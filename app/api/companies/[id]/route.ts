@@ -10,8 +10,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params
+    
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
       return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
@@ -34,8 +39,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // For now, we'll fetch all companies where the user is in the profiles table
-    // Later we can implement a proper user-company relationship table
+    // Get user's profile to check if they have access to this company
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('company_id')
@@ -46,26 +50,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Error fetching profile' }, { status: 500 })
     }
 
-    // If user has a company_id, fetch all companies they have access to
-    // For now, this means their primary company, but this can be extended
-    if (profile.company_id) {
-      const { data: companies, error: companiesError } = await supabase
-        .from('companies')
-        .select('*')
-        .eq('id', profile.company_id)
-
-      if (companiesError) {
-        return NextResponse.json({ error: 'Error fetching companies' }, { status: 500 })
-      }
-
-      return NextResponse.json(companies || [])
+    // Check if the user has access to this company
+    if (profile.company_id !== id) {
+      return NextResponse.json({ error: 'Access denied to this company' }, { status: 403 })
     }
 
-    // Return empty array if no company associated
-    return NextResponse.json([])
+    // Fetch the specific company
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (companyError) {
+      if (companyError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+      }
+      return NextResponse.json({ error: 'Error fetching company' }, { status: 500 })
+    }
+
+    return NextResponse.json(company)
 
   } catch (error) {
-    console.error('Error in companies API:', error)
+    console.error('Error in company API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 } 
