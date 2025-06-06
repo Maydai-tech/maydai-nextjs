@@ -17,7 +17,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      router.push('/')
+      router.push('/dashboard/companies')
     }
   }, [user, router])
 
@@ -31,7 +31,7 @@ export default function LoginPage() {
       if (error) {
         setError('Email ou mot de passe incorrect')
       } else {
-        router.push('/')
+        router.push('/dashboard/companies')
       }
     } catch (err) {
       setError('Une erreur est survenue lors de la connexion')

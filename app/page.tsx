@@ -26,18 +26,7 @@ export default function HomePage() {
     }
   }, [user, loading, router, mounted])
 
-  // Show loading state during SSR and initial client load
-  if (!mounted || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0080A3]"></div>
-          <p className="mt-4 text-gray-600">Chargement...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // This component will redirect, so we don't need to render anything
+  // During loading or before mount, the GlobalLoader handles the display
+  // After auth resolution, we redirect immediately
   return null
 }

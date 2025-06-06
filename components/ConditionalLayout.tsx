@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/auth';
 import Sidebar from './Sidebar';
 
 interface ConditionalLayoutProps {
@@ -9,10 +10,11 @@ interface ConditionalLayoutProps {
 
 export default function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const pathname = usePathname();
+  const { user, loading } = useAuth();
   
   // Pages où on ne veut pas afficher la sidebar
-  const noSidebarPages = ['/login', '/signup', '/dashboard/companies'];
-  const shouldShowSidebar = !noSidebarPages.includes(pathname);
+  const noSidebarPages = ['/', '/login', '/signup', '/dashboard/companies'];
+  const shouldShowSidebar = !noSidebarPages.includes(pathname) && user && !loading;
 
   if (shouldShowSidebar) {
     return (
