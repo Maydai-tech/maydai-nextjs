@@ -379,26 +379,52 @@ export default function NewUseCasePage() {
   }
 
   const handleInputChange = (value: string) => {
-    // Format date input for deployment_date field
-    if (currentQuestion.id === 'deployment_date') {
-      // Remove non-digits
-      let digits = value.replace(/\D/g, '')
-      
-      // Format as DD/MM/YYYY
-      if (digits.length >= 3) {
-        digits = digits.substring(0, 2) + '/' + digits.substring(2)
-      }
-      if (digits.length >= 6) {
-        digits = digits.substring(0, 5) + '/' + digits.substring(5, 9)
-      }
-      
-      value = digits
-    }
-    
     console.log('Form input changed:', currentQuestion.id, '=', value) // Debug log
     setFormData(prev => ({ ...prev, [currentQuestion.id]: value }))
     if (error) {
       setError('')
+    }
+  }
+
+  const handleDateInputChange = (value: string, inputElement?: HTMLInputElement) => {
+    // Remove non-digits except slashes for formatting
+    let digits = value.replace(/[^\d]/g, '')
+    
+    // Limit to 8 digits (DDMMYYYY)
+    digits = digits.substring(0, 8)
+    
+    // Format as DD/MM/YYYY with automatic slash insertion
+    let formatted = ''
+    let cursorPosition = 0
+    
+    if (digits.length >= 1) {
+      formatted = digits.substring(0, 2)
+      if (digits.length >= 2) {
+        formatted += '/'
+        if (digits.length >= 3) {
+          formatted += digits.substring(2, 4)
+          if (digits.length >= 4) {
+            formatted += '/'
+            if (digits.length >= 5) {
+              formatted += digits.substring(4, 8)
+            }
+          }
+        }
+      }
+    }
+    
+    setFormData(prev => ({ ...prev, deployment_date: formatted }))
+    if (error) {
+      setError('')
+    }
+
+    // Auto-position cursor after slash
+    if (inputElement) {
+      setTimeout(() => {
+        if (digits.length === 2 || digits.length === 4) {
+          inputElement.setSelectionRange(formatted.length, formatted.length)
+        }
+      }, 0)
     }
   }
 
@@ -569,7 +595,7 @@ export default function NewUseCasePage() {
           </div>
 
           {/* Input based on question type */}
-          {currentQuestion.type === 'text' && (
+          {currentQuestion.type === 'text' && currentQuestion.id !== 'deployment_date' && (
             <input
               type="text"
               value={formData[currentQuestion.id]}
@@ -582,6 +608,36 @@ export default function NewUseCasePage() {
               maxLength={currentQuestion.maxLength}
               autoFocus
             />
+          )}
+
+          {/* Special date input for deployment_date */}
+          {currentQuestion.type === 'text' && currentQuestion.id === 'deployment_date' && (
+            <div className="relative">
+              <input
+                type="text"
+                value={formData[currentQuestion.id]}
+                onChange={(e) => handleDateInputChange(e.target.value, e.target)}
+                onKeyPress={handleKeyPress}
+                onFocus={(e) => {
+                  // Position cursor at the beginning if empty
+                  setTimeout(() => {
+                    if (!e.target.value) {
+                      e.target.setSelectionRange(0, 0)
+                    }
+                  }, 0)
+                }}
+                className={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors font-mono tracking-wider ${
+                  error ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder="DD/MM/YYYY"
+                maxLength={10}
+                autoFocus
+              />
+              {/* Helper text */}
+              <div className="mt-2 text-sm text-gray-500">
+                Format : JJ/MM/AAAA (ex: 15/06/2025)
+              </div>
+            </div>
           )}
 
 
