@@ -372,53 +372,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          <Link
-            href={`/questionnaire?company=${companyId}`}
-            className="bg-white p-4 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-all group"
-          >
-            <div className="flex items-center">
-              <div className="bg-green-50 p-2 sm:p-3 rounded-lg group-hover:bg-green-100 transition-colors">
-                <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
-              </div>
-              <div className="ml-3 sm:ml-4">
-                <h3 className="text-base sm:text-lg font-medium text-gray-900">Questionnaire</h3>
-                <p className="text-sm text-gray-600">Gérer les questions de conformité</p>
-              </div>
-            </div>
-          </Link>
-
-          <Link
-            href={`/reports?company=${companyId}`}
-            className="bg-white p-4 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-all group"
-          >
-            <div className="flex items-center">
-              <div className="bg-purple-50 p-2 sm:p-3 rounded-lg group-hover:bg-purple-100 transition-colors">
-                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
-              </div>
-              <div className="ml-3 sm:ml-4">
-                <h3 className="text-base sm:text-lg font-medium text-gray-900">Rapports</h3>
-                <p className="text-sm text-gray-600">Analyser la conformité</p>
-              </div>
-            </div>
-          </Link>
-
-          <Link
-            href="/admin"
-            className="bg-white p-4 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-all group sm:col-span-2 lg:col-span-1"
-          >
-            <div className="flex items-center">
-              <div className="bg-[#0080A3]/10 p-2 sm:p-3 rounded-lg group-hover:bg-[#0080A3]/20 transition-colors">
-                <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-[#0080A3]" />
-              </div>
-              <div className="ml-3 sm:ml-4">
-                <h3 className="text-base sm:text-lg font-medium text-gray-900">Administration</h3>
-                <p className="text-sm text-gray-600">Gérer les paramètres</p>
-              </div>
-            </div>
-          </Link>
-        </div>
+      
       </div>
     </div>
   )
