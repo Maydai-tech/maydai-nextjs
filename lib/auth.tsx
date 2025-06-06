@@ -11,6 +11,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signUp: (email: string, password: string) => Promise<{ error: any }>
   signOut: () => Promise<void>
+  refreshSession: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -49,8 +50,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes with error handling
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (mounted) {
+        if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refreshed successfully')
+        } else if (event === 'SIGNED_OUT') {
+          console.log('User signed out')
+        }
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
@@ -97,13 +103,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const refreshSession = async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (error) {
+        console.error('Error refreshing session:', error)
+      } else {
+        setSession(session)
+        setUser(session?.user ?? null)
+      }
+    } catch (error) {
+      console.error('Error in refreshSession:', error)
+    }
+  }
+
   const value = {
     user,
     session,
     loading,
     signIn,
     signUp,
-    signOut
+    signOut,
+    refreshSession
   }
 
   return (
