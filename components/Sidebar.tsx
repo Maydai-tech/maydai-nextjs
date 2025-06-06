@@ -4,15 +4,62 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, User, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const { user, session } = useAuth();
+  const [companyId, setCompanyId] = useState<string | null>(null);
+
+  // Fetch company ID when user is available
+  useEffect(() => {
+    const fetchCompanyId = async () => {
+      if (user && session?.access_token) {
+        try {
+          const response = await fetch('/api/companies', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          });
+          
+          if (response.ok) {
+            const companies = await response.json();
+            // Since users currently have only one company, take the first one
+            if (companies.length > 0) {
+              setCompanyId(companies[0].id);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching company ID:', error);
+        }
+      }
+    };
+
+    fetchCompanyId();
+  }, [user, session]);
+
+  // Determine dashboard URL based on current context
+  const getDashboardUrl = () => {
+    // If we're currently on a company dashboard page, extract the company ID from the URL
+    const dashboardMatch = pathname.match(/^\/dashboard\/([^\/]+)/);
+    if (dashboardMatch && dashboardMatch[1] !== 'companies') {
+      return `/dashboard/${dashboardMatch[1]}`;
+    }
+    
+    // If we have a company ID from the API, use it
+    if (companyId) {
+      return `/dashboard/${companyId}`;
+    }
+    
+    // Fallback to company selection page
+    return '/dashboard/companies';
+  };
 
   const menuItems = [
     {
       name: 'Dashboard',
-      href: '/',
+      href: getDashboardUrl(),
       icon: Home
     },
     {

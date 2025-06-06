@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
-import { Building2, Plus, Users, ChevronRight } from 'lucide-react'
+import { Building2, Plus, Users, ChevronRight, LogOut } from 'lucide-react'
 
 interface Company {
   id: string
@@ -15,7 +15,7 @@ interface Company {
 }
 
 export default function CompanySelection() {
-  const { user, session, loading } = useAuth()
+  const { user, session, loading, signOut } = useAuth()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [companies, setCompanies] = useState<Company[]>([])
@@ -63,6 +63,15 @@ export default function CompanySelection() {
     }
   }
 
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      router.push('/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
+
   // Show loading state during SSR and initial client load
   if (!mounted || loading) {
     return (
@@ -82,6 +91,18 @@ export default function CompanySelection() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Logout Button */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+        <button
+          onClick={handleSignOut}
+          className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-[#0080A3] hover:bg-white rounded-lg transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm cursor-pointer"
+          title="Se déconnecter"
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="hidden sm:inline font-medium">Déconnexion</span>
+        </button>
+      </div>
+
       <div className="max-w-4xl mx-auto py-8 sm:py-16 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
@@ -94,18 +115,6 @@ export default function CompanySelection() {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Sélectionnez l'entreprise sur laquelle vous souhaitez travailler pour accéder au dashboard de conformité IA Act.
           </p>
-          <div className="mt-6 flex justify-center">
-            <span className="text-sm text-gray-500">
-              Connecté en tant que {user.user_metadata?.first_name || user.email}
-            </span>
-            <span className="mx-2 text-gray-300">•</span>
-            <Link
-              href="/profil"
-              className="text-sm text-[#0080A3] hover:text-[#006280] font-medium"
-            >
-              Profil
-            </Link>
-          </div>
         </div>
 
         {loadingData ? (

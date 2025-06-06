@@ -11,7 +11,7 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
   const pathname = usePathname();
   
   // Pages où on ne veut pas afficher la sidebar
-  const noSidebarPages = ['/login', '/signup'];
+  const noSidebarPages = ['/login', '/signup', '/dashboard/companies'];
   const shouldShowSidebar = !noSidebarPages.includes(pathname);
 
   if (shouldShowSidebar) {
