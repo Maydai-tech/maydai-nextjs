@@ -1,34 +1,30 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Home, User, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
+import { useApiCall } from '@/lib/api-auth';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const api = useApiCall();
 
   // Fetch company ID when user is available
   useEffect(() => {
     const fetchCompanyId = async () => {
-      if (user && session?.access_token) {
+      if (user) {
         try {
-          const response = await fetch('/api/companies', {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`
-            }
-          });
+          const result = await api.get('/api/companies');
           
-          if (response.ok) {
-            const companies = await response.json();
+          if (result.data && result.data.length > 0) {
             // Since users currently have only one company, take the first one
-            if (companies.length > 0) {
-              setCompanyId(companies[0].id);
-            }
+            setCompanyId(result.data[0].id);
           }
         } catch (error) {
           console.error('Error fetching company ID:', error);
@@ -37,7 +33,7 @@ export default function Sidebar() {
     };
 
     fetchCompanyId();
-  }, [user, session]);
+  }, [user, api]);
 
   // Determine dashboard URL based on current context
   const getDashboardUrl = () => {

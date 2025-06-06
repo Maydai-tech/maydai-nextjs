@@ -4,7 +4,19 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
-import { Shield, Building2, Brain, FileText, Plus, Users, BarChart3, CheckCircle, AlertTriangle, Clock, ArrowLeft } from 'lucide-react'
+import { useApiCall } from '@/lib/api-auth'
+import { 
+  ArrowLeft, 
+  Shield, 
+  Brain, 
+  CheckCircle, 
+  AlertTriangle, 
+  Clock,
+  Plus,
+  FileText,
+  Calendar,
+  TrendingUp
+} from 'lucide-react'
 
 interface Company {
   id: string
@@ -42,14 +54,15 @@ interface DashboardProps {
 }
 
 export default function CompanyDashboard({ params }: DashboardProps) {
-  const { user, session, loading } = useAuth()
+  const { user, session, loading, signOut } = useAuth()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  const [companyId, setCompanyId] = useState<string>('')
   const [company, setCompany] = useState<Company | null>(null)
   const [useCases, setUseCases] = useState<UseCase[]>([])
   const [progress, setProgress] = useState<Progress[]>([])
   const [loadingData, setLoadingData] = useState(true)
-  const [companyId, setCompanyId] = useState<string | null>(null)
+  const api = useApiCall()
 
   // Resolve params
   useEffect(() => {
@@ -78,8 +91,6 @@ export default function CompanyDashboard({ params }: DashboardProps) {
   }, [user, mounted, companyId])
 
   const fetchDashboardData = async () => {
-    if (!companyId) return
-    
     try {
       setLoadingData(true)
       
@@ -88,39 +99,25 @@ export default function CompanyDashboard({ params }: DashboardProps) {
       }
       
       // Fetch company details
-      const companyResponse = await fetch(`/api/companies/${companyId}`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      })
-      if (companyResponse.ok) {
-        const companyData = await companyResponse.json()
-        setCompany(companyData)
-      } else if (companyResponse.status === 404) {
+      const companyResponse = await api.get(`/api/companies/${companyId}`)
+      
+      if (companyResponse.status === 404) {
         router.push('/dashboard/companies')
         return
+      } else if (companyResponse.data) {
+        setCompany(companyResponse.data)
       }
 
       // Fetch use cases for this company
-      const useCasesResponse = await fetch(`/api/companies/${companyId}/usecases`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      })
-      if (useCasesResponse.ok) {
-        const useCasesData = await useCasesResponse.json()
-        setUseCases(useCasesData)
+      const useCasesResponse = await api.get(`/api/companies/${companyId}/usecases`)
+      if (useCasesResponse.data) {
+        setUseCases(useCasesResponse.data)
       }
 
       // Fetch progress for this company's use cases
-      const progressResponse = await fetch(`/api/companies/${companyId}/progress`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      })
-      if (progressResponse.ok) {
-        const progressData = await progressResponse.json()
-        setProgress(progressData)
+      const progressResponse = await api.get(`/api/companies/${companyId}/progress`)
+      if (progressResponse.data) {
+        setProgress(progressResponse.data)
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -398,7 +395,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
           >
             <div className="flex items-center">
               <div className="bg-purple-50 p-2 sm:p-3 rounded-lg group-hover:bg-purple-100 transition-colors">
-                <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
               </div>
               <div className="ml-3 sm:ml-4">
                 <h3 className="text-base sm:text-lg font-medium text-gray-900">Rapports</h3>
@@ -413,7 +410,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
           >
             <div className="flex items-center">
               <div className="bg-[#0080A3]/10 p-2 sm:p-3 rounded-lg group-hover:bg-[#0080A3]/20 transition-colors">
-                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-[#0080A3]" />
+                <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-[#0080A3]" />
               </div>
               <div className="ml-3 sm:ml-4">
                 <h3 className="text-base sm:text-lg font-medium text-gray-900">Administration</h3>

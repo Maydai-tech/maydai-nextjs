@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
+import { useApiCall } from '@/lib/api-auth'
 import { Building2, Plus, Users, ChevronRight, LogOut } from 'lucide-react'
 
 interface Company {
@@ -15,11 +16,12 @@ interface Company {
 }
 
 export default function CompanySelection() {
-  const { user, session, loading, signOut, refreshSession } = useAuth()
+  const { user, session, loading, signOut } = useAuth()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [companies, setCompanies] = useState<Company[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  const api = useApiCall()
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -42,53 +44,16 @@ export default function CompanySelection() {
     try {
       setLoadingData(true)
       
-      if (!session?.access_token) {
+      if (!user) {
         return
       }
       
-      const makeRequest = async (token: string) => {
-        return await fetch('/api/companies', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-      }
+      const result = await api.get('/api/companies')
       
-      let response = await makeRequest(session.access_token)
-      
-      if (response.status === 401) {
-        // Token invalide ou expiré, essayer de rafraîchir la session une fois
-        console.log('Token invalide, tentative de rafraîchissement...')
-        await refreshSession()
-        
-        // Attendre un peu pour que la session soit mise à jour dans le state
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // Si on a toujours une session, retenter
-        if (session?.access_token) {
-          response = await makeRequest(session.access_token)
-          
-          if (response.status === 401) {
-            // Toujours invalide, déconnecter l'utilisateur
-            console.log('Session invalide après rafraîchissement, déconnexion...')
-            await signOut()
-            router.push('/login')
-            return
-          }
-        } else {
-          // Pas de session après rafraîchissement, déconnecter
-          console.log('Aucune session après rafraîchissement, déconnexion...')
-          await signOut()
-          router.push('/login')
-          return
-        }
-      }
-      
-      if (response.ok) {
-        const data = await response.json()
-        setCompanies(data)
-      } else {
-        console.error('Erreur lors du chargement des entreprises:', response.status)
+      if (result.data) {
+        setCompanies(result.data)
+      } else if (result.error) {
+        console.error('Erreur lors du chargement des entreprises:', result.error)
       }
     } catch (error) {
       console.error('Error fetching companies:', error)
