@@ -13,7 +13,7 @@
             "sourceMaps": true,
             "sourceMapPathOverrides": {
                 "webpack://_N_E/./*": "${webRoot}/*",
-                "webpack:///./*": "${webRoot}/*"
+                                "webpack:///./*": "${webRoot}/*"
             },
             "preLaunchTask": "start-dev-server"
         },

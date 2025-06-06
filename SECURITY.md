@@ -22,9 +22,9 @@
 Créez le fichier `.env.local` dans la racine du projet :
 
 ```bash
-# Copiez et collez ces lignes dans .env.local
-NEXT_PUBLIC_SUPABASE_URL=https://kzdolxpjysirikcpusrv.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6ZG9seHBqeXNpcmlrY3B1c3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUyMzI0OTksImV4cCI6MjA2MDgwODQ5OX0.47DS18wnPjClHoSXY2S6ey3SpmBU_CmPjM3D_-o76LE
+# Obtenez ces valeurs depuis votre dashboard Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 ```
 
 ### 2. Configuration Cursor MCP (optionnel)
@@ -58,9 +58,9 @@ Permissions-Policy: camera=(), microphone=(), geolocation=()
 
 1. **Créer le fichier d'environnement** :
    ```bash
-   # Dans le répertoire racine
-   echo 'NEXT_PUBLIC_SUPABASE_URL=https://kzdolxpjysirikcpusrv.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6ZG9seHBqeXNpcmlrY3B1c3J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUyMzI0OTksImV4cCI6MjA2MDgwODQ5OX0.47DS18wnPjClHoSXY2S6ey3SpmBU_CmPjM3D_-o76LE' > .env.local
+   # Dans le répertoire racine - remplacez par vos vraies valeurs
+   echo 'NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key' > .env.local
    ```
 
 2. **Redémarrer l'application** :

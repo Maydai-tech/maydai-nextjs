@@ -3,8 +3,9 @@
     "tasks": [
         {
             "label": "start-dev-server",
-            "type": "npm",
-            "script": "dev",
+            "type": "shell",
+            "command": "npm",
+            "args": ["run", "dev"],
             "isBackground": true,
             "problemMatcher": {
                 "owner": "next",
@@ -13,8 +14,8 @@
                 },
                 "background": {
                     "activeOnStart": true,
-                    "beginsPattern": ".*compiling.*",
-                    "endsPattern": ".*ready.*"
+                    "beginsPattern": "^\\s*▲ Next\\.js|^\\s*- starting",
+                    "endsPattern": "^\\s*✓ Ready in|^\\s*- Local:|^\\s*Local:"
                 }
             },
             "presentation": {
@@ -24,6 +25,9 @@
                 "panel": "shared",
                 "showReuseMessage": true,
                 "clear": false
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
             }
         },
         {
