@@ -3,6 +3,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary: #0080A3;
+  --primary-light: #00A3CC;
+  --primary-dark: #006280;
 }
 
 @theme inline {
@@ -10,6 +13,9 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +28,33 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Custom classes for auth forms - Styles cohérents avec fond blanc et texte foncé */
+.auth-input {
+  @apply w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors;
+}
+
+.auth-button {
+  @apply w-full bg-[#0080A3] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#006280] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-2 transition-colors;
+}
+
+.auth-button:disabled {
+  @apply opacity-50 cursor-not-allowed hover:bg-[#0080A3];
+}
+
+/* Dark mode styles for auth forms */
+@media (prefers-color-scheme: dark) {
+  .auth-input {
+    @apply border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400;
+  }
+  
+  .auth-input:focus {
+    @apply border-[#00A3CC] ring-[#00A3CC];
+  }
+  
+  .auth-button {
+    @apply bg-[#00A3CC] hover:bg-[#0080A3] focus:ring-[#00A3CC];
+  }
 }

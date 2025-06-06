@@ -1,0 +1,69 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "start-dev-server",
+            "type": "npm",
+            "script": "dev",
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "next",
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".*compiling.*",
+                    "endsPattern": ".*ready.*"
+                }
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": false
+            }
+        },
+        {
+            "label": "Open Chrome",
+            "type": "shell",
+            "command": "open",
+            "args": [
+                "-a",
+                "Google Chrome",
+                "http://localhost:3000"
+            ],
+            "options": {
+                "env": {
+                    "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"
+                }
+            },
+            "presentation": {
+                "echo": false,
+                "reveal": "never",
+                "focus": false,
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Start App & Open Chrome",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "npm: dev",
+                "Open Chrome"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        }
+    ]
+} 
