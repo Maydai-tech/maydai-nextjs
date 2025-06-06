@@ -313,7 +313,16 @@ export default function UseCaseDetailPage() {
                 <div className="text-sm font-medium text-gray-500 mb-1">Date de déploiement</div>
                 <div className="text-gray-900 flex items-center">
                   <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                  {useCase.deployment_date || 'Non spécifiée'}
+                  {useCase.deployment_date ? (
+                    // Check if it's a valid date format
+                    /^\d{4}-\d{2}-\d{2}$/.test(useCase.deployment_date) ? 
+                      new Date(useCase.deployment_date).toLocaleDateString('fr-FR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      }) :
+                      useCase.deployment_date
+                  ) : 'Non spécifiée'}
                 </div>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">

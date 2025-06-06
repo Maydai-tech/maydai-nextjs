@@ -14,8 +14,10 @@ import {
   ChevronRight,
   CheckCircle,
   Search,
-  HelpCircle
+  HelpCircle,
+  Calendar
 } from 'lucide-react'
+
 
 interface Company {
   id: string
@@ -39,7 +41,7 @@ interface FormData {
 interface Question {
   id: keyof FormData
   question: string
-  type: 'text' | 'select' | 'textarea' | 'checkbox' | 'radio'
+  type: 'text' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date'
   options?: string[] | { label: string; examples: string[] }[]
   placeholder?: string
   maxLength?: number
@@ -82,6 +84,23 @@ export default function NewUseCasePage() {
 
   const companyId = searchParams.get('company')
 
+  // Fonction de validation du format de date DD/MM/YYYY
+  const validateDateFormat = (dateString: string): boolean => {
+    if (!dateString) return true // Champ optionnel
+    
+    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/
+    const match = dateString.match(dateRegex)
+    
+    if (!match) return false
+    
+    const [, day, month, year] = match
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    
+    return date.getDate() == parseInt(day) &&
+           date.getMonth() == parseInt(month) - 1 &&
+           date.getFullYear() == parseInt(year)
+  }
+
   const questions: Question[] = [
     {
       id: 'name',
@@ -94,8 +113,8 @@ export default function NewUseCasePage() {
       id: 'deployment_date',
       question: 'Date de déploiement ou prévue ?',
       type: 'text',
-      placeholder: 'ex: 2024-12-01 ou Q2 2025',
-      maxLength: 50
+      placeholder: 'DD/MM/YYYY (ex: 15/06/2025)',
+      maxLength: 10
     },
     {
       id: 'responsible_service',
@@ -284,8 +303,14 @@ export default function NewUseCasePage() {
         setError('Veuillez sélectionner au moins une option')
         return false
       }
+    } else if (currentQuestion.id === 'deployment_date') {
+      // For deployment date, validate format if provided
+      if (value && !validateDateFormat(value)) {
+        setError('Format de date invalide. Utilisez le format DD/MM/YYYY (ex: 15/06/2025)')
+        return false
+      }
     } else {
-      // For other question types
+      // For other question types (text, textarea, etc.)
       if (!value || !value.trim()) {
         setError('Cette réponse est requise')
         return false
@@ -354,6 +379,23 @@ export default function NewUseCasePage() {
   }
 
   const handleInputChange = (value: string) => {
+    // Format date input for deployment_date field
+    if (currentQuestion.id === 'deployment_date') {
+      // Remove non-digits
+      let digits = value.replace(/\D/g, '')
+      
+      // Format as DD/MM/YYYY
+      if (digits.length >= 3) {
+        digits = digits.substring(0, 2) + '/' + digits.substring(2)
+      }
+      if (digits.length >= 6) {
+        digits = digits.substring(0, 5) + '/' + digits.substring(5, 9)
+      }
+      
+      value = digits
+    }
+    
+    console.log('Form input changed:', currentQuestion.id, '=', value) // Debug log
     setFormData(prev => ({ ...prev, [currentQuestion.id]: value }))
     if (error) {
       setError('')
@@ -542,280 +584,282 @@ export default function NewUseCasePage() {
             />
           )}
 
-                     {currentQuestion.type === 'select' && (
-             <div className="space-y-4">
-               {/* Search Bar */}
-               <div className="relative">
-                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                 <input
-                   type="text"
-                   value={searchTerm || formData[currentQuestion.id]}
-                   onChange={(e) => handleSearchInputChange(e.target.value)}
-                   onKeyPress={handleKeyPress}
-                   className="w-full pl-10 pr-4 py-3 text-lg border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
-                   placeholder="Tapez votre choix ou sélectionnez un exemple ci-dessous"
-                   autoFocus
-                 />
-               </div>
 
-               {/* Current Selection */}
-               {formData[currentQuestion.id] && !searchTerm && (
-                 <div className="mb-4">
-                   <p className="text-sm text-gray-600 mb-2">Sélection actuelle :</p>
-                   <div className="inline-flex items-center px-3 py-2 bg-[#0080A3] text-white text-sm font-medium rounded-full">
-                     {formData[currentQuestion.id]}
-                     <button
-                       onClick={() => {
-                         handleInputChange('')
-                         setSearchTerm('')
-                       }}
-                       className="ml-2 text-white hover:text-gray-200"
-                       type="button"
-                     >
-                       ×
-                     </button>
-                   </div>
-                 </div>
-               )}
 
-               {/* Examples Label */}
-               <div>
-                 <p className="text-sm text-gray-500 mb-3">Exemples</p>
-               </div>
+          {currentQuestion.type === 'select' && (
+            <div className="space-y-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchTerm || formData[currentQuestion.id]}
+                  onChange={(e) => handleSearchInputChange(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="w-full pl-10 pr-4 py-3 text-lg border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+                  placeholder="Tapez votre choix ou sélectionnez un exemple ci-dessous"
+                  autoFocus
+                />
+              </div>
 
-               {/* Options as Chips */}
-               <div className="flex flex-wrap gap-2">
-                 {getFilteredOptions().map((option) => (
-                   <button
-                     key={option}
-                     onClick={() => handleChipSelect(option)}
-                     className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
-                       formData[currentQuestion.id] === option && !searchTerm
-                         ? 'bg-[#0080A3] text-white border-[#0080A3]'
-                         : 'bg-white text-gray-700 border-gray-300 hover:border-[#0080A3] hover:text-[#0080A3]'
-                     }`}
-                     type="button"
-                   >
-                     {option}
-                   </button>
-                 ))}
-               </div>
+              {/* Current Selection */}
+              {formData[currentQuestion.id] && !searchTerm && (
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-2">Sélection actuelle :</p>
+                  <div className="inline-flex items-center px-3 py-2 bg-[#0080A3] text-white text-sm font-medium rounded-full">
+                    {formData[currentQuestion.id]}
+                    <button
+                      onClick={() => {
+                        handleInputChange('')
+                        setSearchTerm('')
+                      }}
+                      className="ml-2 text-white hover:text-gray-200"
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
 
-               {/* Custom value indicator */}
-               {searchTerm && !(currentQuestion.options as string[])?.includes(searchTerm) && (
-                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                   <p className="text-blue-700 text-sm">
-                     <span className="font-medium">Valeur personnalisée :</span> "{searchTerm}"
-                   </p>
-                 </div>
-               )}
+              {/* Examples Label */}
+              <div>
+                <p className="text-sm text-gray-500 mb-3">Exemples</p>
+              </div>
 
-               {/* No results message for filtered examples */}
-               {searchTerm && getFilteredOptions().length === 0 && (currentQuestion.options as string[])?.some(opt => opt.toLowerCase().includes(searchTerm.toLowerCase())) === false && (
-                 <p className="text-gray-500 text-center py-2 text-sm">Aucun exemple ne correspond à votre recherche</p>
-               )}
-             </div>
-           )}
+              {/* Options as Chips */}
+              <div className="flex flex-wrap gap-2">
+                {getFilteredOptions().map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => handleChipSelect(option)}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                      formData[currentQuestion.id] === option && !searchTerm
+                        ? 'bg-[#0080A3] text-white border-[#0080A3]'
+                        : 'bg-white text-gray-700 border-gray-300 hover:border-[#0080A3] hover:text-[#0080A3]'
+                    }`}
+                    type="button"
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
 
-                     {currentQuestion.type === 'textarea' && (
-             <textarea
-               rows={6}
-               value={formData[currentQuestion.id]}
-               onChange={(e) => handleInputChange(e.target.value)}
-               className={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors resize-none ${
-                 error ? 'border-red-300' : 'border-gray-300'
-               }`}
-               placeholder={currentQuestion.placeholder}
-               autoFocus
-             />
-           )}
+              {/* Custom value indicator */}
+              {searchTerm && !(currentQuestion.options as string[])?.includes(searchTerm) && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-blue-700 text-sm">
+                    <span className="font-medium">Valeur personnalisée :</span> "{searchTerm}"
+                  </p>
+                </div>
+              )}
 
-           {currentQuestion.type === 'checkbox' && (
-             <div className="space-y-8">
-               {/* Help Button */}
-               <div className="flex justify-end">
-                 <button
-                   type="button"
-                   className="flex items-center px-6 py-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium shadow-sm"
-                 >
-                   <HelpCircle className="h-5 w-5 mr-2" />
-                   Aide ?
-                 </button>
-               </div>
+              {/* No results message for filtered examples */}
+              {searchTerm && getFilteredOptions().length === 0 && (currentQuestion.options as string[])?.some(opt => opt.toLowerCase().includes(searchTerm.toLowerCase())) === false && (
+                <p className="text-gray-500 text-center py-2 text-sm">Aucun exemple ne correspond à votre recherche</p>
+              )}
+            </div>
+          )}
 
-               {/* No partners selected message for LLM models */}
-               {currentQuestion.id === 'llm_model_version' && (!currentQuestion.options || currentQuestion.options.length === 0) && (
-                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
-                   <div className="flex items-center justify-center mb-3">
-                     <AlertCircle className="h-6 w-6 text-amber-600" />
-                   </div>
-                   <h3 className="text-lg font-semibold text-amber-800 mb-2">
-                     Aucun partenaire technologique sélectionné
-                   </h3>
-                   <p className="text-amber-700 mb-4">
-                     Veuillez d'abord sélectionner au moins un partenaire technologique pour voir les modèles disponibles.
-                   </p>
-                   <button
-                     onClick={() => setCurrentQuestionIndex(questions.findIndex(q => q.id === 'technology_partner'))}
-                     className="inline-flex items-center px-4 py-2 bg-amber-600 text-white font-medium rounded-lg hover:bg-amber-700 transition-colors"
-                   >
-                     <ArrowLeft className="h-4 w-4 mr-2" />
-                     Retour aux partenaires
-                   </button>
-                 </div>
-               )}
+          {currentQuestion.type === 'textarea' && (
+            <textarea
+              rows={6}
+              value={formData[currentQuestion.id]}
+              onChange={(e) => handleInputChange(e.target.value)}
+              className={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors resize-none ${
+                error ? 'border-red-300' : 'border-gray-300'
+              }`}
+              placeholder={currentQuestion.placeholder}
+              autoFocus
+            />
+          )}
 
-               {/* Checkbox Grid */}
-               {currentQuestion.options && currentQuestion.options.length > 0 && (
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-1">
-                 {/* Left Column */}
-                 <div className="space-y-3">
-                   {(currentQuestion.options as string[])?.slice(0, Math.ceil((currentQuestion.options as string[]).length / 2)).map((option) => (
-                     <label key={option} className="group flex items-center space-x-4 cursor-pointer p-3 rounded-lg hover:bg-gray-50 transition-all duration-200">
-                       <div className="relative">
-                         <input
-                           type="checkbox"
-                           checked={selectedOptions.includes(option)}
-                           onChange={(e) => handleCheckboxChange(option, e.target.checked)}
-                           className="w-5 h-5 text-[#0080A3] border-2 border-gray-300 rounded focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0 transition-all duration-200"
-                         />
-                         {selectedOptions.includes(option) && (
-                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                             </svg>
-                           </div>
-                         )}
-                       </div>
-                       <span className="text-lg text-gray-700 group-hover:text-gray-900 transition-colors duration-200 font-medium">
-                         {option}
-                       </span>
-                     </label>
-                   ))}
-                 </div>
+          {currentQuestion.type === 'checkbox' && (
+            <div className="space-y-8">
+              {/* Help Button */}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="flex items-center px-6 py-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-all duration-200 font-medium shadow-sm"
+                >
+                  <HelpCircle className="h-5 w-5 mr-2" />
+                  Aide ?
+                </button>
+              </div>
 
-                 {/* Right Column */}
-                 <div className="space-y-3">
-                   {(currentQuestion.options as string[])?.slice(Math.ceil((currentQuestion.options as string[]).length / 2)).map((option) => (
-                     <label key={option} className="group flex items-center space-x-4 cursor-pointer p-3 rounded-lg hover:bg-gray-50 transition-all duration-200">
-                       <div className="relative">
-                         <input
-                           type="checkbox"
-                           checked={selectedOptions.includes(option)}
-                           onChange={(e) => handleCheckboxChange(option, e.target.checked)}
-                           className="w-5 h-5 text-[#0080A3] border-2 border-gray-300 rounded focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0 transition-all duration-200"
-                         />
-                         {selectedOptions.includes(option) && (
-                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                             </svg>
-                           </div>
-                         )}
-                       </div>
-                       <span className="text-lg text-gray-700 group-hover:text-gray-900 transition-colors duration-200 font-medium">
-                         {option}
-                       </span>
-                     </label>
-                   ))}
+              {/* No partners selected message for LLM models */}
+              {currentQuestion.id === 'llm_model_version' && (!currentQuestion.options || currentQuestion.options.length === 0) && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
+                  <div className="flex items-center justify-center mb-3">
+                    <AlertCircle className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-amber-800 mb-2">
+                    Aucun partenaire technologique sélectionné
+                  </h3>
+                  <p className="text-amber-700 mb-4">
+                    Veuillez d'abord sélectionner au moins un partenaire technologique pour voir les modèles disponibles.
+                  </p>
+                  <button
+                    onClick={() => setCurrentQuestionIndex(questions.findIndex(q => q.id === 'technology_partner'))}
+                    className="inline-flex items-center px-4 py-2 bg-amber-600 text-white font-medium rounded-lg hover:bg-amber-700 transition-colors"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Retour aux partenaires
+                  </button>
+                </div>
+              )}
 
-                   {/* Other Option */}
-                   {currentQuestion.hasOtherOption && (
-                     <div className="space-y-3">
-                       <label className="group flex items-center space-x-4 cursor-pointer p-3 rounded-lg hover:bg-gray-50 transition-all duration-200">
-                         <div className="relative">
-                           <input
-                             type="checkbox"
-                             checked={selectedOptions.includes('Autre') || otherValue.trim() !== ''}
-                             onChange={(e) => {
-                               if (e.target.checked) {
-                                 if (!selectedOptions.includes('Autre')) {
-                                   handleCheckboxChange('Autre', true)
-                                 }
-                               } else {
-                                 setOtherValue('')
-                                 handleOtherValueChange('')
-                                 handleCheckboxChange('Autre', false)
-                               }
-                             }}
-                             className="w-5 h-5 text-[#0080A3] border-2 border-gray-300 rounded focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0 transition-all duration-200"
-                           />
-                           {(selectedOptions.includes('Autre') || otherValue.trim() !== '') && (
-                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                               <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                               </svg>
-                             </div>
-                           )}
-                         </div>
-                         <span className="text-lg text-gray-700 group-hover:text-gray-900 transition-colors duration-200 font-medium">
-                           Autre
-                         </span>
-                       </label>
+              {/* Checkbox Grid */}
+              {currentQuestion.options && currentQuestion.options.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-1">
+                {/* Left Column */}
+                <div className="space-y-3">
+                  {(currentQuestion.options as string[])?.slice(0, Math.ceil((currentQuestion.options as string[]).length / 2)).map((option) => (
+                    <label key={option} className="group flex items-center space-x-4 cursor-pointer p-3 rounded-lg hover:bg-gray-50 transition-all duration-200">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          checked={selectedOptions.includes(option)}
+                          onChange={(e) => handleCheckboxChange(option, e.target.checked)}
+                          className="w-5 h-5 text-[#0080A3] border-2 border-gray-300 rounded focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0 transition-all duration-200"
+                        />
+                        {selectedOptions.includes(option) && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-lg text-gray-700 group-hover:text-gray-900 transition-colors duration-200 font-medium">
+                        {option}
+                      </span>
+                    </label>
+                  ))}
+                </div>
 
-                       {/* Other Input Field - Only show when "Autre" is selected */}
-                       {(selectedOptions.includes('Autre') || otherValue.trim() !== '') && (
-                         <div className="ml-9 animate-fadeIn">
-                           <input
-                             type="text"
-                             value={otherValue}
-                             onChange={(e) => handleOtherValueChange(e.target.value)}
-                             onKeyPress={handleKeyPress}
-                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:border-[#0080A3] focus:ring-2 focus:ring-[#0080A3] focus:ring-opacity-20 focus:outline-none transition-all duration-200"
-                             placeholder="Spécifiez le partenaire technologique..."
-                             autoFocus
-                           />
-                         </div>
-                       )}
-                     </div>
-                   )}
-                 </div>
-               </div>
-               )}
+                {/* Right Column */}
+                <div className="space-y-3">
+                  {(currentQuestion.options as string[])?.slice(Math.ceil((currentQuestion.options as string[]).length / 2)).map((option) => (
+                    <label key={option} className="group flex items-center space-x-4 cursor-pointer p-3 rounded-lg hover:bg-gray-50 transition-all duration-200">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          checked={selectedOptions.includes(option)}
+                          onChange={(e) => handleCheckboxChange(option, e.target.checked)}
+                          className="w-5 h-5 text-[#0080A3] border-2 border-gray-300 rounded focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0 transition-all duration-200"
+                        />
+                        {selectedOptions.includes(option) && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-lg text-gray-700 group-hover:text-gray-900 transition-colors duration-200 font-medium">
+                        {option}
+                      </span>
+                    </label>
+                  ))}
 
-               {/* Selected Summary */}
-               {(selectedOptions.length > 0 || otherValue.trim()) && (
-                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 shadow-sm">
-                   <p className="text-blue-800 text-sm mb-3 font-semibold">
-                     Partenaires sélectionnés :
-                   </p>
-                   <div className="flex flex-wrap gap-2">
-                     {selectedOptions.filter(option => option !== 'Autre').map((option) => (
-                       <span key={option} className="inline-flex items-center px-3 py-1 bg-[#0080A3] text-white text-sm font-medium rounded-full shadow-sm">
-                         {option}
-                         <button
-                           onClick={() => handleCheckboxChange(option, false)}
-                           className="ml-2 text-white hover:text-gray-200 transition-colors"
-                           type="button"
-                         >
-                           ×
-                         </button>
-                       </span>
-                     ))}
-                     {otherValue.trim() && (
-                       <span className="inline-flex items-center px-3 py-1 bg-purple-600 text-white text-sm font-medium rounded-full shadow-sm">
-                         {otherValue.trim()}
-                         <button
-                           onClick={() => {
-                             setOtherValue('')
-                             handleOtherValueChange('')
-                             handleCheckboxChange('Autre', false)
-                           }}
-                           className="ml-2 text-white hover:text-gray-200 transition-colors"
-                           type="button"
-                         >
-                           ×
-                         </button>
-                       </span>
-                     )}
-                   </div>
-                   {(selectedOptions.length === 0 && !otherValue.trim()) && (
-                     <p className="text-gray-500 text-sm italic">Aucun partenaire sélectionné</p>
-                   )}
-                 </div>
-               )}
-             </div>
-           )}
+                  {/* Other Option */}
+                  {currentQuestion.hasOtherOption && (
+                    <div className="space-y-3">
+                      <label className="group flex items-center space-x-4 cursor-pointer p-3 rounded-lg hover:bg-gray-50 transition-all duration-200">
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            checked={selectedOptions.includes('Autre') || otherValue.trim() !== ''}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                if (!selectedOptions.includes('Autre')) {
+                                  handleCheckboxChange('Autre', true)
+                                }
+                              } else {
+                                setOtherValue('')
+                                handleOtherValueChange('')
+                                handleCheckboxChange('Autre', false)
+                              }
+                            }}
+                            className="w-5 h-5 text-[#0080A3] border-2 border-gray-300 rounded focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0 transition-all duration-200"
+                          />
+                          {(selectedOptions.includes('Autre') || otherValue.trim() !== '') && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-lg text-gray-700 group-hover:text-gray-900 transition-colors duration-200 font-medium">
+                          Autre
+                        </span>
+                      </label>
+
+                      {/* Other Input Field - Only show when "Autre" is selected */}
+                      {(selectedOptions.includes('Autre') || otherValue.trim() !== '') && (
+                        <div className="ml-9 animate-fadeIn">
+                          <input
+                            type="text"
+                            value={otherValue}
+                            onChange={(e) => handleOtherValueChange(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:border-[#0080A3] focus:ring-2 focus:ring-[#0080A3] focus:ring-opacity-20 focus:outline-none transition-all duration-200"
+                            placeholder="Spécifiez le partenaire technologique..."
+                            autoFocus
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              )}
+
+              {/* Selected Summary */}
+              {(selectedOptions.length > 0 || otherValue.trim()) && (
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 shadow-sm">
+                  <p className="text-blue-800 text-sm mb-3 font-semibold">
+                    Partenaires sélectionnés :
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedOptions.filter(option => option !== 'Autre').map((option) => (
+                      <span key={option} className="inline-flex items-center px-3 py-1 bg-[#0080A3] text-white text-sm font-medium rounded-full shadow-sm">
+                        {option}
+                        <button
+                          onClick={() => handleCheckboxChange(option, false)}
+                          className="ml-2 text-white hover:text-gray-200 transition-colors"
+                          type="button"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                    {otherValue.trim() && (
+                      <span className="inline-flex items-center px-3 py-1 bg-purple-600 text-white text-sm font-medium rounded-full shadow-sm">
+                        {otherValue.trim()}
+                        <button
+                          onClick={() => {
+                            setOtherValue('')
+                            handleOtherValueChange('')
+                            handleCheckboxChange('Autre', false)
+                          }}
+                          className="ml-2 text-white hover:text-gray-200 transition-colors"
+                          type="button"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                  {(selectedOptions.length === 0 && !otherValue.trim()) && (
+                    <p className="text-gray-500 text-sm italic">Aucun partenaire sélectionné</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {currentQuestion.type === 'radio' && (
             <div className="space-y-4">
