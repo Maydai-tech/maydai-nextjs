@@ -18,17 +18,11 @@
   --color-primary-dark: var(--primary-dark);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: #ffffff;
+  color: #171717;
   font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
 }
 
 /* Custom classes for auth forms - Styles cohérents avec fond blanc et texte foncé */
