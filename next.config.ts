@@ -1,7 +1,57 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          // Empêche les navigateurs de deviner le type MIME
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          // Empêche l'affichage de la page dans une iframe
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          // Protection XSS intégrée du navigateur
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          // Contrôle des informations de référence
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          // Politique de sécurité du contenu
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "connect-src 'self' https://*.supabase.co",
+              "font-src 'self' data:",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "frame-ancestors 'none'",
+              "upgrade-insecure-requests"
+            ].join('; '),
+          },
+          // Protection contre les attaques de sniffing MIME
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
