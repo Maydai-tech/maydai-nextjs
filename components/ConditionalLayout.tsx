@@ -13,7 +13,7 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
   const { user, loading } = useAuth();
   
   // Pages où on ne veut pas afficher la sidebar
-  const noSidebarPages = ['/', '/login', '/signup', '/dashboard/companies'];
+  const noSidebarPages = ['/', '/login', '/signup', '/dashboard/companies', '/companies/new'];
   const shouldShowSidebar = !noSidebarPages.includes(pathname) && user && !loading;
 
   if (shouldShowSidebar) {
