@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
@@ -18,6 +18,8 @@ import {
   Calendar
 } from 'lucide-react'
 
+// Force dynamic rendering to prevent prerender errors
+export const dynamic = 'force-dynamic'
 
 interface Company {
   id: string
@@ -48,7 +50,7 @@ interface Question {
   hasOtherOption?: boolean
 }
 
-export default function NewUseCasePage() {
+function NewUseCasePageContent() {
   // Add animation styles
   const animationStyles = `
     .animate-fadeIn {
@@ -270,6 +272,12 @@ export default function NewUseCasePage() {
       router.push('/dashboard/companies')
     }
   }, [user, mounted, companyId])
+
+  // Additional safety check for SSR
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setMounted(true)
+  }, [])
 
   const fetchCompany = async () => {
     try {
@@ -504,6 +512,18 @@ export default function NewUseCasePage() {
     }
   }
 
+  // Early return for SSR/initial render
+  if (typeof window === 'undefined') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0080A3]"></div>
+          <p className="mt-4 text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    )
+  }
+
   // Show loading state during SSR and initial client load
   if (!mounted || loading) {
     return (
@@ -639,8 +659,6 @@ export default function NewUseCasePage() {
               </div>
             </div>
           )}
-
-
 
           {currentQuestion.type === 'select' && (
             <div className="space-y-4">
@@ -939,5 +957,20 @@ export default function NewUseCasePage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function NewUseCasePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0080A3]"></div>
+          <p className="mt-4 text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <NewUseCasePageContent />
+    </Suspense>
   )
 } 

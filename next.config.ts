@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
     // Désactive ESLint pendant le build de production
     ignoreDuringBuilds: true,
   },
+  // Disable static optimization for pages that use search params
+  trailingSlash: false,
+  output: 'standalone',
   async headers() {
     return [
       {
