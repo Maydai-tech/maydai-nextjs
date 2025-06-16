@@ -68,7 +68,7 @@ export async function GET(
     // Get user's profile to check access
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('company_id, role')
+      .select('company_id')
       .eq('id', user.id)
       .single()
 
@@ -77,8 +77,8 @@ export async function GET(
     }
 
     // Check if user has access to this use case
-    // Users can access use cases from their company or if they are admin
-    const hasAccess = profile.company_id === useCase.company_id || profile.role === 'admin'
+    // Users can access use cases from their company
+    const hasAccess = profile.company_id === useCase.company_id
     
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })

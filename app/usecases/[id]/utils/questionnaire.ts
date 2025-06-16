@@ -1,0 +1,147 @@
+import { Question, QuestionAnswer, QuestionProgress } from '../types/usecase'
+
+// Navigation logic
+export const getNextQuestion = (currentQuestionId: string, answers: Record<string, any>): string | null => {
+  switch (currentQuestionId) {
+    case 'E4.N7.Q1':
+      return 'E4.N7.Q2'
+    case 'E4.N7.Q2':
+      return 'E4.N7.Q3'
+    case 'E4.N7.Q3':
+      // Check if any high-risk domain/activity is selected
+      const q2Answers = answers['E4.N7.Q2'] || []
+      const q3Answers = answers['E4.N7.Q3'] || []
+      const hasRiskAnswers = (q2Answers.length > 0 && !q2Answers.includes('Aucun de ces domaines')) ||
+                           (q3Answers.length > 0 && !q3Answers.includes('Aucune de ces activités'))
+      return hasRiskAnswers ? 'E5.N8.Q1' : 'E4.N8.Q12'
+    
+    // High-risk sequence
+    case 'E5.N8.Q1': return 'E5.N8.Q2'
+    case 'E5.N8.Q2': return 'E5.N9.Q3'
+    case 'E5.N9.Q3': return 'E5.N9.Q4'
+    case 'E5.N9.Q4': return 'E5.N9.Q5'
+    case 'E5.N9.Q5': return 'E5.N9.Q6'
+    case 'E5.N9.Q6': return 'E5.N9.Q7'
+    case 'E5.N9.Q7': return 'E5.N9.Q8'
+    case 'E5.N9.Q8': return 'E5.N9.Q9'
+    case 'E5.N9.Q9': return 'E4.N8.Q12'
+    
+    // Critical question
+    case 'E4.N8.Q12':
+      return answers['E4.N8.Q12'] === 'Oui' ? null : 'E4.N8.Q9' // End if games/spam, continue otherwise
+    
+    // Additional questions
+    case 'E4.N8.Q9':
+      return answers['E4.N8.Q9'] === 'Oui' ? 'E4.N8.Q10' : 'E4.N8.Q11'
+    case 'E4.N8.Q10': return 'E4.N8.Q11'
+    case 'E4.N8.Q11': return 'E6.N10.Q1'
+    
+    // Transparency questions
+    case 'E6.N10.Q1': return 'E6.N10.Q2'
+    case 'E6.N10.Q2': return null // End
+    
+    default: return null
+  }
+}
+
+export const getQuestionProgress = (currentQuestionId: string, answers: Record<string, any>): QuestionProgress => {
+  // Calculate estimated total questions based on current path
+  let totalQuestions = 3 // Always Q1, Q2, Q3
+  
+  const q2Answers = answers['E4.N7.Q2'] || []
+  const q3Answers = answers['E4.N7.Q3'] || []
+  const hasRiskAnswers = (q2Answers.length > 0 && !q2Answers.includes('Aucun de ces domaines')) ||
+                        (q3Answers.length > 0 && !q3Answers.includes('Aucune de ces activités'))
+  
+  if (hasRiskAnswers) {
+    totalQuestions += 9 // High-risk sequence
+  }
+  
+  totalQuestions += 1 // E4.N8.Q12
+  
+  if (answers['E4.N8.Q12'] === 'Non') {
+    totalQuestions += 3 // E4.N8.Q9, Q11, transparency questions
+    if (answers['E4.N8.Q9'] === 'Oui') {
+      totalQuestions += 1 // E4.N8.Q10
+    }
+  }
+  
+  // Count current progress
+  const questionOrder = ['E4.N7.Q1', 'E4.N7.Q2', 'E4.N7.Q3']
+  if (hasRiskAnswers) {
+    questionOrder.push('E5.N8.Q1', 'E5.N8.Q2', 'E5.N9.Q3', 'E5.N9.Q4', 'E5.N9.Q5', 'E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8', 'E5.N9.Q9')
+  }
+  questionOrder.push('E4.N8.Q12')
+  if (answers['E4.N8.Q12'] === 'Non') {
+    questionOrder.push('E4.N8.Q9')
+    if (answers['E4.N8.Q9'] === 'Oui') {
+      questionOrder.push('E4.N8.Q10')
+    }
+    questionOrder.push('E4.N8.Q11', 'E6.N10.Q1', 'E6.N10.Q2')
+  }
+  
+  const currentIndex = questionOrder.indexOf(currentQuestionId) + 1
+  
+  return {
+    current: currentIndex,
+    total: totalQuestions,
+    percentage: Math.round((currentIndex / totalQuestions) * 100)
+  }
+}
+
+// Helper function to check if user can proceed
+export const checkCanProceed = (question: Question, answer: any): boolean => {
+  if (!question) return false
+  
+  switch (question.type) {
+    case 'radio':
+      return typeof answer === 'string' && answer.length > 0
+    case 'checkbox':
+      return Array.isArray(answer) && answer.length > 0
+    case 'tags':
+      return Array.isArray(answer) && answer.length > 0
+    case 'conditional':
+      if (!answer) return false
+      if (typeof answer === 'string') return answer.length > 0
+      if (typeof answer === 'object' && answer.selected) {
+        if (answer.selected === 'Si oui préciser') {
+          return answer.conditionalValues && Object.values(answer.conditionalValues).some((v: any) => v && v.length > 0)
+        }
+        return true
+      }
+      return false
+    default:
+      return false
+  }
+}
+
+// Utility functions for styling
+export const getRiskLevelColor = (riskLevel: string): string => {
+  switch (riskLevel?.toLowerCase()) {
+    case 'high': return 'text-red-700 bg-red-50 border border-red-200'
+    case 'limited': return 'text-yellow-700 bg-yellow-50 border border-yellow-200'
+    case 'minimal': return 'text-green-700 bg-green-50 border border-green-200'
+    case 'unacceptable': return 'text-red-800 bg-red-100 border border-red-300'
+    default: return 'text-gray-700 bg-gray-50 border border-gray-200'
+  }
+}
+
+export const getStatusColor = (status: string): string => {
+  switch (status?.toLowerCase()) {
+    case 'active': return 'text-green-700 bg-green-50 border border-green-200'
+    case 'draft': return 'text-gray-700 bg-gray-50 border border-gray-200'
+    case 'under_review': return 'text-yellow-700 bg-yellow-50 border border-yellow-200'
+    case 'suspended': return 'text-red-700 bg-red-50 border border-red-200'
+    default: return 'text-gray-700 bg-gray-50 border border-gray-200'
+  }
+}
+
+export const formatDate = (dateString: string): string => {
+  return new Date(dateString).toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+} 
