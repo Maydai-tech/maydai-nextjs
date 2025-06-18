@@ -14,7 +14,7 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
         <label
           key={index}
           className={`flex items-start p-4 border rounded-lg cursor-pointer transition-all hover:bg-gray-50 ${
-            currentAnswer === option
+            currentAnswer === option.code
               ? 'border-[#0080A3] bg-[#0080A3]/5'
               : 'border-gray-200'
           }`}
@@ -22,12 +22,12 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
           <input
             type="radio"
             name={question.id}
-            value={option}
-            checked={currentAnswer === option}
-            onChange={() => onAnswerChange(option)}
+            value={option.code}
+            checked={currentAnswer === option.code}
+            onChange={() => onAnswerChange(option.code)}
             className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3]"
           />
-          <span className="text-gray-900 leading-relaxed">{option}</span>
+          <span className="text-gray-900 leading-relaxed">{option.label}</span>
         </label>
       ))}
     </div>
@@ -42,7 +42,7 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
           <label
             key={index}
             className={`flex items-start p-4 border rounded-lg cursor-pointer transition-all hover:bg-gray-50 ${
-              checkboxAnswers.includes(option)
+              checkboxAnswers.includes(option.code)
                 ? 'border-[#0080A3] bg-[#0080A3]/5'
                 : 'border-gray-200'
             }`}
@@ -50,18 +50,18 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
             <input
               type="checkbox"
               name={question.id}
-              value={option}
-              checked={checkboxAnswers.includes(option)}
+              value={option.code}
+              checked={checkboxAnswers.includes(option.code)}
               onChange={(e) => {
                 if (e.target.checked) {
-                  onAnswerChange([...checkboxAnswers, option])
+                  onAnswerChange([...checkboxAnswers, option.code])
                 } else {
-                  onAnswerChange(checkboxAnswers.filter((item: string) => item !== option))
+                  onAnswerChange(checkboxAnswers.filter((item: string) => item !== option.code))
                 }
               }}
               className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3]"
             />
-            <span className="text-gray-900 leading-relaxed">{option}</span>
+            <span className="text-gray-900 leading-relaxed">{option.label}</span>
           </label>
         ))}
       </div>
@@ -79,25 +79,28 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
               key={index}
               type="button"
               onClick={() => {
-                if (tagAnswers.includes(option)) {
-                  onAnswerChange(tagAnswers.filter((item: string) => item !== option))
+                if (tagAnswers.includes(option.code)) {
+                  onAnswerChange(tagAnswers.filter((item: string) => item !== option.code))
                 } else {
-                  onAnswerChange([...tagAnswers, option])
+                  onAnswerChange([...tagAnswers, option.code])
                 }
               }}
               className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
-                tagAnswers.includes(option)
+                tagAnswers.includes(option.code)
                   ? 'bg-[#0080A3] text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              {option}
+              {option.label}
             </button>
           ))}
         </div>
         {tagAnswers.length > 0 && (
           <div className="text-sm text-gray-600">
-            Sélectionnés: {tagAnswers.join(', ')}
+            Sélectionnés: {tagAnswers.map(code => {
+              const opt = question.options.find(o => o.code === code)
+              return opt ? opt.label : code
+            }).join(', ')}
           </div>
         )}
       </div>
@@ -123,8 +126,8 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
             <label
               key={index}
               className={`flex items-start p-4 border rounded-lg cursor-pointer transition-all hover:bg-gray-50 ${
-                (typeof currentAnswer === 'string' && currentAnswer === option) ||
-                (typeof currentAnswer === 'object' && currentAnswer.selected === option)
+                (typeof currentAnswer === 'string' && currentAnswer === option.code) ||
+                (typeof currentAnswer === 'object' && currentAnswer.selected === option.code)
                   ? 'border-[#0080A3] bg-[#0080A3]/5'
                   : 'border-gray-200'
               }`}
@@ -132,21 +135,21 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
               <input
                 type="radio"
                 name={question.id}
-                value={option}
+                value={option.code}
                 checked={
-                  (typeof currentAnswer === 'string' && currentAnswer === option) ||
-                  (typeof currentAnswer === 'object' && currentAnswer.selected === option)
+                  (typeof currentAnswer === 'string' && currentAnswer === option.code) ||
+                  (typeof currentAnswer === 'object' && currentAnswer.selected === option.code)
                 }
-                onChange={() => handleConditionalChange(option)}
+                onChange={() => handleConditionalChange(option.code)}
                 className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3]"
               />
-              <span className="text-gray-900 leading-relaxed">{option}</span>
+              <span className="text-gray-900 leading-relaxed">{option.label}</span>
             </label>
           ))}
         </div>
 
         {/* Conditional fields */}
-        {typeof currentAnswer === 'object' && currentAnswer.selected === 'Si oui préciser' && question.conditionalFields && (
+        {typeof currentAnswer === 'object' && question.conditionalFields && (
           <div className="ml-6 space-y-3 border-l-2 border-gray-200 pl-4">
             {question.conditionalFields.map((field, index) => (
               <div key={index}>
@@ -158,7 +161,7 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
                   placeholder={field.placeholder}
                   value={(currentAnswer.conditionalValues && currentAnswer.conditionalValues[field.label]) || ''}
                   onChange={(e) => {
-                    handleConditionalChange('Si oui préciser', {
+                    handleConditionalChange(currentAnswer.selected, {
                       ...(currentAnswer.conditionalValues || {}),
                       [field.label]: e.target.value
                     })

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { QuestionnaireData } from '../types/usecase'
 import { QUESTIONS } from '../data/questions'
 import { getNextQuestion, getQuestionProgress, checkCanProceed, getPreviousQuestion, buildQuestionPath } from '../utils/questionnaire'
@@ -49,18 +49,25 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
   // Charger les réponses existantes au montage
   useEffect(() => {
     if (Object.keys(formattedAnswers).length > 0) {
-      setQuestionnaireData(prev => ({
-        ...prev,
-        answers: formattedAnswers
-      }))
+      setQuestionnaireData(prev => {
+        // Éviter la mise à jour si les réponses sont identiques
+        const answersChanged = JSON.stringify(prev.answers) !== JSON.stringify(formattedAnswers)
+        if (answersChanged) {
+          return {
+            ...prev,
+            answers: formattedAnswers
+          }
+        }
+        return prev
+      })
     }
   }, [formattedAnswers])
 
-  // Reconstruire l'historique des questions quand les réponses changent
+  // Reconstruire l'historique des questions uniquement quand l'ID de la question courante change
   useEffect(() => {
     const currentPath = buildQuestionPath(questionnaireData.currentQuestionId, questionnaireData.answers)
     setQuestionHistory(currentPath)
-  }, [questionnaireData.currentQuestionId, questionnaireData.answers])
+  }, [questionnaireData.currentQuestionId])
 
   const currentQuestion = QUESTIONS[questionnaireData.currentQuestionId]
   const progress = getQuestionProgress(questionnaireData.currentQuestionId, questionnaireData.answers)
@@ -70,27 +77,22 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
   const canGoBack = getPreviousQuestion(questionnaireData.currentQuestionId, questionHistory) !== null
 
   // Fonction pour sauvegarder une réponse individuelle avec les codes appropriés
-  const saveIndividualResponse = async (questionId: string, answer: any) => {
+  const saveIndividualResponse = useCallback(async (questionId: string, answer: any) => {
     const question = QUESTIONS[questionId]
     if (!question) return
 
     try {
       if (question.type === 'radio') {
-        // Pour les boutons radio, sauvegarder le code de l'option sélectionnée
-        const selectedOption = question.options.find(opt => opt.label === answer)
-        if (selectedOption) {
-          await saveResponse(questionId, selectedOption.code)
-        }
+        // Pour les boutons radio, la réponse est déjà un code
+        await saveResponse(questionId, answer)
       } else if (question.type === 'checkbox' || question.type === 'tags') {
-        // Pour les checkboxes/tags, sauvegarder les codes des options sélectionnées
-        const selectedCodes = answer.map((selectedLabel: string) => {
-          const option = question.options.find(opt => opt.label === selectedLabel)
-          return option?.code
-        }).filter(Boolean)
-        
+        // Pour les checkboxes/tags, les réponses sont déjà des codes
         await saveResponse(questionId, undefined, { 
-          selected_codes: selectedCodes, 
-          selected_labels: answer 
+          selected_codes: answer,
+          selected_labels: answer.map((code: string) => {
+            const option = question.options.find(opt => opt.code === code)
+            return option?.label || code
+          })
         })
       } else if (question.type === 'conditional') {
         // Pour les questions conditionnelles, sauvegarder la structure complète
@@ -100,9 +102,9 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
       console.error('Error saving individual response:', err)
       // Ne pas bloquer l'utilisateur en cas d'erreur de sauvegarde individuelle
     }
-  }
+  }, [saveResponse])
 
-  const handleAnswerSelect = async (answer: any) => {
+  const handleAnswerSelect = useCallback(async (answer: any) => {
     // Mettre à jour l'état local immédiatement
     setQuestionnaireData(prev => ({
       ...prev,
@@ -114,36 +116,9 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
 
     // Sauvegarder la réponse automatiquement
     await saveIndividualResponse(currentQuestion.id, answer)
-  }
+  }, [currentQuestion.id, saveIndividualResponse])
 
-  const handleNext = () => {
-    if (isLastQuestion) {
-      handleSubmit()
-    } else {
-      setQuestionnaireData(prev => ({
-        ...prev,
-        currentQuestionId: nextQuestionId!
-      }))
-      
-      // Ajouter la nouvelle question à l'historique si elle n'y est pas déjà
-      if (!questionHistory.includes(nextQuestionId!)) {
-        setQuestionHistory(prev => [...prev, nextQuestionId!])
-      }
-    }
-  }
-
-  const handlePrevious = () => {
-    const previousQuestionId = getPreviousQuestion(questionnaireData.currentQuestionId, questionHistory)
-    
-    if (previousQuestionId) {
-      setQuestionnaireData(prev => ({
-        ...prev,
-        currentQuestionId: previousQuestionId
-      }))
-    }
-  }
-
-  const updateUsecaseStatus = async (status: string) => {
+  const updateUsecaseStatus = useCallback(async (status: string) => {
     try {
       const { error } = await supabase
         .from('usecases')
@@ -160,9 +135,9 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
       console.error('Error updating usecase status:', err)
       throw new Error('Failed to update questionnaire status')
     }
-  }
+  }, [usecaseId])
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     setIsSubmitting(true)
     setError(null)
     
@@ -194,7 +169,34 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
     } finally {
       setIsSubmitting(false)
     }
-  }
+  }, [questionnaireData.answers, saveMultiple, updateUsecaseStatus, onComplete])
+
+  const handleNext = useCallback(() => {
+    if (isLastQuestion) {
+      handleSubmit()
+    } else {
+      setQuestionnaireData(prev => ({
+        ...prev,
+        currentQuestionId: nextQuestionId!
+      }))
+      
+      // Ajouter la nouvelle question à l'historique si elle n'y est pas déjà
+      if (!questionHistory.includes(nextQuestionId!)) {
+        setQuestionHistory(prev => [...prev, nextQuestionId!])
+      }
+    }
+  }, [isLastQuestion, nextQuestionId, questionHistory, handleSubmit])
+
+  const handlePrevious = useCallback(() => {
+    const previousQuestionId = getPreviousQuestion(questionnaireData.currentQuestionId, questionHistory)
+    
+    if (previousQuestionId) {
+      setQuestionnaireData(prev => ({
+        ...prev,
+        currentQuestionId: previousQuestionId
+      }))
+    }
+  }, [questionnaireData.currentQuestionId, questionHistory])
 
   return {
     questionnaireData,
