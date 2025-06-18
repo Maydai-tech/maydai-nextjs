@@ -1,7 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { UseCase, Progress } from '../types/usecase'
-import { getRiskLevelColor, getStatusColor } from '../utils/questionnaire'
+import { getRiskLevelColor, getStatusColor, getUseCaseStatusInFrench } from '../utils/questionnaire'
 import { ArrowLeft, Brain, Building, Shield, CheckCircle, Clock } from 'lucide-react'
 
 interface UseCaseHeaderProps {
@@ -10,16 +10,18 @@ interface UseCaseHeaderProps {
 }
 
 const getStatusIcon = (status: string) => {
-  switch (status?.toLowerCase()) {
-    case 'active': return <CheckCircle className="h-4 w-4" />
-    case 'draft': return <Clock className="h-4 w-4" />
-    case 'under_review': return <Clock className="h-4 w-4" />
-    case 'suspended': return <Shield className="h-4 w-4" />
+  const frenchStatus = getUseCaseStatusInFrench(status)
+  switch (frenchStatus.toLowerCase()) {
+    case 'terminé': return <CheckCircle className="h-4 w-4" />
+    case 'en cours': return <Clock className="h-4 w-4" />
+    case 'à compléter': return <Clock className="h-4 w-4" />
     default: return <Clock className="h-4 w-4" />
   }
 }
 
 export function UseCaseHeader({ useCase, progress }: UseCaseHeaderProps) {
+  const frenchStatus = getUseCaseStatusInFrench(useCase.status)
+  
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
       <div className="flex items-center justify-between mb-4">
@@ -46,9 +48,9 @@ export function UseCaseHeader({ useCase, progress }: UseCaseHeaderProps) {
               </p>
             )}
             <div className="flex flex-wrap gap-2 mt-3">
-              <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(useCase.status)}`}>
+              <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(frenchStatus)}`}>
                 {getStatusIcon(useCase.status)}
-                <span className="ml-1">{useCase.status}</span>
+                <span className="ml-1">{frenchStatus}</span>
               </span>
               {useCase.risk_level && (
                 <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getRiskLevelColor(useCase.risk_level)}`}>
