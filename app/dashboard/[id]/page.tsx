@@ -39,14 +39,6 @@ interface UseCase {
   responsible_service: string
 }
 
-interface Progress {
-  usecase_id: string
-  completion_percentage: number
-  is_completed: boolean
-  answered_questions: number
-  total_questions: number
-}
-
 interface DashboardProps {
   params: Promise<{
     id: string
@@ -60,7 +52,6 @@ export default function CompanyDashboard({ params }: DashboardProps) {
   const [companyId, setCompanyId] = useState<string>('')
   const [company, setCompany] = useState<Company | null>(null)
   const [useCases, setUseCases] = useState<UseCase[]>([])
-  const [progress, setProgress] = useState<Progress[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const api = useApiCall()
 
@@ -113,21 +104,11 @@ export default function CompanyDashboard({ params }: DashboardProps) {
       if (useCasesResponse.data) {
         setUseCases(useCasesResponse.data)
       }
-
-      // Fetch progress for this company's use cases
-      const progressResponse = await api.get(`/api/companies/${companyId}/progress`)
-      if (progressResponse.data) {
-        setProgress(progressResponse.data)
-      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
       setLoadingData(false)
     }
-  }
-
-  const getProgressForUseCase = (useCaseId: string) => {
-    return progress.find(p => p.usecase_id === useCaseId)
   }
 
   const getRiskLevelColor = (riskLevel: string) => {
@@ -141,12 +122,44 @@ export default function CompanyDashboard({ params }: DashboardProps) {
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'active': return 'text-green-700 bg-green-50 border border-green-200'
-      case 'draft': return 'text-gray-700 bg-gray-50 border border-gray-200'
-      case 'under_review': return 'text-yellow-700 bg-yellow-50 border border-yellow-200'
-      case 'suspended': return 'text-red-700 bg-red-50 border border-red-200'
+      case 'terminé': return 'text-green-700 bg-green-50 border border-green-200'
+      case 'en cours': return 'text-yellow-700 bg-yellow-50 border border-yellow-200'
+      case 'a compléter': return 'text-gray-700 bg-gray-50 border border-gray-200'
       default: return 'text-gray-700 bg-gray-50 border border-gray-200'
     }
+  }
+
+  const getUseCaseStatusInFrench = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'completed':
+      case 'active': 
+        return 'Terminé'
+      case 'in_progress':
+      case 'under_review':
+        return 'En cours'
+      case 'draft':
+      case 'not_started':
+      default:
+        return 'À compléter'
+    }
+  }
+
+  const getCompletedCount = () => {
+    return useCases.filter(useCase => 
+      ['completed', 'active'].includes(useCase.status?.toLowerCase())
+    ).length
+  }
+
+  const getInProgressCount = () => {
+    return useCases.filter(useCase => 
+      ['in_progress', 'under_review'].includes(useCase.status?.toLowerCase())
+    ).length
+  }
+
+  const getNotStartedCount = () => {
+    return useCases.filter(useCase => 
+      ['draft', 'not_started'].includes(useCase.status?.toLowerCase()) || !useCase.status
+    ).length
   }
 
   // Show loading state during SSR and initial client load
@@ -249,7 +262,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
               <div className="sm:ml-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-600">Conformes</p>
                 <p className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {progress.filter(p => p.is_completed).length}
+                  {getCompletedCount()}
                 </p>
               </div>
             </div>
@@ -263,7 +276,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
               <div className="sm:ml-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-600">En cours</p>
                 <p className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {progress.filter(p => !p.is_completed).length}
+                  {getInProgressCount()}
                 </p>
               </div>
             </div>
@@ -277,7 +290,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
               <div className="sm:ml-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-600">Non démarrés</p>
                 <p className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {useCases.length - progress.length}
+                  {getNotStartedCount()}
                 </p>
               </div>
             </div>
@@ -317,8 +330,6 @@ export default function CompanyDashboard({ params }: DashboardProps) {
             ) : (
               <div className="space-y-4">
                 {useCases.map((useCase) => {
-                  const useCaseProgress = getProgressForUseCase(useCase.id)
-                  
                   return (
                     <Link
                       key={useCase.id}
@@ -330,8 +341,8 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                           <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
                             <h3 className="font-medium text-gray-900 truncate">{useCase.name}</h3>
                             <div className="flex flex-wrap gap-2">
-                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(useCase.status)}`}>
-                                {useCase.status}
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(getUseCaseStatusInFrench(useCase.status))}`}>
+                                {getUseCaseStatusInFrench(useCase.status)}
                               </span>
                               {useCase.risk_level && (
                                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRiskLevelColor(useCase.risk_level)}`}>
@@ -346,22 +357,6 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                             {useCase.technology_partner && <span className="hidden sm:inline">• {useCase.technology_partner}</span>}
                             {useCase.technology_partner && <span className="sm:hidden text-xs">{useCase.technology_partner}</span>}
                           </div>
-                        </div>
-                        <div className="flex justify-end sm:ml-4">
-                          {useCaseProgress ? (
-                            <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded-lg">
-                              {useCaseProgress.is_completed ? (
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <Clock className="h-4 w-4 text-yellow-600" />
-                              )}
-                              <span className="text-sm font-medium">
-                                {Math.round(useCaseProgress.completion_percentage)}%
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-400 bg-white px-3 py-2 rounded-lg">Non démarré</span>
-                          )}
                         </div>
                       </div>
                     </Link>

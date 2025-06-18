@@ -114,7 +114,10 @@ export default function Sidebar() {
         <nav className="flex-1 p-4 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            // Dashboard should be highlighted when on dashboard pages or usecase pages
+            const isActive = item.name === 'Dashboard' 
+              ? (pathname === item.href || pathname.startsWith('/usecases/'))
+              : pathname === item.href;
             
             return (
               <Link
