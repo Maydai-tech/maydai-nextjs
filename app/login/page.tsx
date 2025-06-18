@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
@@ -11,12 +11,13 @@ type Step = 'email' | 'otp'
 export default function LoginPage() {
   const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
-  const [otpCode, setOtpCode] = useState('')
+  const [otpCode, setOtpCode] = useState(['', '', '', '', '', ''])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
   const { signInWithOtp, verifyOtp, user } = useAuth()
   const router = useRouter()
+  const otpInputs = useRef<(HTMLInputElement | null)[]>([])
 
   useEffect(() => {
     if (user) {
@@ -54,7 +55,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const { error } = await verifyOtp(email, otpCode)
+      const { error } = await verifyOtp(email, otpCode.join(''))
       if (error) {
         if (error.message?.includes('Invalid token') || error.message?.includes('expired')) {
           setError('Code invalide ou expiré. Veuillez recommencer.')
@@ -73,9 +74,62 @@ export default function LoginPage() {
 
   const handleBackToEmail = () => {
     setStep('email')
-    setOtpCode('')
+    setOtpCode(['', '', '', '', '', ''])
     setOtpSent(false)
     setError('')
+  }
+
+  const handleOtpChange = (index: number, value: string) => {
+    // Si on colle du texte
+    if (value.length > 1) {
+      const pastedValue = value.replace(/[^0-9]/g, '').slice(0, 6)
+      const newOtpCode = [...otpCode]
+      
+      for (let i = 0; i < 6; i++) {
+        newOtpCode[i] = pastedValue[i] || ''
+      }
+      
+      setOtpCode(newOtpCode)
+      
+      // Focus sur la prochaine case vide ou la dernière
+      const nextEmptyIndex = newOtpCode.findIndex(code => code === '')
+      const focusIndex = nextEmptyIndex === -1 ? 5 : nextEmptyIndex
+      setTimeout(() => {
+        otpInputs.current[focusIndex]?.focus()
+      }, 0)
+      return
+    }
+
+    // Saisie normale d'un chiffre
+    if (value === '' || /^[0-9]$/.test(value)) {
+      const newOtpCode = [...otpCode]
+      newOtpCode[index] = value
+      setOtpCode(newOtpCode)
+
+      // Auto-focus sur la case suivante si un chiffre est saisi
+      if (value && index < 5) {
+        setTimeout(() => {
+          otpInputs.current[index + 1]?.focus()
+        }, 0)
+      }
+    }
+  }
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
+      // Si la case est vide et on appuie sur backspace, aller à la case précédente
+      setTimeout(() => {
+        otpInputs.current[index - 1]?.focus()
+      }, 0)
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      setTimeout(() => {
+        otpInputs.current[index - 1]?.focus()
+      }, 0)
+    } else if (e.key === 'ArrowRight' && index < 5) {
+      setTimeout(() => {
+        otpInputs.current[index + 1]?.focus()
+      }, 0)
+    }
   }
 
   return (
@@ -173,29 +227,29 @@ export default function LoginPage() {
               )}
 
               <div>
-                <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-4">
                   Code de vérification
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="otp"
-                    name="otp"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={6}
-                    required
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors text-center text-2xl tracking-widest"
-                    placeholder="123456"
-                    autoComplete="one-time-code"
-                  />
+                
+                {/* Cases individuelles pour le code OTP */}
+                <div className="flex justify-center gap-3 mb-4">
+                  {otpCode.map((digit, index) => (
+                                         <input
+                       key={index}
+                       ref={(el) => { otpInputs.current[index] = el }}
+                       type="text"
+                       inputMode="numeric"
+                       maxLength={6} // Permet le copier-coller
+                       value={digit}
+                       onChange={(e) => handleOtpChange(index, e.target.value)}
+                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                       className="w-12 h-12 text-center text-xl font-semibold border-2 border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+                       autoComplete="one-time-code"
+                     />
+                  ))}
                 </div>
-                <p className="mt-2 text-sm text-gray-500">
+                
+                <p className="text-sm text-gray-500 text-center">
                   Saisissez le code à 6 chiffres reçu par email
                 </p>
               </div>
@@ -203,7 +257,7 @@ export default function LoginPage() {
               <div className="space-y-3">
                 <button
                   type="submit"
-                  disabled={loading || otpCode.length !== 6}
+                  disabled={loading || otpCode.some(digit => digit === '')}
                   className="w-full bg-[#0080A3] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#006280] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0080A3] flex items-center justify-center gap-2"
                 >
                   {loading ? (
