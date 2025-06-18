@@ -89,6 +89,39 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
   }
 }
 
+// Navigation logic for going back to previous question
+export const getPreviousQuestion = (currentQuestionId: string, questionHistory: string[]): string | null => {
+  // Find the current question in the history
+  const currentIndex = questionHistory.indexOf(currentQuestionId)
+  
+  // If we're at the beginning or question not found in history, return null
+  if (currentIndex <= 0) {
+    return null
+  }
+  
+  // Return the previous question from history
+  return questionHistory[currentIndex - 1]
+}
+
+// Helper function to build the question path based on current state
+export const buildQuestionPath = (currentQuestionId: string, answers: Record<string, any>): string[] => {
+  const path: string[] = []
+  let questionId: string | null = 'E4.N7.Q1' // Start from the first question
+  
+  // Build the path by following the navigation logic
+  while (questionId && questionId !== currentQuestionId) {
+    path.push(questionId)
+    questionId = getNextQuestion(questionId, answers)
+  }
+  
+  // Add the current question
+  if (questionId === currentQuestionId) {
+    path.push(currentQuestionId)
+  }
+  
+  return path
+}
+
 // Helper function to check if user can proceed
 export const checkCanProceed = (question: Question, answer: any): boolean => {
   if (!question) return false

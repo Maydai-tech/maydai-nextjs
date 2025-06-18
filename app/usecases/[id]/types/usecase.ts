@@ -29,11 +29,16 @@ export interface Progress {
   total_questions: number
 }
 
+export interface QuestionOption {
+  code: string
+  label: string
+}
+
 export interface Question {
   id: string
   question: string
   type: 'radio' | 'checkbox' | 'tags' | 'conditional'
-  options: string[]
+  options: QuestionOption[]
   required: boolean
   conditionalFields?: { label: string, placeholder?: string }[]
 }

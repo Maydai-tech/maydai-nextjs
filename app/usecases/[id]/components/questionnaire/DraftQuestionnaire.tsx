@@ -2,7 +2,7 @@ import React from 'react'
 import { UseCase } from '../../types/usecase'
 import { useQuestionnaire } from '../../hooks/useQuestionnaire'
 import { QuestionRenderer } from './QuestionRenderer'
-import { CheckCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CheckCircle, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
 
 interface DraftQuestionnaireProps {
   useCase: UseCase
@@ -15,13 +15,18 @@ export function DraftQuestionnaire({ useCase, onComplete }: DraftQuestionnairePr
     progress,
     isLastQuestion,
     canProceed,
+    canGoBack,
     isSubmitting,
     isCompleted,
+    error,
     questionnaireData,
     handleAnswerSelect,
     handleNext,
     handlePrevious
-  } = useQuestionnaire(onComplete)
+  } = useQuestionnaire({
+    usecaseId: useCase.id,
+    onComplete
+  })
 
   if (isCompleted) {
     return (
@@ -34,7 +39,7 @@ export function DraftQuestionnaire({ useCase, onComplete }: DraftQuestionnairePr
             Questionnaire complété !
           </h3>
           <p className="text-gray-600 mb-4">
-            Merci d'avoir répondu aux questions. Votre cas d'usage va être évalué.
+            Merci d'avoir répondu aux questions. Votre cas d'usage a été sauvegardé et évalué.
           </p>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0080A3] mx-auto"></div>
         </div>
@@ -65,6 +70,16 @@ export function DraftQuestionnaire({ useCase, onComplete }: DraftQuestionnairePr
         </div>
       </div>
 
+      {/* Error message */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        </div>
+      )}
+
       {currentQuestion && (
         <div className="space-y-6">
           <div>
@@ -82,9 +97,9 @@ export function DraftQuestionnaire({ useCase, onComplete }: DraftQuestionnairePr
           <div className="flex justify-between pt-6 border-t border-gray-200">
             <button
               onClick={handlePrevious}
-              disabled={questionnaireData.currentQuestionId === 'E4.N7.Q1'}
+              disabled={!canGoBack}
               className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                questionnaireData.currentQuestionId === 'E4.N7.Q1'
+                !canGoBack
                   ? 'text-gray-400 cursor-not-allowed'
                   : 'text-gray-700 hover:bg-gray-100 border border-gray-300'
               }`}
@@ -105,7 +120,7 @@ export function DraftQuestionnaire({ useCase, onComplete }: DraftQuestionnairePr
               {isSubmitting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Envoi...
+                  {isLastQuestion ? 'Sauvegarde...' : 'Envoi...'}
                 </>
               ) : (
                 <>
