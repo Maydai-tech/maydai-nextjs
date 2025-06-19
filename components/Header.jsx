@@ -5,7 +5,7 @@ export default function Header() {
     <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-30">
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3 md:py-4">
         <div className="flex items-center gap-2">
-          <img src="/logo.svg" alt="MaydAI Logo" className="h-8 w-8" />
+          <img src="/logo-maydai.png" alt="MaydAI Logo" className="h-8 w-8" />
           <span className="font-bold text-xl text-primary">MaydAI</span>
         </div>
         <ul className="hidden md:flex gap-8 items-center text-gray-700 font-medium">
