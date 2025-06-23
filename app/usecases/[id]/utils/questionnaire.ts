@@ -11,8 +11,8 @@ export const getNextQuestion = (currentQuestionId: string, answers: Record<strin
       // Check if any high-risk domain/activity is selected
       const q2Answers = answers['E4.N7.Q2'] || []
       const q3Answers = answers['E4.N7.Q3'] || []
-      const hasRiskAnswers = (q2Answers.length > 0 && !q2Answers.includes('Aucun de ces domaines')) ||
-                           (q3Answers.length > 0 && !q3Answers.includes('Aucune de ces activités'))
+      const hasRiskAnswers = (q2Answers.length > 0 && !q2Answers.includes('E4.N7.Q2.I')) ||
+                           (q3Answers.length > 0 && !q3Answers.includes('E4.N7.Q3.I'))
       return hasRiskAnswers ? 'E5.N8.Q1' : 'E4.N8.Q12'
     
     // High-risk sequence
@@ -28,11 +28,11 @@ export const getNextQuestion = (currentQuestionId: string, answers: Record<strin
     
     // Critical question
     case 'E4.N8.Q12':
-      return answers['E4.N8.Q12'] === 'Oui' ? null : 'E4.N8.Q9' // End if games/spam, continue otherwise
+      return answers['E4.N8.Q12'] === 'E4.N8.Q12.A' ? null : 'E4.N8.Q9' // End if games/spam, continue otherwise
     
     // Additional questions
     case 'E4.N8.Q9':
-      return answers['E4.N8.Q9'] === 'Oui' ? 'E4.N8.Q10' : 'E4.N8.Q11'
+      return answers['E4.N8.Q9'] === 'E4.N8.Q9.A' ? 'E4.N8.Q10' : 'E4.N8.Q11'
     case 'E4.N8.Q10': return 'E4.N8.Q11'
     case 'E4.N8.Q11': return 'E6.N10.Q1'
     
@@ -50,8 +50,8 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
   
   const q2Answers = answers['E4.N7.Q2'] || []
   const q3Answers = answers['E4.N7.Q3'] || []
-  const hasRiskAnswers = (q2Answers.length > 0 && !q2Answers.includes('Aucun de ces domaines')) ||
-                        (q3Answers.length > 0 && !q3Answers.includes('Aucune de ces activités'))
+  const hasRiskAnswers = (q2Answers.length > 0 && !q2Answers.includes('E4.N7.Q2.I')) ||
+                        (q3Answers.length > 0 && !q3Answers.includes('E4.N7.Q3.I'))
   
   if (hasRiskAnswers) {
     totalQuestions += 9 // High-risk sequence
@@ -59,9 +59,9 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
   
   totalQuestions += 1 // E4.N8.Q12
   
-  if (answers['E4.N8.Q12'] === 'Non') {
+  if (answers['E4.N8.Q12'] === 'E4.N8.Q12.B') {
     totalQuestions += 3 // E4.N8.Q9, Q11, transparency questions
-    if (answers['E4.N8.Q9'] === 'Oui') {
+    if (answers['E4.N8.Q9'] === 'E4.N8.Q9.A') {
       totalQuestions += 1 // E4.N8.Q10
     }
   }
@@ -72,9 +72,9 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
     questionOrder.push('E5.N8.Q1', 'E5.N8.Q2', 'E5.N9.Q3', 'E5.N9.Q4', 'E5.N9.Q5', 'E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8', 'E5.N9.Q9')
   }
   questionOrder.push('E4.N8.Q12')
-  if (answers['E4.N8.Q12'] === 'Non') {
+  if (answers['E4.N8.Q12'] === 'E4.N8.Q12.B') {
     questionOrder.push('E4.N8.Q9')
-    if (answers['E4.N8.Q9'] === 'Oui') {
+    if (answers['E4.N8.Q9'] === 'E4.N8.Q9.A') {
       questionOrder.push('E4.N8.Q10')
     }
     questionOrder.push('E4.N8.Q11', 'E6.N10.Q1', 'E6.N10.Q2')
@@ -137,7 +137,11 @@ export const checkCanProceed = (question: Question, answer: any): boolean => {
       if (!answer) return false
       if (typeof answer === 'string') return answer.length > 0
       if (typeof answer === 'object' && answer.selected) {
-        if (answer.selected === 'Si oui préciser') {
+        // Check if it's a "Oui" option (ends with .B) with conditional fields or "Other" option (E4.N8.Q10.G)
+        const isYesWithConditional = answer.selected.endsWith('.B') && question.conditionalFields && question.conditionalFields.length > 0
+        const isOtherOption = answer.selected === 'E4.N8.Q10.G'
+        
+        if (isYesWithConditional || isOtherOption) {
           return answer.conditionalValues && Object.values(answer.conditionalValues).some((v: any) => v && v.length > 0)
         }
         return true

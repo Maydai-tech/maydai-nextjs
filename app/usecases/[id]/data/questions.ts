@@ -111,7 +111,7 @@ export const QUESTIONS: Record<string, Question> = {
       { code: 'E5.N9.Q6.B', label: 'Oui' },
       { code: 'E5.N9.Q6.C', label: 'Si oui préciser' }
     ],
-    conditionalFields: [{ label: 'Précisions', placeholder: 'Décrivez vos procédures...' }],
+    conditionalFields: [{ key: 'procedures_details', label: 'Précisions', placeholder: 'Décrivez vos procédures...' }],
     required: true
   },
   'E5.N9.Q7': {
@@ -124,8 +124,8 @@ export const QUESTIONS: Record<string, Question> = {
       { code: 'E5.N9.Q7.C', label: 'Si oui préciser' }
     ],
     conditionalFields: [
-      { label: 'Type', placeholder: 'Interne' },
-      { label: 'Système', placeholder: 'MaydAI' }
+      { key: 'registry_type', label: 'Type', placeholder: 'Interne' },
+      { key: 'system_name', label: 'Système', placeholder: 'MaydAI' }
     ],
     required: true
   },
@@ -139,8 +139,8 @@ export const QUESTIONS: Record<string, Question> = {
       { code: 'E5.N9.Q8.C', label: 'Si oui préciser' }
     ],
     conditionalFields: [
-      { label: 'Nom prénom', placeholder: '' },
-      { label: 'Rôle', placeholder: '' }
+      { key: 'supervisor_name', label: 'Nom prénom', placeholder: '' },
+      { key: 'supervisor_role', label: 'Rôle', placeholder: '' }
     ],
     required: true
   },
@@ -154,7 +154,7 @@ export const QUESTIONS: Record<string, Question> = {
       { code: 'E5.N9.Q9.C', label: 'Si oui préciser' }
     ],
     conditionalFields: [
-      { label: 'Détails', placeholder: 'Décrivez vos procédures...' }
+      { key: 'security_details', label: 'Détails', placeholder: 'Décrivez vos procédures...' }
     ],
     required: true
   },
@@ -193,7 +193,7 @@ export const QUESTIONS: Record<string, Question> = {
       { code: 'E4.N8.Q10.F', label: '> à 1 M' },
       { code: 'E4.N8.Q10.G', label: 'Other' }
     ],
-    conditionalFields: [{ label: 'Autre nombre', placeholder: 'Précisez...' }],
+    conditionalFields: [{ key: 'other_count', label: 'Autre nombre', placeholder: 'Précisez...' }],
     required: true
   },
   'E4.N8.Q11': {

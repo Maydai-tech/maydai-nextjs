@@ -155,14 +155,7 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
             )
           })}
         </div>
-        {tagAnswers.length > 0 && (
-          <div className="text-sm text-gray-600">
-            Sélectionnés: {tagAnswers.map(code => {
-              const opt = question.options.find(o => o.code === code)
-              return opt ? opt.label : code
-            }).join(', ')}
-          </div>
-        )}
+
       </div>
     )
   }
@@ -175,7 +168,12 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
         currentAnswer
       })
       
-      if (selectedOption === 'Si oui préciser') {
+      // Pour les questions avec des champs conditionnels, on vérifie si c'est "Oui" (code .B)
+      const hasConditionalFields = question.conditionalFields && question.conditionalFields.length > 0
+      const isYesOption = selectedOption.endsWith('.B') && hasConditionalFields
+      const isOtherOption = selectedOption === 'E4.N8.Q10.G'
+      
+      if (isYesOption || isOtherOption) {
         const newAnswer = {
           selected: selectedOption,
           conditionalValues: conditionalValues || {}
@@ -205,10 +203,13 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
       currentConditionalValues
     })
 
+    // Filtrer les options pour ne pas afficher "Si oui préciser" (code .C)
+    const visibleOptions = question.options.filter(option => !option.code.endsWith('.C'))
+
     return (
       <div className="space-y-4">
         <div className="space-y-3">
-          {question.options.map((option, index) => {
+          {visibleOptions.map((option, index) => {
             const isChecked = currentSelection === option.code
             
             return (
@@ -237,27 +238,30 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
           })}
         </div>
 
-        {/* Conditional fields */}
-        {currentSelection === 'Si oui préciser' && question.conditionalFields && (
+        {/* Conditional fields - Affichés quand "Oui" est sélectionné (.B) ou "Other" (E4.N8.Q10.G) */}
+        {((currentSelection?.endsWith('.B') && question.conditionalFields) || currentSelection === 'E4.N8.Q10.G') && question.conditionalFields && (
           <div className="ml-6 space-y-3 border-l-2 border-gray-200 pl-4">
+            <div className="text-sm font-medium text-gray-700 mb-2">
+              Veuillez préciser :
+            </div>
             {question.conditionalFields.map((field, index) => (
-              <div key={`${question.id}-field-${index}`}>
+              <div key={`${question.id}-${field.key}`}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {field.label}
                 </label>
                 <input
                   type="text"
                   placeholder={field.placeholder}
-                  value={currentConditionalValues[field.label] || ''}
+                  value={currentConditionalValues[field.key] || ''}
                   onChange={(e) => {
                     console.log('Conditional field change:', {
-                      field: field.label,
+                      field: field.key,
                       value: e.target.value
                     })
                     
                     const newConditionalValues = {
                       ...currentConditionalValues,
-                      [field.label]: e.target.value
+                      [field.key]: e.target.value
                     }
                     
                     handleConditionalChange(currentSelection!, newConditionalValues)

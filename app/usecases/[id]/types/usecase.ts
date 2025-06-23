@@ -40,7 +40,7 @@ export interface Question {
   type: 'radio' | 'checkbox' | 'tags' | 'conditional'
   options: QuestionOption[]
   required: boolean
-  conditionalFields?: { label: string, placeholder?: string }[]
+  conditionalFields?: { key: string, label: string, placeholder?: string }[]
 }
 
 export interface QuestionnaireData {
