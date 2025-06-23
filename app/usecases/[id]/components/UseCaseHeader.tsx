@@ -2,7 +2,9 @@ import React from 'react'
 import Link from 'next/link'
 import { UseCase, Progress } from '../types/usecase'
 import { getRiskLevelColor, getStatusColor, getUseCaseStatusInFrench } from '../utils/questionnaire'
-import { ArrowLeft, Brain, Building, Shield, CheckCircle, Clock } from 'lucide-react'
+import { ArrowLeft, Brain, Building, Shield, CheckCircle, Clock, Info } from 'lucide-react'
+import { useUseCaseScore } from '../hooks/useUseCaseScore'
+import { getScoreCategory } from '../utils/score-categories'
 
 interface UseCaseHeaderProps {
   useCase: UseCase
@@ -17,6 +19,97 @@ const getStatusIcon = (status: string) => {
     case 'à compléter': return <Clock className="h-4 w-4" />
     default: return <Clock className="h-4 w-4" />
   }
+}
+
+function HeaderScore({ usecaseId }: { usecaseId: string }) {
+  const { score, loading, error } = useUseCaseScore(usecaseId)
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-4 w-full sm:w-auto">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-28 mb-3"></div>
+          <div className="h-8 bg-gray-200 rounded mb-2"></div>
+          <div className="h-3 bg-gray-200 rounded w-20 mx-auto"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !score) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-4 w-full sm:w-auto">
+        <div className="text-center">
+          <Info className="h-5 w-5 text-gray-400 mx-auto mb-2" />
+          <div className="text-sm font-medium text-gray-900 mb-1">Score non disponible</div>
+          <div className="text-xs text-gray-500">En attente de calcul</div>
+        </div>
+      </div>
+    )
+  }
+
+  const category = getScoreCategory(score.score)
+
+  // Couleurs professionnelles et sobres
+  const getProfessionalColor = (category: any) => {
+    const categoryName = category.category.toLowerCase()
+    if (categoryName.includes('excellent')) {
+      return {
+        bg: 'bg-green-50',
+        border: 'border-green-200',
+        text: 'text-green-800',
+        accent: 'text-green-600'
+      }
+    } else if (categoryName.includes('bon')) {
+      return {
+        bg: 'bg-blue-50',
+        border: 'border-blue-200',
+        text: 'text-blue-800',
+        accent: 'text-blue-600'
+      }
+    } else if (categoryName.includes('moyen')) {
+      return {
+        bg: 'bg-amber-50',
+        border: 'border-amber-200',
+        text: 'text-amber-800',
+        accent: 'text-amber-600'
+      }
+    } else {
+      return {
+        bg: 'bg-red-50',
+        border: 'border-red-200',
+        text: 'text-red-800',
+        accent: 'text-red-600'
+      }
+    }
+  }
+
+  const professionalColors = getProfessionalColor(category)
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4 w-full sm:w-auto">
+      <div className="text-center mb-3">
+        <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Score de Conformité</div>
+      </div>
+      
+      <div className={`${professionalColors.bg} ${professionalColors.border} border p-4 rounded-lg`}>
+        <div className="flex items-center justify-center space-x-3">
+          <span className={`text-2xl ${professionalColors.accent}`}>
+            {category.icon}
+          </span>
+          <div className="text-center">
+            <div className={`text-2xl font-semibold ${professionalColors.text}`}>
+              {score.score}
+              <span className="text-lg text-gray-500">/{score.max_score}</span>
+            </div>
+            <div className={`text-xs font-medium ${professionalColors.accent} mt-1`}>
+              {category.category}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function UseCaseHeader({ useCase, progress }: UseCaseHeaderProps) {
@@ -34,8 +127,8 @@ export function UseCaseHeader({ useCase, progress }: UseCaseHeaderProps) {
         </Link>
       </div>
       
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-4 sm:space-y-0">
-        <div className="flex items-start space-x-3 sm:space-x-4">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0 lg:space-x-6">
+        <div className="flex items-start space-x-3 sm:space-x-4 flex-1">
           <div className="bg-[#0080A3]/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
             <Brain className="h-6 w-6 sm:h-8 sm:w-8 text-[#0080A3]" />
           </div>
@@ -62,25 +155,30 @@ export function UseCaseHeader({ useCase, progress }: UseCaseHeaderProps) {
           </div>
         </div>
 
-        {/* Progress Card */}
-        {progress && (
-          <div className="bg-gray-50 p-4 rounded-lg w-full sm:w-auto">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Progression</span>
-              {progress.is_completed ? (
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              ) : (
-                <Clock className="h-4 w-4 text-yellow-600" />
-              )}
+        <div className="flex flex-col sm:flex-row gap-4 lg:flex-col">
+          {/* Progress Card */}
+          {progress && (
+            <div className="bg-gray-50 p-4 rounded-lg w-full sm:w-auto">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Progression</span>
+                {progress.is_completed ? (
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                ) : (
+                  <Clock className="h-4 w-4 text-yellow-600" />
+                )}
+              </div>
+              <div className="text-2xl font-bold text-gray-900 mb-1">
+                {progress.answered_questions} / {progress.total_questions}
+              </div>
+              <div className="text-xs text-gray-600">
+                questions répondues
+              </div>
             </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">
-              {progress.answered_questions} / {progress.total_questions}
-            </div>
-            <div className="text-xs text-gray-600">
-              questions répondues
-            </div>
-          </div>
-        )}
+          )}
+
+          {/* Score Card */}
+          <HeaderScore usecaseId={useCase.id} />
+        </div>
       </div>
     </div>
   )
