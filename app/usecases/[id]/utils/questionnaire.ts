@@ -89,6 +89,44 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
   }
 }
 
+// Nouvelle fonction pour calculer la progression basée sur le maximum absolu de questions
+export const getAbsoluteQuestionProgress = (currentQuestionId: string): QuestionProgress => {
+  // Nombre maximum absolu de questions possibles dans le questionnaire
+  // 3 (base) + 9 (high-risk) + 1 (critical) + 3 (additional) + 2 (transparency) = 18
+  const MAX_QUESTIONS = 18
+  
+  // Ordre global de toutes les questions possibles
+  const ALL_QUESTIONS = [
+    'E4.N7.Q1', 'E4.N7.Q2', 'E4.N7.Q3', // Base questions (3)
+    'E5.N8.Q1', 'E5.N8.Q2', 'E5.N9.Q3', 'E5.N9.Q4', 'E5.N9.Q5', 'E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8', 'E5.N9.Q9', // High-risk sequence (9)
+    'E4.N8.Q12', // Critical question (1)
+    'E4.N8.Q9', 'E4.N8.Q10', 'E4.N8.Q11', // Additional questions (3)
+    'E6.N10.Q1', 'E6.N10.Q2' // Transparency questions (2)
+  ]
+  
+  // Trouver l'index de la question courante
+  const currentIndex = ALL_QUESTIONS.indexOf(currentQuestionId)
+  
+  // Si la question n'est pas trouvée, retourner 0
+  if (currentIndex === -1) {
+    return {
+      current: 0,
+      total: MAX_QUESTIONS,
+      percentage: 0
+    }
+  }
+  
+  // Calculer la progression basée sur la position dans l'ordre global
+  const current = currentIndex + 1
+  const percentage = Math.round((current / MAX_QUESTIONS) * 100)
+  
+  return {
+    current,
+    total: MAX_QUESTIONS,
+    percentage
+  }
+}
+
 // Navigation logic for going back to previous question
 export const getPreviousQuestion = (currentQuestionId: string, questionHistory: string[]): string | null => {
   // Find the current question in the history

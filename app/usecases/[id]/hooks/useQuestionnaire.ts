@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { QuestionnaireData } from '../types/usecase'
 import { QUESTIONS } from '../data/questions'
-import { getNextQuestion, getQuestionProgress, checkCanProceed, getPreviousQuestion, buildQuestionPath } from '../utils/questionnaire'
+import { getNextQuestion, getQuestionProgress, getAbsoluteQuestionProgress, checkCanProceed, getPreviousQuestion, buildQuestionPath } from '../utils/questionnaire'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 import { supabase } from '@/lib/supabase'
 
@@ -83,7 +83,7 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
 
   // Calculer les valeurs dérivées
   const currentQuestion = QUESTIONS[questionnaireData.currentQuestionId]
-  const progress = getQuestionProgress(questionnaireData.currentQuestionId, savedAnswers)
+  const progress = getAbsoluteQuestionProgress(questionnaireData.currentQuestionId)
   const nextQuestionId = getNextQuestion(questionnaireData.currentQuestionId, questionnaireData.answers)
   const isLastQuestion = nextQuestionId === null
   const currentAnswer = questionnaireData.answers[currentQuestion?.id]

@@ -54,12 +54,9 @@ export function DraftQuestionnaire({ useCase, onComplete }: DraftQuestionnairePr
           <h2 className="text-xl font-semibold text-gray-900">
             Évaluation du cas d'usage
           </h2>
-          <span className="text-sm text-gray-500">
-            {progress.current} / {progress.total}
-          </span>
         </div>
         
-        {/* Progress bar */}
+        {/* Progress bar - basée sur le maximum absolu de questions */}
         <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
           <div
             className="bg-[#0080A3] h-2 rounded-full transition-all duration-300"
