@@ -127,13 +127,13 @@ export const QUESTION_CODE_MAPPING = {
   
   // E4.N7.Q3 - Activités spécifiques (Prohibited = -50, Others = 0)
   'E4.N7.Q3': {
-    'E4.N7.Q3.A': 0,    // Identification biométrique = 0 (Others)
-    'E4.N7.Q3.B': 0,    // Catégorisation sensible = 0 (Others)
-    'E4.N7.Q3.C': 0,    // Déduction émotions = 0 (Others)
-    'E4.N7.Q3.D': 0,    // Reconnaissance faciale = 0 (Others)
-    'E4.N7.Q3.E': 0,    // Profilage criminel = 0 (Others)
-    'E4.N7.Q3.F': 0,    // Exploitation vulnérabilités = 0 (Others)
-    'E4.N7.Q3.G': 0,    // Manipulation = 0 (Others)
+    'E4.N7.Q3.A': -50,    // Identification biométrique = 0 (Others)
+    'E4.N7.Q3.B': -50,    // Catégorisation sensible = 0 (Others)
+    'E4.N7.Q3.C': -50,    // Déduction émotions = 0 (Others)
+    'E4.N7.Q3.D': -50,    // Reconnaissance faciale = 0 (Others)
+    'E4.N7.Q3.E': -50,    // Profilage criminel = 0 (Others)
+    'E4.N7.Q3.F': -50,    // Exploitation vulnérabilités = 0 (Others)
+    'E4.N7.Q3.G': -50,    // Manipulation = 0 (Others)
     'E4.N7.Q3.H': -50,  // Notation sociale = -50 (Prohibited)
     'E4.N7.Q3.I': 0     // Aucune = 0 (Others)
   },
@@ -141,13 +141,13 @@ export const QUESTION_CODE_MAPPING = {
   // E4.N7.Q2 - Domaines d'application (High = -30, Others = 0)
   'E4.N7.Q2': {
     'E4.N7.Q2.A': -30,  // Identification Biométrique = -30 (High)
-    'E4.N7.Q2.B': 0,    // Emploi = 0 (Others)
-    'E4.N7.Q2.C': 0,    // Infrastructures critiques = 0 (Others)
-    'E4.N7.Q2.D': 0,    // Services essentiels = 0 (Others)
-    'E4.N7.Q2.E': 0,    // Migration/frontières = 0 (Others)
-    'E4.N7.Q2.F': 0,    // Justice = 0 (Others)
-    'E4.N7.Q2.G': 0,    // Éducation = 0 (Others)
-    'E4.N7.Q2.H': 0,    // Répressif = 0 (Others)
+    'E4.N7.Q2.B': -30,    // Emploi = 0 (Others)
+    'E4.N7.Q2.C': -30,    // Infrastructures critiques = 0 (Others)
+    'E4.N7.Q2.D': -30,    // Services essentiels = 0 (Others)
+    'E4.N7.Q2.E': -30,    // Migration/frontières = 0 (Others)
+    'E4.N7.Q2.F': -30,    // Justice = 0 (Others)
+    'E4.N7.Q2.G': -30,    // Éducation = 0 (Others)
+    'E4.N7.Q2.H': -30,    // Répressif = 0 (Others)
     'E4.N7.Q2.I': 0     // Aucun = 0 (Others)
   }
 }
