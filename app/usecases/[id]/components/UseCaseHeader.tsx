@@ -74,18 +74,10 @@ export function UseCaseHeader({ useCase, progress }: UseCaseHeaderProps) {
               )}
             </div>
             <div className="text-2xl font-bold text-gray-900 mb-1">
-              {Math.round(progress.completion_percentage)}%
+              {progress.answered_questions} / {progress.total_questions}
             </div>
             <div className="text-xs text-gray-600">
-              {progress.answered_questions} / {progress.total_questions} questions
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-              <div
-                className={`h-2 rounded-full transition-all ${
-                  progress.is_completed ? 'bg-green-600' : 'bg-yellow-600'
-                }`}
-                style={{ width: `${progress.completion_percentage}%` }}
-              ></div>
+              questions répondues
             </div>
           </div>
         )}

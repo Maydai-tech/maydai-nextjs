@@ -58,4 +58,37 @@ export interface QuestionProgress {
 export type QuestionAnswer = string | string[] | {
   selected: string
   conditionalValues?: Record<string, string>
+}
+
+// Nouveaux types pour le système de scoring
+export interface UseCaseScore {
+  id?: string
+  usecase_id: string
+  score: number
+  max_score: number
+  score_breakdown: ScoreBreakdown[]
+  calculated_at: string
+  version: number
+}
+
+export interface ScoreBreakdown {
+  question_id: string
+  question_text: string
+  answer_value: any
+  score_impact: number
+  reasoning: string
+}
+
+export interface ScoreCategory {
+  category: string
+  color: string
+  description: string
+  icon: string
+}
+
+export interface ScoreRule {
+  questionId: string
+  rules: {
+    [answerCode: string]: number
+  }
 } 

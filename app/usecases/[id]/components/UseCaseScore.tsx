@@ -1,0 +1,155 @@
+'use client'
+
+import { useState } from 'react'
+import { useUseCaseScore } from '../hooks/useUseCaseScore'
+import { getScoreCategory, getScoreRecommendations } from '../utils/score-categories'
+import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, Info } from 'lucide-react'
+
+interface UseCaseScoreProps {
+  usecaseId: string
+}
+
+export function UseCaseScore({ usecaseId }: UseCaseScoreProps) {
+  const { score, loading, error } = useUseCaseScore(usecaseId)
+  const [showBreakdown, setShowBreakdown] = useState(false)
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-16 bg-gray-200 rounded mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg border border-red-200 p-6">
+        <div className="flex items-center space-x-3">
+          <AlertCircle className="h-5 w-5 text-red-500" />
+          <div>
+            <h3 className="font-medium text-red-900">Erreur de calcul du score</h3>
+            <p className="text-sm text-red-700 mt-1">{error}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!score) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="text-center">
+          <Info className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Score non disponible</h3>
+          <p className="text-sm text-gray-600">
+            Le score sera calculé une fois que vous aurez répondu au questionnaire.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const category = getScoreCategory(score.score)
+  const recommendations = getScoreRecommendations(score.score, score.score_breakdown)
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900">Score de Conformité</h3>
+      </div>
+
+      {/* Score Display */}
+      <div className="p-6">
+        <div className={`p-4 rounded-lg ${category.color} mb-4`}>
+          <div className="flex items-center space-x-3">
+            <span className="text-2xl">{category.icon}</span>
+            <div>
+              <div className="text-2xl font-bold">{score.score}/{score.max_score}</div>
+              <div className="text-sm font-medium">{category.category}</div>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-sm text-gray-600 mb-4">{category.description}</p>
+
+        {/* Recommendations */}
+        {recommendations.length > 0 && (
+          <div className="mb-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-2">Recommandations</h4>
+            <ul className="space-y-1">
+              {recommendations.slice(0, 3).map((rec, index) => (
+                <li key={index} className="text-sm text-gray-600 flex items-start">
+                  <span className="text-yellow-500 mr-2 mt-0.5">•</span>
+                  {rec}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Toggle Breakdown */}
+        {score.score_breakdown.length > 0 && (
+          <button
+            onClick={() => setShowBreakdown(!showBreakdown)}
+            className="w-full flex items-center justify-between p-3 text-sm font-medium text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <span>Détail des impacts sur le score</span>
+            {showBreakdown ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Breakdown Details */}
+      {showBreakdown && score.score_breakdown.length > 0 && (
+        <div className="border-t border-gray-200 p-6 bg-gray-50">
+          <h4 className="text-sm font-medium text-gray-900 mb-3">Détail des impacts</h4>
+          <div className="space-y-3">
+            {score.score_breakdown.map((item, index) => (
+              <div key={index} className="flex items-start justify-between py-2 border-b border-gray-200 last:border-b-0">
+                <div className="flex-1 pr-4">
+                  <p className="text-sm font-medium text-gray-900 mb-1">
+                    {item.question_text}
+                  </p>
+                  <p className="text-xs text-gray-600">{item.reasoning}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {item.score_impact > 0 ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-red-500" />
+                  )}
+                  <span className={`text-sm font-medium ${
+                    item.score_impact > 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {item.score_impact > 0 ? '+' : ''}{item.score_impact}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-4 pt-3 border-t border-gray-200">
+            <p className="text-xs text-gray-500">
+              Dernière mise à jour : {new Date(score.calculated_at).toLocaleDateString('fr-FR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+} 

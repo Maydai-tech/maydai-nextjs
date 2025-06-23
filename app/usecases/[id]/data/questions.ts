@@ -55,8 +55,8 @@ export const QUESTIONS: Record<string, Question> = {
     question: 'Avez-vous établi et maintenez-vous un système de gestion des risques ?',
     type: 'radio',
     options: [
-      { code: 'E5.N8.Q1.A', label: 'Yes' },
-      { code: 'E5.N8.Q1.B', label: 'No' }
+      { code: 'E5.N8.Q1.A', label: 'Oui' },
+      { code: 'E5.N8.Q1.B', label: 'Non' }
     ],
     required: true
   },
@@ -65,8 +65,8 @@ export const QUESTIONS: Record<string, Question> = {
     question: "Votre système de gestion des risques comprend-il l'identification et l'analyse des risques et des utilisations abusives ?",
     type: 'radio',
     options: [
-      { code: 'E5.N8.Q2.A', label: 'Yes' },
-      { code: 'E5.N8.Q2.B', label: 'No' }
+      { code: 'E5.N8.Q2.A', label: 'Oui' },
+      { code: 'E5.N8.Q2.B', label: 'Non' }
     ],
     required: true
   },
@@ -75,8 +75,8 @@ export const QUESTIONS: Record<string, Question> = {
     question: "Des mesures d'atténuation des risques sont-elles mises en œuvre et leur efficacité testée, garantissant que le risque résiduel est acceptable ?",
     type: 'radio',
     options: [
-      { code: 'E5.N9.Q3.A', label: 'Yes' },
-      { code: 'E5.N9.Q3.B', label: 'No' }
+      { code: 'E5.N9.Q3.A', label: 'Oui' },
+      { code: 'E5.N9.Q3.B', label: 'Non' }
     ],
     required: true
   },
@@ -85,8 +85,8 @@ export const QUESTIONS: Record<string, Question> = {
     question: "Avez-vous établi une documentation technique complète pour votre système d'IA ?",
     type: 'radio',
     options: [
-      { code: 'E5.N9.Q4.A', label: 'Yes' },
-      { code: 'E5.N9.Q4.B', label: 'No' }
+      { code: 'E5.N9.Q4.A', label: 'Oui' },
+      { code: 'E5.N9.Q4.B', label: 'Non' }
     ],
     required: true
   },

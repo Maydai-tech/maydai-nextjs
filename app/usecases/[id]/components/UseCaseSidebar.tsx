@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { UseCase } from '../types/usecase'
 import { formatDate } from '../utils/questionnaire'
 import { Calendar, Clock, CheckCircle } from 'lucide-react'
+import { UseCaseScore } from './UseCaseScore'
 
 interface UseCaseSidebarProps {
   useCase: UseCase
@@ -11,6 +12,9 @@ interface UseCaseSidebarProps {
 export function UseCaseSidebar({ useCase }: UseCaseSidebarProps) {
   return (
     <div className="space-y-6">
+      {/* Score de Conformité */}
+      <UseCaseScore usecaseId={useCase.id} />
+
       {/* Metadata */}
       <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Informations</h3>
