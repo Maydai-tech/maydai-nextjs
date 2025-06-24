@@ -1,0 +1,54 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# UI Conventions
+
+## Design System
+
+### Color Palette
+- **Primary**: `#0080A3` - Main brand color for buttons, links, accents
+- **Primary Dark**: `#006280` - Hover states for primary elements
+- **Background**: `bg-gray-50` - Main app background
+- **Cards**: `bg-white` with `shadow-sm` or `shadow-lg`
+
+### Loading States
+Consistent loading components across the app:
+
+```tsx
+<div className="min-h-screen flex items-center justify-center">
+  <div className="text-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0080A3] mx-auto mb-4"></div>
+    <p className="text-gray-600">Chargement...</p>
+  </div>
+</div>
+```
+
+## Component Architecture
+
+### Layout Components
+- [components/Header.jsx](mdc:components/Header.jsx) - Main navigation header
+- [components/Sidebar.tsx](mdc:components/Sidebar.tsx) - Collapsible sidebar for authenticated users
+- [components/ConditionalLayout.tsx](mdc:components/ConditionalLayout.tsx) - Manages sidebar visibility
+
+### Responsive Design
+- **Mobile-first approach**: All components must work on mobile devices
+- Use `sm:`, `md:`, `lg:` Tailwind breakpoints consistently
+- Sidebar collapses on mobile with hamburger menu
+- Cards stack vertically on small screens
+
+## Accessibility
+
+- Use semantic HTML elements
+- Provide proper ARIA labels for interactive elements
+- Ensure keyboard navigation works correctly
+- Maintain proper color contrast ratios
+- Include loading states with descriptive text
+
+## File Organization
+
+- `/components/` - Reusable UI components
+- `/app/*/components/` - Page-specific components
+- Prefer TypeScript (.tsx) for new components
+- Use consistent naming: PascalCase for components

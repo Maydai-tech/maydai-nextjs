@@ -1,0 +1,39 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Questionnaire System
+
+## Storage Architecture
+
+The questionnaire system uses a dual-state approach for reliable data persistence:
+
+### 1. Local State Management
+- **Temporary answers**: Stored in `questionnaireData.answers` for immediate UI updates
+- **Saved answers**: Maintained in `savedAnswers` from Supabase for persistence
+- **Initial data loading**: Uses `initialDataLoaded` flag to prevent multiple API calls
+
+### 2. Saving Strategy
+- Responses are saved **only** when clicking "Suivant" via `saveIndividualResponse`
+- No auto-save on answer changes to prevent conflicts
+- Going back automatically loads previously saved responses
+
+### 3. Question Rendering
+[app/usecases/[id]/components/questionnaire/QuestionRenderer.tsx](mdc:app/usecases/[id]/components/questionnaire/QuestionRenderer.tsx) handles:
+- All question types with unique keys
+- Answer change management with detailed logging
+- Proper state synchronization between local and saved data
+
+## Key Files
+
+- [app/usecases/[id]/hooks/useQuestionnaire.ts](mdc:app/usecases/[id]/hooks/useQuestionnaire.ts) - Main questionnaire logic
+- [app/usecases/[id]/utils/questionnaire.ts](mdc:app/usecases/[id]/utils/questionnaire.ts) - Utility functions
+- [lib/questionnaire-api.ts](mdc:lib/questionnaire-api.ts) - API integration
+
+## Guidelines
+
+- Always use the provided hooks and utilities for questionnaire functionality
+- Maintain separation between temporary UI state and persisted data
+- Implement proper error handling for save operations
+- Log important state changes for debugging

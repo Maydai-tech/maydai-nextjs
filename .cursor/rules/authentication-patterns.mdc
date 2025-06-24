@@ -1,0 +1,63 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Authentication Patterns
+
+## Standardized Authentication Patterns
+
+The application uses 3 standardized authentication patterns:
+
+### 1. Auth Pages Pattern (`isCheckingAuth`)
+Used for: [app/login/page.tsx](mdc:app/login/page.tsx), [app/signup/page.tsx](mdc:app/signup/page.tsx)
+
+```tsx
+const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+
+useEffect(() => {
+  if (user) {
+    router.push('/dashboard/companies')
+  } else {
+    setIsCheckingAuth(false)
+  }
+}, [user, router])
+
+if (isCheckingAuth) {
+  return <LoadingComponent />
+}
+```
+
+### 2. Protected Pages Pattern (`mounted + loading`)
+Used for: [app/dashboard/companies/page.tsx](mdc:app/dashboard/companies/page.tsx), [app/usecases/[id]/page.tsx](mdc:app/usecases/[id]/page.tsx), [app/profil/page.tsx](mdc:app/profil/page.tsx)
+
+```tsx
+const [mounted, setMounted] = useState(false)
+
+useEffect(() => setMounted(true), [])
+
+useEffect(() => {
+  if (mounted && !loading && !user) {
+    router.push('/login')
+  }
+}, [user, loading, router, mounted])
+
+if (!mounted || loading) return <LoadingComponent />
+if (!user) return null
+```
+
+### 3. Admin Pages Pattern (`ProtectedRoute`)
+Used for: [app/admin/layout.tsx](mdc:app/admin/layout.tsx)
+
+```tsx
+<ProtectedRoute>
+  <AdminComponent />
+</ProtectedRoute>
+```
+
+## Security Guidelines
+
+- **Pattern 2** (`mounted + loading`) is the most secure as it prevents SSR hydration vulnerabilities
+- Always use defensive programming: assume content should be hidden by default
+- Client-side authentication is for UX only - real security must be enforced server-side
+- Use the `useAuth` hook from [lib/auth.tsx](mdc:lib/auth.tsx) for all authentication logic

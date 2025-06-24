@@ -1,0 +1,56 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# API Architecture
+
+## Authentication System
+
+### Client-Side Authentication
+Use [lib/auth.tsx](mdc:lib/auth.tsx) for all client-side authentication:
+- `useAuth()` hook provides `user`, `session`, `loading` states
+- Handles Supabase authentication with OTP and password methods
+- Manages session refresh and error handling
+
+### Server-Side Authentication
+Use [lib/api-auth.ts](mdc:lib/api-auth.ts) for API route protection:
+- `getAuthenticatedSupabaseClient()` verifies Bearer tokens
+- `useApiCall()` hook handles automatic token refresh and logout
+- All API routes must validate authentication before processing
+
+## API Route Structure
+
+### Protected Route Pattern
+```tsx
+export async function GET(request: NextRequest) {
+  try {
+    const { supabase, user } = await getAuthenticatedSupabaseClient(request)
+    
+    // Verify user permissions
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+    
+    // Your API logic here
+  } catch (error) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+}
+```
+
+## Key Principles
+
+- **Never trust client-side authentication** - always verify on the server
+- Use profile-based authorization to check company access
+- Handle authentication errors gracefully with automatic logout
+- Implement proper CORS and security headers
+- Log authentication failures for security monitoring
+
+## File Structure
+
+- `/app/api/` - All API routes
+- Each route validates authentication independently
+- Use consistent error responses and status codes
