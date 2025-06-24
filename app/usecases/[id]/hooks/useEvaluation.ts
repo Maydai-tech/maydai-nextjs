@@ -48,39 +48,50 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
 
   // Load initial data once
   useEffect(() => {
-    if (!initialDataLoaded && !loadingResponses && savedAnswers && Object.keys(savedAnswers).length > 0) {
+    if (!initialDataLoaded && !loadingResponses) {
       console.log('🔄 Loading initial data from saved responses:', savedAnswers)
       
-      // Load saved answers
-      setQuestionnaireData(prev => ({
-        ...prev,
-        answers: { ...savedAnswers }
-      }))
-      
-      // Find the correct current question based on saved answers
-      const questionPath = buildQuestionPath('E4.N7.Q1', savedAnswers)
-      let currentQuestionId = 'E4.N7.Q1'
-      
-      // Find the first unanswered question
-      for (const questionId of questionPath) {
-        if (!savedAnswers[questionId] || 
-            (Array.isArray(savedAnswers[questionId]) && savedAnswers[questionId].length === 0)) {
-          currentQuestionId = questionId
-          break
+      if (savedAnswers && Object.keys(savedAnswers).length > 0) {
+        // Load saved answers
+        setQuestionnaireData(prev => ({
+          ...prev,
+          answers: { ...savedAnswers }
+        }))
+        
+        // Find the correct current question based on saved answers
+        const questionPath = buildQuestionPath('E4.N7.Q1', savedAnswers)
+        let currentQuestionId = 'E4.N7.Q1'
+        
+        // Find the first unanswered question
+        for (const questionId of questionPath) {
+          if (!savedAnswers[questionId] || 
+              (Array.isArray(savedAnswers[questionId]) && savedAnswers[questionId].length === 0)) {
+            currentQuestionId = questionId
+            break
+          }
+          currentQuestionId = getNextQuestion(questionId, savedAnswers) || questionId
         }
-        currentQuestionId = getNextQuestion(questionId, savedAnswers) || questionId
+        
+        console.log('📍 Setting current question to:', currentQuestionId)
+        
+        setQuestionnaireData(prev => ({
+          ...prev,
+          currentQuestionId
+        }))
+        
+        // Build history up to current question
+        const historyPath = buildQuestionPath(currentQuestionId, savedAnswers)
+        setQuestionHistory(historyPath)
+      } else {
+        console.log('📍 No saved responses, starting from first question')
+        // No saved responses, start from the beginning
+        setQuestionnaireData(prev => ({
+          ...prev,
+          currentQuestionId: 'E4.N7.Q1',
+          answers: {}
+        }))
+        setQuestionHistory(['E4.N7.Q1'])
       }
-      
-      console.log('📍 Setting current question to:', currentQuestionId)
-      
-      setQuestionnaireData(prev => ({
-        ...prev,
-        currentQuestionId
-      }))
-      
-      // Build history up to current question
-      const historyPath = buildQuestionPath(currentQuestionId, savedAnswers)
-      setQuestionHistory(historyPath)
       
       setInitialDataLoaded(true)
     }
@@ -109,36 +120,40 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
     setError(null)
   }, [questionnaireData.currentQuestionId])
 
-  const saveIndividualResponse = async (questionId: string, answer: any) => {
+  const saveIndividualResponse = useCallback(async (questionId: string, answer: any) => {
     try {
       console.log(`💾 Saving response for ${questionId}:`, answer)
       
-      const { error } = await supabase
-        .from('questionnaire_responses')
-        .upsert({
-          usecase_id: usecaseId,
-          question_id: questionId,
-          answer: answer,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'usecase_id,question_id'
-        })
+      // Use the proper saveResponse method from useQuestionnaireResponses
+      const question = QUESTIONS[questionId]
+      if (!question) {
+        throw new Error(`Question not found: ${questionId}`)
+      }
 
-      if (error) {
-        console.error('❌ Error saving response:', error)
-        throw error
+      if (question.type === 'radio') {
+        await saveResponse(questionId, answer)
+      } else if (question.type === 'checkbox' || question.type === 'tags') {
+        await saveResponse(questionId, undefined, { 
+          selected_codes: answer,
+          selected_labels: answer?.map((code: string) => {
+            const option = question.options.find(opt => opt.code === code)
+            return option?.label || code
+          }) || []
+        })
+      } else if (question.type === 'conditional') {
+        await saveResponse(questionId, undefined, answer)
+      } else {
+        // Fallback for other types
+        await saveResponse(questionId, undefined, answer)
       }
       
       console.log(`✅ Successfully saved response for ${questionId}`)
-      
-      // Update local saved state
-      await saveResponse(questionId, undefined, answer)
       
     } catch (error) {
       console.error('❌ Error in saveIndividualResponse:', error)
       throw error
     }
-  }
+  }, [saveResponse])
 
   const handleNext = useCallback(async () => {
     if (!canProceed || isSubmitting) return
@@ -185,7 +200,7 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
     } finally {
       setIsSubmitting(false)
     }
-  }, [canProceed, isSubmitting, questionnaireData, isLastQuestion, usecaseId, onComplete])
+  }, [canProceed, isSubmitting, questionnaireData.currentQuestionId, questionnaireData.answers, isLastQuestion, usecaseId, onComplete, saveIndividualResponse])
 
   const handlePrevious = useCallback(() => {
     if (!canGoBack) return

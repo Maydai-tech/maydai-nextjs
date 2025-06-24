@@ -7,7 +7,9 @@ import { useUseCaseData } from '../hooks/useUseCaseData'
 import { useUseCaseNavigation } from '../utils/navigation'
 import { UseCaseLayout } from '../components/shared/UseCaseLayout'
 import { UseCaseLoader } from '../components/shared/UseCaseLoader'
+import { StepByStepQuestionnaire } from '../components/evaluation/StepByStepQuestionnaire'
 import { EvaluationQuestionnaire } from '../components/evaluation/EvaluationQuestionnaire'
+import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 
 export default function UseCaseEvaluationPage() {
   const { user, loading } = useAuth()
@@ -18,6 +20,10 @@ export default function UseCaseEvaluationPage() {
   const useCaseId = params.id as string
   const { useCase, loading: loadingData, error } = useUseCaseData(useCaseId)
   const { goToOverview } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
+  
+  // Check if any responses have been saved
+  const { formattedAnswers, loading: loadingResponses } = useQuestionnaireResponses(useCaseId)
+  const hasAnySavedResponses = Object.keys(formattedAnswers || {}).length > 0
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -44,7 +50,7 @@ export default function UseCaseEvaluationPage() {
     return null
   }
 
-  if (loadingData) {
+  if (loadingData || loadingResponses) {
     return <UseCaseLoader message="Chargement du cas d'usage..." />
   }
 
@@ -67,12 +73,27 @@ export default function UseCaseEvaluationPage() {
     )
   }
 
-  // L'évaluation est maintenant accessible quel que soit le statut
+  // Si aucune réponse n'a été sauvegardée, afficher le questionnaire question par question en pleine page
+  if (!hasAnySavedResponses) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          <StepByStepQuestionnaire 
+            useCase={useCase} 
+            onComplete={handleQuestionnaireComplete}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // Si des réponses existent, afficher toutes les questions avec possibilité de modification
   return (
     <UseCaseLayout useCase={useCase}>
       <EvaluationQuestionnaire 
         useCase={useCase} 
         onComplete={handleQuestionnaireComplete}
+        isReadOnly={false}
       />
     </UseCaseLayout>
   )
