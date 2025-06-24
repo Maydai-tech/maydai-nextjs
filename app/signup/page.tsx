@@ -15,14 +15,31 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  // Nouvel état pour gérer le chargement initial
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const { signUp, user } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     if (user) {
       router.push('/admin')
+    } else {
+      // Si pas d'utilisateur, on peut afficher la page
+      setIsCheckingAuth(false)
     }
   }, [user, router])
+
+  // Afficher un loader pendant la vérification d'authentification
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0080A3] mx-auto mb-4"></div>
+          <p className="text-gray-600">Vérification...</p>
+        </div>
+      </div>
+    )
+  }
 
   const validatePassword = (password: string) => {
     return password.length >= 6

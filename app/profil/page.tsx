@@ -1,12 +1,42 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { User, Mail, LogOut } from 'lucide-react'
 
 export default function ProfilPage() {
-  const { user, signOut } = useAuth()
+  const { user, loading, signOut } = useAuth()
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted && !loading && !user) {
+      router.push('/login')
+    }
+  }, [user, loading, router, mounted])
+
+  // Show loading state during SSR and initial client load
+  if (!mounted || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0080A3] mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Redirect if no user
+  if (!user) {
+    return null
+  }
 
   const handleSignOut = async () => {
     try {
@@ -32,25 +62,23 @@ export default function ProfilPage() {
           </div>
         </div>
 
-        {user && (
-          <div className="space-y-4">
-            <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-              <Mail className="h-5 w-5 text-gray-400 mr-3" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">Adresse e-mail</p>
-                <p className="text-gray-900">{user.email}</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-              <User className="h-5 w-5 text-gray-400 mr-3" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">ID utilisateur</p>
-                <p className="text-gray-900 text-sm font-mono">{user.id}</p>
-              </div>
+        <div className="space-y-4">
+          <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+            <Mail className="h-5 w-5 text-gray-400 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-gray-700">Adresse e-mail</p>
+              <p className="text-gray-900">{user.email}</p>
             </div>
           </div>
-        )}
+          
+          <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+            <User className="h-5 w-5 text-gray-400 mr-3" />
+            <div>
+              <p className="text-sm font-medium text-gray-700">ID utilisateur</p>
+              <p className="text-gray-900 text-sm font-mono">{user.id}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow">
