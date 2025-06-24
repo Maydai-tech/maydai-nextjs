@@ -107,9 +107,9 @@ export const QUESTIONS: Record<string, Question> = {
     question: 'Avez vous de procédures de vérification de la qualité des données ?',
     type: 'conditional',
     options: [
-      { code: 'E5.N9.Q6.A', label: 'Non' },
       { code: 'E5.N9.Q6.B', label: 'Oui' },
-      { code: 'E5.N9.Q6.C', label: 'Si oui préciser' }
+      { code: 'E5.N9.Q6.C', label: 'Si oui préciser' },
+      { code: 'E5.N9.Q6.A', label: 'Non' }
     ],
     conditionalFields: [{ key: 'procedures_details', label: 'Précisions', placeholder: 'Décrivez vos procédures...' }],
     required: true
@@ -119,9 +119,9 @@ export const QUESTIONS: Record<string, Question> = {
     question: 'Tenez vous un registre centralisé de vos systèmes d\'IA ?',
     type: 'conditional',
     options: [
-      { code: 'E5.N9.Q7.A', label: 'Non' },
       { code: 'E5.N9.Q7.B', label: 'Oui' },
-      { code: 'E5.N9.Q7.C', label: 'Si oui préciser' }
+      { code: 'E5.N9.Q7.C', label: 'Si oui préciser' },
+      { code: 'E5.N9.Q7.A', label: 'Non' }
     ],
     conditionalFields: [
       { key: 'registry_type', label: 'Type', placeholder: 'Interne' },
@@ -134,9 +134,9 @@ export const QUESTIONS: Record<string, Question> = {
     question: 'Avez vous une étape de surveillance humaine dans votre système d\'IA ?',
     type: 'conditional',
     options: [
-      { code: 'E5.N9.Q8.A', label: 'Non' },
       { code: 'E5.N9.Q8.B', label: 'Oui' },
-      { code: 'E5.N9.Q8.C', label: 'Si oui préciser' }
+      { code: 'E5.N9.Q8.C', label: 'Si oui préciser' },
+      { code: 'E5.N9.Q8.A', label: 'Non' }
     ],
     conditionalFields: [
       { key: 'supervisor_name', label: 'Nom prénom', placeholder: '' },
@@ -149,9 +149,9 @@ export const QUESTIONS: Record<string, Question> = {
     question: 'Vérifiez vous l\'exactitude, la robustesse et la cybersécurité de votre système d\'IA ?',
     type: 'conditional',
     options: [
-      { code: 'E5.N9.Q9.A', label: 'Non' },
       { code: 'E5.N9.Q9.B', label: 'Oui' },
-      { code: 'E5.N9.Q9.C', label: 'Si oui préciser' }
+      { code: 'E5.N9.Q9.C', label: 'Si oui préciser' },
+      { code: 'E5.N9.Q9.A', label: 'Non' }
     ],
     conditionalFields: [
       { key: 'security_details', label: 'Détails', placeholder: 'Décrivez vos procédures...' }
