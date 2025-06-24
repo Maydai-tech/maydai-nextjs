@@ -23,44 +23,40 @@ export function UseCaseNavigation({ useCaseId, companyId, isDraft = false }: Use
   const { isCurrentPath } = useUseCaseNavigation(useCaseId, companyId)
 
   return (
-    <div className="border-b border-gray-200 bg-white">
-      <nav className="px-4 sm:px-6 lg:px-8">
-        <div className="flex space-x-8">
-          {useCaseNavigation.map((item) => {
-            const isActive = isCurrentPath(item.key)
-            const href = item.href(useCaseId)
-            
-            // Disable evaluation if not draft
-            const isDisabled = item.key === 'evaluation' && !isDraft
-            
-            return (
-              <Link
-                key={item.key}
-                href={isDisabled ? '#' : href}
-                className={`${
-                  isActive
-                    ? 'border-[#0080A3] text-[#0080A3]'
-                    : isDisabled
-                    ? 'border-transparent text-gray-400 cursor-not-allowed'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm inline-flex items-center space-x-2 transition-colors`}
-                {...(isDisabled && { 
-                  onClick: (e) => e.preventDefault(),
-                  'aria-disabled': true
-                })}
-              >
-                {getIcon(item.key)}
-                <span>{item.label}</span>
-                {item.key === 'evaluation' && isDraft && (
-                  <span className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full ml-2">
-                    À compléter
-                  </span>
-                )}
-              </Link>
-            )
-          })}
-        </div>
-      </nav>
+    <div className="flex space-x-8">
+      {useCaseNavigation.map((item) => {
+        const isActive = isCurrentPath(item.key)
+        const href = item.href(useCaseId)
+        
+        // Disable evaluation if not draft
+        const isDisabled = item.key === 'evaluation' && !isDraft
+        
+        return (
+          <Link
+            key={item.key}
+            href={isDisabled ? '#' : href}
+            className={`${
+              isActive
+                ? 'border-[#0080A3] text-[#0080A3]'
+                : isDisabled
+                ? 'border-transparent text-gray-400 cursor-not-allowed'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm inline-flex items-center space-x-2 transition-colors`}
+            {...(isDisabled && { 
+              onClick: (e) => e.preventDefault(),
+              'aria-disabled': true
+            })}
+          >
+            {getIcon(item.key)}
+            <span>{item.label}</span>
+            {item.key === 'evaluation' && isDraft && (
+              <span className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full ml-2">
+                À compléter
+              </span>
+            )}
+          </Link>
+        )
+      })}
     </div>
   )
 } 

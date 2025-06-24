@@ -1,0 +1,57 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Layout Architecture Guidelines
+
+## Core Layout System
+
+The application uses a centralized layout system managed by [ConditionalLayout.tsx](mdc:components/ConditionalLayout.tsx) which:
+
+- Manages the sidebar structure with [Sidebar.tsx](mdc:components/Sidebar.tsx)
+- Applies base styling (`bg-gray-50`, `p-6 pt-16 lg:pt-6`) to main content
+- Handles responsive design and mobile adaptations
+- Determines when to show/hide the sidebar based on routes
+
+## Layout Rules
+
+### ❌ DO NOT
+- Use `min-h-screen` in page components (already handled by ConditionalLayout)
+- Use `max-w-7xl` or other max-width containers (conflicts with sidebar layout)
+- Apply `bg-gray-50` or similar background colors (already applied)
+- Create full-page layouts that ignore the existing structure
+
+### ✅ DO
+- Use negative margins (`-m-6`, `-mx-6`) to extend elements to full width
+- Apply corresponding padding (`p-6`, `px-6`) when using negative margins
+- Use `sticky top-0` for navigation elements that should stick to top
+- Leverage the existing padding structure for consistent spacing
+
+## Example Pattern
+
+```tsx
+// Good: Working with ConditionalLayout
+<div className="space-y-0">
+  {/* Full-width header */}
+  <div className="bg-white shadow-sm -m-6 mb-0 p-6">
+    <Header />
+  </div>
+  
+  {/* Full-width sticky navigation */}
+  <div className="bg-white border-b border-gray-200 sticky top-0 z-10 -mx-6 px-6">
+    <Navigation />
+  </div>
+  
+  {/* Content with standard padding */}
+  <div className="pt-6">
+    <Content />
+  </div>
+</div>
+```
+
+## Files to Reference
+
+- [ConditionalLayout.tsx](mdc:components/ConditionalLayout.tsx) - Main layout wrapper
+- [UseCaseLayout.tsx](mdc:app/usecases/[id]/components/shared/UseCaseLayout.tsx) - Example of proper layout implementation
+- [Sidebar.tsx](mdc:components/Sidebar.tsx) - Sidebar component structure

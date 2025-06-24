@@ -15,21 +15,23 @@ export function UseCaseLayout({ useCase, children, showNavigation = true }: UseC
   return (
     <div className="space-y-0">
       {/* Header */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="bg-white shadow-sm -m-6 mb-0 p-6">
         <UseCaseHeader useCase={useCase} />
       </div>
 
       {/* Navigation */}
       {showNavigation && (
-        <UseCaseNavigation 
-          useCaseId={useCase.id} 
-          companyId={useCase.company_id}
-          isDraft={isDraft}
-        />
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-10 -mx-6 px-6">
+          <UseCaseNavigation 
+            useCaseId={useCase.id} 
+            companyId={useCase.company_id}
+            isDraft={isDraft}
+          />
+        </div>
       )}
 
       {/* Content */}
-      <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="pt-6">
         {children}
       </div>
     </div>
