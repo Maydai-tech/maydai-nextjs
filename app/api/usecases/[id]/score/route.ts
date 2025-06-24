@@ -33,18 +33,18 @@ function calculateScore(usecaseId: string, responses: any[]): UseCaseScore {
       let questionImpact = 0
       let reasoning = ''
 
-      // Calculer l'impact selon le type de réponse
+      // Calculer l'impact selon le type de réponse avec la nouvelle structure Array
       if (question.type === 'radio') {
-        // Réponse unique
-        const answerCode = response.response_value
-        questionImpact = getAnswerImpact(response.question_code, answerCode)
-        reasoning = `${answerCode}: ${questionImpact} points`
+        // Réponse unique stockée dans single_value
+        const answerCode = response.single_value
+        if (answerCode) {
+          questionImpact = getAnswerImpact(response.question_code, answerCode)
+          reasoning = `${answerCode}: ${questionImpact} points`
+        }
       } 
       else if (question.type === 'checkbox' || question.type === 'tags') {
-        // Réponses multiples - les impacts se cumulent
-        const answerCodes = Array.isArray(response.response_value) 
-          ? response.response_value 
-          : [response.response_value]
+        // Réponses multiples stockées dans multiple_codes
+        const answerCodes = response.multiple_codes || []
         
         const impacts: string[] = []
         
@@ -57,16 +57,15 @@ function calculateScore(usecaseId: string, responses: any[]): UseCaseScore {
         }
         reasoning = impacts.length > 0 ? impacts.join(', ') : 'Aucun impact'
       }
-      else if (question.type === 'conditional' && response.response_value?.selected) {
-        // Réponse conditionnelle
-        const selectedCode = response.response_value.selected
+      else if (question.type === 'conditional' && response.conditional_main) {
+        // Réponse conditionnelle stockée dans conditional_main, conditional_keys, conditional_values
+        const selectedCode = response.conditional_main
         questionImpact = getAnswerImpact(response.question_code, selectedCode)
         reasoning = `${selectedCode}: ${questionImpact} points`
         
         // Bonus si des détails sont fournis pour les réponses positives
-        if (selectedCode.includes('.B') && questionImpact >= 0 && response.response_value.conditionalValues) {
-          const hasDetails = Object.values(response.response_value.conditionalValues)
-            .some((v: any) => v && String(v).trim().length > 0)
+        if (selectedCode.includes('.B') && questionImpact >= 0 && response.conditional_keys && response.conditional_values) {
+          const hasDetails = response.conditional_values.some((v: string) => v && v.trim().length > 0)
           if (hasDetails) {
             const bonus = 2
             questionImpact += bonus
@@ -80,10 +79,28 @@ function calculateScore(usecaseId: string, responses: any[]): UseCaseScore {
     
     // Ajouter au breakdown si impact non nul
     if (questionImpact !== 0) {
+      // Créer une valeur de réponse formatée selon le type
+      let answerValue: any = null
+      if (response.single_value) {
+        answerValue = response.single_value
+      } else if (response.multiple_codes) {
+        answerValue = response.multiple_codes
+      } else if (response.conditional_main) {
+        answerValue = {
+          selected: response.conditional_main,
+          conditionalValues: response.conditional_keys && response.conditional_values 
+            ? response.conditional_keys.reduce((acc: Record<string, string>, key: string, index: number) => {
+                acc[key] = response.conditional_values[index] || ''
+                return acc
+              }, {})
+            : {}
+        }
+      }
+      
       breakdown.push({
         question_id: response.question_code,
         question_text: question.question,
-        answer_value: response.response_value,
+        answer_value: answerValue,
         score_impact: questionImpact,
         reasoning
       })
@@ -224,7 +241,7 @@ export async function GET(
     console.log('Fetching responses...')
     const { data: responses, error: responsesError } = await supabase
       .from('usecase_responses')
-      .select('question_code, response_value, response_data')
+      .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
       .eq('usecase_id', usecaseId)
 
     if (responsesError) {

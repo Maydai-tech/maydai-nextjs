@@ -62,14 +62,32 @@ export interface UseCase {
   updated_at: string
 }
 
+// Types pour la nouvelle structure usecase_responses avec colonnes Array
 export interface UseCaseResponse {
   id: string
-  usecase_id?: string
+  usecase_id: string
   question_code: string
-  response_value?: string
-  response_data?: any
-  answered_by?: string
+  single_value?: string
+  multiple_codes?: string[]
+  multiple_labels?: string[]
+  conditional_main?: string
+  conditional_keys?: string[]
+  conditional_values?: string[]
+  answered_by: string
   answered_at: string
   created_at: string
   updated_at: string
+}
+
+export interface QuestionnaireResponseInput {
+  question_code: string
+  single_value?: string
+  multiple_data?: {
+    selected_codes: string[]
+    selected_labels: string[]
+  }
+  conditional_data?: {
+    selected: string
+    conditionalValues: Record<string, string>
+  }
 } 

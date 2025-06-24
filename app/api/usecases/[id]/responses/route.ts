@@ -134,49 +134,69 @@ export async function POST(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    // Vérifier si une réponse existe déjà pour cette question
-    const { data: existingResponse, error: existingError } = await supabase
+    // Préparer les données selon le type de réponse
+    let updateData: any = {
+      usecase_id: usecaseId,
+      question_code,
+      answered_by: user.email,
+      answered_at: new Date().toISOString(),
+      // Reset toutes les colonnes
+      single_value: null,
+      multiple_codes: null,
+      multiple_labels: null,
+      conditional_main: null,
+      conditional_keys: null,
+      conditional_values: null
+    }
+
+    if (response_data?.selected_codes) {
+      // Réponse multiple
+      updateData.multiple_codes = response_data.selected_codes
+      updateData.multiple_labels = response_data.selected_labels || response_data.selected_codes
+    } else if (response_data && typeof response_data === 'object' && response_data.selected) {
+      // Réponse conditionnelle
+      updateData.conditional_main = response_data.selected
+      if (response_data.conditionalValues) {
+        updateData.conditional_keys = Object.keys(response_data.conditionalValues)
+        updateData.conditional_values = Object.values(response_data.conditionalValues)
+      }
+    } else if (response_value) {
+      // Réponse simple
+      updateData.single_value = response_value
+    } else if (response_data) {
+      // Fallback: traiter response_data comme une réponse simple sérialisée
+      updateData.single_value = JSON.stringify(response_data)
+    } else {
+      // Aucune donnée valide
+      console.error('No valid response data provided:', { question_code, response_value, response_data })
+      return NextResponse.json({ error: 'No valid response data provided' }, { status: 400 })
+    }
+
+    console.log('Attempting to save updateData:', updateData)
+
+    const { data, error } = await supabase
       .from('usecase_responses')
-      .select('id')
-      .eq('usecase_id', usecaseId)
-      .eq('question_code', question_code)
+      .upsert(updateData, {
+        onConflict: 'usecase_id,question_code'
+      })
+      .select()
       .single()
 
-    let result
-    if (existingResponse) {
-      // Mettre à jour la réponse existante
-      result = await supabase
-        .from('usecase_responses')
-        .update({
-          response_value,
-          response_data,
-          answered_by: user.email,
-          answered_at: new Date().toISOString()
-        })
-        .eq('id', existingResponse.id)
-        .select()
-        .single()
-    } else {
-      // Créer une nouvelle réponse
-      result = await supabase
-        .from('usecase_responses')
-        .insert({
-          usecase_id: usecaseId,
-          question_code,
-          response_value,
-          response_data,
-          answered_by: user.email,
-          answered_at: new Date().toISOString()
-        })
-        .select()
-        .single()
+    if (error) {
+      console.error('Supabase error details:', {
+        error,
+        updateData,
+        question_code,
+        response_value,
+        response_data
+      })
+      return NextResponse.json({ 
+        error: 'Error saving response', 
+        details: error.message 
+      }, { status: 500 })
     }
 
-    if (result.error) {
-      return NextResponse.json({ error: 'Error saving response' }, { status: 500 })
-    }
-
-    return NextResponse.json(result.data)
+    return NextResponse.json(data)
   } catch (error) {
     console.error('Error in POST /api/usecases/[id]/responses:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -249,46 +269,60 @@ export async function PUT(
         continue // Skip invalid responses
       }
 
-      // Vérifier si une réponse existe déjà
-      const { data: existingResponse } = await supabase
-        .from('usecase_responses')
-        .select('id')
-        .eq('usecase_id', usecaseId)
-        .eq('question_code', question_code)
-        .single()
-
-      let result
-      if (existingResponse) {
-        // Mettre à jour
-        result = await supabase
-          .from('usecase_responses')
-          .update({
-            response_value,
-            response_data,
-            answered_by: user.email,
-            answered_at: new Date().toISOString()
-          })
-          .eq('id', existingResponse.id)
-          .select()
-          .single()
-      } else {
-        // Créer
-        result = await supabase
-          .from('usecase_responses')
-          .insert({
-            usecase_id: usecaseId,
-            question_code,
-            response_value,
-            response_data,
-            answered_by: user.email,
-            answered_at: new Date().toISOString()
-          })
-          .select()
-          .single()
+      // Préparer les données selon le type de réponse
+      let updateData: any = {
+        usecase_id: usecaseId,
+        question_code,
+        answered_by: user.email,
+        answered_at: new Date().toISOString(),
+        // Reset toutes les colonnes
+        single_value: null,
+        multiple_codes: null,
+        multiple_labels: null,
+        conditional_main: null,
+        conditional_keys: null,
+        conditional_values: null
       }
 
-      if (result.data) {
-        savedResponses.push(result.data)
+      if (response_data?.selected_codes) {
+        // Réponse multiple
+        updateData.multiple_codes = response_data.selected_codes
+        updateData.multiple_labels = response_data.selected_labels || response_data.selected_codes
+      } else if (response_data && typeof response_data === 'object' && response_data.selected) {
+        // Réponse conditionnelle
+        updateData.conditional_main = response_data.selected
+        if (response_data.conditionalValues) {
+          updateData.conditional_keys = Object.keys(response_data.conditionalValues)
+          updateData.conditional_values = Object.values(response_data.conditionalValues)
+        }
+      } else if (response_value) {
+        // Réponse simple
+        updateData.single_value = response_value
+      } else if (response_data) {
+        // Fallback: traiter response_data comme une réponse simple sérialisée
+        updateData.single_value = JSON.stringify(response_data)
+      } else {
+        // Skip cette réponse si pas de données valides
+        console.log('Skipping response with no valid data:', { question_code, response_value, response_data })
+        continue
+      }
+
+      const { data, error } = await supabase
+        .from('usecase_responses')
+        .upsert(updateData, {
+          onConflict: 'usecase_id,question_code'
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Supabase error in batch save:', {
+          error,
+          question_code,
+          updateData
+        })
+      } else if (data) {
+        savedResponses.push(data)
       }
     }
 
