@@ -67,12 +67,7 @@ export default function UseCaseEvaluationPage() {
     )
   }
 
-  // Redirect if not draft
-  if (useCase.status?.toLowerCase() !== 'draft') {
-    router.push(`/usecases/${useCaseId}`)
-    return <UseCaseLoader message="Redirection..." />
-  }
-
+  // L'évaluation est maintenant accessible quel que soit le statut
   return (
     <UseCaseLayout useCase={useCase}>
       <EvaluationQuestionnaire 

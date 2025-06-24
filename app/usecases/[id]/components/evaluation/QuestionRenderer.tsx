@@ -5,14 +5,16 @@ interface QuestionRendererProps {
   question: Question
   currentAnswer: any
   onAnswerChange: (answer: any) => void
+  isReadOnly?: boolean
 }
 
-export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: QuestionRendererProps) {
+export function QuestionRenderer({ question, currentAnswer, onAnswerChange, isReadOnly = false }: QuestionRendererProps) {
   console.log('QuestionRenderer render:', {
     questionId: question.id,
     currentAnswer,
     answerType: typeof currentAnswer,
-    isArray: Array.isArray(currentAnswer)
+    isArray: Array.isArray(currentAnswer),
+    isReadOnly
   })
 
   const renderRadioQuestion = () => (
@@ -23,7 +25,11 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
         return (
           <label
             key={`${question.id}-${option.code}-${index}`}
-            className={`flex items-start p-4 border rounded-lg cursor-pointer transition-all hover:bg-gray-50 ${
+            className={`flex items-start p-4 border rounded-lg transition-all ${
+              isReadOnly 
+                ? 'cursor-default' 
+                : 'cursor-pointer hover:bg-gray-50'
+            } ${
               isChecked
                 ? 'border-[#0080A3] bg-[#0080A3]/5'
                 : 'border-gray-200'
@@ -34,13 +40,18 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
               name={question.id}
               value={option.code}
               checked={isChecked}
+              disabled={isReadOnly}
               onChange={() => {
-                console.log('Radio change:', option.code)
-                onAnswerChange(option.code)
+                if (!isReadOnly) {
+                  console.log('Radio change:', option.code)
+                  onAnswerChange(option.code)
+                }
               }}
-              className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3]"
+              className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3] disabled:opacity-50"
             />
-            <span className="text-gray-900 leading-relaxed">{option.label}</span>
+            <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
+              {option.label}
+            </span>
           </label>
         )
       })}
@@ -54,7 +65,8 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
     console.log('Checkbox render:', {
       currentAnswer,
       checkboxAnswers,
-      options: question.options.map(opt => opt.code)
+      options: question.options.map(opt => opt.code),
+      isReadOnly
     })
     
     return (
@@ -65,7 +77,11 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
           return (
             <label
               key={`${question.id}-${option.code}-${index}`}
-              className={`flex items-start p-4 border rounded-lg cursor-pointer transition-all hover:bg-gray-50 ${
+              className={`flex items-start p-4 border rounded-lg transition-all ${
+                isReadOnly 
+                  ? 'cursor-default' 
+                  : 'cursor-pointer hover:bg-gray-50'
+              } ${
                 isChecked
                   ? 'border-[#0080A3] bg-[#0080A3]/5'
                   : 'border-gray-200'
@@ -76,28 +92,33 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
                 name={`${question.id}-${option.code}`}
                 value={option.code}
                 checked={isChecked}
+                disabled={isReadOnly}
                 onChange={(e) => {
-                  console.log('Checkbox change:', {
-                    option: option.code,
-                    checked: e.target.checked,
-                    currentAnswers: checkboxAnswers
-                  })
-                  
-                  let newAnswers: string[]
-                  if (e.target.checked) {
-                    // Ajouter l'option
-                    newAnswers = [...checkboxAnswers, option.code]
-                  } else {
-                    // Retirer l'option
-                    newAnswers = checkboxAnswers.filter((item: string) => item !== option.code)
+                  if (!isReadOnly) {
+                    console.log('Checkbox change:', {
+                      option: option.code,
+                      checked: e.target.checked,
+                      currentAnswers: checkboxAnswers
+                    })
+                    
+                    let newAnswers: string[]
+                    if (e.target.checked) {
+                      // Ajouter l'option
+                      newAnswers = [...checkboxAnswers, option.code]
+                    } else {
+                      // Retirer l'option
+                      newAnswers = checkboxAnswers.filter((item: string) => item !== option.code)
+                    }
+                    
+                    console.log('New checkbox answers:', newAnswers)
+                    onAnswerChange(newAnswers)
                   }
-                  
-                  console.log('New checkbox answers:', newAnswers)
-                  onAnswerChange(newAnswers)
                 }}
-                className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3]"
+                className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3] disabled:opacity-50"
               />
-              <span className="text-gray-900 leading-relaxed">{option.label}</span>
+              <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
+                {option.label}
+              </span>
             </label>
           )
         })}
@@ -112,7 +133,8 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
     console.log('Tags render:', {
       currentAnswer,
       tagAnswers,
-      options: question.options.map(opt => opt.code)
+      options: question.options.map(opt => opt.code),
+      isReadOnly
     })
     
     return (
@@ -125,30 +147,35 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
               <button
                 key={`${question.id}-${option.code}-${index}`}
                 type="button"
+                disabled={isReadOnly}
                 onClick={() => {
-                  console.log('Tag click:', {
-                    option: option.code,
-                    isSelected,
-                    currentTags: tagAnswers
-                  })
-                  
-                  let newAnswers: string[]
-                  if (isSelected) {
-                    // Retirer le tag
-                    newAnswers = tagAnswers.filter((item: string) => item !== option.code)
-                  } else {
-                    // Ajouter le tag
-                    newAnswers = [...tagAnswers, option.code]
+                  if (!isReadOnly) {
+                    console.log('Tag click:', {
+                      option: option.code,
+                      isSelected,
+                      currentTags: tagAnswers
+                    })
+                    
+                    let newAnswers: string[]
+                    if (isSelected) {
+                      // Retirer le tag
+                      newAnswers = tagAnswers.filter((item: string) => item !== option.code)
+                    } else {
+                      // Ajouter le tag
+                      newAnswers = [...tagAnswers, option.code]
+                    }
+                    
+                    console.log('New tag answers:', newAnswers)
+                    onAnswerChange(newAnswers)
                   }
-                  
-                  console.log('New tag answers:', newAnswers)
-                  onAnswerChange(newAnswers)
                 }}
                 className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
                   isSelected
                     ? 'bg-[#0080A3] text-white'
+                    : isReadOnly
+                    ? 'bg-gray-100 text-gray-600 cursor-not-allowed'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                } ${isReadOnly ? 'opacity-75' : ''}`}
               >
                 {option.label}
               </button>
@@ -162,6 +189,8 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
 
   const renderConditionalQuestion = () => {
     const handleConditionalChange = (selectedOption: string, conditionalValues?: Record<string, string>) => {
+      if (isReadOnly) return
+      
       console.log('Conditional change:', {
         selectedOption,
         conditionalValues,
@@ -215,7 +244,11 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
             return (
               <label
                 key={`${question.id}-${option.code}-${index}`}
-                className={`flex items-start p-4 border rounded-lg cursor-pointer transition-all hover:bg-gray-50 ${
+                className={`flex items-start p-4 border rounded-lg transition-all ${
+                  isReadOnly 
+                    ? 'cursor-default' 
+                    : 'cursor-pointer hover:bg-gray-50'
+                } ${
                   isChecked
                     ? 'border-[#0080A3] bg-[#0080A3]/5'
                     : 'border-gray-200'
@@ -226,13 +259,18 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
                   name={question.id}
                   value={option.code}
                   checked={isChecked}
+                  disabled={isReadOnly}
                   onChange={() => {
-                    console.log('Conditional radio change:', option.code)
-                    handleConditionalChange(option.code)
+                    if (!isReadOnly) {
+                      console.log('Conditional radio change:', option.code)
+                      handleConditionalChange(option.code)
+                    }
                   }}
-                  className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3]"
+                  className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3] disabled:opacity-50"
                 />
-                <span className="text-gray-900 leading-relaxed">{option.label}</span>
+                <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
+                  {option.label}
+                </span>
               </label>
             )
           })}
@@ -253,20 +291,25 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange }: Qu
                   type="text"
                   placeholder={field.placeholder}
                   value={currentConditionalValues[field.key] || ''}
+                  disabled={isReadOnly}
                   onChange={(e) => {
-                    console.log('Conditional field change:', {
-                      field: field.key,
-                      value: e.target.value
-                    })
-                    
-                    const newConditionalValues = {
-                      ...currentConditionalValues,
-                      [field.key]: e.target.value
+                    if (!isReadOnly) {
+                      console.log('Conditional field change:', {
+                        field: field.key,
+                        value: e.target.value
+                      })
+                      
+                      const newConditionalValues = {
+                        ...currentConditionalValues,
+                        [field.key]: e.target.value
+                      }
+                      
+                      handleConditionalChange(currentSelection!, newConditionalValues)
                     }
-                    
-                    handleConditionalChange(currentSelection!, newConditionalValues)
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent ${
+                    isReadOnly ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''
+                  }`}
                 />
               </div>
             ))}
