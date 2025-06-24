@@ -1,0 +1,21 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# UseCase Architecture
+
+## 3-Page Structure
+- `/usecases/[id]` - Overview (main view)
+- `/usecases/[id]/evaluation` - Questionnaire (drafts only)
+- `/usecases/[id]/rapport` - Compliance report (completed only)
+
+## Smart Navigation
+- **Draft usecases**: Auto-redirect to `/evaluation`
+- **Completed usecases**: Full navigation available
+- **Shared layout**: [UseCaseLayout](mdc:app/usecases/[id]/components/shared/UseCaseLayout.tsx) for all pages
+
+## Key Files
+- Data: [useUseCaseData.ts](mdc:app/usecases/[id]/hooks/useUseCaseData.ts)
+- Evaluation: [useEvaluation.ts](mdc:app/usecases/[id]/hooks/useEvaluation.ts)
+- Routes: [routes.ts](mdc:app/usecases/[id]/utils/routes.ts)

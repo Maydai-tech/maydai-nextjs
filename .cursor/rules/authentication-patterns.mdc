@@ -5,57 +5,65 @@ alwaysApply: false
 ---
 # Authentication Patterns
 
-## Standardized Authentication Patterns
+## Standardized Auth Pattern
+Based on workspace memory, all usecase pages follow consistent authentication patterns:
 
-The application uses 3 standardized authentication patterns:
+## Standard Implementation
+```typescript
+export default function UseCasePage() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+  const [mounted, setMounted] = useState(false)
 
-### 1. Auth Pages Pattern (`isCheckingAuth`)
-Used for: [app/login/page.tsx](mdc:app/login/page.tsx), [app/signup/page.tsx](mdc:app/signup/page.tsx)
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
-```tsx
-const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  // Auth redirect
+  useEffect(() => {
+    if (mounted && !loading && !user) {
+      router.push('/login')
+    }
+  }, [user, loading, router, mounted])
 
-useEffect(() => {
-  if (user) {
-    router.push('/dashboard/companies')
-  } else {
-    setIsCheckingAuth(false)
+  // Loading states
+  if (!mounted || loading) {
+    return <UseCaseLoader />
   }
-}, [user, router])
 
-if (isCheckingAuth) {
-  return <LoadingComponent />
+  if (!user) {
+    return null
+  }
+
+  // Page content...
 }
 ```
 
-### 2. Protected Pages Pattern (`mounted + loading`)
-Used for: [app/dashboard/companies/page.tsx](mdc:app/dashboard/companies/page.tsx), [app/usecases/[id]/page.tsx](mdc:app/usecases/[id]/page.tsx), [app/profil/page.tsx](mdc:app/profil/page.tsx)
+## Three Auth Patterns
 
-```tsx
-const [mounted, setMounted] = useState(false)
+### 1. Auth Pages (login/signup)
+- Simple `isCheckingAuth` pattern
+- Direct and straightforward
 
-useEffect(() => setMounted(true), [])
+### 2. Protected Pages (dashboard, usecases, profil)  
+- `mounted + loading` pattern for SSR robustness
+- Used in: [page.tsx](mdc:app/usecases/[id]/page.tsx), [evaluation/page.tsx](mdc:app/usecases/[id]/evaluation/page.tsx), [rapport/page.tsx](mdc:app/usecases/[id]/rapport/page.tsx)
 
-useEffect(() => {
-  if (mounted && !loading && !user) {
-    router.push('/login')
-  }
-}, [user, loading, router, mounted])
+### 3. Admin Pages
+- `ProtectedRoute` wrapper component
+- Centralized and reusable
 
-if (!mounted || loading) return <LoadingComponent />
-if (!user) return null
-```
+## Key Requirements
+- **SSR Compatibility**: Always use `mounted` state
+- **Loading States**: Show consistent loaders
+- **Automatic Redirects**: No manual auth checks in components
+- **Responsive Design**: All auth flows work on mobile/tablet
 
-### 3. Admin Pages Pattern (`ProtectedRoute`)
-Used for: [app/admin/layout.tsx](mdc:app/admin/layout.tsx)
-
-```tsx
-<ProtectedRoute>
-  <AdminComponent />
-</ProtectedRoute>
-```
-
-## Security Guidelines
+## Critical Rules
+- **Always use `mounted` state** for SSR compatibility
+- **Consistent loading states** across all pages
+- **Auto-redirects only** - no manual auth checks in components
 
 - **Pattern 2** (`mounted + loading`) is the most secure as it prevents SSR hydration vulnerabilities
 - Always use defensive programming: assume content should be hidden by default
