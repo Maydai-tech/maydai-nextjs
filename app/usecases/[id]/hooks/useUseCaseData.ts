@@ -3,28 +3,29 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-auth'
 import { UseCase, Progress } from '../types/usecase'
+import { useCaseRoutes } from '../utils/routes'
 
-interface UseUseCaseReturn {
+interface UseUseCaseDataReturn {
   useCase: UseCase | null
   progress: Progress | null
   loading: boolean
-  showQuestionnaire: boolean
-  setShowQuestionnaire: (show: boolean) => void
+  error: string | null
   refetch: () => Promise<void>
 }
 
-export function useUseCase(useCaseId: string): UseUseCaseReturn {
+export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
   const { user, session } = useAuth()
   const router = useRouter()
   const [useCase, setUseCase] = useState<UseCase | null>(null)
   const [progress, setProgress] = useState<Progress | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showQuestionnaire, setShowQuestionnaire] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const api = useApiCall()
 
   const fetchUseCaseData = async () => {
     try {
       setLoading(true)
+      setError(null)
       
       if (!session?.access_token || !useCaseId) {
         return
@@ -34,13 +35,10 @@ export function useUseCase(useCaseId: string): UseUseCaseReturn {
       const useCaseResponse = await api.get(`/api/usecases/${useCaseId}`)
       
       if (useCaseResponse.status === 404) {
-        router.push('/dashboard/companies')
+        router.push(useCaseRoutes.companies())
         return
       } else if (useCaseResponse.data) {
         setUseCase(useCaseResponse.data)
-        
-        // Show questionnaire if status is draft
-        setShowQuestionnaire(useCaseResponse.data.status?.toLowerCase() === 'draft')
         
         // Fetch progress for this use case
         if (useCaseResponse.data.company_id) {
@@ -53,7 +51,8 @@ export function useUseCase(useCaseId: string): UseUseCaseReturn {
       }
     } catch (error) {
       console.error('Error fetching use case data:', error)
-      router.push('/dashboard/companies')
+      setError('Erreur lors du chargement du cas d\'usage')
+      router.push(useCaseRoutes.companies())
     } finally {
       setLoading(false)
     }
@@ -69,8 +68,7 @@ export function useUseCase(useCaseId: string): UseUseCaseReturn {
     useCase,
     progress,
     loading,
-    showQuestionnaire,
-    setShowQuestionnaire,
+    error,
     refetch: fetchUseCaseData
   }
 } 

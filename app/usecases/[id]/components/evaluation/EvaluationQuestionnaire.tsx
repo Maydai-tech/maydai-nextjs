@@ -1,15 +1,15 @@
 import React from 'react'
 import { UseCase } from '../../types/usecase'
-import { useQuestionnaire } from '../../hooks/useQuestionnaire'
+import { useEvaluation } from '../../hooks/useEvaluation'
 import { QuestionRenderer } from './QuestionRenderer'
 import { CheckCircle, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react'
 
-interface DraftQuestionnaireProps {
+interface EvaluationQuestionnaireProps {
   useCase: UseCase
   onComplete: () => void
 }
 
-export function DraftQuestionnaire({ useCase, onComplete }: DraftQuestionnaireProps) {
+export function EvaluationQuestionnaire({ useCase, onComplete }: EvaluationQuestionnaireProps) {
   const {
     currentQuestion,
     progress,
@@ -23,7 +23,7 @@ export function DraftQuestionnaire({ useCase, onComplete }: DraftQuestionnairePr
     handleAnswerSelect,
     handleNext,
     handlePrevious
-  } = useQuestionnaire({
+  } = useEvaluation({
     usecaseId: useCase.id,
     onComplete
   })

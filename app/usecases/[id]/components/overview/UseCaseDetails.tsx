@@ -1,5 +1,5 @@
 import React from 'react'
-import { UseCase } from '../types/usecase'
+import { UseCase } from '../../types/usecase'
 import { Calendar, Users, Shield } from 'lucide-react'
 
 interface UseCaseDetailsProps {

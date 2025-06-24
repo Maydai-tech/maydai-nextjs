@@ -1,10 +1,11 @@
 import React from 'react'
 import Link from 'next/link'
-import { UseCase, Progress } from '../types/usecase'
-import { getRiskLevelColor, getStatusColor, getUseCaseStatusInFrench } from '../utils/questionnaire'
+import { UseCase, Progress } from '../../types/usecase'
+import { getRiskLevelColor, getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
+import { useCaseRoutes } from '../../utils/routes'
 import { ArrowLeft, Brain, Building, Shield, CheckCircle, Clock, Info } from 'lucide-react'
-import { useUseCaseScore } from '../hooks/useUseCaseScore'
-import { getScoreCategory } from '../utils/score-categories'
+import { useUseCaseScore } from '../../hooks/useUseCaseScore'
+import { getScoreCategory } from '../../utils/score-categories'
 
 interface UseCaseHeaderProps {
   useCase: UseCase
@@ -119,7 +120,7 @@ export function UseCaseHeader({ useCase, progress }: UseCaseHeaderProps) {
     <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
       <div className="flex items-center justify-between mb-4">
         <Link
-          href={`/dashboard/${useCase.company_id}`}
+          href={useCaseRoutes.dashboard(useCase.company_id)}
           className="inline-flex items-center text-gray-600 hover:text-[#0080A3] transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
