@@ -31,7 +31,10 @@ export default function UseCaseDetailPage() {
     }
   }, [user, loading, router, mounted])
 
-  // Auto-redirect to evaluation if questionnaire hasn't been started
+  // Auto-redirect to evaluation only in specific cases
+  // Désactivé temporairement car l'API de progress est désactivée
+  // et cela cause des redirections non désirées
+  /*
   useEffect(() => {
     if (useCase && progress !== undefined) {
       const hasNotStarted = 
@@ -51,6 +54,7 @@ export default function UseCaseDetailPage() {
       }
     }
   }, [useCase, progress, goToEvaluation])
+  */
 
   // Show loading state during SSR and initial client load
   if (!mounted || loading) {
