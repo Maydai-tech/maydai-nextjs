@@ -3,3 +3,79 @@ description:
 globs:
 alwaysApply: false
 ---
+# Migration des Données du Questionnaire
+
+## Structure de Données Actuelle (Array Columns PostgreSQL)
+
+L'application a migré vers un système de colonnes Array PostgreSQL pour stocker les réponses du questionnaire. La structure définie dans [lib/supabase.ts](mdc:lib/supabase.ts) utilise l'interface `UseCaseResponse` :
+
+### Types de Réponses Supportés
+
+1. **Réponses simples** : `single_value?: string`
+2. **Réponses multiples** : 
+   - `multiple_codes?: string[]` (codes internes)
+   - `multiple_labels?: string[]` (labels affichés)
+3. **Réponses conditionnelles** :
+   - `conditional_main?: string` (choix principal)
+   - `conditional_keys?: string[]` (clés des sous-questions)
+   - `conditional_values?: string[]` (valeurs correspondantes)
+
+## ⚠️ Propriétés Obsolètes à Éviter
+
+**NE PLUS UTILISER** ces propriétés qui génèrent des erreurs TypeScript :
+- `response_value` (remplacée par `single_value`)
+- `response_data` (remplacée par les colonnes spécialisées)
+
+## Exemples d'Usage Correct
+
+### Filtrage et Recherche
+```typescript
+const getResponseText = (response: UseCaseResponse): string => {
+  if (response.single_value) return response.single_value
+  if (response.multiple_labels?.length) return response.multiple_labels.join(' ')
+  if (response.conditional_main) return response.conditional_main
+  if (response.conditional_values?.length) return response.conditional_values.join(' ')
+  return ''
+}
+```
+
+### Prévisualisation des Réponses
+```typescript
+const getResponsePreview = (response: UseCaseResponse) => {
+  // Single value response
+  if (response.single_value) {
+    return truncateText(response.single_value, 80)
+  }
+  
+  // Multiple choice response
+  if (response.multiple_labels?.length) {
+    return truncateText(response.multiple_labels.join(', '), 80)
+  }
+  
+  // Conditional response
+  if (response.conditional_main) {
+    let preview = response.conditional_main
+    if (response.conditional_values?.length) {
+      preview += ` (${response.conditional_values.join(', ')})`
+    }
+    return truncateText(preview, 80)
+  }
+  
+  return 'Aucune réponse'
+}
+```
+
+## Sauvegarde avec Upsert
+
+L'API utilise `upsert(data, { onConflict: 'usecase_id,question_code' })` comme défini dans [lib/questionnaire-api.ts](mdc:lib/questionnaire-api.ts).
+
+## Hook de Formatage
+
+Le hook [lib/hooks/useQuestionnaireResponses.ts](mdc:lib/hooks/useQuestionnaireResponses.ts) formate automatiquement les réponses pour l'UI en détectant le type de données stockées.
+
+## Fichiers Clés à Consulter
+
+- Type definitions: [lib/supabase.ts](mdc:lib/supabase.ts)
+- API questionnaire: [lib/questionnaire-api.ts](mdc:lib/questionnaire-api.ts)
+- Hook responses: [lib/hooks/useQuestionnaireResponses.ts](mdc:lib/hooks/useQuestionnaireResponses.ts)
+- Exemple admin: [app/admin/responses/page.tsx](mdc:app/admin/responses/page.tsx)

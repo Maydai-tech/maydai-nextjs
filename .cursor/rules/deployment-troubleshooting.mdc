@@ -1,0 +1,82 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Guide de Résolution des Erreurs de Déploiement
+
+## Validation Locale Avant Déploiement
+
+**TOUJOURS** exécuter ces commandes avant de déployer :
+
+```bash
+npm run build      # Vérification build
+npm run type-check # Si disponible
+```
+
+## Erreurs TypeScript Courantes
+
+### 1. Propriétés Inexistantes sur les Types
+
+**Symptôme** : `Property 'X' does not exist on type 'Y'`
+
+**Causes fréquentes** :
+- Migration de schéma de base de données sans mise à jour des types
+- Utilisation d'anciennes propriétés après refactoring
+- Import de types obsolètes
+
+**Solution** :
+1. Vérifier la définition du type dans [lib/supabase.ts](mdc:lib/supabase.ts)
+2. Adapter le code pour utiliser les nouvelles propriétés
+3. Tester localement avec `npm run build`
+
+### 2. Erreurs de Migration de Données
+
+**Exemple récent** : Migration vers les colonnes Array PostgreSQL
+- ❌ `response_value` (obsolète)
+- ✅ `single_value` (nouveau)
+
+Voir [data-migration-questionnaire.mdc](mdc:data-migration-questionnaire.mdc) pour les détails.
+
+## Workflow de Vérification
+
+### Avant Commit
+```bash
+# Vérification TypeScript
+npm run build
+
+# Si erreurs, corriger puis re-tester
+npm run build
+```
+
+### Structure de Débogage
+1. **Identifier le fichier et la ligne** depuis les logs Netlify
+2. **Analyser le type concerné** dans les définitions
+3. **Adapter le code** pour la nouvelle structure
+4. **Valider localement** avant push
+
+## Fichiers Sensibles aux Erreurs TypeScript
+
+- [app/admin/responses/page.tsx](mdc:app/admin/responses/page.tsx) - Gestion des réponses
+- [lib/supabase.ts](mdc:lib/supabase.ts) - Définitions de types
+- [lib/hooks/useQuestionnaireResponses.ts](mdc:lib/hooks/useQuestionnaireResponses.ts) - Hook de formatage
+
+## Logs Netlify : Comment Lire
+
+Les erreurs apparaissent généralement sous cette forme :
+```
+./path/to/file.tsx:LINE:COLUMN
+Type error: Property 'X' does not exist on type 'Y'.
+```
+
+**Actions** :
+1. Aller à `file.tsx` ligne `LINE`
+2. Vérifier le type `Y` dans les définitions
+3. Corriger l'usage de la propriété `X`
+
+## Prévention
+
+- ✅ Toujours tester localement avant push
+- ✅ Mettre à jour les types après migration DB
+- ✅ Documenter les changements de structure dans les règles Cursor
+- ✅ Réviser les imports et types après refactoring majeur

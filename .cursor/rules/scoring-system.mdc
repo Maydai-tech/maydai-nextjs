@@ -1,0 +1,56 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Système de Scoring et Catégories de Risque
+
+## Architecture du Scoring
+
+Le système de scoring est basé sur l'évaluation de risques par catégories. Les composants principaux se trouvent dans les répertoires suivants :
+
+### Composants de Scoring
+- [app/usecases/[id]/components/UseCaseScore.tsx](mdc:app/usecases/[id]/components/UseCaseScore.tsx) - Affichage principal du score
+- [app/usecases/[id]/components/CategoryScores.tsx](mdc:app/usecases/[id]/components/CategoryScores.tsx) - Scores par catégorie
+- [app/usecases/[id]/components/CompactScore.tsx](mdc:app/usecases/[id]/components/CompactScore.tsx) - Version compacte
+
+### Configuration et Utilitaires
+- [app/usecases/[id]/utils/risk-categories.ts](mdc:app/usecases/[id]/utils/risk-categories.ts) - Définition des catégories de risque
+- [app/usecases/[id]/utils/score-categories.ts](mdc:app/usecases/[id]/utils/score-categories.ts) - Catégories de scoring
+- [app/usecases/[id]/utils/scoring-config.ts](mdc:app/usecases/[id]/utils/scoring-config.ts) - Configuration du système
+
+## Hooks de Gestion du Score
+
+- [app/usecases/[id]/hooks/useUseCaseScore.ts](mdc:app/usecases/[id]/hooks/useUseCaseScore.ts) - Gestion des scores
+- [app/usecases/[id]/hooks/useEvaluation.ts](mdc:app/usecases/[id]/hooks/useEvaluation.ts) - Logique d'évaluation
+
+## APIs de Scoring
+
+- [app/api/usecases/[id]/score/route.ts](mdc:app/api/usecases/[id]/score/route.ts) - API score principal
+- [app/api/usecases/[id]/score/history/route.ts](mdc:app/api/usecases/[id]/score/history/route.ts) - Historique des scores
+
+## Catégories de Risque
+
+Le système évalue différentes catégories de risque IA Act :
+1. **Risques fondamentaux**
+2. **Risques opérationnels** 
+3. **Risques de gouvernance**
+4. **Risques techniques**
+
+Chaque catégorie produit un score qui contribue au score global du cas d'usage.
+
+## Workflow de Calcul
+
+1. **Collecte des réponses** via le questionnaire
+2. **Analyse par catégorie** selon les règles définies
+3. **Calcul du score global** basé sur la pondération
+4. **Stockage et historique** pour suivi dans le temps
+
+## Pages d'Affichage
+
+- [app/usecases/[id]/page.tsx](mdc:app/usecases/[id]/page.tsx) - Vue overview avec score
+- [app/usecases/[id]/rapport/page.tsx](mdc:app/usecases/[id]/rapport/page.tsx) - Rapport détaillé
+
+## Intégration avec le Questionnaire
+
+Le scoring utilise les réponses stockées dans la nouvelle structure Array PostgreSQL (voir [data-migration-questionnaire.mdc](mdc:data-migration-questionnaire.mdc)) pour calculer les scores par catégorie.
