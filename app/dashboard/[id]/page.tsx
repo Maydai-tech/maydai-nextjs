@@ -15,7 +15,9 @@ import {
   Plus,
   FileText,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 
 interface Company {
@@ -53,6 +55,11 @@ export default function CompanyDashboard({ params }: DashboardProps) {
   const [company, setCompany] = useState<Company | null>(null)
   const [useCases, setUseCases] = useState<UseCase[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+  
   const api = useApiCall()
 
   // Resolve params
@@ -103,12 +110,28 @@ export default function CompanyDashboard({ params }: DashboardProps) {
       const useCasesResponse = await api.get(`/api/companies/${companyId}/usecases`)
       if (useCasesResponse.data) {
         setUseCases(useCasesResponse.data)
+        // Reset to first page when data changes
+        setCurrentPage(1)
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
       setLoadingData(false)
     }
+  }
+
+  // Pagination calculations
+  const totalPages = Math.ceil(useCases.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentUseCases = useCases.slice(startIndex, endIndex)
+  const startItem = startIndex + 1
+  const endItem = Math.min(endIndex, useCases.length)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // Scroll to top of use cases section
+    document.getElementById('use-cases-section')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   const getRiskLevelColor = (riskLevel: string) => {
@@ -298,10 +321,17 @@ export default function CompanyDashboard({ params }: DashboardProps) {
         </div>
 
         {/* Use Cases Section */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div id="use-cases-section" className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 sm:px-6 py-4 bg-gray-50 border-b border-gray-100">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
-              <h2 className="text-lg font-semibold text-gray-900">Cas d'usage IA</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4">
+                <h2 className="text-lg font-semibold text-gray-900">Cas d'usage IA</h2>
+                {useCases.length > 0 && (
+                  <span className="text-sm text-gray-600">
+                    {startItem}-{endItem} sur {useCases.length}
+                  </span>
+                )}
+              </div>
               <Link
                 href={`/usecases/new?company=${companyId}`}
                 className="inline-flex items-center justify-center px-4 py-2 bg-[#0080A3] text-white text-sm font-medium rounded-lg hover:bg-[#006280] transition-colors w-full sm:w-auto"
@@ -328,53 +358,125 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-4">
-                {useCases.map((useCase) => {
-                  // Détermine l'URL de destination selon le statut
-                  const getUseCaseUrl = (useCase: UseCase) => {
-                    const isToComplete = 
-                      useCase.status?.toLowerCase() === 'draft' ||
-                      useCase.status?.toLowerCase() === 'not_started' ||
-                      !useCase.status
-                    
-                    return isToComplete 
-                      ? `/usecases/${useCase.id}/evaluation`
-                      : `/usecases/${useCase.id}`
-                  }
+              <>
+                <div className="space-y-4">
+                  {currentUseCases.map((useCase) => {
+                    // Détermine l'URL de destination selon le statut
+                    const getUseCaseUrl = (useCase: UseCase) => {
+                      const isToComplete = 
+                        useCase.status?.toLowerCase() === 'draft' ||
+                        useCase.status?.toLowerCase() === 'not_started' ||
+                        !useCase.status
+                      
+                      return isToComplete 
+                        ? `/usecases/${useCase.id}/evaluation`
+                        : `/usecases/${useCase.id}`
+                    }
 
-                  return (
-                    <Link
-                      key={useCase.id}
-                      href={getUseCaseUrl(useCase)}
-                      className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
-                            <h3 className="font-medium text-gray-900 truncate">{useCase.name}</h3>
-                            <div className="flex flex-wrap gap-2">
-                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(getUseCaseStatusInFrench(useCase.status))}`}>
-                                {getUseCaseStatusInFrench(useCase.status)}
-                              </span>
-                              {useCase.risk_level && (
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRiskLevelColor(useCase.risk_level)}`}>
-                                  {useCase.risk_level} risk
+                    return (
+                      <Link
+                        key={useCase.id}
+                        href={getUseCaseUrl(useCase)}
+                        className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
+                              <h3 className="font-medium text-gray-900 truncate">{useCase.name}</h3>
+                              <div className="flex flex-wrap gap-2">
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(getUseCaseStatusInFrench(useCase.status))}`}>
+                                  {getUseCaseStatusInFrench(useCase.status)}
                                 </span>
-                              )}
+                                {useCase.risk_level && (
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRiskLevelColor(useCase.risk_level)}`}>
+                                    {useCase.risk_level} risk
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-600 mb-3 line-clamp-2">{useCase.description}</p>
+                            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
+                              {useCase.ai_category && <span>{useCase.ai_category}</span>}
+                              {useCase.technology_partner && <span className="hidden sm:inline">• {useCase.technology_partner}</span>}
+                              {useCase.technology_partner && <span className="sm:hidden text-xs">{useCase.technology_partner}</span>}
                             </div>
                           </div>
-                          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{useCase.description}</p>
-                          <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
-                            {useCase.ai_category && <span>{useCase.ai_category}</span>}
-                            {useCase.technology_partner && <span className="hidden sm:inline">• {useCase.technology_partner}</span>}
-                            {useCase.technology_partner && <span className="sm:hidden text-xs">{useCase.technology_partner}</span>}
-                          </div>
                         </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="mt-6 pt-6 border-t border-gray-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+                      <div className="text-sm text-gray-600 text-center sm:text-left">
+                        Affichage de {startItem} à {endItem} sur {useCases.length} cas d'usage
                       </div>
-                    </Link>
-                  )
-                })}
-              </div>
+                      <div className="flex items-center justify-center space-x-2">
+                        <button
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-600 transition-colors"
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-1" />
+                          Précédent
+                        </button>
+
+                        <div className="flex items-center space-x-1">
+                          {[...Array(totalPages)].map((_, index) => {
+                            const page = index + 1
+                            const isCurrentPage = page === currentPage
+                            
+                            // Show first page, last page, current page, and pages around current page
+                            const showPage = 
+                              page === 1 || 
+                              page === totalPages || 
+                              (page >= currentPage - 1 && page <= currentPage + 1)
+                            
+                            if (!showPage) {
+                              // Show ellipsis for gaps
+                              if ((page === currentPage - 2 && currentPage > 3) || 
+                                  (page === currentPage + 2 && currentPage < totalPages - 2)) {
+                                return (
+                                  <span key={page} className="px-2 py-1 text-sm text-gray-400">
+                                    ...
+                                  </span>
+                                )
+                              }
+                              return null
+                            }
+
+                            return (
+                              <button
+                                key={page}
+                                onClick={() => handlePageChange(page)}
+                                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                                  isCurrentPage
+                                    ? 'bg-[#0080A3] text-white'
+                                    : 'text-gray-600 bg-white border border-gray-300 hover:bg-gray-50 hover:text-gray-700'
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        <button
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-600 transition-colors"
+                        >
+                          Suivant
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
