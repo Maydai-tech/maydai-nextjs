@@ -1,0 +1,122 @@
+export interface RiskCategory {
+  id: string
+  name: string
+  description: string
+  color: string
+  icon: string
+  weight: number
+  shortName: string
+}
+
+export const RISK_CATEGORIES: Record<string, RiskCategory> = {
+  'transparency': {
+    id: 'transparency',
+    name: 'Transparency',
+    shortName: 'Transparence',
+    description: 'Explicabilité et information des utilisateurs',
+    color: 'text-blue-700 bg-blue-50 border border-blue-200',
+    icon: '🔍',
+    weight: 0.15
+  },
+  'technical_robustness': {
+    id: 'technical_robustness',
+    name: 'Technical Robustness and Safety',
+    shortName: 'Robustesse Technique',
+    description: 'Sécurité, fiabilité et performance technique',
+    color: 'text-green-700 bg-green-50 border border-green-200',
+    icon: '🛡️',
+    weight: 0.20
+  },
+  'human_agency': {
+    id: 'human_agency',
+    name: 'Human Agency & Oversight',
+    shortName: 'Supervision Humaine',
+    description: 'Contrôle et surveillance humaine',
+    color: 'text-purple-700 bg-purple-50 border border-purple-200',
+    icon: '👥',
+    weight: 0.18
+  },
+  'privacy_data': {
+    id: 'privacy_data',
+    name: 'Privacy & Data Governance',
+    shortName: 'Confidentialité & Données',
+    description: 'Protection des données et de la vie privée',
+    color: 'text-indigo-700 bg-indigo-50 border border-indigo-200',
+    icon: '🔒',
+    weight: 0.17
+  },
+  'social_environmental': {
+    id: 'social_environmental',
+    name: 'Social & Environmental Well-being',
+    shortName: 'Impact Social & Environnemental',
+    description: 'Bien-être social et impact environnemental',
+    color: 'text-teal-700 bg-teal-50 border border-teal-200',
+    icon: '🌱',
+    weight: 0.10
+  },
+  'diversity_fairness': {
+    id: 'diversity_fairness',
+    name: 'Diversity, Non-discrimination & Fairness',
+    shortName: 'Équité & Non-discrimination',
+    description: 'Diversité, équité et lutte contre les discriminations',
+    color: 'text-amber-700 bg-amber-50 border border-amber-200',
+    icon: '⚖️',
+    weight: 0.15
+  },
+  'prohibited_practices': {
+    id: 'prohibited_practices',
+    name: 'Prohibited Practices',
+    shortName: 'Pratiques Interdites',
+    description: 'Pratiques interdites par la réglementation',
+    color: 'text-red-700 bg-red-50 border border-red-200',
+    icon: '🚫',
+    weight: 0.05
+  }
+}
+
+// Mapping exact basé sur le tableau fourni
+export const QUESTION_RISK_CATEGORY_MAPPING: Record<string, string> = {
+  // Transparency
+  'E6.N10.Q2': 'transparency',
+  'E6.N10.Q1': 'transparency',
+  'E5.N9.Q3': 'transparency',
+  'E5.N9.Q2': 'transparency',
+  'E4.N8.Q11': 'transparency',
+  
+  // Technical Robustness and Safety
+  'E5.N9.Q9': 'technical_robustness',
+  'E5.N9.Q1': 'technical_robustness',
+  'E4.N8.Q8': 'technical_robustness',
+  'E4.N8.Q7': 'technical_robustness',
+  'E4.N8.Q3': 'technical_robustness',
+  'E4.N8.Q1': 'technical_robustness',
+  'E4.N7.Q2': 'technical_robustness',
+  
+  // Human Agency & Oversight
+  'E5.N9.Q8': 'human_agency',
+  'E5.N9.Q7': 'human_agency',
+  'E5.N9.Q4': 'human_agency',
+  'E4.N8.Q10': 'human_agency',
+  'E4.N8.Q9': 'human_agency',
+  
+  // Privacy & Data Governance
+  'E5.N9.Q6': 'privacy_data',
+  'E5.N9.Q5': 'privacy_data',
+  'E4.N8.Q12': 'privacy_data',
+  
+  // Social & Environmental Well-being
+  'E4.N8.Q6': 'social_environmental',
+  
+  // Diversity, Non-discrimination & Fairness
+  'E4.N8.Q5': 'diversity_fairness',
+  'E4.N8.Q4': 'diversity_fairness',
+  'E4.N8.Q2': 'diversity_fairness',
+  
+  // Prohibited Practices
+  'E4.N7.Q3': 'prohibited_practices'
+}
+
+export const getRiskCategoryForQuestion = (questionCode: string): RiskCategory | null => {
+  const categoryId = QUESTION_RISK_CATEGORY_MAPPING[questionCode]
+  return categoryId ? RISK_CATEGORIES[categoryId] : null
+} 

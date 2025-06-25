@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { QUESTIONS } from '../../../../usecases/[id]/data/questions'
 import { QUESTION_CODE_MAPPING, QUESTION_SCORING_CONFIG, getAnswerImpact } from '../../../../usecases/[id]/utils/scoring-config'
-import { UseCaseScore, ScoreBreakdown } from '../../../../usecases/[id]/types/usecase'
+import { UseCaseScore, ScoreBreakdown, CategoryScore } from '../../../../usecases/[id]/types/usecase'
+import { RISK_CATEGORIES, QUESTION_RISK_CATEGORY_MAPPING } from '../../../../usecases/[id]/utils/risk-categories'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -20,6 +21,21 @@ function calculateScore(usecaseId: string, responses: any[]): UseCaseScore {
     
     let currentScore = BASE_SCORE
     const breakdown: ScoreBreakdown[] = []
+    
+    // Initialiser les compteurs par catégorie
+    const categoryData: Record<string, { 
+      totalImpact: number, 
+      questionCount: number, 
+      maxPossibleScore: number 
+    }> = {}
+    
+    Object.keys(RISK_CATEGORIES).forEach(categoryId => {
+      categoryData[categoryId] = { 
+        totalImpact: 0, 
+        questionCount: 0, 
+        maxPossibleScore: 0 
+      }
+    })
 
     for (const response of responses) {
       console.log('Processing response for question:', response.question_code)
@@ -74,50 +90,82 @@ function calculateScore(usecaseId: string, responses: any[]): UseCaseScore {
         }
       }
 
-    // Ajouter l'impact au score total
-    currentScore += questionImpact
-    
-    // Ajouter au breakdown si impact non nul
-    if (questionImpact !== 0) {
-      // Créer une valeur de réponse formatée selon le type
-      let answerValue: any = null
-      if (response.single_value) {
-        answerValue = response.single_value
-      } else if (response.multiple_codes) {
-        answerValue = response.multiple_codes
-      } else if (response.conditional_main) {
-        answerValue = {
-          selected: response.conditional_main,
-          conditionalValues: response.conditional_keys && response.conditional_values 
-            ? response.conditional_keys.reduce((acc: Record<string, string>, key: string, index: number) => {
-                acc[key] = response.conditional_values[index] || ''
-                return acc
-              }, {})
-            : {}
+      // Ajouter l'impact au score total
+      currentScore += questionImpact
+      
+      // Identifier la catégorie de risque
+      const riskCategoryId = QUESTION_RISK_CATEGORY_MAPPING[response.question_code]
+      
+      // Ajouter au breakdown si impact non nul
+      if (questionImpact !== 0) {
+        // Créer une valeur de réponse formatée selon le type
+        let answerValue: any = null
+        if (response.single_value) {
+          answerValue = response.single_value
+        } else if (response.multiple_codes) {
+          answerValue = response.multiple_codes
+        } else if (response.conditional_main) {
+          answerValue = {
+            selected: response.conditional_main,
+            conditionalValues: response.conditional_keys && response.conditional_values 
+              ? response.conditional_keys.reduce((acc: Record<string, string>, key: string, index: number) => {
+                  acc[key] = response.conditional_values[index] || ''
+                  return acc
+                }, {})
+              : {}
+          }
+        }
+        
+        breakdown.push({
+          question_id: response.question_code,
+          question_text: question.question,
+          answer_value: answerValue,
+          score_impact: questionImpact,
+          reasoning,
+          risk_category: riskCategoryId
+        })
+        
+        // Mettre à jour les données de catégorie
+        if (riskCategoryId && categoryData[riskCategoryId]) {
+          categoryData[riskCategoryId].totalImpact += questionImpact
+          categoryData[riskCategoryId].questionCount += 1
+          // Calculer le score max possible pour cette question (impact positif max)
+          categoryData[riskCategoryId].maxPossibleScore += Math.max(0, Math.abs(questionImpact))
         }
       }
-      
-      breakdown.push({
-        question_id: response.question_code,
-        question_text: question.question,
-        answer_value: answerValue,
-        score_impact: questionImpact,
-        reasoning
-      })
     }
-  }
 
-  // S'assurer que le score ne descend pas en dessous de 0
-  currentScore = Math.max(0, currentScore)
+    // S'assurer que le score ne descend pas en dessous de 0
+    currentScore = Math.max(0, currentScore)
+
+    // Calculer les scores par catégorie
+    const categoryScores: CategoryScore[] = Object.entries(RISK_CATEGORIES).map(([categoryId, category]) => {
+      const data = categoryData[categoryId]
+      const baseScore = BASE_SCORE * category.weight
+      const adjustedScore = Math.max(0, baseScore + data.totalImpact)
+      
+      return {
+        category_id: categoryId,
+        category_name: category.shortName,
+        score: adjustedScore,
+        max_score: baseScore,
+        percentage: Math.round((adjustedScore / baseScore) * 100),
+        question_count: data.questionCount,
+        color: category.color,
+        icon: category.icon
+      }
+    })
 
     console.log('Final score calculated:', currentScore, '/', BASE_SCORE)
     console.log('Breakdown entries:', breakdown.length)
+    console.log('Category scores:', categoryScores.length)
 
     return {
       usecase_id: usecaseId,
       score: currentScore,
       max_score: BASE_SCORE,
       score_breakdown: breakdown,
+      category_scores: categoryScores,
       calculated_at: new Date().toISOString(),
       version: 1
     }
@@ -129,6 +177,7 @@ function calculateScore(usecaseId: string, responses: any[]): UseCaseScore {
       score: BASE_SCORE,
       max_score: BASE_SCORE,
       score_breakdown: [],
+      category_scores: [],
       calculated_at: new Date().toISOString(),
       version: 1
     }
@@ -260,6 +309,12 @@ export async function GET(
     console.log('Saving score...')
     const savedScore = await saveScore(supabase, scoreData)
     console.log('Score saved with ID:', savedScore.id)
+
+    // S'assurer que les category_scores sont présents (rétrocompatibilité)
+    if (!savedScore.category_scores || savedScore.category_scores.length === 0) {
+      console.log('Adding category scores for backward compatibility')
+      savedScore.category_scores = scoreData.category_scores
+    }
 
     return NextResponse.json(savedScore)
 

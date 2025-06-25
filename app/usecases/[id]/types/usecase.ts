@@ -61,12 +61,24 @@ export type QuestionAnswer = string | string[] | {
 }
 
 // Nouveaux types pour le système de scoring
+export interface CategoryScore {
+  category_id: string
+  category_name: string
+  score: number
+  max_score: number
+  percentage: number
+  question_count: number
+  color: string
+  icon: string
+}
+
 export interface UseCaseScore {
   id?: string
   usecase_id: string
   score: number
   max_score: number
   score_breakdown: ScoreBreakdown[]
+  category_scores: CategoryScore[]
   calculated_at: string
   version: number
 }
@@ -77,6 +89,7 @@ export interface ScoreBreakdown {
   answer_value: any
   score_impact: number
   reasoning: string
+  risk_category?: string
 }
 
 export interface ScoreCategory {
