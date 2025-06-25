@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useAuth } from '../auth' // Utiliser le contexte auth
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useAuth } from '../auth'
 
 interface UseCaseResponse {
   id: string
@@ -34,25 +34,40 @@ interface UseQuestionnaireResponsesReturn {
 }
 
 export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireResponsesReturn {
-  const { session } = useAuth() // Utiliser directement la session du contexte
+  const { session } = useAuth()
   const [responses, setResponses] = useState<UseCaseResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isFetching = useRef(false)
+  const lastFetchId = useRef<string>('')
 
-  // Charger les réponses - OPTIMISÉ sans appel getSession()
+  // Extraire access_token comme string stable pour éviter les changements de référence
+  const accessToken = session?.access_token || ''
+
+  // Charger les réponses - STABILISÉ
   const refreshResponses = useCallback(async () => {
-    if (!session?.access_token || !usecaseId) {
-      setLoading(false)
+    if (!accessToken || !usecaseId || isFetching.current) {
+      if (!accessToken || !usecaseId) {
+        setLoading(false)
+      }
+      return
+    }
+
+    // Éviter les fetch dupliqués
+    const fetchId = `${usecaseId}-${accessToken.slice(-8)}`
+    if (lastFetchId.current === fetchId && !isFetching.current) {
       return
     }
 
     try {
+      isFetching.current = true
+      lastFetchId.current = fetchId
       setLoading(true)
       setError(null)
 
       const response = await fetch(`/api/usecases/${usecaseId}/responses`, {
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
+        headers: { 'Authorization': `Bearer ${accessToken}` }
       })
 
       if (!response.ok) {
@@ -65,23 +80,24 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
       setError(err instanceof Error ? err.message : 'Error loading responses')
     } finally {
       setLoading(false)
+      isFetching.current = false
     }
-  }, [usecaseId, session?.access_token]) // Dépendances optimisées
+  }, [usecaseId, accessToken])
 
-  // Charger uniquement quand la session est prête
+  // Charger uniquement quand nécessaire
   useEffect(() => {
-    if (session?.access_token && usecaseId) {
+    if (accessToken && usecaseId && !isFetching.current) {
       refreshResponses()
     }
-  }, [session?.access_token, usecaseId, refreshResponses])
+  }, [accessToken, usecaseId, refreshResponses])
 
-  // Sauvegarder une réponse - OPTIMISÉ
+  // Sauvegarder une réponse - STABILISÉ
   const saveResponse = useCallback(async (
     questionCode: string, 
     responseValue?: string, 
     responseData?: any
   ) => {
-    if (!session?.access_token) throw new Error('No session found')
+    if (!accessToken) throw new Error('No session found')
 
     try {
       setSaving(true)
@@ -91,7 +107,7 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
           question_code: questionCode,
@@ -117,17 +133,20 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
           return [...prev, savedResponse]
         }
       })
+      
+      // Invalider le cache pour forcer un refresh lors du prochain mount
+      lastFetchId.current = ''
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error saving response')
       throw err
     } finally {
       setSaving(false)
     }
-  }, [usecaseId, session?.access_token]) // Dépendances stables
+  }, [usecaseId, accessToken])
 
-  // Sauvegarder plusieurs réponses à la fois - OPTIMISÉ
+  // Sauvegarder plusieurs réponses à la fois - STABILISÉ
   const saveMultiple = useCallback(async (answers: Record<string, any>) => {
-    if (!session?.access_token) throw new Error('No session found')
+    if (!accessToken) throw new Error('No session found')
 
     try {
       setSaving(true)
@@ -162,7 +181,7 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({ responses: responsesToSave })
       })
@@ -189,13 +208,16 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
         
         return newResponses
       })
+      
+      // Invalider le cache
+      lastFetchId.current = ''
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la sauvegarde multiple')
       throw err
     } finally {
       setSaving(false)
     }
-  }, [usecaseId, session?.access_token])
+  }, [usecaseId, accessToken])
 
   // Obtenir une réponse spécifique
   const getResponse = useCallback((questionCode: string): UseCaseResponse | null => {

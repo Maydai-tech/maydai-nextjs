@@ -7,8 +7,15 @@ const nextConfig: NextConfig = {
   },
   // Disable static optimization for pages that use search params
   trailingSlash: false,
-  output: 'standalone',
+  // Retire output: 'standalone' pour le développement
+  ...(process.env.NODE_ENV === 'production' && { output: 'standalone' }),
   async headers() {
+    // En développement, utilisez des en-têtes plus permissifs
+    if (process.env.NODE_ENV === 'development') {
+      return [];
+    }
+    
+    // En production, utilisez les en-têtes de sécurité stricts
     return [
       {
         source: '/(.*)',

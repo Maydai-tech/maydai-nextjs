@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-auth'
@@ -20,56 +20,62 @@ export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
   const [progress, setProgress] = useState<Progress | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const api = useApiCall()
+  const isFetching = useRef(false)
 
+  // Fonction pour récupérer les données du cas d'usage
   const fetchUseCaseData = useCallback(async () => {
-    if (!session?.access_token || !useCaseId) {
-      setLoading(false)
+    if (!user || !session?.access_token || !useCaseId || isFetching.current) {
+      if (!user || !session?.access_token || !useCaseId) {
+        setLoading(false)
+      }
       return
     }
 
     try {
+      isFetching.current = true
       setLoading(true)
       setError(null)
-      
-      // Fetch use case details
-      const useCaseResponse = await api.get(`/api/usecases/${useCaseId}`)
-      
-      if (useCaseResponse.status === 404) {
-        router.push(useCaseRoutes.companies())
-        return
-      } else if (useCaseResponse.data) {
-        setUseCase(useCaseResponse.data)
-        
-        // Fetch progress for this use case
-        if (useCaseResponse.data.company_id) {
-          const progressResponse = await api.get(`/api/companies/${useCaseResponse.data.company_id}/progress`)
-          if (progressResponse.data) {
-            const useCaseProgress = progressResponse.data.find((p: Progress) => p.usecase_id === useCaseId)
-            setProgress(useCaseProgress || null)
-          }
+
+      const response = await fetch(`/api/usecases/${useCaseId}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
         }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch use case')
       }
-    } catch (error) {
-      console.error('Error fetching use case data:', error)
-      setError('Erreur lors du chargement du cas d\'usage')
-      router.push(useCaseRoutes.companies())
+
+      const data = await response.json()
+      setUseCase(data)
+
+      // Progress fetch temporairement désactivé pour éviter les erreurs 500
+      // TODO: Réactiver une fois l'API corrigée
+      setProgress(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error loading use case')
     } finally {
       setLoading(false)
+      isFetching.current = false
     }
-  }, [useCaseId, session?.access_token, api, router]) // Dépendances stables
+  }, [user, session?.access_token, useCaseId])
 
+  // Charger les données quand les dépendances changent
   useEffect(() => {
-    if (user && session?.access_token && useCaseId) {
+    if (user && session?.access_token && useCaseId && !isFetching.current) {
       fetchUseCaseData()
     }
-  }, [user, session?.access_token, useCaseId, fetchUseCaseData]) // Dépendances précises
+  }, [user, session?.access_token, useCaseId, fetchUseCaseData])
+
+  const refetch = useCallback(async () => {
+    await fetchUseCaseData()
+  }, [fetchUseCaseData])
 
   return {
     useCase,
     progress,
     loading,
     error,
-    refetch: fetchUseCaseData
+    refetch
   }
 } 
