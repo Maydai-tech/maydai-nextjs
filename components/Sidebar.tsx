@@ -6,6 +6,7 @@ import { Home, User, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useApiCall } from '@/lib/api-auth';
+import packageJson from '../package.json';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -141,7 +142,7 @@ export default function Sidebar() {
         
         <div className="p-4 border-t border-[#006280]/30">
           <div className="text-center text-white/60 text-xs">
-            Maydai v1.0
+            Maydai v{packageJson.version}
           </div>
         </div>
       </div>
