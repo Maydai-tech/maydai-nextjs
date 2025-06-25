@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-auth'
@@ -22,14 +22,15 @@ export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
   const [error, setError] = useState<string | null>(null)
   const api = useApiCall()
 
-  const fetchUseCaseData = async () => {
+  const fetchUseCaseData = useCallback(async () => {
+    if (!session?.access_token || !useCaseId) {
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
-      
-      if (!session?.access_token || !useCaseId) {
-        return
-      }
       
       // Fetch use case details
       const useCaseResponse = await api.get(`/api/usecases/${useCaseId}`)
@@ -56,13 +57,13 @@ export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
     } finally {
       setLoading(false)
     }
-  }
+  }, [useCaseId, session?.access_token, api, router]) // Dépendances stables
 
   useEffect(() => {
-    if (user && useCaseId) {
+    if (user && session?.access_token && useCaseId) {
       fetchUseCaseData()
     }
-  }, [user, useCaseId])
+  }, [user, session?.access_token, useCaseId, fetchUseCaseData]) // Dépendances précises
 
   return {
     useCase,

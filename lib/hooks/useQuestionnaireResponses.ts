@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { supabase } from '../supabase'
+import { useAuth } from '../auth' // Utiliser le contexte auth
 
 interface UseCaseResponse {
   id: string
@@ -34,19 +34,22 @@ interface UseQuestionnaireResponsesReturn {
 }
 
 export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireResponsesReturn {
+  const { session } = useAuth() // Utiliser directement la session du contexte
   const [responses, setResponses] = useState<UseCaseResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Charger les réponses au montage
+  // Charger les réponses - OPTIMISÉ sans appel getSession()
   const refreshResponses = useCallback(async () => {
+    if (!session?.access_token || !usecaseId) {
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
-      
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('No session found')
 
       const response = await fetch(`/api/usecases/${usecaseId}/responses`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
@@ -63,24 +66,26 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
     } finally {
       setLoading(false)
     }
-  }, [usecaseId])
+  }, [usecaseId, session?.access_token]) // Dépendances optimisées
 
+  // Charger uniquement quand la session est prête
   useEffect(() => {
-    refreshResponses()
-  }, [refreshResponses])
+    if (session?.access_token && usecaseId) {
+      refreshResponses()
+    }
+  }, [session?.access_token, usecaseId, refreshResponses])
 
-  // Sauvegarder une réponse
+  // Sauvegarder une réponse - OPTIMISÉ
   const saveResponse = useCallback(async (
     questionCode: string, 
     responseValue?: string, 
     responseData?: any
   ) => {
+    if (!session?.access_token) throw new Error('No session found')
+
     try {
       setSaving(true)
       setError(null)
-      
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('No session found')
 
       const response = await fetch(`/api/usecases/${usecaseId}/responses`, {
         method: 'POST',
@@ -118,16 +123,15 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
     } finally {
       setSaving(false)
     }
-  }, [usecaseId])
+  }, [usecaseId, session?.access_token]) // Dépendances stables
 
-  // Sauvegarder plusieurs réponses à la fois
+  // Sauvegarder plusieurs réponses à la fois - OPTIMISÉ
   const saveMultiple = useCallback(async (answers: Record<string, any>) => {
+    if (!session?.access_token) throw new Error('No session found')
+
     try {
       setSaving(true)
       setError(null)
-      
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('No session found')
 
       const responsesToSave = Object.entries(answers).map(([questionCode, answer]) => {
         // Si la réponse est un objet complexe, la traiter selon son type
@@ -191,7 +195,7 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
     } finally {
       setSaving(false)
     }
-  }, [usecaseId])
+  }, [usecaseId, session?.access_token])
 
   // Obtenir une réponse spécifique
   const getResponse = useCallback((questionCode: string): UseCaseResponse | null => {

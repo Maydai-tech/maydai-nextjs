@@ -30,11 +30,12 @@ export default function UseCaseEvaluationPage() {
     setMounted(true)
   }, [])
 
+  // Auth redirect - OPTIMISÉ avec des dépendances précises
   useEffect(() => {
     if (mounted && !loading && !user) {
       router.push('/login')
     }
-  }, [user, loading, router, mounted])
+  }, [mounted, loading, user, router])
 
   const handleQuestionnaireComplete = () => {
     goToOverview()
