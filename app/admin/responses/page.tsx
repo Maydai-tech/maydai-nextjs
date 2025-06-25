@@ -75,9 +75,20 @@ export default function ResponsesPage() {
   }
 
   const filteredResponses = responses.filter(response => {
+    // Helper function to get searchable response text
+    const getResponseText = (resp: ResponseWithDetails): string => {
+      if (resp.single_value) return resp.single_value
+      if (resp.multiple_labels?.length) return resp.multiple_labels.join(' ')
+      if (resp.conditional_main) return resp.conditional_main
+      if (resp.conditional_values?.length) return resp.conditional_values.join(' ')
+      return ''
+    }
+
+    const responseText = getResponseText(response)
+    
     const matchesSearch = 
       (response.question_text && response.question_text.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (response.response_value && response.response_value.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (responseText && responseText.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (response.usecase_name && response.usecase_name.toLowerCase().includes(searchTerm.toLowerCase()))
     
     const matchesUsecase = !selectedUsecase || response.usecase_id === selectedUsecase
@@ -101,19 +112,25 @@ export default function ResponsesPage() {
   }
 
   const getResponsePreview = (response: UseCaseResponse) => {
-    if (response.response_value) {
-      return truncateText(response.response_value, 80)
+    // Single value response (text, select, etc.)
+    if (response.single_value) {
+      return truncateText(response.single_value, 80)
     }
-    if (response.response_data) {
-      try {
-        const data = typeof response.response_data === 'string' 
-          ? JSON.parse(response.response_data) 
-          : response.response_data
-        return truncateText(JSON.stringify(data), 80)
-      } catch {
-        return 'Données complexes'
+    
+    // Multiple choice response
+    if (response.multiple_labels?.length) {
+      return truncateText(response.multiple_labels.join(', '), 80)
+    }
+    
+    // Conditional response
+    if (response.conditional_main) {
+      let preview = response.conditional_main
+      if (response.conditional_values?.length) {
+        preview += ` (${response.conditional_values.join(', ')})`
       }
+      return truncateText(preview, 80)
     }
+    
     return 'Aucune réponse'
   }
 
