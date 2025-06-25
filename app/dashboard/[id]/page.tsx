@@ -17,7 +17,9 @@ import {
   Calendar,
   TrendingUp,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Search,
+  X
 } from 'lucide-react'
 
 interface Company {
@@ -55,6 +57,9 @@ export default function CompanyDashboard({ params }: DashboardProps) {
   const [company, setCompany] = useState<Company | null>(null)
   const [useCases, setUseCases] = useState<UseCase[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  
+  // Search state
+  const [searchTerm, setSearchTerm] = useState('')
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -120,18 +125,34 @@ export default function CompanyDashboard({ params }: DashboardProps) {
     }
   }
 
+  // Filter use cases based on search term
+  const filteredUseCases = useCases.filter(useCase =>
+    (useCase.name && useCase.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (useCase.description && useCase.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  )
+
   // Pagination calculations
-  const totalPages = Math.ceil(useCases.length / itemsPerPage)
+  const totalPages = Math.ceil(filteredUseCases.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
-  const currentUseCases = useCases.slice(startIndex, endIndex)
+  const currentUseCases = filteredUseCases.slice(startIndex, endIndex)
   const startItem = startIndex + 1
-  const endItem = Math.min(endIndex, useCases.length)
+  const endItem = Math.min(endIndex, filteredUseCases.length)
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
     // Scroll to top of use cases section
     document.getElementById('use-cases-section')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value)
+    setCurrentPage(1) // Reset to first page when searching
+  }
+
+  const clearSearch = () => {
+    setSearchTerm('')
+    setCurrentPage(1)
   }
 
   const getRiskLevelColor = (riskLevel: string) => {
@@ -323,22 +344,57 @@ export default function CompanyDashboard({ params }: DashboardProps) {
         {/* Use Cases Section */}
         <div id="use-cases-section" className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 sm:px-6 py-4 bg-gray-50 border-b border-gray-100">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
-              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4">
-                <h2 className="text-lg font-semibold text-gray-900">Cas d'usage IA</h2>
-                {useCases.length > 0 && (
-                  <span className="text-sm text-gray-600">
-                    {startItem}-{endItem} sur {useCases.length}
-                  </span>
-                )}
+            <div className="flex flex-col space-y-4">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-3 sm:space-y-0">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Cas d'usage IA</h2>
+                  {useCases.length > 0 && (
+                    <span className="text-sm text-gray-600">
+                      {searchTerm ? (
+                        <>
+                          {startItem}-{endItem} sur {filteredUseCases.length} 
+                          {filteredUseCases.length !== useCases.length && (
+                            <span className="text-gray-400"> (filtré sur {useCases.length})</span>
+                          )}
+                        </>
+                      ) : (
+                        <>{startItem}-{endItem} sur {useCases.length}</>
+                      )}
+                    </span>
+                  )}
+                </div>
+                <Link
+                  href={`/usecases/new?company=${companyId}`}
+                  className="inline-flex items-center justify-center px-4 py-2 bg-[#0080A3] text-white text-sm font-medium rounded-lg hover:bg-[#006280] transition-colors w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nouveau cas d'usage
+                </Link>
               </div>
-              <Link
-                href={`/usecases/new?company=${companyId}`}
-                className="inline-flex items-center justify-center px-4 py-2 bg-[#0080A3] text-white text-sm font-medium rounded-lg hover:bg-[#006280] transition-colors w-full sm:w-auto"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Nouveau cas d'usage
-              </Link>
+              
+              {/* Search Bar */}
+              {useCases.length > 0 && (
+                <div className="relative max-w-md">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Rechercher un cas d'usage..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={clearSearch}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 transition-colors"
+                    >
+                      <X className="h-4 w-4 text-gray-400" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="p-4 sm:p-6">
@@ -356,6 +412,23 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                   <Plus className="h-4 w-4 mr-2" />
                   Nouveau cas d'usage
                 </Link>
+              </div>
+            ) : filteredUseCases.length === 0 ? (
+              <div className="text-center py-8 sm:py-12">
+                <div className="bg-gray-50 p-3 sm:p-4 rounded-full w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 flex items-center justify-center">
+                  <Search className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
+                </div>
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Aucun résultat trouvé</h3>
+                <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
+                  Aucun cas d'usage ne correspond à votre recherche "{searchTerm}"
+                </p>
+                <button
+                  onClick={clearSearch}
+                  className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Effacer la recherche
+                </button>
               </div>
             ) : (
               <>
@@ -412,7 +485,10 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                   <div className="mt-6 pt-6 border-t border-gray-100">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                       <div className="text-sm text-gray-600 text-center sm:text-left">
-                        Affichage de {startItem} à {endItem} sur {useCases.length} cas d'usage
+                        Affichage de {startItem} à {endItem} sur {filteredUseCases.length} cas d'usage
+                        {searchTerm && filteredUseCases.length !== useCases.length && (
+                          <span className="text-gray-400"> (filtré sur {useCases.length})</span>
+                        )}
                       </div>
                       <div className="flex items-center justify-center space-x-2">
                         <button
