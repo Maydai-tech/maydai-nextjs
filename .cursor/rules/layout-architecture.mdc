@@ -55,3 +55,38 @@ The application uses a centralized layout system managed by [ConditionalLayout.t
 - [ConditionalLayout.tsx](mdc:components/ConditionalLayout.tsx) - Main layout wrapper
 - [UseCaseLayout.tsx](mdc:app/usecases/[id]/components/shared/UseCaseLayout.tsx) - Example of proper layout implementation
 - [Sidebar.tsx](mdc:components/Sidebar.tsx) - Sidebar component structure
+
+# Layout Architecture Rules
+
+## ConditionalLayout System
+
+The app uses a ConditionalLayout that manages the main structure with sidebar and responsive design.
+
+### Core Layout Rules
+1. **Never redefine structure**: Components should NOT redefine `min-h-screen`, `max-w-7xl`, or max-width containers
+2. **Background and padding**: ConditionalLayout applies `bg-gray-50` background and `p-6 pt-16 lg:pt-6` padding
+3. **Full-width extension**: Use negative margins like `-m-6`, `-mx-6` with corresponding padding for full-width elements
+4. **Responsive handling**: ConditionalLayout handles responsive design and sidebar management
+
+### Layout Components
+- Main layout: [components/ConditionalLayout.tsx](mdc:components/ConditionalLayout.tsx)
+- Sidebar component: [components/Sidebar.tsx](mdc:components/Sidebar.tsx)
+
+### Usage Pattern
+```typescript
+// ❌ Don't do this in page components
+<div className="min-h-screen max-w-7xl mx-auto">
+
+// ✅ Do this instead - let ConditionalLayout handle structure
+<div className="space-y-6">
+  {/* Your page content */}
+</div>
+```
+
+### Full-width Elements
+```typescript
+// For elements that need full width
+<div className="-mx-6 px-6 bg-white">
+  {/* Full-width content */}
+</div>
+```

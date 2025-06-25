@@ -1,0 +1,54 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Responsive Design Rules
+
+## Mobile-First Approach
+
+The entire app must be perfectly responsive for tablet and mobile phone usage.
+
+### Responsive Breakpoints
+- **Mobile**: Default (no prefix)
+- **Tablet**: `sm:` (640px+)
+- **Desktop**: `lg:` (1024px+)
+
+### Layout Patterns
+```typescript
+// ✅ Good responsive classes
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+<div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+<p className="text-sm sm:text-base text-gray-600">
+
+// ✅ Responsive padding/margins
+<div className="p-4 sm:p-6 lg:p-8">
+<div className="space-y-4 sm:space-y-6 lg:space-y-8">
+```
+
+### Navigation Responsiveness  
+- Sidebar collapses on mobile
+- Navigation adapts to screen size
+- Touch-friendly button sizes (minimum 44px)
+
+### Typography Scale
+```typescript
+// Responsive text sizing
+<h1 className="text-xl sm:text-2xl lg:text-3xl">
+<p className="text-sm sm:text-base">
+```
+
+### Component Responsiveness
+- All components must work on mobile
+- Test on tablet and phone viewports
+- Use responsive grid systems
+- Ensure touch targets are adequate
+
+### Development Rules
+1. **Mobile-first**: Start with mobile layout, enhance for larger screens
+2. **Test all breakpoints**: Verify functionality across device sizes
+3. **ConditionalLayout handles main responsive structure**: Don't override in components
+
+### Files to Reference
+- Responsive examples in [app/dashboard/[id]/page.tsx](mdc:app/dashboard/[id]/page.tsx)
+- Mobile-optimized components in [app/usecases/[id]/components/](mdc:app/usecases/[id]/components/)

@@ -330,10 +330,22 @@ export default function CompanyDashboard({ params }: DashboardProps) {
             ) : (
               <div className="space-y-4">
                 {useCases.map((useCase) => {
+                  // Détermine l'URL de destination selon le statut
+                  const getUseCaseUrl = (useCase: UseCase) => {
+                    const isToComplete = 
+                      useCase.status?.toLowerCase() === 'draft' ||
+                      useCase.status?.toLowerCase() === 'not_started' ||
+                      !useCase.status
+                    
+                    return isToComplete 
+                      ? `/usecases/${useCase.id}/evaluation`
+                      : `/usecases/${useCase.id}`
+                  }
+
                   return (
                     <Link
                       key={useCase.id}
-                      href={`/usecases/${useCase.id}`}
+                      href={getUseCaseUrl(useCase)}
                       className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">

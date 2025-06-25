@@ -1,0 +1,46 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Questionnaire Data Management
+
+## PostgreSQL Array-based Storage System
+
+The questionnaire system uses PostgreSQL Array columns for flexible data storage.
+
+### Data Structure
+1. **`single_value`**: For simple responses (string/number)
+2. **`multiple_codes`/`multiple_labels`**: For multiple choice responses
+3. **`conditional_main`/`conditional_keys`/`conditional_values`**: For conditional responses
+
+### API Save Pattern
+```typescript
+// Use upsert with explicit conflict resolution
+const { error } = await supabase
+  .from('questionnaire_responses')
+  .upsert(data, { 
+    onConflict: 'usecase_id,question_code' 
+  })
+```
+
+### Data Formatting Hook
+The [useQuestionnaireResponses](mdc:lib/hooks/useQuestionnaireResponses.ts) hook automatically formats responses for UI consumption by detecting stored data types.
+
+### Response Processing
+```typescript
+// The hook handles different data formats:
+// - Single values: direct mapping
+// - Multiple values: arrays with codes/labels
+// - Conditional: main value with key-value pairs
+```
+
+### Migration Notes
+- System migrated from individual columns to Array-based storage
+- Fallback handling for non-structured legacy data
+- Explicit conflict column specification prevents upsert errors
+
+### Files Involved
+- Hook: [lib/hooks/useQuestionnaireResponses.ts](mdc:lib/hooks/useQuestionnaireResponses.ts)
+- API utilities: [lib/questionnaire-api.ts](mdc:lib/questionnaire-api.ts)
+- Questionnaire components in [app/usecases/[id]/components/evaluation/](mdc:app/usecases/[id]/components/evaluation/)

@@ -1,0 +1,39 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Use Case Navigation and Redirection Rules
+
+## Status-based Navigation Logic
+
+Use cases have different statuses that determine navigation behavior:
+
+### Status Mapping
+- `draft` or `not_started` → "À compléter" (French display)
+- `in_progress` or `under_review` → "En cours" 
+- `completed` or `active` → "Terminé"
+
+### Navigation Rules
+1. **Dashboard clicks**: Use cases with "À compléter" status should redirect directly to evaluation (`/usecases/{id}/evaluation`)
+2. **Completed use cases**: Navigate to overview page (`/usecases/{id}`)
+3. **Avoid page flash**: Never use useEffect redirections that cause visual flashing - handle redirections at click level
+
+### Implementation Pattern
+```typescript
+const getUseCaseUrl = (useCase: UseCase) => {
+  const isToComplete = 
+    useCase.status?.toLowerCase() === 'draft' ||
+    useCase.status?.toLowerCase() === 'not_started' ||
+    !useCase.status
+  
+  return isToComplete 
+    ? `/usecases/${useCase.id}/evaluation`
+    : `/usecases/${useCase.id}`
+}
+```
+
+### Files Involved
+- Dashboard navigation: [app/dashboard/[id]/page.tsx](mdc:app/dashboard/[id]/page.tsx)
+- Use case overview: [app/usecases/[id]/page.tsx](mdc:app/usecases/[id]/page.tsx)
+- Status utilities: [app/usecases/[id]/utils/questionnaire.ts](mdc:app/usecases/[id]/utils/questionnaire.ts)
