@@ -1,0 +1,124 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Scripts de Développement et Utilitaires
+
+## Scripts Utilitaires
+
+### Script de Vérification des Tests
+- [scripts/test-scoring.js](mdc:scripts/test-scoring.js) - Vérification rapide du système de scoring
+
+#### Utilisation
+```bash
+node scripts/test-scoring.js
+```
+
+#### Fonctionnalités
+- Vérification de l'existence des fichiers de test
+- Validation de la structure des configurations de scoring
+- Vérification des catégories de risque
+- Rapport de statut des tests
+
+## Documentation Technique
+
+### Guide des Tests
+- [docs/TESTING.md](mdc:docs/TESTING.md) - Documentation complète des tests unitaires
+
+#### Contenu du Guide
+- Instructions d'installation et de configuration
+- Guide d'utilisation des commandes de test
+- Architecture du système de tests
+- Exemples et patterns recommandés
+- Troubleshooting des problèmes courants
+
+## Configuration de Développement
+
+### Jest
+- [jest.config.js](mdc:jest.config.js) - Configuration Jest adaptée au projet
+- [jest.setup.js](mdc:jest.setup.js) - Setup global pour les tests
+
+#### Points Clés de Configuration
+```javascript
+// Mapping des modules
+moduleNameMapper: {
+  '^@/(.*)$': '<rootDir>/$1',
+}
+
+// Environment de test
+testEnvironment: 'jsdom'
+
+// Support TypeScript
+preset: 'ts-jest'
+```
+
+## Commandes de Développement
+
+### Tests
+```bash
+# Tests de base
+npm test                    # Tous les tests
+npm run test:watch         # Mode surveillance
+npm run test:coverage      # Couverture de code
+
+# Tests spécifiques
+npm test -- "scoring"      # Tests de scoring
+npm test -- --verbose      # Mode détaillé
+```
+
+### Application
+```bash
+npm run dev                # Serveur de développement
+npm run build              # Build de production
+npm run start              # Serveur de production
+```
+
+## Bonnes Pratiques
+
+### Scripts de Vérification
+- Toujours tester les scripts sur des données de test
+- Inclure des vérifications de sanité
+- Fournir des messages d'erreur clairs
+- Documenter les paramètres et options
+
+### Documentation
+- Maintenir la documentation à jour avec le code
+- Inclure des exemples pratiques
+- Expliquer les cas d'usage et les limitations
+- Fournir des guides de dépannage
+
+## Structure des Fichiers
+
+### Organisation Recommandée
+```
+scripts/
+├── test-scoring.js         # Vérification du système de scoring
+└── [autres-scripts].js    # Futurs scripts utilitaires
+
+docs/
+├── TESTING.md             # Guide des tests
+└── [autres-docs].md       # Autres documentations
+
+jest.config.js             # Configuration Jest
+jest.setup.js              # Setup des tests
+```
+
+### Conventions de Nommage
+- Scripts : `kebab-case.js`
+- Documentation : `UPPERCASE.md` pour les guides principaux
+- Configuration : `nom-du-tool.config.js`
+
+## Maintenance
+
+### Mise à Jour des Scripts
+1. Tester les modifications sur un environnement de dev
+2. Vérifier la compatibilité avec les versions actuelles
+3. Mettre à jour la documentation associée
+4. Valider avec l'équipe avant le merge
+
+### Surveillance
+- Vérifier régulièrement que les scripts fonctionnent
+- Monitorer les performances des tests
+- Maintenir la couverture de code
+- Documenter les changements importants

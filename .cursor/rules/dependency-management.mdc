@@ -1,0 +1,108 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Gestion des Dépendances - Compatibilité React 19
+
+## Compatibilité React 19
+
+### Problèmes Connus
+Le projet utilise React 19, ce qui peut causer des conflits avec certaines dépendances tierces qui ne supportent pas encore cette version.
+
+### Dépendances Testing Library
+**Problème résolu** : `@testing-library/react` versions < 16.0.0 ne sont pas compatibles avec React 19.
+
+#### Solution Implémentée
+- ✅ `@testing-library/react@^16.1.0` - Compatible React 19
+- ✅ `@testing-library/jest-dom@^6.1.4` - Stable
+- ✅ `@testing-library/dom@^10.0.0` - Dépendance requise
+
+#### Versions Problématiques à Éviter
+- ❌ `@testing-library/react@^14.x.x` - Incompatible React 19
+- ❌ `@testing-library/react@^15.x.x` - Incompatible React 19
+
+## Configuration Package.json
+
+### Scripts de Test
+```json
+{
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  }
+}
+```
+
+### Dépendances de Développement Actuelles
+Voir [package.json](mdc:package.json) pour la liste complète, notamment :
+- `jest@^29.7.0`
+- `ts-jest@^29.1.1`
+- `@types/jest@^29.5.5`
+
+## Résolution de Problèmes
+
+### Erreurs NPM Install Communes
+
+#### Erreur de Peer Dependencies
+```bash
+# Si vous voyez des erreurs de peer dependencies
+npm install --legacy-peer-deps
+```
+
+#### Cache NPM Corrompu
+```bash
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Vérification de Compatibilité
+
+#### Tester les Dépendances
+```bash
+npm test  # Vérifier que les tests passent
+npm run build  # Vérifier que le build fonctionne
+```
+
+## Configuration Jest
+
+### Configuration Principale
+- [jest.config.js](mdc:jest.config.js) - Configuration adaptée Next.js + React 19
+- [jest.setup.js](mdc:jest.setup.js) - Setup global avec testing-library
+
+### Points Importants
+- ✅ `moduleNameMapper` (pas `moduleNameMapping`)
+- ✅ Environment `jsdom` pour les tests de composants
+- ✅ Support TypeScript avec `ts-jest`
+
+## Bonnes Pratiques
+
+### Mise à Jour des Dépendances
+1. **Vérifier la compatibilité** avant de mettre à jour React
+2. **Tester les dépendances critiques** (testing, build tools)
+3. **Utiliser des versions spécifiques** pour éviter les surprises
+
+### Surveillance des Versions
+- Suivre les release notes de React
+- Vérifier la compatibilité des testing libraries
+- Maintenir la documentation des versions testées
+
+## Dépendances Critiques pour MayDai
+
+### Runtime
+- React 19 (stable)
+- Next.js (compatible React 19)
+- Supabase client libraries
+
+### Développement
+- Jest + ts-jest pour les tests
+- Testing Library (version 16+)
+- TypeScript
+
+### À Surveiller
+Les packages qui pourraient avoir des problèmes avec React 19 :
+- Certaines UI libraries tierces
+- Packages d'animation/transition
+- Tools de développement anciens

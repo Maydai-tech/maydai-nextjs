@@ -1,0 +1,181 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Tests Unitaires - Système MayDai
+
+## Structure des Tests
+
+### Organisation des Tests
+Les tests unitaires sont organisés dans le répertoire `__tests__` à côté des modules testés :
+```
+app/usecases/[id]/utils/__tests__/
+├── scoring-config.test.ts      # Tests de configuration des scores
+├── risk-categories.test.ts     # Tests des catégories de risque
+└── score-calculator.test.ts    # Tests du calculateur de scores
+```
+
+### Configuration Jest
+- [jest.config.js](mdc:jest.config.js) - Configuration Jest pour Next.js
+- [jest.setup.js](mdc:jest.setup.js) - Setup global des tests
+- [package.json](mdc:package.json) - Scripts et dépendances de test
+
+## Modules Testés
+
+### Score Calculator
+- [app/usecases/[id]/utils/score-calculator.ts](mdc:app/usecases/[id]/utils/score-calculator.ts) - Logique de calcul des scores
+- Tests couvrent :
+  - Calculs de base avec différents types de réponses (radio, checkbox, conditional)
+  - Répartition par catégories de risque
+  - Gestion des cas limites et erreurs
+
+### Configuration de Scoring
+- [app/usecases/[id]/utils/scoring-config.ts](mdc:app/usecases/[id]/utils/scoring-config.ts) - Règles de scoring
+- Tests vérifient :
+  - Cohérence des mappings de questions
+  - Intégrité des règles de scoring
+  - Calculs d'impacts par type de réponse
+
+### Catégories de Risque
+- [app/usecases/[id]/utils/risk-categories.ts](mdc:app/usecases/[id]/utils/risk-categories.ts) - Définitions des catégories
+- Tests vérifient :
+  - Structure des catégories (7 catégories attendues)
+  - Pondérations (doivent totaliser 1.0)
+  - Mapping questions → catégories
+
+## Commandes de Test
+
+### Commandes Principales
+```bash
+npm test                    # Lancer tous les tests
+npm run test:watch         # Mode surveillance
+npm run test:coverage      # Rapport de couverture
+```
+
+### Tests Spécifiques
+```bash
+npm test -- "scoring-config"     # Tests de configuration
+npm test -- "score-calculator"   # Tests de calcul
+npm test -- "risk-categories"    # Tests de catégories
+```
+
+## Dépendances de Test
+
+### Compatibilité React 19
+Les tests utilisent des versions compatibles avec React 19 :
+- `@testing-library/react@^16.1.0` (compatible React 19)
+- `@testing-library/jest-dom@^6.1.4`
+- `@testing-library/dom@^10.0.0`
+- `jest@^29.7.0`
+- `ts-jest@^29.1.1`
+
+### Configuration Jest
+- Support TypeScript avec `ts-jest`
+- Mapping des modules (`@/` → racine du projet)
+- Environment JSDOM pour tests de composants
+
+## Règles de Développement avec Tests
+
+### 🚨 RÈGLES CRITIQUES - À RESPECTER ABSOLUMENT
+
+#### 1. Tests Obligatoires pour Nouvelles Fonctionnalités
+**TOUTE nouvelle fonctionnalité DOIT être accompagnée de tests unitaires :**
+- ✅ Nouvelles fonctions → Tests obligatoires
+- ✅ Nouveaux composants → Tests obligatoires  
+- ✅ Nouvelles API routes → Tests obligatoires
+- ✅ Nouveaux utilitaires → Tests obligatoires
+- ✅ Modifications de logique métier → Tests de régression obligatoires
+
+#### 2. Protection des Tests Existants
+**INTERDICTION ABSOLUE de modifier les tests existants sans ordre explicite :**
+- ❌ JAMAIS modifier automatiquement les fichiers `*.test.ts` ou `*.test.tsx`
+- ❌ JAMAIS supprimer des tests existants
+- ❌ JAMAIS changer les assertions sans demande explicite
+- ✅ SEULEMENT ajouter de nouveaux tests
+- ✅ SEULEMENT si demandé explicitement par l'utilisateur
+
+#### 3. Workflow de Développement
+```
+1. Développer la fonctionnalité
+2. Créer les tests correspondants
+3. Vérifier que TOUS les tests passent (anciens + nouveaux)
+4. Commit uniquement si 100% des tests passent
+```
+
+## Patterns de Test
+
+### Structure des Tests
+```typescript
+describe('Module Name', () => {
+  describe('Function Name', () => {
+    test('should handle specific case', () => {
+      // Arrange
+      const input = mockData
+      
+      // Act
+      const result = functionUnderTest(input)
+      
+      // Assert
+      expect(result).toBe(expectedValue)
+    })
+  })
+})
+```
+
+### Cas de Test Couverts
+1. **Cas nominaux** - Fonctionnement normal
+2. **Cas limites** - Données nulles, vides, incorrectes
+3. **Intégration** - Interaction entre modules
+4. **Régression** - Prévention des régressions futures
+
+## Couverture de Code
+
+### Objectifs de Couverture
+- **100%** des fonctions de calcul de score
+- **95%+** des cas limites et gestion d'erreurs
+- **100%** des configurations et mappings
+
+### Métriques Actuelles
+- ✅ 37 tests passent
+- ✅ 3 suites de tests
+- ✅ 100% de réussite
+
+## Documentation
+
+### Documentation des Tests
+- [docs/TESTING.md](mdc:docs/TESTING.md) - Guide complet des tests
+- [scripts/test-scoring.js](mdc:scripts/test-scoring.js) - Script de vérification
+
+### Bonnes Pratiques
+
+#### Développement Piloté par les Tests
+- **Tests isolés et indépendants** - Chaque test doit pouvoir s'exécuter seul
+- **Noms de tests descriptifs** - Expliquer clairement ce qui est testé
+- **Mocks appropriés** pour les dépendances externes
+- **Vérification complète** des structures de données retournées
+
+#### Règles de Modification des Tests
+- **CRÉER** de nouveaux tests pour les nouvelles fonctionnalités
+- **PROTÉGER** les tests existants - Ne JAMAIS les modifier sans demande explicite
+- **VALIDER** que tous les tests passent avant chaque commit
+- **DOCUMENTER** les raisons des changements de tests quand autorisés
+
+#### Couverture et Qualité
+- Viser une couverture de **100%** pour les nouvelles fonctions critiques
+- Inclure des tests de **cas limites** et de **gestion d'erreurs**
+- Tester les **interactions** entre modules
+- Maintenir des tests de **non-régression**
+
+#### Avant de Committer
+```bash
+# TOUJOURS exécuter avant un commit
+npm test                # Tous les tests doivent passer
+npm run test:coverage   # Vérifier la couverture
+```
+
+#### En Cas de Test qui Échoue
+1. **NE PAS** modifier le test pour le faire passer
+2. **CORRIGER** le code source pour respecter le test
+3. **DEMANDER** explicitement si le test doit être modifié
+4. **JUSTIFIER** pourquoi le test existant serait incorrect

@@ -18,6 +18,12 @@ Le système de scoring est basé sur l'évaluation de risques par catégories. L
 - [app/usecases/[id]/utils/risk-categories.ts](mdc:app/usecases/[id]/utils/risk-categories.ts) - Définition des catégories de risque
 - [app/usecases/[id]/utils/score-categories.ts](mdc:app/usecases/[id]/utils/score-categories.ts) - Catégories de scoring
 - [app/usecases/[id]/utils/scoring-config.ts](mdc:app/usecases/[id]/utils/scoring-config.ts) - Configuration du système
+- [app/usecases/[id]/utils/score-calculator.ts](mdc:app/usecases/[id]/utils/score-calculator.ts) - Logique de calcul des scores
+
+### Tests Unitaires
+- [app/usecases/[id]/utils/__tests__/scoring-config.test.ts](mdc:app/usecases/[id]/utils/__tests__/scoring-config.test.ts) - Tests de configuration
+- [app/usecases/[id]/utils/__tests__/risk-categories.test.ts](mdc:app/usecases/[id]/utils/__tests__/risk-categories.test.ts) - Tests des catégories
+- [app/usecases/[id]/utils/__tests__/score-calculator.test.ts](mdc:app/usecases/[id]/utils/__tests__/score-calculator.test.ts) - Tests de calcul
 
 ## Hooks de Gestion du Score
 
