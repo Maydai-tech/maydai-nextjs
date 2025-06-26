@@ -4,16 +4,16 @@ import { supabase } from './supabase'
 import { useAuth } from './auth'
 import { useRouter } from 'next/navigation'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être définies'
-  )
-}
-
 export async function getAuthenticatedSupabaseClient(request: NextRequest) {
+  // Déplacer la vérification des variables d'environnement ici
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être définies'
+    )
+  }
   const authHeader = request.headers.get('authorization')
   if (!authHeader) {
     throw new Error('No authorization header')
@@ -22,7 +22,7 @@ export async function getAuthenticatedSupabaseClient(request: NextRequest) {
   const token = authHeader.replace('Bearer ', '')
   
   // Create Supabase client with the user's token
-  const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
+  const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
     global: {
       headers: {
         Authorization: `Bearer ${token}`
@@ -31,12 +31,12 @@ export async function getAuthenticatedSupabaseClient(request: NextRequest) {
   })
   
   // Verify the token and get user
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
   if (authError || !user) {
     throw new Error('Invalid token')
   }
 
-  return { supabase, user }
+  return { supabase: supabaseClient, user }
 }
 
 export async function getUserCompanyId(supabase: any, userId: string) {

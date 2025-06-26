@@ -5,12 +5,7 @@ import { QUESTION_CODE_MAPPING, QUESTION_SCORING_CONFIG, getAnswerImpact } from 
 import { UseCaseScore, ScoreBreakdown, CategoryScore } from '../../../../usecases/[id]/types/usecase'
 import { RISK_CATEGORIES, QUESTION_RISK_CATEGORY_MAPPING } from '../../../../usecases/[id]/utils/risk-categories'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Variables d\'environnement Supabase manquantes')
-}
+// Variables d'environnement vérifiées dans chaque fonction pour éviter les erreurs de build
 
 const BASE_SCORE = 100
 
@@ -235,6 +230,17 @@ export async function GET(
   try {
     console.log('=== STARTING SCORE API CALL ===')
     
+    // Vérifier les variables d'environnement
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json(
+        { error: 'Variables d\'environnement Supabase manquantes' },
+        { status: 500 }
+      )
+    }
+    
     const authHeader = request.headers.get('authorization')
     console.log('Auth header present:', !!authHeader)
     
@@ -244,7 +250,7 @@ export async function GET(
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: `Bearer ${token}` } }
     })
     

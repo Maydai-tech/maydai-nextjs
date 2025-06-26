@@ -1,16 +1,21 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Vérification que les variables d'environnement sont définies
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Fonction pour créer le client Supabase avec validation à l'exécution
+function createSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être définies dans .env.local'
-  )
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être définies dans .env.local'
+    )
+  }
+
+  return createClient(supabaseUrl, supabaseAnonKey)
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Export du client avec lazy initialization
+export const supabase = createSupabaseClient()
 
 // Types pour la base de données
 export interface QuestionnaireSection {
