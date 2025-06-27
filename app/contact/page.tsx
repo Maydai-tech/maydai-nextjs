@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useState, useRef } from 'react';
-import ReCAPTCHA from 'react-google-recaptcha';
 
 export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -13,31 +12,19 @@ export default function ContactPage() {
     type: 'success' | 'error';
     text: string;
   } | null>(null);
-  const recaptchaRef = useRef<ReCAPTCHA>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitMessage(null);
 
-    // Vérifier le CAPTCHA
-    const recaptchaValue = recaptchaRef.current?.getValue();
-    if (!recaptchaValue) {
-      setSubmitMessage({
-        type: 'error',
-        text: 'Veuillez compléter le CAPTCHA pour continuer.',
-      });
-      setIsSubmitting(false);
-      return;
-    }
-
     const formData = new FormData(e.currentTarget);
-    const data = {
+    const data: any = {
       fullName: formData.get('fullName') as string,
       email: formData.get('email') as string,
       phone: formData.get('phone') as string,
       motivations: formData.get('motivations') as string,
-      recaptchaToken: recaptchaValue,
     };
 
     try {
@@ -56,16 +43,15 @@ export default function ContactPage() {
           type: 'success',
           text: 'Merci ! Votre demande a été envoyée avec succès. Nous vous recontacterons bientôt.',
         });
-        // Reset the form and CAPTCHA
-        e.currentTarget.reset();
-        recaptchaRef.current?.reset();
+        // Reset the form using ref
+        if (formRef.current) {
+          formRef.current.reset();
+        }
       } else {
         setSubmitMessage({
           type: 'error',
           text: result.error || 'Une erreur est survenue lors de l\'envoi de votre demande.',
         });
-        // Reset CAPTCHA on error
-        recaptchaRef.current?.reset();
       }
     } catch (error) {
       console.error('Erreur lors de l\'envoi du formulaire:', error);
@@ -73,8 +59,6 @@ export default function ContactPage() {
         type: 'error',
         text: 'Une erreur inattendue est survenue. Veuillez réessayer.',
       });
-      // Reset CAPTCHA on error
-      recaptchaRef.current?.reset();
     } finally {
       setIsSubmitting(false);
     }
@@ -114,99 +98,121 @@ export default function ContactPage() {
 
             {/* Formulaire de contact */}
             <div className="bg-white rounded-2xl shadow-xl p-8 lg:p-10 border border-gray-100 mb-12">
-              {/* Message de statut */}
-              {submitMessage && (
-                <div className={`mb-6 p-4 rounded-lg ${
-                  submitMessage.type === 'success' 
-                    ? 'bg-green-50 text-green-800 border border-green-200' 
-                    : 'bg-red-50 text-red-800 border border-red-200'
-                }`}>
-                  {submitMessage.text}
+              
+              {/* Affichage conditionnel : Message de succès OU Formulaire */}
+              {submitMessage?.type === 'success' ? (
+                /* Message de succès qui remplace le formulaire */
+                <div className="text-center py-8">
+                  <div className="mb-6">
+                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                    Demande envoyée avec succès !
+                  </h3>
+                  
+                  <p className="text-lg text-gray-700 mb-6 leading-relaxed">
+                    {submitMessage.text}
+                  </p>
+                  
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-green-800">
+                      <strong>Prochaines étapes :</strong><br />
+                      Notre équipe va examiner votre demande et vous recontactera dans les plus brefs délais 
+                      pour vous donner accès à la plateforme MaydAI.
+                    </p>
+                  </div>
+                  
                 </div>
+              ) : (
+                /* Formulaire normal */
+                <>
+                  {/* Message d'erreur seulement */}
+                  {submitMessage?.type === 'error' && (
+                    <div className="mb-6 p-4 rounded-lg bg-red-50 text-red-800 border border-red-200">
+                      {submitMessage.text}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSubmit} className="space-y-6" ref={formRef}>
+                    {/* Champ Nom Prénom */}
+                    <div>
+                      <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                        Nom Prénom *
+                      </label>
+                      <input
+                        type="text"
+                        id="fullName"
+                        name="fullName"
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
+                        placeholder="Votre nom et prénom"
+                      />
+                    </div>
+
+                    {/* Champ Email */}
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                        Adresse email *
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
+                        placeholder="votre.email@exemple.com"
+                      />
+                    </div>
+
+                    {/* Champ Téléphone */}
+                    <div>
+                      <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                        Téléphone
+                      </label>
+                      <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
+                        placeholder="06 12 34 56 78"
+                      />
+                    </div>
+
+                    {/* Champ Motivations */}
+                    <div>
+                      <label htmlFor="motivations" className="block text-sm font-medium text-gray-700 mb-2">
+                        Vos motivations pour nous rejoindre *
+                      </label>
+                      <textarea
+                        id="motivations"
+                        name="motivations"
+                        rows={5}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200 resize-vertical"
+                        placeholder="Expliquez-nous pourquoi vous souhaitez rejoindre notre communauté de bêta-testeurs..."
+                      />
+                    </div>
+
+                    {/* Bouton d'envoi */}
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className={`w-full font-semibold py-4 px-6 rounded-lg shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#0080a3] focus:ring-offset-2 ${
+                        isSubmitting
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-[#0080a3] hover:bg-[#006b8a] text-white transform hover:scale-105'
+                      }`}
+                    >
+                      {isSubmitting ? 'Envoi en cours...' : 'Envoyer ma candidature'}
+                    </button>
+                  </form>
+                </>
               )}
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Champ Nom Prénom */}
-                <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                    Nom Prénom *
-                  </label>
-                  <input
-                    type="text"
-                    id="fullName"
-                    name="fullName"
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
-                    placeholder="Votre nom et prénom"
-                  />
-                </div>
-
-                {/* Champ Email */}
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Adresse email *
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
-                    placeholder="votre.email@exemple.com"
-                  />
-                </div>
-
-                {/* Champ Téléphone */}
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                    Téléphone
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
-                    placeholder="06 12 34 56 78"
-                  />
-                </div>
-
-                {/* Champ Motivations */}
-                <div>
-                  <label htmlFor="motivations" className="block text-sm font-medium text-gray-700 mb-2">
-                    Vos motivations pour nous rejoindre *
-                  </label>
-                  <textarea
-                    id="motivations"
-                    name="motivations"
-                    rows={5}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200 resize-vertical"
-                    placeholder="Expliquez-nous pourquoi vous souhaitez rejoindre notre communauté de bêta-testeurs..."
-                  />
-                </div>
-
-                {/* ReCAPTCHA */}
-                <div className="flex justify-center">
-                  <ReCAPTCHA
-                    ref={recaptchaRef}
-                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
-                    theme="light"
-                  />
-                </div>
-
-                {/* Bouton d'envoi */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`w-full font-semibold py-4 px-6 rounded-lg shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#0080a3] focus:ring-offset-2 ${
-                    isSubmitting
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-[#0080a3] hover:bg-[#006b8a] text-white transform hover:scale-105'
-                  }`}
-                >
-                  {isSubmitting ? 'Envoi en cours...' : 'Envoyer ma candidature'}
-                </button>
-              </form>
             </div>
 
             {/* Section Nous Contacter Directement - Déplacée en bas */}

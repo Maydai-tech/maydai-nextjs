@@ -1,45 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// Fonction pour vérifier le CAPTCHA
-async function verifyCaptcha(token: string): Promise<boolean> {
-  try {
-    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}`,
-    });
-
-    const data = await response.json();
-    return data.success === true;
-  } catch (error) {
-    console.error('Erreur lors de la vérification du CAPTCHA:', error);
-    return false;
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { fullName, email, phone, motivations, recaptchaToken } = body;
-
-    // Vérification du CAPTCHA
-    if (!recaptchaToken) {
-      return NextResponse.json(
-        { error: 'CAPTCHA requis' },
-        { status: 400 }
-      );
-    }
-
-    const isCaptchaValid = await verifyCaptcha(recaptchaToken);
-    if (!isCaptchaValid) {
-      return NextResponse.json(
-        { error: 'CAPTCHA invalide. Veuillez réessayer.' },
-        { status: 400 }
-      );
-    }
+    const { fullName, email, phone, motivations } = body;
 
     // Validation des données
     if (!fullName || !email || !motivations) {
@@ -87,8 +52,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Utiliser le client Supabase
-
     // Vérifier si l'email existe déjà
     const { data: existingRequest, error: checkError } = await supabase
       .from('beta_requests')
@@ -125,7 +88,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Erreur lors de l\'insertion:', error);
+      console.error('❌ Erreur lors de l\'insertion:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       return NextResponse.json(
         { error: 'Erreur lors de l\'enregistrement de votre demande' },
         { status: 500 }
