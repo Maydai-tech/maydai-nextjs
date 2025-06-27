@@ -3,30 +3,69 @@ export default function AuditAIActCompliance() {
     <section className="py-20 bg-gradient-to-br from-primary-light to-white" id="audit-ai-act">
       <div className="max-w-4xl mx-auto px-4">
         <h2 className="text-3xl md:text-4xl font-bold text-primary-dark mb-8">Audit AI Act : Conformité et Sécurité pour vos Systèmes d'IA</h2>
-        <p className="text-lg mb-6">
-          L'Audit AI Act est essentiel pour garantir que vos systèmes d'intelligence artificielle respectent les exigences réglementaires européennes. MaydAI vous accompagne dans la réalisation de votre Audit AI Act, en vous offrant une expertise pointue et des outils performants pour chaque étape du processus.
+        <p className="text-lg mb-8 leading-relaxed">
+          L'Intelligence Artificielle... Cette promesse de l'aube numérique qui, tel un génie sorti de sa lampe, nous demande soudain ce que nous désirons. Et notre premier vœu ? Un règlement. Un manuel. Un Audit. Voilà qui en dit long sur notre incurable et touchante manie de vouloir mettre de l'ordre dans le chaos que nous créons nous-mêmes.
         </p>
+        
         <div className="space-y-8">
           <div>
-            <h3 className="text-2xl font-semibold text-primary mb-2">Pourquoi un Audit AI Act est-il crucial ?</h3>
-            <p>
-              L'Audit AI Act permet d'anticiper les risques, d'assurer la transparence et de renforcer la confiance de vos utilisateurs. En réalisant un Audit AI Act avec MaydAI, vous bénéficiez d'une analyse approfondie, d'un accompagnement sur-mesure et d'une conformité accélérée.
+            <h3 className="text-2xl font-semibold text-primary mb-4">Pourquoi un Audit AI Act est-il crucial ?</h3>
+            <p className="leading-relaxed">
+              Parce que la confiance, même envers une machine, ne se décrète pas ; elle se mérite. C'est un dialogue, une poignée de main, une vérification que le sourire de votre algorithme n'est pas celui du loup. Anticiper les risques, c'est bien. Éviter de finir dévoré par sa propre ambition, c'est encore mieux. L'audit, c'est ce regard lucide et un peu amusé que le créateur porte sur sa créature, avant de la lâcher dans le monde.
             </p>
           </div>
+          
           <div>
-            <h3 className="text-2xl font-semibold text-primary mb-2">Notre approche de l'Audit AI Act</h3>
-            <p>
-              MaydAI propose une méthodologie éprouvée pour l'Audit AI Act : diagnostic initial, analyse des risques, recommandations personnalisées et suivi continu. Notre plateforme centralise toutes les étapes pour une gestion simplifiée et efficace de votre conformité AI Act.
+            <h3 className="text-2xl font-semibold text-primary mb-4">Notre approche de l'Audit AI Act : L'horloger, pas l'inquisiteur</h3>
+            <p className="mb-4 leading-relaxed">
+              Chez MaydAI, nous abordons l'AI Act sans blouse blanche ni ton doctoral.
             </p>
-          </div>
-          <div>
-            <h3 className="text-2xl font-semibold text-primary mb-2">Les bénéfices de l'Audit AI Act avec MaydAI</h3>
-            <ul className="list-disc pl-6 text-gray-700">
-              <li>Conformité rapide et documentée à l'AI Act</li>
-              <li>Réduction des risques juridiques et opérationnels</li>
-              <li>Valorisation de la transparence et de l'éthique IA</li>
-              <li>Accompagnement par des experts en Audit AI Act</li>
+            <ul className="space-y-3 text-gray-700">
+              <li className="flex items-start">
+                <span className="text-primary font-bold mr-2">•</span>
+                <span>Nous diagnostiquons avec la curiosité d'un naturaliste découvrant une nouvelle espèce.</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-primary font-bold mr-2">•</span>
+                <span>Nous analysons les risques comme un vieux marin scrute le ciel, sachant que le calme plat peut cacher la tempête.</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-primary font-bold mr-2">•</span>
+                <span>Nous vous guidons avec des recommandations qui ont le goût du bon sens, pas celui du jargon abscons.</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-primary font-bold mr-2">•</span>
+                <span>Nous assurons un suivi qui ressemble plus à une conversation entre gens de bonne compagnie qu'à un interrogatoire.</span>
+              </li>
             </ul>
+          </div>
+          
+          <div>
+            <h3 className="text-2xl font-semibold text-primary mb-4">Les bénéfices, au-delà des mots ronflants :</h3>
+            <ul className="space-y-3 text-gray-700">
+              <li className="flex items-start">
+                <span className="text-primary font-bold mr-2">•</span>
+                <span><strong>La sérénité réglementaire :</strong> Naviguez dans les eaux de l'AI Act sans craindre le naufrage.</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-primary font-bold mr-2">•</span>
+                <span><strong>Une éthique qui devient un atout :</strong> Montrez que votre modernité a une âme.</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-primary font-bold mr-2">•</span>
+                <span><strong>La fin des angles morts :</strong> Éclairez les recoins de vos systèmes où se cachent les ennuis de demain.</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-primary font-bold mr-2">•</span>
+                <span><strong>Un partenariat, pas une simple prestation :</strong> Nous sommes là pour que l'aventure de l'IA reste une belle histoire.</span>
+              </li>
+            </ul>
+          </div>
+          
+          <div className="bg-primary/10 rounded-lg p-6 mt-8">
+            <p className="text-lg font-medium text-primary-dark leading-relaxed">
+              Avec MaydAI, rendez votre IA non seulement conforme, mais aussi un peu plus humaine. C'est peut-être un détail pour l'univers, mais pour vos utilisateurs, ça veut dire beaucoup.
+            </p>
           </div>
         </div>
       </div>

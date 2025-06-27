@@ -2,32 +2,12 @@
 
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import Sidebar from './Sidebar';
 
 interface ConditionalLayoutProps {
   children: React.ReactNode;
 }
 
 export default function ConditionalLayout({ children }: ConditionalLayoutProps) {
-  const pathname = usePathname();
-  const { user, loading } = useAuth();
-  
-  // Pages où on ne veut pas afficher la sidebar
-  const noSidebarPages = ['/', '/login', '/signup', '/dashboard/companies', '/companies/new'];
-  const shouldShowSidebar = !noSidebarPages.includes(pathname) && user && !loading;
-
-  if (shouldShowSidebar) {
-    return (
-      <div className="flex min-h-screen bg-white">
-        <Sidebar />
-        <main className="flex-1 lg:ml-64 min-h-screen bg-gray-50">
-          <div className="p-6 pt-16 lg:pt-6">
-            {children}
-          </div>
-        </main>
-      </div>
-    );
-  }
-
+  // Sidebar désactivée - retour du layout simple pour toutes les pages
   return <div className="min-h-screen bg-white">{children}</div>;
 } 
