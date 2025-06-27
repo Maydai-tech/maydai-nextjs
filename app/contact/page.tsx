@@ -4,12 +4,61 @@ import { FiPhone, FiMail, FiMapPin } from 'react-icons/fi';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { useState } from 'react';
 
 export default function ContactPage() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Implémenter la logique d'envoi du formulaire
-    console.log('Formulaire soumis');
+    setIsSubmitting(true);
+    setSubmitMessage(null);
+
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      fullName: formData.get('fullName') as string,
+      email: formData.get('email') as string,
+      phone: formData.get('phone') as string,
+      motivations: formData.get('motivations') as string,
+    };
+
+    try {
+      const response = await fetch('/api/beta-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSubmitMessage({
+          type: 'success',
+          text: 'Merci ! Votre demande a été envoyée avec succès. Nous vous recontacterons bientôt.',
+        });
+        // Reset the form
+        e.currentTarget.reset();
+      } else {
+        setSubmitMessage({
+          type: 'error',
+          text: result.error || 'Une erreur est survenue lors de l\'envoi de votre demande.',
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi du formulaire:', error);
+      setSubmitMessage({
+        type: 'error',
+        text: 'Une erreur inattendue est survenue. Veuillez réessayer.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -46,6 +95,17 @@ export default function ContactPage() {
 
             {/* Formulaire de contact */}
             <div className="bg-white rounded-2xl shadow-xl p-8 lg:p-10 border border-gray-100 mb-12">
+              {/* Message de statut */}
+              {submitMessage && (
+                <div className={`mb-6 p-4 rounded-lg ${
+                  submitMessage.type === 'success' 
+                    ? 'bg-green-50 text-green-800 border border-green-200' 
+                    : 'bg-red-50 text-red-800 border border-red-200'
+                }`}>
+                  {submitMessage.text}
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Champ Nom Prénom */}
                 <div>
@@ -109,9 +169,14 @@ export default function ContactPage() {
                 {/* Bouton d'envoi */}
                 <button
                   type="submit"
-                  className="w-full bg-[#0080a3] hover:bg-[#006b8a] text-white font-semibold py-4 px-6 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#0080a3] focus:ring-offset-2"
+                  disabled={isSubmitting}
+                  className={`w-full font-semibold py-4 px-6 rounded-lg shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#0080a3] focus:ring-offset-2 ${
+                    isSubmitting
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-[#0080a3] hover:bg-[#006b8a] text-white transform hover:scale-105'
+                  }`}
                 >
-                  Envoyer ma candidature
+                  {isSubmitting ? 'Envoi en cours...' : 'Envoyer ma candidature'}
                 </button>
               </form>
             </div>
