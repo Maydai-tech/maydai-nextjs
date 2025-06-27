@@ -1,0 +1,11 @@
+# public/robots.txt
+
+# Allow all user agents
+User-agent: *
+Disallow:
+
+# Disallow Next.js specific build folders if they were ever exposed
+Disallow: /_next/
+
+# Point to the sitemap (use the full URL)
+Sitemap: https://maydai.io/sitemap.xml
