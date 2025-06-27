@@ -95,4 +95,15 @@ export interface QuestionnaireResponseInput {
     selected: string
     conditionalValues: Record<string, string>
   }
+}
+
+export interface BetaRequest {
+  id: string
+  full_name: string
+  email: string
+  phone?: string
+  motivations: string
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+  updated_at: string
 } 
