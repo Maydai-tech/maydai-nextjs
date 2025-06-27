@@ -1,7 +1,10 @@
 import Head from 'next/head';
 import Header from '@/components/Header';
 import HeroSection from '@/components/HeroSection';
+import TechnologiesSection from '@/components/TechnologiesSection';
 import FeaturesSection from '@/components/FeaturesSection';
+import EvaluationCriteriaSection from '@/src/components/sections/EvaluationCriteriaSection';
+import MistralDashboard from '@/components/MistralDashboard';
 import AuditAIActCompliance from '@/components/AuditAIActCompliance';
 import TestimonialsSection from '@/components/TestimonialsSection';
 import Footer from '@/components/Footer';
@@ -19,7 +22,10 @@ export default function HomePage() {
       <Header />
       <main>
         <HeroSection />
+        <TechnologiesSection />
         <FeaturesSection />
+        <EvaluationCriteriaSection />
+        <MistralDashboard />
         <AuditAIActCompliance />
         <TestimonialsSection />
       </main>
