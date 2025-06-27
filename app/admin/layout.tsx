@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '@/lib/auth'
-import ProtectedRoute from '@/components/ProtectedRoute'
+import AdminProtectedRoute from '@/components/AdminProtectedRoute'
 import { LogOut, User } from 'lucide-react'
 
 export default function AdminLayout({
@@ -16,7 +16,7 @@ export default function AdminLayout({
   }
 
   return (
-    <ProtectedRoute>
+    <AdminProtectedRoute>
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
         <header className="bg-white shadow-sm border-b border-gray-200">
@@ -54,6 +54,6 @@ export default function AdminLayout({
           {children}
         </main>
       </div>
-    </ProtectedRoute>
+    </AdminProtectedRoute>
   )
 } 
