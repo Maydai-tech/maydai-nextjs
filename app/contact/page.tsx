@@ -40,14 +40,19 @@ export default function ContactPage() {
 
               {/* Image Bob Dylan Need You - Hauteur maximisée pour visibilité complète */}
               <div className="flex-shrink-0">
-                <div className="relative w-80 h-[30rem] lg:w-96 lg:h-[36rem]">
-                  <Image
-                    src="/screenshots/Bob Dylan Need You.jpg"
-                    alt="Bob Dylan Need You - Rejoignez MaydAI"
-                    fill
-                    className="object-cover rounded-2xl shadow-lg"
-                    priority
-                  />
+                <div className="relative w-80 h-[30rem] lg:w-96 lg:h-[36rem] bg-gradient-to-br from-[#0080a3]/10 to-[#0080a3]/20 rounded-2xl shadow-lg flex items-center justify-center">
+                  <div className="text-center p-8">
+                    <div className="w-24 h-24 bg-[#0080a3] rounded-full flex items-center justify-center mx-auto mb-6">
+                      <span className="text-white text-4xl font-bold">!</span>
+                    </div>
+                    <h3 className="text-2xl font-bold text-[#0080a3] mb-4">
+                      WE NEED YOU!
+                    </h3>
+                    <p className="text-gray-700 font-medium">
+                      Rejoignez notre communauté<br/>
+                      de bêta-testeurs
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
