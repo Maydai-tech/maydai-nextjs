@@ -1,0 +1,85 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Page Visibility & 404 System
+
+## Overview
+Cette application utilise un système de middleware pour contrôler l'accès aux pages selon l'environnement. Les pages sont divisées en deux catégories : **site vitrine** (toujours accessible) et **SaaS/authentification** (masquées en production).
+
+## Middleware Configuration
+Le fichier [middleware.ts](mdc:middleware.ts) contrôle l'accès aux pages :
+
+### Environnements
+- **Développement (localhost)** : Toutes les pages sont accessibles
+- **Production** : Seules les pages vitrine sont accessibles, les autres renvoient vers [app/not-found.tsx](mdc:app/not-found.tsx)
+
+### Pages Autorisées (Site Vitrine)
+```typescript
+const allowedPaths = [
+  '/',                           // Page d'accueil
+  '/a-propos',                   // À propos
+  '/conditions-generales',       // Conditions générales
+  '/contact',                    // Contact
+  '/fonctionnalites',           // Fonctionnalités
+  '/ia-act-ue',                 // IA Act vue d'ensemble
+  '/ia-act-ue/calendrier',      // Calendrier IA Act
+  '/ia-act-ue/risques',         // Pyramide des risques
+  '/politique-confidentialite', // Politique de confidentialité
+  '/tarifs',                    // Tarifs
+];
+```
+
+### Pages Bloquées en Production (SaaS)
+- `/login` - Connexion
+- `/signup` - Inscription  
+- `/dashboard/*` - Tableau de bord
+- `/profil` - Profil utilisateur
+- `/usecases/*` - Cas d'usage
+- `/companies/*` - Gestion des entreprises
+- `/admin/*` - Administration
+
+## Règles pour Créer de Nouvelles Pages
+
+### ✅ Pages Vitrine (Publiques)
+Si vous créez une page pour le **site vitrine**, vous devez :
+1. Créer la page dans le dossier `app/`
+2. **AJOUTER le chemin dans le tableau `allowedPaths` du middleware**
+3. La page utilisera automatiquement [components/Header.jsx](mdc:components/Header.jsx) et [components/Footer.jsx](mdc:components/Footer.jsx)
+
+### ❌ Pages SaaS (Privées)
+Si vous créez une page pour la **partie SaaS/authentification** :
+1. Créer la page dans le dossier `app/`
+2. **NE PAS ajouter le chemin dans `allowedPaths`**
+3. La page sera automatiquement bloquée en production
+4. Utiliser les patterns d'authentification définis dans [authentication-patterns.mdc](mdc:authentication-patterns.mdc)
+
+## Page 404 Personnalisée
+La page [app/not-found.tsx](mdc:app/not-found.tsx) :
+- Design cohérent avec l'identité MaydAI
+- Bouton de retour à l'accueil
+- Intègre [components/Header.jsx](mdc:components/Header.jsx) et [components/Footer.jsx](mdc:components/Footer.jsx)
+- Responsive et adaptée mobile
+
+## ⚠️ Important
+**Chaque fois qu'une nouvelle page vitrine est créée**, le chemin doit être ajouté au tableau `allowedPaths` dans [middleware.ts](mdc:middleware.ts), sinon elle sera inaccessible en production.
+
+## Exemples
+
+### ✅ Nouvelle page vitrine `/faq`
+```typescript
+// Dans middleware.ts
+const allowedPaths = [
+  '/',
+  '/a-propos',
+  // ... autres pages
+  '/faq',  // ← AJOUTER ICI
+];
+```
+
+### ❌ Nouvelle page SaaS `/settings`
+```typescript
+// Ne rien ajouter au middleware
+// La page sera automatiquement bloquée en production
+```
