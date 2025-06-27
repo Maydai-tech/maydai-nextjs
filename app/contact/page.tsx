@@ -4,7 +4,8 @@ import { FiPhone, FiMail, FiMapPin } from 'react-icons/fi';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -12,11 +13,23 @@ export default function ContactPage() {
     type: 'success' | 'error';
     text: string;
   } | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitMessage(null);
+
+    // Vérifier le CAPTCHA
+    const recaptchaValue = recaptchaRef.current?.getValue();
+    if (!recaptchaValue) {
+      setSubmitMessage({
+        type: 'error',
+        text: 'Veuillez compléter le CAPTCHA pour continuer.',
+      });
+      setIsSubmitting(false);
+      return;
+    }
 
     const formData = new FormData(e.currentTarget);
     const data = {
@@ -24,6 +37,7 @@ export default function ContactPage() {
       email: formData.get('email') as string,
       phone: formData.get('phone') as string,
       motivations: formData.get('motivations') as string,
+      recaptchaToken: recaptchaValue,
     };
 
     try {
@@ -42,13 +56,16 @@ export default function ContactPage() {
           type: 'success',
           text: 'Merci ! Votre demande a été envoyée avec succès. Nous vous recontacterons bientôt.',
         });
-        // Reset the form
+        // Reset the form and CAPTCHA
         e.currentTarget.reset();
+        recaptchaRef.current?.reset();
       } else {
         setSubmitMessage({
           type: 'error',
           text: result.error || 'Une erreur est survenue lors de l\'envoi de votre demande.',
         });
+        // Reset CAPTCHA on error
+        recaptchaRef.current?.reset();
       }
     } catch (error) {
       console.error('Erreur lors de l\'envoi du formulaire:', error);
@@ -56,6 +73,8 @@ export default function ContactPage() {
         type: 'error',
         text: 'Une erreur inattendue est survenue. Veuillez réessayer.',
       });
+      // Reset CAPTCHA on error
+      recaptchaRef.current?.reset();
     } finally {
       setIsSubmitting(false);
     }
@@ -163,6 +182,15 @@ export default function ContactPage() {
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200 resize-vertical"
                     placeholder="Expliquez-nous pourquoi vous souhaitez rejoindre notre communauté de bêta-testeurs..."
+                  />
+                </div>
+
+                {/* ReCAPTCHA */}
+                <div className="flex justify-center">
+                  <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                    theme="light"
                   />
                 </div>
 
