@@ -20,42 +20,24 @@ export default function ContactPage() {
         <section className="py-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-5xl mx-auto">
             
-            {/* Titre principal avec image Bob Dylan */}
-            <div className="flex flex-col lg:flex-row items-center gap-8 mb-12">
-              <div className="flex-1">
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-                  Rejoignez la Communauté des{' '}
-                  <span className="text-[#0080a3]">Bêta-Testeurs MaydAI</span>
-                </h1>
+            {/* Titre principal */}
+            <div className="text-center mb-12">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                Rejoignez la Communauté des{' '}
+                <span className="text-[#0080a3]">Bêta-Testeurs MaydAI</span>
+              </h1>
 
-                {/* Paragraphe d'introduction */}
-                <p className="text-lg text-gray-700 mb-8 leading-relaxed">
-                  La plateforme MaydAI est actuellement accessible à une communauté de Beta testeurs 
-                  (avocats, chercheurs, experts IA, Friends and Family..). Si vous souhaitez rejoindre 
-                  cette communauté, nous serions ravis de vous y accueillir pour améliorer notre plateforme, 
-                  les interactions proposées et les analyses poussées sur de multiples cas d'usages IA, 
-                  y compris ceux liés aux nouvelles régulations comme l'IA Act.
-                </p>
-              </div>
-
-              {/* Image Bob Dylan Need You - Hauteur maximisée pour visibilité complète */}
-              <div className="flex-shrink-0">
-                <div className="relative w-80 h-[30rem] lg:w-96 lg:h-[36rem] bg-gradient-to-br from-[#0080a3]/10 to-[#0080a3]/20 rounded-2xl shadow-lg flex items-center justify-center">
-                  <div className="text-center p-8">
-                    <div className="w-24 h-24 bg-[#0080a3] rounded-full flex items-center justify-center mx-auto mb-6">
-                      <span className="text-white text-4xl font-bold">!</span>
-                    </div>
-                    <h3 className="text-2xl font-bold text-[#0080a3] mb-4">
-                      WE NEED YOU!
-                    </h3>
-                    <p className="text-gray-700 font-medium">
-                      Rejoignez notre communauté<br/>
-                      de bêta-testeurs
-                    </p>
-                  </div>
-                </div>
-              </div>
+              {/* Paragraphe d'introduction */}
+              <p className="text-lg text-gray-700 mb-8 leading-relaxed max-w-4xl mx-auto">
+                La plateforme MaydAI est actuellement accessible à une communauté de Beta testeurs 
+                (avocats, chercheurs, experts IA, Friends and Family..). Si vous souhaitez rejoindre 
+                cette communauté, nous serions ravis de vous y accueillir pour améliorer notre plateforme, 
+                les interactions proposées et les analyses poussées sur de multiples cas d'usages IA, 
+                y compris ceux liés aux nouvelles régulations comme l'IA Act.
+              </p>
             </div>
+
+
 
             {/* Sous-titre */}
             <p className="text-xl font-semibold text-gray-900 mb-8 text-center">
