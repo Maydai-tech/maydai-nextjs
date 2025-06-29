@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function HeroSection() {
   return (
@@ -14,8 +15,16 @@ export default function HeroSection() {
           Démarrer l'Audit AI Act
         </Link>
       </div>
-      {/* Logo conformité IA */}
-      <img src="/logos/Logo conformité IA.svg" alt="Logo conformité IA" className="absolute right-8 bottom-0 w-40 md:w-64 opacity-30 pointer-events-none select-none" />
+      {/* Logo conformité IA - Optimisé pour LCP */}
+      <Image 
+        src="/logos/Logo conformité IA.svg" 
+        alt="Logo conformité IA" 
+        width={256}
+        height={256}
+        className="absolute right-8 bottom-0 w-40 md:w-64 opacity-30 pointer-events-none select-none"
+        priority
+        sizes="(max-width: 768px) 160px, 256px"
+      />
     </section>
   );
 } 
