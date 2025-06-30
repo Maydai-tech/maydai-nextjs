@@ -3,49 +3,62 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { supabase } from '@/lib/supabase'
+import { createBrowserClient } from '@supabase/ssr'
+import { hasAdminRole, type UserRole } from '@/lib/admin-auth'
 
 interface AdminProtectedRouteProps {
   children: React.ReactNode
+  requiredRole?: 'admin' | 'super_admin'
+  fallbackUrl?: string
 }
 
-export default function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
+export default function AdminProtectedRoute({ 
+  children, 
+  requiredRole = 'admin',
+  fallbackUrl = '/dashboard' 
+}: AdminProtectedRouteProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
   const [checkingRole, setCheckingRole] = useState(true)
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   useEffect(() => {
     const checkAdminRole = async () => {
       if (!loading && user) {
         try {
-          // Vérifier si l'utilisateur a un rôle admin
-          const { data, error } = await supabase
-            .from('users_roles')
-            .select(`
-              role_id,
-              roles (
-                name
-              )
-            `)
-            .eq('user_id', user.id)
+          // Récupérer le profil avec le rôle
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
             .single()
 
-          if (error) {
+          if (error || !profile) {
             console.error('Erreur lors de la vérification du rôle:', error)
             setIsAdmin(false)
-            router.push('/login')
-          } else if ((data?.roles as any)?.name === 'admin') {
-            setIsAdmin(true)
+            router.push(fallbackUrl)
           } else {
-            // Utilisateur connecté mais pas admin
-            setIsAdmin(false)
-            router.push('/') // Rediriger vers l'accueil
+            const userRole = profile.role as UserRole
+            
+            // Vérifier si l'utilisateur a le rôle requis
+            if (requiredRole === 'super_admin') {
+              setIsAdmin(userRole === 'super_admin')
+            } else {
+              setIsAdmin(hasAdminRole(userRole))
+            }
+            
+            if (!isAdmin && userRole !== requiredRole && !hasAdminRole(userRole)) {
+              router.push(fallbackUrl)
+            }
           }
         } catch (error) {
           console.error('Erreur lors de la vérification du rôle:', error)
           setIsAdmin(false)
-          router.push('/login')
+          router.push(fallbackUrl)
         }
       } else if (!loading && !user) {
         // Pas connecté
@@ -55,7 +68,7 @@ export default function AdminProtectedRoute({ children }: AdminProtectedRoutePro
     }
 
     checkAdminRole()
-  }, [user, loading, router])
+  }, [user, loading, router, supabase, requiredRole, fallbackUrl])
 
   if (loading || checkingRole) {
     return (

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { calculateScore } from '../../../../usecases/[id]/utils/score-calculator'
 import { UseCaseScore } from '../../../../usecases/[id]/types/usecase'
+import { logger, createRequestContext } from '@/lib/secure-logger'
 
 async function saveScore(supabase: any, scoreData: UseCaseScore) {
   try {
@@ -15,7 +16,7 @@ async function saveScore(supabase: any, scoreData: UseCaseScore) {
       .single()
 
     if (fetchError && fetchError.code !== 'PGRST116') {
-      console.warn('Warning: Could not fetch existing score, table may not exist:', fetchError)
+      logger.warn('Could not fetch existing score, table may not exist')
       return { ...scoreData, id: 'temp-' + Date.now(), version: 1 }
     }
 
@@ -33,13 +34,13 @@ async function saveScore(supabase: any, scoreData: UseCaseScore) {
       .single()
 
     if (error) {
-      console.warn('Warning: Could not save score to database:', error)
+      logger.warn('Could not save score to database')
       return { ...scoreData, id: 'temp-' + Date.now(), version }
     }
     
     return data
   } catch (error) {
-    console.warn('Warning: Error in saveScore function:', error)
+    logger.warn('Error in saveScore function')
     return { ...scoreData, id: 'temp-' + Date.now(), version: 1 }
   }
 }
@@ -123,7 +124,8 @@ export async function GET(
     return NextResponse.json(savedScore)
 
   } catch (error) {
-    console.error('=== ERROR IN SCORE API ===', error)
+    const context = createRequestContext(request)
+    logger.error('Score API error', error, context)
     
     return NextResponse.json({ 
       error: 'Internal server error',

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { generateNonce, createCSPHeader } from '@/lib/csp-nonce';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  
+  // Générer un nonce unique pour cette requête
+  const nonce = generateNonce()
 
   // En développement (localhost), autoriser toutes les pages
   const isDevelopment = process.env.NODE_ENV === 'development' || 
@@ -10,7 +14,10 @@ export function middleware(request: NextRequest) {
                        request.nextUrl.hostname === '127.0.0.1';
 
   if (isDevelopment) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    // Même en développement, ajouter le nonce pour tester
+    response.headers.set('x-nonce', nonce);
+    return response;
   }
 
   // Pages du site vitrine autorisées (publiques) en production
@@ -43,7 +50,21 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(new URL('/not-found', request.url));
   }
 
-  return NextResponse.next();
+  // Créer la réponse avec les headers de sécurité
+  const response = NextResponse.next();
+  
+  // Ajouter le nonce aux headers
+  response.headers.set('x-nonce', nonce);
+  
+  // En production, ajouter les headers de sécurité avec le nonce
+  response.headers.set('Content-Security-Policy', createCSPHeader(nonce));
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+  return response;
 }
 
 export const config = {

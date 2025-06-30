@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger, createRequestContext } from '@/lib/secure-logger'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -65,7 +66,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json([])
 
   } catch (error) {
-    console.error('Error in companies API:', error)
+    const context = createRequestContext(request)
+    logger.error('Failed to fetch companies', error, context)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -117,7 +119,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ id: data.id })
   } catch (error) {
-    console.error('Erreur lors de la création de la compagnie:', error)
+    const context = createRequestContext(request)
+    logger.error('Failed to create company', error, context)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 } 
