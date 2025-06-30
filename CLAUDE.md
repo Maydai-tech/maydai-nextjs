@@ -215,6 +215,245 @@ interface UseCaseScore {
    - Mettre à jour `scoring-config.ts` si impact sur le scoring
    - Ajouter des tests unitaires
 
+## 🔍 **CRITICAL: Procédure de merge depuis la branche THOMAS**
+
+⚠️ **ATTENTION**: La branche `thomas` est mise à jour par un utilisateur non-technique utilisant Cursor. Suivre IMPÉRATIVEMENT cette checklist avant tout merge.
+
+### Pre-merge Checklist Thomas → Dev
+
+#### 1. **📁 Vérification des Assets et Fichiers**
+```bash
+# Vérifier les noms de fichiers problématiques
+find . -name "* *" -o -name "*é*" -o -name "*è*" -o -name "*à*" -o -name "*ç*"
+
+# Vérifier les nouveaux fichiers ajoutés
+git diff dev..thomas --name-status | grep "^A"
+```
+
+**Points critiques à vérifier** :
+- [ ] Aucun fichier avec espaces dans le nom
+- [ ] Aucun caractère spécial/accent dans les noms de fichiers
+- [ ] Nouveaux assets dans `/public/` correctement nommés (kebab-case)
+- [ ] Images optimisées (< 500KB, formats web)
+
+#### 2. **🖼️ Vérification des Références d'Images**
+```bash
+# Chercher les nouvelles références d'images
+grep -r "\.png\|\.jpg\|\.svg\|\.webp" components/ app/ --include="*.jsx" --include="*.tsx"
+```
+
+**À vérifier** :
+- [ ] Tous les chemins d'images utilisent la nomenclature `kebab-case`
+- [ ] Aucun chemin avec espaces ou caractères spéciaux
+- [ ] Images référencées existent bien dans `/public/`
+- [ ] Attributs `alt` présents et descriptifs
+
+#### 3. **🔧 Vérification Technique**
+```bash
+# Test de build obligatoire
+npm run build
+
+# Test de lint obligatoire  
+npm run lint
+
+# Test des fonctionnalités critiques
+npm test
+```
+
+**Points de contrôle** :
+- [ ] Build Next.js réussi sans erreurs
+- [ ] Aucune erreur ESLint critique
+- [ ] Tests unitaires passent
+- [ ] Aucune erreur TypeScript
+
+#### 4. **🌐 Vérification de Production**
+```bash
+# Simuler l'environnement de production
+npm run build && npm run start
+```
+
+**À tester manuellement** :
+- [ ] Page d'accueil charge sans erreur
+- [ ] Navigation fonctionne
+- [ ] Images s'affichent correctement
+- [ ] Console browser sans erreurs 500/CSP
+- [ ] Fonctionnalités principales accessibles
+
+#### 5. **📊 Vérification du Contenu**
+**Changements de contenu à valider** :
+- [ ] Nouveaux textes cohérents avec le tone of voice
+- [ ] Pas de fautes d'orthographe/grammaire
+- [ ] Structure HTML sémantique respectée
+- [ ] Accessibilité maintenue (contraste, alt text)
+
+#### 6. **🔄 Procédure de Merge Sécurisée**
+
+**Étape 1: Préparation**
+```bash
+# Sauvegarder dev actuel
+git checkout dev
+git branch backup-dev-$(date +%Y%m%d-%H%M%S)
+
+# Merger dev dans thomas d'abord (résolution des conflits)
+git checkout thomas
+git pull origin thomas
+git merge dev
+# Résoudre les conflits si nécessaire
+git push origin thomas
+```
+
+**Étape 2: Merge vers dev**
+```bash
+# Merger thomas dans dev
+git checkout dev
+git merge thomas
+```
+
+**Étape 3: Vérification post-merge**
+```bash
+# Re-test complet après merge
+npm run build
+npm run lint
+npm test
+
+# Test manuel de l'application
+npm run dev
+```
+
+#### 7. **🚨 Actions en cas de Problème**
+
+**Si erreurs de build/deploy** :
+1. Identifier les fichiers problématiques avec `git diff dev~1..dev --name-only`
+2. Renommer fichiers avec caractères spéciaux : `scripts/rename-assets.sh`
+3. Mettre à jour les références dans le code
+4. Commit de correction immédiat
+
+**Si erreurs CSP/Headers** :
+1. Vérifier `middleware.ts` non modifié
+2. Contrôler `next.config.ts` non cassé
+3. S'assurer aucun nouveau header Link avec caractères spéciaux
+
+**Si régression fonctionnelle** :
+1. Rollback immédiat : `git revert HEAD`
+2. Identifier le commit problématique
+3. Fix ciblé puis nouveau merge
+
+### 📋 Template de Commit Post-Merge Thomas
+
+```
+feat/fix: Merge thomas - [Description courte des changements]
+
+Changements depuis thomas:
+- [ ] Assets: [décrire nouveaux fichiers]
+- [ ] Contenu: [décrire modifications texte/images] 
+- [ ] Technique: [décrire impacts code]
+
+Vérifications effectuées:
+✅ Build réussi
+✅ Lint passé  
+✅ Tests OK
+✅ Assets nommés correctement
+✅ Aucune erreur production
+
+Co-authored-by: Thomas <thomas@mayday-consulting.ai>
+🤖 Generated with [Claude Code](https://claude.ai/code)
+```
+
+### 🎯 Scripts Utilitaires pour Thomas
+
+**Script de vérification pré-merge** :
+```bash
+# Lancer avant chaque merge depuis thomas
+./scripts/check-thomas-merge.sh
+```
+
+Ce script vérifie automatiquement :
+- Noms de fichiers problématiques
+- Nouveaux assets ajoutés
+- Références d'images dans le code
+- Build, lint et tests
+- Génère un rapport de vérification
+
+### 📝 **Guide pour les Contributeurs Non-Techniques (Thomas)**
+
+#### ✅ **RÈGLES D'OR - À RESPECTER ABSOLUMENT**
+
+1. **Nommage des fichiers** :
+   - ❌ `Logo MaydAI.png` ❌ `Image été.jpg` 
+   - ✅ `logo-maydai.png` ✅ `image-ete.jpg`
+   - Utiliser uniquement : lettres minuscules, chiffres, tirets (-)
+
+2. **Ajout d'images** :
+   - Toujours placer dans `/public/logos/` ou `/public/images/`
+   - Optimiser avant ajout (< 500KB)
+   - Formats recommandés : `.webp`, `.png`, `.jpg`
+
+3. **Modification de contenu** :
+   - Modifier uniquement les textes dans les composants
+   - Ne jamais toucher aux fichiers `.ts`, `.js` de configuration
+   - Préserver la structure HTML existante
+
+4. **Avant de push** :
+   - Tester localement avec `npm run dev`
+   - Vérifier que toutes les images s'affichent
+   - S'assurer qu'aucune erreur n'apparaît en console
+
+#### 🚫 **INTERDICTIONS ABSOLUES**
+
+- Ne JAMAIS modifier `middleware.ts`, `next.config.ts`
+- Ne JAMAIS renommer des dossiers existants
+- Ne JAMAIS supprimer des fichiers sans validation
+- Ne JAMAIS ajouter de packages npm
+- Ne JAMAIS modifier les types TypeScript
+
+#### 📞 **Quand demander de l'aide technique**
+
+- Erreurs de build/compilation
+- Pages qui ne s'affichent plus
+- Images qui ne se chargent pas
+- Erreurs en console navigateur
+- Problèmes de routing/navigation
+
+#### 🔧 **Cursor - Paramètres Recommandés**
+
+```json
+{
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/node_modules/**": true,
+    "**/.next/**": true
+  },
+  "eslint.autoFixOnSave": true,
+  "editor.formatOnSave": true
+}
+```
+
+### 🎯 **Workflow Thomas - Étapes Recommandées**
+
+1. **Avant de commencer** :
+   ```bash
+   git checkout thomas
+   git pull origin thomas
+   npm run dev  # Vérifier que tout fonctionne
+   ```
+
+2. **Pendant les modifications** :
+   - Faire des commits fréquents avec messages clairs
+   - Tester après chaque modification importante
+   - Éviter les gros changements d'un coup
+
+3. **Avant de push** :
+   ```bash
+   npm run build  # Vérifier que ça build
+   git add .
+   git commit -m "feat: Description claire du changement"
+   git push origin thomas
+   ```
+
+4. **Après le push** :
+   - Informer l'équipe technique pour le merge
+   - Fournir une liste des changements effectués
+
 ## 🐛 Debugging
 
 - Logs Supabase dans la console navigateur
