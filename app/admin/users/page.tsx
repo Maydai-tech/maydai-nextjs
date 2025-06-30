@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import AdminProtectedRoute from '@/components/AdminProtectedRoute'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 import { getAdminUsers, promoteToAdmin, demoteAdmin, type AdminProfile } from '@/lib/admin-auth'
 import { Shield, ShieldCheck, User, Mail } from 'lucide-react'
 
@@ -10,7 +10,10 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
-  const supabase = createClientComponentClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   useEffect(() => {
     loadAdminUsers()

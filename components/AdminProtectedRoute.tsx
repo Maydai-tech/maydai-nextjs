@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@supabase/ssr'
 import { hasAdminRole, type UserRole } from '@/lib/admin-auth'
 
 interface AdminProtectedRouteProps {
@@ -21,7 +21,10 @@ export default function AdminProtectedRoute({
   const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
   const [checkingRole, setCheckingRole] = useState(true)
-  const supabase = createClientComponentClient()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   useEffect(() => {
     const checkAdminRole = async () => {
