@@ -8,10 +8,10 @@
 
 | Phase | Total | Complétées | En cours | À faire | Progression |
 |-------|-------|------------|----------|---------|-------------|
-| Phase 1 | 6 | 3 | 0 | 3 | 50% |
+| Phase 1 | 6 | 4 | 0 | 2 | 67% |
 | Phase 2 | 8 | 0 | 0 | 8 | 0% |
 | Phase 3 | 7 | 0 | 0 | 7 | 0% |
-| **TOTAL** | **21** | **3** | **0** | **18** | **14%** |
+| **TOTAL** | **21** | **4** | **0** | **17** | **19%** |
 
 ## 📊 Vue d'ensemble
 
@@ -77,12 +77,20 @@ if (!authHeader || !authHeader.includes('admin-secret')) {
   - Support des logs d'audit pour actions admin
   - Script de test complet (`scripts/test-secure-logging.js`)
 
-#### **🚨 CSP Trop Permissive**
+#### **✅ CSP Trop Permissive** *(Complété le 2025-06-30)*
 - **Problème** : `'unsafe-eval'` et `'unsafe-inline'` autorisés
 - **Fichier** : `next.config.ts`
 - **Solution** : Utiliser des nonces ou hash pour les scripts/styles
 - **Effort** : 1-2 jours
-- **Status** : ❌ À faire
+- **Status** : ✅ COMPLÉTÉ
+- **Commit** : `56b0278` - fix: Implémentation du CSP sécurisé avec nonces
+- **Implémentation** :
+  - Système de nonces uniques générés par middleware (`lib/csp-nonce.ts`)
+  - CSP dynamique adapté dev/production sans `unsafe-eval`/`unsafe-inline`
+  - Migration des headers de sécurité vers middleware pour plus de flexibilité
+  - Support nonces pour Google Tag Manager et scripts inline
+  - Tests complets avec validation 100% sécurité
+  - Headers de sécurité complets (X-Frame-Options, X-Content-Type-Options, etc.)
 
 ### ✅ 1.2 Qualité du Code - Erreurs Massives
 
