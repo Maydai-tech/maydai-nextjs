@@ -97,12 +97,12 @@ export default function ContactPage() {
             </p>
 
             {/* Formulaire de contact */}
-            <div className="bg-white rounded-2xl shadow-xl p-8 lg:p-10 border border-gray-100 mb-12">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 mb-12 overflow-hidden">
               
               {/* Affichage conditionnel : Message de succès OU Formulaire */}
               {submitMessage?.type === 'success' ? (
                 /* Message de succès qui remplace le formulaire */
-                <div className="text-center py-8">
+                <div className="text-center py-8 px-8 lg:px-10">
                   <div className="mb-6">
                     <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,89 +129,123 @@ export default function ContactPage() {
                   
                 </div>
               ) : (
-                /* Formulaire normal */
-                <>
-                  {/* Message d'erreur seulement */}
-                  {submitMessage?.type === 'error' && (
-                    <div className="mb-6 p-4 rounded-lg bg-red-50 text-red-800 border border-red-200">
-                      {submitMessage.text}
+                /* Formulaire normal avec image */
+                <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[700px]">
+                  {/* Colonne Image - Alice Recoque */}
+                  <div className="relative hidden lg:block">
+                    <Image
+                      src="/content/Alice Recoque IWY.webp"
+                      alt="Alice Recoque - Experte en IA et conformité"
+                      fill
+                      className="object-cover object-center"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      priority
+                    />
+                    {/* Overlay avec informations en bas */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-12 pb-8 px-6">
+                      <div className="text-center text-white">
+                        <p className="text-lg font-medium mb-3">
+                          Alice Recoque
+                        </p>
+                        <a 
+                          href="https://fr.wikipedia.org/wiki/Alice_Recoque" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-white hover:text-blue-200 text-sm underline transition-colors duration-200 inline-block mb-2"
+                        >
+                          En savoir plus sur Wikipedia
+                        </a>
+                        <p className="text-xs text-gray-300 mt-2">
+                          Image générée par ChatGPT-4o
+                        </p>
+                      </div>
                     </div>
-                  )}
+                  </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-6" ref={formRef}>
-                    {/* Champ Nom Prénom */}
-                    <div>
-                      <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                        Nom Prénom *
-                      </label>
-                      <input
-                        type="text"
-                        id="fullName"
-                        name="fullName"
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
-                        placeholder="Votre nom et prénom"
-                      />
-                    </div>
+                  {/* Colonne Formulaire */}
+                  <div className="p-8 lg:p-10 flex flex-col justify-center">
+                    {/* Message d'erreur seulement */}
+                    {submitMessage?.type === 'error' && (
+                      <div className="mb-6 p-4 rounded-lg bg-red-50 text-red-800 border border-red-200">
+                        {submitMessage.text}
+                      </div>
+                    )}
 
-                    {/* Champ Email */}
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                        Adresse email *
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
-                        placeholder="votre.email@exemple.com"
-                      />
-                    </div>
+                    <form onSubmit={handleSubmit} className="space-y-6" ref={formRef}>
+                      {/* Champ Nom Prénom */}
+                      <div>
+                        <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                          Nom Prénom *
+                        </label>
+                        <input
+                          type="text"
+                          id="fullName"
+                          name="fullName"
+                          required
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
+                          placeholder="Votre nom et prénom"
+                        />
+                      </div>
 
-                    {/* Champ Téléphone */}
-                    <div>
-                      <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                        Téléphone
-                      </label>
-                      <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
-                        placeholder="06 12 34 56 78"
-                      />
-                    </div>
+                      {/* Champ Email */}
+                      <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                          Adresse email *
+                        </label>
+                        <input
+                          type="email"
+                          id="email"
+                          name="email"
+                          required
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
+                          placeholder="votre.email@exemple.com"
+                        />
+                      </div>
 
-                    {/* Champ Motivations */}
-                    <div>
-                      <label htmlFor="motivations" className="block text-sm font-medium text-gray-700 mb-2">
-                        Vos motivations pour nous rejoindre *
-                      </label>
-                      <textarea
-                        id="motivations"
-                        name="motivations"
-                        rows={5}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200 resize-vertical"
-                        placeholder="Expliquez-nous pourquoi vous souhaitez rejoindre notre communauté de bêta-testeurs..."
-                      />
-                    </div>
+                      {/* Champ Téléphone */}
+                      <div>
+                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                          Téléphone
+                        </label>
+                        <input
+                          type="tel"
+                          id="phone"
+                          name="phone"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
+                          placeholder="06 12 34 56 78"
+                        />
+                      </div>
 
-                    {/* Bouton d'envoi */}
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className={`w-full font-semibold py-4 px-6 rounded-lg shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#0080a3] focus:ring-offset-2 ${
-                        isSubmitting
-                          ? 'bg-gray-400 cursor-not-allowed'
-                          : 'bg-[#0080a3] hover:bg-[#006b8a] text-white transform hover:scale-105'
-                      }`}
-                    >
-                      {isSubmitting ? 'Envoi en cours...' : 'Envoyer ma candidature'}
-                    </button>
-                  </form>
-                </>
+                      {/* Champ Motivations */}
+                      <div>
+                        <label htmlFor="motivations" className="block text-sm font-medium text-gray-700 mb-2">
+                          Vos motivations pour nous rejoindre *
+                        </label>
+                        <textarea
+                          id="motivations"
+                          name="motivations"
+                          rows={5}
+                          required
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200 resize-vertical"
+                          placeholder="Expliquez-nous pourquoi vous souhaitez rejoindre notre communauté de bêta-testeurs..."
+                        />
+                      </div>
+
+                      {/* Bouton d'envoi */}
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className={`w-full font-semibold py-4 px-6 rounded-lg shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#0080a3] focus:ring-offset-2 ${
+                          isSubmitting
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-[#0080a3] hover:bg-[#006b8a] text-white transform hover:scale-105'
+                        }`}
+                      >
+                        {isSubmitting ? 'Envoi en cours...' : 'Envoyer ma candidature'}
+                      </button>
+                    </form>
+                  </div>
+                </div>
               )}
             </div>
 
