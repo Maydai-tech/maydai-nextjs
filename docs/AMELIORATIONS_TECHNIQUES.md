@@ -1,8 +1,17 @@
 # Plan d'Améliorations Techniques - MaydAI
 
-> **Statut** : Document créé le 2025-06-30  
-> **Version** : 1.0  
+> **Statut** : Document créé le 2025-06-30 | Dernière mise à jour : 2025-06-30
+> **Version** : 1.1  
 > **Objectif** : Roadmap des améliorations techniques prioritaires pour l'application MaydAI
+
+## 📈 Progression
+
+| Phase | Total | Complétées | En cours | À faire | Progression |
+|-------|-------|------------|----------|---------|-------------|
+| Phase 1 | 6 | 1 | 0 | 5 | 17% |
+| Phase 2 | 8 | 0 | 0 | 8 | 0% |
+| Phase 3 | 7 | 0 | 0 | 7 | 0% |
+| **TOTAL** | **21** | **1** | **0** | **20** | **5%** |
 
 ## 📊 Vue d'ensemble
 
@@ -17,7 +26,7 @@ L'application MaydAI présente une **architecture solide** mais nécessite des c
 
 ### ✅ 1.1 Sécurité - Vulnérabilités Critiques
 
-#### **🚨 Authentification Admin Faible**
+#### **✅ Authentification Admin Faible** *(Complété le 2025-06-30)*
 - **Problème** : API admin utilise juste un header `admin-secret` facilement contournable
 - **Fichier** : `app/api/admin/recalculate-scores/route.ts`
 - **Code vulnérable** :
@@ -28,7 +37,14 @@ if (!authHeader || !authHeader.includes('admin-secret')) {
 ```
 - **Solution** : Implémenter une authentification basée sur les rôles utilisateur via Supabase
 - **Effort** : 2-3 jours
-- **Status** : ❌ À faire
+- **Status** : ✅ COMPLÉTÉ
+- **Commit** : `e82ec0e` - fix: Sécurisation du système d'authentification admin
+- **Implémentation** :
+  - Nouveau système de rôles (user/admin/super_admin) dans la table `profiles`
+  - Middleware d'authentification JWT (`lib/admin-auth.ts`)
+  - Logs d'audit automatiques
+  - Page de gestion des admins (`/admin/users`)
+  - Documentation : `docs/ADMIN_AUTH_IMPLEMENTATION.md`
 
 #### **🚨 Variables d'Environnement Exposées**
 - **Problème** : Risque de commit accidentel des secrets dans `.env.local`
@@ -413,3 +429,16 @@ npm test
 **📌 Note** : Ce document doit être mis à jour au fur et à mesure des corrections. Chaque tâche complétée doit être cochée avec la date de réalisation.
 
 **🔄 Prochaine révision** : À planifier après la Phase 1
+
+---
+
+## 📝 **HISTORIQUE DES MODIFICATIONS**
+
+### Version 1.1 - 2025-06-30
+- ✅ Implémentation du système d'authentification admin sécurisé
+- Ajout du tableau de progression
+- Ajout de l'historique des modifications
+
+### Version 1.0 - 2025-06-30
+- Création initiale du document
+- Identification de 21 améliorations prioritaires
