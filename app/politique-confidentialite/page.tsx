@@ -108,9 +108,9 @@ export default function PolitiqueConfidentialitePage() {
                 <div className="bg-gray-50 rounded-lg p-6">
                   <p className="text-gray-700 leading-relaxed mb-4">
                     <strong>Hébergeur technique :</strong><br />
-                    Vercel Inc.<br />
-                    340 S Lemon Ave #4133<br />
-                    Walnut, CA 91789, États-Unis
+                    OVHcloud<br />
+                    2 rue Kellermann<br />
+                    59100 Roubaix France
                   </p>
                   <p className="text-gray-700 leading-relaxed">
                     <strong>Responsable du traitement :</strong><br />
@@ -156,7 +156,7 @@ export default function PolitiqueConfidentialitePage() {
                   <p className="text-gray-700 leading-relaxed">
                     <strong>Nom :</strong> Thomas Chippeaux<br />
                     <strong>Adresse :</strong> MaydAI, 47 rue Erlanger, 75016 Paris<br />
-                    <strong>Email :</strong> <a href="mailto:thomas.chippeaux@maydai.io" className="text-[#0080a3] hover:underline">thomas.chippeaux@maydai.io</a><br />
+                    <strong>Email :</strong> <a href="mailto:contact@maydai.io" className="text-[#0080a3] hover:underline">contact@maydai.io</a><br />
                     <strong>Téléphone :</strong> <a href="tel:+33768939116" className="text-[#0080a3] hover:underline">07 68 93 91 16</a>
                   </p>
                 </div>
