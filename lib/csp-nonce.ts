@@ -52,7 +52,7 @@ export function createCSPHeader(nonce: string): string {
     return [
       "default-src 'self'",
       `script-src 'self' 'nonce-${nonce}' 'unsafe-eval'`, // unsafe-eval nécessaire pour le hot reload
-      `style-src 'self' 'nonce-${nonce}' 'unsafe-inline'`, // unsafe-inline pour le CSS hot reload
+      "style-src 'self' 'unsafe-inline'", // Pas de nonce pour les styles en dev
       "img-src 'self' data: https:",
       "connect-src 'self' https://*.supabase.co ws: wss:", // ws/wss pour hot reload
       "font-src 'self' data:",
@@ -63,11 +63,12 @@ export function createCSPHeader(nonce: string): string {
     ].join('; ')
   }
   
-  // En production, CSP strict avec nonces et support GTM/CookieYes
+  // En production, CSP avec nonces pour scripts uniquement
+  // Les styles utilisent unsafe-inline car trop de librairies (React, GTM, etc.) en ont besoin
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://tagmanager.google.com https://cdn-cookieyes.com`,
-    `style-src 'self' 'nonce-${nonce}' 'unsafe-inline' https://fonts.googleapis.com`, // unsafe-inline nécessaire pour GTM et CookieYes
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Pas de nonce pour les styles
     "img-src 'self' data: https: https://www.google-analytics.com https://www.googletagmanager.com",
     "connect-src 'self' https://*.supabase.co https://region1.google-analytics.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://cdn-cookieyes.com",
     "font-src 'self' data: https://fonts.gstatic.com",
