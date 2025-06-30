@@ -63,6 +63,9 @@ export function middleware(request: NextRequest) {
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  
+  // IMPORTANT: Supprimer les headers Link problématiques générés par Next.js
+  response.headers.delete('link');
 
   return response;
 }

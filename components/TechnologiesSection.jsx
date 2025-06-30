@@ -26,44 +26,44 @@ export default function TechnologiesSection() {
 
   const logos = [
     {
-      src: '/logos/Logo institut/EU_AI_Act_logo_main.png',
+      src: '/logos/logo-institut/EU_AI_Act_logo_main.png',
       alt: 'EU AI Act'
     },
     {
-      src: '/logos/Logo institut/6690f6497582bb8f9d6600dd_IA for .png',
+      src: '/logos/logo-institut/6690f6497582bb8f9d6600dd_IA-for.png',
       alt: 'IA for Good'
     },
     {
-      src: '/logos/Logo institut/AI Forensics.png',
+      src: '/logos/logo-institut/AI-Forensics.png',
       alt: 'AI Forensics'
     },
     {
-      src: '/logos/Logo institut/Compl - AI.png',
+      src: '/logos/logo-institut/Compl-AI.png',
       alt: 'Compl AI'
     },
     {
-      src: '/logos/Logo institut/ETH.png',
+      src: '/logos/logo-institut/ETH.png',
       alt: 'ETH Zurich'
     },
     {
-      src: '/logos/Logo institut/logo-part1-en-green.png',
+      src: '/logos/logo-institut/logo-part1-en-green.png',
       alt: 'Partner Logo'
     },
     {
-      src: '/logos/Logo institut/small_partner_DFF_30d5862b03.webp',
+      src: '/logos/logo-institut/small_partner_DFF_30d5862b03.webp',
       alt: 'DFF Partner'
     },
     {
-      src: '/logos/Logo institut/small_partner_NGI_e217d8aa57.webp',
+      src: '/logos/logo-institut/small_partner_NGI_e217d8aa57.webp',
       alt: 'NGI Partner'
     },
 
     {
-      src: '/logos/Logo institut/channels4_profile.jpg',
+      src: '/logos/logo-institut/channels4_profile.jpg',
       alt: 'YouTube Channel'
     },
     {
-      src: '/logos/Logo institut/Espérance et algorithme.jpg',
+      src: '/logos/logo-institut/Esperance-et-algorithme.jpg',
       alt: 'Espérance et algorithme'
     }
   ];

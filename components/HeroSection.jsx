@@ -17,7 +17,7 @@ export default function HeroSection() {
       </div>
       {/* Logo conformité IA - Optimisé pour LCP */}
       <Image 
-        src="/logos/Logo conformité IA.svg" 
+        src="/logos/logo-conformite-ia.svg" 
         alt="Logo conformité IA" 
         width={256}
         height={256}

@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
   // Désactiver l'optimisation automatique des fonts qui cause des problèmes avec les headers
   optimizeFonts: false,
   
+  // Désactiver complètement le préchargement automatique des ressources
+  experimental: {
+    optimizePackageImports: [],
+  },
+  
   // Configuration des headers pour éviter les problèmes de caractères non-ASCII
   async headers() {
     return [
@@ -24,6 +29,11 @@ const nextConfig: NextConfig = {
           {
             key: 'X-DNS-Prefetch-Control',
             value: 'on'
+          },
+          // Empêcher Next.js d'ajouter des headers Link automatiques
+          {
+            key: 'Link',
+            value: ''
           }
         ],
       },
