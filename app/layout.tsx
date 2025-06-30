@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import GlobalLoader from "@/components/GlobalLoader";
+import { getNonce } from "@/lib/csp-nonce";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,18 +22,24 @@ export const metadata: Metadata = {
   description: "Interface d'administration pour la gestion du questionnaire de conformité IA Act",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = await getNonce()
+  
   return (
     <html lang="fr">
       <head>
+        {/* Meta pour exposer le nonce au client */}
+        {nonce && <meta name="csp-nonce" content={nonce} />}
+        
         {/* Google Tag Manager */}
         <Script
           id="gtm-script"
           strategy="afterInteractive"
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `
               (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
