@@ -15,9 +15,9 @@ export default function FeaturesSection() {
             <p className="text-gray-600">Générez des rapports d'audit conformes à l'AI Act en quelques clics grâce au mode collaboratif de la plateforme. Suivez les étapes de réalisation jusqu'à sa validation.</p>
           </div>
           <div className="flex flex-col items-center text-center p-6 bg-gray-50 rounded-xl shadow hover:shadow-lg transition">
-            <img src="/icons/lawyer.png" alt="Accompagnement expert IA" className="w-16 h-16 mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Accompagnement expert IA</h3>
-            <p className="text-gray-600">Bénéficiez de conseils personnalisés pour chaque étape de votre démarche de conformité à l'AI Act.</p>
+            <img src="/icons/lawyer.png" alt="Expertise AI Act : Technique et Juridique" className="w-16 h-16 mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Expertise AI Act : Technique et Juridique</h3>
+            <p className="text-gray-600">Décryptez les subtilités de l'AI Act avec des conseils personnalisés et opérants. Notre double compétence, à la fois technique et juridique, vous apporte des réponses claires pour sécuriser chaque étape de votre démarche de conformité.</p>
           </div>
         </div>
       </div>
