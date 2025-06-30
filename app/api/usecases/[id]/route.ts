@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { logger, createRequestContext } from '@/lib/secure-logger'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -61,7 +62,8 @@ export async function GET(
       if (useCaseError.code === 'PGRST116') {
         return NextResponse.json({ error: 'Use case not found' }, { status: 404 })
       }
-      console.error('Error fetching use case:', useCaseError)
+      const context = createRequestContext(request)
+      logger.error('Failed to fetch use case', useCaseError, { ...context, useCaseId })
       return NextResponse.json({ error: 'Error fetching use case' }, { status: 500 })
     }
 
@@ -87,7 +89,8 @@ export async function GET(
     return NextResponse.json(useCase)
 
   } catch (error) {
-    console.error('Error in use case API:', error)
+    const context = createRequestContext(request)
+    logger.error('Use case API error', error, context)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 } 

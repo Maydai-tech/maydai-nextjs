@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { verifyAdminAuth } from '@/lib/admin-auth'
 
 export async function POST(request: NextRequest) {
   try {
-    // Déplacer la vérification des variables d'environnement ici
+    // Vérifier l'authentification admin
+    const { user: adminUser, error: authError } = await verifyAdminAuth(request)
+    
+    if (authError) {
+      return authError
+    }
+
+    console.log(`=== STARTING BATCH SCORE RECALCULATION ===`)
+    console.log(`Initiated by admin: ${adminUser?.email} (${adminUser?.role})`)
+
+    // Variables d'environnement pour Supabase
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -12,14 +23,6 @@ export async function POST(request: NextRequest) {
         { error: 'Variables d\'environnement Supabase manquantes' },
         { status: 500 }
       )
-    }
-
-    console.log('=== STARTING BATCH SCORE RECALCULATION ===')
-    
-    // Vérification basique d'autorisation (vous pouvez améliorer cela)
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.includes('admin-secret')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
