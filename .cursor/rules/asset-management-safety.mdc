@@ -1,0 +1,136 @@
+---
+description: Safe asset and file management for non-technical contributors
+globs: ["public/**/*", "**/*.jsx", "**/*.tsx"]
+alwaysApply: true
+---
+# Gestion Sécurisée des Assets et Fichiers
+
+## 🎯 PROBLÈME CRITIQUE RÉSOLU
+Les fichiers avec espaces/caractères spéciaux causent des erreurs 500 en production à cause des headers HTTP non-ASCII.
+
+**Exemple d'erreur Vercel** :
+```
+Header 'link: </logos/Logo MaydAI/Logo Name MaydAI.png>' contains non-ASCII characters
+```
+
+## 📁 NOMMAGE DES FICHIERS - RÈGLES STRICTES
+
+### ❌ NOMS INTERDITS
+```
+Logo MaydAI.png          # Espaces
+Image été.jpg            # Accents
+Photo_Produit.PNG        # Underscores + majuscules
+document final.pdf       # Espaces
+```
+
+### ✅ NOMS CORRECTS
+```
+logo-maydai.png          # kebab-case
+image-ete.jpg            # Sans accents
+photo-produit.png        # Minuscules avec tirets
+document-final.pdf       # Cohérent
+```
+
+### Règle de Transformation
+```
+Nom original    → Nom corrigé
+"Logo MaydAI"   → "logo-maydai"
+"été 2024"      → "ete-2024"
+"Photo_Prod"    → "photo-prod"
+```
+
+## 🖼️ GESTION DES IMAGES
+
+### Emplacements Autorisés
+```
+/public/logos/           # Logos de l'entreprise et partenaires
+/public/images/          # Images de contenu
+/public/icons/           # Icônes de l'interface
+/public/screenshots/     # Captures d'écran
+```
+
+### Workflow Sécurisé
+1. **Avant d'ajouter** : Renommer le fichier selon les règles
+2. **Placement** : Mettre dans le bon dossier `/public/`
+3. **Référence** : Utiliser le bon chemin dans le code
+4. **Test** : Vérifier que l'image s'affiche
+
+### Code Template Sûr
+```jsx
+// ✅ BON - Chemin correct avec nom valide
+<img 
+  src="/logos/logo-maydai.png" 
+  alt="Logo MaydAI"
+  className="h-8 w-auto" 
+/>
+
+// ❌ MAUVAIS - Chemin avec espaces
+<img src="/logos/Logo MaydAI.png" alt="Logo" />
+```
+
+## 🔍 VÉRIFICATION AUTOMATIQUE
+
+### Script de Détection
+Utiliser le script fourni pour détecter les problèmes :
+```bash
+./scripts/check-thomas-merge.sh
+```
+
+### Correction Automatique
+```bash
+./scripts/rename-problematic-files.sh
+```
+
+## 📝 RÉFÉRENCES D'IMAGES DANS LE CODE
+
+### Mise à Jour Obligatoire
+Après renommage d'un fichier, mettre à jour TOUTES les références :
+
+```jsx
+// Avant renommage
+<img src="/logos/Logo MaydAI/Logo Name MaydAI.png" />
+
+// Après renommage
+<img src="/logos/logo-maydai/logo-name-maydai.png" />
+```
+
+### Recherche des Références
+```bash
+# Trouver toutes les références à un fichier
+grep -r "nom-ancien-fichier" components/ app/
+```
+
+## 🚨 PRÉVENTION D'ERREURS
+
+### Checklist Obligatoire
+Avant chaque ajout d'image :
+- [ ] Nom en kebab-case (minuscules-avec-tirets)
+- [ ] Aucun espace ni caractère spécial
+- [ ] Emplacement correct dans `/public/`
+- [ ] Test : image s'affiche dans le navigateur
+- [ ] Aucune erreur console
+
+### Formats Recommandés
+- **Images web** : `.webp` (meilleure compression)
+- **Photos** : `.jpg` (pour photos réalistes)
+- **Logos/icônes** : `.png` ou `.svg`
+- **Taille max** : 500KB par fichier
+
+## 🔧 OUTILS D'AIDE
+
+### Renommage Manuel
+```bash
+# Exemple de renommage sûr
+mv "Logo MaydAI.png" "logo-maydai.png"
+mv "Image été.jpg" "image-ete.jpg"
+```
+
+### Validation Build
+Toujours tester après modifications :
+```bash
+npm run build  # Vérifier aucune erreur
+npm run dev    # Tester l'affichage
+```
+
+## 🎯 OBJECTIF
+Éliminer définitivement les erreurs de production liées aux noms de fichiers en appliquant des règles strictes de nommage.

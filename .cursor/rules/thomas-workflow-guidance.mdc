@@ -1,0 +1,175 @@
+---
+description: Step-by-step workflow guidance for Thomas (non-technical contributor)
+globs:
+alwaysApply: true
+---
+# Guide de Workflow pour Thomas
+
+## 🎯 PROFIL UTILISATEUR
+Thomas est responsable du contenu et utilise Cursor pour mettre à jour l'application.
+Il n'a pas d'expertise technique approfondie mais doit pouvoir contribuer efficacement.
+
+## 📋 WORKFLOW RECOMMANDÉ
+
+### 1. Préparation (Avant de Commencer)
+```bash
+# Vérifier que tout fonctionne avant de commencer
+git checkout thomas
+git pull origin thomas
+npm run dev
+
+# Ouvrir http://localhost:3000 et vérifier que tout s'affiche
+```
+
+### 2. Types de Modifications Autorisées
+
+#### ✅ Modification de Contenu
+```jsx
+// Textes, titres, descriptions
+<h1>Nouveau titre</h1>
+<p>Nouveau contenu descriptif</p>
+
+// Ajout de nouvelles sections de contenu
+<section>
+  <h2>Nouvelle section</h2>
+  <p>Description de la nouvelle section</p>
+</section>
+```
+
+#### ✅ Ajout d'Images
+```jsx
+// Avec nom de fichier correct (kebab-case)
+<img 
+  src="/logos/nouveau-logo.png" 
+  alt="Description du logo"
+  className="h-8 w-auto" 
+/>
+```
+
+#### ✅ Création de Nouvelles Pages
+Structure recommandée pour une nouvelle page :
+```jsx
+// app/nouvelle-page/page.tsx
+export default function NouvellePage() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">Titre de la Page</h1>
+      <p className="text-gray-600 mb-8">Description de la page</p>
+      
+      {/* Contenu de la page */}
+    </div>
+  );
+}
+```
+
+### 3. Workflow de Modification
+
+#### Étape 1 : Modification
+- Modifier UNIQUEMENT le contenu textuel
+- Préserver toutes les classes CSS existantes
+- Ne pas toucher aux imports/exports
+
+#### Étape 2 : Test Immédiat
+```bash
+# Après chaque modification, vérifier
+npm run dev
+# Ouvrir le navigateur et voir si tout fonctionne
+```
+
+#### Étape 3 : Commit Fréquent
+```bash
+git add .
+git commit -m "feat: Description claire du changement"
+```
+
+### 4. Ajout d'Images - Procédure Détaillée
+
+#### Étape 1 : Préparation du Fichier
+1. Renommer le fichier selon les règles : `mon-image.png`
+2. Optimiser si nécessaire (< 500KB)
+3. Placer dans `/public/logos/` ou `/public/images/`
+
+#### Étape 2 : Ajout dans le Code
+```jsx
+<img 
+  src="/logos/mon-image.png" 
+  alt="Description précise de l'image"
+  className="h-8 w-auto"  // Garder les classes existantes
+/>
+```
+
+#### Étape 3 : Vérification
+- Image s'affiche dans le navigateur
+- Aucune erreur dans la console (F12)
+- Test sur mobile (mode responsive)
+
+### 5. Gestion des Erreurs Courantes
+
+#### Image ne s'affiche pas
+1. Vérifier le chemin : `/public/logos/nom-fichier.png`
+2. Vérifier le nom (pas d'espaces/accents)
+3. Actualiser la page (Ctrl+F5)
+
+#### Page blanche ou erreur
+1. Vérifier la console (F12)
+2. Annuler le dernier changement : `git checkout -- fichier-modifie`
+3. Redemander l'aide technique
+
+#### Erreur de build
+```bash
+npm run build
+# Si erreurs → NE PAS essayer de corriger
+# → Revenir au commit précédent
+# → Demander l'aide technique
+```
+
+## 🔧 COMMANDES ESSENTIELLES
+
+### Test Local
+```bash
+npm run dev          # Démarre l'application en local
+```
+
+### Vérification Production
+```bash
+npm run build        # Test de compilation (obligatoire avant commit)
+```
+
+### Git Basique
+```bash
+git status           # Voir les fichiers modifiés
+git add .            # Ajouter tous les changements
+git commit -m "..."  # Sauvegarder avec message
+git push origin thomas  # Envoyer vers GitHub
+```
+
+## 📞 QUAND DEMANDER DE L'AIDE
+
+### Situations d'Alerte
+- Erreurs TypeScript lors du build
+- Application qui ne démarre plus
+- Images qui ne se chargent pas
+- Erreurs dans la console navigateur
+- Page qui s'affiche mal sur mobile
+
+### Qui Contacter
+- Erreurs techniques → Équipe développement
+- Problèmes de contenu → Validation avant commit
+- Doutes sur modifications → Toujours demander
+
+## 📊 BONNES PRATIQUES
+
+### Communication
+- Décrire clairement les changements souhaités
+- Fournir les nouveaux assets optimisés
+- Tester sur plusieurs navigateurs
+- Documenter les nouveaux contenus
+
+### Organisation
+- Faire des commits fréquents avec messages clairs
+- Tester après chaque modification importante
+- Éviter les gros changements d'un coup
+- Informer l'équipe des nouveaux contenus ajoutés
+
+## 🎯 OBJECTIF
+Permettre à Thomas de contribuer efficacement tout en maintenant la stabilité et la qualité de l'application.

@@ -414,8 +414,15 @@ Ce script vérifie automatiquement :
 - Erreurs en console navigateur
 - Problèmes de routing/navigation
 
-#### 🔧 **Cursor - Paramètres Recommandés**
+#### 🔧 **Cursor - Configuration et Règles**
 
+**Règles Cursor Spécialisées (dans `.cursor/rules/`)** :
+- `thomas-non-technical-safety.mdc` - Règles de sécurité critiques
+- `asset-management-safety.mdc` - Gestion sécurisée des fichiers/images
+- `thomas-workflow-guidance.mdc` - Guide de workflow détaillé
+- `production-safety-checks.mdc` - Vérifications pré-merge
+
+**Paramètres VS Code/Cursor recommandés** :
 ```json
 {
   "files.watcherExclude": {
@@ -424,7 +431,10 @@ Ce script vérifie automatiquement :
     "**/.next/**": true
   },
   "eslint.autoFixOnSave": true,
-  "editor.formatOnSave": true
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  }
 }
 ```
 

@@ -1,0 +1,199 @@
+---
+description: Production safety checks and merge procedures for thomas branch
+globs:
+alwaysApply: true
+---
+# Vérifications de Sécurité Production
+
+## 🚨 CONTEXTE CRITIQUE
+La branche `thomas` est mise à jour par un contributeur non-technique.
+Les changements de cette branche peuvent casser la production si mal intégrés.
+
+## 📋 CHECKLIST PRÉ-MERGE OBLIGATOIRE
+
+### 1. Vérification des Assets
+```bash
+# Script automatique de vérification
+./scripts/check-thomas-merge.sh
+
+# Vérification manuelle des noms de fichiers
+find . -name "* *" -o -name "*é*" -o -name "*è*" -o -name "*à*"
+```
+
+**Points critiques** :
+- [ ] Aucun fichier avec espaces dans le nom
+- [ ] Aucun caractère spécial/accent
+- [ ] Images optimisées (< 500KB)
+- [ ] Emplacements corrects dans `/public/`
+
+### 2. Vérification des Références
+```bash
+# Chercher les références d'images problématiques
+grep -r "\.png\|\.jpg\|\.svg" components/ app/ | grep -E "[ éèàç]"
+```
+
+**À corriger** :
+- [ ] Tous les chemins utilisent kebab-case
+- [ ] Aucune référence à des fichiers inexistants
+- [ ] Attributs `alt` présents et descriptifs
+
+### 3. Tests de Build
+```bash
+# Tests obligatoires avant merge
+npm run build        # Compilation production
+npm run lint         # Vérification code
+npm test            # Tests unitaires
+```
+
+**Résultats attendus** :
+- [ ] Build réussi sans erreurs
+- [ ] Aucune erreur ESLint critique
+- [ ] Tests passent
+- [ ] Aucune erreur TypeScript
+
+### 4. Test de Production Simulé
+```bash
+# Test avec build de production
+npm run build && npm run start
+```
+
+**Vérifications manuelles** :
+- [ ] Page d'accueil charge sans erreur
+- [ ] Navigation fonctionne correctement
+- [ ] Images s'affichent toutes
+- [ ] Console sans erreurs 500/CSP
+- [ ] Responsive design préservé
+
+## 🔄 PROCÉDURE DE MERGE SÉCURISÉE
+
+### Étape 1 : Préparation
+```bash
+# Sauvegarde de la branche dev actuelle
+git checkout dev
+git branch backup-dev-$(date +%Y%m%d-%H%M%S)
+
+# Récupération des derniers changements
+git fetch origin thomas
+```
+
+### Étape 2 : Merge Test en Local
+```bash
+# Test de merge sans modification
+git checkout thomas
+git merge dev --no-commit --no-ff
+
+# Si conflits → résoudre manuellement
+# Si OK → annuler pour faire le vrai merge
+git merge --abort
+```
+
+### Étape 3 : Merge Réel
+```bash
+# Merger dev dans thomas d'abord
+git merge dev
+git push origin thomas
+
+# Puis merger thomas dans dev
+git checkout dev
+git merge thomas
+```
+
+### Étape 4 : Vérification Post-Merge
+```bash
+# Re-tests complets après merge
+npm run build
+npm run test
+npm run dev  # Test manuel
+```
+
+## 🚨 GESTION DES PROBLÈMES
+
+### Erreurs de Build
+1. **Identifier** : `git diff dev~1..dev --name-only`
+2. **Analyser** : Vérifier les fichiers modifiés
+3. **Corriger** : Renommer assets problématiques
+4. **Re-tester** : `npm run build`
+
+### Erreurs CSP/Headers
+1. **Vérifier** : `middleware.ts` non modifié
+2. **Contrôler** : `next.config.ts` intact
+3. **Supprimer** : Headers Link automatiques
+4. **Tester** : En local puis en prod
+
+### Régressions Fonctionnelles
+1. **Rollback immédiat** : `git revert HEAD`
+2. **Identifier** : Commit problématique
+3. **Fix ciblé** : Correction spécifique
+4. **Nouveau merge** : Après validation
+
+## 📊 MÉTRIQUES DE QUALITÉ
+
+### Avant Merge
+- Build time < 2 minutes
+- Aucune erreur TypeScript
+- Tests coverage maintenu
+- Images < 500KB chacune
+
+### Après Merge
+- Application démarre < 30 secondes
+- Pages se chargent < 3 secondes
+- Aucune erreur 500 en console
+- Mobile responsive préservé
+
+## 🎯 SCRIPTS D'AUTOMATISATION
+
+### Vérification Complète
+```bash
+#!/bin/bash
+# scripts/check-thomas-merge.sh
+echo "🔍 Vérification branche thomas..."
+
+# 1. Vérification assets
+find . -name "* *" -o -name "*é*" | wc -l
+
+# 2. Test build
+npm run build
+
+# 3. Test lint
+npm run lint
+
+# 4. Rapport final
+echo "✅ Vérification terminée"
+```
+
+### Correction Automatique
+```bash
+#!/bin/bash
+# scripts/fix-thomas-assets.sh
+echo "🔧 Correction automatique des assets..."
+
+# Renommage automatique
+./scripts/rename-problematic-files.sh
+
+# Mise à jour des références
+echo "⚠️ Vérifier manuellement les références dans le code"
+```
+
+## 📝 TEMPLATE DE COMMIT
+
+```
+feat/fix: Merge thomas - [Description]
+
+Changements depuis thomas:
+- Assets: [fichiers ajoutés/modifiés]
+- Contenu: [pages/textes modifiés]
+- Technique: [impacts potentiels]
+
+Vérifications:
+✅ Build réussi
+✅ Assets nommés correctement  
+✅ Références mises à jour
+✅ Tests passants
+✅ Production simulée OK
+
+Co-authored-by: Thomas <thomas@mayday-consulting.ai>
+🤖 Generated with [Claude Code](https://claude.ai/code)
+```
+
+## 🎯 OBJECTIF
+Garantir que chaque merge depuis `thomas` maintient la stabilité de la production tout en permettant l'évolution du contenu.

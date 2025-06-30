@@ -1,0 +1,116 @@
+---
+description: Critical safety rules for non-technical contributors (Thomas)
+globs:
+alwaysApply: true
+---
+# Règles de Sécurité pour Contributeurs Non-Techniques
+
+## 🚨 CONTEXTE CRITIQUE
+Tu assistes Thomas, un contributeur NON-TECHNIQUE sur un projet Next.js EN PRODUCTION.
+TOUTE ERREUR peut casser l'application déployée sur Vercel et affecter les utilisateurs.
+
+## 🚫 FICHIERS STRICTEMENT INTERDITS - NE JAMAIS MODIFIER
+
+### Configuration Critique
+- `middleware.ts` - Gestion des headers de sécurité CSP
+- `next.config.ts` - Configuration Next.js et headers HTTP
+- `package.json` / `package-lock.json` - Dépendances npm
+- `.env*` - Variables d'environnement
+- `tailwind.config.*` - Configuration CSS
+
+### Code TypeScript Système
+- Tous les fichiers dans `/lib/` (sauf exemples)
+- Tous les fichiers dans `/scripts/`
+- Fichiers `.ts` (uniquement TypeScript)
+- `types/` et définitions de types
+
+### Raisons
+Ces fichiers contiennent :
+- Logique de sécurité critique (CSP, authentification)
+- Configuration de production
+- Types TypeScript complexes
+- Scripts de build et déploiement
+
+## ✅ MODIFICATIONS AUTORISÉES SEULEMENT
+
+### Contenu Sûr
+- Textes dans les composants React (`.jsx`, `.tsx`)
+- Modification de contenu existant des pages
+- Ajout d'images dans `/public/`
+- Création de nouvelles pages dans `/app/`
+
+### Exemples Sûrs
+```jsx
+// ✅ BON - Modifier le texte
+<h1>Nouveau titre</h1>
+<p>Nouveau contenu</p>
+
+// ❌ ÉVITER - Ne pas toucher aux classes CSS complexes
+<div className="complex-tailwind-classes">
+```
+
+## 🖼️ GESTION DES IMAGES - RÈGLES STRICTES
+
+### Nommage Obligatoire
+- ❌ `Logo MaydAI.png` (espaces)
+- ❌ `Image été.jpg` (accents)
+- ❌ `Photo_Produit.PNG` (underscore, majuscules)
+- ✅ `logo-maydai.png` (kebab-case, minuscules)
+
+### Emplacement Obligatoire
+- Images de logo : `/public/logos/`
+- Autres images : `/public/images/`
+- JAMAIS ailleurs sans validation technique
+
+### Vérification Obligatoire
+Après ajout d'image, TOUJOURS vérifier :
+1. L'image s'affiche dans le navigateur
+2. Aucune erreur dans la console
+3. Le nom respecte la convention
+
+## 📋 WORKFLOW OBLIGATOIRE
+
+### Avant Toute Modification
+```bash
+npm run dev  # Vérifier que tout fonctionne
+```
+
+### Après Chaque Modification
+```bash
+npm run dev  # Re-tester l'application
+# Vérifier dans le navigateur que tout fonctionne
+```
+
+### Avant Chaque Commit
+```bash
+npm run build  # Test de production obligatoire
+```
+
+## 🚨 SIGNAUX D'ALARME - ARRÊTER IMMÉDIATEMENT
+
+Si tu vois :
+- Erreurs TypeScript lors du build
+- Page blanche dans le navigateur
+- Erreurs 500
+- Images qui ne se chargent pas
+- Messages CSP dans la console
+- Erreurs de compilation
+
+**Action** : Annuler les changements et demander l'aide technique.
+
+## 💬 RÉPONSES TYPE RECOMMANDÉES
+
+### Pour modifications système
+❌ "Modifie le fichier middleware.ts..."
+✅ "Ce fichier est critique pour la production. Je recommande de demander l'aide de l'équipe technique pour cette modification."
+
+### Pour installation de packages
+❌ "Installe ce package avec npm install..."
+✅ "L'ajout de nouveaux packages nécessite une validation technique pour éviter les conflits de dépendances."
+
+### Pour erreurs complexes
+❌ "Change cette configuration TypeScript..."
+✅ "Cette erreur nécessite une expertise TypeScript. L'équipe technique pourra résoudre cela rapidement."
+
+## 🎯 OBJECTIF
+Permettre à Thomas de contribuer efficacement au contenu SANS risquer de casser l'application en production.
