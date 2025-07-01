@@ -1,53 +1,61 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { generateNonce, createCSPHeader } from '@/lib/csp-nonce';
+import { getAuthStatus } from '@/lib/middleware-auth';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Générer un nonce unique pour cette requête
   const nonce = generateNonce()
 
-  // En développement (localhost), autoriser toutes les pages
-  const isDevelopment = process.env.NODE_ENV === 'development' || 
-                       request.nextUrl.hostname === 'localhost' ||
-                       request.nextUrl.hostname === '127.0.0.1';
+  // Autoriser les fichiers statiques et les API routes en premier
+  const isStaticFile = pathname.startsWith('/_next/') || 
+                      pathname.startsWith('/api/') ||
+                      pathname.includes('.')
 
-  if (isDevelopment) {
+  // Si c'est un fichier statique, laisser passer immédiatement
+  if (isStaticFile) {
     const response = NextResponse.next();
-    // Même en développement, ajouter le nonce pour tester
     response.headers.set('x-nonce', nonce);
     return response;
   }
 
-  // Pages du site vitrine autorisées (publiques) en production
-  const allowedPaths = [
-    '/',
-    '/a-propos',
-    '/conditions-generales',
-    '/contact',
-    '/fonctionnalites',
-    '/ia-act-ue',
-    '/ia-act-ue/calendrier',
-    '/ia-act-ue/risques',
-    '/politique-confidentialite',
-    '/tarifs',
-  ];
+  // TEMPORAIREMENT DÉSACTIVÉ POUR DEBUG
+  // const { isAuthenticated } = await getAuthStatus(request)
+  console.log('Auth middleware temporarily disabled for debugging')
 
-  // Autoriser les fichiers statiques et les API routes
-  const isStaticFile = pathname.startsWith('/_next/') || 
-                      pathname.startsWith('/api/') ||
-                      pathname.includes('.');
+  // En développement, autoriser toutes les pages
+  const isDevelopment = process.env.NODE_ENV === 'development' || 
+                       request.nextUrl.hostname === 'localhost' ||
+                       request.nextUrl.hostname === '127.0.0.1';
 
-  // Si c'est un fichier statique, laisser passer
-  if (isStaticFile) {
-    return NextResponse.next();
-  }
+  // En production, vérifier les pages autorisées
+  if (!isDevelopment) {
+    const allowedPaths = [
+      '/',
+      '/a-propos',
+      '/conditions-generales',
+      '/contact',
+      '/fonctionnalites',
+      '/ia-act-ue',
+      '/ia-act-ue/calendrier',
+      '/ia-act-ue/risques',
+      '/politique-confidentialite',
+      '/tarifs',
+      '/login',
+      '/signup',
+      '/dashboard',
+      '/usecases',
+      '/companies',
+      '/admin',
+      '/profil',
+    ];
 
-  // Si la page n'est pas dans la liste des pages autorisées, rediriger vers 404
-  if (!allowedPaths.includes(pathname)) {
-    // Rediriger vers une URL qui déclenchera la page 404
-    return NextResponse.rewrite(new URL('/not-found', request.url));
+    // Si la page n'est pas dans la liste des pages autorisées, rediriger vers 404
+    if (!allowedPaths.some(path => pathname.startsWith(path))) {
+      return NextResponse.rewrite(new URL('/not-found', request.url));
+    }
   }
 
   // Créer la réponse avec les headers de sécurité

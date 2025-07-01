@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
@@ -13,25 +13,21 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', ''])
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [formLoading, setFormLoading] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
-  // Nouvel état pour gérer le chargement initial
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
-  const { signInWithOtp, verifyOtp, user } = useAuth()
+  const { signInWithOtp, verifyOtp, user, loading } = useAuth()
   const router = useRouter()
   const otpInputs = useRef<(HTMLInputElement | null)[]>([])
 
+  // Restaurer la redirection côté client temporairement
   useEffect(() => {
     if (user) {
       router.push('/dashboard/companies')
-    } else {
-      // Si pas d'utilisateur, on peut afficher la page
-      setIsCheckingAuth(false)
     }
   }, [user, router])
 
   // Afficher un loader pendant la vérification d'authentification
-  if (isCheckingAuth) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -45,7 +41,7 @@ export default function LoginPage() {
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setLoading(true)
+    setFormLoading(true)
 
     try {
       const { error } = await signInWithOtp(email)
@@ -62,14 +58,14 @@ export default function LoginPage() {
     } catch (err) {
       setError('Une erreur est survenue lors de l\'envoi du code')
     } finally {
-      setLoading(false)
+      setFormLoading(false)
     }
   }
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setLoading(true)
+    setFormLoading(true)
 
     try {
       const { error } = await verifyOtp(email, otpCode.join(''))
@@ -80,12 +76,13 @@ export default function LoginPage() {
           setError('Erreur lors de la vérification du code')
         }
       } else {
+        // Succès - rediriger vers le dashboard
         router.push('/dashboard/companies')
       }
     } catch (err) {
       setError('Une erreur est survenue lors de la vérification')
     } finally {
-      setLoading(false)
+      setFormLoading(false)
     }
   }
 
@@ -207,10 +204,10 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={formLoading}
                 className="w-full bg-[#0080A3] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#006280] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0080A3] flex items-center justify-center gap-2"
               >
-                {loading ? (
+                {formLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                     Envoi en cours...
@@ -274,10 +271,10 @@ export default function LoginPage() {
               <div className="space-y-3">
                 <button
                   type="submit"
-                  disabled={loading || otpCode.some(digit => digit === '')}
+                  disabled={formLoading || otpCode.some(digit => digit === '')}
                   className="w-full bg-[#0080A3] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#006280] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0080A3] flex items-center justify-center gap-2"
                 >
-                  {loading ? (
+                  {formLoading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                       Vérification...

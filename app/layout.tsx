@@ -65,10 +65,11 @@ export default async function RootLayout({
         </noscript>
         
         <AuthProvider>
-          <GlobalLoader />
-          <ConditionalLayout>
-            {children}
-          </ConditionalLayout>
+          <GlobalLoader>
+            <ConditionalLayout>
+              {children}
+            </ConditionalLayout>
+          </GlobalLoader>
         </AuthProvider>
       </body>
     </html>
