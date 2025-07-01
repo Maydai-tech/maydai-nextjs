@@ -138,9 +138,6 @@ export function CategoryScores({ usecaseId }: CategoryScoresProps) {
                     <span className="text-sm font-bold text-gray-900">
                       {percentage}/100
                     </span>
-                    <span className="text-xs text-gray-500">
-                      ({category.question_count} Q)
-                    </span>
                   </div>
                 </div>
                 
