@@ -156,7 +156,7 @@ export default function RisquesIaActPage() {
                   <circle cx="350" cy="100" r="4" fill="#d32f2f" />
                   
                   <text x="36" y="108" fill="#d32f2f" fontSize="24" fontWeight="bold">Risque Inacceptable</text>
-                  <text x="36" y="130" fill="#666" fontSize="20">Systèmes d'IA interdits en Europe</text>
+                  <text x="36" y="130" fill="#666" fontSize="20">Systèmes d&apos;IA interdits en Europe</text>
                   <text x="36" y="150" fill="#666" fontSize="17">• Manipulation subliminale</text>
                   <text x="36" y="168" fill="#666" fontSize="17">• Notation sociale générale</text>
                   <text x="36" y="186" fill="#666" fontSize="17">• Exploitation des vulnérabilités</text>
@@ -168,7 +168,7 @@ export default function RisquesIaActPage() {
                   <text x="1010" y="208" fill="#f57c00" fontSize="24" fontWeight="bold">Risque Élevé</text>
                   <text x="1010" y="230" fill="#666" fontSize="20">IA à fort impact, strictement réglementée</text>
                   <text x="1010" y="250" fill="#666" fontSize="17">• Recrutement et RH</text>
-                  <text x="1010" y="268" fill="#666" fontSize="17">• Forces de l'ordre</text>
+                  <text x="1010" y="268" fill="#666" fontSize="17">• Forces de l&apos;ordre</text>
                   <text x="1010" y="286" fill="#666" fontSize="17">• Systèmes critiques</text>
                   
                   {/* Niveau 3 - À gauche */}
@@ -178,7 +178,7 @@ export default function RisquesIaActPage() {
                   <text x="36" y="308" fill="#1976d2" fontSize="24" fontWeight="bold">Risque Limité</text>
                   <text x="36" y="330" fill="#666" fontSize="20">Obligation de transparence</text>
                   <text x="36" y="350" fill="#666" fontSize="17">• Chatbots et assistants</text>
-                  <text x="36" y="368" fill="#666" fontSize="17">• Reconnaissance d'émotions</text>
+                  <text x="36" y="368" fill="#666" fontSize="17">• Reconnaissance d&apos;émotions</text>
                   <text x="36" y="386" fill="#666" fontSize="17">• Détection de deepfakes</text>
                   
                   {/* Niveau 4 - À droite */}
@@ -189,7 +189,7 @@ export default function RisquesIaActPage() {
                   <text x="1010" y="430" fill="#666" fontSize="20">Libre utilisation, peu de contraintes</text>
                   <text x="1010" y="450" fill="#666" fontSize="17">• Filtres anti-spam</text>
                   <text x="1010" y="468" fill="#666" fontSize="17">• Recommandations de contenu</text>
-                  <text x="1010" y="486" fill="#666" fontSize="17">• Outils d'optimisation</text>
+                  <text x="1010" y="486" fill="#666" fontSize="17">• Outils d&apos;optimisation</text>
                 </svg>
               </div>
             </div>
@@ -287,7 +287,7 @@ export default function RisquesIaActPage() {
                       height={24} 
                       className="mr-3 mt-1"
                     />
-                    <span><strong>Jusqu'à 35 millions d'euros</strong> ou 7% du chiffre d'affaires annuel mondial pour les infractions aux systèmes d'IA interdits</span>
+                    <span><strong>Jusqu&apos;à 35 millions d&apos;euros</strong> ou 7% du chiffre d'affaires annuel mondial pour les infractions aux systèmes d&apos;IA interdits</span>
                   </li>
                   <li className="flex items-start">
                     <Image 
@@ -297,7 +297,7 @@ export default function RisquesIaActPage() {
                       height={24} 
                       className="mr-3 mt-1"
                     />
-                    <span><strong>Jusqu'à 15 millions d'euros</strong> ou 3% du chiffre d'affaires annuel mondial pour non-conformité aux exigences de l'AI Act</span>
+                    <span><strong>Jusqu&apos;à 15 millions d&apos;euros</strong> ou 3% du chiffre d&apos;affaires annuel mondial pour non-conformité aux exigences de l&apos;AI Act</span>
                   </li>
                   <li className="flex items-start">
                     <Image 
@@ -307,7 +307,7 @@ export default function RisquesIaActPage() {
                       height={24} 
                       className="mr-3 mt-1"
                     />
-                    <span><strong>Jusqu'à 7,5 millions d'euros</strong> ou 1,5% du chiffre d'affaires annuel mondial pour fourniture d'informations incorrectes</span>
+                    <span><strong>Jusqu&apos;à 7,5 millions d&apos;euros</strong> ou 1,5% du chiffre d'affaires annuel mondial pour fourniture d&apos;informations incorrectes</span>
                   </li>
                 </ul>
               </div>

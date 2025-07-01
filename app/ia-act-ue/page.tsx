@@ -98,7 +98,7 @@ export default function IAActUEPage() {
 
                   {/* Section Introduction */}
                   <section id="introduction" className="mb-12">
-                    <h2 className="text-3xl font-bold text-[#0080a3] mb-6">L'AI Act : Le Gardien de l'Esprit Humain dans le Royaume de l'IA</h2>
+                    <h2 className="text-3xl font-bold text-[#0080a3] mb-6">L'AI Act : Le Gardien de l'Esprit Humain dans le Royaume de l&apos;IA</h2>
                     <p className="text-lg leading-relaxed mb-6">
                       Ah, l'Intelligence Artificielle ! Cette étrange créature, fruit de nos calculs et de nos aspirations les plus folles, qui, tel un golem numérique, s'apprête à transformer nos vies. Mais comme tout pouvoir naissant, l'IA charrie avec elle son lot de mystères et de dangers. C'est ici qu'intervient l'AI Act, ce texte singulier né du cerveau collectif européen, unique au monde en son genre, pour veiller au grain. Il n'est pas question de brider l'ingéniosité, mais de s'assurer que notre âme, nos libertés, notre bonne vieille démocratie ne finissent pas en pâture algorithmique. C'est l'Europe qui, la première, ose regarder cette énigme en face, avec un mélange de sagesse et de cette pointe de mélancolie clairvoyante propre à ceux qui ont déjà vu quelques soleils se coucher.
                     </p>
@@ -229,7 +229,7 @@ export default function IAActUEPage() {
                   <section id="bacs-a-sable" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/sandbox.png" alt="Bac à sable" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Les Bacs à Sable Réglementaires : Le Laboratoire de l'Avenir</h2>
+                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Les Bacs à Sable Réglementaires : Le Laboratoire de l&apos;Avenir</h2>
                     </div>
                     <p className="text-lg leading-relaxed">
                       Pour éviter de brider la créativité, l'AI Act a prévu des "bacs à sable réglementaires". Des espaces protégés où l'IA peut grandir, expérimenter, et se perfectionner, sous le regard bienveillant de la loi. Une sorte de jardin d'enfants pour intelligences artificielles, pour qu'elles apprennent à être sages avant de se jeter dans la grande mare aux requins.
@@ -240,7 +240,7 @@ export default function IAActUEPage() {
                   <section id="defis" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/level-up.png" alt="Défi" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Défis et Impacts : L'Art de l'Équilibre</h2>
+                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Défis et Impacts : L'Art de l&apos;Équilibre</h2>
                     </div>
                     <p className="text-lg leading-relaxed">
                       Certes, l'AI Act est une avancée majeure. Mais le chemin est encore semé d'embûches. Il faudra interpréter, affiner, inventer de nouveaux outils pour mesurer l'ineffable, comme l'explicabilité ou la corrigibilité de l'IA. Les modèles actuels, avec leurs imperfections, nous rappellent que l'IA a encore beaucoup à apprendre de l'humanité. Cet Acte, en somme, est un appel à la dignité, un effort pour que l'IA, cette créature de nos mains, ne finisse pas par nous échapper, mais devienne, un jour, une amie de l'homme.

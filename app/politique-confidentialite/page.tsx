@@ -54,10 +54,10 @@ export default function PolitiqueConfidentialitePage() {
                 <li>Collectées pour des finalités déterminées, explicites et légitimes</li>
                 <li>Adéquates, pertinentes et limitées à ce qui est nécessaire au regard des finalités</li>
                 <li>Exactes et, si nécessaire, tenues à jour</li>
-                <li>Conservées sous une forme permettant l'identification des personnes concernées pendant une durée n'excédant pas celle nécessaire</li>
+                <li>Conservées sous une forme permettant l&apos;identification des personnes concernées pendant une durée n&apos;excédant pas celle nécessaire</li>
                 <li>Traitées de façon à garantir une sécurité appropriée des données à caractère personnel</li>
                 <li>Ne sont pas transférées vers un pays tiers sans garanties appropriées</li>
-                <li>L'utilisateur est informé en cas de rectification ou d'effacement de données</li>
+                <li>L'utilisateur est informé en cas de rectification ou d&apos;effacement de données</li>
               </ul>
             </section>
 
@@ -79,7 +79,7 @@ export default function PolitiqueConfidentialitePage() {
                   <li>Adresse email</li>
                   <li>Numéro de téléphone</li>
                   <li>Données de géolocalisation (avec consentement)</li>
-                  <li>Données de navigation et d'utilisation du site</li>
+                  <li>Données de navigation et d&apos;utilisation du site</li>
                   <li>Informations relatives à votre entreprise et vos projets IA</li>
                 </ul>
               </div>
@@ -173,12 +173,12 @@ export default function PolitiqueConfidentialitePage() {
                 en application du Règlement Européen 2016/679 et de la Loi Informatique et Liberté (Loi 78-17 du 6 janvier 1978) :
               </p>
               <ul className="list-disc pl-6 space-y-2 text-gray-700 mb-6">
-                <li><strong>Droit d'accès :</strong> obtenir la confirmation que des données vous concernant sont traitées et accéder à ces données</li>
+                <li><strong>Droit d&apos;accès :</strong> obtenir la confirmation que des données vous concernant sont traitées et accéder à ces données</li>
                 <li><strong>Droit de rectification :</strong> obtenir la rectification des données inexactes vous concernant</li>
-                <li><strong>Droit à l'effacement :</strong> obtenir l'effacement de vos données dans certains cas</li>
+                <li><strong>Droit à l&apos;effacement :</strong> obtenir l&apos;effacement de vos données dans certains cas</li>
                 <li><strong>Droit à la limitation :</strong> obtenir la limitation du traitement de vos données dans certains cas</li>
                 <li><strong>Droit à la portabilité :</strong> recevoir vos données dans un format structuré et les transmettre à un autre responsable</li>
-                <li><strong>Droit d'opposition :</strong> vous opposer au traitement de vos données pour des motifs légitimes</li>
+                <li><strong>Droit d&apos;opposition :</strong> vous opposer au traitement de vos données pour des motifs légitimes</li>
                 <li><strong>Droit de retrait du consentement :</strong> retirer votre consentement à tout moment</li>
                 <li><strong>Droit de définir des directives :</strong> définir des directives relatives au sort de vos données après votre décès</li>
               </ul>

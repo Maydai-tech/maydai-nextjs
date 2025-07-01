@@ -299,7 +299,7 @@ export default function ContactPage() {
                     </div>
                     <div className="flex items-center">
                       <span className="w-2 h-2 bg-[#0080a3] rounded-full mr-3"></span>
-                      <span className="text-sm text-gray-600">Expertise partagée sur l'IA Act et la conformité</span>
+                      <span className="text-sm text-gray-600">Expertise partagée sur l&apos;IA Act et la conformité</span>
                     </div>
                     <div className="flex items-center">
                       <span className="w-2 h-2 bg-[#0080a3] rounded-full mr-3"></span>

@@ -52,7 +52,7 @@ export default function Header() {
                   onClick={() => setIsIaActMenuOpen(false)}
                 >
                   <Image src="/icons/eye.png" alt="Œil" width={16} height={16} className="w-4 h-4" />
-                  Vue d'ensemble
+                  Vue d&apos;ensemble
                 </Link>
                 <Link 
                   href="/ia-act-ue/calendrier" 
@@ -118,7 +118,7 @@ export default function Header() {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <Image src="/icons/eye.png" alt="Œil" width={16} height={16} className="w-4 h-4" />
-                Vue d'ensemble
+                Vue d&apos;ensemble
               </Link>
               <Link 
                 href="/ia-act-ue/calendrier" 

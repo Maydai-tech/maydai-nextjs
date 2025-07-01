@@ -119,13 +119,13 @@ export default function AProposPage() {
             {/* Bloc de titre */}
             <div className="text-center mb-16">
               <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-                Découvrez l'Équipe d'Experts{' '}
+                Découvrez l&apos;Équipe d&apos;Experts{' '}
                 <span className="text-[#0080a3]">MaydAI</span>
               </h1>
               
               <p className="text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
                 Experte en droit international, IA Act, Python, Data et Machine Learning, notre équipe multidisciplinaire 
-                vous accompagne dans toutes les étapes d'un projet de conformité IA Act.
+                vous accompagne dans toutes les étapes d&apos;un projet de conformité IA Act.
               </p>
             </div>
 
@@ -139,11 +139,11 @@ export default function AProposPage() {
                   
                   <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed">
                     <p className="mb-6">
-                      Fort de trois années d'expérience avec l'agence <strong>Mayday Consulting</strong>, les équipes de développeurs et de consultants ont décidé de créer la plateforme <strong>MaydAI</strong> pour l'IA Act. Suite aux nombreux échanges avec nos clients pour la conception de cas d'usage IA, il nous paraissait important de démarrer chaque projet en étant <em>"IA Act compliant by design"</em> et en conseillant nos clients pour cette approche éthique de l'IA.
+                      Fort de trois années d&apos;expérience avec l&apos;agence <strong>Mayday Consulting</strong>, les équipes de développeurs et de consultants ont décidé de créer la plateforme <strong>MaydAI</strong> pour l&apos;IA Act. Suite aux nombreux échanges avec nos clients pour la conception de cas d&apos;usage IA, il nous paraissait important de démarrer chaque projet en étant <em>&quot;IA Act compliant by design&quot;</em> et en conseillant nos clients pour cette approche éthique de l&apos;IA.
                     </p>
                     
                     <p className="mb-6">
-                      C'est pourquoi nous avons décidé en <strong>2025</strong> de créer la plateforme <strong>MaydAI IA Act</strong> afin de fournir à toutes les entreprises désireuses de développer des cas d'usage IA, les moyens de comprendre le cadre législatif, les plans de remédiations éventuels et les informations clés leur permettant d'être réglementaires avec le cadre législatif IA Act européen.
+                      C&apos;est pourquoi nous avons décidé en <strong>2025</strong> de créer la plateforme <strong>MaydAI IA Act</strong> afin de fournir à toutes les entreprises désireuses de développer des cas d&apos;usage IA, les moyens de comprendre le cadre législatif, les plans de remédiations éventuels et les informations clés leur permettant d&apos;être réglementaires avec le cadre législatif IA Act européen.
                     </p>
                     
                     <div className="bg-[#0080a3]/5 rounded-lg p-6 mt-8">
@@ -185,7 +185,7 @@ export default function AProposPage() {
                       </svg>
                     </div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-3">Expertise Technique</h3>
-                    <p className="text-gray-600">Plus de 50 ans d'expérience cumulée en développement, data science et IA</p>
+                    <p className="text-gray-600">Plus de 50 ans d&apos;expérience cumulée en développement, data science et IA</p>
                   </div>
 
                   {/* Innovation */}
@@ -196,7 +196,7 @@ export default function AProposPage() {
                       </svg>
                     </div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-3">Innovation Continue</h3>
-                    <p className="text-gray-600">À la pointe des dernières technologies IA et des réglementations comme l'IA Act</p>
+                    <p className="text-gray-600">À la pointe des dernières technologies IA et des réglementations comme l&apos;IA Act</p>
                   </div>
 
                   {/* Accompagnement */}

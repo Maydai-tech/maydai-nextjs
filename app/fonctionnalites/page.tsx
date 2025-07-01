@@ -77,7 +77,7 @@ export default function FonctionnalitesPage() {
 
                   {/* Section Introduction */}
                   <section id="introduction" className="mb-12">
-                    <h2 className="text-3xl font-bold text-[#0080a3] mb-6">L'Architecte de Confiance dans l'Univers de l'IA Act</h2>
+                    <h2 className="text-3xl font-bold text-[#0080a3] mb-6">L'Architecte de Confiance dans l'Univers de l&apos;IA Act</h2>
                     <p className="text-lg leading-relaxed mb-6 text-gray-800">
                       MaydAI, c'est l'architecte de confiance pour naviguer dans les méandres de l'AI Act européen, ce texte pionnier qui s'élève comme le seul et unique phare réglementaire mondial pour l'intelligence artificielle. Notre <strong>Plateforme IA Act</strong>, nourrie de deux ans d'expertise et de recherches scientifiques, protège les citoyens, la démocratie et la liberté face aux périls de l'IA en assurant une conformité rigoureuse.
                     </p>
@@ -100,10 +100,10 @@ export default function FonctionnalitesPage() {
                       <div>
                         <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Le Panthéon de vos IA</h3>
                         <ul className="list-disc pl-6 space-y-2 text-gray-800">
-                          <li><strong>Hiérarchisation intelligente :</strong> Modèles prêts à l'emploi pour une mise en place accélérée, parce que le temps, c'est de l'argent, même dans le monde de l'IA</li>
-                          <li><strong>Suivi du cycle de vie :</strong> Du balbutiement du projet jusqu'au déploiement final, car même une IA a son enfance et sa maturité</li>
+                          <li><strong>Hiérarchisation intelligente :</strong> Modèles prêts à l'emploi pour une mise en place accélérée, parce que le temps, c&apos;est de l'argent, même dans le monde de l&apos;IA</li>
+                          <li><strong>Suivi du cycle de vie :</strong> Du balbutiement du projet jusqu&apos;au déploiement final, car même une IA a son enfance et sa maturité</li>
                           <li><strong>Gestion automatisée :</strong> Tâches et revues régulières avec des règles automatiques, pour que la conformité soit une mélodie continue et non un requiem</li>
-                          <li><strong>Intégration cartographique :</strong> Référentiels communs avec le registre des traitements de données et l'association aux actifs logiciels</li>
+                          <li><strong>Intégration cartographique :</strong> Référentiels communs avec le registre des traitements de données et l&apos;association aux actifs logiciels</li>
                         </ul>
                       </div>
                     </div>
@@ -123,8 +123,8 @@ export default function FonctionnalitesPage() {
                       <div>
                         <h3 className="text-xl font-semibold text-[#0080a3] mb-4">La Loupe du Conformiste</h3>
                         <ul className="list-disc pl-6 space-y-2 text-gray-800">
-                          <li><strong>Audit détaillé personnalisé :</strong> Évaluation de conformité, collecte des preuves, traçage des validations pour chaque cas d'IA</li>
-                          <li><strong>Questionnaire structuré :</strong> Reprend article par article les obligations de l'AI Act pour un score de conformité précis</li>
+                          <li><strong>Audit détaillé personnalisé :</strong> Évaluation de conformité, collecte des preuves, traçage des validations pour chaque cas d&apos;IA</li>
+                          <li><strong>Questionnaire structuré :</strong> Reprend article par article les obligations de l&apos;AI Act pour un score de conformité précis</li>
                           <li><strong>Plans de remédiation :</strong> Définition et priorisation des actions correctives, parce que même les génies ont besoin de quelques coups de cravache</li>
                           <li><strong>Dossier technique :</strong> Outil clé pour constituer le dossier de certification des IA à haut risque</li>
                         </ul>
@@ -136,7 +136,7 @@ export default function FonctionnalitesPage() {
                   <section id="fiches-usage" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/tag.png" alt="Cas d'usage" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Fiches Cas d'Usage : La Carte d'Identité de vos IA</h2>
+                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Fiches Cas d'Usage : La Carte d&apos;Identité de vos IA</h2>
                     </div>
                     <p className="text-lg leading-relaxed mb-6 text-gray-800">
                       Une approche structurée pour chaque cas d'usage, avec sa finalité, son périmètre, ses jalons, les réglementations applicables, et sa documentation technique. Chaque IA a son histoire, nous la racontons avec précision.
@@ -146,9 +146,9 @@ export default function FonctionnalitesPage() {
                       <div>
                         <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Le Récit de vos Créations Numériques</h3>
                         <ul className="list-disc pl-6 space-y-2 text-gray-800">
-                          <li><strong>Identification précise :</strong> Cas d'usage à haut risque détectés, mieux vaut anticiper les orages que de les subir</li>
-                          <li><strong>Outils collaboratifs :</strong> Pilotage de la mise en conformité grâce à l'inventaire et la qualification des cas d'usage IA</li>
-                          <li><strong>Évaluation des risques :</strong> Analyse approfondie des risques portés par chaque cas d'usage</li>
+                          <li><strong>Identification précise :</strong> Cas d&apos;usage à haut risque détectés, mieux vaut anticiper les orages que de les subir</li>
+                          <li><strong>Outils collaboratifs :</strong> Pilotage de la mise en conformité grâce à l&apos;inventaire et la qualification des cas d&apos;usage IA</li>
+                          <li><strong>Évaluation des risques :</strong> Analyse approfondie des risques portés par chaque cas d&apos;usage</li>
                           <li><strong>Documentation vivante :</strong> Traçabilité complète du cycle de vie de chaque IA</li>
                         </ul>
                       </div>
@@ -170,8 +170,8 @@ export default function FonctionnalitesPage() {
                         <h3 className="text-xl font-semibold text-[#0080a3] mb-4">La Lumière qui Guide</h3>
                         <ul className="list-disc pl-6 space-y-2 text-gray-800">
                           <li><strong>Exportation facilitée :</strong> Tous vos systèmes, audits et preuves de conformité, car la clarté est notre lumière</li>
-                          <li><strong>Notices de transparence :</strong> Information claire des usagers, un gage d'honnêteté envers ceux qui interagiront avec vos créations</li>
-                          <li><strong>Surveillance post-déploiement :</strong> Mécanismes d'identification des incidents, car la vigilance est la mère de la sûreté</li>
+                          <li><strong>Notices de transparence :</strong> Information claire des usagers, un gage d&apos;honnêteté envers ceux qui interagiront avec vos créations</li>
+                          <li><strong>Surveillance post-déploiement :</strong> Mécanismes d&apos;identification des incidents, car la vigilance est la mère de la sûreté</li>
                           <li><strong>Revues programmées :</strong> Surveillance continue pour une conformité qui ne faillit jamais</li>
                         </ul>
                       </div>
@@ -192,9 +192,9 @@ export default function FonctionnalitesPage() {
                       <div>
                         <h3 className="text-xl font-semibold text-[#0080a3] mb-4">La Vision Stratégique des Dirigeants</h3>
                         <ul className="list-disc pl-6 space-y-2 text-gray-800">
-                          <li><strong>Suivi temps réel :</strong> Plans de remédiation suivis avec une agilité digne d'un danseur étoile</li>
+                          <li><strong>Suivi temps réel :</strong> Plans de remédiation suivis avec une agilité digne d&apos;un danseur étoile</li>
                           <li><strong>Tableaux de bord intelligents :</strong> Anticipation des risques, identification des opportunités, optimisation stratégique</li>
-                          <li><strong>Vision d'ensemble :</strong> Combinaison d'outils technologiques, évaluation des risques et gouvernance stratégique</li>
+                          <li><strong>Vision d&apos;ensemble :</strong> Combinaison d&apos;outils technologiques, évaluation des risques et gouvernance stratégique</li>
                           <li><strong>Rapports exécutifs :</strong> Synthèses pour la direction, détails pour les équipes techniques</li>
                         </ul>
                       </div>
@@ -205,7 +205,7 @@ export default function FonctionnalitesPage() {
                   <section id="verification" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/evaluation.png" alt="Évaluation" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Vérification et Validation : Le Sceau de l'Excellence</h2>
+                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Vérification et Validation : Le Sceau de l&apos;Excellence</h2>
                     </div>
                     <p className="text-lg leading-relaxed mb-6 text-gray-800">
                       Classification et évaluation des risques, gouvernance des données, vérification des obligations de conformité. Notre <strong>Plateforme IA Act</strong> transforme l'incertitude en certitude, le doute en assurance.
@@ -215,7 +215,7 @@ export default function FonctionnalitesPage() {
                       <div>
                         <h3 className="text-xl font-semibold text-[#0080a3] mb-4">L'Excellence à Chaque Étape</h3>
                         <ul className="list-disc pl-6 space-y-2 text-gray-800">
-                          <li><strong>Classification automatique :</strong> Évaluation et classification selon les exigences de l'AI Act UE, rationalisation de l'évaluation IA tierce</li>
+                          <li><strong>Classification automatique :</strong> Évaluation et classification selon les exigences de l'AI Act UE, rationalisation de l&apos;évaluation IA tierce</li>
                           <li><strong>Gouvernance des données :</strong> Identification des risques dans les jeux de données, protection efficace du pipeline ML</li>
                           <li><strong>Conformité réglementaire :</strong> Documentation technique, supervision humaine, explicabilité et transparence</li>
                           <li><strong>Alertes intelligentes :</strong> Notifications de changements, mises à jour automatiques, déclenchement de tâches utilisateur</li>

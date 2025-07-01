@@ -110,8 +110,8 @@ const TarifsPage: NextPage = () => {
                 <ul className="space-y-4 flex-grow">
                   <li className="flex items-start"><CheckIcon /> 1 registre IA Act</li>
                   <li className="flex items-start"><CheckIcon /> 1 Dashboard Entreprise</li>
-                  <li className="flex items-start"><CheckIcon /> 6 cas d'usage IA disponibles</li>
-                  <li className="flex items-start"><CheckIcon /> 6 models de cas d'usage disponibles</li>
+                  <li className="flex items-start"><CheckIcon /> 6 cas d&apos;usage IA disponibles</li>
+                  <li className="flex items-start"><CheckIcon /> 6 models de cas d&apos;usage disponibles</li>
                   <li className="flex items-start"><CheckIcon /> 3 invitations pour collaborer</li>
                   <li className="flex items-start"><CheckIcon /> Support Email</li>
                 </ul>
@@ -128,7 +128,7 @@ const TarifsPage: NextPage = () => {
                   <span className="text-5xl font-extrabold" style={{ color: '#0080a3' }}>10€</span>
                   <span className="text-gray-500"> / Par mois</span>
                 </div>
-                <p className="text-gray-600 mb-6 h-20">Vous avez la volonté de centraliser et d'évaluer tous les cas d'usages de votre entreprise et/ou de ses filiales.</p>
+                <p className="text-gray-600 mb-6 h-20">Vous avez la volonté de centraliser et d'évaluer tous les cas d&apos;usages de votre entreprise et/ou de ses filiales.</p>
                 <a href="/contact" className="w-full text-center bg-[#0080a3] text-white hover:bg-[#006d8a] font-bold py-3 px-6 rounded-lg transition-colors duration-300">
                   C'est parti !
                 </a>
@@ -137,8 +137,8 @@ const TarifsPage: NextPage = () => {
                     <li className="flex items-start"><CheckIcon /> 1 super registre IA Act</li>
                     <li className="flex items-start"><CheckIcon /> 3 registres IA Act</li>
                     <li className="flex items-start"><CheckIcon /> 4 Dashboards Entreprise</li>
-                    <li className="flex items-start"><CheckIcon /> 12 cas d'usage IA disponibles</li>
-                    <li className="flex items-start"><CheckIcon /> 12 models de cas d'usage disponibles</li>
+                    <li className="flex items-start"><CheckIcon /> 12 cas d&apos;usage IA disponibles</li>
+                    <li className="flex items-start"><CheckIcon /> 12 models de cas d&apos;usage disponibles</li>
                     <li className="flex items-start"><CheckIcon /> 6 invitations pour collaborer</li>
                     <li className="flex items-start"><CheckIcon /> Support prioritaire</li>
                 </ul>
@@ -154,7 +154,7 @@ const TarifsPage: NextPage = () => {
                   <span className="text-5xl font-extrabold" style={{ color: '#0080a3' }}>1K€</span>
                   <span className="text-gray-500"> (Mission 1 mois)</span>
                 </div>
-                <p className="text-gray-600 mb-6 h-20">Devis entreprise: Vous avez besoin d'être accompagné en matière de formation, de création d'audit IA act et de registre entreprise.</p>
+                <p className="text-gray-600 mb-6 h-20">Devis entreprise: Vous avez besoin d'être accompagné en matière de formation, de création d&apos;audit IA act et de registre entreprise.</p>
                  <a href="/contact" className="w-full text-center bg-white text-[#0080a3] border border-[#0080a3] hover:bg-[#0080a3] hover:bg-opacity-10 font-bold py-3 px-6 rounded-lg transition-colors duration-300">
                   Attachez vos ceintures !
                 </a>
@@ -163,9 +163,9 @@ const TarifsPage: NextPage = () => {
                     <li className="flex items-start"><CheckIcon /> 1 formation sur site</li>
                     <li className="flex items-start"><CheckIcon /> 1 atelier audit IA act</li>
                     <li className="flex items-start"><CheckIcon /> Création du Dashboard Entreprise</li>
-                    <li className="flex items-start"><CheckIcon /> Cas d'usage IA illimités</li>
+                    <li className="flex items-start"><CheckIcon /> Cas d&apos;usage IA illimités</li>
                     <li className="flex items-start"><CheckIcon /> Collaboration illimitée</li>
-                    <li className="flex items-start"><CheckIcon /> Support juridique relecture cas d'usage</li>
+                    <li className="flex items-start"><CheckIcon /> Support juridique relecture cas d&apos;usage</li>
                     <li className="flex items-start"><CheckIcon /> Support prioritaire</li>
                 </ul>
               </div>
@@ -173,7 +173,7 @@ const TarifsPage: NextPage = () => {
              {/* Notes additionnelles sous les cartes */}
             <div className="text-center mt-12 text-gray-500 text-sm max-w-2xl mx-auto">
                 <p>Tout abonnement peut être arrêté à tout moment.</p>
-                <p>Les audits IA Act gratuits sont protégés et ne sont pas utilisés à des fins d'entraînement (ce qui est hélas le cas aujourd'hui de l'IA gratuite).</p>
+                <p>Les audits IA Act gratuits sont protégés et ne sont pas utilisés à des fins d'entraînement (ce qui est hélas le cas aujourd&apos;hui de l&apos;IA gratuite).</p>
             </div>
           </div>
         </section>
