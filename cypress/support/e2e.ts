@@ -29,3 +29,13 @@ Cypress.on('window:before:load', (win) => {
 Cypress.config('defaultCommandTimeout', 10000)
 Cypress.config('requestTimeout', 10000)
 Cypress.config('responseTimeout', 10000)
+
+// Ignore uncaught exceptions from cross-origin scripts
+Cypress.on('uncaught:exception', (err, runnable) => {
+  // Ignore cross-origin script errors during tests
+  if (err.message.includes('Script error')) {
+    return false
+  }
+  // Let other errors fail the test
+  return true
+})
