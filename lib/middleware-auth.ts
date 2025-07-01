@@ -3,8 +3,21 @@ import { createServerClient } from '@supabase/ssr'
 
 export async function getAuthStatus(request: NextRequest) {
   try {
-    // Log pour debug
+    // Extraire le project_ref de l'URL Supabase
+    const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL!.split('//')[1].split('.')[0]
+    const authCookieName = `sb-${projectRef}-auth-token`
+    
     console.log('Checking auth for path:', request.nextUrl.pathname)
+    console.log('Looking for cookie:', authCookieName)
+    
+    // Vérifier si le cookie d'auth existe
+    const authCookie = request.cookies.get(authCookieName)
+    console.log('Auth cookie found:', !!authCookie?.value)
+    
+    if (!authCookie?.value) {
+      console.log('No auth cookie found, user not authenticated')
+      return { isAuthenticated: false, user: null }
+    }
     
     // Créer un client Supabase pour le serveur avec support des cookies
     const supabase = createServerClient(
@@ -14,7 +27,6 @@ export async function getAuthStatus(request: NextRequest) {
         cookies: {
           get(name: string) {
             const value = request.cookies.get(name)?.value
-            console.log(`Cookie ${name}:`, value ? 'exists' : 'missing')
             return value
           },
           set() {
@@ -27,10 +39,14 @@ export async function getAuthStatus(request: NextRequest) {
       }
     )
 
-    // Vérifier la session utilisateur
+    // Vérifier la session utilisateur avec getUser() (recommandé pour le serveur)
     const { data: { user }, error } = await supabase.auth.getUser()
     
-    console.log('Auth check result:', { user: !!user, error: error?.message })
+    console.log('Auth check result:', { 
+      user: !!user, 
+      userId: user?.id?.substring(0, 8) + '...', 
+      error: error?.message 
+    })
     
     if (error || !user) {
       return { isAuthenticated: false, user: null }

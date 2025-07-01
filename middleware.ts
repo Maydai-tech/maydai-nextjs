@@ -21,9 +21,7 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // TEMPORAIREMENT DÉSACTIVÉ POUR DEBUG
-  // const { isAuthenticated } = await getAuthStatus(request)
-  console.log('Auth middleware temporarily disabled for debugging')
+  // Middleware d'authentification désactivé - utilise l'authentification côté client
 
   // En développement, autoriser toutes les pages
   const isDevelopment = process.env.NODE_ENV === 'development' || 
@@ -65,15 +63,17 @@ export async function middleware(request: NextRequest) {
   response.headers.set('x-nonce', nonce);
   
   // En production, ajouter les headers de sécurité avec le nonce
-  response.headers.set('Content-Security-Policy', createCSPHeader(nonce));
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  
-  // IMPORTANT: Supprimer les headers Link problématiques générés par Next.js
-  response.headers.delete('link');
+  if (!isDevelopment) {
+    response.headers.set('Content-Security-Policy', createCSPHeader(nonce));
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('X-Frame-Options', 'DENY');
+    response.headers.set('X-XSS-Protection', '1; mode=block');
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    
+    // IMPORTANT: Supprimer les headers Link problématiques générés par Next.js
+    response.headers.delete('link');
+  }
 
   return response;
 }

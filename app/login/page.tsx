@@ -19,12 +19,12 @@ export default function LoginPage() {
   const router = useRouter()
   const otpInputs = useRef<(HTMLInputElement | null)[]>([])
 
-  // Restaurer la redirection côté client temporairement
+  // Redirection automatique pour les utilisateurs connectés
   useEffect(() => {
-    if (user) {
-      router.push('/dashboard/companies')
+    if (user && !loading) {
+      router.replace('/dashboard/companies')
     }
-  }, [user, router])
+  }, [user, loading, router])
 
   // Afficher un loader pendant la vérification d'authentification
   if (loading) {
@@ -77,7 +77,7 @@ export default function LoginPage() {
         }
       } else {
         // Succès - rediriger vers le dashboard
-        router.push('/dashboard/companies')
+        router.replace('/dashboard/companies')
       }
     } catch (err) {
       setError('Une erreur est survenue lors de la vérification')
