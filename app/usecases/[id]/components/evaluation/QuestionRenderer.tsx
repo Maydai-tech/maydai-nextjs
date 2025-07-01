@@ -8,7 +8,7 @@ interface QuestionRendererProps {
   isReadOnly?: boolean
 }
 
-export function QuestionRenderer({ question, currentAnswer, onAnswerChange, isReadOnly = false }: QuestionRendererProps) {
+export const QuestionRenderer = React.memo(function QuestionRenderer({ question, currentAnswer, onAnswerChange, isReadOnly = false }: QuestionRendererProps) {
   console.log('QuestionRenderer render:', {
     questionId: question.id,
     currentAnswer,
@@ -336,4 +336,4 @@ export function QuestionRenderer({ question, currentAnswer, onAnswerChange, isRe
         </div>
       )
   }
-} 
+}) 

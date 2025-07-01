@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { RISK_CATEGORIES, QUESTION_RISK_CATEGORY_MAPPING } from '../utils/risk-categories'
 import { AlertCircle, Info } from 'lucide-react'
@@ -8,7 +9,7 @@ interface CategoryScoresProps {
   usecaseId: string
 }
 
-export function CategoryScores({ usecaseId }: CategoryScoresProps) {
+export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: CategoryScoresProps) {
   const { score, loading, error } = useUseCaseScore(usecaseId)
 
   if (loading) {
@@ -177,4 +178,4 @@ export function CategoryScores({ usecaseId }: CategoryScoresProps) {
       </div>
     </div>
   )
-} 
+}) 

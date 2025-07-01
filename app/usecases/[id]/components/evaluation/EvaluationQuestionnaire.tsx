@@ -117,7 +117,7 @@ function QuestionEditModal({ question, currentAnswer, isOpen, onClose, onSave }:
   )
 }
 
-export function EvaluationQuestionnaire({ useCase, onComplete, isReadOnly = false }: EvaluationQuestionnaireProps) {
+export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnaire({ useCase, onComplete, isReadOnly = false }: EvaluationQuestionnaireProps) {
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null)
   const {
     formattedAnswers,
@@ -305,4 +305,4 @@ export function EvaluationQuestionnaire({ useCase, onComplete, isReadOnly = fals
       />
     </>
   )
-} 
+}) 

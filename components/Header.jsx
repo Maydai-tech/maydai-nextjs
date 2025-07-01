@@ -31,7 +31,14 @@ export default function Header() {
     <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-30">
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3 md:py-4">
         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <img src="/logos/logo-maydai/logo-name-maydai.png" alt="MaydAI Logo" className="h-8 w-auto" />
+          <Image 
+            src="/logos/logo-maydai/logo-name-maydai.png" 
+            alt="MaydAI Logo" 
+            width={120} 
+            height={32}
+            className="h-8 w-auto" 
+            priority 
+          />
         </Link>
         <ul className="hidden md:flex gap-8 items-center text-gray-700 font-medium">
           <li className="relative" ref={menuRef}>

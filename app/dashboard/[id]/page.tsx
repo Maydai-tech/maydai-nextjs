@@ -101,8 +101,11 @@ export default function CompanyDashboard({ params }: DashboardProps) {
         return
       }
       
-      // Fetch company details
-      const companyResponse = await api.get(`/api/companies/${companyId}`)
+      // Fetch company details and use cases in parallel
+      const [companyResponse, useCasesResponse] = await Promise.all([
+        api.get(`/api/companies/${companyId}`),
+        api.get(`/api/companies/${companyId}/usecases`)
+      ])
       
       if (companyResponse.status === 404) {
         router.push('/dashboard/companies')
@@ -111,8 +114,6 @@ export default function CompanyDashboard({ params }: DashboardProps) {
         setCompany(companyResponse.data)
       }
 
-      // Fetch use cases for this company
-      const useCasesResponse = await api.get(`/api/companies/${companyId}/usecases`)
       if (useCasesResponse.data) {
         setUseCases(useCasesResponse.data)
         // Reset to first page when data changes

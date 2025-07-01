@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { getScoreCategory, getScoreRecommendations } from '../utils/score-categories'
 import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, Info } from 'lucide-react'
@@ -9,7 +9,7 @@ interface UseCaseScoreProps {
   usecaseId: string
 }
 
-export function UseCaseScore({ usecaseId }: UseCaseScoreProps) {
+export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseCaseScoreProps) {
   const { score, loading, error } = useUseCaseScore(usecaseId)
   const [showBreakdown, setShowBreakdown] = useState(false)
 
@@ -152,4 +152,4 @@ export function UseCaseScore({ usecaseId }: UseCaseScoreProps) {
       )}
     </div>
   )
-} 
+}) 

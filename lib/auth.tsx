@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 
@@ -8,10 +8,10 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: any }>
-  signUp: (email: string, password: string) => Promise<{ error: any }>
-  signInWithOtp: (email: string) => Promise<{ error: any }>
-  verifyOtp: (email: string, token: string) => Promise<{ error: any }>
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signUp: (email: string, password: string) => Promise<{ error: Error | null }>
+  signInWithOtp: (email: string) => Promise<{ error: Error | null }>
+  verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
 }
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -80,11 +80,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error }
     } catch (error) {
       console.error('Error in signIn:', error)
-      return { error }
+      return { error: error as Error }
     }
-  }
+  }, [])
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
@@ -93,19 +93,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error }
     } catch (error) {
       console.error('Error in signUp:', error)
-      return { error }
+      return { error: error as Error }
     }
-  }
+  }, [])
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       await supabase.auth.signOut()
     } catch (error) {
       console.error('Error in signOut:', error)
     }
-  }
+  }, [])
 
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession()
       if (error) {
@@ -117,9 +117,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error in refreshSession:', error)
     }
-  }
+  }, [])
 
-  const signInWithOtp = async (email: string) => {
+  const signInWithOtp = useCallback(async (email: string) => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -130,11 +130,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error }
     } catch (error) {
       console.error('Error in signInWithOtp:', error)
-      return { error }
+      return { error: error as Error }
     }
-  }
+  }, [])
 
-  const verifyOtp = async (email: string, token: string) => {
+  const verifyOtp = useCallback(async (email: string, token: string) => {
     try {
       const { error } = await supabase.auth.verifyOtp({
         email,
@@ -144,11 +144,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error }
     } catch (error) {
       console.error('Error in verifyOtp:', error)
-      return { error }
+      return { error: error as Error }
     }
-  }
+  }, [])
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     session,
     loading,
@@ -158,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshSession,
     signInWithOtp,
     verifyOtp
-  }
+  }), [user, session, loading, signIn, signUp, signOut, refreshSession, signInWithOtp, verifyOtp])
 
   return (
     <AuthContext.Provider value={value}>

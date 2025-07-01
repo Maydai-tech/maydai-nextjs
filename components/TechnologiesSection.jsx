@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 export default function TechnologiesSection() {
   const scrollRef = useRef(null);
@@ -88,9 +89,11 @@ export default function TechnologiesSection() {
             {/* Première série de logos */}
             {logos.map((logo, index) => (
               <div key={index} className="flex-shrink-0">
-                <img
+                <Image
                   src={logo.src}
                   alt={logo.alt}
+                  width={140}
+                  height={64}
                   className="h-12 md:h-16 w-auto max-w-[120px] md:max-w-[140px] object-contain filter grayscale opacity-60 hover:opacity-90 hover:grayscale-0 transition-all duration-300"
                 />
               </div>
@@ -98,9 +101,11 @@ export default function TechnologiesSection() {
             {/* Duplication pour un défilement continu */}
             {logos.map((logo, index) => (
               <div key={`duplicate-${index}`} className="flex-shrink-0">
-                <img
+                <Image
                   src={logo.src}
                   alt={logo.alt}
+                  width={140}
+                  height={64}
                   className="h-12 md:h-16 w-auto max-w-[120px] md:max-w-[140px] object-contain filter grayscale opacity-60 hover:opacity-90 hover:grayscale-0 transition-all duration-300"
                 />
               </div>
