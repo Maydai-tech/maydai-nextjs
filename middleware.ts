@@ -23,16 +23,16 @@ export async function middleware(request: NextRequest) {
 
   // Middleware d'authentification désactivé - utilise l'authentification côté client
 
-  // En développement, autoriser toutes les pages
-  const isDevelopment = process.env.NODE_ENV === 'development' || 
-                       request.nextUrl.hostname === 'localhost' ||
-                       request.nextUrl.hostname === '127.0.0.1';
+  // Force la vérification en production (pas de bypass en développement)
+  const isProduction = process.env.NODE_ENV === 'production' || 
+                      (!request.nextUrl.hostname.includes('localhost') && 
+                       !request.nextUrl.hostname.includes('127.0.0.1'));
 
   // Debug: ajouter un log pour vérifier l'environnement
-  console.log('Middleware - NODE_ENV:', process.env.NODE_ENV, 'hostname:', request.nextUrl.hostname, 'isDevelopment:', isDevelopment, 'pathname:', pathname);
+  console.log('Middleware - NODE_ENV:', process.env.NODE_ENV, 'hostname:', request.nextUrl.hostname, 'isProduction:', isProduction, 'pathname:', pathname);
 
   // En production, vérifier les pages autorisées
-  if (!isDevelopment) {
+  if (isProduction) {
     const allowedPaths = [
       '/',
       '/a-propos',
@@ -59,7 +59,7 @@ export async function middleware(request: NextRequest) {
   response.headers.set('x-nonce', nonce);
   
   // En production, ajouter les headers de sécurité avec le nonce
-  if (!isDevelopment) {
+  if (isProduction) {
     response.headers.set('Content-Security-Policy', createCSPHeader(nonce));
     response.headers.set('X-Content-Type-Options', 'nosniff');
     response.headers.set('X-Frame-Options', 'DENY');
