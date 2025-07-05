@@ -35,7 +35,17 @@ export default async function RootLayout({
         {/* Meta pour exposer le nonce au client */}
         {nonce && <meta name="csp-nonce" content={nonce} />}
         
-        {/* Google Tag Manager - Seulement en production */}
+        {/* CookieYes - Bannière de cookies RGPD */}
+        {process.env.NEXT_PUBLIC_COOKIEYES_ID && (
+          <Script
+            id="cookieyes-script"
+            src={`https://cdn-cookieyes.com/client_data/${process.env.NEXT_PUBLIC_COOKIEYES_ID}/script.js`}
+            strategy="afterInteractive"
+            nonce={nonce}
+          />
+        )}
+        
+        {/* Google Tag Manager - Seulement en production avec consentement */}
         {process.env.NODE_ENV === 'production' && (
           <Script
             id="gtm-script"
@@ -43,11 +53,28 @@ export default async function RootLayout({
             nonce={nonce}
             dangerouslySetInnerHTML={{
               __html: `
-                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                })(window,document,'script','dataLayer','GTM-KLSD6BXG');
+                // Attendre le consentement CookieYes avant de charger GTM
+                function initGTM() {
+                  if (window.gtag) return; // Éviter la double initialisation
+                  
+                  (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+                  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+                  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+                  })(window,document,'script','dataLayer','GTM-KLSD6BXG');
+                }
+                
+                // Écouter les événements de consentement CookieYes
+                document.addEventListener('cookieyes_consent_update', function(event) {
+                  if (event.detail.accepted.includes('analytics') || event.detail.accepted.includes('performance')) {
+                    initGTM();
+                  }
+                });
+                
+                // Vérifier si le consentement a déjà été donné
+                if (typeof ckyAPI !== 'undefined' && ckyAPI.getConsentValue('analytics')) {
+                  initGTM();
+                }
               `,
             }}
           />

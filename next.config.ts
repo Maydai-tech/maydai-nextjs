@@ -9,35 +9,113 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
   // Retire output: 'standalone' pour le développement
   ...(process.env.NODE_ENV === 'production' && { output: 'standalone' }),
-  // Les headers de sécurité sont maintenant gérés par le middleware
-  // avec des nonces dynamiques pour le CSP
   
   // Désactiver l'optimisation automatique des fonts qui cause des problèmes avec les headers
-  optimizeFonts: false,
+  // optimizeFonts: false, // Cette option n'existe plus dans Next.js 15
   
   // Désactiver complètement le préchargement automatique des ressources
   experimental: {
     optimizePackageImports: [],
   },
   
-  // Configuration des headers pour éviter les problèmes de caractères non-ASCII
   async headers() {
+    // En développement, utilisez des en-têtes plus permissifs
+    if (process.env.NODE_ENV === 'development') {
+      return [
+        {
+          source: '/:path*',
+          headers: [
+            {
+              key: 'X-DNS-Prefetch-Control',
+              value: 'on'
+            },
+            // Empêcher Next.js d'ajouter des headers Link automatiques
+            {
+              key: 'Link',
+              value: ''
+            }
+          ],
+        },
+      ];
+    }
+    
+    // En production, utilisez les en-têtes de sécurité stricts avec support CookieYes
     return [
       {
-        source: '/:path*',
+        source: '/(.*)',
         headers: [
+          // Empêche les navigateurs de deviner le type MIME
           {
-            key: 'X-DNS-Prefetch-Control',
-            value: 'on'
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
           },
-          // Empêcher Next.js d'ajouter des headers Link automatiques
+          // Empêche l'affichage de la page dans une iframe
           {
-            key: 'Link',
-            value: ''
-          }
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          // Protection XSS intégrée du navigateur
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          // Contrôle des informations de référence
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          // Politique de sécurité du contenu mise à jour pour GTM et CookieYes
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              // Source par défaut - Autoriser uniquement le domaine actuel
+              "default-src 'self'",
+              
+              // Scripts - Autoriser GTM, CookieYes et les scripts nécessaires à Next.js
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://cdn-cookieyes.com",
+              
+              // Styles - Autoriser les styles inline (nécessaire pour Next.js et les bandeaux)
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              
+              // Images - Autoriser toutes les images HTTPS et data URIs + GA4/GTM
+              "img-src 'self' data: https: https://www.google-analytics.com https://www.googletagmanager.com",
+              
+              // Connexions - Autoriser les appels API nécessaires (Supabase + GA4 + GTM + CookieYes)
+              "connect-src 'self' https://*.supabase.co https://region1.google-analytics.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://cdn-cookieyes.com",
+              
+              // Polices - Autoriser les polices personnalisées et Google Fonts
+              "font-src 'self' data: https://fonts.gstatic.com",
+              
+              // Frames - Autoriser les iframes pour GTM noscript
+              "frame-src 'self' https://www.googletagmanager.com",
+              
+              // Objets - Interdire tous les objets pour la sécurité
+              "object-src 'none'",
+              
+              // Base URI - Restreindre aux domaines sûrs
+              "base-uri 'self'",
+              
+              // Actions de formulaire - Autoriser uniquement le domaine actuel
+              "form-action 'self'",
+              
+              // Ancêtres de frame - Interdire l'intégration dans des iframes
+              "frame-ancestors 'none'",
+              
+              // Mise à niveau forcée vers HTTPS
+              "upgrade-insecure-requests"
+            ]
+            .join('; ') // Joindre les directives CSP avec des point-virgules
+            .replace(/\s{2,}/g, ' ') // Nettoyer les espaces multiples
+            .trim(), // Supprimer les espaces en début/fin
+          },
+          // Politique de permissions - Restreindre l'accès aux APIs sensibles
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()',
+          },
         ],
       },
-    ]
+    ];
   }
 };
 
