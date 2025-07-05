@@ -28,6 +28,9 @@ export async function middleware(request: NextRequest) {
                        request.nextUrl.hostname === 'localhost' ||
                        request.nextUrl.hostname === '127.0.0.1';
 
+  // Debug: ajouter un log pour vérifier l'environnement
+  console.log('Middleware - NODE_ENV:', process.env.NODE_ENV, 'hostname:', request.nextUrl.hostname, 'isDevelopment:', isDevelopment, 'pathname:', pathname);
+
   // En production, vérifier les pages autorisées
   if (!isDevelopment) {
     const allowedPaths = [
