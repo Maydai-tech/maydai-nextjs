@@ -43,11 +43,6 @@ export async function middleware(request: NextRequest) {
       '/tarifs',
       '/login',
       '/signup',
-      '/dashboard',
-      '/usecases',
-      '/companies',
-      '/admin',
-      '/profil',
     ];
 
     // Si la page n'est pas dans la liste des pages autorisées, rediriger vers 404
