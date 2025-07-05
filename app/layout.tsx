@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Maydai Admin - Gestion du questionnaire IA Act",
-  description: "Interface d'administration pour la gestion du questionnaire de conformité IA Act",
+  title: "Maydai - Audit AI Act",
+  description: "Audit AI Act avec Maydai",
 };
 
 export default async function RootLayout({
