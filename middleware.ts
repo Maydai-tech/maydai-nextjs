@@ -28,9 +28,20 @@ export async function middleware(request: NextRequest) {
                       (!request.nextUrl.hostname.includes('localhost') && 
                        !request.nextUrl.hostname.includes('127.0.0.1'));
   
-  // Test spécifique pour /login - toujours bloquer en production
-  if (pathname === '/login' && isProduction) {
-    console.log('Middleware - Blocking /login access in production');
+  // Pages à bloquer spécifiquement en production
+  const blockedPaths = [
+    '/login',
+    '/signup',
+    '/admin',
+    '/dashboard',
+    '/companies',
+    '/usecases',
+    '/profil'
+  ];
+
+  // Test spécifique pour les pages bloquées - toujours bloquer en production
+  if (isProduction && blockedPaths.some(blockedPath => pathname.startsWith(blockedPath))) {
+    console.log('Middleware - Blocking access to private page:', pathname);
     return NextResponse.redirect(new URL('/not-found', request.url));
   }
 
