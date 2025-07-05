@@ -118,9 +118,6 @@
                 "focus": false,
                 "panel": "shared"
             },
-            "runOptions": {
-                "runOn": "folderOpen"
-            },
             "command": "sleep 3 && bash -c \"PORT=\\$(lsof -ti:3000,3001,3002,3003,3004,3005 | head -1 | xargs -I {} lsof -Pan -p {} -iTCP | grep LISTEN | grep -oE ':[0-9]+' | head -1 | cut -d: -f2 || echo '3000'); open -a 'Google Chrome' \\\"http://localhost:\\$PORT\\\"\"",
             "type": "shell"
         }
