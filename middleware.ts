@@ -48,7 +48,8 @@ export async function middleware(request: NextRequest) {
 
     // Si la page n'est pas dans la liste des pages autorisées, rediriger vers 404
     if (!allowedPaths.some(path => pathname.startsWith(path))) {
-      return NextResponse.rewrite(new URL('/not-found', request.url));
+      console.log('Middleware - Blocking access to:', pathname);
+      return NextResponse.redirect(new URL('/not-found', request.url));
     }
   }
 
