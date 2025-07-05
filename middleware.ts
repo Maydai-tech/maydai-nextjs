@@ -27,6 +27,12 @@ export async function middleware(request: NextRequest) {
   const isProduction = process.env.NODE_ENV === 'production' || 
                       (!request.nextUrl.hostname.includes('localhost') && 
                        !request.nextUrl.hostname.includes('127.0.0.1'));
+  
+  // Test spécifique pour /login - toujours bloquer en production
+  if (pathname === '/login' && isProduction) {
+    console.log('Middleware - Blocking /login access in production');
+    return NextResponse.redirect(new URL('/not-found', request.url));
+  }
 
   // Debug: ajouter un log pour vérifier l'environnement
   console.log('Middleware - NODE_ENV:', process.env.NODE_ENV, 'hostname:', request.nextUrl.hostname, 'isProduction:', isProduction, 'pathname:', pathname);
