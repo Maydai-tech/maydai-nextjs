@@ -53,6 +53,11 @@ npm run test:watch     # Mode watch pour les tests
 npm run test:coverage  # Tests avec rapport de couverture
 npm run lint           # Vérifie le code avec ESLint
 
+# Déploiement Vercel
+vercel                 # Déploie sur Vercel (preview)
+vercel --prod          # Déploie en production
+vercel env pull        # Récupère les variables d'environnement
+
 # Scripts utilitaires
 node scripts/test-scoring.js      # Test rapide du système de scoring
 node scripts/migrate-scores.js    # Migration des scores (si nécessaire)
@@ -70,6 +75,35 @@ SUPABASE_SERVICE_ROLE_KEY=
 AIRTABLE_API_KEY=
 AIRTABLE_BASE_ID=
 ```
+
+### Configuration Vercel
+
+Pour configurer le déploiement automatique sur Vercel :
+
+1. **Variables d'environnement Vercel** :
+   - Aller sur [vercel.com/dashboard](https://vercel.com/dashboard)
+   - Sélectionner le projet MaydAI
+   - Dans "Settings" > "Environment Variables", ajouter :
+     - `NEXT_PUBLIC_SUPABASE_URL`
+     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+     - `SUPABASE_SERVICE_ROLE_KEY`
+     - `AIRTABLE_API_KEY` (optionnel)
+     - `AIRTABLE_BASE_ID` (optionnel)
+
+2. **Déploiement automatique** :
+   - Dans "Settings" > "Git", vérifier que :
+     - La branche de production est `main`
+     - "Automatic deployments" est activé
+     - "Deploy Hooks" configurés si nécessaire
+
+3. **Configuration locale** :
+   ```bash
+   # Lier le projet local à Vercel
+   vercel link
+   
+   # Récupérer les variables d'environnement
+   vercel env pull
+   ```
 
 ## 🏗️ Architecture principale
 
