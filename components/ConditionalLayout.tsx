@@ -27,8 +27,7 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
     '/dashboard',
     '/profil',
     '/usecases',
-    '/companies',
-    '/admin'
+    '/companies'
   ];
 
   // Pages à exclure de la sidebar même si elles commencent par un préfixe autorisé
