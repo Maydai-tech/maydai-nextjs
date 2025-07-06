@@ -106,4 +106,95 @@ export interface BetaRequest {
   status: 'pending' | 'approved' | 'rejected'
   created_at: string
   updated_at: string
+}
+
+// Types pour les données COMPL-AI
+export interface ComplAIPrinciple {
+  id: string
+  code: string
+  name: string
+  description?: string
+  category?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ComplAIModel {
+  id: string
+  model_name: string
+  model_provider?: string
+  model_type?: string
+  version?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ComplAIBenchmark {
+  id: string
+  principle_id: string
+  name: string
+  code: string
+  description?: string
+  metric_type?: string
+  min_value: number
+  max_value: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ComplAIEvaluation {
+  id: string
+  model_id: string
+  principle_id: string
+  benchmark_id?: string
+  score?: number
+  score_text?: string
+  evaluation_date: string
+  data_source: string
+  raw_data?: any
+  created_at: string
+  updated_at: string
+}
+
+export interface ComplAISyncLog {
+  id: string
+  sync_date: string
+  status: 'success' | 'error' | 'partial'
+  models_synced: number
+  evaluations_synced: number
+  error_message?: string
+  execution_time_ms?: number
+  created_at: string
+}
+
+// Types pour l'API Edge Function
+export interface ComplAISyncResponse {
+  success: boolean
+  sync_date: string
+  execution_time_ms: number
+  categories_processed: number
+  models_synced: number
+  evaluations_created: number
+  errors: string[]
+}
+
+// Types pour les scores agrégés (futures tables simplifiées)
+export interface ComplAICategoryScore {
+  id: string
+  model_name: string
+  category_id: string
+  average_score: number
+  benchmarks_count: number
+  evaluation_date: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ComplAIScore {
+  id: string
+  model_name: string
+  overall_score: number
+  evaluation_date: string
+  created_at: string
+  updated_at: string
 } 
