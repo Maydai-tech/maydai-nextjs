@@ -47,6 +47,7 @@ const CATEGORY_CONFIG = {
 
 interface ModelScore {
   modelName: string;
+  modelProvider: string;
   scores: number[];
   averageScore: number;
   benchmarksCount: number;
@@ -71,6 +72,56 @@ async function callGradioAPI(endpoint: string, params: Record<string, any>): Pro
     console.error(`Failed to call Gradio API ${endpoint}:`, error);
     throw error;
   }
+}
+
+function parseModelName(rawModelName: string): { name: string; provider: string } {
+  if (!rawModelName || typeof rawModelName !== 'string') {
+    return { name: '', provider: '' };
+  }
+  
+  // Si c'est une balise HTML, extraire le texte
+  let cleanName = rawModelName;
+  if (rawModelName.includes('<a') && rawModelName.includes('</a>')) {
+    const match = rawModelName.match(/>([^<]+)</);
+    cleanName = match ? match[1].trim() : rawModelName.trim();
+  } else {
+    cleanName = rawModelName.trim();
+  }
+  
+  // Séparer le provider du nom si il y a un slash
+  if (cleanName.includes('/')) {
+    const [provider, ...nameParts] = cleanName.split('/');
+    return {
+      name: nameParts.join('/').trim(),
+      provider: provider.trim()
+    };
+  }
+  
+  // Essayer de détecter le provider à partir du nom
+  const detectedProvider = detectProvider(cleanName);
+  return {
+    name: cleanName,
+    provider: detectedProvider
+  };
+}
+
+function detectProvider(modelName: string): string {
+  const name = modelName.toLowerCase();
+  
+  // Mapping des noms de modèles vers leurs providers
+  if (name.includes('gpt') || name.includes('openai')) return 'OpenAI';
+  if (name.includes('claude')) return 'Anthropic';
+  if (name.includes('gemini') || name.includes('bard')) return 'Google';
+  if (name.includes('llama') || name.includes('meta')) return 'Meta';
+  if (name.includes('mistral')) return 'Mistral AI';
+  if (name.includes('cohere')) return 'Cohere';
+  if (name.includes('anthropic')) return 'Anthropic';
+  if (name.includes('google')) return 'Google';
+  if (name.includes('microsoft')) return 'Microsoft';
+  if (name.includes('huggingface')) return 'Hugging Face';
+  
+  // Retourner 'Unknown' si aucun provider détecté
+  return 'Unknown';
 }
 
 function parseModelScores(data: any): ModelScore[] {
@@ -99,8 +150,12 @@ function parseModelScores(data: any): ModelScore[] {
   const results: ModelScore[] = [];
   
   for (const row of rows) {
-    const modelName = row[modelIndex];
-    if (!modelName || typeof modelName !== 'string') continue;
+    const rawModelName = row[modelIndex];
+    if (!rawModelName || typeof rawModelName !== 'string') continue;
+    
+    // Parser le nom du modèle pour extraire le texte des balises HTML et le provider
+    const parsedModel = parseModelName(rawModelName);
+    if (!parsedModel.name) continue;
     
     // Extraire les scores numériques (ignorer les colonnes non-numériques)
     const scores: number[] = [];
@@ -122,7 +177,8 @@ function parseModelScores(data: any): ModelScore[] {
     if (scores.length > 0) {
       const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
       results.push({
-        modelName: modelName.trim(),
+        modelName: parsedModel.name,
+        modelProvider: parsedModel.provider,
         scores,
         averageScore,
         benchmarksCount: scores.length
@@ -162,7 +218,7 @@ async function upsertModelScores(supabase: any, categoryCode: string, modelScore
       .from('compl_ai_models')
       .upsert([{
         model_name: modelScore.modelName,
-        model_provider: null,
+        model_provider: modelScore.modelProvider,
         model_type: null,
         version: null
       }], {
