@@ -4,46 +4,6 @@ import { calculateScore } from '../../../../usecases/[id]/utils/score-calculator
 import { UseCaseScore } from '../../../../usecases/[id]/types/usecase'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 
-async function saveScore(supabase: any, scoreData: UseCaseScore) {
-  try {
-    // Vérifier s'il existe déjà un score pour ce usecase
-    const { data: existingScore, error: fetchError } = await supabase
-      .from('usecase_scores')
-      .select('id, version')
-      .eq('usecase_id', scoreData.usecase_id)
-      .order('version', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      logger.warn('Could not fetch existing score, table may not exist')
-      return { ...scoreData, id: 'temp-' + Date.now(), version: 1 }
-    }
-
-    // Déterminer la version
-    const version = existingScore ? existingScore.version + 1 : 1
-
-    // Insérer le nouveau score
-    const { data, error } = await supabase
-      .from('usecase_scores')
-      .insert({
-        ...scoreData,
-        version
-      })
-      .select()
-      .single()
-
-    if (error) {
-      logger.warn('Could not save score to database')
-      return { ...scoreData, id: 'temp-' + Date.now(), version }
-    }
-    
-    return data
-  } catch (error) {
-    logger.warn('Error in saveScore function')
-    return { ...scoreData, id: 'temp-' + Date.now(), version: 1 }
-  }
-}
 
 export async function GET(
   request: NextRequest,
@@ -113,15 +73,8 @@ export async function GET(
     // Calculer le score
     const scoreData = calculateScore(usecaseId, responses || [])
 
-    // Sauvegarder le score calculé
-    const savedScore = await saveScore(supabase, scoreData)
-
-    // S'assurer que les category_scores sont présents (rétrocompatibilité)
-    if (!savedScore.category_scores || savedScore.category_scores.length === 0) {
-      savedScore.category_scores = scoreData.category_scores
-    }
-
-    return NextResponse.json(savedScore)
+    // Retourner directement le score calculé (pas de sauvegarde)
+    return NextResponse.json(scoreData)
 
   } catch (error) {
     const context = createRequestContext(request)
