@@ -34,7 +34,7 @@ export default function Header() {
           <Image 
             src="/logos/logo-maydai/logo-name-maydai.png" 
             alt="MaydAI Logo" 
-            width={120} 
+            width={134} 
             height={32}
             className="h-8 w-auto" 
             priority 

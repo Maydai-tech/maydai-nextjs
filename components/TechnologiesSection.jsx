@@ -56,12 +56,16 @@ export default function TechnologiesSection() {
     },
     {
       src: '/logos/logo-institut/small_partner_NGI_e217d8aa57.webp',
-      alt: 'NGI Partner'
+      alt: 'NGI Partner',
+      width: 128,
+      height: 64
     },
 
     {
       src: '/logos/logo-institut/channels4_profile.jpg',
-      alt: 'YouTube Channel'
+      alt: 'YouTube Channel',
+      width: 120,
+      height: 64
     },
     {
       src: '/logos/logo-institut/Esperance-et-algorithme.jpg',
@@ -92,8 +96,8 @@ export default function TechnologiesSection() {
                 <Image
                   src={logo.src}
                   alt={logo.alt}
-                  width={140}
-                  height={64}
+                  width={logo.width || 140}
+                  height={logo.height || 64}
                   className="h-12 md:h-16 w-auto max-w-[120px] md:max-w-[140px] object-contain filter grayscale opacity-60 hover:opacity-90 hover:grayscale-0 transition-all duration-300"
                 />
               </div>
@@ -104,8 +108,8 @@ export default function TechnologiesSection() {
                 <Image
                   src={logo.src}
                   alt={logo.alt}
-                  width={140}
-                  height={64}
+                  width={logo.width || 140}
+                  height={logo.height || 64}
                   className="h-12 md:h-16 w-auto max-w-[120px] md:max-w-[140px] object-contain filter grayscale opacity-60 hover:opacity-90 hover:grayscale-0 transition-all duration-300"
                 />
               </div>

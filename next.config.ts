@@ -12,9 +12,6 @@ const nextConfig: NextConfig = {
   // Les headers de sécurité sont maintenant gérés par le middleware
   // avec des nonces dynamiques pour le CSP
   
-  // Désactiver l'optimisation automatique des fonts qui cause des problèmes avec les headers
-  optimizeFonts: false,
-  
   // Désactiver complètement le préchargement automatique des ressources
   experimental: {
     optimizePackageImports: [],
