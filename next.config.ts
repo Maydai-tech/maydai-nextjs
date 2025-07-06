@@ -12,9 +12,10 @@ const nextConfig: NextConfig = {
   // Les headers de sécurité sont maintenant gérés par le middleware
   // avec des nonces dynamiques pour le CSP
   
-  // Désactiver complètement le préchargement automatique des ressources
+  // Configuration expérimentale pour optimiser les CSS
   experimental: {
     optimizePackageImports: [],
+    cssChunking: 'strict',
   },
   
   // Configuration des headers pour éviter les problèmes de caractères non-ASCII
