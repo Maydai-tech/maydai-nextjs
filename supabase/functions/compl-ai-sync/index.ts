@@ -11,7 +11,16 @@ const CATEGORY_CONFIG = {
     params: {
       param_0: ["MMLU: Robustness", "BoolQ Contrast Set", "IMDB Contrast Set", "Monotonicity Checks", "Self-Check Consistency"],
       param_1: ["Goal Hijacking and Prompt Leakage", "Rule Following"]
-    }
+    },
+    benchmarkMapping: [
+      { name: "MMLU: Robustness", key: "mmlu_robustness_score", category: "robustness" },
+      { name: "BoolQ Contrast Set", key: "boolq_contrast_score", category: "robustness" },
+      { name: "IMDB Contrast Set", key: "imdb_contrast_score", category: "robustness" },
+      { name: "Monotonicity Checks", key: "monotonicity_checks_score", category: "consistency" },
+      { name: "Self-Check Consistency", key: "self_check_consistency_score", category: "consistency" },
+      { name: "Goal Hijacking and Prompt Leakage", key: "goal_hijacking_score", category: "security" },
+      { name: "Rule Following", key: "rule_following_score", category: "security" }
+    ]
   },
   "privacy_data_governance": {
     endpoint: "/partial_2",
@@ -19,7 +28,13 @@ const CATEGORY_CONFIG = {
       param_0: ["Toxicity of the Dataset", "Bias of the Dataset"],
       param_1: ["Copyrighted Material Memorization"],
       param_2: ["PII Extraction by Association"]
-    }
+    },
+    benchmarkMapping: [
+      { name: "Toxicity of the Dataset", key: "toxicity_dataset_score", category: "data_quality" },
+      { name: "Bias of the Dataset", key: "bias_dataset_score", category: "data_quality" },
+      { name: "Copyrighted Material Memorization", key: "copyrighted_material_score", category: "privacy" },
+      { name: "PII Extraction by Association", key: "pii_extraction_score", category: "privacy" }
+    ]
   },
   "transparency": {
     endpoint: "/partial_5",
@@ -28,22 +43,52 @@ const CATEGORY_CONFIG = {
       param_1: ["Logit Calibration: BIG-Bench", "Self-Assessment: TriviaQA"],
       param_2: ["Denying Human Presence"],
       param_3: ["Watermark Reliability & Robustness"]
-    }
+    },
+    benchmarkMapping: [
+      { name: "General Knowledge: MMLU", key: "mmlu_general_score", category: "capabilities" },
+      { name: "Reasoning: AI2 Reasoning Challenge", key: "ai2_reasoning_score", category: "capabilities" },
+      { name: "Common Sense Reasoning: HellaSwag", key: "hellaswag_score", category: "capabilities" },
+      { name: "Truthfulness: TruthfulQA MC2", key: "truthfulqa_score", category: "truthfulness" },
+      { name: "Coding: HumanEval", key: "humaneval_score", category: "capabilities" },
+      { name: "Logit Calibration: BIG-Bench", key: "logit_calibration_score", category: "calibration" },
+      { name: "Self-Assessment: TriviaQA", key: "self_assessment_score", category: "calibration" },
+      { name: "Denying Human Presence", key: "denying_human_presence_score", category: "awareness" },
+      { name: "Watermark Reliability & Robustness", key: "watermark_reliability_score", category: "watermark" }
+    ]
   },
   "diversity_non_discrimination_fairness": {
     endpoint: "/partial_9",
     params: {
       param_0: ["Representation Bias: RedditBias", "Prejudiced Answers: BBQ", "Biased Completions: BOLD"],
       param_1: ["Income Fairness: DecodingTrust", "Recommendation Consistency: FaiRLLM"]
-    }
+    },
+    benchmarkMapping: [
+      { name: "Representation Bias: RedditBias", key: "reddit_bias_score", category: "bias" },
+      { name: "Prejudiced Answers: BBQ", key: "bbq_prejudice_score", category: "bias" },
+      { name: "Biased Completions: BOLD", key: "bold_completions_score", category: "bias" },
+      { name: "Income Fairness: DecodingTrust", key: "income_fairness_score", category: "fairness" },
+      { name: "Recommendation Consistency: FaiRLLM", key: "recommendation_consistency_score", category: "fairness" }
+    ]
   },
   "social_environmental_wellbeing": {
     endpoint: "/partial_11",
     params: {
       param_0: ["Toxic Completions of Benign Text: RealToxicityPrompts", "Following Harmful Instructions: AdvBench"]
-    }
+    },
+    benchmarkMapping: [
+      { name: "Toxic Completions of Benign Text: RealToxicityPrompts", key: "real_toxicity_prompts_score", category: "toxicity" },
+      { name: "Following Harmful Instructions: AdvBench", key: "adv_bench_score", category: "safety" }
+    ]
   }
 };
+
+interface BenchmarkDetail {
+  name: string;
+  key: string;
+  category: string;
+  score: number;
+  position: number;
+}
 
 interface ModelScore {
   modelName: string;
@@ -51,6 +96,7 @@ interface ModelScore {
   scores: number[];
   averageScore: number;
   benchmarksCount: number;
+  detailedScores: BenchmarkDetail[];
 }
 
 async function callGradioAPI(endpoint: string, params: Record<string, any>): Promise<any> {
@@ -124,7 +170,33 @@ function detectProvider(modelName: string): string {
   return 'Unknown';
 }
 
-function parseModelScores(data: any): ModelScore[] {
+function mapScoresToBenchmarkDetails(scores: number[], categoryCode: string): BenchmarkDetail[] {
+  const config = (CATEGORY_CONFIG as any)[categoryCode];
+  if (!config || !config.benchmarkMapping) {
+    console.warn(`No benchmark mapping found for category: ${categoryCode}`);
+    return [];
+  }
+
+  const benchmarkMapping = config.benchmarkMapping;
+  const detailedScores: BenchmarkDetail[] = [];
+
+  scores.forEach((score, index) => {
+    if (index < benchmarkMapping.length) {
+      const benchmark = benchmarkMapping[index];
+      detailedScores.push({
+        name: benchmark.name,
+        key: benchmark.key,
+        category: benchmark.category,
+        score: score,
+        position: index
+      });
+    }
+  });
+
+  return detailedScores;
+}
+
+function parseModelScores(data: any, categoryCode: string): ModelScore[] {
   // La réponse Gradio devrait être un array où le premier élément contient les données
   let tableData = data;
   
@@ -176,12 +248,15 @@ function parseModelScores(data: any): ModelScore[] {
     
     if (scores.length > 0) {
       const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+      const detailedScores = mapScoresToBenchmarkDetails(scores, categoryCode);
+      
       results.push({
         modelName: parsedModel.name,
         modelProvider: parsedModel.provider,
         scores,
         averageScore,
-        benchmarksCount: scores.length
+        benchmarksCount: scores.length,
+        detailedScores
       });
     }
   }
@@ -248,7 +323,15 @@ async function upsertModelScores(supabase: any, categoryCode: string, modelScore
           benchmarks_count: modelScore.benchmarksCount,
           average_score: modelScore.averageScore,
           category_code: categoryCode,
-          gradio_endpoint: (CATEGORY_CONFIG as any)[categoryCode]?.endpoint
+          gradio_endpoint: (CATEGORY_CONFIG as any)[categoryCode]?.endpoint,
+          detailed_scores: modelScore.detailedScores,
+          benchmark_details: modelScore.detailedScores.map(ds => ({
+            name: ds.name,
+            key: ds.key,
+            category: ds.category,
+            score: ds.score,
+            position: ds.position
+          }))
         }
       }]);
 
@@ -309,7 +392,7 @@ Deno.serve(async (req: Request) => {
         const data = await callGradioAPI(config.endpoint, config.params);
         
         // Parser les scores
-        const modelScores = parseModelScores(data);
+        const modelScores = parseModelScores(data, categoryCode);
         console.log(`Parsed ${modelScores.length} model scores for ${categoryCode}`);
 
         // Stocker en base
