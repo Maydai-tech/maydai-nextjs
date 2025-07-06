@@ -139,13 +139,7 @@ export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseC
           
           <div className="mt-4 pt-3 border-t border-gray-200">
             <p className="text-xs text-gray-500">
-              Dernière mise à jour : {new Date(score.calculated_at).toLocaleDateString('fr-FR', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+              Score calculé en temps réel
             </p>
           </div>
         </div>

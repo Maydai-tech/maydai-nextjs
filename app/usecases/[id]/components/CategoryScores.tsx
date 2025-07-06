@@ -83,7 +83,7 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
     // Créer les category scores
     categoryScores = Object.entries(RISK_CATEGORIES).map(([categoryId, category]) => {
       const data = categoryData[categoryId]
-      const baseScore = 100 * category.weight // Use 100 as base for display
+      const baseScore = 100 // Toutes les catégories ont le même score de base
       const adjustedScore = Math.max(0, baseScore + data.totalImpact)
       
       return {

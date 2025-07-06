@@ -10,12 +10,10 @@ const nextConfig: NextConfig = {
   // Retire output: 'standalone' pour le développement
   ...(process.env.NODE_ENV === 'production' && { output: 'standalone' }),
   
-  // Désactiver l'optimisation automatique des fonts qui cause des problèmes avec les headers
-  // optimizeFonts: false, // Cette option n'existe plus dans Next.js 15
-  
-  // Désactiver complètement le préchargement automatique des ressources
+  // Configuration expérimentale pour optimiser les CSS
   experimental: {
     optimizePackageImports: [],
+    cssChunking: 'strict',
   },
   
   async headers() {
