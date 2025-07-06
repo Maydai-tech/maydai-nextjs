@@ -55,6 +55,7 @@ export default async function RootLayout({
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true}
       >
         {/* Google Tag Manager (noscript) - Seulement en production */}
         {process.env.NODE_ENV === 'production' && (
