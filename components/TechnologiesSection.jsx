@@ -27,23 +27,23 @@ export default function TechnologiesSection() {
 
   const logos = [
     {
-      src: '/logos/logo-institut/EU_AI_Act_logo_main.png',
+      src: '/logos/logo-institut/eu_ai_act_logo_main.png',
       alt: 'EU AI Act'
     },
     {
-      src: '/logos/logo-institut/6690f6497582bb8f9d6600dd_IA-for.png',
+      src: '/logos/logo-institut/6690f6497582bb8f9d6600dd_ia-for-.png',
       alt: 'IA for Good'
     },
     {
-      src: '/logos/logo-institut/AI-Forensics.png',
+      src: '/logos/logo-institut/ai-forensics.png',
       alt: 'AI Forensics'
     },
     {
-      src: '/logos/logo-institut/Compl-AI.png',
+      src: '/logos/logo-institut/compl---ai.png',
       alt: 'Compl AI'
     },
     {
-      src: '/logos/logo-institut/ETH.png',
+      src: '/logos/logo-institut/eth.png',
       alt: 'ETH Zurich'
     },
     {
@@ -68,7 +68,7 @@ export default function TechnologiesSection() {
       height: 64
     },
     {
-      src: '/logos/logo-institut/Esperance-et-algorithme.jpg',
+      src: '/logos/logo-institut/Espérance et algorithme.jpg',
       alt: 'Espérance et algorithme'
     }
   ];
