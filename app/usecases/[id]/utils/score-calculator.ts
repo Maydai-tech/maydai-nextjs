@@ -133,10 +133,10 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
     // S'assurer que le score ne descend pas en dessous de 0
     currentScore = Math.max(0, currentScore)
 
-    // Calculer les scores par catégorie
+    // Calculer les scores par catégorie - toutes les catégories sont indépendantes avec le même score de base
     const categoryScores: CategoryScore[] = Object.entries(RISK_CATEGORIES).map(([categoryId, category]) => {
       const data = categoryData[categoryId]
-      const baseScore = BASE_SCORE * category.weight
+      const baseScore = BASE_SCORE // Toutes les catégories ont le même score de base de 100
       const adjustedScore = Math.max(0, baseScore + data.totalImpact)
       
       return {

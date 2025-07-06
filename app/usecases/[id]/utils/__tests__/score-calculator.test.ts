@@ -98,9 +98,9 @@ describe('Score Calculator', () => {
       )
       
       expect(transparencyCategory).toBeDefined()
-      expect(transparencyCategory!.score).toBe(10) // (100 * 0.15) - 5 = 10
-      expect(transparencyCategory!.max_score).toBe(15) // 100 * 0.15
-      expect(transparencyCategory!.percentage).toBe(67) // Math.round((10/15) * 100)
+      expect(transparencyCategory!.score).toBe(95) // 100 - 5 = 95 (catégories indépendantes)
+      expect(transparencyCategory!.max_score).toBe(100) // Toutes les catégories ont un score max de 100
+      expect(transparencyCategory!.percentage).toBe(95) // Math.round((95/100) * 100)
       expect(transparencyCategory!.question_count).toBe(1)
     })
 
