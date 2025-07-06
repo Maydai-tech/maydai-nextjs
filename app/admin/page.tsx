@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Users, FileText, Settings, BarChart3 } from 'lucide-react'
+import { Users, FileText, Settings, BarChart3, TrendingUp } from 'lucide-react'
 
 interface AdminStats {
   sectionsCount: number
@@ -121,7 +121,7 @@ export default function AdminDashboard() {
           <h2 className="text-lg font-medium text-gray-900">Actions rapides</h2>
         </div>
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <a
               href="/admin/sections"
               className="block p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-colors"
@@ -152,6 +152,17 @@ export default function AdminDashboard() {
               <h3 className="font-medium text-gray-900">Voir les cas d'usage</h3>
               <p className="text-sm text-gray-500 mt-1">
                 Consulter les cas d'usage soumis
+              </p>
+            </a>
+
+            <a
+              href="/admin/compl-ai-scores"
+              className="block p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:shadow-md transition-colors"
+            >
+              <TrendingUp className="h-6 w-6 text-orange-600 mb-2" />
+              <h3 className="font-medium text-gray-900">Scores COMPL-AI</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Consulter les scores de conformité des modèles IA
               </p>
             </a>
           </div>

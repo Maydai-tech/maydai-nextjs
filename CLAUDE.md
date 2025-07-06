@@ -530,3 +530,105 @@ Ce script vérifie automatiquement :
 5. **Export des résultats**: (À implémenter selon les besoins)
 
 Ce guide devrait vous permettre de comprendre rapidement l'architecture et de contribuer efficacement au projet MaydAI.
+
+## 📝 **HISTORIQUE DES SESSIONS RÉCENTES**
+
+### Session du 06/07/2025 - Ajout du menu COMPL-AI Admin
+
+#### ✅ **RÉALISATIONS ACCOMPLIES**
+
+**Contexte** : Ajout d'un menu admin pour accéder à une page "Score COMPL-AI" affichant les scores des modèles stockés dans Supabase.
+
+**Fichiers créés/modifiés** :
+1. ✅ **CRÉÉ** : `/app/admin/compl-ai-scores/page.tsx` - Page complète d'affichage des scores COMPL-AI
+2. ✅ **MODIFIÉ** : `/app/admin/page.tsx` - Ajout du lien menu "Scores COMPL-AI"
+
+**Fonctionnalités implémentées** :
+- 📊 **Interface COMPL-AI** : Page admin complète avec :
+  - Statistiques résumées (modèles évalués, total évaluations, score moyen)
+  - Tableau récapitulatif par modèle avec scores moyens
+  - Liste détaillée des évaluations avec filtrage par modèle
+  - Code couleur pour les scores (vert ≥80, jaune ≥60, rouge <60)
+- 🔗 **Menu admin** : Nouveau lien "Scores COMPL-AI" avec icône TrendingUp
+- 🗄️ **Base de données** : Intégration avec tables Supabase :
+  - `compl_ai_evaluations` : Évaluations des modèles
+  - `compl_ai_models` : Modèles IA référencés
+  - `compl_ai_principles` : Principes de conformité
+
+**État technique** :
+- ✅ Build Next.js : Réussi sans erreurs
+- ✅ TypeScript : Pas d'erreurs de compilation
+- ⚠️ ESLint : Quelques warnings sur les guillemets échappés (existants dans le projet)
+
+**URL d'accès** : `/admin/compl-ai-scores`
+
+#### 🧩 **INTÉGRATION RÉALISÉE**
+
+**Structure des données COMPL-AI** :
+```typescript
+interface ModelScore {
+  id: string
+  model_name: string
+  model_provider: string
+  model_type: string
+  version: string
+  principle_name: string
+  principle_code: string
+  principle_category: string
+  score: number
+  score_text: string
+  evaluation_date: string
+}
+
+interface ModelSummary {
+  model_name: string
+  model_provider: string
+  avg_score: number
+  evaluation_count: number
+  latest_date: number
+}
+```
+
+**Requêtes Supabase implémentées** :
+```sql
+-- Récupération des évaluations avec jointures
+SELECT 
+  id, score, score_text, evaluation_date,
+  compl_ai_models(model_name, model_provider, model_type, version),
+  compl_ai_principles(name, code, category)
+FROM compl_ai_evaluations
+ORDER BY evaluation_date DESC
+```
+
+#### 🎯 **PROCHAINES ÉTAPES POSSIBLES**
+
+Si tu veux continuer le développement :
+1. **Améliorer l'interface** : Graphiques de tendance des scores
+2. **Filtres avancés** : Par fournisseur, catégorie de principe, période
+3. **Export des données** : CSV/Excel des évaluations
+4. **Détails modèle** : Page dédiée pour chaque modèle
+5. **Notifications** : Alertes sur scores faibles
+
+#### 🔧 **COMMANDES DE REPRISE**
+
+Pour reprendre le développement :
+```bash
+# Vérifier l'état du projet
+npm run build
+npm run dev  # Tester la nouvelle page sur http://localhost:3000/admin/compl-ai-scores
+
+# Voir les changements récents
+git status
+git diff
+```
+
+#### 📋 **CONTEXTE IMPORTANT**
+
+- **Tables COMPL-AI** : Déjà présentes dans Supabase avec données de test
+- **Authentification** : Page protégée par `AdminProtectedRoute`
+- **Styling** : Utilise Tailwind CSS cohérent avec le reste de l'app
+- **Navigation** : Intégrée dans le menu admin existant
+
+---
+
+**💡 TIP** : La page COMPL-AI est fonctionnelle et prête. Teste-la en accédant à `/admin/compl-ai-scores` après connexion admin.

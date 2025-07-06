@@ -32,7 +32,6 @@ export async function middleware(request: NextRequest) {
   const blockedPaths = [
     '/login',
     '/signup',
-    '/admin',
     '/dashboard',
     '/companies',
     '/usecases',
@@ -61,6 +60,7 @@ export async function middleware(request: NextRequest) {
       '/ia-act-ue/risques',
       '/politique-confidentialite',
       '/tarifs',
+      '/admin',
     ];
 
     // Si la page n'est pas dans la liste des pages autorisées, rediriger vers 404
