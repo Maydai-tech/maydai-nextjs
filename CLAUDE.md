@@ -147,7 +147,6 @@ Pour configurer le déploiement automatique sur Vercel :
 - `companies`: Entreprises enregistrées
 - `usecases`: Cas d'usage IA
 - `usecase_responses`: Réponses au questionnaire (structure Array)
-- `usecase_scores`: Scores calculés avec historique
 
 ### Structure des réponses
 ```typescript
