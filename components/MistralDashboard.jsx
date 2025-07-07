@@ -16,7 +16,7 @@ export default function MistralDashboard() {
       total: 100
     },
     {
-      icon: '/icons/closed-eyes 1.png',
+      icon: '/icons/closed-eyes-1.png',
       title: 'Confidentialité et Gouvernance des Données',
       score: 99,
       total: 100
@@ -28,7 +28,7 @@ export default function MistralDashboard() {
       total: 100
     },
     {
-      icon: '/icons/balance (1).png',
+      icon: '/icons/balance-1.png',
       title: 'Diversité, Non-discrimination et Équité',
       subtitle: '(complété lors de l\'audit du cas d\'usage)',
       score: 37,

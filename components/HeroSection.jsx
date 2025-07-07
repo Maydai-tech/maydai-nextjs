@@ -6,7 +6,7 @@ export default function HeroSection() {
     <section className="relative bg-gradient-to-br from-primary-light to-primary-dark text-white py-20 px-4 flex flex-col items-center justify-center text-center min-h-[60vh]">
       <div className="max-w-2xl mx-auto z-10">
         <h1 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
-          MaydAI : Votre partenaire pour l&apos;<span className="text-primary-light">Audit AI Act</span> et la conformité réglementaire IA
+          MaydAI : <span className="text-[#ffab5a]">plateforme de conformité AI Act</span> qui vous accompagne dans vos Audits IA
         </h1>
         <p className="text-lg md:text-xl mb-8 font-medium">
           Simplifiez et sécurisez la conformité de vos systèmes d&apos;IA avec MaydAI. Notre solution vous accompagne à chaque étape de l&apos;Audit AI Act, pour une conformité rapide, fiable et transparente.

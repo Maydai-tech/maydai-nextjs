@@ -32,7 +32,7 @@ export default function Header() {
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3 md:py-4">
         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <Image 
-            src="/logos/logo-maydai/logo-name-maydai.png" 
+            src="/logos/logo-maydai/logo-maydai-complet.png" 
             alt="MaydAI Logo" 
             width={134} 
             height={32}
@@ -74,7 +74,7 @@ export default function Header() {
                   className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition"
                   onClick={() => setIsIaActMenuOpen(false)}
                 >
-                  <Image src="/icons/caution (1).png" alt="Attention" width={16} height={16} className="w-4 h-4" />
+                  <Image src="/icons/caution-1.png" alt="Attention" width={16} height={16} className="w-4 h-4" />
                   Pyramide risques IA
                 </Link>
               </div>

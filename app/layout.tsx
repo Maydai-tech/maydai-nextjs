@@ -20,6 +20,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Maydai - Audit AI Act",
   description: "Audit AI Act avec Maydai",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://maydai.fr'),
 };
 
 export default async function RootLayout({
@@ -34,18 +35,34 @@ export default async function RootLayout({
       <head>
         {/* Meta pour exposer le nonce au client */}
         {nonce && <meta name="csp-nonce" content={nonce} />}
-        
-        {/* CookieYes - Bannière de cookies RGPD */}
-        {process.env.NEXT_PUBLIC_COOKIEYES_ID && (
+        {/* Google Consent Mode Script - Doit être chargé AVANT GTM */}
+        {process.env.NODE_ENV === 'production' && (
           <Script
-            id="cookieyes-script"
-            src={`https://cdn-cookieyes.com/client_data/${process.env.NEXT_PUBLIC_COOKIEYES_ID}/script.js`}
+            id="google-consent-mode"
             strategy="afterInteractive"
             nonce={nonce}
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('consent', 'default', {
+                  ad_storage: 'denied',
+                  ad_user_data: 'denied', 
+                  ad_personalization: 'denied',
+                  analytics_storage: 'denied',
+                  functionality_storage: 'denied',
+                  personalization_storage: 'denied',
+                  security_storage: 'granted',
+                  wait_for_update: 2000,
+                });
+                gtag('set', 'ads_data_redaction', true);
+                gtag('set', 'url_passthrough', true);
+              `,
+            }}
           />
         )}
-        
-        {/* Google Tag Manager - Seulement en production avec consentement */}
+
+        {/* Google Tag Manager - Seulement en production */}
         {process.env.NODE_ENV === 'production' && (
           <Script
             id="gtm-script"
@@ -53,30 +70,23 @@ export default async function RootLayout({
             nonce={nonce}
             dangerouslySetInnerHTML={{
               __html: `
-                // Attendre le consentement CookieYes avant de charger GTM
-                function initGTM() {
-                  if (window.gtag) return; // Éviter la double initialisation
-                  
-                  (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-                  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-                  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-                  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                  })(window,document,'script','dataLayer','GTM-KLSD6BXG');
-                }
-                
-                // Écouter les événements de consentement CookieYes
-                document.addEventListener('cookieyes_consent_update', function(event) {
-                  if (event.detail.accepted.includes('analytics') || event.detail.accepted.includes('performance')) {
-                    initGTM();
-                  }
-                });
-                
-                // Vérifier si le consentement a déjà été donné
-                if (typeof ckyAPI !== 'undefined' && ckyAPI.getConsentValue('analytics')) {
-                  initGTM();
-                }
+                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+                })(window,document,'script','dataLayer','GTM-KLSD6BXG');
               `,
             }}
+          />
+        )}
+
+        {/* CookieYes Script - Bannière de consentement aux cookies */}
+        {process.env.NODE_ENV === 'production' && (
+          <Script
+            id="cookieyes-script"
+            src="https://cdn-cookieyes.com/client_data/d7c0d5315d5927e305484578/script.js"
+            strategy="afterInteractive"
+            nonce={nonce}
           />
         )}
       </head>
