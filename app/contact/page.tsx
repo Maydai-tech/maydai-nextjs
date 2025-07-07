@@ -134,7 +134,7 @@ export default function ContactPage() {
                   {/* Colonne Image - Alice Recoque */}
                   <div className="relative hidden lg:block">
                     <Image
-                      src="/content/Alice Recoque IWY.webp"
+                      src="/content/alice-recoque.webp"
                       alt="Alice Recoque - Experte en IA et conformité"
                       fill
                       className="object-cover object-center"
