@@ -35,7 +35,7 @@ export async function getNonce(): Promise<string | undefined> {
   try {
     const headersList = await headers()
     return headersList.get('x-nonce') || undefined
-  } catch (error) {
+  } catch {
     // En cas d'erreur (ex: composant client), retourner undefined
     return undefined
   }

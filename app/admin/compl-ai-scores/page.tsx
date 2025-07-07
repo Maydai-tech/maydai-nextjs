@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { BarChart3, TrendingUp, Database, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 
 interface BenchmarkDetail {
   name: string

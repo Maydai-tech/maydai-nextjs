@@ -14,7 +14,7 @@ const EvaluationCriteriaSection: React.FC = () => {
       description: "Le plus brillant des automates ne remplacera jamais la lueur d'une conscience. Chaque système doit rester sous le contrôle effectif d'un humain, capable d'intervenir, de corriger, et de dire « halte » pour prévenir ou minimiser les risques. La machine propose, mais c'est toujours l'homme qui, en dernier ressort, doit disposer."
     },
     {
-      icon: <Image src="/icons/balance (1).png" alt="Balance" width={40} height={40} className="w-10 h-10" />,
+      icon: <Image src="/icons/balance-1.png" alt="Balance" width={40} height={40} className="w-10 h-10" />,
       title: "Justice & Équité",
       description: "L'intelligence artificielle ne doit pas hériter de nos vieux démons. Nous scrutons les données qui l'ont nourrie pour traquer et corriger les biais potentiels, afin qu'elle ne devienne pas le miroir de nos propres injustices. Chaque algorithme doit être une promesse d'équité, et non la perpétuation de nos discriminations passées."
     },
@@ -24,7 +24,7 @@ const EvaluationCriteriaSection: React.FC = () => {
       description: "La confiance se mérite. Nous éprouvons la solidité des systèmes face aux erreurs, aux pannes et aux tentatives de corruption. Une IA digne de ce nom doit être résiliente, prévisible et sécurisée. C'est un allié fiable dans un monde qui, lui, ne l'est pas toujours."
     },
     {
-      icon: <Image src="/icons/closed-eyes 1.png" alt="Yeux fermés" width={40} height={40} className="w-10 h-10" />,
+      icon: <Image src="/icons/closed-eyes-1.png" alt="Yeux fermés" width={40} height={40} className="w-10 h-10" />,
       title: "Respect de l'Intimité",
       description: "Les données sont le reflet de vies humaines, pas une carrière à ciel ouvert. Nous veillons au respect scrupuleux de la vie privée et à une gouvernance des données irréprochable, en accord avec les principes de minimisation et de protection dès la conception. La plus grande intelligence est celle qui sait où s'arrêter : au seuil de l'intimité."
     },

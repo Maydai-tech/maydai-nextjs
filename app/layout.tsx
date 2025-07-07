@@ -20,6 +20,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Maydai - Audit AI Act",
   description: "Audit AI Act avec Maydai",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://maydai.fr'),
 };
 
 export default async function RootLayout({
