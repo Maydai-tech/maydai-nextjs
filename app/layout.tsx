@@ -35,6 +35,33 @@ export default async function RootLayout({
         {/* Meta pour exposer le nonce au client */}
         {nonce && <meta name="csp-nonce" content={nonce} />}
         
+        {/* Google Consent Mode Script - Doit être chargé AVANT GTM */}
+        {process.env.NODE_ENV === 'production' && (
+          <Script
+            id="google-consent-mode"
+            strategy="afterInteractive"
+            nonce={nonce}
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('consent', 'default', {
+                  ad_storage: 'denied',
+                  ad_user_data: 'denied', 
+                  ad_personalization: 'denied',
+                  analytics_storage: 'denied',
+                  functionality_storage: 'denied',
+                  personalization_storage: 'denied',
+                  security_storage: 'granted',
+                  wait_for_update: 2000,
+                });
+                gtag('set', 'ads_data_redaction', true);
+                gtag('set', 'url_passthrough', true);
+              `,
+            }}
+          />
+        )}
+
         {/* Google Tag Manager - Seulement en production */}
         {process.env.NODE_ENV === 'production' && (
           <Script
@@ -50,6 +77,16 @@ export default async function RootLayout({
                 })(window,document,'script','dataLayer','GTM-KLSD6BXG');
               `,
             }}
+          />
+        )}
+
+        {/* CookieYes Script - Remplacez VOTRE_CLE_SITE par votre vraie clé */}
+        {process.env.NODE_ENV === 'production' && (
+          <Script
+            id="cookieyes-script"
+            src="https://cdn-cookieyes.com/client_data/VOTRE_CLE_SITE/script.js"
+            strategy="afterInteractive"
+            nonce={nonce}
           />
         )}
       </head>
