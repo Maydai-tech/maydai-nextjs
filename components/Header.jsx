@@ -32,7 +32,7 @@ export default function Header() {
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3 md:py-4">
         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <Image 
-            src="/logos/logo-maydai/logo-name-maydai.png" 
+            src="/logos/logo-maydai/logo-maydai-complet.png" 
             alt="MaydAI Logo" 
             width={134} 
             height={32}
