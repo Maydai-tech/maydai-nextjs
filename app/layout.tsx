@@ -80,11 +80,11 @@ export default async function RootLayout({
           />
         )}
 
-        {/* CookieYes Script - Remplacez VOTRE_CLE_SITE par votre vraie clé */}
+        {/* CookieYes Script - Bannière de consentement aux cookies */}
         {process.env.NODE_ENV === 'production' && (
           <Script
             id="cookieyes-script"
-            src="https://cdn-cookieyes.com/client_data/VOTRE_CLE_SITE/script.js"
+            src="https://cdn-cookieyes.com/client_data/d7c0d5315d5927e305484578/script.js"
             strategy="afterInteractive"
             nonce={nonce}
           />
