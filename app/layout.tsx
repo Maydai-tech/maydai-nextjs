@@ -20,6 +20,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Maydai - Audit AI Act",
   description: "Audit AI Act avec Maydai",
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/logos/logo-maydai/icon-maydai.png", type: "image/png" }
+    ],
+    shortcut: "/favicon.png",
+    apple: "/logos/logo-maydai/icon-maydai.png",
+  },
 };
 
 export default async function RootLayout({
