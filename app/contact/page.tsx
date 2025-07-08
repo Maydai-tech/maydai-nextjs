@@ -2,71 +2,58 @@
 
 import { FiPhone, FiMail, FiMapPin } from 'react-icons/fi';
 import Image from 'next/image';
+import Script from 'next/script';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { getNonce } from '@/lib/csp-nonce';
 
 export default function ContactPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState<{
-    type: 'success' | 'error';
-    text: string;
-  } | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [isHubspotLoaded, setIsHubspotLoaded] = useState(false);
+  const [hubspotError, setHubspotError] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitMessage(null);
-
-    const formData = new FormData(e.currentTarget);
-    const data: any = {
-      fullName: formData.get('fullName') as string,
-      email: formData.get('email') as string,
-      phone: formData.get('phone') as string,
-      motivations: formData.get('motivations') as string,
-    };
-
-    try {
-      const response = await fetch('/api/beta-requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setSubmitMessage({
-          type: 'success',
-          text: 'Merci ! Votre demande a été envoyée avec succès. Nous vous recontacterons bientôt.',
+  // Fonction pour créer le formulaire Hubspot
+  const createHubspotForm = () => {
+    if (typeof window !== 'undefined' && (window as any).hbspt) {
+      try {
+        (window as any).hbspt.forms.create({
+          portalId: "146512527",
+          formId: "a8ba2616-b912-4158-a0c5-cb84a56c954d",
+          region: "eu1",
+          target: '#hubspot-form-container',
+          onFormSubmitted: function() {
+            // Rediriger vers une page de remerciement ou afficher un message
+            console.log('Formulaire Hubspot soumis avec succès');
+          },
+          onFormFailedValidation: function() {
+            console.log('Erreur de validation du formulaire Hubspot');
+          }
         });
-        // Reset the form using ref
-        if (formRef.current) {
-          formRef.current.reset();
-        }
-      } else {
-        setSubmitMessage({
-          type: 'error',
-          text: result.error || 'Une erreur est survenue lors de l\'envoi de votre demande.',
-        });
+        setIsHubspotLoaded(true);
+      } catch (error) {
+        console.error('Erreur lors de la création du formulaire Hubspot:', error);
+        setHubspotError(true);
       }
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi du formulaire:', error);
-      setSubmitMessage({
-        type: 'error',
-        text: 'Une erreur inattendue est survenue. Veuillez réessayer.',
-      });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   return (
     <>
       <Header />
+      
+      {/* Scripts Hubspot avec nonce pour la sécurité */}
+      <Script
+        src="//js-eu1.hsforms.net/forms/embed/v2.js"
+        strategy="afterInteractive"
+        onLoad={() => {
+          createHubspotForm();
+        }}
+        onError={() => {
+          console.error('Erreur de chargement du script Hubspot');
+          setHubspotError(true);
+        }}
+      />
+
       <main className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
         {/* Section principale */}
         <section className="py-16 px-4 sm:px-6 lg:px-8">
@@ -89,164 +76,179 @@ export default function ContactPage() {
               </p>
             </div>
 
-
-
             {/* Sous-titre */}
             <p className="text-xl font-semibold text-gray-900 mb-8 text-center">
               Envoyez-nous ce formulaire, nous serons heureux de vous inviter et de vous compter parmi nous :
             </p>
 
-            {/* Formulaire de contact */}
+            {/* Formulaire de contact Hubspot */}
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 mb-12 overflow-hidden">
-              
-              {/* Affichage conditionnel : Message de succès OU Formulaire */}
-              {submitMessage?.type === 'success' ? (
-                /* Message de succès qui remplace le formulaire */
-                <div className="text-center py-8 px-8 lg:px-10">
-                  <div className="mb-6">
-                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+              <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[700px]">
+                {/* Colonne Image - Alice Recoque */}
+                <div className="relative hidden lg:block">
+                  <Image
+                    src="/content/alice-recoque.webp"
+                    alt="Alice Recoque - Experte en IA et conformité"
+                    fill
+                    className="object-cover object-center"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    priority
+                  />
+                  {/* Overlay avec informations en bas */}
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-12 pb-8 px-6">
+                    <div className="text-center text-white">
+                      <p className="text-lg font-medium mb-3">
+                        Alice Recoque
+                      </p>
+                      <a 
+                        href="https://fr.wikipedia.org/wiki/Alice_Recoque" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-white hover:text-blue-200 text-sm underline transition-colors duration-200 inline-block mb-2"
+                      >
+                        En savoir plus sur Wikipedia
+                      </a>
+                      <p className="text-xs text-gray-300 mt-2">
+                        Image générée par ChatGPT-4o
+                      </p>
                     </div>
                   </div>
-                  
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                    Demande envoyée avec succès !
-                  </h3>
-                  
-                  <p className="text-lg text-gray-700 mb-6 leading-relaxed">
-                    {submitMessage.text}
-                  </p>
-                  
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-green-800">
-                      <strong>Prochaines étapes :</strong><br />
-                      Notre équipe va examiner votre demande et vous recontactera dans les plus brefs délais 
-                      pour vous donner accès à la plateforme MaydAI.
-                    </p>
-                  </div>
-                  
                 </div>
-              ) : (
-                /* Formulaire normal avec image */
-                <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[700px]">
-                  {/* Colonne Image - Alice Recoque */}
-                  <div className="relative hidden lg:block">
-                    <Image
-                      src="/content/alice-recoque.webp"
-                      alt="Alice Recoque - Experte en IA et conformité"
-                      fill
-                      className="object-cover object-center"
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                      priority
-                    />
-                    {/* Overlay avec informations en bas */}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-12 pb-8 px-6">
-                      <div className="text-center text-white">
-                        <p className="text-lg font-medium mb-3">
-                          Alice Recoque
-                        </p>
-                        <a 
-                          href="https://fr.wikipedia.org/wiki/Alice_Recoque" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-white hover:text-blue-200 text-sm underline transition-colors duration-200 inline-block mb-2"
-                        >
-                          En savoir plus sur Wikipedia
-                        </a>
-                        <p className="text-xs text-gray-300 mt-2">
-                          Image générée par ChatGPT-4o
-                        </p>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Colonne Formulaire */}
-                  <div className="p-8 lg:p-10 flex flex-col justify-center">
-                    {/* Message d'erreur seulement */}
-                    {submitMessage?.type === 'error' && (
-                      <div className="mb-6 p-4 rounded-lg bg-red-50 text-red-800 border border-red-200">
-                        {submitMessage.text}
+                {/* Colonne Formulaire Hubspot */}
+                <div className="p-8 lg:p-10 flex flex-col justify-center">
+                  {/* Conteneur pour le formulaire Hubspot */}
+                  <div id="hubspot-form-container" className="w-full">
+                    {/* Message de chargement */}
+                    {!isHubspotLoaded && !hubspotError && (
+                      <div className="text-center py-8">
+                        <div className="w-12 h-12 border-4 border-[#0080a3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-gray-600">Chargement du formulaire...</p>
                       </div>
                     )}
-
-                    <form onSubmit={handleSubmit} className="space-y-6" ref={formRef}>
-                      {/* Champ Nom Prénom */}
-                      <div>
-                        <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                          Nom Prénom *
-                        </label>
-                        <input
-                          type="text"
-                          id="fullName"
-                          name="fullName"
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
-                          placeholder="Votre nom et prénom"
-                        />
+                    
+                    {/* Message d'erreur avec formulaire de fallback */}
+                    {hubspotError && (
+                      <div className="space-y-6">
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                          <p className="text-yellow-800 text-sm">
+                            <strong>Formulaire temporairement indisponible.</strong><br />
+                            Vous pouvez nous contacter directement par email ou téléphone (voir les coordonnées ci-dessous).
+                          </p>
+                        </div>
+                        
+                        {/* Formulaire de contact simple de fallback */}
+                        <form 
+                          action="mailto:contact@maydai.io" 
+                          method="get" 
+                          className="space-y-4"
+                        >
+                          <div>
+                            <label htmlFor="fallback-subject" className="block text-sm font-medium text-gray-700 mb-2">
+                              Objet
+                            </label>
+                            <input
+                              type="text"
+                              id="fallback-subject"
+                              name="subject"
+                              defaultValue="Demande de rejoindre la communauté bêta-testeurs MaydAI"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
+                              readOnly
+                            />
+                          </div>
+                          
+                          <div>
+                            <label htmlFor="fallback-body" className="block text-sm font-medium text-gray-700 mb-2">
+                              Message
+                            </label>
+                            <textarea
+                              id="fallback-body"
+                              name="body"
+                              rows={6}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200 resize-vertical"
+                              placeholder="Bonjour,&#10;&#10;Je souhaite rejoindre la communauté des bêta-testeurs MaydAI.&#10;&#10;Nom et Prénom : &#10;Téléphone : &#10;Motivations : &#10;&#10;Cordialement,"
+                            />
+                          </div>
+                          
+                          <button
+                            type="submit"
+                            className="w-full font-semibold py-4 px-6 rounded-lg shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#0080a3] focus:ring-offset-2 bg-[#0080a3] hover:bg-[#006b8a] text-white transform hover:scale-105"
+                          >
+                            Ouvrir votre client email
+                          </button>
+                        </form>
                       </div>
-
-                      {/* Champ Email */}
-                      <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                          Adresse email *
-                        </label>
-                        <input
-                          type="email"
-                          id="email"
-                          name="email"
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
-                          placeholder="votre.email@exemple.com"
-                        />
-                      </div>
-
-                      {/* Champ Téléphone */}
-                      <div>
-                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                          Téléphone
-                        </label>
-                        <input
-                          type="tel"
-                          id="phone"
-                          name="phone"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200"
-                          placeholder="06 12 34 56 78"
-                        />
-                      </div>
-
-                      {/* Champ Motivations */}
-                      <div>
-                        <label htmlFor="motivations" className="block text-sm font-medium text-gray-700 mb-2">
-                          Vos motivations pour nous rejoindre *
-                        </label>
-                        <textarea
-                          id="motivations"
-                          name="motivations"
-                          rows={5}
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-[#0080a3] focus:border-[#0080a3] transition-colors duration-200 resize-vertical"
-                          placeholder="Expliquez-nous pourquoi vous souhaitez rejoindre notre communauté de bêta-testeurs..."
-                        />
-                      </div>
-
-                      {/* Bouton d'envoi */}
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className={`w-full font-semibold py-4 px-6 rounded-lg shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#0080a3] focus:ring-offset-2 ${
-                          isSubmitting
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-[#0080a3] hover:bg-[#006b8a] text-white transform hover:scale-105'
-                        }`}
-                      >
-                        {isSubmitting ? 'Envoi en cours...' : 'Envoyer ma candidature'}
-                      </button>
-                    </form>
+                    )}
                   </div>
+
+                  {/* Styles pour personnaliser le formulaire Hubspot */}
+                  <style jsx>{`
+                    #hubspot-form-container .hs-form {
+                      font-family: inherit;
+                    }
+                    
+                    #hubspot-form-container .hs-form .hs-fieldtype-text input,
+                    #hubspot-form-container .hs-form .hs-fieldtype-email input,
+                    #hubspot-form-container .hs-form .hs-fieldtype-phone input,
+                    #hubspot-form-container .hs-form .hs-fieldtype-textarea textarea {
+                      width: 100% !important;
+                      padding: 12px 16px !important;
+                      border: 1px solid #d1d5db !important;
+                      border-radius: 8px !important;
+                      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+                      font-size: 16px !important;
+                      transition: all 0.2s !important;
+                    }
+                    
+                    #hubspot-form-container .hs-form .hs-fieldtype-text input:focus,
+                    #hubspot-form-container .hs-form .hs-fieldtype-email input:focus,
+                    #hubspot-form-container .hs-form .hs-fieldtype-phone input:focus,
+                    #hubspot-form-container .hs-form .hs-fieldtype-textarea textarea:focus {
+                      outline: none !important;
+                      ring: 2px !important;
+                      ring-color: #0080a3 !important;
+                      border-color: #0080a3 !important;
+                    }
+                    
+                    #hubspot-form-container .hs-form .hs-submit input {
+                      width: 100% !important;
+                      background-color: #0080a3 !important;
+                      color: white !important;
+                      font-weight: 600 !important;
+                      padding: 16px 24px !important;
+                      border-radius: 8px !important;
+                      border: none !important;
+                      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+                      transition: all 0.3s !important;
+                      cursor: pointer !important;
+                      font-size: 16px !important;
+                    }
+                    
+                    #hubspot-form-container .hs-form .hs-submit input:hover {
+                      background-color: #006b8a !important;
+                      transform: scale(1.02) !important;
+                    }
+                    
+                    #hubspot-form-container .hs-form label {
+                      font-weight: 500 !important;
+                      color: #374151 !important;
+                      margin-bottom: 8px !important;
+                      display: block !important;
+                      font-size: 14px !important;
+                    }
+                    
+                    #hubspot-form-container .hs-form .hs-form-field {
+                      margin-bottom: 24px !important;
+                    }
+                    
+                    #hubspot-form-container .hs-form .hs-error-msgs {
+                      color: #dc2626 !important;
+                      font-size: 14px !important;
+                      margin-top: 4px !important;
+                    }
+                  `}</style>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Section Nous Contacter Directement - Déplacée en bas */}
