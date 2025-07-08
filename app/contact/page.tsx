@@ -6,36 +6,86 @@ import Script from 'next/script';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useState, useEffect } from 'react';
-import { getNonce } from '@/lib/csp-nonce';
 
 export default function ContactPage() {
   const [isHubspotLoaded, setIsHubspotLoaded] = useState(false);
   const [hubspotError, setHubspotError] = useState(false);
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
-  // Fonction pour créer le formulaire Hubspot
+  // Debug helper function
+  const addDebugInfo = (info: string) => {
+    setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${info}`]);
+    console.log(`HubSpot Debug: ${info}`);
+  };
+
+  // Fonction pour créer le formulaire Hubspot avec retry logic
   const createHubspotForm = () => {
+    addDebugInfo('Tentative de création du formulaire HubSpot');
+    
     if (typeof window !== 'undefined' && (window as any).hbspt) {
       try {
+        addDebugInfo('Object hbspt trouvé, création du formulaire');
         (window as any).hbspt.forms.create({
           portalId: "146512527",
           formId: "a8ba2616-b912-4158-a0c5-cb84a56c954d",
           region: "eu1",
           target: '#hubspot-form-container',
+          onFormReady: function() {
+            addDebugInfo('Formulaire HubSpot prêt');
+            setIsHubspotLoaded(true);
+          },
           onFormSubmitted: function() {
-            // Rediriger vers une page de remerciement ou afficher un message
+            addDebugInfo('Formulaire HubSpot soumis avec succès');
             console.log('Formulaire Hubspot soumis avec succès');
           },
           onFormFailedValidation: function() {
+            addDebugInfo('Erreur de validation du formulaire HubSpot');
             console.log('Erreur de validation du formulaire Hubspot');
+          },
+          onFormSubmitError: function() {
+            addDebugInfo('Erreur de soumission du formulaire HubSpot');
+            console.error('Erreur de soumission du formulaire Hubspot');
           }
         });
         setIsHubspotLoaded(true);
       } catch (error) {
+        addDebugInfo(`Erreur lors de la création du formulaire: ${error}`);
         console.error('Erreur lors de la création du formulaire Hubspot:', error);
+        setHubspotError(true);
+      }
+    } else {
+      addDebugInfo('Object hbspt non trouvé');
+      if (isScriptLoaded) {
+        // Si le script est chargé mais hbspt n'est pas disponible, c'est une erreur
+        addDebugInfo('Script chargé mais hbspt non disponible - erreur');
         setHubspotError(true);
       }
     }
   };
+
+  // Effect pour retry la création du formulaire
+  useEffect(() => {
+    if (isScriptLoaded && !isHubspotLoaded && !hubspotError) {
+      // Retry avec un délai pour laisser le temps au script de s'initialiser
+      const retryTimer = setTimeout(() => {
+        createHubspotForm();
+      }, 500);
+
+      // Timeout final après 10 secondes
+      const timeoutTimer = setTimeout(() => {
+        if (!isHubspotLoaded) {
+          addDebugInfo('Timeout - formulaire non chargé après 10s');
+          setHubspotError(true);
+        }
+      }, 10000);
+
+      return () => {
+        clearTimeout(retryTimer);
+        clearTimeout(timeoutTimer);
+      };
+    }
+  }, [isScriptLoaded, isHubspotLoaded, hubspotError]);
 
   return (
     <>
@@ -43,14 +93,23 @@ export default function ContactPage() {
       
       {/* Scripts Hubspot avec nonce pour la sécurité */}
       <Script
-        src="//js-eu1.hsforms.net/forms/embed/v2.js"
+        src="https://js-eu1.hsforms.net/forms/embed/v2.js"
         strategy="afterInteractive"
         onLoad={() => {
-          createHubspotForm();
+          addDebugInfo('Script HubSpot chargé');
+          setIsScriptLoaded(true);
+          // Attendre un peu que le script s'initialise avant de créer le formulaire
+          setTimeout(() => {
+            createHubspotForm();
+          }, 100);
         }}
-        onError={() => {
-          console.error('Erreur de chargement du script Hubspot');
+        onError={(error) => {
+          addDebugInfo(`Erreur de chargement du script: ${error}`);
+          console.error('Erreur de chargement du script Hubspot:', error);
           setHubspotError(true);
+        }}
+        onReady={() => {
+          addDebugInfo('Script HubSpot prêt');
         }}
       />
 
@@ -124,6 +183,15 @@ export default function ContactPage() {
                       <div className="text-center py-8">
                         <div className="w-12 h-12 border-4 border-[#0080a3] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                         <p className="text-gray-600">Chargement du formulaire...</p>
+                        {/* Debug info en développement */}
+                        {process.env.NODE_ENV === 'development' && debugInfo.length > 0 && (
+                          <div className="mt-4 text-xs text-gray-400 text-left">
+                            <p className="font-semibold mb-2">Debug:</p>
+                            {debugInfo.map((info, index) => (
+                              <p key={index}>{info}</p>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                     
@@ -135,6 +203,15 @@ export default function ContactPage() {
                             <strong>Formulaire temporairement indisponible.</strong><br />
                             Vous pouvez nous contacter directement par email ou téléphone (voir les coordonnées ci-dessous).
                           </p>
+                          {/* Debug info en développement */}
+                          {process.env.NODE_ENV === 'development' && debugInfo.length > 0 && (
+                            <div className="mt-4 text-xs text-gray-600">
+                              <p className="font-semibold mb-2">Informations de debug:</p>
+                              {debugInfo.map((info, index) => (
+                                <p key={index}>{info}</p>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         
                         {/* Formulaire de contact simple de fallback */}
