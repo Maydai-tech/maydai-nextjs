@@ -120,9 +120,10 @@ export default function ContactPage() {
             
             {/* Titre principal */}
             <div className="text-center mb-12">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-                Rejoignez la Communauté des{' '}
-                <span className="text-[#0080a3]">Bêta-Testeurs MaydAI</span>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight text-center">
+                <span className="text-[#0080a3]">Rejoignez la Communauté des</span>
+                <br />
+                <span className="text-[#ffab5a]">Bêta-Testeurs MaydAI</span>
               </h1>
 
               {/* Paragraphe d'introduction */}
@@ -137,39 +138,41 @@ export default function ContactPage() {
 
             {/* Sous-titre */}
             <p className="text-xl font-semibold text-gray-900 mb-8 text-center">
-              Envoyez-nous ce formulaire, nous serons heureux de vous inviter et de vous compter parmi nous :
+              Envoyez-nous ce formulaire, nous serons ravis de vous inviter et de vous compter parmi nous :
             </p>
 
             {/* Formulaire de contact Hubspot */}
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 mb-12 overflow-hidden">
-              <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[700px]">
+              <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[600px]">
                 {/* Colonne Image - Alice Recoque */}
-                <div className="relative hidden lg:block">
-                  <Image
-                    src="/content/alice-recoque.webp"
-                    alt="Alice Recoque - Experte en IA et conformité"
-                    fill
-                    className="object-cover object-center"
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    priority
-                  />
-                  {/* Overlay avec informations en bas */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-12 pb-8 px-6">
-                    <div className="text-center text-white">
-                      <p className="text-lg font-medium mb-3">
-                        Alice Recoque
-                      </p>
-                      <a 
-                        href="https://fr.wikipedia.org/wiki/Alice_Recoque" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-white hover:text-blue-200 text-sm underline transition-colors duration-200 inline-block mb-2"
-                      >
-                        En savoir plus sur Wikipedia
-                      </a>
-                      <p className="text-xs text-gray-300 mt-2">
-                        Image générée par ChatGPT-4o
-                      </p>
+                <div className="relative hidden lg:block h-[600px] bg-gray-100 flex items-center justify-center p-4">
+                  <div className="relative w-full h-[500px]">
+                    <Image
+                      src="/content/alice-recoque-iwu.webp"
+                      alt="Alice Recoque - Experte en IA et conformité"
+                      fill
+                      className="object-contain"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      priority
+                    />
+                    {/* Overlay avec informations en bas */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-16 pb-6 px-6 z-10">
+                      <div className="text-center text-white">
+                        <p className="text-lg font-semibold mb-3">
+                          Alice Recoque
+                        </p>
+                        <a 
+                          href="https://fr.wikipedia.org/wiki/Alice_Recoque" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-white hover:text-blue-200 text-sm underline transition-colors duration-200 inline-block mb-2"
+                        >
+                          En savoir plus sur Wikipedia
+                        </a>
+                        <p className="text-xs text-gray-200 mt-2">
+                          Image générée par ChatGPT-4o
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
