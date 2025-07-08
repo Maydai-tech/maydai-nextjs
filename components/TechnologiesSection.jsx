@@ -78,8 +78,20 @@ export default function TechnologiesSection() {
       <div className="max-w-7xl mx-auto px-4">
         <h2 className="text-2xl md:text-3xl font-bold text-center mb-12" style={{ color: '#0080a3' }}>
           Façonner l'IA en Europe : <br />
-          Nos Engagements pour une Technologie à Visage Humain.
+          Nos Engagements pour une <span style={{ color: '#ffab5a' }}>Technologie à Visage Humain.</span>
         </h2>
+        
+        {/* Image ajoutée - Technologie à visage humain */}
+        <div className="flex justify-center mb-12">
+          <Image
+            src="/illustration/technologie-visage-humain.webp"
+            alt="Technologie à visage humain - Vision européenne de l'IA éthique"
+            width={600}
+            height={400}
+            className="rounded-lg shadow-lg object-cover max-w-full h-auto"
+            priority
+          />
+        </div>
         
         <div className="relative overflow-hidden">
           <div 
