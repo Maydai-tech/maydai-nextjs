@@ -31,11 +31,11 @@ export default function HeroSection() {
       <Image 
         src="/content/compliance-ai-eu.webp" 
         alt="Logo conformité IA" 
-        width={128}
-        height={128}
-        className="absolute right-8 bottom-0 w-20 md:w-32 opacity-30 pointer-events-none select-none"
+        width={256}
+        height={256}
+        className="absolute right-8 bottom-0 w-40 md:w-64 opacity-30 pointer-events-none select-none"
         priority
-        sizes="(max-width: 768px) 80px, 128px"
+        sizes="(max-width: 768px) 160px, 256px"
       />
     </section>
   );
