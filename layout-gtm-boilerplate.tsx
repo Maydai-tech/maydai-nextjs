@@ -1,34 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
-import { AuthProvider } from "@/lib/auth";
-import ConditionalLayout from "@/components/ConditionalLayout";
-import GlobalLoader from "@/components/GlobalLoader";
-import { getNonce } from "@/lib/csp-nonce";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { getNonce } from "@/lib/csp-nonce"; // Optionnel : pour CSP avec nonces
 
 export const metadata: Metadata = {
-  title: "Maydai - Audit AI Act",
-  description: "Audit AI Act avec Maydai",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://maydai.fr'),
-  icons: {
-    icon: [
-      { url: "/favicon.png", type: "image/png" },
-      { url: "/logos/logo-maydai/icon-maydai.png", type: "image/png" }
-    ],
-    shortcut: "/favicon.png",
-    apple: "/logos/logo-maydai/icon-maydai.png",
-  },
+  title: "Mon App - Titre",
+  description: "Description de mon application",
 };
 
 export default async function RootLayout({
@@ -36,13 +13,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const nonce = await getNonce()
+  // Récupération du nonce pour la sécurité CSP (optionnel)
+  const nonce = await getNonce?.() || undefined;
   
   return (
     <html lang="fr">
       <head>
-        {/* Meta pour exposer le nonce au client */}
+        {/* Meta pour exposer le nonce au client (si CSP utilisé) */}
         {nonce && <meta name="csp-nonce" content={nonce} />}
+        
         {/* Google Consent Mode Script - Doit être chargé AVANT GTM */}
         {process.env.NODE_ENV === 'production' && (
           <Script
@@ -82,23 +61,18 @@ export default async function RootLayout({
                 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
                 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                })(window,document,'script','dataLayer','GTM-KLSD6BXG');
+                })(window,document,'script','dataLayer','GTM-XXXXXXX');
               `,
             }}
           />
         )}
-
-
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning={true}
-      >
+      <body>
         {/* Google Tag Manager (noscript) - Seulement en production */}
         {process.env.NODE_ENV === 'production' && (
           <noscript>
             <iframe
-              src="https://www.googletagmanager.com/ns.html?id=GTM-KLSD6BXG"
+              src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX"
               height="0"
               width="0"
               style={{ display: 'none', visibility: 'hidden' }}
@@ -106,14 +80,8 @@ export default async function RootLayout({
           </noscript>
         )}
         
-        <AuthProvider>
-          <GlobalLoader>
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
-          </GlobalLoader>
-        </AuthProvider>
+        {children}
       </body>
     </html>
   );
-}
+} 

@@ -68,7 +68,7 @@ export default function TechnologiesSection() {
       height: 64
     },
     {
-      src: '/logos/logo-institut/Espérance et algorithme.jpg',
+      src: '/logos/logo-institut/esperance-et-algorithme.jpg',
       alt: 'Espérance et algorithme'
     }
   ];
