@@ -74,7 +74,7 @@ export default function Header() {
                   className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition"
                   onClick={() => setIsIaActMenuOpen(false)}
                 >
-                  <Image src="/icons/caution (1).png" alt="Attention" width={16} height={16} className="w-4 h-4" />
+                  <Image src="/icons/caution-1.png" alt="Attention" width={16} height={16} className="w-4 h-4" />
                   Pyramide risques IA
                 </Link>
               </div>
@@ -140,7 +140,7 @@ export default function Header() {
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition rounded-lg"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <Image src="/icons/caution (1).png" alt="Attention" width={16} height={16} className="w-4 h-4" />
+                <Image src="/icons/caution-1.png" alt="Attention" width={16} height={16} className="w-4 h-4" />
                 Pyramide risques IA
               </Link>
             </div>
