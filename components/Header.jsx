@@ -86,7 +86,7 @@ export default function Header() {
           <li><Link href="/contact" className="hover:text-primary transition">Contact</Link></li>
         </ul>
         <div className="hidden md:block">
-          <Link href="/contact" className="bg-primary text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-primary-dark transition">Commencer</Link>
+          <Link href="/contact" className="px-5 py-2 rounded-lg font-semibold shadow transition text-white" style={{ backgroundColor: '#ffab5a' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'} onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}>Commencer</Link>
         </div>
         
         {/* Mobile menu button */}
@@ -185,7 +185,10 @@ export default function Header() {
             <div className="pt-2">
               <Link 
                 href="/contact" 
-                className="block w-full bg-primary text-white px-5 py-3 rounded-lg font-semibold shadow hover:bg-primary-dark transition text-center"
+                className="block w-full px-5 py-3 rounded-lg font-semibold shadow transition text-center text-white"
+                style={{ backgroundColor: '#ffab5a' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Commencer
