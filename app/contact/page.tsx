@@ -13,6 +13,11 @@ export default function ContactPage() {
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
+  // Récupération du nonce CSP
+  const nonce = typeof window !== 'undefined' ? 
+    document.querySelector('meta[name="csp-nonce"]')?.getAttribute('content') || undefined : 
+    undefined;
+
   // Debug helper function
   const addDebugInfo = (info: string) => {
     setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${info}`]);
@@ -95,6 +100,7 @@ export default function ContactPage() {
       <Script
         src="https://js-eu1.hsforms.net/forms/embed/v2.js"
         strategy="afterInteractive"
+        nonce={nonce}
         onLoad={() => {
           addDebugInfo('Script HubSpot chargé');
           setIsScriptLoaded(true);
@@ -132,7 +138,7 @@ export default function ContactPage() {
                 (avocats, chercheurs, experts IA, Friends and Family..). Si vous souhaitez rejoindre 
                 cette communauté, nous serions ravis de vous y accueillir pour améliorer notre plateforme, 
                 les interactions proposées et les analyses poussées sur de multiples cas d'usages IA, 
-                y compris ceux liés aux nouvelles régulations comme l'IA Act.
+                y compris ceux liés aux nouvelles régulations comme l&apos;IA Act.
               </p>
             </div>
 
