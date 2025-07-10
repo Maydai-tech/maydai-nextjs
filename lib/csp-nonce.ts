@@ -71,7 +71,7 @@ export function createCSPHeader(nonce: string): string {
     "img-src 'self' data: https: https://www.google-analytics.com https://www.googletagmanager.com https://cdn-cookieyes.com https://track.hubspot.com https://track.hubspot.eu",
     "connect-src 'self' https://*.supabase.co https://region1.google-analytics.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://cookieyes.com https://cdn-cookieyes.com https://api.hsforms.com https://forms.hubspot.com https://forms-eu1.hsforms.com https://api.hubspot.com https://api.hubapi.com",
     "font-src 'self' data: https://fonts.gstatic.com https://cdn-cookieyes.com",
-    "frame-src 'self' https://www.googletagmanager.com https://cookieyes.com https://app.hubspot.com https://app-eu1.hubspot.com",
+    "frame-src 'self' https://www.googletagmanager.com https://cookieyes.com https://app.hubspot.com https://app-eu1.hubspot.com https://forms-eu1.hsforms.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self' https://forms.hubspot.com https://forms-eu1.hsforms.com https://app-eu1.hubspot.com",
