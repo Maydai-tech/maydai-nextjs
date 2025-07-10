@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Users, FileText, Settings, BarChart3, TrendingUp } from 'lucide-react'
+import { Users, FileText, Settings, BarChart3, TrendingUp, Activity } from 'lucide-react'
 
 interface AdminStats {
   sectionsCount: number
@@ -121,7 +121,7 @@ export default function AdminDashboard() {
           <h2 className="text-lg font-medium text-gray-900">Actions rapides</h2>
         </div>
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
             <a
               href="/admin/sections"
               className="block p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-colors"
@@ -152,6 +152,19 @@ export default function AdminDashboard() {
               <h3 className="font-medium text-gray-900">Voir les cas d'usage</h3>
               <p className="text-sm text-gray-500 mt-1">
                 Consulter les cas d'usage soumis
+              </p>
+            </a>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <a
+              href="/admin/usecase-scores"
+              className="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition-colors"
+            >
+              <Activity className="h-6 w-6 text-indigo-600 mb-2" />
+              <h3 className="font-medium text-gray-900">Scores des Usecases</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Vue d'ensemble des scores de conformité IA Act pour tous les cas d'usage
               </p>
             </a>
 

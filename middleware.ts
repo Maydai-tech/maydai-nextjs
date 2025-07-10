@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest) {
                       pathname.startsWith('/api/') ||
                       pathname.includes('.')
 
-  // Si c'est un fichier statique, laisser passer immédiatement
+  // Si c'est un fichier statique ou une API route, laisser passer immédiatement
   if (isStaticFile) {
     const response = NextResponse.next();
     response.headers.set('x-nonce', nonce);
