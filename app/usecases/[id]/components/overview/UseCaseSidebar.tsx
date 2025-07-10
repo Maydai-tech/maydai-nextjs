@@ -108,7 +108,7 @@ export function UseCaseSidebar({ useCase }: UseCaseSidebarProps) {
                           <div key={index} className="flex items-start justify-between text-sm p-2 bg-white rounded">
                             <div className="flex-1">
                               <div className="font-medium">{item.question_id}</div>
-                              <div className="text-gray-600 text-xs">{item.reason}</div>
+                              <div className="text-gray-600 text-xs">{item.reasoning}</div>
                             </div>
                             <div className={`font-bold ${item.score_impact >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {item.score_impact >= 0 ? '+' : ''}{item.score_impact}
