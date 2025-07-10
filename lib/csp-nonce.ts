@@ -6,7 +6,7 @@ import { headers } from 'next/headers'
 import { NextRequest } from 'next/server'
 
 /**
- * Génère un nonce alééatoire sécurisé pour le CSP
+ * Génère un nonce aléatoire sécurisé pour le CSP
  */
 export function generateNonce(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -63,16 +63,15 @@ export function createCSPHeader(nonce: string): string {
     ].join('; ')
   }
   
-  // En production, CSP avec nonces pour scripts uniquement
-  // Les styles utilisent unsafe-inline car trop de librairies (React, GTM, etc.) en ont besoin
+  // En production, CSP avec nonces pour scripts et domaines HubSpot complets
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://tagmanager.google.com https://cdn-cookieyes.com https://js-eu1.hsforms.net https://js.hsforms.net https://js-eu1.hs-scripts.com https://js.hs-scripts.com`,
+    `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://tagmanager.google.com https://cdn-cookieyes.com https://js-eu1.hsforms.net https://js.hsforms.net https://js-eu1.hs-scripts.com https://js.hs-scripts.com https://js-eu1.hs-analytics.net https://js.hs-analytics.net https://js-eu1.hs-banner.com https://js.hs-banner.com https://js.hs-banner.com`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn-cookieyes.com", // Pas de nonce pour les styles
     "img-src 'self' data: https: https://www.google-analytics.com https://www.googletagmanager.com https://cdn-cookieyes.com https://track.hubspot.com https://track.hubspot.eu",
     "connect-src 'self' https://*.supabase.co https://region1.google-analytics.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://cookieyes.com https://cdn-cookieyes.com https://api.hsforms.com https://forms.hubspot.com https://forms-eu1.hsforms.com https://api.hubspot.com https://api.hubapi.com",
     "font-src 'self' data: https://fonts.gstatic.com https://cdn-cookieyes.com",
-    "frame-src 'self' https://www.googletagmanager.com https://cookieyes.com",
+    "frame-src 'self' https://www.googletagmanager.com https://cookieyes.com https://app.hubspot.com https://app-eu1.hubspot.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self' https://forms.hubspot.com https://forms-eu1.hsforms.com https://app-eu1.hubspot.com",
