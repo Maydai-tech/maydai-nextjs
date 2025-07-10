@@ -15,16 +15,38 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
     setError(null)
     
     try {
-      const response = await fetch(`/api/usecases/${usecaseId}/score`, {
+      const url = `/api/usecases/${usecaseId}/score`
+      console.log('Fetching score from:', url)
+      console.log('With token:', session?.access_token ? 'Present' : 'Missing')
+      
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${session?.access_token}`,
           'Content-Type': 'application/json'
         }
       })
+      
+      console.log('Response status:', response.status)
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Erreur lors du calcul du score')
+        let errorMessage = 'Erreur lors du calcul du score'
+        
+        // Vérifier si la réponse est du JSON
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+          } catch (parseError) {
+            console.error('Error parsing error response:', parseError)
+          }
+        } else {
+          // Si ce n'est pas du JSON, c'est probablement une page HTML d'erreur
+          errorMessage = `Erreur ${response.status}: ${response.statusText}`
+        }
+        
+        throw new Error(errorMessage)
       }
 
       const scoreData = await response.json()
@@ -53,8 +75,23 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Erreur lors du recalcul du score')
+        let errorMessage = 'Erreur lors du recalcul du score'
+        
+        // Vérifier si la réponse est du JSON
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+          } catch (parseError) {
+            console.error('Error parsing error response:', parseError)
+          }
+        } else {
+          // Si ce n'est pas du JSON, c'est probablement une page HTML d'erreur
+          errorMessage = `Erreur ${response.status}: ${response.statusText}`
+        }
+        
+        throw new Error(errorMessage)
       }
 
       const scoreData = await response.json()
