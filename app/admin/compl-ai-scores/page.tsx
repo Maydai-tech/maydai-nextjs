@@ -62,30 +62,84 @@ export default function ComplAIScoresPage() {
     setSyncMessage('')
     
     try {
-      // Appeler l'edge function COMPL-AI sync
-      const { data, error } = await supabase.functions.invoke('compl-ai-sync', {
-        method: 'POST'
+      console.log('Démarrage de la synchronisation COMPL-AI...')
+      
+      // Obtenir le token de session
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Pas de session active. Veuillez vous reconnecter.')
+      }
+      
+      // Appeler notre API Route qui servira de proxy
+      const response = await fetch('/api/admin/compl-ai-sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({})
       })
 
-      if (error) {
-        throw error
+      const data = await response.json()
+      console.log('Réponse API:', data)
+
+      if (!response.ok) {
+        // Gérer les erreurs HTTP
+        if (response.status === 401) {
+          throw new Error('Non autorisé. Veuillez vous reconnecter.')
+        } else if (response.status === 403) {
+          throw new Error('Accès refusé. Droits administrateur requis.')
+        } else {
+          throw new Error(data.error || 'Erreur lors de la synchronisation')
+        }
       }
 
-      if (data?.success) {
-        setSyncMessage(`Synchronisation réussie ! ${data.models_synced} modèles, ${data.evaluations_created} évaluations créées.`)
-        
-        // Recharger les données après la synchronisation
-        setLoading(true)
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Attendre 1 seconde
-        
-        // Refetch data
-        await fetchScores()
+      // Traiter la réponse
+      if (data.success) {
+        if (data.warning) {
+          // Cas où l'Edge Function a eu une erreur de communication mais a peut-être fonctionné
+          setSyncMessage('⚠️ ' + data.message)
+          console.warn('Warning:', data.warning)
+        } else if (data.models_synced !== undefined || data.evaluations_created !== undefined) {
+          // Succès complet avec des données
+          setSyncMessage(`✅ Synchronisation réussie ! ${data.models_synced || 0} modèles, ${data.evaluations_created || 0} évaluations créées.`)
+        } else {
+          // Succès sans détails spécifiques
+          setSyncMessage('✅ Synchronisation terminée avec succès.')
+        }
       } else {
-        setSyncMessage('Synchronisation échouée : ' + (data?.error || 'Erreur inconnue'))
+        // Échec
+        setSyncMessage('❌ ' + (data.message || data.error || 'Échec de la synchronisation'))
       }
+      
+      // Toujours recharger les données après la synchronisation
+      console.log('Rechargement des données...')
+      await new Promise(resolve => setTimeout(resolve, 1500)) // Petit délai pour laisser la DB se mettre à jour
+      await fetchScores()
+      
+      // Ajouter une note si des données ont été mises à jour
+      if (data.warning) {
+        setSyncMessage(prev => prev + ' Les données ont été rechargées.')
+      }
+      
     } catch (error) {
-      console.error('Erreur lors de la synchronisation:', error)
-      setSyncMessage('Erreur lors de la synchronisation : ' + (error instanceof Error ? error.message : 'Erreur inconnue'))
+      console.error('Erreur synchronisation:', error)
+      
+      // Message d'erreur utilisateur
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
+      setSyncMessage('❌ ' + errorMessage)
+      
+      // Essayer quand même de recharger les données au cas où
+      if (!errorMessage.includes('autorisé') && !errorMessage.includes('reconnecter')) {
+        setTimeout(async () => {
+          try {
+            await fetchScores()
+            setSyncMessage(prev => prev + ' (Données rechargées pour vérification)')
+          } catch (e) {
+            console.error('Erreur lors du rechargement:', e)
+          }
+        }, 2000)
+      }
     } finally {
       setSyncing(false)
     }

@@ -181,9 +181,15 @@ export default function UseCaseScoresPage() {
     try {
       setLoadingScores(prev => new Set(prev).add(usecaseId))
       
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('No valid session found')
+      }
+      
       const response = await fetch(`/api/usecases/${usecaseId}/score`, {
         headers: {
-          'Authorization': `Bearer ${user?.id}`
+          'Authorization': `Bearer ${session.access_token}`
         }
       })
 

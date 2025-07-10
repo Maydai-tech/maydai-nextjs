@@ -52,23 +52,32 @@ export async function GET(
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('company_id')
+      .select('company_id, role')
       .eq('id', user.id)
       .single()
 
-    if (profileError || profile.company_id !== usecase.company_id) {
+    if (profileError) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    // Allow admin access or company access
+    if (profile.role !== 'admin' && profile.company_id !== usecase.company_id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
     // Récupérer les réponses
-    const { data: responses, error: responsesError } = await supabase
+    const { data: responseData, error: responsesError } = await supabase
       .from('usecase_responses')
-      .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
+      .select('responses')
       .eq('usecase_id', usecaseId)
+      .single()
 
     if (responsesError) {
       return NextResponse.json({ error: 'Error fetching responses' }, { status: 500 })
     }
+
+    // Extract responses array from the JSONB column
+    const responses = responseData?.responses || []
 
     // Calculer le score
     const scoreData = calculateScore(usecaseId, responses || [])
