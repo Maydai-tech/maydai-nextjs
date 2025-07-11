@@ -362,7 +362,8 @@ function NewUseCasePageContent() {
     setSubmitting(true)
     
     try {
-      const response = await api.post('/api/usecases', {
+      // Log des données à envoyer
+      const payload = {
         name: formData.name,
         deployment_date: formData.deployment_date,
         responsible_service: formData.responsible_service,
@@ -373,14 +374,35 @@ function NewUseCasePageContent() {
         description: formData.description,
         status: 'draft',
         company_id: companyId
-      })
+      }
+      
+      console.log('=== DEBUG: Soumission du use case ===')
+      console.log('Payload complet:', payload)
+      console.log('Company ID:', companyId)
+      console.log('FormData actuel:', formData)
+      
+      const response = await api.post('/api/usecases', payload)
+      
+      console.log('Réponse du serveur:', response)
+      console.log('Status:', response.status)
+      console.log('Data:', response.data)
 
       if (response.data) {
+        console.log('Redirection vers:', `/dashboard/${companyId}`)
         router.push(`/dashboard/${companyId}`)
       }
-    } catch (error) {
-      console.error('Error creating use case:', error)
-      setError('Erreur lors de la création du cas d\'usage')
+    } catch (error: any) {
+      console.error('=== ERREUR lors de la création du use case ===')
+      console.error('Type d\'erreur:', error?.name)
+      console.error('Message:', error?.message)
+      console.error('Response:', error?.response)
+      console.error('Response status:', error?.response?.status)
+      console.error('Response data:', error?.response?.data)
+      console.error('Stack trace:', error?.stack)
+      
+      // Message d'erreur plus détaillé
+      const errorMessage = error?.response?.data?.error || error?.message || 'Erreur lors de la création du cas d\'usage'
+      setError(errorMessage)
     } finally {
       setSubmitting(false)
     }
