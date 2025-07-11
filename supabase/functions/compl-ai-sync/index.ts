@@ -8,10 +8,10 @@ import { Client } from "https://esm.sh/@gradio/client@1";
 const CATEGORY_CONFIG = {
   "technical_robustness_safety": {
     endpoint: "/partial",
-    params: {
-      param_0: ["MMLU: Robustness", "BoolQ Contrast Set", "IMDB Contrast Set", "Monotonicity Checks", "Self-Check Consistency"],
-      param_1: ["Goal Hijacking and Prompt Leakage", "Rule Following"]
-    },
+    params: [
+      ["MMLU: Robustness", "BoolQ Contrast Set", "IMDB Contrast Set", "Monotonicity Checks", "Self-Check Consistency"],
+      ["Goal Hijacking and Prompt Leakage", "Rule Following"]
+    ],
     benchmarkMapping: [
       { name: "MMLU: Robustness", key: "mmlu_robustness_score", category: "robustness" },
       { name: "BoolQ Contrast Set", key: "boolq_contrast_score", category: "robustness" },
@@ -24,11 +24,11 @@ const CATEGORY_CONFIG = {
   },
   "privacy_data_governance": {
     endpoint: "/partial_2",
-    params: {
-      param_0: ["Toxicity of the Dataset", "Bias of the Dataset"],
-      param_1: ["Copyrighted Material Memorization"],
-      param_2: ["PII Extraction by Association"]
-    },
+    params: [
+      ["Toxicity of the Dataset", "Bias of the Dataset"],
+      ["Copyrighted Material Memorization"],
+      ["PII Extraction by Association"]
+    ],
     benchmarkMapping: [
       { name: "Toxicity of the Dataset", key: "toxicity_dataset_score", category: "data_quality" },
       { name: "Bias of the Dataset", key: "bias_dataset_score", category: "data_quality" },
@@ -38,12 +38,12 @@ const CATEGORY_CONFIG = {
   },
   "transparency": {
     endpoint: "/partial_5",
-    params: {
-      param_0: ["General Knowledge: MMLU", "Reasoning: AI2 Reasoning Challenge", "Common Sense Reasoning: HellaSwag", "Truthfulness: TruthfulQA MC2", "Coding: HumanEval"],
-      param_1: ["Logit Calibration: BIG-Bench", "Self-Assessment: TriviaQA"],
-      param_2: ["Denying Human Presence"],
-      param_3: ["Watermark Reliability & Robustness"]
-    },
+    params: [
+      ["General Knowledge: MMLU", "Reasoning: AI2 Reasoning Challenge", "Common Sense Reasoning: HellaSwag", "Truthfulness: TruthfulQA MC2", "Coding: HumanEval"],
+      ["Logit Calibration: BIG-Bench", "Self-Assessment: TriviaQA"],
+      ["Denying Human Presence"],
+      ["Watermark Reliability & Robustness"]
+    ],
     benchmarkMapping: [
       { name: "General Knowledge: MMLU", key: "mmlu_general_score", category: "capabilities" },
       { name: "Reasoning: AI2 Reasoning Challenge", key: "ai2_reasoning_score", category: "capabilities" },
@@ -58,10 +58,10 @@ const CATEGORY_CONFIG = {
   },
   "diversity_non_discrimination_fairness": {
     endpoint: "/partial_9",
-    params: {
-      param_0: ["Representation Bias: RedditBias", "Prejudiced Answers: BBQ", "Biased Completions: BOLD"],
-      param_1: ["Income Fairness: DecodingTrust", "Recommendation Consistency: FaiRLLM"]
-    },
+    params: [
+      ["Representation Bias: RedditBias", "Prejudiced Answers: BBQ", "Biased Completions: BOLD"],
+      ["Income Fairness: DecodingTrust", "Recommendation Consistency: FaiRLLM"]
+    ],
     benchmarkMapping: [
       { name: "Representation Bias: RedditBias", key: "reddit_bias_score", category: "bias" },
       { name: "Prejudiced Answers: BBQ", key: "bbq_prejudice_score", category: "bias" },
@@ -72,9 +72,9 @@ const CATEGORY_CONFIG = {
   },
   "social_environmental_wellbeing": {
     endpoint: "/partial_11",
-    params: {
-      param_0: ["Toxic Completions of Benign Text: RealToxicityPrompts", "Following Harmful Instructions: AdvBench"]
-    },
+    params: [
+      ["Toxic Completions of Benign Text: RealToxicityPrompts", "Following Harmful Instructions: AdvBench"]
+    ],
     benchmarkMapping: [
       { name: "Toxic Completions of Benign Text: RealToxicityPrompts", key: "real_toxicity_prompts_score", category: "toxicity" },
       { name: "Following Harmful Instructions: AdvBench", key: "adv_bench_score", category: "safety" }
@@ -99,20 +99,21 @@ interface ModelScore {
   detailedScores: BenchmarkDetail[];
 }
 
-async function callGradioAPI(endpoint: string, params: Record<string, any>): Promise<any> {
+async function callGradioAPI(endpoint: string, params: any[]): Promise<any> {
   console.log(`Calling Gradio API: ${endpoint} with params:`, params);
   
   try {
     // Connexion au client Gradio
     const client = await Client.connect("latticeflow/compl-ai-board");
     
-    // Appel à l'endpoint avec les paramètres
-    const result = await client.predict(endpoint, params);
+    // Appel à l'endpoint avec les paramètres et api_name
+    const apiName = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const result = await (client as any).predict(...params, { api_name: apiName });
     
     console.log(`API response for ${endpoint}:`, result);
     
-    // La réponse devrait contenir les données dans result.data
-    return result.data;
+    // La réponse est directement l'objet avec headers et data
+    return result;
     
   } catch (error) {
     console.error(`Failed to call Gradio API ${endpoint}:`, error);
@@ -170,34 +171,9 @@ function detectProvider(modelName: string): string {
   return 'Unknown';
 }
 
-function mapScoresToBenchmarkDetails(scores: number[], categoryCode: string): BenchmarkDetail[] {
-  const config = (CATEGORY_CONFIG as any)[categoryCode];
-  if (!config || !config.benchmarkMapping) {
-    console.warn(`No benchmark mapping found for category: ${categoryCode}`);
-    return [];
-  }
-
-  const benchmarkMapping = config.benchmarkMapping;
-  const detailedScores: BenchmarkDetail[] = [];
-
-  scores.forEach((score, index) => {
-    if (index < benchmarkMapping.length) {
-      const benchmark = benchmarkMapping[index];
-      detailedScores.push({
-        name: benchmark.name,
-        key: benchmark.key,
-        category: benchmark.category,
-        score: score,
-        position: index
-      });
-    }
-  });
-
-  return detailedScores;
-}
 
 function parseModelScores(data: any, categoryCode: string): ModelScore[] {
-  // La réponse Gradio devrait être un array où le premier élément contient les données
+  // La réponse Gradio peut être un objet direct ou un array
   let tableData = data;
   
   // Si c'est un array, prendre le premier élément
@@ -205,7 +181,8 @@ function parseModelScores(data: any, categoryCode: string): ModelScore[] {
     tableData = data[0];
   }
   
-  if (!tableData || !tableData.headers || !tableData.data) {
+  // Nouvelle structure : vérifier si c'est directement un objet avec headers et data
+  if (!tableData || (!tableData.headers && !tableData.data)) {
     console.error('Invalid data structure from API:', data);
     throw new Error('Invalid data structure from API');
   }
@@ -213,10 +190,65 @@ function parseModelScores(data: any, categoryCode: string): ModelScore[] {
   const headers = tableData.headers;
   const rows = tableData.data;
   
+  console.log(`Headers for ${categoryCode}:`, headers);
+  console.log(`Sample row for ${categoryCode}:`, rows[0]);
+  
   // Trouver l'index de la colonne "Model"
   const modelIndex = headers.findIndex((h: string) => h.toLowerCase().includes('model'));
   if (modelIndex === -1) {
     throw new Error('Model column not found in headers');
+  }
+
+  // Obtenir la configuration des benchmarks pour cette catégorie
+  const config = (CATEGORY_CONFIG as any)[categoryCode];
+  if (!config || !config.benchmarkMapping) {
+    throw new Error(`No benchmark mapping found for category: ${categoryCode}`);
+  }
+
+  // Créer un mapping exact entre les noms de benchmarks et leurs indices dans les headers
+  const benchmarkIndices: Map<string, number> = new Map();
+  
+  for (const benchmark of config.benchmarkMapping) {
+    // Chercher le header qui correspond EXACTEMENT au nom du benchmark
+    const benchmarkName = benchmark.name;
+    
+    // Chercher d'abord une correspondance exacte
+    let headerIndex = headers.findIndex((header: string) => header === benchmarkName);
+    
+    // Si pas de correspondance exacte, essayer avec normalisation
+    if (headerIndex === -1) {
+      headerIndex = headers.findIndex((header: string, idx: number) => {
+        // Skip les premières colonnes non-numériques et les colonnes de fin
+        if (idx <= modelIndex || header.toLowerCase().includes('query') || header.toLowerCase().includes('report')) {
+          return false;
+        }
+        
+        // Nettoyer les headers pour la comparaison
+        const cleanHeader = header.toLowerCase().trim();
+        const cleanBenchmarkName = benchmarkName.toLowerCase().trim();
+        
+        // Correspondance exacte après nettoyage
+        if (cleanHeader === cleanBenchmarkName) {
+          return true;
+        }
+        
+        // Vérifier si le header contient tous les mots clés principaux du benchmark
+        const benchmarkKeywords = cleanBenchmarkName.split(/[:\s]+/).filter(word => word.length > 2);
+        const matchesAllKeywords = benchmarkKeywords.every(keyword => 
+          cleanHeader.includes(keyword)
+        );
+        
+        return matchesAllKeywords;
+      });
+    }
+    
+    if (headerIndex !== -1) {
+      benchmarkIndices.set(benchmarkName, headerIndex);
+      console.log(`✅ Mapped benchmark "${benchmarkName}" to column ${headerIndex} (${headers[headerIndex]})`);
+    } else {
+      console.warn(`⚠️  Could not find header for benchmark: ${benchmarkName}`);
+      console.log(`   Available headers: ${headers.slice(modelIndex + 1).join(', ')}`);
+    }
   }
 
   const results: ModelScore[] = [];
@@ -229,26 +261,66 @@ function parseModelScores(data: any, categoryCode: string): ModelScore[] {
     const parsedModel = parseModelName(rawModelName);
     if (!parsedModel.name) continue;
     
-    // Extraire les scores numériques (ignorer les colonnes non-numériques)
+    // Extraire les scores en utilisant le mapping des benchmarks
+    const detailedScores: BenchmarkDetail[] = [];
     const scores: number[] = [];
-    for (let i = 0; i < row.length; i++) {
-      if (i === modelIndex) continue; // Skip model name column
-      if (i < 3) continue; // Skip first few columns (usually status, model, report)
+    
+    console.log(`Processing model: ${parsedModel.name}`);
+    
+    for (const benchmark of config.benchmarkMapping) {
+      const columnIndex = benchmarkIndices.get(benchmark.name);
       
-      const value = row[i];
-      if (typeof value === 'number' && !isNaN(value) && value >= 0 && value <= 1) {
-        scores.push(value);
-      } else if (typeof value === 'string' && value !== 'N/A' && value !== '') {
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue) && numValue >= 0 && numValue <= 1) {
-          scores.push(numValue);
+      if (columnIndex !== undefined) {
+        const value = row[columnIndex];
+        let score: number | null = null;
+        
+        console.log(`  ${benchmark.name}: value=${value} (type: ${typeof value}, column: ${columnIndex})`);
+        
+        // Gérer les différents types de valeurs
+        if (typeof value === 'number' && !isNaN(value) && value >= 0 && value <= 1) {
+          score = value;
+        } else if (typeof value === 'string') {
+          if (value === 'N/A' || value === '' || value.toLowerCase() === 'n/a') {
+            console.log(`    -> N/A value, skipping`);
+            // Ne pas ajouter ce score, mais enregistrer la tentative
+            detailedScores.push({
+              name: benchmark.name,
+              key: benchmark.key,
+              category: benchmark.category,
+              score: -1, // Indicateur de N/A
+              position: detailedScores.length
+            });
+            continue;
+          } else {
+            const numValue = parseFloat(value);
+            if (!isNaN(numValue) && numValue >= 0 && numValue <= 1) {
+              score = numValue;
+            } else {
+              console.log(`    -> Invalid numeric value: ${value}`);
+            }
+          }
+        } else {
+          console.log(`    -> Unexpected value type: ${typeof value}`);
         }
+        
+        if (score !== null) {
+          scores.push(score);
+          detailedScores.push({
+            name: benchmark.name,
+            key: benchmark.key,
+            category: benchmark.category,
+            score: score,
+            position: detailedScores.length
+          });
+          console.log(`    -> Added score: ${score}`);
+        }
+      } else {
+        console.log(`  ${benchmark.name}: column not found in mapping`);
       }
     }
     
     if (scores.length > 0) {
       const averageScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-      const detailedScores = mapScoresToBenchmarkDetails(scores, categoryCode);
       
       results.push({
         modelName: parsedModel.name,
@@ -331,7 +403,14 @@ async function upsertModelScores(supabase: any, categoryCode: string, modelScore
             category: ds.category,
             score: ds.score,
             position: ds.position
-          }))
+          })),
+          sync_metadata: {
+            sync_date: evaluationDate,
+            mapping_method: 'header_based',
+            total_benchmarks_mapped: modelScore.detailedScores.length,
+            model_parsed_name: modelScore.modelName,
+            model_parsed_provider: modelScore.modelProvider
+          }
         }
       }]);
 

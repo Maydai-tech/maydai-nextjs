@@ -22,8 +22,9 @@
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "^2.49.9",
+    "@supabase/supabase-js": "^2.50.4",
     "airtable": "^0.12.2",
+    "dotenv": "^17.2.0",
     "lucide-react": "^0.511.0",
     "next": "15.3.3",
     "react": "^19.0.0",

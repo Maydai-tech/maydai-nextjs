@@ -278,7 +278,7 @@ export default function ComplAIScoresPage() {
   }
 
   const getScoreColor = (score?: number) => {
-    if (!score) return 'bg-gray-100 text-gray-500'
+    if (!score || score === -1) return 'bg-gray-100 text-gray-500'
     if (score >= 0.8) return 'bg-green-100 text-green-800'
     if (score >= 0.6) return 'bg-yellow-100 text-yellow-800'
     return 'bg-red-100 text-red-800'
@@ -302,7 +302,7 @@ export default function ComplAIScoresPage() {
               {benchmark.name.split(':')[0]}
             </span>
             <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getScoreColor(benchmark.score)}`}>
-              {benchmark.score.toFixed(2)}
+              {benchmark.score === -1 ? 'N/A' : benchmark.score.toFixed(2)}
             </span>
           </div>
         ))}
