@@ -30,12 +30,7 @@ export async function middleware(request: NextRequest) {
   
   // Pages à bloquer spécifiquement en production
   const blockedPaths = [
-    '/login',
     '/signup',
-    '/dashboard',
-    '/companies',
-    '/usecases',
-    '/profil'
   ];
 
   // Test spécifique pour les pages bloquées - toujours bloquer en production
@@ -61,6 +56,11 @@ export async function middleware(request: NextRequest) {
       '/politique-confidentialite',
       '/tarifs',
       '/admin',
+      '/login',
+      '/dashboard',
+      '/companies',
+      '/usecases',
+      '/profil'
     ];
 
     // Si la page n'est pas dans la liste des pages autorisées, rediriger vers 404
