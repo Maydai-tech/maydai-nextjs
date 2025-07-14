@@ -70,31 +70,30 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
         const answerCodes = response.multiple_codes || []
         
         const impacts: string[] = []
+        let maxImpact = 0
         
+        // Pour les questions multiples, prendre le pire impact (le plus négatif)
         for (const code of answerCodes) {
           const impact = getAnswerImpactFromJSON(response.question_code, code)
-          questionImpact += impact
           if (impact !== 0) {
             impacts.push(`${code}: ${impact}`)
+            // Garder le pire impact (le plus négatif)
+            if (impact < maxImpact) {
+              maxImpact = impact
+            }
           }
         }
-        reasoning = impacts.length > 0 ? impacts.join(', ') : 'Aucun impact'
+        
+        questionImpact = maxImpact
+        reasoning = impacts.length > 0 ? 
+          `${impacts.join(', ')} → Impact retenu: ${maxImpact} points (pire cas)` : 
+          'Aucun impact'
       }
       else if (question.type === 'conditional' && response.conditional_main) {
         // Réponse conditionnelle stockée dans conditional_main, conditional_keys, conditional_values
         const selectedCode = response.conditional_main
         questionImpact = getAnswerImpactFromJSON(response.question_code, selectedCode)
         reasoning = `${selectedCode}: ${questionImpact} points`
-        
-        // Bonus si des détails sont fournis pour les réponses positives
-        if (selectedCode.includes('.B') && questionImpact >= 0 && response.conditional_keys && response.conditional_values) {
-          const hasDetails = response.conditional_values.some((v: string) => v && v.trim().length > 0)
-          if (hasDetails) {
-            const bonus = 2
-            questionImpact += bonus
-            reasoning += ` (+${bonus} détails fournis)`
-          }
-        }
       }
 
       // Ajouter l'impact au score total
