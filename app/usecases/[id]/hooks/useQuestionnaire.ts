@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { QuestionnaireData } from '../types/usecase'
-import { QUESTIONS } from '../data/questions'
+import { loadQuestions } from '../utils/questions-loader'
 import { getNextQuestion, getQuestionProgress, getAbsoluteQuestionProgress, checkCanProceed, getPreviousQuestion, buildQuestionPath } from '../utils/questionnaire'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 import { supabase } from '@/lib/supabase'
@@ -82,7 +82,8 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
   }, [questionnaireData.currentQuestionId, savedAnswers])
 
   // Calculer les valeurs dérivées
-  const currentQuestion = QUESTIONS[questionnaireData.currentQuestionId]
+  const questions = loadQuestions()
+  const currentQuestion = questions[questionnaireData.currentQuestionId]
   const progress = getAbsoluteQuestionProgress(questionnaireData.currentQuestionId)
   const nextQuestionId = getNextQuestion(questionnaireData.currentQuestionId, questionnaireData.answers)
   const isLastQuestion = nextQuestionId === null
@@ -100,7 +101,8 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
 
   // Fonction pour sauvegarder une réponse individuelle
   const saveIndividualResponse = useCallback(async (questionId: string, answer: any) => {
-    const question = QUESTIONS[questionId]
+    const questions = loadQuestions()
+    const question = questions[questionId]
     if (!question || answer === undefined || answer === null) return
 
     console.log('Saving response for question:', questionId, 'answer:', answer)

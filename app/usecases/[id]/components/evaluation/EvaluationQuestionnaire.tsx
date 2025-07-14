@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { UseCase } from '../../types/usecase'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
-import { QUESTIONS } from '../../data/questions'
+import { loadQuestions, getAllQuestions } from '../../utils/questions-loader'
 import { QuestionRenderer } from './QuestionRenderer'
 import { CheckCircle, ChevronLeft, ChevronRight, AlertCircle, Edit3, Eye, X } from 'lucide-react'
 
@@ -129,27 +129,8 @@ export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnai
   const isDraftStatus = useCase.status?.toLowerCase() === 'draft'
 
   // Obtenir toutes les questions dans l'ordre logique
-  const getAllQuestions = () => {
-    const allQuestions = Object.values(QUESTIONS)
-    return allQuestions.sort((a, b) => {
-      // Tri par section puis par numéro de question
-      const aSectionMatch = a.id.match(/E4\.N(\d+)\.Q(\d+)/)
-      const bSectionMatch = b.id.match(/E4\.N(\d+)\.Q(\d+)/)
-      
-      if (aSectionMatch && bSectionMatch) {
-        const aSection = parseInt(aSectionMatch[1])
-        const bSection = parseInt(bSectionMatch[1])
-        const aQuestion = parseInt(aSectionMatch[2])
-        const bQuestion = parseInt(bSectionMatch[2])
-        
-        if (aSection !== bSection) {
-          return aSection - bSection
-        }
-        return aQuestion - bQuestion
-      }
-      
-      return a.id.localeCompare(b.id)
-    })
+  const getOrderedQuestions = () => {
+    return getAllQuestions() // Utilise la fonction du questions-loader qui trie déjà par ID
   }
 
   const formatAnswerDisplay = (question: any, answer: any) => {
@@ -195,7 +176,8 @@ export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnai
 
   const handleSaveAnswer = async (questionId: string, answer: any) => {
     try {
-      const question = QUESTIONS[questionId]
+      const questions = loadQuestions()
+      const question = questions[questionId]
       if (question.type === 'radio') {
         await saveResponse(questionId, answer)
       } else if (question.type === 'checkbox' || question.type === 'tags') {
@@ -214,8 +196,9 @@ export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnai
     }
   }
 
-  const questions = getAllQuestions()
-  const currentQuestion = editingQuestion ? QUESTIONS[editingQuestion] : null
+  const questions = getOrderedQuestions()
+  const loadedQuestions = loadQuestions()
+  const currentQuestion = editingQuestion ? loadedQuestions[editingQuestion] : null
 
   if (loadingResponses) {
     return (
