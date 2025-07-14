@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { QuestionnaireData } from '../types/usecase'
-import { QUESTIONS } from '../data/questions'
+import { loadQuestions } from '../utils/questions-loader'
 import { getNextQuestion, getQuestionProgress, getAbsoluteQuestionProgress, checkCanProceed, getPreviousQuestion, buildQuestionPath } from '../utils/questionnaire'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 import { supabase } from '@/lib/supabase'
@@ -97,7 +97,8 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
     }
   }, [savedAnswers, loadingResponses, initialDataLoaded])
 
-  const currentQuestion = QUESTIONS[questionnaireData.currentQuestionId]
+  const questions = loadQuestions()
+  const currentQuestion = questions[questionnaireData.currentQuestionId]
   const nextQuestionId = getNextQuestion(questionnaireData.currentQuestionId, questionnaireData.answers)
   const isLastQuestion = nextQuestionId === null
   const canProceed = checkCanProceed(currentQuestion, questionnaireData.answers[questionnaireData.currentQuestionId])
@@ -125,7 +126,8 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
       console.log(`💾 Saving response for ${questionId}:`, answer)
       
       // Use the proper saveResponse method from useQuestionnaireResponses
-      const question = QUESTIONS[questionId]
+      const questions = loadQuestions()
+      const question = questions[questionId]
       if (!question) {
         throw new Error(`Question not found: ${questionId}`)
       }
