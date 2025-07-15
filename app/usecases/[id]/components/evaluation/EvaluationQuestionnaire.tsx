@@ -3,6 +3,7 @@ import { UseCase } from '../../types/usecase'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 import { loadQuestions, getAllQuestions } from '../../utils/questions-loader'
 import { QuestionRenderer } from './QuestionRenderer'
+import { UseCaseScore } from '../UseCaseScore'
 import { CheckCircle, ChevronLeft, ChevronRight, AlertCircle, Edit3, Eye, X } from 'lucide-react'
 
 interface EvaluationQuestionnaireProps {
@@ -220,58 +221,64 @@ export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnai
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Évaluation du cas d'usage
-            </h2>
-          </div>
-          
-          {isCompletedStatus && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center">
-                <Eye className="h-5 w-5 text-blue-600 mr-2" />
-                <div>
-                  <p className="text-blue-800 text-sm font-medium">Questionnaire complété</p>
-                  <p className="text-blue-600 text-sm">Cliquez sur "Modifier" pour changer une réponse.</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+      <div className="space-y-6">
+        {/* Score de conformité */}
+        <UseCaseScore usecaseId={useCase.id} />
 
-        <div className="space-y-4">
-          {questions.map((question, index) => {
-            const answer = formattedAnswers[question.id]
-            const displayAnswer = formatAnswerDisplay(question, answer)
+        {/* Évaluation du questionnaire */}
+        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Évaluation du cas d'usage
+              </h2>
+            </div>
             
-            return (
-              <div key={question.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 mr-4">
-                    <div className="flex items-center mb-2">
-                      <h3 className="text-sm font-medium text-gray-900">
-                        {question.question}
-                      </h3>
-                    </div>
-                    <div className="ml-12">
-                      <p className={`text-sm ${displayAnswer.className}`}>
-                        {displayAnswer.text}
-                      </p>
-                    </div>
+            {isCompletedStatus && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center">
+                  <Eye className="h-5 w-5 text-blue-600 mr-2" />
+                  <div>
+                    <p className="text-blue-800 text-sm font-medium">Questionnaire complété</p>
+                    <p className="text-blue-600 text-sm">Cliquez sur "Modifier" pour changer une réponse.</p>
                   </div>
-                  <button
-                    onClick={() => setEditingQuestion(question.id)}
-                    className="flex items-center px-3 py-1.5 text-xs font-medium text-[#0080A3] bg-[#0080A3]/10 rounded-lg hover:bg-[#0080A3]/20 transition-colors cursor-pointer"
-                  >
-                    <Edit3 className="h-3 w-3 mr-1" />
-                    Modifier
-                  </button>
                 </div>
               </div>
-            )
-          })}
+            )}
+          </div>
+
+          <div className="space-y-4">
+            {questions.map((question) => {
+              const answer = formattedAnswers[question.id]
+              const displayAnswer = formatAnswerDisplay(question, answer)
+              
+              return (
+                <div key={question.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 mr-4">
+                      <div className="flex items-center mb-2">
+                        <h3 className="text-sm font-medium text-gray-900">
+                          {question.question}
+                        </h3>
+                      </div>
+                      <div className="ml-12">
+                        <p className={`text-sm ${displayAnswer.className}`}>
+                          {displayAnswer.text}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setEditingQuestion(question.id)}
+                      className="flex items-center px-3 py-1.5 text-xs font-medium text-[#0080A3] bg-[#0080A3]/10 rounded-lg hover:bg-[#0080A3]/20 transition-colors cursor-pointer"
+                    >
+                      <Edit3 className="h-3 w-3 mr-1" />
+                      Modifier
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
 

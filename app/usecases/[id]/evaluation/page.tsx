@@ -9,6 +9,7 @@ import { UseCaseLayout } from '../components/shared/UseCaseLayout'
 import { UseCaseLoader } from '../components/shared/UseCaseLoader'
 import { StepByStepQuestionnaire } from '../components/evaluation/StepByStepQuestionnaire'
 import { EvaluationQuestionnaire } from '../components/evaluation/EvaluationQuestionnaire'
+import { EvaluationDebugger } from '../components/debug/EvaluationDebugger'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 
 export default function UseCaseEvaluationPage() {
@@ -96,6 +97,7 @@ export default function UseCaseEvaluationPage() {
         onComplete={handleQuestionnaireComplete}
         isReadOnly={false}
       />
+      <EvaluationDebugger useCase={useCase} />
     </UseCaseLayout>
   )
 } 

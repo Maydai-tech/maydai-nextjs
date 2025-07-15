@@ -78,14 +78,8 @@ export const getNextQuestion = (currentQuestionId: string, answers: Record<strin
       return 'E4.N8.Q9'
     
     case 'E4.N8.Q9':
-      const q9Answer = answers['E4.N8.Q9']
-      if (q9Answer === 'E4.N8.Q9.A') {
-        return 'E4.N8.Q10'
-      } else if (q9Answer === 'E4.N8.Q9.B') {
-        return 'E4.N8.Q11'
-      }
-      return null
-    
+      return 'E4.N8.Q10'
+
     case 'E4.N8.Q10':
       return 'E4.N8.Q11'
     
