@@ -1,0 +1,869 @@
+{
+  "E4.N7.Q1": {
+    "id": "E4.N7.Q1",
+    "question": "Dans cette situation, votre cas d'usage concerne :",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N7.Q1.A",
+        "label": "Mon entreprise travaille dans le domaine de l'informatique et de l'IA",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N7.Q1.B",
+        "label": "Mon entreprise utilise des systèmes d'IA tiers",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N7.Q1.1": {
+    "id": "E4.N7.Q1.1",
+    "question": "Quelle phrase décrit le mieux votre situation ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N7.Q1.1.A",
+        "label": "Je suis fabricant d'un produit intégrant un système d'IA",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N7.Q1.1.B",
+        "label": "Je distribue et/ou déploie un système d'IA pour d'autres entreprises",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N7.Q1.1.C",
+        "label": "Je suis éditeur d'un logiciel intégrant un système d'IA",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N7.Q1.1.D",
+        "label": "Je suis importateur d'un système d'IA",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N7.Q1.1.E",
+        "label": "Je suis un fournisseur d'un système d'IA",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N7.Q1.1.F",
+        "label": "Je suis représentant autorisé d'un fournisseur de système d'IA",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N7.Q1.2": {
+    "id": "E4.N7.Q1.2",
+    "question": "Quelle phrase décrit le mieux votre situation ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N7.Q1.2.A",
+        "label": "Je suis un utilisateur d'un système d'IA pour mon entreprise",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N7.Q1.2.B",
+        "label": "J'ai une idée de cas d'usage IA et souhaite tester sa conformité",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N7.Q1.2.C",
+        "label": "Je suis le Data Protection Officer (DPO) de mon entreprise",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N7.Q1.2.D",
+        "label": "Je suis avocat et souhaite apporter des réponses techniques à mes clients",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N7.Q1.2.E",
+        "label": "Je suis dirigeant et souhaite recenser tous les cas d'usage IA de mon entreprise",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N7.Q1.2.F",
+        "label": "Je suis étudiant ou chercheur souhaitant approfondir le sujet IA Act",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N7.Q2": {
+    "id": "E4.N7.Q2",
+    "question": "Votre système d'IA est utilisé dans un ou des domaines suivants ?",
+    "type": "checkbox",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N7.Q2.A",
+        "label": "Emploi, gestion des travailleurs et accès à l'emploi indépendant",
+        "score_impact": -30,
+        "category_impacts": {
+          "diversity_fairness": -5
+        }
+      },
+      {
+        "code": "E4.N7.Q2.B",
+        "label": "Administration de la justice et processus démocratiques",
+        "score_impact": -30,
+        "category_impacts": {
+          "diversity_fairness": -5
+        }
+      },
+      {
+        "code": "E4.N7.Q2.C",
+        "label": "Migration, asile et gestion des contrôles aux frontières",
+        "score_impact": -30,
+        "category_impacts": {
+          "diversity_fairness": -5
+        }
+      },
+      {
+        "code": "E4.N7.Q2.D",
+        "label": "Gestion et exploitation des infrastructures critiques",
+        "score_impact": -30,
+        "category_impacts": {
+          "technical_robustness": -5
+        }
+      },
+      {
+        "code": "E4.N7.Q2.E",
+        "label": "Éducation et formation professionnelle",
+        "score_impact": -30,
+        "category_impacts": {
+          "diversity_fairness": -5
+        }
+      },
+      {
+        "code": "E4.N7.Q2.F",
+        "label": "Activités répressives (risque récidive, fiabilité preuves...)",
+        "score_impact": -30,
+        "category_impacts": {
+          "diversity_fairness": -5
+        }
+      },
+      {
+        "code": "E4.N7.Q2.G",
+        "label": "Aucun de ces domaines",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N7.Q2.1": {
+    "id": "E4.N7.Q2.1",
+    "question": "Votre système d'IA est utilisé dans un ou plusieurs des cas suivants ?",
+    "type": "checkbox",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N7.Q2.1.A",
+        "label": "Identification Biométrique à Distance en Temps Réel dans les Espaces Publics",
+        "score_impact": -40,
+        "category_impacts": {
+          "social_environmental": -10
+        }
+      },
+      {
+        "code": "E4.N7.Q2.1.B",
+        "label": "Composant de sécurité dans des secteurs critiques (santé, transports, énergies, etc.)",
+        "score_impact": -40,
+        "category_impacts": {
+          "technical_robustness": -10
+        }
+      },
+      {
+        "code": "E4.N7.Q2.1.C",
+        "label": "Évaluations dans un système d'éducation ou en entreprise",
+        "score_impact": -40,
+        "category_impacts": {
+          "diversity_fairness": -10
+        }
+      },
+      {
+        "code": "E4.N7.Q2.1.D",
+        "label": "Accès et jouissance de services essentiels privés et publics",
+        "score_impact": -40,
+        "category_impacts": {
+          "diversity_fairness": -10
+        }
+      },
+      {
+        "code": "E4.N7.Q2.1.E",
+        "label": "Aucun de ces cas",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N7.Q3": {
+    "id": "E4.N7.Q3",
+    "question": "Votre système d'IA a pour finalité une ou des activités suivantes ?",
+    "type": "checkbox",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N7.Q3.A",
+        "label": "Identification biométrique et catégorisation des personnes physiques",
+        "score_impact": -40,
+        "category_impacts": {
+          "privacy_data": -10
+        }
+      },
+      {
+        "code": "E4.N7.Q3.B",
+        "label": "Catégorisation biométrique basée sur des caractéristiques sensibles",
+        "score_impact": -40,
+        "category_impacts": {
+          "diversity_fairness": -10
+        }
+      },
+      {
+        "code": "E4.N7.Q3.C",
+        "label": "Création de bases de données de reconnaissance faciale par moissonnage non ciblé",
+        "score_impact": -40,
+        "category_impacts": {
+          "privacy_data": -10
+        }
+      },
+      {
+        "code": "E4.N7.Q3.D",
+        "label": "Déduction des émotions sur le lieu de travail et d'enseignement",
+        "score_impact": -40,
+        "category_impacts": {
+          "social_environmental": -10
+        }
+      },
+      {
+        "code": "E4.N7.Q3.E",
+        "label": "Aucune de ces activités",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N7.Q3.1": {
+    "id": "E4.N7.Q3.1",
+    "question": "Possible intervention dans l'une de ces situations ?",
+    "type": "checkbox",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N7.Q3.1.A",
+        "label": "Exploitation des vulnérabilités",
+        "score_impact": -40,
+        "category_impacts": {
+          "transparency": -10
+        }
+      },
+      {
+        "code": "E4.N7.Q3.1.B",
+        "label": "Manipulation et tromperie",
+        "score_impact": -40,
+        "category_impacts": {
+          "transparency": -10
+        }
+      },
+      {
+        "code": "E4.N7.Q3.1.C",
+        "label": "Notation sociale",
+        "score_impact": -40,
+        "category_impacts": {
+          "social_environmental": -10
+        }
+      },
+      {
+        "code": "E4.N7.Q3.1.D",
+        "label": "Profilage pour évaluation du risque criminel",
+        "score_impact": -40,
+        "category_impacts": {
+          "diversity_fairness": -10
+        }
+      },
+      {
+        "code": "E4.N7.Q3.1.E",
+        "label": "Aucune de ces situations",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N8.Q2": {
+    "id": "E4.N8.Q2",
+    "question": "Question E4.N8.Q2",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q2.A",
+        "label": "Oui",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q2.B",
+        "label": "Non",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N8.Q3": {
+    "id": "E4.N8.Q3",
+    "question": "Question E4.N8.Q3",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q3.A",
+        "label": "Oui",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q3.B",
+        "label": "Non",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N8.Q4": {
+    "id": "E4.N8.Q4",
+    "question": "Question E4.N8.Q4",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q4.A",
+        "label": "Oui",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q4.B",
+        "label": "Non",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N8.Q5": {
+    "id": "E4.N8.Q5",
+    "question": "Question E4.N8.Q5",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q5.A",
+        "label": "Oui",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q5.B",
+        "label": "Non",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N8.Q6": {
+    "id": "E4.N8.Q6",
+    "question": "Question E4.N8.Q6",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q6.A",
+        "label": "Oui",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q6.B",
+        "label": "Non",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N8.Q7": {
+    "id": "E4.N8.Q7",
+    "question": "Question E4.N8.Q7",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q7.A",
+        "label": "Oui",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q7.B",
+        "label": "Non",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N8.Q8": {
+    "id": "E4.N8.Q8",
+    "question": "Question E4.N8.Q8",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q8.A",
+        "label": "Oui",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q8.B",
+        "label": "Non",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N8.Q9": {
+    "id": "E4.N8.Q9",
+    "question": "Votre système d'IA interagit-il avec des personnes physiques ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q9.A",
+        "label": "Oui",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q9.B",
+        "label": "Non",
+        "score_impact": 0,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N8.Q10": {
+    "id": "E4.N8.Q10",
+    "question": "Utilisé par combien de personnes physiques par mois ?",
+    "type": "conditional",
+    "required": true,
+    "conditionalFields": [
+      {
+        "key": "other_count",
+        "label": "Autre nombre",
+        "placeholder": "Précisez..."
+      }
+    ],
+    "options": [
+      {
+        "code": "E4.N8.Q10.A",
+        "label": "< de 100",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q10.B",
+        "label": "> à 100",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q10.C",
+        "label": "> à 1000",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q10.D",
+        "label": "> à 10 000",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q10.E",
+        "label": "> à 100 000",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q10.F",
+        "label": "> à 1 M",
+        "score_impact": -5,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N8.Q11": {
+    "id": "E4.N8.Q11",
+    "question": "Utilisé pour générer ou manipuler du contenu ?",
+    "type": "tags",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q11.A",
+        "label": "Texte",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q11.B",
+        "label": "Image",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q11.C",
+        "label": "audio",
+        "score_impact": -5,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q11.D",
+        "label": "Vidéo",
+        "score_impact": -5,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E4.N8.Q12": {
+    "id": "E4.N8.Q12",
+    "question": "Votre système d'IA est utilisé dans des jeux vidéos ou comme filtre anti-spam ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q12.A",
+        "label": "Oui",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E4.N8.Q12.B",
+        "label": "Non",
+        "score_impact": -5,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E5.N9.Q1": {
+    "id": "E5.N9.Q1",
+    "question": "Avez-vous établi et maintenez-vous un système de gestion des risques ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E5.N9.Q1.A",
+        "label": "Oui",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q1.B",
+        "label": "Non",
+        "score_impact": -5,
+        "category_impacts": {
+          "technical_robustness": -5
+        }
+      }
+    ]
+  },
+  "E5.N9.Q2": {
+    "id": "E5.N9.Q2",
+    "question": "Votre système de gestion des risques comprend-il l'identification et l'analyse des risques et des utilisations abusives ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E5.N9.Q2.A",
+        "label": "Oui",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q2.B",
+        "label": "Non",
+        "score_impact": -5,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E5.N9.Q3": {
+    "id": "E5.N9.Q3",
+    "question": "Des mesures d'atténuation des risques sont-elles mises en œuvre et leur efficacité testée, garantissant que le risque résiduel est acceptable ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E5.N9.Q3.A",
+        "label": "Oui",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q3.B",
+        "label": "Non",
+        "score_impact": -5,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E5.N9.Q4": {
+    "id": "E5.N9.Q4",
+    "question": "Avez-vous établi une documentation technique complète pour votre système d'IA ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E5.N9.Q4.A",
+        "label": "Oui",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q4.B",
+        "label": "Non",
+        "score_impact": -10,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E5.N9.Q5": {
+    "id": "E5.N9.Q5",
+    "question": "Quelles sont les types de données traitées en entrée ?",
+    "type": "tags",
+    "required": true,
+    "options": [
+      {
+        "code": "E5.N9.Q5.A",
+        "label": "Publiques",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q5.B",
+        "label": "Personnelles",
+        "score_impact": -10,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q5.C",
+        "label": "Stratégiques",
+        "score_impact": -10,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q5.D",
+        "label": "sensibles",
+        "score_impact": -10,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E5.N9.Q6": {
+    "id": "E5.N9.Q6",
+    "question": "Avez vous de procédures de vérification de la qualité des données ?",
+    "type": "conditional",
+    "required": true,
+    "conditionalFields": [
+      {
+        "key": "procedures_details",
+        "label": "Précisions",
+        "placeholder": "Décrivez vos procédures..."
+      }
+    ],
+    "options": [
+      {
+        "code": "E5.N9.Q6.B",
+        "label": "Oui",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q6.C",
+        "label": "Si oui préciser",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q6.A",
+        "label": "Non",
+        "score_impact": -5,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E5.N9.Q7": {
+    "id": "E5.N9.Q7",
+    "question": "Tenez vous un registre centralisé de vos systèmes d'IA ?",
+    "type": "conditional",
+    "required": true,
+    "conditionalFields": [
+      {
+        "key": "registry_type",
+        "label": "Type",
+        "placeholder": "Interne"
+      },
+      {
+        "key": "system_name",
+        "label": "Système",
+        "placeholder": "MaydAI"
+      }
+    ],
+    "options": [
+      {
+        "code": "E5.N9.Q7.B",
+        "label": "Oui",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q7.C",
+        "label": "Si oui préciser",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q7.A",
+        "label": "Non",
+        "score_impact": -10,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E5.N9.Q8": {
+    "id": "E5.N9.Q8",
+    "question": "Avez vous une étape de surveillance humaine dans votre système d'IA ?",
+    "type": "conditional",
+    "required": true,
+    "conditionalFields": [
+      {
+        "key": "supervisor_name",
+        "label": "Nom prénom",
+        "placeholder": ""
+      },
+      {
+        "key": "supervisor_role",
+        "label": "Rôle",
+        "placeholder": ""
+      }
+    ],
+    "options": [
+      {
+        "code": "E5.N9.Q8.B",
+        "label": "Oui",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q8.C",
+        "label": "Si oui préciser",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q8.A",
+        "label": "Non",
+        "score_impact": -10,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E5.N9.Q9": {
+    "id": "E5.N9.Q9",
+    "question": "Vérifiez vous l'exactitude, la robustesse et la cybersécurité de votre système d'IA ?",
+    "type": "conditional",
+    "required": true,
+    "conditionalFields": [
+      {
+        "key": "security_details",
+        "label": "Détails",
+        "placeholder": "Décrivez vos procédures..."
+      }
+    ],
+    "options": [
+      {
+        "code": "E5.N9.Q9.B",
+        "label": "Oui",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q9.C",
+        "label": "Si oui préciser",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E5.N9.Q9.A",
+        "label": "Non",
+        "score_impact": -5,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E6.N10.Q1": {
+    "id": "E6.N10.Q1",
+    "question": "Lorsque votre système d'IA interagit avec des personnes, sont elles informées ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E6.N10.Q1.A",
+        "label": "Oui",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E6.N10.Q1.B",
+        "label": "Non",
+        "score_impact": -5,
+        "category_impacts": {}
+      }
+    ]
+  },
+  "E6.N10.Q2": {
+    "id": "E6.N10.Q2",
+    "question": "Lorsque votre système d'IA génère ou manipule du contenu, est ce que ce dernier est marqué par un format lisible et reconnaissable ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E6.N10.Q2.A",
+        "label": "Oui",
+        "score_impact": 0,
+        "category_impacts": {}
+      },
+      {
+        "code": "E6.N10.Q2.B",
+        "label": "Non",
+        "score_impact": -5,
+        "category_impacts": {}
+      }
+    ]
+  }
+}

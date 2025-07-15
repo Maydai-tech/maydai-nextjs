@@ -32,6 +32,7 @@ export interface Progress {
 export interface QuestionOption {
   code: string
   label: string
+  score_impact?: number
 }
 
 export interface Question {

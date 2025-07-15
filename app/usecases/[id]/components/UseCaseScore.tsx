@@ -114,24 +114,59 @@ export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseC
           <h4 className="text-sm font-medium text-gray-900 mb-3">Détail des impacts</h4>
           <div className="space-y-3">
             {score.score_breakdown.map((item, index) => (
-              <div key={index} className="flex items-start justify-between py-2 border-b border-gray-200 last:border-b-0">
-                <div className="flex-1 pr-4">
-                  <p className="text-sm font-medium text-gray-900 mb-1">
-                    {item.question_text}
-                  </p>
-                  <p className="text-xs text-gray-600">{item.reasoning}</p>
+              <div key={index} className="py-3 border-b border-gray-200 last:border-b-0">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1 pr-4">
+                    <p className="text-sm font-medium text-gray-900 mb-1">
+                      {item.question_id} - {item.question_text}
+                    </p>
+                    {item.risk_category && (
+                      <span className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full mb-1">
+                        {item.risk_category}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {item.score_impact > 0 ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : item.score_impact < 0 ? (
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                    ) : (
+                      <div className="h-4 w-4 rounded-full bg-gray-300" />
+                    )}
+                    <span className={`text-sm font-medium ${
+                      item.score_impact > 0 ? 'text-green-600' : 
+                      item.score_impact < 0 ? 'text-red-600' : 'text-gray-600'
+                    }`}>
+                      {item.score_impact > 0 ? '+' : ''}{item.score_impact} points
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {item.score_impact > 0 ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 text-red-500" />
-                  )}
-                  <span className={`text-sm font-medium ${
-                    item.score_impact > 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {item.score_impact > 0 ? '+' : ''}{item.score_impact}
-                  </span>
+                <div className="bg-gray-50 rounded-md p-3">
+                  <p className="text-xs text-gray-600 mb-1">
+                    <span className="font-medium">Réponse donnée:</span>
+                  </p>
+                  <p className="text-sm text-gray-800 mb-2">
+                    {typeof item.answer_value === 'string' ? (
+                      item.answer_value
+                    ) : Array.isArray(item.answer_value) ? (
+                      item.answer_value.join(', ')
+                    ) : item.answer_value?.selected ? (
+                      <>
+                        {item.answer_value.selected}
+                        {item.answer_value.conditionalValues && Object.keys(item.answer_value.conditionalValues).length > 0 && (
+                          <div className="mt-1 text-xs text-gray-600">
+                            <span className="font-medium">Détails:</span> {Object.entries(item.answer_value.conditionalValues).map(([key, value]) => `${key}: ${value}`).join(', ')}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      JSON.stringify(item.answer_value)
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    <span className="font-medium">Calcul:</span> {item.reasoning}
+                  </p>
                 </div>
               </div>
             ))}

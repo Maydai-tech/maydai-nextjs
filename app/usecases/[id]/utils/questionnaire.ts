@@ -1,44 +1,96 @@
 import { Question, QuestionAnswer, QuestionProgress } from '../types/usecase'
+// Note: Ce fichier sera mis à jour dans une future étape pour utiliser loadQuestions()
+// import { loadQuestions } from './questions-loader'
 
 // Navigation logic
 export const getNextQuestion = (currentQuestionId: string, answers: Record<string, any>): string | null => {
   switch (currentQuestionId) {
     case 'E4.N7.Q1':
+      // Si A -> E4.N7.Q1.1, Si B -> E4.N7.Q1.2
+      const q1Answer = answers['E4.N7.Q1']
+      if (q1Answer === 'E4.N7.Q1.A') {
+        return 'E4.N7.Q1.1'
+      } else if (q1Answer === 'E4.N7.Q1.B') {
+        return 'E4.N7.Q1.2'
+      }
+      return null
+    
+    case 'E4.N7.Q1.1':
       return 'E4.N7.Q2'
+    
+    case 'E4.N7.Q1.2':
+      return 'E4.N7.Q2'
+    
     case 'E4.N7.Q2':
+      return 'E4.N7.Q2.1'
+    
+    case 'E4.N7.Q2.1':
       return 'E4.N7.Q3'
+    
     case 'E4.N7.Q3':
-      // Check if any high-risk domain/activity is selected
-      const q2Answers = answers['E4.N7.Q2'] || []
-      const q3Answers = answers['E4.N7.Q3'] || []
-      const hasRiskAnswers = (q2Answers.length > 0 && !q2Answers.includes('E4.N7.Q2.I')) ||
-                           (q3Answers.length > 0 && !q3Answers.includes('E4.N7.Q3.I'))
-      return hasRiskAnswers ? 'E5.N8.Q1' : 'E4.N8.Q12'
+      return 'E4.N7.Q3.1'
     
-    // High-risk sequence
-    case 'E5.N8.Q1': return 'E5.N8.Q2'
-    case 'E5.N8.Q2': return 'E5.N9.Q3'
-    case 'E5.N9.Q3': return 'E5.N9.Q4'
-    case 'E5.N9.Q4': return 'E5.N9.Q5'
-    case 'E5.N9.Q5': return 'E5.N9.Q6'
-    case 'E5.N9.Q6': return 'E5.N9.Q7'
-    case 'E5.N9.Q7': return 'E5.N9.Q8'
-    case 'E5.N9.Q8': return 'E5.N9.Q9'
-    case 'E5.N9.Q9': return 'E4.N8.Q12'
+    case 'E4.N7.Q3.1':
+      return 'E5.N9.Q4'
     
-    // Critical question
+    case 'E5.N9.Q4':
+      const q4Answer = answers['E5.N9.Q4']
+      if (q4Answer === 'E5.N9.Q4.A') {
+        return 'E5.N9.Q5'
+      } else if (q4Answer === 'E5.N9.Q4.B') {
+        // Vérifier si toutes les réponses précédentes sont "aucun/aucune"
+        const q2Answers = answers['E4.N7.Q2'] || []
+        const q21Answers = answers['E4.N7.Q2.1'] || []
+        const q3Answers = answers['E4.N7.Q3'] || []
+        const q31Answers = answers['E4.N7.Q3.1'] || []
+        
+        const allNoneAnswers = (q2Answers.includes('E4.N7.Q2.G') && q2Answers.length === 1) &&
+                              (q21Answers.includes('E4.N7.Q2.1.E') && q21Answers.length === 1) &&
+                              (q3Answers.includes('E4.N7.Q3.E') && q3Answers.length === 1) &&
+                              (q31Answers.includes('E4.N7.Q3.1.E') && q31Answers.length === 1)
+        
+        return allNoneAnswers ? 'E5.N9.Q5' : 'E5.N9.Q1'
+      }
+      return null
+    
+    case 'E5.N9.Q1':
+      return 'E5.N9.Q2'
+    
+    case 'E5.N9.Q2':
+      return 'E5.N9.Q3'
+    
+    case 'E5.N9.Q3':
+      return 'E5.N9.Q5'
+    
+    case 'E5.N9.Q5':
+      return 'E5.N9.Q6'
+    
+    case 'E5.N9.Q6':
+      return 'E5.N9.Q7'
+    
+    case 'E5.N9.Q7':
+      return 'E5.N9.Q8'
+    
+    case 'E5.N9.Q8':
+      return 'E4.N8.Q12'
+    
     case 'E4.N8.Q12':
-      return answers['E4.N8.Q12'] === 'E4.N8.Q12.A' ? null : 'E4.N8.Q9' // End if games/spam, continue otherwise
+      return 'E4.N8.Q9'
     
-    // Additional questions
     case 'E4.N8.Q9':
-      return answers['E4.N8.Q9'] === 'E4.N8.Q9.A' ? 'E4.N8.Q10' : 'E4.N8.Q11'
-    case 'E4.N8.Q10': return 'E4.N8.Q11'
-    case 'E4.N8.Q11': return 'E6.N10.Q1'
+      return 'E4.N8.Q10'
+
+    case 'E4.N8.Q10':
+      return 'E4.N8.Q11'
     
-    // Transparency questions
-    case 'E6.N10.Q1': return 'E6.N10.Q2'
-    case 'E6.N10.Q2': return null // End
+    case 'E4.N8.Q11':
+      return 'E6.N10.Q1'
+    
+    case 'E6.N10.Q1':
+      return 'E6.N10.Q2'
+    
+    case 'E6.N10.Q2':
+      return null // Fin du questionnaire
     
     default: return null
   }
@@ -46,12 +98,16 @@ export const getNextQuestion = (currentQuestionId: string, answers: Record<strin
 
 export const getQuestionProgress = (currentQuestionId: string, answers: Record<string, any>): QuestionProgress => {
   // Calculate estimated total questions based on current path
-  let totalQuestions = 3 // Always Q1, Q2, Q3
+  let totalQuestions = 6 // Always Q1, Q1.1/Q1.2, Q2, Q2.1, Q3, Q3.1
   
   const q2Answers = answers['E4.N7.Q2'] || []
+  const q21Answers = answers['E4.N7.Q2.1'] || []
   const q3Answers = answers['E4.N7.Q3'] || []
-  const hasRiskAnswers = (q2Answers.length > 0 && !q2Answers.includes('E4.N7.Q2.I')) ||
-                        (q3Answers.length > 0 && !q3Answers.includes('E4.N7.Q3.I'))
+  const q31Answers = answers['E4.N7.Q3.1'] || []
+  const hasRiskAnswers = (q2Answers.length > 0 && !q2Answers.includes('E4.N7.Q2.G')) ||
+                        (q21Answers.length > 0 && !q21Answers.includes('E4.N7.Q2.1.E')) ||
+                        (q3Answers.length > 0 && !q3Answers.includes('E4.N7.Q3.E')) ||
+                        (q31Answers.length > 0 && !q31Answers.includes('E4.N7.Q3.1.E'))
   
   if (hasRiskAnswers) {
     totalQuestions += 9 // High-risk sequence
@@ -67,7 +123,15 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
   }
   
   // Count current progress
-  const questionOrder = ['E4.N7.Q1', 'E4.N7.Q2', 'E4.N7.Q3']
+  const questionOrder = ['E4.N7.Q1']
+  // Add Q1.1 or Q1.2 based on Q1 answer
+  if (answers['E4.N7.Q1'] === 'E4.N7.Q1.A') {
+    questionOrder.push('E4.N7.Q1.1')
+  } else if (answers['E4.N7.Q1'] === 'E4.N7.Q1.B') {
+    questionOrder.push('E4.N7.Q1.2')
+  }
+  questionOrder.push('E4.N7.Q2', 'E4.N7.Q2.1', 'E4.N7.Q3', 'E4.N7.Q3.1')
+  
   if (hasRiskAnswers) {
     questionOrder.push('E5.N8.Q1', 'E5.N8.Q2', 'E5.N9.Q3', 'E5.N9.Q4', 'E5.N9.Q5', 'E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8', 'E5.N9.Q9')
   }
@@ -92,12 +156,12 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
 // Nouvelle fonction pour calculer la progression basée sur le maximum absolu de questions
 export const getAbsoluteQuestionProgress = (currentQuestionId: string): QuestionProgress => {
   // Nombre maximum absolu de questions possibles dans le questionnaire
-  // 3 (base) + 9 (high-risk) + 1 (critical) + 3 (additional) + 2 (transparency) = 18
-  const MAX_QUESTIONS = 18
+  // 6 (base) + 9 (high-risk) + 1 (critical) + 3 (additional) + 2 (transparency) = 21
+  const MAX_QUESTIONS = 21
   
   // Ordre global de toutes les questions possibles
   const ALL_QUESTIONS = [
-    'E4.N7.Q1', 'E4.N7.Q2', 'E4.N7.Q3', // Base questions (3)
+    'E4.N7.Q1', 'E4.N7.Q1.1', 'E4.N7.Q1.2', 'E4.N7.Q2', 'E4.N7.Q2.1', 'E4.N7.Q3', 'E4.N7.Q3.1', // Base questions (7)
     'E5.N8.Q1', 'E5.N8.Q2', 'E5.N9.Q3', 'E5.N9.Q4', 'E5.N9.Q5', 'E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8', 'E5.N9.Q9', // High-risk sequence (9)
     'E4.N8.Q12', // Critical question (1)
     'E4.N8.Q9', 'E4.N8.Q10', 'E4.N8.Q11', // Additional questions (3)
