@@ -24,7 +24,8 @@ export function loadQuestions(): Record<string, Question> {
       options: data.options.map((option: any) => ({
         code: option.code,
         label: option.label,
-        score_impact: option.score_impact || 0
+        score_impact: option.score_impact || 0,
+        category_impacts: option.category_impacts || undefined
       })),
       required: data.required,
       conditionalFields: data.conditionalFields || undefined

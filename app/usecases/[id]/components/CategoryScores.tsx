@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
-import { RISK_CATEGORIES, QUESTION_RISK_CATEGORY_MAPPING } from '../utils/risk-categories'
+import { RISK_CATEGORIES } from '../utils/risk-categories'
 import { AlertCircle, Info } from 'lucide-react'
 
 interface CategoryScoresProps {
@@ -60,44 +60,8 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
   }
 
   // Si pas de category_scores (ancien score), on les calcule à partir du breakdown
-  let categoryScores = score.category_scores || []
-  
-  if (categoryScores.length === 0 && score.score_breakdown && score.score_breakdown.length > 0) {
-    console.log('Calculating category scores from breakdown for backward compatibility')
-    
-    // Regrouper les impacts par catégorie
-    const categoryData: Record<string, { totalImpact: number, questionCount: number }> = {}
-    
-    Object.keys(RISK_CATEGORIES).forEach(categoryId => {
-      categoryData[categoryId] = { totalImpact: 0, questionCount: 0 }
-    })
-    
-    score.score_breakdown.forEach(item => {
-      const categoryId = item.risk_category || QUESTION_RISK_CATEGORY_MAPPING[item.question_id]
-      if (categoryId && categoryData[categoryId]) {
-        categoryData[categoryId].totalImpact += item.score_impact
-        categoryData[categoryId].questionCount += 1
-      }
-    })
-    
-    // Créer les category scores
-    categoryScores = Object.entries(RISK_CATEGORIES).map(([categoryId, category]) => {
-      const data = categoryData[categoryId]
-      const baseScore = 100 // Toutes les catégories ont le même score de base
-      const adjustedScore = Math.max(0, baseScore + data.totalImpact)
-      
-      return {
-        category_id: categoryId,
-        category_name: category.shortName,
-        score: adjustedScore,
-        max_score: baseScore,
-        percentage: Math.round((adjustedScore / baseScore) * 100),
-        question_count: data.questionCount,
-        color: category.color,
-        icon: category.icon
-      }
-    })
-  }
+  // Utiliser directement les scores calculés par score-calculator.ts
+  const categoryScores = score.category_scores || []
 
   if (categoryScores.length === 0) {
     return (
