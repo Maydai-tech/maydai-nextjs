@@ -8,14 +8,12 @@
       {
         "code": "E4.N7.Q1.A",
         "label": "Mon entreprise travaille dans le domaine de l'informatique et de l'IA",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N7.Q1.B",
         "label": "Mon entreprise utilise des systèmes d'IA tiers",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -28,38 +26,32 @@
       {
         "code": "E4.N7.Q1.1.A",
         "label": "Je suis fabricant d'un produit intégrant un système d'IA",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N7.Q1.1.B",
         "label": "Je distribue et/ou déploie un système d'IA pour d'autres entreprises",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N7.Q1.1.C",
         "label": "Je suis éditeur d'un logiciel intégrant un système d'IA",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N7.Q1.1.D",
         "label": "Je suis importateur d'un système d'IA",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N7.Q1.1.E",
         "label": "Je suis un fournisseur d'un système d'IA",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N7.Q1.1.F",
         "label": "Je suis représentant autorisé d'un fournisseur de système d'IA",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -72,38 +64,32 @@
       {
         "code": "E4.N7.Q1.2.A",
         "label": "Je suis un utilisateur d'un système d'IA pour mon entreprise",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N7.Q1.2.B",
         "label": "J'ai une idée de cas d'usage IA et souhaite tester sa conformité",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N7.Q1.2.C",
         "label": "Je suis le Data Protection Officer (DPO) de mon entreprise",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N7.Q1.2.D",
         "label": "Je suis avocat et souhaite apporter des réponses techniques à mes clients",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N7.Q1.2.E",
         "label": "Je suis dirigeant et souhaite recenser tous les cas d'usage IA de mon entreprise",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N7.Q1.2.F",
         "label": "Je suis étudiant ou chercheur souhaitant approfondir le sujet IA Act",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -164,8 +150,7 @@
       {
         "code": "E4.N7.Q2.G",
         "label": "Aucun de ces domaines",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -210,8 +195,7 @@
       {
         "code": "E4.N7.Q2.1.E",
         "label": "Aucun de ces cas",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -256,8 +240,7 @@
       {
         "code": "E4.N7.Q3.E",
         "label": "Aucune de ces activités",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -302,8 +285,7 @@
       {
         "code": "E4.N7.Q3.1.E",
         "label": "Aucune de ces situations",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -316,14 +298,12 @@
       {
         "code": "E4.N8.Q2.A",
         "label": "Oui",
-        "score_impact": -5,
-        "category_impacts": {}
+        "score_impact": -5
       },
       {
         "code": "E4.N8.Q2.B",
         "label": "Non",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -336,14 +316,12 @@
       {
         "code": "E4.N8.Q3.A",
         "label": "Oui",
-        "score_impact": -5,
-        "category_impacts": {}
+        "score_impact": -5
       },
       {
         "code": "E4.N8.Q3.B",
         "label": "Non",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -356,14 +334,12 @@
       {
         "code": "E4.N8.Q4.A",
         "label": "Oui",
-        "score_impact": -5,
-        "category_impacts": {}
+        "score_impact": -5
       },
       {
         "code": "E4.N8.Q4.B",
         "label": "Non",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -376,14 +352,12 @@
       {
         "code": "E4.N8.Q5.A",
         "label": "Oui",
-        "score_impact": -5,
-        "category_impacts": {}
+        "score_impact": -5
       },
       {
         "code": "E4.N8.Q5.B",
         "label": "Non",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -396,14 +370,12 @@
       {
         "code": "E4.N8.Q6.A",
         "label": "Oui",
-        "score_impact": -5,
-        "category_impacts": {}
+        "score_impact": -5
       },
       {
         "code": "E4.N8.Q6.B",
         "label": "Non",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -416,14 +388,12 @@
       {
         "code": "E4.N8.Q7.A",
         "label": "Oui",
-        "score_impact": -5,
-        "category_impacts": {}
+        "score_impact": -5
       },
       {
         "code": "E4.N8.Q7.B",
         "label": "Non",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -436,14 +406,12 @@
       {
         "code": "E4.N8.Q8.A",
         "label": "Oui",
-        "score_impact": -5,
-        "category_impacts": {}
+        "score_impact": -5
       },
       {
         "code": "E4.N8.Q8.B",
         "label": "Non",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -457,13 +425,14 @@
         "code": "E4.N8.Q9.A",
         "label": "Oui",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "human_oversight": -5
+        }
       },
       {
         "code": "E4.N8.Q9.B",
         "label": "Non",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       }
     ]
   },
@@ -483,38 +452,47 @@
       {
         "code": "E4.N8.Q10.A",
         "label": "< de 100",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N8.Q10.B",
         "label": "> à 100",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "human_oversight": -5
+        }
       },
       {
         "code": "E4.N8.Q10.C",
         "label": "> à 1000",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "human_oversight": -5
+        }
       },
       {
         "code": "E4.N8.Q10.D",
         "label": "> à 10 000",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "human_oversight": -5
+        }
       },
       {
         "code": "E4.N8.Q10.E",
         "label": "> à 100 000",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "human_oversight": -5
+        }
       },
       {
         "code": "E4.N8.Q10.F",
         "label": "> à 1 M",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "human_oversight": -5
+        }
       }
     ]
   },
@@ -527,26 +505,31 @@
       {
         "code": "E4.N8.Q11.A",
         "label": "Texte",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N8.Q11.B",
         "label": "Image",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "social_environmental": -5
+        }
       },
       {
         "code": "E4.N8.Q11.C",
         "label": "audio",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "social_environmental": -5
+        }
       },
       {
         "code": "E4.N8.Q11.D",
         "label": "Vidéo",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "social_environmental": -5
+        }
       }
     ]
   },
@@ -559,14 +542,15 @@
       {
         "code": "E4.N8.Q12.A",
         "label": "Oui",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E4.N8.Q12.B",
         "label": "Non",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "privacy_data": -5
+        }
       }
     ]
   },
@@ -579,8 +563,7 @@
       {
         "code": "E5.N9.Q1.A",
         "label": "Oui",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q1.B",
@@ -601,14 +584,15 @@
       {
         "code": "E5.N9.Q2.A",
         "label": "Oui",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q2.B",
         "label": "Non",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "technical_robustness": -5
+        }
       }
     ]
   },
@@ -621,14 +605,15 @@
       {
         "code": "E5.N9.Q3.A",
         "label": "Oui",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q3.B",
         "label": "Non",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "technical_robustness": -5
+        }
       }
     ]
   },
@@ -641,14 +626,15 @@
       {
         "code": "E5.N9.Q4.A",
         "label": "Oui",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q4.B",
         "label": "Non",
         "score_impact": -10,
-        "category_impacts": {}
+        "category_impacts": {
+          "human_oversight": -10
+        }
       }
     ]
   },
@@ -661,26 +647,31 @@
       {
         "code": "E5.N9.Q5.A",
         "label": "Publiques",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q5.B",
         "label": "Personnelles",
         "score_impact": -10,
-        "category_impacts": {}
+        "category_impacts": {
+          "privacy_data": -10
+        }
       },
       {
         "code": "E5.N9.Q5.C",
         "label": "Stratégiques",
         "score_impact": -10,
-        "category_impacts": {}
+        "category_impacts": {
+          "privacy_data": -5
+        }
       },
       {
         "code": "E5.N9.Q5.D",
         "label": "sensibles",
         "score_impact": -10,
-        "category_impacts": {}
+        "category_impacts": {
+          "privacy_data": -5
+        }
       }
     ]
   },
@@ -700,20 +691,20 @@
       {
         "code": "E5.N9.Q6.B",
         "label": "Oui",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q6.C",
         "label": "Si oui préciser",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q6.A",
         "label": "Non",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "privacy_data": -5
+        }
       }
     ]
   },
@@ -738,20 +729,20 @@
       {
         "code": "E5.N9.Q7.B",
         "label": "Oui",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q7.C",
         "label": "Si oui préciser",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q7.A",
         "label": "Non",
         "score_impact": -10,
-        "category_impacts": {}
+        "category_impacts": {
+          "human_oversight": -10
+        }
       }
     ]
   },
@@ -776,20 +767,20 @@
       {
         "code": "E5.N9.Q8.B",
         "label": "Oui",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q8.C",
         "label": "Si oui préciser",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q8.A",
         "label": "Non",
         "score_impact": -10,
-        "category_impacts": {}
+        "category_impacts": {
+          "human_oversight": -10
+        }
       }
     ]
   },
@@ -809,20 +800,20 @@
       {
         "code": "E5.N9.Q9.B",
         "label": "Oui",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q9.C",
         "label": "Si oui préciser",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E5.N9.Q9.A",
         "label": "Non",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "technical_robustness": -5
+        }
       }
     ]
   },
@@ -835,14 +826,15 @@
       {
         "code": "E6.N10.Q1.A",
         "label": "Oui",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E6.N10.Q1.B",
         "label": "Non",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "transparency": -5
+        }
       }
     ]
   },
@@ -855,14 +847,15 @@
       {
         "code": "E6.N10.Q2.A",
         "label": "Oui",
-        "score_impact": 0,
-        "category_impacts": {}
+        "score_impact": 0
       },
       {
         "code": "E6.N10.Q2.B",
         "label": "Non",
         "score_impact": -5,
-        "category_impacts": {}
+        "category_impacts": {
+          "transparency": -5
+        }
       }
     ]
   }

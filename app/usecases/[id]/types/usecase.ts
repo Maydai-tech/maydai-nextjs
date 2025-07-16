@@ -33,6 +33,7 @@ export interface QuestionOption {
   code: string
   label: string
   score_impact?: number
+  category_impacts?: Record<string, number>
 }
 
 export interface Question {
@@ -91,6 +92,7 @@ export interface ScoreBreakdown {
   score_impact: number
   reasoning: string
   risk_category?: string
+  category_impacts?: Record<string, number>
 }
 
 export interface ScoreCategory {

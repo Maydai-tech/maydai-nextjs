@@ -1,17 +1,26 @@
 import { loadQuestions } from '../utils/questions-loader'
 import { UseCaseScore, ScoreBreakdown, CategoryScore } from '../types/usecase'
-import { RISK_CATEGORIES, QUESTION_RISK_CATEGORY_MAPPING } from './risk-categories'
+import { RISK_CATEGORIES } from './risk-categories'
 
 const BASE_SCORE = 100
 
-// Fonction utilitaire pour obtenir l'impact d'une réponse depuis le JSON
-function getAnswerImpactFromJSON(questionCode: string, answerCode: string): number {
+// Interface pour les impacts d'une réponse
+interface AnswerImpacts {
+  score_impact: number
+  category_impacts?: Record<string, number>
+}
+
+// Fonction utilitaire pour obtenir les impacts d'une réponse depuis le JSON
+function getAnswerImpactsFromJSON(questionCode: string, answerCode: string): AnswerImpacts {
   const questions = loadQuestions()
   const question = questions[questionCode]
-  if (!question) return 0
+  if (!question) return { score_impact: 0 }
   
   const option = question.options.find(opt => opt.code === answerCode)
-  return option?.score_impact || 0
+  return {
+    score_impact: option?.score_impact || 0,
+    category_impacts: option?.category_impacts || {}
+  }
 }
 
 export function calculateScore(usecaseId: string, responses: any[]): UseCaseScore {
@@ -29,15 +38,15 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
     // Initialiser les compteurs par catégorie
     const categoryData: Record<string, { 
       totalImpact: number, 
-      questionCount: number, 
-      maxPossibleScore: number 
+      questionCount: number,
+      impactedQuestions: Set<string>
     }> = {}
     
     Object.keys(RISK_CATEGORIES).forEach(categoryId => {
       categoryData[categoryId] = { 
         totalImpact: 0, 
-        questionCount: 0, 
-        maxPossibleScore: 0 
+        questionCount: 0,
+        impactedQuestions: new Set()
       }
     })
 
@@ -55,13 +64,23 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
 
       let questionImpact = 0
       let reasoning = ''
+      const categoryImpactsForQuestion: Record<string, number> = {}
 
       // Calculer l'impact selon le type de réponse avec la nouvelle structure Array
       if (question.type === 'radio') {
         // Réponse unique stockée dans single_value
         const answerCode = response.single_value
         if (answerCode) {
-          questionImpact = getAnswerImpactFromJSON(response.question_code, answerCode)
+          const impacts = getAnswerImpactsFromJSON(response.question_code, answerCode)
+          questionImpact = impacts.score_impact
+          
+          // Appliquer les impacts par catégorie
+          if (impacts.category_impacts) {
+            Object.entries(impacts.category_impacts).forEach(([categoryId, impact]) => {
+              categoryImpactsForQuestion[categoryId] = impact
+            })
+          }
+          
           reasoning = `${answerCode}: ${questionImpact} points`
         }
       } 
@@ -70,40 +89,59 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
         const answerCodes = response.multiple_codes || []
         
         const impacts: string[] = []
-        let maxImpact = 0
+        let totalImpact = 0
         
-        // Pour les questions multiples, prendre le pire impact (le plus négatif)
+        // Pour les questions multiples, CUMULER tous les impacts
         for (const code of answerCodes) {
-          const impact = getAnswerImpactFromJSON(response.question_code, code)
-          if (impact !== 0) {
-            impacts.push(`${code}: ${impact}`)
-            // Garder le pire impact (le plus négatif)
-            if (impact < maxImpact) {
-              maxImpact = impact
-            }
+          const answerImpacts = getAnswerImpactsFromJSON(response.question_code, code)
+          if (answerImpacts.score_impact !== 0) {
+            impacts.push(`${code}: ${answerImpacts.score_impact}`)
+            totalImpact += answerImpacts.score_impact
+          }
+          
+          // Cumuler les impacts par catégorie
+          if (answerImpacts.category_impacts) {
+            Object.entries(answerImpacts.category_impacts).forEach(([categoryId, impact]) => {
+              categoryImpactsForQuestion[categoryId] = (categoryImpactsForQuestion[categoryId] || 0) + impact
+            })
           }
         }
         
-        questionImpact = maxImpact
+        questionImpact = totalImpact
         reasoning = impacts.length > 0 ? 
-          `${impacts.join(', ')} → Impact retenu: ${maxImpact} points (pire cas)` : 
+          `${impacts.join(', ')} → Impact total: ${totalImpact} points (cumul)` : 
           'Aucun impact'
       }
       else if (question.type === 'conditional' && response.conditional_main) {
         // Réponse conditionnelle stockée dans conditional_main, conditional_keys, conditional_values
         const selectedCode = response.conditional_main
-        questionImpact = getAnswerImpactFromJSON(response.question_code, selectedCode)
+        const impacts = getAnswerImpactsFromJSON(response.question_code, selectedCode)
+        questionImpact = impacts.score_impact
+        
+        // Appliquer les impacts par catégorie
+        if (impacts.category_impacts) {
+          Object.entries(impacts.category_impacts).forEach(([categoryId, impact]) => {
+            categoryImpactsForQuestion[categoryId] = impact
+          })
+        }
+        
         reasoning = `${selectedCode}: ${questionImpact} points`
       }
 
       // Ajouter l'impact au score total
       currentScore += questionImpact
       
-      // Identifier la catégorie de risque
-      const riskCategoryId = QUESTION_RISK_CATEGORY_MAPPING[response.question_code]
+      // Appliquer les impacts aux catégories concernées
+      Object.entries(categoryImpactsForQuestion).forEach(([categoryId, impact]) => {
+        if (categoryData[categoryId]) {
+          categoryData[categoryId].totalImpact += impact
+          categoryData[categoryId].impactedQuestions.add(response.question_code)
+          // console.log(`Applied impact ${impact} to category ${categoryId} for question ${response.question_code}`)
+        }
+      })
       
-      // Ajouter au breakdown si impact non nul
-      if (questionImpact !== 0) {
+      // Ajouter au breakdown si impact non nul (global ou par catégorie)
+      if (questionImpact !== 0 || Object.keys(categoryImpactsForQuestion).length > 0) {
         // Créer une valeur de réponse formatée selon le type
         let answerValue: any = null
         if (response.single_value) {
@@ -122,22 +160,18 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
           }
         }
         
+        // Déterminer les catégories impactées pour le breakdown
+        const impactedCategories = Object.keys(categoryImpactsForQuestion).join(', ') || 'score_global'
+        
         breakdown.push({
           question_id: response.question_code,
           question_text: question.question,
           answer_value: answerValue,
           score_impact: questionImpact,
           reasoning,
-          risk_category: riskCategoryId
+          risk_category: impactedCategories,
+          category_impacts: categoryImpactsForQuestion
         })
-        
-        // Mettre à jour les données de catégorie
-        if (riskCategoryId && categoryData[riskCategoryId]) {
-          categoryData[riskCategoryId].totalImpact += questionImpact
-          categoryData[riskCategoryId].questionCount += 1
-          // Calculer le score max possible pour cette question (impact positif max)
-          categoryData[riskCategoryId].maxPossibleScore += Math.max(0, Math.abs(questionImpact))
-        }
       }
     }
 
@@ -156,7 +190,7 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
         score: adjustedScore,
         max_score: baseScore,
         percentage: Math.round((adjustedScore / baseScore) * 100),
-        question_count: data.questionCount,
+        question_count: data.impactedQuestions.size, // Nombre de questions qui ont impacté cette catégorie
         color: category.color,
         icon: category.icon
       }

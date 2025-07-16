@@ -135,7 +135,7 @@ export async function POST(
     }
 
     // Préparer les données selon le type de réponse
-    let updateData: any = {
+    const updateData: any = {
       usecase_id: usecaseId,
       question_code,
       answered_by: user.email,
@@ -270,7 +270,7 @@ export async function PUT(
       }
 
       // Préparer les données selon le type de réponse
-      let updateData: any = {
+      const updateData: any = {
         usecase_id: usecaseId,
         question_code,
         answered_by: user.email,

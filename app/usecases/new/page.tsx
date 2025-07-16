@@ -425,7 +425,7 @@ function NewUseCasePageContent() {
     
     // Format as DD/MM/YYYY with automatic slash insertion
     let formatted = ''
-    let cursorPosition = 0
+    const cursorPosition = 0
     
     if (digits.length >= 1) {
       formatted = digits.substring(0, 2)
