@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { getScoreCategory, getScoreRecommendations } from '../utils/score-categories'
+import { RISK_CATEGORIES } from '../utils/risk-categories'
 import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, Info } from 'lucide-react'
 
 interface UseCaseScoreProps {
@@ -98,7 +99,7 @@ export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseC
             onClick={() => setShowBreakdown(!showBreakdown)}
             className="w-full flex items-center justify-between p-3 text-sm font-medium text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            <span>Détail des impacts sur le score</span>
+            <span>Détails des impacts sur le score</span>
             {showBreakdown ? (
               <ChevronUp className="h-4 w-4" />
             ) : (
@@ -111,8 +112,56 @@ export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseC
       {/* Breakdown Details */}
       {showBreakdown && score.score_breakdown.length > 0 && (
         <div className="border-t border-gray-200 p-6 bg-gray-50">
-          <h4 className="text-sm font-medium text-gray-900 mb-3">Détail des impacts</h4>
+          <h4 className="text-sm font-medium text-gray-900 mb-4">Détails des impacts</h4>
+          
+          {/* Scores par catégorie calculés */}
+          {score.category_scores && score.category_scores.length > 0 && (
+            <div className="mb-6">
+              <h5 className="text-sm font-medium text-gray-700 mb-3">Scores par catégorie de risque</h5>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                {score.category_scores
+                  .filter(cat => cat.question_count > 0)
+                  .sort((a, b) => b.percentage - a.percentage)
+                  .map((category) => (
+                    <div key={category.category_id} className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm">{category.icon}</span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {category.category_name}
+                          </span>
+                        </div>
+                        <div className="text-sm font-bold text-gray-900">
+                          {category.score}/{category.max_score}
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${
+                            category.percentage >= 80 
+                              ? 'bg-green-500' 
+                              : category.percentage >= 60 
+                              ? 'bg-yellow-500' 
+                              : category.percentage >= 40
+                              ? 'bg-orange-500'
+                              : 'bg-red-500'
+                          }`}
+                          style={{ width: `${Math.max(category.percentage, 2)}%` }}
+                        ></div>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>{category.question_count} question{category.question_count > 1 ? 's' : ''}</span>
+                        <span>{category.percentage}%</span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Détails par question */}
           <div className="space-y-3">
+            <h5 className="text-sm font-medium text-gray-700">Détails par question</h5>
             {score.score_breakdown.map((item, index) => (
               <div key={index} className="py-3 border-b border-gray-200 last:border-b-0">
                 <div className="flex items-start justify-between mb-2">
@@ -142,7 +191,7 @@ export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseC
                     </span>
                   </div>
                 </div>
-                <div className="bg-gray-50 rounded-md p-3">
+                <div className="bg-white rounded-md p-3 border border-gray-100">
                   <p className="text-xs text-gray-600 mb-1">
                     <span className="font-medium">Réponse donnée:</span>
                   </p>
@@ -164,6 +213,36 @@ export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseC
                       JSON.stringify(item.answer_value)
                     )}
                   </p>
+                  
+                  {/* Impacts par catégorie */}
+                  {item.category_impacts && Object.keys(item.category_impacts).length > 0 && (
+                    <div className="mt-2 mb-2">
+                      <p className="text-xs text-gray-600 mb-1">
+                        <span className="font-medium">Impacts par catégorie:</span>
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(item.category_impacts).map(([categoryId, impact]) => {
+                          const category = RISK_CATEGORIES[categoryId]
+                          if (!category || impact === 0) return null
+                          
+                          return (
+                            <span
+                              key={categoryId}
+                              className={`inline-flex items-center px-2 py-1 text-xs rounded-full ${
+                                impact > 0 
+                                  ? 'bg-green-100 text-green-800 border border-green-200' 
+                                  : 'bg-red-100 text-red-800 border border-red-200'
+                              }`}
+                            >
+                              <span className="mr-1">{category.icon}</span>
+                              {category.shortName}: {impact > 0 ? '+' : ''}{impact}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
                   <p className="text-xs text-gray-600">
                     <span className="font-medium">Calcul:</span> {item.reasoning}
                   </p>

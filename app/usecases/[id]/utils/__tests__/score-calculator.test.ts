@@ -39,21 +39,21 @@ describe('Score Calculator', () => {
       expect(result.score_breakdown[0].question_id).toBe('E6.N10.Q1')
     })
 
-    test('should handle multiple choice responses', () => {
+    test('should handle multiple choice responses with cumulative impacts', () => {
       const responses = [
         {
           question_code: 'E4.N7.Q3',
           single_value: null,
-          multiple_codes: ['E4.N7.Q3.H', 'E4.N7.Q3.I'], // -50 + 0 = -50
+          multiple_codes: ['E4.N7.Q3.A', 'E4.N7.Q3.B'], // -40 + -40 = -80 (cumul)
           conditional_main: null
         }
       ]
 
       const result = calculateScore(mockUsecaseId, responses)
       
-      expect(result.score).toBe(50) // 100 - 50
+      expect(result.score).toBe(20) // 100 - 80
       expect(result.score_breakdown).toHaveLength(1)
-      expect(result.score_breakdown[0].score_impact).toBe(-50)
+      expect(result.score_breakdown[0].score_impact).toBe(-80) // Cumul des impacts
       expect(result.score_breakdown[0].question_id).toBe('E4.N7.Q3')
     })
 
@@ -84,24 +84,26 @@ describe('Score Calculator', () => {
     test('should calculate category scores correctly', () => {
       const responses = [
         {
-          question_code: 'E6.N10.Q2', // transparency category
-          single_value: 'E6.N10.Q2.B', // -5
-          multiple_codes: null,
+          question_code: 'E4.N7.Q2', // Has category_impacts
+          single_value: null,
+          multiple_codes: ['E4.N7.Q2.A'], // score_impact: -30, diversity_fairness: -5
           conditional_main: null
         }
       ]
 
       const result = calculateScore(mockUsecaseId, responses)
       
-      const transparencyCategory = result.category_scores.find(
-        cat => cat.category_id === 'transparency'
+      expect(result.score).toBe(70) // 100 - 30
+      
+      const fairnessCategory = result.category_scores.find(
+        cat => cat.category_id === 'diversity_fairness'
       )
       
-      expect(transparencyCategory).toBeDefined()
-      expect(transparencyCategory!.score).toBe(95) // 100 - 5 = 95 (catégories indépendantes)
-      expect(transparencyCategory!.max_score).toBe(100) // Toutes les catégories ont un score max de 100
-      expect(transparencyCategory!.percentage).toBe(95) // Math.round((95/100) * 100)
-      expect(transparencyCategory!.question_count).toBe(1)
+      expect(fairnessCategory).toBeDefined()
+      expect(fairnessCategory!.score).toBe(95) // 100 - 5 = 95
+      expect(fairnessCategory!.max_score).toBe(100)
+      expect(fairnessCategory!.percentage).toBe(95)
+      expect(fairnessCategory!.question_count).toBe(1)
     })
 
     test('should ensure score never goes below 0', () => {
@@ -119,11 +121,11 @@ describe('Score Calculator', () => {
       expect(result.score).toBeGreaterThanOrEqual(0) // Should not go below 0
     })
 
-    test('should handle bonus questions correctly', () => {
+    test('should handle negative impact questions correctly', () => {
       const responses = [
         {
           question_code: 'E4.N8.Q12',
-          single_value: 'E4.N8.Q12.A', // +10
+          single_value: 'E4.N8.Q12.B', // -5
           multiple_codes: null,
           conditional_main: null
         }
@@ -131,8 +133,8 @@ describe('Score Calculator', () => {
 
       const result = calculateScore(mockUsecaseId, responses)
       
-      expect(result.score).toBe(110) // 100 + 10
-      expect(result.score_breakdown[0].score_impact).toBe(10)
+      expect(result.score).toBe(95) // 100 - 5
+      expect(result.score_breakdown[0].score_impact).toBe(-5)
     })
 
     test('should have all category scores with correct structure', () => {
@@ -223,6 +225,27 @@ describe('Score Calculator', () => {
   })
 
   describe('Complex scenarios', () => {
+    test('should cumulate category impacts for checkbox questions', () => {
+      const responses = [
+        {
+          question_code: 'E4.N7.Q3',
+          single_value: null,
+          multiple_codes: ['E4.N7.Q3.A', 'E4.N7.Q3.B', 'E4.N7.Q3.C'], // A: privacy -10, B: diversity -10, C: privacy -10
+          conditional_main: null
+        }
+      ]
+
+      const result = calculateScore(mockUsecaseId, responses)
+      
+      expect(result.score).toBe(0) // 100 - 40 - 40 - 40 = -20, but capped at 0
+      
+      const privacyCategory = result.category_scores.find(cat => cat.category_id === 'privacy_data')
+      const fairnessCategory = result.category_scores.find(cat => cat.category_id === 'diversity_fairness')
+      
+      expect(privacyCategory?.score).toBe(80) // 100 - 10 - 10 (cumul from A and C)
+      expect(fairnessCategory?.score).toBe(90) // 100 - 10 (from B only)
+    })
+
     test('should handle mixed response types correctly', () => {
       const responses = [
         {
@@ -251,38 +274,32 @@ describe('Score Calculator', () => {
       expect(result.score_breakdown).toHaveLength(1) // Seul l'impact non nul
     })
 
-    test('should correctly distribute impacts across categories', () => {
+    test('should correctly distribute impacts across categories using category_impacts', () => {
       const responses = [
         {
-          question_code: 'E6.N10.Q2', // transparency
-          single_value: 'E6.N10.Q2.B', // -5 impact
+          question_code: 'E5.N9.Q1', // Has category_impacts  
+          single_value: 'E5.N9.Q1.B', // score -5, technical_robustness -5
           multiple_codes: null,
           conditional_main: null
-        },
-        {
-          question_code: 'E5.N9.Q9', // technical_robustness - conditional question
-          single_value: null,
-          multiple_codes: null,
-          conditional_main: 'E5.N9.Q9.B' // NON = -5 impact
         }
       ]
 
       const result = calculateScore(mockUsecaseId, responses)
       
-      expect(result.score).toBe(90) // 100 - 5 - 5
-      expect(result.score_breakdown).toHaveLength(2) // Both questions have impact
+      expect(result.score).toBe(95) // 100 - 5 = 95
+      expect(result.score_breakdown).toHaveLength(1)
       
-      const transparencyCategory = result.category_scores.find(cat => cat.category_id === 'transparency')
       const technicalCategory = result.category_scores.find(cat => cat.category_id === 'technical_robustness')
       
-      expect(transparencyCategory?.question_count).toBe(1)
-      expect(technicalCategory?.question_count).toBe(1)
+      expect(technicalCategory?.score).toBe(95) // 100 - 5 = 95
+      expect(technicalCategory?.question_count).toBe(1) // 1 question a impacté cette catégorie
       
-      // Vérifier que les autres catégories ont 0 questions
+      // Vérifier que les autres catégories ont un score de 100
       const otherCategories = result.category_scores
-        .filter(cat => !['transparency', 'technical_robustness'].includes(cat.category_id))
+        .filter(cat => cat.category_id !== 'technical_robustness')
       
       otherCategories.forEach(cat => {
+        expect(cat.score).toBe(100)
         expect(cat.question_count).toBe(0)
       })
     })
