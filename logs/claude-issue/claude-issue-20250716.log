@@ -1,0 +1,77 @@
+[2025-07-16 22:36:21] [ERROR] Le numéro d'issue doit être un nombre entier
+[2025-07-16 22:36:21] [ERROR] Script terminé avec erreur (code: 1)
+[2025-07-16 22:36:39] [INFO] === Démarrage de claude-issue.sh ===
+[2025-07-16 22:36:39] [INFO] Issue: #123 | Auto: false | Dry-run: true | Verbose: false
+[2025-07-16 22:36:39] [INFO] Vérification des prérequis...
+[2025-07-16 22:36:40] [ERROR] ANTHROPIC_API_KEY n'est pas définie
+[2025-07-16 22:36:40] [ERROR] Script terminé avec erreur (code: 1)
+[2025-07-16 22:36:50] [INFO] === Démarrage de claude-issue.sh ===
+[2025-07-16 22:36:50] [INFO] Issue: #123 | Auto: false | Dry-run: true | Verbose: false
+[2025-07-16 22:36:50] [INFO] Vérification des prérequis...
+[2025-07-16 22:36:51] [WARNING] Des modifications non commitées ont été détectées
+[2025-07-16 22:36:51] [ERROR] Script terminé avec erreur (code: 1)
+[2025-07-16 22:37:04] [INFO] === Démarrage de claude-issue.sh ===
+[2025-07-16 22:37:04] [INFO] Issue: #123 | Auto: false | Dry-run: true | Verbose: false
+[2025-07-16 22:37:04] [INFO] Vérification des prérequis...
+[2025-07-16 22:37:05] [SUCCESS] Tous les prérequis sont satisfaits
+[2025-07-16 22:38:43] [INFO] === Démarrage de claude-issue.sh ===
+[2025-07-16 22:38:43] [INFO] Issue: #123 | Auto: false | Dry-run: true | Verbose: false
+[2025-07-16 22:38:43] [INFO] Vérification des prérequis...
+[2025-07-16 22:38:43] [SUCCESS] Tous les prérequis sont satisfaits
+[2025-07-16 22:38:43] [INFO] Mode DRY-RUN activé - Aucune action ne sera exécutée
+[2025-07-16 22:38:43] [INFO] Actions qui seraient effectuées:
+[2025-07-16 22:38:43] [INFO]   1. Récupération de l'issue #123
+[2025-07-16 22:38:43] [INFO]   2. Création d'un worktree pour la branche issue-123
+[2025-07-16 22:38:43] [INFO]   3. Exécution de Claude Code pour traiter l'issue
+[2025-07-16 22:38:43] [INFO]   4. Commit des changements
+[2025-07-16 22:38:43] [INFO]   5. Création d'une PR
+[2025-07-16 22:38:48] [INFO] === Démarrage de claude-issue.sh ===
+[2025-07-16 22:38:48] [INFO] Issue: #999 | Auto: false | Dry-run: true | Verbose: true
+[2025-07-16 22:38:48] [INFO] Vérification des prérequis...
+[2025-07-16 22:38:48] [SUCCESS] Tous les prérequis sont satisfaits
+[2025-07-16 22:38:48] [INFO] Mode DRY-RUN activé - Aucune action ne sera exécutée
+[2025-07-16 22:38:48] [INFO] Actions qui seraient effectuées:
+[2025-07-16 22:38:48] [INFO]   1. Récupération de l'issue #999
+[2025-07-16 22:38:49] [INFO]   2. Création d'un worktree pour la branche issue-999
+[2025-07-16 22:38:49] [INFO]   3. Exécution de Claude Code pour traiter l'issue
+[2025-07-16 22:38:49] [INFO]   4. Commit des changements
+[2025-07-16 22:38:49] [INFO]   5. Création d'une PR
+[2025-07-16 22:50:39] [INFO] === Démarrage de claude-issue.sh ===
+[2025-07-16 22:50:39] [INFO] Issue: #123 | Auto: false | Dry-run: true | Verbose: true
+[2025-07-16 22:50:39] [INFO] Vérification des prérequis...
+[2025-07-16 22:50:40] [SUCCESS] Tous les prérequis sont satisfaits
+[2025-07-16 22:50:40] [INFO] Mode DRY-RUN activé - Aucune action ne sera exécutée
+[2025-07-16 22:50:40] [INFO] Actions qui seraient effectuées:
+[2025-07-16 22:50:40] [INFO]   1. Récupération de l'issue #123
+[2025-07-16 22:50:40] [INFO]   2. Création d'un worktree pour la branche issue-123
+[2025-07-16 22:50:40] [INFO]   3. Exécution de Claude Code pour traiter l'issue
+[2025-07-16 22:50:40] [INFO]   4. Commit des changements
+[2025-07-16 22:50:40] [INFO]   5. Création d'une PR
+[2025-07-16 22:54:38] [INFO] === Démarrage de claude-issue.sh ===
+[2025-07-16 22:54:38] [INFO] Issue: #999 | Auto: false | Dry-run: true | Verbose: true
+[2025-07-16 22:54:38] [INFO] Vérification des prérequis...
+[2025-07-16 22:54:39] [SUCCESS] Tous les prérequis sont satisfaits
+[2025-07-16 22:54:39] [INFO] Mode DRY-RUN activé - Aucune action ne sera exécutée
+[2025-07-16 22:54:39] [INFO] Actions qui seraient effectuées:
+[2025-07-16 22:54:39] [INFO]   1. Récupération de l'issue #999
+[2025-07-16 22:54:39] [INFO]   2. Création d'un worktree pour la branche issue-999
+[2025-07-16 22:54:39] [INFO]   3. Exécution de Claude Code pour traiter l'issue
+[2025-07-16 22:54:39] [INFO]   4. Commit des changements
+[2025-07-16 22:54:39] [INFO]   5. Création d'une PR
+[2025-07-16 22:55:30] [INFO] === Démarrage de claude-issue.sh ===
+[2025-07-16 22:55:30] [INFO] Issue: #999999 | Auto: false | Dry-run: false | Verbose: true
+[2025-07-16 22:55:30] [INFO] Vérification des prérequis...
+[2025-07-16 22:55:31] [DEBUG] Test de l'authentification Claude...
+[2025-07-16 22:55:31] [DEBUG] Test de la session Claude...
+[2025-07-16 22:55:31] [DEBUG] Claude CLI disponible, tentative d'utilisation en session
+[2025-07-16 22:55:31] [SUCCESS] Claude authentifié via session
+[2025-07-16 22:55:31] [WARNING] Des modifications non commitées ont été détectées
+[2025-07-16 23:00:10] [INFO] === Démarrage de claude-issue.sh ===
+[2025-07-16 23:00:10] [INFO] Issue: #2 | Auto: false | Dry-run: false | Verbose: false
+[2025-07-16 23:00:10] [INFO] Vérification des prérequis...
+[2025-07-16 23:00:10] [DEBUG] Test de l'authentification Claude...
+[2025-07-16 23:00:10] [DEBUG] Test de la session Claude...
+[2025-07-16 23:00:11] [DEBUG] Claude CLI disponible, tentative d'utilisation en session
+[2025-07-16 23:00:11] [SUCCESS] Claude authentifié via session
+[2025-07-16 23:00:11] [WARNING] Des modifications non commitées ont été détectées
+[2025-07-16 23:00:18] [ERROR] Script terminé avec erreur (code: 1)
