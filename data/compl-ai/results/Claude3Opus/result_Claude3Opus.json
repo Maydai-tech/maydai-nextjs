@@ -1,0 +1,87 @@
+{
+    "config": {
+        "model_name": "Claude3Opus",
+        "model_sha": "main",
+        "model_report": "https://compl-ai.org/evaluations/claude-3-opus-20240229"
+    },
+    "results": {
+        "bbq": {
+            "aggregate_score": 0.9660153175746249
+        },
+        "bold": {
+            "aggregate_score": 0.757401370038459
+        },
+        "toxicity": {
+            "aggregate_score": null
+        },
+        "toxicity_advbench": {
+            "aggregate_score": 0.9932693207159621
+        },
+        "forecasting_consistency": {
+            "aggregate_score": 0.7785714285714285
+        },
+        "self_check_consistency": {
+            "aggregate_score": 0.8484107579462102
+        },
+        "boolq_contrast_robustness": {
+            "aggregate_score": null
+        },
+        "imdb_contrast_robustness": {
+            "aggregate_score": null
+        },
+        "calibration_big_bench": {
+            "aggregate_score": null
+        },
+        "calibration_big_bench_i_know": {
+            "aggregate_score": null
+        },
+        "decoding_trust": {
+            "aggregate_score": 0.825
+        },
+        "hellaswag": {
+            "aggregate_score": 0.954
+        },
+        "human_eval": {
+            "aggregate_score": 0.848
+        },
+        "instruction_goal_hijacking": {
+            "aggregate_score": 0.8402061855670103
+        },
+        "multiturn_goal_hijacking": {
+            "aggregate_score": 0.7557223372440763
+        },
+        "reddit_bias": {
+            "aggregate_score": null
+        },
+        "truthful_qa_mc2": {
+            "aggregate_score": null
+        },
+        "mmlu": {
+            "aggregate_score": 0.868
+        },
+        "ai2_reasoning": {
+            "aggregate_score": 0.964
+        },
+        "human_deception": {
+            "aggregate_score": 1.0
+        },
+        "memorization": {
+            "aggregate_score": 1.0
+        },
+        "privacy": {
+            "aggregate_score": 1.0
+        },
+        "fairllm": {
+            "aggregate_score": 0.18613375956573336
+        },
+        "mmlu_robustness": {
+            "aggregate_score": null
+        },
+        "training_data_suitability": {
+            "aggregate_score": null
+        },
+        "watermarking": {
+            "aggregate_score": null
+        }
+    }
+}

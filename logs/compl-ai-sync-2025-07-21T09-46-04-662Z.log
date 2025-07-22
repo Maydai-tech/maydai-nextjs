@@ -1,0 +1,1565 @@
+=== COMPL-AI SYNC LOG ===
+Started at: 2025-07-21T09:46:04.664Z
+=========================
+
+[2025-07-21T09:46:04.664Z] === STARTING COMPL-AI SYNC API ROUTE ===
+[WARN] [2025-07-21T09:46:05.165Z] SUPABASE_SERVICE_ROLE_KEY not found, using authenticated client
+[2025-07-21T09:46:05.165Z] Starting COMPL-AI sync...
+[2025-07-21T09:46:05.165Z] Mode: REAL API CALLS
+[2025-07-21T09:46:05.165Z] 
+=== Processing category: technical_robustness_safety ===
+[2025-07-21T09:46:05.166Z] Endpoint: /partial
+[2025-07-21T09:46:05.166Z] Params structure: [
+  [
+    "MMLU: Robustness",
+    "BoolQ Contrast Set",
+    "IMDB Contrast Set",
+    "Monotonicity Checks",
+    "Self-Check Consistency"
+  ],
+  [
+    "Goal Hijacking and Prompt Leakage",
+    "Rule Following"
+  ]
+]
+[2025-07-21T09:46:05.166Z] Step 1: Calling real Gradio API for technical_robustness_safety...
+[2025-07-21T09:46:05.166Z] Calling Gradio API: /partial with params: [
+  [
+    "MMLU: Robustness",
+    "BoolQ Contrast Set",
+    "IMDB Contrast Set",
+    "Monotonicity Checks",
+    "Self-Check Consistency"
+  ],
+  [
+    "Goal Hijacking and Prompt Leakage",
+    "Rule Following"
+  ]
+]
+[2025-07-21T09:46:05.166Z] Making request to: https://latticeflow-compl-ai-board.hf.space/api/predict
+[ERROR] [2025-07-21T09:46:05.483Z] HTTP error response: {"detail":"Not Found"}
+[ERROR] [2025-07-21T09:46:05.585Z] Failed to call Gradio API /partial: {}
+[ERROR] [2025-07-21T09:46:05.585Z] Error details: {
+  "name": "Error",
+  "message": "HTTP error! status: 404 - Not Found",
+  "stack": "Error: HTTP error! status: 404 - Not Found\n    at callGradioAPI (webpack-internal:///(rsc)/./app/api/admin/compl-ai-sync/route.ts:324:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async POST (webpack-internal:///(rsc)/./app/api/admin/compl-ai-sync/route.ts:895:32)\n    at async AppRouteRouteModule.do (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n    at async doRender (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1920:28)\n    at async DevServer.renderPageComponent (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:2445:32)\n    at async DevServer.pipeImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/next-server.js:305:17)\n    at async DevServer.handleRequestImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:900:17)\n    at async /Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n    at async Span.traceAsyncFn (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/trace/trace.js:157:20)\n    at async DevServer.handleRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n    at async invokeRender (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:237:21)\n    at async handleRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:428:24)\n    at async requestHandlerImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:452:13)\n    at async Server.requestListener (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/start-server.js:158:13)"
+}
+[2025-07-21T09:46:05.585Z] Using fallback data for /partial due to API error
+[2025-07-21T09:46:05.585Z] 🧪 Generating DIAGNOSTIC fallback data for /partial
+[2025-07-21T09:46:05.586Z] 🧪 Headers générés pour test: [
+  "Model",
+  "MMLU: Robustness",
+  "BoolQ Contrast Set",
+  "IMDB Contrast Set",
+  "Monotonicity Checks",
+  "Self-Check Consistency",
+  "Goal Hijacking and Prompt Leakage",
+  "Rule Following"
+]
+[2025-07-21T09:46:05.586Z] 🧪 Données test pour GPT-4 Turbo: [
+  "GPT-4 Turbo",
+  "0.100",
+  "0.110",
+  "0.120",
+  "0.130",
+  "0.140",
+  "0.150",
+  "0.160"
+]
+[2025-07-21T09:46:05.586Z] 🧪 Données test pour Claude 3 Opus: [
+  "Claude 3 Opus",
+  "0.450",
+  "0.480",
+  "N/A",
+  "0.540",
+  "0.570",
+  "0.600",
+  "0.630"
+]
+[2025-07-21T09:46:05.586Z] 🧪 Données test pour Gemini 1.5 Pro: [
+  "Gemini 1.5 Pro",
+  "0.500",
+  "0.530",
+  "0.560",
+  "0.590",
+  "N/A",
+  "0.650",
+  "0.680"
+]
+[2025-07-21T09:46:05.586Z] 🧪 Données test pour GPT-3.5 Turbo: [
+  "GPT-3.5 Turbo",
+  "0.550",
+  "N/A",
+  "0.610",
+  "N/A",
+  "0.670",
+  "0.700",
+  "0.730"
+]
+[2025-07-21T09:46:05.586Z] 🧪 Données test pour LLaMA 3 70B: [
+  "LLaMA 3 70B",
+  "0.600",
+  "0.630",
+  "0.660",
+  "0.690",
+  "0.720",
+  "0.750",
+  "0.780"
+]
+[2025-07-21T09:46:05.586Z] 🧪 Données test pour Mistral Large: [
+  "Mistral Large",
+  "0.650",
+  "0.680",
+  "N/A",
+  "0.740",
+  "0.770",
+  "N/A",
+  "0.830"
+]
+[2025-07-21T09:46:05.586Z] 🧪 Données test pour Claude 3 Sonnet: [
+  "Claude 3 Sonnet",
+  "0.700",
+  "0.730",
+  "0.760",
+  "0.790",
+  "N/A",
+  "0.850",
+  "0.880"
+]
+[2025-07-21T09:46:05.586Z] 🧪 Données test pour Gemini 1.0 Pro: [
+  "Gemini 1.0 Pro",
+  "0.750",
+  "0.780",
+  "0.810",
+  "0.840",
+  "0.870",
+  "0.900",
+  "N/A"
+]
+[2025-07-21T09:46:05.586Z] 🧪 Structure finale des données de test: {
+  "headers": [
+    "Model",
+    "MMLU: Robustness",
+    "BoolQ Contrast Set",
+    "IMDB Contrast Set",
+    "Monotonicity Checks",
+    "Self-Check Consistency",
+    "Goal Hijacking and Prompt Leakage",
+    "Rule Following"
+  ],
+  "dataRows": 8
+}
+[2025-07-21T09:46:05.587Z] Step 1 completed for technical_robustness_safety
+[2025-07-21T09:46:05.587Z] Step 2: Parsing model scores for technical_robustness_safety...
+[2025-07-21T09:46:05.587Z] 
+🔍 === DEBUGGING MAPPING POUR technical_robustness_safety ===
+[2025-07-21T09:46:05.587Z] Headers reçus de l'API: [
+  "Model",
+  "MMLU: Robustness",
+  "BoolQ Contrast Set",
+  "IMDB Contrast Set",
+  "Monotonicity Checks",
+  "Self-Check Consistency",
+  "Goal Hijacking and Prompt Leakage",
+  "Rule Following"
+]
+[2025-07-21T09:46:05.587Z] Benchmarks attendus dans la config: [
+  "MMLU: Robustness",
+  "BoolQ Contrast Set",
+  "IMDB Contrast Set",
+  "Monotonicity Checks",
+  "Self-Check Consistency",
+  "Goal Hijacking and Prompt Leakage",
+  "Rule Following"
+]
+[2025-07-21T09:46:05.587Z] Index de la colonne modèle: 0
+[2025-07-21T09:46:05.587Z] 
+📊 RÉSULTATS DU MAPPING:
+[2025-07-21T09:46:05.587Z] ✅ [0] "MMLU: Robustness" → Col 1 "MMLU: Robustness" (exact)
+[2025-07-21T09:46:05.587Z] ✅ [1] "BoolQ Contrast Set" → Col 2 "BoolQ Contrast Set" (exact)
+[2025-07-21T09:46:05.587Z] ✅ [2] "IMDB Contrast Set" → Col 3 "IMDB Contrast Set" (exact)
+[2025-07-21T09:46:05.587Z] ✅ [3] "Monotonicity Checks" → Col 4 "Monotonicity Checks" (exact)
+[2025-07-21T09:46:05.587Z] ✅ [4] "Self-Check Consistency" → Col 5 "Self-Check Consistency" (exact)
+[2025-07-21T09:46:05.587Z] ✅ [5] "Goal Hijacking and Prompt Leakage" → Col 6 "Goal Hijacking and Prompt Leakage" (exact)
+[2025-07-21T09:46:05.587Z] ✅ [6] "Rule Following" → Col 7 "Rule Following" (exact)
+[2025-07-21T09:46:05.587Z] 
+📈 RÉSUMÉ: 7/7 benchmarks mappés
+[2025-07-21T09:46:05.587Z] 
+🤖 === TRAITEMENT MODÈLE: GPT-4 Turbo ===
+[2025-07-21T09:46:05.588Z] Données brutes de la ligne: [
+  "GPT-4 Turbo",
+  "0.100",
+  "0.110",
+  "0.120",
+  "0.130",
+  "0.140",
+  "0.150",
+  "0.160"
+]
+[2025-07-21T09:46:05.588Z] 📊 ASSIGNATIONS DE SCORES POUR GPT-4 Turbo:
+[2025-07-21T09:46:05.588Z]   ✅ [0] MMLU: Robustness → Col 1: "0.100" = 0.1000
+[2025-07-21T09:46:05.588Z]   ✅ [1] BoolQ Contrast Set → Col 2: "0.110" = 0.1100
+[2025-07-21T09:46:05.588Z]   ✅ [2] IMDB Contrast Set → Col 3: "0.120" = 0.1200
+[2025-07-21T09:46:05.588Z]   ✅ [3] Monotonicity Checks → Col 4: "0.130" = 0.1300
+[2025-07-21T09:46:05.588Z]   ✅ [4] Self-Check Consistency → Col 5: "0.140" = 0.1400
+[2025-07-21T09:46:05.588Z]   ✅ [5] Goal Hijacking and Prompt Leakage → Col 6: "0.150" = 0.1500
+[2025-07-21T09:46:05.588Z]   ✅ [6] Rule Following → Col 7: "0.160" = 0.1600
+[2025-07-21T09:46:05.588Z] 
+🤖 === TRAITEMENT MODÈLE: Claude 3 Opus ===
+[2025-07-21T09:46:05.588Z] Données brutes de la ligne: [
+  "Claude 3 Opus",
+  "0.450",
+  "0.480",
+  "N/A",
+  "0.540",
+  "0.570",
+  "0.600",
+  "0.630"
+]
+[2025-07-21T09:46:05.588Z] 📊 ASSIGNATIONS DE SCORES POUR Claude 3 Opus:
+[2025-07-21T09:46:05.588Z]   ✅ [0] MMLU: Robustness → Col 1: "0.450" = 0.4500
+[2025-07-21T09:46:05.588Z]   ✅ [1] BoolQ Contrast Set → Col 2: "0.480" = 0.4800
+[2025-07-21T09:46:05.588Z]   ✅ [2] IMDB Contrast Set → Col 3: "N/A" = N/A
+[2025-07-21T09:46:05.588Z]   ✅ [3] Monotonicity Checks → Col 4: "0.540" = 0.5400
+[2025-07-21T09:46:05.588Z]   ✅ [4] Self-Check Consistency → Col 5: "0.570" = 0.5700
+[2025-07-21T09:46:05.588Z]   ✅ [5] Goal Hijacking and Prompt Leakage → Col 6: "0.600" = 0.6000
+[2025-07-21T09:46:05.588Z]   ✅ [6] Rule Following → Col 7: "0.630" = 0.6300
+[2025-07-21T09:46:05.588Z] 
+🤖 === TRAITEMENT MODÈLE: Gemini 1.5 Pro ===
+[2025-07-21T09:46:05.588Z] Données brutes de la ligne: [
+  "Gemini 1.5 Pro",
+  "0.500",
+  "0.530",
+  "0.560",
+  "0.590",
+  "N/A",
+  "0.650",
+  "0.680"
+]
+[2025-07-21T09:46:05.588Z] 📊 ASSIGNATIONS DE SCORES POUR Gemini 1.5 Pro:
+[2025-07-21T09:46:05.588Z]   ✅ [0] MMLU: Robustness → Col 1: "0.500" = 0.5000
+[2025-07-21T09:46:05.588Z]   ✅ [1] BoolQ Contrast Set → Col 2: "0.530" = 0.5300
+[2025-07-21T09:46:05.588Z]   ✅ [2] IMDB Contrast Set → Col 3: "0.560" = 0.5600
+[2025-07-21T09:46:05.588Z]   ✅ [3] Monotonicity Checks → Col 4: "0.590" = 0.5900
+[2025-07-21T09:46:05.588Z]   ✅ [4] Self-Check Consistency → Col 5: "N/A" = N/A
+[2025-07-21T09:46:05.588Z]   ✅ [5] Goal Hijacking and Prompt Leakage → Col 6: "0.650" = 0.6500
+[2025-07-21T09:46:05.588Z]   ✅ [6] Rule Following → Col 7: "0.680" = 0.6800
+[2025-07-21T09:46:05.588Z] 
+🤖 === TRAITEMENT MODÈLE: GPT-3.5 Turbo ===
+[2025-07-21T09:46:05.589Z] Données brutes de la ligne: [
+  "GPT-3.5 Turbo",
+  "0.550",
+  "N/A",
+  "0.610",
+  "N/A",
+  "0.670",
+  "0.700",
+  "0.730"
+]
+[2025-07-21T09:46:05.589Z] 📊 ASSIGNATIONS DE SCORES POUR GPT-3.5 Turbo:
+[2025-07-21T09:46:05.589Z]   ✅ [0] MMLU: Robustness → Col 1: "0.550" = 0.5500
+[2025-07-21T09:46:05.589Z]   ✅ [1] BoolQ Contrast Set → Col 2: "N/A" = N/A
+[2025-07-21T09:46:05.589Z]   ✅ [2] IMDB Contrast Set → Col 3: "0.610" = 0.6100
+[2025-07-21T09:46:05.589Z]   ✅ [3] Monotonicity Checks → Col 4: "N/A" = N/A
+[2025-07-21T09:46:05.589Z]   ✅ [4] Self-Check Consistency → Col 5: "0.670" = 0.6700
+[2025-07-21T09:46:05.589Z]   ✅ [5] Goal Hijacking and Prompt Leakage → Col 6: "0.700" = 0.7000
+[2025-07-21T09:46:05.589Z]   ✅ [6] Rule Following → Col 7: "0.730" = 0.7300
+[2025-07-21T09:46:05.589Z] 
+🤖 === TRAITEMENT MODÈLE: LLaMA 3 70B ===
+[2025-07-21T09:46:05.591Z] Données brutes de la ligne: [
+  "LLaMA 3 70B",
+  "0.600",
+  "0.630",
+  "0.660",
+  "0.690",
+  "0.720",
+  "0.750",
+  "0.780"
+]
+[2025-07-21T09:46:05.592Z] 📊 ASSIGNATIONS DE SCORES POUR LLaMA 3 70B:
+[2025-07-21T09:46:05.592Z]   ✅ [0] MMLU: Robustness → Col 1: "0.600" = 0.6000
+[2025-07-21T09:46:05.592Z]   ✅ [1] BoolQ Contrast Set → Col 2: "0.630" = 0.6300
+[2025-07-21T09:46:05.592Z]   ✅ [2] IMDB Contrast Set → Col 3: "0.660" = 0.6600
+[2025-07-21T09:46:05.592Z]   ✅ [3] Monotonicity Checks → Col 4: "0.690" = 0.6900
+[2025-07-21T09:46:05.592Z]   ✅ [4] Self-Check Consistency → Col 5: "0.720" = 0.7200
+[2025-07-21T09:46:05.592Z]   ✅ [5] Goal Hijacking and Prompt Leakage → Col 6: "0.750" = 0.7500
+[2025-07-21T09:46:05.592Z]   ✅ [6] Rule Following → Col 7: "0.780" = 0.7800
+[2025-07-21T09:46:05.592Z] 
+🤖 === TRAITEMENT MODÈLE: Mistral Large ===
+[2025-07-21T09:46:05.592Z] Données brutes de la ligne: [
+  "Mistral Large",
+  "0.650",
+  "0.680",
+  "N/A",
+  "0.740",
+  "0.770",
+  "N/A",
+  "0.830"
+]
+[2025-07-21T09:46:05.592Z] 📊 ASSIGNATIONS DE SCORES POUR Mistral Large:
+[2025-07-21T09:46:05.592Z]   ✅ [0] MMLU: Robustness → Col 1: "0.650" = 0.6500
+[2025-07-21T09:46:05.592Z]   ✅ [1] BoolQ Contrast Set → Col 2: "0.680" = 0.6800
+[2025-07-21T09:46:05.592Z]   ✅ [2] IMDB Contrast Set → Col 3: "N/A" = N/A
+[2025-07-21T09:46:05.592Z]   ✅ [3] Monotonicity Checks → Col 4: "0.740" = 0.7400
+[2025-07-21T09:46:05.592Z]   ✅ [4] Self-Check Consistency → Col 5: "0.770" = 0.7700
+[2025-07-21T09:46:05.592Z]   ✅ [5] Goal Hijacking and Prompt Leakage → Col 6: "N/A" = N/A
+[2025-07-21T09:46:05.592Z]   ✅ [6] Rule Following → Col 7: "0.830" = 0.8300
+[2025-07-21T09:46:05.592Z] 
+🤖 === TRAITEMENT MODÈLE: Claude 3 Sonnet ===
+[2025-07-21T09:46:05.592Z] Données brutes de la ligne: [
+  "Claude 3 Sonnet",
+  "0.700",
+  "0.730",
+  "0.760",
+  "0.790",
+  "N/A",
+  "0.850",
+  "0.880"
+]
+[2025-07-21T09:46:05.592Z] 📊 ASSIGNATIONS DE SCORES POUR Claude 3 Sonnet:
+[2025-07-21T09:46:05.592Z]   ✅ [0] MMLU: Robustness → Col 1: "0.700" = 0.7000
+[2025-07-21T09:46:05.592Z]   ✅ [1] BoolQ Contrast Set → Col 2: "0.730" = 0.7300
+[2025-07-21T09:46:05.592Z]   ✅ [2] IMDB Contrast Set → Col 3: "0.760" = 0.7600
+[2025-07-21T09:46:05.592Z]   ✅ [3] Monotonicity Checks → Col 4: "0.790" = 0.7900
+[2025-07-21T09:46:05.592Z]   ✅ [4] Self-Check Consistency → Col 5: "N/A" = N/A
+[2025-07-21T09:46:05.592Z]   ✅ [5] Goal Hijacking and Prompt Leakage → Col 6: "0.850" = 0.8500
+[2025-07-21T09:46:05.592Z]   ✅ [6] Rule Following → Col 7: "0.880" = 0.8800
+[2025-07-21T09:46:05.592Z] 
+🤖 === TRAITEMENT MODÈLE: Gemini 1.0 Pro ===
+[2025-07-21T09:46:05.593Z] Données brutes de la ligne: [
+  "Gemini 1.0 Pro",
+  "0.750",
+  "0.780",
+  "0.810",
+  "0.840",
+  "0.870",
+  "0.900",
+  "N/A"
+]
+[2025-07-21T09:46:05.593Z] 📊 ASSIGNATIONS DE SCORES POUR Gemini 1.0 Pro:
+[2025-07-21T09:46:05.593Z]   ✅ [0] MMLU: Robustness → Col 1: "0.750" = 0.7500
+[2025-07-21T09:46:05.593Z]   ✅ [1] BoolQ Contrast Set → Col 2: "0.780" = 0.7800
+[2025-07-21T09:46:05.593Z]   ✅ [2] IMDB Contrast Set → Col 3: "0.810" = 0.8100
+[2025-07-21T09:46:05.593Z]   ✅ [3] Monotonicity Checks → Col 4: "0.840" = 0.8400
+[2025-07-21T09:46:05.593Z]   ✅ [4] Self-Check Consistency → Col 5: "0.870" = 0.8700
+[2025-07-21T09:46:05.593Z]   ✅ [5] Goal Hijacking and Prompt Leakage → Col 6: "0.900" = 0.9000
+[2025-07-21T09:46:05.593Z]   ✅ [6] Rule Following → Col 7: "N/A" = N/A
+[2025-07-21T09:46:05.593Z] 
+🎯 === CONTRÔLES DE QUALITÉ POUR technical_robustness_safety ===
+[2025-07-21T09:46:05.593Z] Modèles traités: 8
+[2025-07-21T09:46:05.593Z] 🔍 VÉRIFICATION Claude 3 Opus + IMDB Contrast Set: ✅ N/A (correct)
+[2025-07-21T09:46:05.593Z] 🔍 VÉRIFICATION GPT-4 Turbo patterns:
+[2025-07-21T09:46:05.593Z]   ✅ [0] MMLU: Robustness: attendu 0.100, reçu 0.100
+[2025-07-21T09:46:05.593Z]   ✅ [1] BoolQ Contrast Set: attendu 0.110, reçu 0.110
+[2025-07-21T09:46:05.593Z]   ✅ [2] IMDB Contrast Set: attendu 0.120, reçu 0.120
+[2025-07-21T09:46:05.593Z]   ✅ [3] Monotonicity Checks: attendu 0.130, reçu 0.130
+[2025-07-21T09:46:05.593Z]   ✅ [4] Self-Check Consistency: attendu 0.140, reçu 0.140
+[2025-07-21T09:46:05.593Z]   ✅ [5] Goal Hijacking and Prompt Leakage: attendu 0.150, reçu 0.150
+[2025-07-21T09:46:05.593Z]   ✅ [6] Rule Following: attendu 0.160, reçu 0.160
+[2025-07-21T09:46:05.593Z] 📊 STATISTIQUES:
+[2025-07-21T09:46:05.593Z]   - Total scores: 56
+[2025-07-21T09:46:05.593Z]   - Scores valides: 48
+[2025-07-21T09:46:05.593Z]   - Scores N/A: 8
+[2025-07-21T09:46:05.593Z]   - Benchmarks mappés par modèle: 7/7
+[2025-07-21T09:46:05.593Z] 
+✅ === FIN DU TRAITEMENT technical_robustness_safety ===
+
+[2025-07-21T09:46:05.593Z] Step 2 completed: Parsed 8 model scores for technical_robustness_safety
+[2025-07-21T09:46:05.593Z] Step 3: Storing in database for technical_robustness_safety...
+[2025-07-21T09:46:12.032Z] Step 3 completed for technical_robustness_safety
+[2025-07-21T09:46:12.032Z] 
+=== Processing category: privacy_data_governance ===
+[2025-07-21T09:46:12.034Z] Endpoint: /partial_2
+[2025-07-21T09:46:12.034Z] Params structure: [
+  [
+    "Toxicity of the Dataset",
+    "Bias of the Dataset"
+  ],
+  [
+    "Copyrighted Material Memorization"
+  ],
+  [
+    "PII Extraction by Association"
+  ]
+]
+[2025-07-21T09:46:14.035Z] Step 1: Calling real Gradio API for privacy_data_governance...
+[2025-07-21T09:46:14.036Z] Calling Gradio API: /partial_2 with params: [
+  [
+    "Toxicity of the Dataset",
+    "Bias of the Dataset"
+  ],
+  [
+    "Copyrighted Material Memorization"
+  ],
+  [
+    "PII Extraction by Association"
+  ]
+]
+[2025-07-21T09:46:14.036Z] Making request to: https://latticeflow-compl-ai-board.hf.space/api/predict
+[ERROR] [2025-07-21T09:46:14.342Z] HTTP error response: {"detail":"Not Found"}
+[ERROR] [2025-07-21T09:46:14.407Z] Failed to call Gradio API /partial_2: {}
+[ERROR] [2025-07-21T09:46:14.407Z] Error details: {
+  "name": "Error",
+  "message": "HTTP error! status: 404 - Not Found",
+  "stack": "Error: HTTP error! status: 404 - Not Found\n    at callGradioAPI (webpack-internal:///(rsc)/./app/api/admin/compl-ai-sync/route.ts:324:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async POST (webpack-internal:///(rsc)/./app/api/admin/compl-ai-sync/route.ts:895:32)\n    at async AppRouteRouteModule.do (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n    at async doRender (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1920:28)\n    at async DevServer.renderPageComponent (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:2445:32)\n    at async DevServer.pipeImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/next-server.js:305:17)\n    at async DevServer.handleRequestImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:900:17)\n    at async /Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n    at async Span.traceAsyncFn (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/trace/trace.js:157:20)\n    at async DevServer.handleRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n    at async invokeRender (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:237:21)\n    at async handleRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:428:24)\n    at async requestHandlerImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:452:13)\n    at async Server.requestListener (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/start-server.js:158:13)"
+}
+[2025-07-21T09:46:14.407Z] Using fallback data for /partial_2 due to API error
+[2025-07-21T09:46:14.407Z] 🧪 Generating DIAGNOSTIC fallback data for /partial_2
+[2025-07-21T09:46:14.408Z] 🧪 Headers générés pour test: [
+  "Model",
+  "Toxicity of the Dataset",
+  "Bias of the Dataset",
+  "Copyrighted Material Memorization",
+  "PII Extraction by Association"
+]
+[2025-07-21T09:46:14.408Z] 🧪 Données test pour GPT-4 Turbo: [
+  "GPT-4 Turbo",
+  "0.100",
+  "0.110",
+  "0.120",
+  "0.130"
+]
+[2025-07-21T09:46:14.408Z] 🧪 Données test pour Claude 3 Opus: [
+  "Claude 3 Opus",
+  "0.450",
+  "N/A",
+  "N/A",
+  "0.540"
+]
+[2025-07-21T09:46:14.408Z] 🧪 Données test pour Gemini 1.5 Pro: [
+  "Gemini 1.5 Pro",
+  "0.500",
+  "0.530",
+  "0.560",
+  "0.590"
+]
+[2025-07-21T09:46:14.408Z] 🧪 Données test pour GPT-3.5 Turbo: [
+  "GPT-3.5 Turbo",
+  "0.550",
+  "0.580",
+  "0.610",
+  "0.640"
+]
+[2025-07-21T09:46:14.408Z] 🧪 Données test pour LLaMA 3 70B: [
+  "LLaMA 3 70B",
+  "0.600",
+  "0.630",
+  "0.660",
+  "N/A"
+]
+[2025-07-21T09:46:14.408Z] 🧪 Données test pour Mistral Large: [
+  "Mistral Large",
+  "0.650",
+  "0.680",
+  "0.710",
+  "0.740"
+]
+[2025-07-21T09:46:14.408Z] 🧪 Données test pour Claude 3 Sonnet: [
+  "Claude 3 Sonnet",
+  "0.700",
+  "0.730",
+  "0.760",
+  "0.790"
+]
+[2025-07-21T09:46:14.408Z] 🧪 Données test pour Gemini 1.0 Pro: [
+  "Gemini 1.0 Pro",
+  "N/A",
+  "0.780",
+  "0.810",
+  "0.840"
+]
+[2025-07-21T09:46:14.408Z] 🧪 Structure finale des données de test: {
+  "headers": [
+    "Model",
+    "Toxicity of the Dataset",
+    "Bias of the Dataset",
+    "Copyrighted Material Memorization",
+    "PII Extraction by Association"
+  ],
+  "dataRows": 8
+}
+[2025-07-21T09:46:14.408Z] Step 1 completed for privacy_data_governance
+[2025-07-21T09:46:14.408Z] Step 2: Parsing model scores for privacy_data_governance...
+[2025-07-21T09:46:14.408Z] 
+🔍 === DEBUGGING MAPPING POUR privacy_data_governance ===
+[2025-07-21T09:46:14.408Z] Headers reçus de l'API: [
+  "Model",
+  "Toxicity of the Dataset",
+  "Bias of the Dataset",
+  "Copyrighted Material Memorization",
+  "PII Extraction by Association"
+]
+[2025-07-21T09:46:14.408Z] Benchmarks attendus dans la config: [
+  "Toxicity of the Dataset",
+  "Bias of the Dataset",
+  "Copyrighted Material Memorization",
+  "PII Extraction by Association"
+]
+[2025-07-21T09:46:14.408Z] Index de la colonne modèle: 0
+[2025-07-21T09:46:14.409Z] 
+📊 RÉSULTATS DU MAPPING:
+[2025-07-21T09:46:14.409Z] ✅ [0] "Toxicity of the Dataset" → Col 1 "Toxicity of the Dataset" (exact)
+[2025-07-21T09:46:14.409Z] ✅ [1] "Bias of the Dataset" → Col 2 "Bias of the Dataset" (exact)
+[2025-07-21T09:46:14.409Z] ✅ [2] "Copyrighted Material Memorization" → Col 3 "Copyrighted Material Memorization" (exact)
+[2025-07-21T09:46:14.409Z] ✅ [3] "PII Extraction by Association" → Col 4 "PII Extraction by Association" (exact)
+[2025-07-21T09:46:14.409Z] 
+📈 RÉSUMÉ: 4/4 benchmarks mappés
+[2025-07-21T09:46:14.409Z] 
+🤖 === TRAITEMENT MODÈLE: GPT-4 Turbo ===
+[2025-07-21T09:46:14.409Z] Données brutes de la ligne: [
+  "GPT-4 Turbo",
+  "0.100",
+  "0.110",
+  "0.120",
+  "0.130"
+]
+[2025-07-21T09:46:14.409Z] 📊 ASSIGNATIONS DE SCORES POUR GPT-4 Turbo:
+[2025-07-21T09:46:14.409Z]   ✅ [0] Toxicity of the Dataset → Col 1: "0.100" = 0.1000
+[2025-07-21T09:46:14.409Z]   ✅ [1] Bias of the Dataset → Col 2: "0.110" = 0.1100
+[2025-07-21T09:46:14.409Z]   ✅ [2] Copyrighted Material Memorization → Col 3: "0.120" = 0.1200
+[2025-07-21T09:46:14.409Z]   ✅ [3] PII Extraction by Association → Col 4: "0.130" = 0.1300
+[2025-07-21T09:46:14.409Z] 
+🤖 === TRAITEMENT MODÈLE: Claude 3 Opus ===
+[2025-07-21T09:46:14.409Z] Données brutes de la ligne: [
+  "Claude 3 Opus",
+  "0.450",
+  "N/A",
+  "N/A",
+  "0.540"
+]
+[2025-07-21T09:46:14.409Z] 📊 ASSIGNATIONS DE SCORES POUR Claude 3 Opus:
+[2025-07-21T09:46:14.409Z]   ✅ [0] Toxicity of the Dataset → Col 1: "0.450" = 0.4500
+[2025-07-21T09:46:14.409Z]   ✅ [1] Bias of the Dataset → Col 2: "N/A" = N/A
+[2025-07-21T09:46:14.409Z]   ✅ [2] Copyrighted Material Memorization → Col 3: "N/A" = N/A
+[2025-07-21T09:46:14.409Z]   ✅ [3] PII Extraction by Association → Col 4: "0.540" = 0.5400
+[2025-07-21T09:46:14.409Z] 
+🤖 === TRAITEMENT MODÈLE: Gemini 1.5 Pro ===
+[2025-07-21T09:46:14.409Z] Données brutes de la ligne: [
+  "Gemini 1.5 Pro",
+  "0.500",
+  "0.530",
+  "0.560",
+  "0.590"
+]
+[2025-07-21T09:46:14.409Z] 📊 ASSIGNATIONS DE SCORES POUR Gemini 1.5 Pro:
+[2025-07-21T09:46:14.409Z]   ✅ [0] Toxicity of the Dataset → Col 1: "0.500" = 0.5000
+[2025-07-21T09:46:14.409Z]   ✅ [1] Bias of the Dataset → Col 2: "0.530" = 0.5300
+[2025-07-21T09:46:14.409Z]   ✅ [2] Copyrighted Material Memorization → Col 3: "0.560" = 0.5600
+[2025-07-21T09:46:14.409Z]   ✅ [3] PII Extraction by Association → Col 4: "0.590" = 0.5900
+[2025-07-21T09:46:14.409Z] 
+🤖 === TRAITEMENT MODÈLE: GPT-3.5 Turbo ===
+[2025-07-21T09:46:14.409Z] Données brutes de la ligne: [
+  "GPT-3.5 Turbo",
+  "0.550",
+  "0.580",
+  "0.610",
+  "0.640"
+]
+[2025-07-21T09:46:14.409Z] 📊 ASSIGNATIONS DE SCORES POUR GPT-3.5 Turbo:
+[2025-07-21T09:46:14.409Z]   ✅ [0] Toxicity of the Dataset → Col 1: "0.550" = 0.5500
+[2025-07-21T09:46:14.409Z]   ✅ [1] Bias of the Dataset → Col 2: "0.580" = 0.5800
+[2025-07-21T09:46:14.409Z]   ✅ [2] Copyrighted Material Memorization → Col 3: "0.610" = 0.6100
+[2025-07-21T09:46:14.409Z]   ✅ [3] PII Extraction by Association → Col 4: "0.640" = 0.6400
+[2025-07-21T09:46:14.410Z] 
+🤖 === TRAITEMENT MODÈLE: LLaMA 3 70B ===
+[2025-07-21T09:46:14.410Z] Données brutes de la ligne: [
+  "LLaMA 3 70B",
+  "0.600",
+  "0.630",
+  "0.660",
+  "N/A"
+]
+[2025-07-21T09:46:14.410Z] 📊 ASSIGNATIONS DE SCORES POUR LLaMA 3 70B:
+[2025-07-21T09:46:14.410Z]   ✅ [0] Toxicity of the Dataset → Col 1: "0.600" = 0.6000
+[2025-07-21T09:46:14.410Z]   ✅ [1] Bias of the Dataset → Col 2: "0.630" = 0.6300
+[2025-07-21T09:46:14.410Z]   ✅ [2] Copyrighted Material Memorization → Col 3: "0.660" = 0.6600
+[2025-07-21T09:46:14.410Z]   ✅ [3] PII Extraction by Association → Col 4: "N/A" = N/A
+[2025-07-21T09:46:14.410Z] 
+🤖 === TRAITEMENT MODÈLE: Mistral Large ===
+[2025-07-21T09:46:14.410Z] Données brutes de la ligne: [
+  "Mistral Large",
+  "0.650",
+  "0.680",
+  "0.710",
+  "0.740"
+]
+[2025-07-21T09:46:14.410Z] 📊 ASSIGNATIONS DE SCORES POUR Mistral Large:
+[2025-07-21T09:46:14.410Z]   ✅ [0] Toxicity of the Dataset → Col 1: "0.650" = 0.6500
+[2025-07-21T09:46:14.410Z]   ✅ [1] Bias of the Dataset → Col 2: "0.680" = 0.6800
+[2025-07-21T09:46:14.410Z]   ✅ [2] Copyrighted Material Memorization → Col 3: "0.710" = 0.7100
+[2025-07-21T09:46:14.410Z]   ✅ [3] PII Extraction by Association → Col 4: "0.740" = 0.7400
+[2025-07-21T09:46:14.410Z] 
+🤖 === TRAITEMENT MODÈLE: Claude 3 Sonnet ===
+[2025-07-21T09:46:14.410Z] Données brutes de la ligne: [
+  "Claude 3 Sonnet",
+  "0.700",
+  "0.730",
+  "0.760",
+  "0.790"
+]
+[2025-07-21T09:46:14.410Z] 📊 ASSIGNATIONS DE SCORES POUR Claude 3 Sonnet:
+[2025-07-21T09:46:14.410Z]   ✅ [0] Toxicity of the Dataset → Col 1: "0.700" = 0.7000
+[2025-07-21T09:46:14.410Z]   ✅ [1] Bias of the Dataset → Col 2: "0.730" = 0.7300
+[2025-07-21T09:46:14.410Z]   ✅ [2] Copyrighted Material Memorization → Col 3: "0.760" = 0.7600
+[2025-07-21T09:46:14.410Z]   ✅ [3] PII Extraction by Association → Col 4: "0.790" = 0.7900
+[2025-07-21T09:46:14.410Z] 
+🤖 === TRAITEMENT MODÈLE: Gemini 1.0 Pro ===
+[2025-07-21T09:46:14.410Z] Données brutes de la ligne: [
+  "Gemini 1.0 Pro",
+  "N/A",
+  "0.780",
+  "0.810",
+  "0.840"
+]
+[2025-07-21T09:46:14.410Z] 📊 ASSIGNATIONS DE SCORES POUR Gemini 1.0 Pro:
+[2025-07-21T09:46:14.410Z]   ✅ [0] Toxicity of the Dataset → Col 1: "N/A" = N/A
+[2025-07-21T09:46:14.410Z]   ✅ [1] Bias of the Dataset → Col 2: "0.780" = 0.7800
+[2025-07-21T09:46:14.410Z]   ✅ [2] Copyrighted Material Memorization → Col 3: "0.810" = 0.8100
+[2025-07-21T09:46:14.410Z]   ✅ [3] PII Extraction by Association → Col 4: "0.840" = 0.8400
+[2025-07-21T09:46:14.410Z] 
+🎯 === CONTRÔLES DE QUALITÉ POUR privacy_data_governance ===
+[2025-07-21T09:46:14.410Z] Modèles traités: 8
+[2025-07-21T09:46:14.410Z] 🔍 VÉRIFICATION GPT-4 Turbo patterns:
+[2025-07-21T09:46:14.410Z]   ✅ [0] Toxicity of the Dataset: attendu 0.100, reçu 0.100
+[2025-07-21T09:46:14.410Z]   ✅ [1] Bias of the Dataset: attendu 0.110, reçu 0.110
+[2025-07-21T09:46:14.410Z]   ✅ [2] Copyrighted Material Memorization: attendu 0.120, reçu 0.120
+[2025-07-21T09:46:14.410Z]   ✅ [3] PII Extraction by Association: attendu 0.130, reçu 0.130
+[2025-07-21T09:46:14.411Z] 📊 STATISTIQUES:
+[2025-07-21T09:46:14.411Z]   - Total scores: 32
+[2025-07-21T09:46:14.411Z]   - Scores valides: 28
+[2025-07-21T09:46:14.411Z]   - Scores N/A: 4
+[2025-07-21T09:46:14.411Z]   - Benchmarks mappés par modèle: 4/4
+[2025-07-21T09:46:14.411Z] 
+✅ === FIN DU TRAITEMENT privacy_data_governance ===
+
+[2025-07-21T09:46:14.411Z] Step 2 completed: Parsed 8 model scores for privacy_data_governance
+[2025-07-21T09:46:14.411Z] Step 3: Storing in database for privacy_data_governance...
+[2025-07-21T09:46:18.401Z] Step 3 completed for privacy_data_governance
+[2025-07-21T09:46:18.401Z] 
+=== Processing category: transparency ===
+[2025-07-21T09:46:18.401Z] Endpoint: /partial_5
+[2025-07-21T09:46:18.401Z] Params structure: [
+  [
+    "General Knowledge: MMLU",
+    "Reasoning: AI2 Reasoning Challenge",
+    "Common Sense Reasoning: HellaSwag",
+    "Truthfulness: TruthfulQA MC2",
+    "Coding: HumanEval"
+  ],
+  [
+    "Logit Calibration: BIG-Bench",
+    "Self-Assessment: TriviaQA"
+  ],
+  [
+    "Denying Human Presence"
+  ],
+  [
+    "Watermark Reliability & Robustness"
+  ]
+]
+[2025-07-21T09:46:20.403Z] Step 1: Calling real Gradio API for transparency...
+[2025-07-21T09:46:20.403Z] Calling Gradio API: /partial_5 with params: [
+  [
+    "General Knowledge: MMLU",
+    "Reasoning: AI2 Reasoning Challenge",
+    "Common Sense Reasoning: HellaSwag",
+    "Truthfulness: TruthfulQA MC2",
+    "Coding: HumanEval"
+  ],
+  [
+    "Logit Calibration: BIG-Bench",
+    "Self-Assessment: TriviaQA"
+  ],
+  [
+    "Denying Human Presence"
+  ],
+  [
+    "Watermark Reliability & Robustness"
+  ]
+]
+[2025-07-21T09:46:20.403Z] Making request to: https://latticeflow-compl-ai-board.hf.space/api/predict
+[ERROR] [2025-07-21T09:46:20.698Z] HTTP error response: {"detail":"Not Found"}
+[ERROR] [2025-07-21T09:46:20.755Z] Failed to call Gradio API /partial_5: {}
+[ERROR] [2025-07-21T09:46:20.755Z] Error details: {
+  "name": "Error",
+  "message": "HTTP error! status: 404 - Not Found",
+  "stack": "Error: HTTP error! status: 404 - Not Found\n    at callGradioAPI (webpack-internal:///(rsc)/./app/api/admin/compl-ai-sync/route.ts:324:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async POST (webpack-internal:///(rsc)/./app/api/admin/compl-ai-sync/route.ts:895:32)\n    at async AppRouteRouteModule.do (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n    at async doRender (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1920:28)\n    at async DevServer.renderPageComponent (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:2445:32)\n    at async DevServer.pipeImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/next-server.js:305:17)\n    at async DevServer.handleRequestImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:900:17)\n    at async /Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n    at async Span.traceAsyncFn (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/trace/trace.js:157:20)\n    at async DevServer.handleRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n    at async invokeRender (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:237:21)\n    at async handleRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:428:24)\n    at async requestHandlerImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:452:13)\n    at async Server.requestListener (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/start-server.js:158:13)"
+}
+[2025-07-21T09:46:20.755Z] Using fallback data for /partial_5 due to API error
+[2025-07-21T09:46:20.755Z] 🧪 Generating DIAGNOSTIC fallback data for /partial_5
+[2025-07-21T09:46:20.757Z] 🧪 Headers générés pour test: [
+  "Model",
+  "General Knowledge: MMLU",
+  "Reasoning: AI2 Reasoning Challenge",
+  "Common Sense Reasoning: HellaSwag",
+  "Truthfulness: TruthfulQA MC2",
+  "Coding: HumanEval",
+  "Logit Calibration: BIG-Bench",
+  "Self-Assessment: TriviaQA",
+  "Denying Human Presence",
+  "Watermark Reliability & Robustness"
+]
+[2025-07-21T09:46:20.758Z] 🧪 Données test pour GPT-4 Turbo: [
+  "GPT-4 Turbo",
+  "0.100",
+  "0.110",
+  "0.120",
+  "0.130",
+  "0.140",
+  "0.150",
+  "0.160",
+  "0.170",
+  "0.180"
+]
+[2025-07-21T09:46:20.758Z] 🧪 Données test pour Claude 3 Opus: [
+  "Claude 3 Opus",
+  "0.450",
+  "0.480",
+  "0.510",
+  "0.540",
+  "0.570",
+  "0.600",
+  "0.630",
+  "0.660",
+  "0.690"
+]
+[2025-07-21T09:46:20.758Z] 🧪 Données test pour Gemini 1.5 Pro: [
+  "Gemini 1.5 Pro",
+  "0.500",
+  "0.530",
+  "0.560",
+  "0.590",
+  "0.620",
+  "0.650",
+  "0.680",
+  "0.710",
+  "0.740"
+]
+[2025-07-21T09:46:20.758Z] 🧪 Données test pour GPT-3.5 Turbo: [
+  "GPT-3.5 Turbo",
+  "0.550",
+  "0.580",
+  "0.610",
+  "0.640",
+  "0.670",
+  "N/A",
+  "0.730",
+  "0.760",
+  "0.790"
+]
+[2025-07-21T09:46:20.758Z] 🧪 Données test pour LLaMA 3 70B: [
+  "LLaMA 3 70B",
+  "0.600",
+  "0.630",
+  "0.660",
+  "0.690",
+  "N/A",
+  "0.750",
+  "0.780",
+  "0.810",
+  "N/A"
+]
+[2025-07-21T09:46:20.758Z] 🧪 Données test pour Mistral Large: [
+  "Mistral Large",
+  "N/A",
+  "0.680",
+  "0.710",
+  "0.740",
+  "N/A",
+  "0.800",
+  "0.830",
+  "0.860",
+  "0.890"
+]
+[2025-07-21T09:46:20.758Z] 🧪 Données test pour Claude 3 Sonnet: [
+  "Claude 3 Sonnet",
+  "0.700",
+  "0.730",
+  "N/A",
+  "0.790",
+  "0.820",
+  "N/A",
+  "0.880",
+  "0.910",
+  "0.940"
+]
+[2025-07-21T09:46:20.758Z] 🧪 Données test pour Gemini 1.0 Pro: [
+  "Gemini 1.0 Pro",
+  "0.750",
+  "0.780",
+  "0.810",
+  "N/A",
+  "0.870",
+  "0.900",
+  "N/A",
+  "0.950",
+  "0.950"
+]
+[2025-07-21T09:46:20.758Z] 🧪 Structure finale des données de test: {
+  "headers": [
+    "Model",
+    "General Knowledge: MMLU",
+    "Reasoning: AI2 Reasoning Challenge",
+    "Common Sense Reasoning: HellaSwag",
+    "Truthfulness: TruthfulQA MC2",
+    "Coding: HumanEval",
+    "Logit Calibration: BIG-Bench",
+    "Self-Assessment: TriviaQA",
+    "Denying Human Presence",
+    "Watermark Reliability & Robustness"
+  ],
+  "dataRows": 8
+}
+[2025-07-21T09:46:20.758Z] Step 1 completed for transparency
+[2025-07-21T09:46:20.758Z] Step 2: Parsing model scores for transparency...
+[2025-07-21T09:46:20.758Z] 
+🔍 === DEBUGGING MAPPING POUR transparency ===
+[2025-07-21T09:46:20.758Z] Headers reçus de l'API: [
+  "Model",
+  "General Knowledge: MMLU",
+  "Reasoning: AI2 Reasoning Challenge",
+  "Common Sense Reasoning: HellaSwag",
+  "Truthfulness: TruthfulQA MC2",
+  "Coding: HumanEval",
+  "Logit Calibration: BIG-Bench",
+  "Self-Assessment: TriviaQA",
+  "Denying Human Presence",
+  "Watermark Reliability & Robustness"
+]
+[2025-07-21T09:46:20.758Z] Benchmarks attendus dans la config: [
+  "General Knowledge: MMLU",
+  "Reasoning: AI2 Reasoning Challenge",
+  "Common Sense Reasoning: HellaSwag",
+  "Truthfulness: TruthfulQA MC2",
+  "Coding: HumanEval",
+  "Logit Calibration: BIG-Bench",
+  "Self-Assessment: TriviaQA",
+  "Denying Human Presence",
+  "Watermark Reliability & Robustness"
+]
+[2025-07-21T09:46:20.758Z] Index de la colonne modèle: 0
+[2025-07-21T09:46:20.758Z] 
+📊 RÉSULTATS DU MAPPING:
+[2025-07-21T09:46:20.758Z] ✅ [0] "General Knowledge: MMLU" → Col 1 "General Knowledge: MMLU" (exact)
+[2025-07-21T09:46:20.758Z] ✅ [1] "Reasoning: AI2 Reasoning Challenge" → Col 2 "Reasoning: AI2 Reasoning Challenge" (exact)
+[2025-07-21T09:46:20.758Z] ✅ [2] "Common Sense Reasoning: HellaSwag" → Col 3 "Common Sense Reasoning: HellaSwag" (exact)
+[2025-07-21T09:46:20.759Z] ✅ [3] "Truthfulness: TruthfulQA MC2" → Col 4 "Truthfulness: TruthfulQA MC2" (exact)
+[2025-07-21T09:46:20.759Z] ✅ [4] "Coding: HumanEval" → Col 5 "Coding: HumanEval" (exact)
+[2025-07-21T09:46:20.759Z] ✅ [5] "Logit Calibration: BIG-Bench" → Col 6 "Logit Calibration: BIG-Bench" (exact)
+[2025-07-21T09:46:20.760Z] ✅ [6] "Self-Assessment: TriviaQA" → Col 7 "Self-Assessment: TriviaQA" (exact)
+[2025-07-21T09:46:20.760Z] ✅ [7] "Denying Human Presence" → Col 8 "Denying Human Presence" (exact)
+[2025-07-21T09:46:20.760Z] ✅ [8] "Watermark Reliability & Robustness" → Col 9 "Watermark Reliability & Robustness" (exact)
+[2025-07-21T09:46:20.760Z] 
+📈 RÉSUMÉ: 9/9 benchmarks mappés
+[2025-07-21T09:46:20.760Z] 
+🤖 === TRAITEMENT MODÈLE: GPT-4 Turbo ===
+[2025-07-21T09:46:20.763Z] Données brutes de la ligne: [
+  "GPT-4 Turbo",
+  "0.100",
+  "0.110",
+  "0.120",
+  "0.130",
+  "0.140",
+  "0.150",
+  "0.160",
+  "0.170",
+  "0.180"
+]
+[2025-07-21T09:46:20.763Z] 📊 ASSIGNATIONS DE SCORES POUR GPT-4 Turbo:
+[2025-07-21T09:46:20.763Z]   ✅ [0] General Knowledge: MMLU → Col 1: "0.100" = 0.1000
+[2025-07-21T09:46:20.763Z]   ✅ [1] Reasoning: AI2 Reasoning Challenge → Col 2: "0.110" = 0.1100
+[2025-07-21T09:46:20.763Z]   ✅ [2] Common Sense Reasoning: HellaSwag → Col 3: "0.120" = 0.1200
+[2025-07-21T09:46:20.763Z]   ✅ [3] Truthfulness: TruthfulQA MC2 → Col 4: "0.130" = 0.1300
+[2025-07-21T09:46:20.763Z]   ✅ [4] Coding: HumanEval → Col 5: "0.140" = 0.1400
+[2025-07-21T09:46:20.763Z]   ✅ [5] Logit Calibration: BIG-Bench → Col 6: "0.150" = 0.1500
+[2025-07-21T09:46:20.763Z]   ✅ [6] Self-Assessment: TriviaQA → Col 7: "0.160" = 0.1600
+[2025-07-21T09:46:20.763Z]   ✅ [7] Denying Human Presence → Col 8: "0.170" = 0.1700
+[2025-07-21T09:46:20.764Z]   ✅ [8] Watermark Reliability & Robustness → Col 9: "0.180" = 0.1800
+[2025-07-21T09:46:20.764Z] 
+🤖 === TRAITEMENT MODÈLE: Claude 3 Opus ===
+[2025-07-21T09:46:20.764Z] Données brutes de la ligne: [
+  "Claude 3 Opus",
+  "0.450",
+  "0.480",
+  "0.510",
+  "0.540",
+  "0.570",
+  "0.600",
+  "0.630",
+  "0.660",
+  "0.690"
+]
+[2025-07-21T09:46:20.764Z] 📊 ASSIGNATIONS DE SCORES POUR Claude 3 Opus:
+[2025-07-21T09:46:20.764Z]   ✅ [0] General Knowledge: MMLU → Col 1: "0.450" = 0.4500
+[2025-07-21T09:46:20.764Z]   ✅ [1] Reasoning: AI2 Reasoning Challenge → Col 2: "0.480" = 0.4800
+[2025-07-21T09:46:20.764Z]   ✅ [2] Common Sense Reasoning: HellaSwag → Col 3: "0.510" = 0.5100
+[2025-07-21T09:46:20.764Z]   ✅ [3] Truthfulness: TruthfulQA MC2 → Col 4: "0.540" = 0.5400
+[2025-07-21T09:46:20.764Z]   ✅ [4] Coding: HumanEval → Col 5: "0.570" = 0.5700
+[2025-07-21T09:46:20.764Z]   ✅ [5] Logit Calibration: BIG-Bench → Col 6: "0.600" = 0.6000
+[2025-07-21T09:46:20.764Z]   ✅ [6] Self-Assessment: TriviaQA → Col 7: "0.630" = 0.6300
+[2025-07-21T09:46:20.764Z]   ✅ [7] Denying Human Presence → Col 8: "0.660" = 0.6600
+[2025-07-21T09:46:20.764Z]   ✅ [8] Watermark Reliability & Robustness → Col 9: "0.690" = 0.6900
+[2025-07-21T09:46:20.764Z] 
+🤖 === TRAITEMENT MODÈLE: Gemini 1.5 Pro ===
+[2025-07-21T09:46:20.764Z] Données brutes de la ligne: [
+  "Gemini 1.5 Pro",
+  "0.500",
+  "0.530",
+  "0.560",
+  "0.590",
+  "0.620",
+  "0.650",
+  "0.680",
+  "0.710",
+  "0.740"
+]
+[2025-07-21T09:46:20.764Z] 📊 ASSIGNATIONS DE SCORES POUR Gemini 1.5 Pro:
+[2025-07-21T09:46:20.764Z]   ✅ [0] General Knowledge: MMLU → Col 1: "0.500" = 0.5000
+[2025-07-21T09:46:20.764Z]   ✅ [1] Reasoning: AI2 Reasoning Challenge → Col 2: "0.530" = 0.5300
+[2025-07-21T09:46:20.764Z]   ✅ [2] Common Sense Reasoning: HellaSwag → Col 3: "0.560" = 0.5600
+[2025-07-21T09:46:20.764Z]   ✅ [3] Truthfulness: TruthfulQA MC2 → Col 4: "0.590" = 0.5900
+[2025-07-21T09:46:20.764Z]   ✅ [4] Coding: HumanEval → Col 5: "0.620" = 0.6200
+[2025-07-21T09:46:20.764Z]   ✅ [5] Logit Calibration: BIG-Bench → Col 6: "0.650" = 0.6500
+[2025-07-21T09:46:20.764Z]   ✅ [6] Self-Assessment: TriviaQA → Col 7: "0.680" = 0.6800
+[2025-07-21T09:46:20.764Z]   ✅ [7] Denying Human Presence → Col 8: "0.710" = 0.7100
+[2025-07-21T09:46:20.764Z]   ✅ [8] Watermark Reliability & Robustness → Col 9: "0.740" = 0.7400
+[2025-07-21T09:46:20.764Z] 
+🤖 === TRAITEMENT MODÈLE: GPT-3.5 Turbo ===
+[2025-07-21T09:46:20.765Z] Données brutes de la ligne: [
+  "GPT-3.5 Turbo",
+  "0.550",
+  "0.580",
+  "0.610",
+  "0.640",
+  "0.670",
+  "N/A",
+  "0.730",
+  "0.760",
+  "0.790"
+]
+[2025-07-21T09:46:20.765Z] 📊 ASSIGNATIONS DE SCORES POUR GPT-3.5 Turbo:
+[2025-07-21T09:46:20.765Z]   ✅ [0] General Knowledge: MMLU → Col 1: "0.550" = 0.5500
+[2025-07-21T09:46:20.765Z]   ✅ [1] Reasoning: AI2 Reasoning Challenge → Col 2: "0.580" = 0.5800
+[2025-07-21T09:46:20.765Z]   ✅ [2] Common Sense Reasoning: HellaSwag → Col 3: "0.610" = 0.6100
+[2025-07-21T09:46:20.765Z]   ✅ [3] Truthfulness: TruthfulQA MC2 → Col 4: "0.640" = 0.6400
+[2025-07-21T09:46:20.765Z]   ✅ [4] Coding: HumanEval → Col 5: "0.670" = 0.6700
+[2025-07-21T09:46:20.765Z]   ✅ [5] Logit Calibration: BIG-Bench → Col 6: "N/A" = N/A
+[2025-07-21T09:46:20.765Z]   ✅ [6] Self-Assessment: TriviaQA → Col 7: "0.730" = 0.7300
+[2025-07-21T09:46:20.765Z]   ✅ [7] Denying Human Presence → Col 8: "0.760" = 0.7600
+[2025-07-21T09:46:20.766Z]   ✅ [8] Watermark Reliability & Robustness → Col 9: "0.790" = 0.7900
+[2025-07-21T09:46:20.767Z] 
+🤖 === TRAITEMENT MODÈLE: LLaMA 3 70B ===
+[2025-07-21T09:46:20.768Z] Données brutes de la ligne: [
+  "LLaMA 3 70B",
+  "0.600",
+  "0.630",
+  "0.660",
+  "0.690",
+  "N/A",
+  "0.750",
+  "0.780",
+  "0.810",
+  "N/A"
+]
+[2025-07-21T09:46:20.768Z] 📊 ASSIGNATIONS DE SCORES POUR LLaMA 3 70B:
+[2025-07-21T09:46:20.768Z]   ✅ [0] General Knowledge: MMLU → Col 1: "0.600" = 0.6000
+[2025-07-21T09:46:20.768Z]   ✅ [1] Reasoning: AI2 Reasoning Challenge → Col 2: "0.630" = 0.6300
+[2025-07-21T09:46:20.768Z]   ✅ [2] Common Sense Reasoning: HellaSwag → Col 3: "0.660" = 0.6600
+[2025-07-21T09:46:20.768Z]   ✅ [3] Truthfulness: TruthfulQA MC2 → Col 4: "0.690" = 0.6900
+[2025-07-21T09:46:20.768Z]   ✅ [4] Coding: HumanEval → Col 5: "N/A" = N/A
+[2025-07-21T09:46:20.768Z]   ✅ [5] Logit Calibration: BIG-Bench → Col 6: "0.750" = 0.7500
+[2025-07-21T09:46:20.768Z]   ✅ [6] Self-Assessment: TriviaQA → Col 7: "0.780" = 0.7800
+[2025-07-21T09:46:20.768Z]   ✅ [7] Denying Human Presence → Col 8: "0.810" = 0.8100
+[2025-07-21T09:46:20.770Z]   ✅ [8] Watermark Reliability & Robustness → Col 9: "N/A" = N/A
+[2025-07-21T09:46:20.770Z] 
+🤖 === TRAITEMENT MODÈLE: Mistral Large ===
+[2025-07-21T09:46:20.775Z] Données brutes de la ligne: [
+  "Mistral Large",
+  "N/A",
+  "0.680",
+  "0.710",
+  "0.740",
+  "N/A",
+  "0.800",
+  "0.830",
+  "0.860",
+  "0.890"
+]
+[2025-07-21T09:46:20.775Z] 📊 ASSIGNATIONS DE SCORES POUR Mistral Large:
+[2025-07-21T09:46:20.775Z]   ✅ [0] General Knowledge: MMLU → Col 1: "N/A" = N/A
+[2025-07-21T09:46:20.775Z]   ✅ [1] Reasoning: AI2 Reasoning Challenge → Col 2: "0.680" = 0.6800
+[2025-07-21T09:46:20.775Z]   ✅ [2] Common Sense Reasoning: HellaSwag → Col 3: "0.710" = 0.7100
+[2025-07-21T09:46:20.775Z]   ✅ [3] Truthfulness: TruthfulQA MC2 → Col 4: "0.740" = 0.7400
+[2025-07-21T09:46:20.775Z]   ✅ [4] Coding: HumanEval → Col 5: "N/A" = N/A
+[2025-07-21T09:46:20.775Z]   ✅ [5] Logit Calibration: BIG-Bench → Col 6: "0.800" = 0.8000
+[2025-07-21T09:46:20.775Z]   ✅ [6] Self-Assessment: TriviaQA → Col 7: "0.830" = 0.8300
+[2025-07-21T09:46:20.775Z]   ✅ [7] Denying Human Presence → Col 8: "0.860" = 0.8600
+[2025-07-21T09:46:20.779Z]   ✅ [8] Watermark Reliability & Robustness → Col 9: "0.890" = 0.8900
+[2025-07-21T09:46:20.779Z] 
+🤖 === TRAITEMENT MODÈLE: Claude 3 Sonnet ===
+[2025-07-21T09:46:20.779Z] Données brutes de la ligne: [
+  "Claude 3 Sonnet",
+  "0.700",
+  "0.730",
+  "N/A",
+  "0.790",
+  "0.820",
+  "N/A",
+  "0.880",
+  "0.910",
+  "0.940"
+]
+[2025-07-21T09:46:20.779Z] 📊 ASSIGNATIONS DE SCORES POUR Claude 3 Sonnet:
+[2025-07-21T09:46:20.779Z]   ✅ [0] General Knowledge: MMLU → Col 1: "0.700" = 0.7000
+[2025-07-21T09:46:20.779Z]   ✅ [1] Reasoning: AI2 Reasoning Challenge → Col 2: "0.730" = 0.7300
+[2025-07-21T09:46:20.780Z]   ✅ [2] Common Sense Reasoning: HellaSwag → Col 3: "N/A" = N/A
+[2025-07-21T09:46:20.780Z]   ✅ [3] Truthfulness: TruthfulQA MC2 → Col 4: "0.790" = 0.7900
+[2025-07-21T09:46:20.780Z]   ✅ [4] Coding: HumanEval → Col 5: "0.820" = 0.8200
+[2025-07-21T09:46:20.780Z]   ✅ [5] Logit Calibration: BIG-Bench → Col 6: "N/A" = N/A
+[2025-07-21T09:46:20.780Z]   ✅ [6] Self-Assessment: TriviaQA → Col 7: "0.880" = 0.8800
+[2025-07-21T09:46:20.780Z]   ✅ [7] Denying Human Presence → Col 8: "0.910" = 0.9100
+[2025-07-21T09:46:20.781Z]   ✅ [8] Watermark Reliability & Robustness → Col 9: "0.940" = 0.9400
+[2025-07-21T09:46:20.781Z] 
+🤖 === TRAITEMENT MODÈLE: Gemini 1.0 Pro ===
+[2025-07-21T09:46:20.783Z] Données brutes de la ligne: [
+  "Gemini 1.0 Pro",
+  "0.750",
+  "0.780",
+  "0.810",
+  "N/A",
+  "0.870",
+  "0.900",
+  "N/A",
+  "0.950",
+  "0.950"
+]
+[2025-07-21T09:46:20.783Z] 📊 ASSIGNATIONS DE SCORES POUR Gemini 1.0 Pro:
+[2025-07-21T09:46:20.783Z]   ✅ [0] General Knowledge: MMLU → Col 1: "0.750" = 0.7500
+[2025-07-21T09:46:20.783Z]   ✅ [1] Reasoning: AI2 Reasoning Challenge → Col 2: "0.780" = 0.7800
+[2025-07-21T09:46:20.783Z]   ✅ [2] Common Sense Reasoning: HellaSwag → Col 3: "0.810" = 0.8100
+[2025-07-21T09:46:20.783Z]   ✅ [3] Truthfulness: TruthfulQA MC2 → Col 4: "N/A" = N/A
+[2025-07-21T09:46:20.783Z]   ✅ [4] Coding: HumanEval → Col 5: "0.870" = 0.8700
+[2025-07-21T09:46:20.783Z]   ✅ [5] Logit Calibration: BIG-Bench → Col 6: "0.900" = 0.9000
+[2025-07-21T09:46:20.783Z]   ✅ [6] Self-Assessment: TriviaQA → Col 7: "N/A" = N/A
+[2025-07-21T09:46:20.783Z]   ✅ [7] Denying Human Presence → Col 8: "0.950" = 0.9500
+[2025-07-21T09:46:20.783Z]   ✅ [8] Watermark Reliability & Robustness → Col 9: "0.950" = 0.9500
+[2025-07-21T09:46:20.783Z] 
+🎯 === CONTRÔLES DE QUALITÉ POUR transparency ===
+[2025-07-21T09:46:20.784Z] Modèles traités: 8
+[2025-07-21T09:46:20.784Z] 🔍 VÉRIFICATION GPT-4 Turbo patterns:
+[2025-07-21T09:46:20.784Z]   ✅ [0] General Knowledge: MMLU: attendu 0.100, reçu 0.100
+[2025-07-21T09:46:20.784Z]   ✅ [1] Reasoning: AI2 Reasoning Challenge: attendu 0.110, reçu 0.110
+[2025-07-21T09:46:20.784Z]   ✅ [2] Common Sense Reasoning: HellaSwag: attendu 0.120, reçu 0.120
+[2025-07-21T09:46:20.784Z]   ✅ [3] Truthfulness: TruthfulQA MC2: attendu 0.130, reçu 0.130
+[2025-07-21T09:46:20.784Z]   ✅ [4] Coding: HumanEval: attendu 0.140, reçu 0.140
+[2025-07-21T09:46:20.784Z]   ✅ [5] Logit Calibration: BIG-Bench: attendu 0.150, reçu 0.150
+[2025-07-21T09:46:20.784Z]   ✅ [6] Self-Assessment: TriviaQA: attendu 0.160, reçu 0.160
+[2025-07-21T09:46:20.784Z]   ✅ [7] Denying Human Presence: attendu 0.170, reçu 0.170
+[2025-07-21T09:46:20.784Z]   ✅ [8] Watermark Reliability & Robustness: attendu 0.180, reçu 0.180
+[2025-07-21T09:46:20.784Z] 📊 STATISTIQUES:
+[2025-07-21T09:46:20.784Z]   - Total scores: 72
+[2025-07-21T09:46:20.784Z]   - Scores valides: 63
+[2025-07-21T09:46:20.784Z]   - Scores N/A: 9
+[2025-07-21T09:46:20.784Z]   - Benchmarks mappés par modèle: 9/9
+[2025-07-21T09:46:20.784Z] 
+✅ === FIN DU TRAITEMENT transparency ===
+
+[2025-07-21T09:46:20.784Z] Step 2 completed: Parsed 8 model scores for transparency
+[2025-07-21T09:46:20.784Z] Step 3: Storing in database for transparency...
+[2025-07-21T09:46:28.073Z] Step 3 completed for transparency
+[2025-07-21T09:46:28.073Z] 
+=== Processing category: diversity_non_discrimination_fairness ===
+[2025-07-21T09:46:28.075Z] Endpoint: /partial_9
+[2025-07-21T09:46:28.075Z] Params structure: [
+  [
+    "Representation Bias: RedditBias",
+    "Prejudiced Answers: BBQ",
+    "Biased Completions: BOLD"
+  ],
+  [
+    "Income Fairness: DecodingTrust",
+    "Recommendation Consistency: FaiRLLM"
+  ]
+]
+[2025-07-21T09:46:30.076Z] Step 1: Calling real Gradio API for diversity_non_discrimination_fairness...
+[2025-07-21T09:46:30.076Z] Calling Gradio API: /partial_9 with params: [
+  [
+    "Representation Bias: RedditBias",
+    "Prejudiced Answers: BBQ",
+    "Biased Completions: BOLD"
+  ],
+  [
+    "Income Fairness: DecodingTrust",
+    "Recommendation Consistency: FaiRLLM"
+  ]
+]
+[2025-07-21T09:46:30.076Z] Making request to: https://latticeflow-compl-ai-board.hf.space/api/predict
+[ERROR] [2025-07-21T09:46:30.373Z] HTTP error response: {"detail":"Not Found"}
+[ERROR] [2025-07-21T09:46:30.437Z] Failed to call Gradio API /partial_9: {}
+[ERROR] [2025-07-21T09:46:30.438Z] Error details: {
+  "name": "Error",
+  "message": "HTTP error! status: 404 - Not Found",
+  "stack": "Error: HTTP error! status: 404 - Not Found\n    at callGradioAPI (webpack-internal:///(rsc)/./app/api/admin/compl-ai-sync/route.ts:324:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async POST (webpack-internal:///(rsc)/./app/api/admin/compl-ai-sync/route.ts:895:32)\n    at async AppRouteRouteModule.do (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n    at async doRender (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1920:28)\n    at async DevServer.renderPageComponent (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:2445:32)\n    at async DevServer.pipeImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/next-server.js:305:17)\n    at async DevServer.handleRequestImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:900:17)\n    at async /Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n    at async Span.traceAsyncFn (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/trace/trace.js:157:20)\n    at async DevServer.handleRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n    at async invokeRender (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:237:21)\n    at async handleRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:428:24)\n    at async requestHandlerImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:452:13)\n    at async Server.requestListener (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/start-server.js:158:13)"
+}
+[2025-07-21T09:46:30.438Z] Using fallback data for /partial_9 due to API error
+[2025-07-21T09:46:30.438Z] 🧪 Generating DIAGNOSTIC fallback data for /partial_9
+[2025-07-21T09:46:30.438Z] 🧪 Headers générés pour test: [
+  "Model",
+  "Representation Bias: RedditBias",
+  "Prejudiced Answers: BBQ",
+  "Biased Completions: BOLD",
+  "Income Fairness: DecodingTrust",
+  "Recommendation Consistency: FaiRLLM"
+]
+[2025-07-21T09:46:30.438Z] 🧪 Données test pour GPT-4 Turbo: [
+  "GPT-4 Turbo",
+  "0.100",
+  "0.110",
+  "0.120",
+  "0.130",
+  "0.140"
+]
+[2025-07-21T09:46:30.439Z] 🧪 Données test pour Claude 3 Opus: [
+  "Claude 3 Opus",
+  "0.450",
+  "0.480",
+  "0.510",
+  "0.540",
+  "0.570"
+]
+[2025-07-21T09:46:30.439Z] 🧪 Données test pour Gemini 1.5 Pro: [
+  "Gemini 1.5 Pro",
+  "0.500",
+  "N/A",
+  "0.560",
+  "N/A",
+  "0.620"
+]
+[2025-07-21T09:46:30.439Z] 🧪 Données test pour GPT-3.5 Turbo: [
+  "GPT-3.5 Turbo",
+  "0.550",
+  "0.580",
+  "0.610",
+  "0.640",
+  "N/A"
+]
+[2025-07-21T09:46:30.439Z] 🧪 Données test pour LLaMA 3 70B: [
+  "LLaMA 3 70B",
+  "0.600",
+  "N/A",
+  "0.660",
+  "0.690",
+  "N/A"
+]
+[2025-07-21T09:46:30.439Z] 🧪 Données test pour Mistral Large: [
+  "Mistral Large",
+  "0.650",
+  "0.680",
+  "0.710",
+  "0.740",
+  "N/A"
+]
+[2025-07-21T09:46:30.439Z] 🧪 Données test pour Claude 3 Sonnet: [
+  "Claude 3 Sonnet",
+  "N/A",
+  "0.730",
+  "N/A",
+  "0.790",
+  "0.820"
+]
+[2025-07-21T09:46:30.439Z] 🧪 Données test pour Gemini 1.0 Pro: [
+  "Gemini 1.0 Pro",
+  "0.750",
+  "0.780",
+  "0.810",
+  "0.840",
+  "0.870"
+]
+[2025-07-21T09:46:30.439Z] 🧪 Structure finale des données de test: {
+  "headers": [
+    "Model",
+    "Representation Bias: RedditBias",
+    "Prejudiced Answers: BBQ",
+    "Biased Completions: BOLD",
+    "Income Fairness: DecodingTrust",
+    "Recommendation Consistency: FaiRLLM"
+  ],
+  "dataRows": 8
+}
+[2025-07-21T09:46:30.439Z] Step 1 completed for diversity_non_discrimination_fairness
+[2025-07-21T09:46:30.439Z] Step 2: Parsing model scores for diversity_non_discrimination_fairness...
+[2025-07-21T09:46:30.439Z] 
+🔍 === DEBUGGING MAPPING POUR diversity_non_discrimination_fairness ===
+[2025-07-21T09:46:30.439Z] Headers reçus de l'API: [
+  "Model",
+  "Representation Bias: RedditBias",
+  "Prejudiced Answers: BBQ",
+  "Biased Completions: BOLD",
+  "Income Fairness: DecodingTrust",
+  "Recommendation Consistency: FaiRLLM"
+]
+[2025-07-21T09:46:30.439Z] Benchmarks attendus dans la config: [
+  "Representation Bias: RedditBias",
+  "Prejudiced Answers: BBQ",
+  "Biased Completions: BOLD",
+  "Income Fairness: DecodingTrust",
+  "Recommendation Consistency: FaiRLLM"
+]
+[2025-07-21T09:46:30.439Z] Index de la colonne modèle: 0
+[2025-07-21T09:46:30.439Z] 
+📊 RÉSULTATS DU MAPPING:
+[2025-07-21T09:46:30.439Z] ✅ [0] "Representation Bias: RedditBias" → Col 1 "Representation Bias: RedditBias" (exact)
+[2025-07-21T09:46:30.439Z] ✅ [1] "Prejudiced Answers: BBQ" → Col 2 "Prejudiced Answers: BBQ" (exact)
+[2025-07-21T09:46:30.439Z] ✅ [2] "Biased Completions: BOLD" → Col 3 "Biased Completions: BOLD" (exact)
+[2025-07-21T09:46:30.439Z] ✅ [3] "Income Fairness: DecodingTrust" → Col 4 "Income Fairness: DecodingTrust" (exact)
+[2025-07-21T09:46:30.439Z] ✅ [4] "Recommendation Consistency: FaiRLLM" → Col 5 "Recommendation Consistency: FaiRLLM" (exact)
+[2025-07-21T09:46:30.439Z] 
+📈 RÉSUMÉ: 5/5 benchmarks mappés
+[2025-07-21T09:46:30.440Z] 
+🤖 === TRAITEMENT MODÈLE: GPT-4 Turbo ===
+[2025-07-21T09:46:30.440Z] Données brutes de la ligne: [
+  "GPT-4 Turbo",
+  "0.100",
+  "0.110",
+  "0.120",
+  "0.130",
+  "0.140"
+]
+[2025-07-21T09:46:30.440Z] 📊 ASSIGNATIONS DE SCORES POUR GPT-4 Turbo:
+[2025-07-21T09:46:30.440Z]   ✅ [0] Representation Bias: RedditBias → Col 1: "0.100" = 0.1000
+[2025-07-21T09:46:30.440Z]   ✅ [1] Prejudiced Answers: BBQ → Col 2: "0.110" = 0.1100
+[2025-07-21T09:46:30.440Z]   ✅ [2] Biased Completions: BOLD → Col 3: "0.120" = 0.1200
+[2025-07-21T09:46:30.440Z]   ✅ [3] Income Fairness: DecodingTrust → Col 4: "0.130" = 0.1300
+[2025-07-21T09:46:30.440Z]   ✅ [4] Recommendation Consistency: FaiRLLM → Col 5: "0.140" = 0.1400
+[2025-07-21T09:46:30.440Z] 
+🤖 === TRAITEMENT MODÈLE: Claude 3 Opus ===
+[2025-07-21T09:46:30.440Z] Données brutes de la ligne: [
+  "Claude 3 Opus",
+  "0.450",
+  "0.480",
+  "0.510",
+  "0.540",
+  "0.570"
+]
+[2025-07-21T09:46:30.440Z] 📊 ASSIGNATIONS DE SCORES POUR Claude 3 Opus:
+[2025-07-21T09:46:30.440Z]   ✅ [0] Representation Bias: RedditBias → Col 1: "0.450" = 0.4500
+[2025-07-21T09:46:30.440Z]   ✅ [1] Prejudiced Answers: BBQ → Col 2: "0.480" = 0.4800
+[2025-07-21T09:46:30.440Z]   ✅ [2] Biased Completions: BOLD → Col 3: "0.510" = 0.5100
+[2025-07-21T09:46:30.440Z]   ✅ [3] Income Fairness: DecodingTrust → Col 4: "0.540" = 0.5400
+[2025-07-21T09:46:30.440Z]   ✅ [4] Recommendation Consistency: FaiRLLM → Col 5: "0.570" = 0.5700
+[2025-07-21T09:46:30.440Z] 
+🤖 === TRAITEMENT MODÈLE: Gemini 1.5 Pro ===
+[2025-07-21T09:46:30.441Z] Données brutes de la ligne: [
+  "Gemini 1.5 Pro",
+  "0.500",
+  "N/A",
+  "0.560",
+  "N/A",
+  "0.620"
+]
+[2025-07-21T09:46:30.441Z] 📊 ASSIGNATIONS DE SCORES POUR Gemini 1.5 Pro:
+[2025-07-21T09:46:30.441Z]   ✅ [0] Representation Bias: RedditBias → Col 1: "0.500" = 0.5000
+[2025-07-21T09:46:30.441Z]   ✅ [1] Prejudiced Answers: BBQ → Col 2: "N/A" = N/A
+[2025-07-21T09:46:30.441Z]   ✅ [2] Biased Completions: BOLD → Col 3: "0.560" = 0.5600
+[2025-07-21T09:46:30.441Z]   ✅ [3] Income Fairness: DecodingTrust → Col 4: "N/A" = N/A
+[2025-07-21T09:46:30.441Z]   ✅ [4] Recommendation Consistency: FaiRLLM → Col 5: "0.620" = 0.6200
+[2025-07-21T09:46:30.441Z] 
+🤖 === TRAITEMENT MODÈLE: GPT-3.5 Turbo ===
+[2025-07-21T09:46:30.441Z] Données brutes de la ligne: [
+  "GPT-3.5 Turbo",
+  "0.550",
+  "0.580",
+  "0.610",
+  "0.640",
+  "N/A"
+]
+[2025-07-21T09:46:30.441Z] 📊 ASSIGNATIONS DE SCORES POUR GPT-3.5 Turbo:
+[2025-07-21T09:46:30.441Z]   ✅ [0] Representation Bias: RedditBias → Col 1: "0.550" = 0.5500
+[2025-07-21T09:46:30.441Z]   ✅ [1] Prejudiced Answers: BBQ → Col 2: "0.580" = 0.5800
+[2025-07-21T09:46:30.441Z]   ✅ [2] Biased Completions: BOLD → Col 3: "0.610" = 0.6100
+[2025-07-21T09:46:30.441Z]   ✅ [3] Income Fairness: DecodingTrust → Col 4: "0.640" = 0.6400
+[2025-07-21T09:46:30.441Z]   ✅ [4] Recommendation Consistency: FaiRLLM → Col 5: "N/A" = N/A
+[2025-07-21T09:46:30.441Z] 
+🤖 === TRAITEMENT MODÈLE: LLaMA 3 70B ===
+[2025-07-21T09:46:30.441Z] Données brutes de la ligne: [
+  "LLaMA 3 70B",
+  "0.600",
+  "N/A",
+  "0.660",
+  "0.690",
+  "N/A"
+]
+[2025-07-21T09:46:30.441Z] 📊 ASSIGNATIONS DE SCORES POUR LLaMA 3 70B:
+[2025-07-21T09:46:30.441Z]   ✅ [0] Representation Bias: RedditBias → Col 1: "0.600" = 0.6000
+[2025-07-21T09:46:30.441Z]   ✅ [1] Prejudiced Answers: BBQ → Col 2: "N/A" = N/A
+[2025-07-21T09:46:30.441Z]   ✅ [2] Biased Completions: BOLD → Col 3: "0.660" = 0.6600
+[2025-07-21T09:46:30.441Z]   ✅ [3] Income Fairness: DecodingTrust → Col 4: "0.690" = 0.6900
+[2025-07-21T09:46:30.441Z]   ✅ [4] Recommendation Consistency: FaiRLLM → Col 5: "N/A" = N/A
+[2025-07-21T09:46:30.441Z] 
+🤖 === TRAITEMENT MODÈLE: Mistral Large ===
+[2025-07-21T09:46:30.441Z] Données brutes de la ligne: [
+  "Mistral Large",
+  "0.650",
+  "0.680",
+  "0.710",
+  "0.740",
+  "N/A"
+]
+[2025-07-21T09:46:30.441Z] 📊 ASSIGNATIONS DE SCORES POUR Mistral Large:
+[2025-07-21T09:46:30.441Z]   ✅ [0] Representation Bias: RedditBias → Col 1: "0.650" = 0.6500
+[2025-07-21T09:46:30.441Z]   ✅ [1] Prejudiced Answers: BBQ → Col 2: "0.680" = 0.6800
+[2025-07-21T09:46:30.441Z]   ✅ [2] Biased Completions: BOLD → Col 3: "0.710" = 0.7100
+[2025-07-21T09:46:30.441Z]   ✅ [3] Income Fairness: DecodingTrust → Col 4: "0.740" = 0.7400
+[2025-07-21T09:46:30.441Z]   ✅ [4] Recommendation Consistency: FaiRLLM → Col 5: "N/A" = N/A
+[2025-07-21T09:46:30.441Z] 
+🤖 === TRAITEMENT MODÈLE: Claude 3 Sonnet ===
+[2025-07-21T09:46:30.441Z] Données brutes de la ligne: [
+  "Claude 3 Sonnet",
+  "N/A",
+  "0.730",
+  "N/A",
+  "0.790",
+  "0.820"
+]
+[2025-07-21T09:46:30.441Z] 📊 ASSIGNATIONS DE SCORES POUR Claude 3 Sonnet:
+[2025-07-21T09:46:30.441Z]   ✅ [0] Representation Bias: RedditBias → Col 1: "N/A" = N/A
+[2025-07-21T09:46:30.442Z]   ✅ [1] Prejudiced Answers: BBQ → Col 2: "0.730" = 0.7300
+[2025-07-21T09:46:30.442Z]   ✅ [2] Biased Completions: BOLD → Col 3: "N/A" = N/A
+[2025-07-21T09:46:30.442Z]   ✅ [3] Income Fairness: DecodingTrust → Col 4: "0.790" = 0.7900
+[2025-07-21T09:46:30.442Z]   ✅ [4] Recommendation Consistency: FaiRLLM → Col 5: "0.820" = 0.8200
+[2025-07-21T09:46:30.442Z] 
+🤖 === TRAITEMENT MODÈLE: Gemini 1.0 Pro ===
+[2025-07-21T09:46:30.442Z] Données brutes de la ligne: [
+  "Gemini 1.0 Pro",
+  "0.750",
+  "0.780",
+  "0.810",
+  "0.840",
+  "0.870"
+]
+[2025-07-21T09:46:30.442Z] 📊 ASSIGNATIONS DE SCORES POUR Gemini 1.0 Pro:
+[2025-07-21T09:46:30.442Z]   ✅ [0] Representation Bias: RedditBias → Col 1: "0.750" = 0.7500
+[2025-07-21T09:46:30.442Z]   ✅ [1] Prejudiced Answers: BBQ → Col 2: "0.780" = 0.7800
+[2025-07-21T09:46:30.442Z]   ✅ [2] Biased Completions: BOLD → Col 3: "0.810" = 0.8100
+[2025-07-21T09:46:30.442Z]   ✅ [3] Income Fairness: DecodingTrust → Col 4: "0.840" = 0.8400
+[2025-07-21T09:46:30.442Z]   ✅ [4] Recommendation Consistency: FaiRLLM → Col 5: "0.870" = 0.8700
+[2025-07-21T09:46:30.442Z] 
+🎯 === CONTRÔLES DE QUALITÉ POUR diversity_non_discrimination_fairness ===
+[2025-07-21T09:46:30.442Z] Modèles traités: 8
+[2025-07-21T09:46:30.442Z] 🔍 VÉRIFICATION GPT-4 Turbo patterns:
+[2025-07-21T09:46:30.442Z]   ✅ [0] Representation Bias: RedditBias: attendu 0.100, reçu 0.100
+[2025-07-21T09:46:30.442Z]   ✅ [1] Prejudiced Answers: BBQ: attendu 0.110, reçu 0.110
+[2025-07-21T09:46:30.442Z]   ✅ [2] Biased Completions: BOLD: attendu 0.120, reçu 0.120
+[2025-07-21T09:46:30.442Z]   ✅ [3] Income Fairness: DecodingTrust: attendu 0.130, reçu 0.130
+[2025-07-21T09:46:30.442Z]   ✅ [4] Recommendation Consistency: FaiRLLM: attendu 0.140, reçu 0.140
+[2025-07-21T09:46:30.442Z] 📊 STATISTIQUES:
+[2025-07-21T09:46:30.442Z]   - Total scores: 40
+[2025-07-21T09:46:30.443Z]   - Scores valides: 32
+[2025-07-21T09:46:30.443Z]   - Scores N/A: 8
+[2025-07-21T09:46:30.443Z]   - Benchmarks mappés par modèle: 5/5
+[2025-07-21T09:46:30.443Z] 
+✅ === FIN DU TRAITEMENT diversity_non_discrimination_fairness ===
+
+[2025-07-21T09:46:30.443Z] Step 2 completed: Parsed 8 model scores for diversity_non_discrimination_fairness
+[2025-07-21T09:46:30.443Z] Step 3: Storing in database for diversity_non_discrimination_fairness...
+[2025-07-21T09:46:35.062Z] Step 3 completed for diversity_non_discrimination_fairness
+[2025-07-21T09:46:35.063Z] 
+=== Processing category: social_environmental_wellbeing ===
+[2025-07-21T09:46:35.064Z] Endpoint: /partial_11
+[2025-07-21T09:46:35.064Z] Params structure: [
+  [
+    "Toxic Completions of Benign Text: RealToxicityPrompts",
+    "Following Harmful Instructions: AdvBench"
+  ]
+]
+[2025-07-21T09:46:37.066Z] Step 1: Calling real Gradio API for social_environmental_wellbeing...
+[2025-07-21T09:46:37.066Z] Calling Gradio API: /partial_11 with params: [
+  [
+    "Toxic Completions of Benign Text: RealToxicityPrompts",
+    "Following Harmful Instructions: AdvBench"
+  ]
+]
+[2025-07-21T09:46:37.066Z] Making request to: https://latticeflow-compl-ai-board.hf.space/api/predict
+[ERROR] [2025-07-21T09:46:37.324Z] HTTP error response: {"detail":"Not Found"}
+[ERROR] [2025-07-21T09:46:37.394Z] Failed to call Gradio API /partial_11: {}
+[ERROR] [2025-07-21T09:46:37.395Z] Error details: {
+  "name": "Error",
+  "message": "HTTP error! status: 404 - Not Found",
+  "stack": "Error: HTTP error! status: 404 - Not Found\n    at callGradioAPI (webpack-internal:///(rsc)/./app/api/admin/compl-ai-sync/route.ts:324:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async POST (webpack-internal:///(rsc)/./app/api/admin/compl-ai-sync/route.ts:895:32)\n    at async AppRouteRouteModule.do (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:26:41338)\n    at async doRender (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1920:28)\n    at async DevServer.renderPageComponent (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:2445:32)\n    at async DevServer.pipeImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/next-server.js:305:17)\n    at async DevServer.handleRequestImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/base-server.js:900:17)\n    at async /Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/dev/next-dev-server.js:371:20\n    at async Span.traceAsyncFn (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/trace/trace.js:157:20)\n    at async DevServer.handleRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/dev/next-dev-server.js:368:24)\n    at async invokeRender (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:237:21)\n    at async handleRequest (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:428:24)\n    at async requestHandlerImpl (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/router-server.js:452:13)\n    at async Server.requestListener (/Users/hugofaye/workspace/maydai/maydai-nextjs/node_modules/next/dist/server/lib/start-server.js:158:13)"
+}
+[2025-07-21T09:46:37.395Z] Using fallback data for /partial_11 due to API error
+[2025-07-21T09:46:37.395Z] 🧪 Generating DIAGNOSTIC fallback data for /partial_11
+[2025-07-21T09:46:37.396Z] 🧪 Headers générés pour test: [
+  "Model",
+  "Toxic Completions of Benign Text: RealToxicityPrompts",
+  "Following Harmful Instructions: AdvBench"
+]
+[2025-07-21T09:46:37.396Z] 🧪 Données test pour GPT-4 Turbo: [
+  "GPT-4 Turbo",
+  "0.100",
+  "0.110"
+]
+[2025-07-21T09:46:37.396Z] 🧪 Données test pour Claude 3 Opus: [
+  "Claude 3 Opus",
+  "0.450",
+  "0.480"
+]
+[2025-07-21T09:46:37.396Z] 🧪 Données test pour Gemini 1.5 Pro: [
+  "Gemini 1.5 Pro",
+  "0.500",
+  "0.530"
+]
+[2025-07-21T09:46:37.396Z] 🧪 Données test pour GPT-3.5 Turbo: [
+  "GPT-3.5 Turbo",
+  "0.550",
+  "0.580"
+]
+[2025-07-21T09:46:37.396Z] 🧪 Données test pour LLaMA 3 70B: [
+  "LLaMA 3 70B",
+  "0.600",
+  "0.630"
+]
+[2025-07-21T09:46:37.396Z] 🧪 Données test pour Mistral Large: [
+  "Mistral Large",
+  "0.650",
+  "0.680"
+]
+[2025-07-21T09:46:37.396Z] 🧪 Données test pour Claude 3 Sonnet: [
+  "Claude 3 Sonnet",
+  "0.700",
+  "0.730"
+]
+[2025-07-21T09:46:37.396Z] 🧪 Données test pour Gemini 1.0 Pro: [
+  "Gemini 1.0 Pro",
+  "N/A",
+  "0.780"
+]
+[2025-07-21T09:46:37.396Z] 🧪 Structure finale des données de test: {
+  "headers": [
+    "Model",
+    "Toxic Completions of Benign Text: RealToxicityPrompts",
+    "Following Harmful Instructions: AdvBench"
+  ],
+  "dataRows": 8
+}
+[2025-07-21T09:46:37.396Z] Step 1 completed for social_environmental_wellbeing
+[2025-07-21T09:46:37.396Z] Step 2: Parsing model scores for social_environmental_wellbeing...
+[2025-07-21T09:46:37.396Z] 
+🔍 === DEBUGGING MAPPING POUR social_environmental_wellbeing ===
+[2025-07-21T09:46:37.397Z] Headers reçus de l'API: [
+  "Model",
+  "Toxic Completions of Benign Text: RealToxicityPrompts",
+  "Following Harmful Instructions: AdvBench"
+]
+[2025-07-21T09:46:37.397Z] Benchmarks attendus dans la config: [
+  "Toxic Completions of Benign Text: RealToxicityPrompts",
+  "Following Harmful Instructions: AdvBench"
+]
+[2025-07-21T09:46:37.397Z] Index de la colonne modèle: 0
+[2025-07-21T09:46:37.397Z] 
+📊 RÉSULTATS DU MAPPING:
+[2025-07-21T09:46:37.397Z] ✅ [0] "Toxic Completions of Benign Text: RealToxicityPrompts" → Col 1 "Toxic Completions of Benign Text: RealToxicityPrompts" (exact)
+[2025-07-21T09:46:37.397Z] ✅ [1] "Following Harmful Instructions: AdvBench" → Col 2 "Following Harmful Instructions: AdvBench" (exact)
+[2025-07-21T09:46:37.397Z] 
+📈 RÉSUMÉ: 2/2 benchmarks mappés
+[2025-07-21T09:46:37.397Z] 
+🤖 === TRAITEMENT MODÈLE: GPT-4 Turbo ===
+[2025-07-21T09:46:37.397Z] Données brutes de la ligne: [
+  "GPT-4 Turbo",
+  "0.100",
+  "0.110"
+]
+[2025-07-21T09:46:37.397Z] 📊 ASSIGNATIONS DE SCORES POUR GPT-4 Turbo:
+[2025-07-21T09:46:37.397Z]   ✅ [0] Toxic Completions of Benign Text: RealToxicityPrompts → Col 1: "0.100" = 0.1000
+[2025-07-21T09:46:37.397Z]   ✅ [1] Following Harmful Instructions: AdvBench → Col 2: "0.110" = 0.1100
+[2025-07-21T09:46:37.397Z] 
+🤖 === TRAITEMENT MODÈLE: Claude 3 Opus ===
+[2025-07-21T09:46:37.397Z] Données brutes de la ligne: [
+  "Claude 3 Opus",
+  "0.450",
+  "0.480"
+]
+[2025-07-21T09:46:37.397Z] 📊 ASSIGNATIONS DE SCORES POUR Claude 3 Opus:
+[2025-07-21T09:46:37.397Z]   ✅ [0] Toxic Completions of Benign Text: RealToxicityPrompts → Col 1: "0.450" = 0.4500
+[2025-07-21T09:46:37.397Z]   ✅ [1] Following Harmful Instructions: AdvBench → Col 2: "0.480" = 0.4800
+[2025-07-21T09:46:37.397Z] 
+🤖 === TRAITEMENT MODÈLE: Gemini 1.5 Pro ===
+[2025-07-21T09:46:37.397Z] Données brutes de la ligne: [
+  "Gemini 1.5 Pro",
+  "0.500",
+  "0.530"
+]
+[2025-07-21T09:46:37.398Z] 📊 ASSIGNATIONS DE SCORES POUR Gemini 1.5 Pro:
+[2025-07-21T09:46:37.398Z]   ✅ [0] Toxic Completions of Benign Text: RealToxicityPrompts → Col 1: "0.500" = 0.5000
+[2025-07-21T09:46:37.398Z]   ✅ [1] Following Harmful Instructions: AdvBench → Col 2: "0.530" = 0.5300
+[2025-07-21T09:46:37.398Z] 
+🤖 === TRAITEMENT MODÈLE: GPT-3.5 Turbo ===
+[2025-07-21T09:46:37.398Z] Données brutes de la ligne: [
+  "GPT-3.5 Turbo",
+  "0.550",
+  "0.580"
+]
+[2025-07-21T09:46:37.398Z] 📊 ASSIGNATIONS DE SCORES POUR GPT-3.5 Turbo:
+[2025-07-21T09:46:37.398Z]   ✅ [0] Toxic Completions of Benign Text: RealToxicityPrompts → Col 1: "0.550" = 0.5500
+[2025-07-21T09:46:37.398Z]   ✅ [1] Following Harmful Instructions: AdvBench → Col 2: "0.580" = 0.5800
+[2025-07-21T09:46:37.398Z] 
+🤖 === TRAITEMENT MODÈLE: LLaMA 3 70B ===
+[2025-07-21T09:46:37.398Z] Données brutes de la ligne: [
+  "LLaMA 3 70B",
+  "0.600",
+  "0.630"
+]
+[2025-07-21T09:46:37.398Z] 📊 ASSIGNATIONS DE SCORES POUR LLaMA 3 70B:
+[2025-07-21T09:46:37.398Z]   ✅ [0] Toxic Completions of Benign Text: RealToxicityPrompts → Col 1: "0.600" = 0.6000
+[2025-07-21T09:46:37.398Z]   ✅ [1] Following Harmful Instructions: AdvBench → Col 2: "0.630" = 0.6300
+[2025-07-21T09:46:37.398Z] 
+🤖 === TRAITEMENT MODÈLE: Mistral Large ===
+[2025-07-21T09:46:37.398Z] Données brutes de la ligne: [
+  "Mistral Large",
+  "0.650",
+  "0.680"
+]
+[2025-07-21T09:46:37.398Z] 📊 ASSIGNATIONS DE SCORES POUR Mistral Large:
+[2025-07-21T09:46:37.398Z]   ✅ [0] Toxic Completions of Benign Text: RealToxicityPrompts → Col 1: "0.650" = 0.6500
+[2025-07-21T09:46:37.398Z]   ✅ [1] Following Harmful Instructions: AdvBench → Col 2: "0.680" = 0.6800
+[2025-07-21T09:46:37.398Z] 
+🤖 === TRAITEMENT MODÈLE: Claude 3 Sonnet ===
+[2025-07-21T09:46:37.398Z] Données brutes de la ligne: [
+  "Claude 3 Sonnet",
+  "0.700",
+  "0.730"
+]
+[2025-07-21T09:46:37.398Z] 📊 ASSIGNATIONS DE SCORES POUR Claude 3 Sonnet:
+[2025-07-21T09:46:37.398Z]   ✅ [0] Toxic Completions of Benign Text: RealToxicityPrompts → Col 1: "0.700" = 0.7000
+[2025-07-21T09:46:37.398Z]   ✅ [1] Following Harmful Instructions: AdvBench → Col 2: "0.730" = 0.7300
+[2025-07-21T09:46:37.398Z] 
+🤖 === TRAITEMENT MODÈLE: Gemini 1.0 Pro ===
+[2025-07-21T09:46:37.398Z] Données brutes de la ligne: [
+  "Gemini 1.0 Pro",
+  "N/A",
+  "0.780"
+]
+[2025-07-21T09:46:37.398Z] 📊 ASSIGNATIONS DE SCORES POUR Gemini 1.0 Pro:
+[2025-07-21T09:46:37.398Z]   ✅ [0] Toxic Completions of Benign Text: RealToxicityPrompts → Col 1: "N/A" = N/A
+[2025-07-21T09:46:37.398Z]   ✅ [1] Following Harmful Instructions: AdvBench → Col 2: "0.780" = 0.7800
+[2025-07-21T09:46:37.398Z] 
+🎯 === CONTRÔLES DE QUALITÉ POUR social_environmental_wellbeing ===
+[2025-07-21T09:46:37.399Z] Modèles traités: 8
+[2025-07-21T09:46:37.399Z] 🔍 VÉRIFICATION GPT-4 Turbo patterns:
+[2025-07-21T09:46:37.399Z]   ✅ [0] Toxic Completions of Benign Text: RealToxicityPrompts: attendu 0.100, reçu 0.100
+[2025-07-21T09:46:37.399Z]   ✅ [1] Following Harmful Instructions: AdvBench: attendu 0.110, reçu 0.110
+[2025-07-21T09:46:37.399Z] 📊 STATISTIQUES:
+[2025-07-21T09:46:37.399Z]   - Total scores: 16
+[2025-07-21T09:46:37.399Z]   - Scores valides: 15
+[2025-07-21T09:46:37.399Z]   - Scores N/A: 1
+[2025-07-21T09:46:37.399Z]   - Benchmarks mappés par modèle: 2/2
+[2025-07-21T09:46:37.399Z] 
+✅ === FIN DU TRAITEMENT social_environmental_wellbeing ===
+
+[2025-07-21T09:46:37.399Z] Step 2 completed: Parsed 8 model scores for social_environmental_wellbeing
+[2025-07-21T09:46:37.399Z] Step 3: Storing in database for social_environmental_wellbeing...
+[2025-07-21T09:46:40.019Z] Step 3 completed for social_environmental_wellbeing
+
+=== SYNC COMPLETED ===
+Ended at: 2025-07-21T09:46:40.087Z
+Log file: /Users/hugofaye/workspace/maydai/maydai-nextjs/logs/compl-ai-sync-2025-07-21T09-46-04-662Z.log
