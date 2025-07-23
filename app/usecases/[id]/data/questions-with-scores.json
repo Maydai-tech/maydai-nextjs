@@ -163,7 +163,6 @@
       {
         "code": "E4.N7.Q2.1.A",
         "label": "Identification Biométrique à Distance en Temps Réel dans les Espaces Publics",
-        "score_impact": -40,
         "is_eliminatory": true,
         "category_impacts": {
           "social_environmental": -10
@@ -172,7 +171,6 @@
       {
         "code": "E4.N7.Q2.1.B",
         "label": "Composant de sécurité dans des secteurs critiques (santé, transports, énergies, etc.)",
-        "score_impact": -40,
         "is_eliminatory": true,
         "category_impacts": {
           "technical_robustness": -10
@@ -181,7 +179,6 @@
       {
         "code": "E4.N7.Q2.1.C",
         "label": "Évaluations dans un système d'éducation ou en entreprise",
-        "score_impact": -40,
         "is_eliminatory": true,
         "category_impacts": {
           "diversity_fairness": -10
@@ -190,7 +187,6 @@
       {
         "code": "E4.N7.Q2.1.D",
         "label": "Accès et jouissance de services essentiels privés et publics",
-        "score_impact": -40,
         "is_eliminatory": true,
         "category_impacts": {
           "diversity_fairness": -10
@@ -212,7 +208,6 @@
       {
         "code": "E4.N7.Q3.A",
         "label": "Identification biométrique et catégorisation des personnes physiques",
-        "score_impact": -40,
         "is_eliminatory": true,
         "category_impacts": {
           "privacy_data": -10
@@ -221,7 +216,6 @@
       {
         "code": "E4.N7.Q3.B",
         "label": "Catégorisation biométrique basée sur des caractéristiques sensibles",
-        "score_impact": -40,
         "is_eliminatory": true,
         "category_impacts": {
           "diversity_fairness": -10
@@ -230,7 +224,6 @@
       {
         "code": "E4.N7.Q3.C",
         "label": "Création de bases de données de reconnaissance faciale par moissonnage non ciblé",
-        "score_impact": -40,
         "is_eliminatory": true,
         "category_impacts": {
           "privacy_data": -10
@@ -239,7 +232,6 @@
       {
         "code": "E4.N7.Q3.D",
         "label": "Déduction des émotions sur le lieu de travail et d'enseignement",
-        "score_impact": -40,
         "is_eliminatory": true,
         "category_impacts": {
           "social_environmental": -10
@@ -261,7 +253,6 @@
       {
         "code": "E4.N7.Q3.1.A",
         "label": "Exploitation des vulnérabilités",
-        "score_impact": -40,
         "is_eliminatory": true,
         "category_impacts": {
           "transparency": -10
@@ -270,7 +261,6 @@
       {
         "code": "E4.N7.Q3.1.B",
         "label": "Manipulation et tromperie",
-        "score_impact": -40,
         "is_eliminatory": true,
         "category_impacts": {
           "transparency": -10
@@ -279,7 +269,6 @@
       {
         "code": "E4.N7.Q3.1.C",
         "label": "Notation sociale",
-        "score_impact": -40,
         "is_eliminatory": true,
         "category_impacts": {
           "social_environmental": -10
@@ -288,7 +277,6 @@
       {
         "code": "E4.N7.Q3.1.D",
         "label": "Profilage pour évaluation du risque criminel",
-        "score_impact": -40,
         "is_eliminatory": true,
         "category_impacts": {
           "diversity_fairness": -10
