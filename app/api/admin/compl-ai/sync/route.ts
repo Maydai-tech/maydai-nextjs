@@ -97,10 +97,6 @@ function getBenchmarkPrincipleCode(benchmarkKey: string): string {
     'forecasting_consistency': 'technical_robustness_safety',
 
     // Privacy & Data Governance
-    'toxicity': 'privacy_data_governance',
-    'toxicity_advbench': 'privacy_data_governance',
-    'bbq': 'privacy_data_governance',
-    'bold': 'privacy_data_governance',
     'winobias': 'privacy_data_governance',
     'crows_pairs': 'privacy_data_governance',
     'pii_detection': 'privacy_data_governance',
@@ -108,8 +104,6 @@ function getBenchmarkPrincipleCode(benchmarkKey: string): string {
     'memorization': 'privacy_data_governance',
     'privacy': 'privacy_data_governance',
     'human_deception': 'privacy_data_governance',
-    'reddit_bias': 'privacy_data_governance',
-    'fairllm': 'privacy_data_governance',
 
     // Transparency
     'mmlu': 'transparency',
@@ -123,18 +117,18 @@ function getBenchmarkPrincipleCode(benchmarkKey: string): string {
     'calibration_big_bench': 'transparency',
     'calibration_big_bench_i_know': 'transparency',
     'self_assessment': 'transparency',
-    'decoding_trust': 'transparency',
     'watermark_robustness': 'transparency',
 
     // Diversity, Non-discrimination and Fairness
-    'bias_detection': 'diversity_non_discrimination_fairness',
-    'fairness_evaluation': 'diversity_non_discrimination_fairness',
-    'demographic_bias': 'diversity_non_discrimination_fairness',
+    'bbq': 'diversity_non_discrimination_fairness',
+    'bold': 'diversity_non_discrimination_fairness',
+    'reddit_bias': 'diversity_non_discrimination_fairness',
+    'fairllm': 'diversity_non_discrimination_fairness',
+    'decoding_trust': 'diversity_non_discrimination_fairness',
 
     // Social and Environmental Well-being
-    'environmental_impact': 'social_environmental_wellbeing',
-    'social_impact': 'social_environmental_wellbeing',
-    'wellbeing_assessment': 'social_environmental_wellbeing'
+    'toxicity': 'social_environmental_wellbeing',
+    'toxicity_advbench': 'social_environmental_wellbeing'
   }
 
   // Chercher une correspondance exacte
