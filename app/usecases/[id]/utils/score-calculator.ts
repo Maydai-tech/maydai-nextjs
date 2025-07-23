@@ -10,8 +10,13 @@ interface AnswerImpacts {
   category_impacts?: Record<string, number>
 }
 
+// Interface pour les impacts d'une réponse (étendue avec is_eliminatory)
+interface AnswerImpactsExtended extends AnswerImpacts {
+  is_eliminatory?: boolean
+}
+
 // Fonction utilitaire pour obtenir les impacts d'une réponse depuis le JSON
-function getAnswerImpactsFromJSON(questionCode: string, answerCode: string): AnswerImpacts {
+function getAnswerImpactsFromJSON(questionCode: string, answerCode: string): AnswerImpactsExtended {
   const questions = loadQuestions()
   const question = questions[questionCode]
   if (!question) return { score_impact: 0 }
@@ -19,7 +24,8 @@ function getAnswerImpactsFromJSON(questionCode: string, answerCode: string): Ans
   const option = question.options.find(opt => opt.code === answerCode)
   return {
     score_impact: option?.score_impact || 0,
-    category_impacts: option?.category_impacts || {}
+    category_impacts: option?.category_impacts || {},
+    is_eliminatory: option?.is_eliminatory || false
   }
 }
 
@@ -34,6 +40,40 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
     
     let currentScore = BASE_SCORE
     const breakdown: ScoreBreakdown[] = []
+    let isEliminated = false
+    
+    // Charger les questions une seule fois
+    const questions = loadQuestions()
+
+    // PREMIÈRE PASSE : Détecter les réponses éliminatoires
+    for (const response of responses) {
+      const question = questions[response.question_code]
+      if (!question) continue
+
+      // Vérifier selon le type de réponse
+      if (question.type === 'radio' && response.single_value) {
+        const impacts = getAnswerImpactsFromJSON(response.question_code, response.single_value)
+        if (impacts.is_eliminatory) {
+          isEliminated = true
+          break
+        }
+      } else if ((question.type === 'checkbox' || question.type === 'tags') && response.multiple_codes) {
+        for (const code of response.multiple_codes) {
+          const impacts = getAnswerImpactsFromJSON(response.question_code, code)
+          if (impacts.is_eliminatory) {
+            isEliminated = true
+            break
+          }
+        }
+        if (isEliminated) break
+      } else if (question.type === 'conditional' && response.conditional_main) {
+        const impacts = getAnswerImpactsFromJSON(response.question_code, response.conditional_main)
+        if (impacts.is_eliminatory) {
+          isEliminated = true
+          break
+        }
+      }
+    }
     
     // Initialiser les compteurs par catégorie
     const categoryData: Record<string, { 
@@ -50,9 +90,7 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
       }
     })
 
-    // Charger les questions une seule fois
-    const questions = loadQuestions()
-
+    // DEUXIÈME PASSE : Calculer les scores normalement (même si éliminé, pour le breakdown)
     for (const response of responses) {
       // console.log('Processing response for question:', response.question_code)
       
@@ -178,6 +216,11 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
     // S'assurer que le score ne descend pas en dessous de 0
     currentScore = Math.max(0, currentScore)
 
+    // Si éliminé, forcer le score à zéro
+    if (isEliminated) {
+      currentScore = 0
+    }
+
     // Calculer les scores par catégorie - toutes les catégories sont indépendantes avec le même score de base
     const categoryScores: CategoryScore[] = Object.entries(RISK_CATEGORIES).map(([categoryId, category]) => {
       const data = categoryData[categoryId]
@@ -207,7 +250,8 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
       score_breakdown: breakdown,
       category_scores: categoryScores,
       calculated_at: new Date().toISOString(),
-      version: 1
+      version: 1,
+      is_eliminated: isEliminated
     }
   } catch (error) {
     console.error('Error in calculateScore:', error)
@@ -219,7 +263,8 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
       score_breakdown: [],
       category_scores: [],
       calculated_at: new Date().toISOString(),
-      version: 1
+      version: 1,
+      is_eliminated: false
     }
   }
 } 

@@ -34,6 +34,7 @@ export interface QuestionOption {
   label: string
   score_impact?: number
   category_impacts?: Record<string, number>
+  is_eliminatory?: boolean
 }
 
 export interface Question {
@@ -83,6 +84,7 @@ export interface UseCaseScore {
   category_scores: CategoryScore[]
   calculated_at: string
   version: number
+  is_eliminated?: boolean
 }
 
 export interface ScoreBreakdown {
