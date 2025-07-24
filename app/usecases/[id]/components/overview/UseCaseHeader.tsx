@@ -1,15 +1,20 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { UseCase, Progress } from '../../types/usecase'
+import { ComplAIModel } from '@/lib/supabase'
 import { getRiskLevelColor, getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
 import { useCaseRoutes } from '../../utils/routes'
-import { ArrowLeft, Brain, Building, Shield, CheckCircle, Clock, Info } from 'lucide-react'
+import { ArrowLeft, Brain, Building, Shield, CheckCircle, Clock, Info, Bot, Edit3 } from 'lucide-react'
 import { useUseCaseScore } from '../../hooks/useUseCaseScore'
 import { getScoreCategory } from '../../utils/score-categories'
+import ModelSelectorModal from '../ModelSelectorModal'
+import ComplAiScoreBadge from '../ComplAiScoreBadge'
 
 interface UseCaseHeaderProps {
   useCase: UseCase
   progress?: Progress | null
+  onUpdateUseCase?: (updates: Partial<UseCase>) => Promise<UseCase | null>
+  updating?: boolean
 }
 
 const getStatusIcon = (status: string) => {
@@ -113,8 +118,25 @@ function HeaderScore({ usecaseId }: { usecaseId: string }) {
   )
 }
 
-export function UseCaseHeader({ useCase, progress }: UseCaseHeaderProps) {
+export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = false }: UseCaseHeaderProps) {
   const frenchStatus = getUseCaseStatusInFrench(useCase.status)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const handleModelEdit = () => {
+    setIsModalOpen(true)
+  }
+
+  const handleModelSave = async (selectedModel: ComplAIModel | null) => {
+    if (!onUpdateUseCase) return
+    
+    await onUpdateUseCase({ 
+      primary_model_id: selectedModel?.id || null 
+    })
+  }
+
+  const handleModalClose = () => {
+    setIsModalOpen(false)
+  }
   
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
@@ -141,6 +163,44 @@ export function UseCaseHeader({ useCase, progress }: UseCaseHeaderProps) {
                 {useCase.companies.name} • {useCase.companies.industry}
               </p>
             )}
+            
+            {/* Modèle COMPL-AI */}
+            <div className="flex items-center gap-2 mt-2">
+              <div 
+                className="group relative inline-flex items-center px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer"
+                onClick={onUpdateUseCase ? handleModelEdit : undefined}
+                title={onUpdateUseCase ? "Cliquer pour modifier le modèle" : undefined}
+              >
+                <Bot className="h-3 w-3 mr-2" />
+                {useCase.compl_ai_models ? (
+                  <>
+                    <span className="text-sm font-medium">{useCase.compl_ai_models.model_name}</span>
+                    {useCase.compl_ai_models.model_provider && (
+                      <span className="text-blue-600 ml-2 text-sm">• {useCase.compl_ai_models.model_provider}</span>
+                    )}
+                    {useCase.compl_ai_models.version && (
+                      <span className="text-blue-500 ml-2 text-xs">(v{useCase.compl_ai_models.version})</span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-sm text-gray-500">Aucun modèle sélectionné</span>
+                )}
+                
+                {/* Icône modifier intégrée */}
+                {onUpdateUseCase && (
+                  <Edit3 className="h-3 w-3 ml-2 text-blue-500" />
+                )}
+              </div>
+              
+              {/* Score COMPL-AI */}
+              {useCase.compl_ai_models && (
+                <ComplAiScoreBadge 
+                  model={useCase.compl_ai_models} 
+                  size="sm"
+                />
+              )}
+            </div>
+            
             <div className="flex flex-wrap gap-2 mt-3">
               <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(frenchStatus)}`}>
                 {getStatusIcon(useCase.status)}
@@ -181,6 +241,15 @@ export function UseCaseHeader({ useCase, progress }: UseCaseHeaderProps) {
           <HeaderScore usecaseId={useCase.id} />
         </div>
       </div>
+
+      {/* Modal de sélection de modèle */}
+      <ModelSelectorModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        currentModel={useCase.compl_ai_models || null}
+        onSave={handleModelSave}
+        saving={updating}
+      />
     </div>
   )
 } 

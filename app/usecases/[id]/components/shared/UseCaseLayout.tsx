@@ -7,16 +7,22 @@ interface UseCaseLayoutProps {
   useCase: UseCase
   children: React.ReactNode
   showNavigation?: boolean
+  onUpdateUseCase?: (updates: Partial<UseCase>) => Promise<UseCase | null>
+  updating?: boolean
 }
 
-export function UseCaseLayout({ useCase, children, showNavigation = true }: UseCaseLayoutProps) {
+export function UseCaseLayout({ useCase, children, showNavigation = true, onUpdateUseCase, updating }: UseCaseLayoutProps) {
   const isDraft = useCase.status?.toLowerCase() === 'draft'
 
   return (
     <div className="space-y-0">
       {/* Header */}
       <div className="bg-white shadow-sm -m-6 mb-0 p-6">
-        <UseCaseHeader useCase={useCase} />
+        <UseCaseHeader 
+          useCase={useCase} 
+          onUpdateUseCase={onUpdateUseCase}
+          updating={updating}
+        />
       </div>
 
       {/* Navigation */}

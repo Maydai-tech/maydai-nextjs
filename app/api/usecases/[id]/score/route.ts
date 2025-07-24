@@ -71,7 +71,7 @@ export async function GET(
     }
 
     // Calculer le score
-    const scoreData = calculateScore(usecaseId, responses || [])
+    const scoreData = await calculateScore(usecaseId, responses || [])
 
     // Retourner directement le score calculé (pas de sauvegarde)
     return NextResponse.json(scoreData)
