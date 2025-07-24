@@ -2,7 +2,7 @@ import { loadQuestions } from '../utils/questions-loader'
 import { UseCaseScore, ScoreBreakdown, CategoryScore } from '../types/usecase'
 import { RISK_CATEGORIES } from './risk-categories'
 
-const BASE_SCORE = 100
+const BASE_SCORE = 90
 
 // Interface pour les impacts d'une réponse
 interface AnswerImpacts {
