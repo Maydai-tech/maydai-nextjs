@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-auth'
+import { supabase, ComplAIModel } from '@/lib/supabase'
 import { 
   ArrowLeft, 
   Brain, 
@@ -82,6 +83,10 @@ function NewUseCasePageContent() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedOptions, setSelectedOptions] = useState<string[]>([])
   const [otherValue, setOtherValue] = useState('')
+  const [partners, setPartners] = useState<string[]>([])
+  const [loadingPartners, setLoadingPartners] = useState(false)
+  const [availableModels, setAvailableModels] = useState<ComplAIModel[]>([])
+  const [loadingModels, setLoadingModels] = useState(false)
   const api = useApiCall()
 
   const companyId = searchParams.get('company')
@@ -101,6 +106,30 @@ function NewUseCasePageContent() {
     return date.getDate() == parseInt(day) &&
            date.getMonth() == parseInt(month) - 1 &&
            date.getFullYear() == parseInt(year)
+  }
+
+  // Fonction pour récupérer les partenaires depuis la base de données
+  const fetchPartners = async () => {
+    try {
+      setLoadingPartners(true)
+      const { data, error } = await supabase
+        .from('compl_ai_models')
+        .select('model_provider')
+        .not('model_provider', 'is', null)
+        .order('model_provider', { ascending: true })
+
+      if (error) throw error
+
+      // Extraire les partenaires uniques et filtrer les valeurs null/vides
+      const uniquePartners = [...new Set(data?.map(item => item.model_provider).filter(Boolean))] as string[]
+      setPartners(uniquePartners)
+    } catch (error) {
+      console.error('Erreur lors du chargement des partenaires:', error)
+      // Fallback vers la liste en dur en cas d'erreur
+      setPartners(['OpenAI', 'Anthropic', 'Google', 'Meta', 'Qwen', 'Mistral', 'DeepSeek', 'xAI', 'Grok'])
+    } finally {
+      setLoadingPartners(false)
+    }
   }
 
   const questions: Question[] = [
@@ -141,7 +170,7 @@ function NewUseCasePageContent() {
       id: 'technology_partner',
       question: 'Partenaire technologique ?',
       type: 'checkbox',
-      options: ['OpenAI', 'Anthropic', 'Google', 'Meta', 'Qwen', 'Mistral', 'DeepSeek', 'xAI', 'Grok'],
+      options: partners, // Liste dynamique récupérée depuis la base de données
       hasOtherOption: true
     },
     {
@@ -209,37 +238,49 @@ function NewUseCasePageContent() {
     }
   ]
 
-  // Partner to models mapping
-  const partnerModels = {
-    'OpenAI': ['GPT-4o', 'GPT-4', 'GPT-3.5 Turbo'],
-    'Anthropic': ['Claude 3.7 Sonnet', 'Claude 3.5 Sonnet', 'Claude 3.5 Haiku', 'Claude 3 Opus'],
-    'Google': ['Gemini 1.5 Pro', 'Gemini 1.5 Flash', 'Gemini 1.0 Ultra', 'Gemini 2'],
-    'Meta': ['Llama 3', 'Llama 2', 'Llama 3.1'],
-    'Qwen': ['Qwen2', 'Qwen1.5', 'Qwen'],
-    'Mistral': ['Mistral 7B', 'Mistral 8x7B', 'Mistral NeMo 12B', 'Mistral Instruct 7B Q4', 'Mistral Small 3.1', 'Mistral Large'],
-    'DeepSeek': ['DeepSeek-V2', 'DeepSeek-Coder'],
-    'xAI': ['Grok-1.5', 'Grok-1'],
-    'Microsoft': ['Copilot', 'Azure OpenAI Service']
+  // Fonction pour récupérer les modèles disponibles selon les partenaires sélectionnés
+  const fetchAvailableModels = async (selectedPartners: string[]) => {
+    if (selectedPartners.length === 0) {
+      setAvailableModels([])
+      return
+    }
+
+    try {
+      setLoadingModels(true)
+      const { data, error } = await supabase
+        .from('compl_ai_models')
+        .select('*')
+        .in('model_provider', selectedPartners)
+        .order('model_provider', { ascending: true })
+        .order('model_name', { ascending: true })
+
+      if (error) throw error
+      setAvailableModels(data || [])
+    } catch (error) {
+      console.error('Erreur lors du chargement des modèles:', error)
+      setAvailableModels([])
+    } finally {
+      setLoadingModels(false)
+    }
   }
 
-  // Get available models based on selected partners
+  // Fonction synchrone pour récupérer les modèles depuis le state (pour compatibilité)
   const getAvailableModels = () => {
     const techPartnerQuestion = questions.find(q => q.id === 'technology_partner')
     if (!techPartnerQuestion || currentQuestionIndex <= questions.indexOf(techPartnerQuestion)) {
       return []
     }
 
-    const selectedPartners = formData.technology_partner?.split(', ').filter(p => p.trim()) || []
-    const availableModels = new Set<string>()
-    
-    selectedPartners.forEach(partner => {
-      const models = partnerModels[partner as keyof typeof partnerModels]
-      if (models) {
-        models.forEach(model => availableModels.add(model))
-      }
-    })
+    // Retourner les noms des modèles depuis le state availableModels
+    return availableModels.map(model => model.model_name).sort()
+  }
 
-    return Array.from(availableModels).sort()
+  // Fonction pour récupérer l'ID du modèle sélectionné
+  const findModelId = (modelName: string): string | null => {
+    if (!modelName || !availableModels.length) return null
+    
+    const model = availableModels.find(m => m.model_name === modelName)
+    return model?.id || null
   }
 
   // Update current question with dynamic models
@@ -278,6 +319,23 @@ function NewUseCasePageContent() {
     if (typeof window === 'undefined') return
     setMounted(true)
   }, [])
+
+  // Charger les partenaires au démarrage
+  useEffect(() => {
+    if (mounted && user) {
+      fetchPartners()
+    }
+  }, [mounted, user])
+
+  // Charger les modèles disponibles quand les partenaires technologiques changent
+  useEffect(() => {
+    const selectedPartners = formData.technology_partner?.split(', ').filter(p => p.trim()) || []
+    if (selectedPartners.length > 0) {
+      fetchAvailableModels(selectedPartners)
+    } else {
+      setAvailableModels([])
+    }
+  }, [formData.technology_partner])
 
   const fetchCompany = async () => {
     try {
@@ -362,6 +420,16 @@ function NewUseCasePageContent() {
     setSubmitting(true)
     
     try {
+      // Déterminer le primary_model_id à partir du premier modèle sélectionné
+      let primary_model_id = null
+      if (formData.llm_model_version) {
+        // Si plusieurs modèles sont sélectionnés, prendre le premier
+        const selectedModels = formData.llm_model_version.split(', ').filter(m => m.trim())
+        if (selectedModels.length > 0) {
+          primary_model_id = findModelId(selectedModels[0].trim())
+        }
+      }
+
       // Log des données à envoyer
       const payload = {
         name: formData.name,
@@ -369,6 +437,7 @@ function NewUseCasePageContent() {
         responsible_service: formData.responsible_service,
         technology_partner: formData.technology_partner,
         llm_model_version: formData.llm_model_version,
+        primary_model_id, // Ajouter l'ID du modèle principal
         ai_category: formData.ai_category,
         system_type: formData.system_type,
         description: formData.description,
@@ -380,6 +449,8 @@ function NewUseCasePageContent() {
       console.log('Payload complet:', payload)
       console.log('Company ID:', companyId)
       console.log('FormData actuel:', formData)
+      console.log('Available models:', availableModels)
+      console.log('Primary model ID trouvée:', primary_model_id)
       
       const response = await api.post('/api/usecases', payload)
       
@@ -734,8 +805,28 @@ function NewUseCasePageContent() {
 
           {currentQuestion.type === 'checkbox' && (
             <div className="space-y-4">
+              {/* Loading state for technology partners */}
+              {currentQuestion.id === 'technology_partner' && loadingPartners && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
+                  </div>
+                  <p className="text-blue-700">Chargement des partenaires technologiques...</p>
+                </div>
+              )}
+
+              {/* Loading state for models */}
+              {currentQuestion.id === 'llm_model_version' && loadingModels && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
+                  </div>
+                  <p className="text-blue-700">Chargement des modèles disponibles...</p>
+                </div>
+              )}
+
               {/* No partners selected message for LLM models */}
-              {currentQuestion.id === 'llm_model_version' && (!currentQuestion.options || currentQuestion.options.length === 0) && (
+              {currentQuestion.id === 'llm_model_version' && !loadingModels && (!currentQuestion.options || currentQuestion.options.length === 0) && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
                   <div className="flex items-center justify-center mb-3">
                     <AlertCircle className="h-6 w-6 text-amber-600" />
@@ -757,7 +848,7 @@ function NewUseCasePageContent() {
               )}
 
               {/* Checkbox Options in Card Format */}
-              {currentQuestion.options && currentQuestion.options.length > 0 && (
+              {currentQuestion.options && currentQuestion.options.length > 0 && !loadingPartners && !loadingModels && (
                 <div className="space-y-3">
                   {(currentQuestion.options as string[]).map((option, index) => (
                     <label 
