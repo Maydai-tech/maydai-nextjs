@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
+import { calculateUseCaseScore } from '@/lib/score-service'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -207,6 +208,22 @@ export async function PUT(
       const context = createRequestContext(request)
       logger.error('Failed to update use case', updateError, { ...context, useCaseId })
       return NextResponse.json({ error: 'Error updating use case' }, { status: 500 })
+    }
+
+    // Déclencher le recalcul automatique du score si le modèle a été modifié
+    if (primary_model_id !== undefined) {
+      try {
+        await calculateUseCaseScore(useCaseId, token)
+        logger.info('Score recalculated successfully after model update', { useCaseId, primary_model_id })
+      } catch (scoreError) {
+        // Ne pas faire échouer la mise à jour du modèle si le calcul du score échoue
+        const context = createRequestContext(request)
+        logger.warn('Failed to recalculate score after model update', scoreError, { 
+          ...context, 
+          useCaseId, 
+          primary_model_id 
+        })
+      }
     }
 
     return NextResponse.json(updatedUseCase)

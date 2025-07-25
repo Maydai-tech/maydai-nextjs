@@ -110,6 +110,19 @@ export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
 
       const updatedUseCase = await response.json()
       setUseCase(updatedUseCase)
+
+      // Si le modèle primaire a été modifié, attendre un peu puis recharger les données
+      // pour récupérer le score mis à jour
+      if (updates.primary_model_id !== undefined) {
+        setTimeout(async () => {
+          try {
+            await fetchUseCaseData()
+          } catch (refreshError) {
+            console.warn('Failed to refresh use case data after model update:', refreshError)
+          }
+        }, 1000) // Attendre 1 seconde pour laisser le temps au calcul du score
+      }
+
       return updatedUseCase
     } catch (err) {
       console.error('Error updating use case:', err)
@@ -118,7 +131,7 @@ export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
     } finally {
       setUpdating(false)
     }
-  }, [user, session?.access_token, useCaseId])
+  }, [user, session?.access_token, useCaseId, fetchUseCaseData])
 
   return {
     useCase,
