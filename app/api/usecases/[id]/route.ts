@@ -218,7 +218,7 @@ export async function PUT(
       } catch (scoreError) {
         // Ne pas faire échouer la mise à jour du modèle si le calcul du score échoue
         const context = createRequestContext(request)
-        logger.warn('Failed to recalculate score after model update', scoreError, { 
+        logger.error('Failed to recalculate score after model update', scoreError, { 
           ...context, 
           useCaseId, 
           primary_model_id 

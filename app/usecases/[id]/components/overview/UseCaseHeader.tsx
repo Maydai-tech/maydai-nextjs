@@ -10,6 +10,8 @@ import { getScoreCategory } from '../../utils/score-categories'
 import ModelSelectorModal from '../ModelSelectorModal'
 import ComplAiScoreBadge from '../ComplAiScoreBadge'
 
+type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
+
 interface UseCaseHeaderProps {
   useCase: UseCase
   progress?: Progress | null
@@ -132,13 +134,13 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
     setIsModalOpen(true)
   }
 
-  const handleModelSave = async (selectedModel: ComplAIModel | null) => {
+  const handleModelSave = async (selectedModel: PartialComplAIModel | null) => {
     if (!onUpdateUseCase) return
     
     try {
       setIsRecalculatingScore(true)
       await onUpdateUseCase({ 
-        primary_model_id: selectedModel?.id || null 
+        primary_model_id: selectedModel?.id || undefined 
       })
       // Laisser un délai pour le recalcul du score
       setTimeout(() => {

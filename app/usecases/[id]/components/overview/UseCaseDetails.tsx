@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { UseCase } from '../../types/usecase'
 import { ComplAIModel } from '@/lib/supabase'
+
+type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
 import { Calendar, Users, Shield, Bot, Edit3 } from 'lucide-react'
 import ModelSelectorModal from '../ModelSelectorModal'
 import ComplAiScoreBadge from '../ComplAiScoreBadge'
@@ -18,11 +20,11 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
     setIsModalOpen(true)
   }
 
-  const handleModelSave = async (selectedModel: ComplAIModel | null) => {
+  const handleModelSave = async (selectedModel: PartialComplAIModel | null) => {
     if (!onUpdateUseCase) return
     
     await onUpdateUseCase({ 
-      primary_model_id: selectedModel?.id 
+      primary_model_id: selectedModel?.id || undefined 
     })
   }
 

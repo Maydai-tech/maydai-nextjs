@@ -9,7 +9,7 @@ interface ModelSelectorModalProps {
   isOpen: boolean
   onClose: () => void
   currentModel?: PartialComplAIModel | null
-  onSave: (model: ComplAIModel | null) => Promise<void>
+  onSave: (model: PartialComplAIModel | null) => Promise<void>
   saving?: boolean
 }
 
@@ -20,7 +20,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   onSave,
   saving = false
 }) => {
-  const [selectedModel, setSelectedModel] = useState<ComplAIModel | null>(currentModel || null)
+  const [selectedModel, setSelectedModel] = useState<PartialComplAIModel | null>(currentModel || null)
   const [models, setModels] = useState<ComplAIModel[]>([])
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')

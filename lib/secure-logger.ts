@@ -12,6 +12,7 @@ interface LogContext {
   requestId?: string
   userAgent?: string
   ip?: string
+  primary_model_id?: string
 }
 
 interface LogEntry {
