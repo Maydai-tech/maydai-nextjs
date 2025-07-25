@@ -60,7 +60,35 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    // Récupérer les réponses
+    // Récupérer d'abord le score_final stocké en base
+    const { data: usecaseData, error: scoreDataError } = await supabase
+      .from('usecases')
+      .select('score_final, score_base, score_model, is_eliminated, last_calculation_date')
+      .eq('id', usecaseId)
+      .single()
+
+    if (scoreDataError) {
+      return NextResponse.json({ error: 'Error fetching use case data' }, { status: 500 })
+    }
+
+    // Si un score_final existe, le retourner directement avec un format compatible
+    if (usecaseData.score_final !== null && usecaseData.score_final !== undefined) {
+      return NextResponse.json({
+        usecase_id: usecaseId,
+        score: usecaseData.score_final,
+        max_score: 100, // Score maximum sur 100
+        score_breakdown: [], // Pas de breakdown détaillé depuis la base
+        category_scores: [], // Pas de scores par catégorie depuis la base
+        calculated_at: usecaseData.last_calculation_date || new Date().toISOString(),
+        version: 1,
+        is_eliminated: usecaseData.is_eliminated || false,
+        compl_ai_bonus: usecaseData.score_model || 0,
+        compl_ai_score: null,
+        model_info: null
+      })
+    }
+
+    // Fallback : calculer le score dynamiquement si pas de score_final
     const { data: responses, error: responsesError } = await supabase
       .from('usecase_responses')
       .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
@@ -73,7 +101,7 @@ export async function GET(
     // Calculer le score
     const scoreData = await calculateScore(usecaseId, responses || [])
 
-    // Retourner directement le score calculé (pas de sauvegarde)
+    // Retourner le score calculé
     return NextResponse.json(scoreData)
 
   } catch (error) {
