@@ -4,10 +4,12 @@ import { Bot, X, Search, Check } from 'lucide-react'
 import ModelSelector from './ModelSelector'
 import ComplAiScoreBadge from './ComplAiScoreBadge'
 
+type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
+
 interface ModelSelectorModalProps {
   isOpen: boolean
   onClose: () => void
-  currentModel?: ComplAIModel | null
+  currentModel?: PartialComplAIModel | null
   onSave: (model: ComplAIModel | null) => Promise<void>
   saving?: boolean
 }
@@ -19,12 +21,12 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   onSave,
   saving = false
 }) => {
-  const [selectedModel, setSelectedModel] = useState<ComplAIModel | null>(currentModel || null)
+  const [selectedModel, setSelectedModel] = useState<ComplAIModel | null>(null)
 
   // Reset selected model when modal opens/closes or current model changes
   useEffect(() => {
     if (isOpen) {
-      setSelectedModel(currentModel || null)
+      setSelectedModel(null)
     }
   }, [isOpen, currentModel])
 
@@ -38,7 +40,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   }
 
   const handleCancel = () => {
-    setSelectedModel(currentModel || null)
+    setSelectedModel(null)
     onClose()
   }
 

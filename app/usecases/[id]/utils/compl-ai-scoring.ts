@@ -55,7 +55,7 @@ export async function getComplAiScore(modelId: string): Promise<ComplAiModelScor
     const principleScores: Record<string, number[]> = {}
     
     evaluations.forEach(evaluation => {
-      const principleCode = evaluation.compl_ai_principles.code
+      const principleCode = (evaluation.compl_ai_principles as any).code
       if (!principleScores[principleCode]) {
         principleScores[principleCode] = []
       }

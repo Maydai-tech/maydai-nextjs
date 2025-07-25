@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { TrendingUp, AlertCircle } from 'lucide-react'
 
 interface ComplAiScoreBadgeProps {
-  model: ComplAIModel
+  model: Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
   className?: string
   size?: 'sm' | 'md'
 }
