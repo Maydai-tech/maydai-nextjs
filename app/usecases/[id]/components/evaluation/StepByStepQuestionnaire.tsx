@@ -20,6 +20,7 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
     canGoBack,
     isSubmitting,
     isCompleted,
+    isCalculatingScore,
     error,
     handleAnswerSelect,
     handleNext,
@@ -41,7 +42,7 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
             Questionnaire terminé !
           </h2>
           <p className="text-gray-600">
-            Votre évaluation a été sauvegardée avec succès.
+            Votre évaluation a été sauvegardée avec succès et le score de votre use case a été calculé.
           </p>
         </div>
       </div>
@@ -125,7 +126,7 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
               {isSubmitting ? (
                 <>
                   <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                  Finalisation...
+                  {isCalculatingScore ? 'Calcul du score...' : 'Finalisation...'}
                 </>
               ) : (
                 <>

@@ -4,6 +4,7 @@ import { loadQuestions } from '../utils/questions-loader'
 import { getNextQuestion, getQuestionProgress, getAbsoluteQuestionProgress, checkCanProceed, getPreviousQuestion, buildQuestionPath } from '../utils/questionnaire'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 import { supabase } from '@/lib/supabase'
+import { scoreService } from '@/lib/score-service'
 
 interface UseEvaluationReturn {
   questionnaireData: QuestionnaireData
@@ -15,6 +16,7 @@ interface UseEvaluationReturn {
   canGoBack: boolean
   isSubmitting: boolean
   isCompleted: boolean
+  isCalculatingScore: boolean
   error: string | null
   handleAnswerSelect: (answer: any) => void
   handleNext: () => void
@@ -38,6 +40,7 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [initialDataLoaded, setInitialDataLoaded] = useState(false)
+  const [isCalculatingScore, setIsCalculatingScore] = useState(false)
 
   const {
     formattedAnswers: savedAnswers,
@@ -172,6 +175,21 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
       if (isLastQuestion) {
         // Complete questionnaire
         console.log('🏁 Completing questionnaire')
+        
+        // Calculate score using edge function
+        console.log('🧮 Calculating use case score...')
+        setIsCalculatingScore(true)
+        
+        try {
+          const scoreResult = await scoreService.calculateUseCaseScore(usecaseId)
+          console.log('✅ Score calculated successfully:', scoreResult)
+        } catch (scoreError) {
+          console.error('❌ Error calculating score:', scoreError)
+          // Continue with completion even if score calculation fails
+        } finally {
+          setIsCalculatingScore(false)
+        }
+        
         // Mark as completed in the database
         await supabase
           .from('usecases')
@@ -237,6 +255,7 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
     canGoBack,
     isSubmitting,
     isCompleted: questionnaireData.isCompleted,
+    isCalculatingScore,
     error,
     handleAnswerSelect,
     handleNext,
