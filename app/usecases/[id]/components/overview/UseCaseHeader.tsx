@@ -10,6 +10,8 @@ import { getScoreCategory } from '../../utils/score-categories'
 import ModelSelectorModal from '../ModelSelectorModal'
 import ComplAiScoreBadge from '../ComplAiScoreBadge'
 
+type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
+
 interface UseCaseHeaderProps {
   useCase: UseCase
   progress?: Progress | null
@@ -27,10 +29,10 @@ const getStatusIcon = (status: string) => {
   }
 }
 
-function HeaderScore({ usecaseId }: { usecaseId: string }) {
+function HeaderScore({ usecaseId, refreshing = false }: { usecaseId: string, refreshing?: boolean }) {
   const { score, loading, error } = useUseCaseScore(usecaseId)
 
-  if (loading) {
+  if (loading || refreshing) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-4 w-full sm:w-auto">
         <div className="animate-pulse">
@@ -38,6 +40,11 @@ function HeaderScore({ usecaseId }: { usecaseId: string }) {
           <div className="h-8 bg-gray-200 rounded mb-2"></div>
           <div className="h-3 bg-gray-200 rounded w-20 mx-auto"></div>
         </div>
+        {refreshing && (
+          <div className="text-xs text-blue-600 text-center mt-2">
+            Recalcul en cours...
+          </div>
+        )}
       </div>
     )
   }
@@ -121,17 +128,28 @@ function HeaderScore({ usecaseId }: { usecaseId: string }) {
 export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = false }: UseCaseHeaderProps) {
   const frenchStatus = getUseCaseStatusInFrench(useCase.status)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isRecalculatingScore, setIsRecalculatingScore] = useState(false)
 
   const handleModelEdit = () => {
     setIsModalOpen(true)
   }
 
-  const handleModelSave = async (selectedModel: ComplAIModel | null) => {
+  const handleModelSave = async (selectedModel: PartialComplAIModel | null) => {
     if (!onUpdateUseCase) return
     
-    await onUpdateUseCase({ 
-      primary_model_id: selectedModel?.id 
-    })
+    try {
+      setIsRecalculatingScore(true)
+      await onUpdateUseCase({ 
+        primary_model_id: selectedModel?.id || undefined 
+      })
+      // Laisser un délai pour le recalcul du score
+      setTimeout(() => {
+        setIsRecalculatingScore(false)
+      }, 2000)
+    } catch (error) {
+      setIsRecalculatingScore(false)
+      throw error
+    }
   }
 
   const handleModalClose = () => {
@@ -171,7 +189,6 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                 onClick={onUpdateUseCase ? handleModelEdit : undefined}
                 title={onUpdateUseCase ? "Cliquer pour modifier le modèle" : undefined}
               >
-                <Bot className="h-3 w-3 mr-2" />
                 {useCase.compl_ai_models ? (
                   <>
                     <span className="text-sm font-medium">{useCase.compl_ai_models.model_name}</span>
@@ -191,14 +208,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                   <Edit3 className="h-3 w-3 ml-2 text-blue-500" />
                 )}
               </div>
-              
-              {/* Score COMPL-AI */}
-              {useCase.compl_ai_models && (
-                <ComplAiScoreBadge 
-                  model={useCase.compl_ai_models} 
-                  size="sm"
-                />
-              )}
+            
             </div>
             
             <div className="flex flex-wrap gap-2 mt-3">
@@ -238,7 +248,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           )}
 
           {/* Score Card */}
-          <HeaderScore usecaseId={useCase.id} />
+          <HeaderScore usecaseId={useCase.id} refreshing={isRecalculatingScore} />
         </div>
       </div>
 
