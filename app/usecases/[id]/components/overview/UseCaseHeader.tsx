@@ -187,7 +187,6 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                 onClick={onUpdateUseCase ? handleModelEdit : undefined}
                 title={onUpdateUseCase ? "Cliquer pour modifier le modèle" : undefined}
               >
-                <Bot className="h-3 w-3 mr-2" />
                 {useCase.compl_ai_models ? (
                   <>
                     <span className="text-sm font-medium">{useCase.compl_ai_models.model_name}</span>
@@ -207,14 +206,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                   <Edit3 className="h-3 w-3 ml-2 text-blue-500" />
                 )}
               </div>
-              
-              {/* Score COMPL-AI */}
-              {useCase.compl_ai_models && (
-                <ComplAiScoreBadge 
-                  model={useCase.compl_ai_models} 
-                  size="sm"
-                />
-              )}
+            
             </div>
             
             <div className="flex flex-wrap gap-2 mt-3">

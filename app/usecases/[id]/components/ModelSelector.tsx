@@ -160,7 +160,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 
       {/* Menu déroulant */}
       {isOpen && !disabled && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
+        <div className="absolute z-[300] w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-2xl max-h-60 overflow-hidden">
           {/* Barre de recherche */}
           <div className="p-2 border-b border-gray-200">
             <div className="relative">
@@ -177,7 +177,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
           </div>
 
           {/* Liste des modèles */}
-          <div className="max-h-40 overflow-y-auto">
+          <div className="max-h-40 overflow-y-auto bg-white">
             {loading ? (
               <div className="p-3 text-center text-gray-500">
                 Chargement des modèles...

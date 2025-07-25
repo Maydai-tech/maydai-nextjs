@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { ComplAIModel } from '@/lib/supabase'
+import { ComplAIModel, supabase } from '@/lib/supabase'
 import { Bot, X, Search, Check } from 'lucide-react'
-import ModelSelector from './ModelSelector'
 import ComplAiScoreBadge from './ComplAiScoreBadge'
 
 interface ModelSelectorModalProps {
@@ -20,13 +19,66 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   saving = false
 }) => {
   const [selectedModel, setSelectedModel] = useState<ComplAIModel | null>(currentModel || null)
+  const [models, setModels] = useState<ComplAIModel[]>([])
+  const [loading, setLoading] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Reset selected model when modal opens/closes or current model changes
   useEffect(() => {
     if (isOpen) {
       setSelectedModel(currentModel || null)
+      fetchModels()
     }
   }, [isOpen, currentModel])
+
+  const fetchModels = async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('compl_ai_models')
+        .select('*')
+        .order('model_provider', { ascending: true })
+        .order('model_name', { ascending: true })
+
+      if (error) throw error
+      setModels(data || [])
+    } catch (error) {
+      console.error('Erreur lors du chargement des modèles:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getGroupedModels = () => {
+    // Filter models based on search term
+    const filteredModels = models.filter(model => {
+      if (!searchTerm) return true
+      const searchLower = searchTerm.toLowerCase()
+      return (
+        model.model_name.toLowerCase().includes(searchLower) ||
+        (model.model_provider?.toLowerCase().includes(searchLower) ?? false) ||
+        (model.model_type?.toLowerCase().includes(searchLower) ?? false)
+      )
+    })
+
+    // Group models by provider
+    const grouped = filteredModels.reduce((acc, model) => {
+      const provider = model.model_provider || 'Autres'
+      if (!acc[provider]) {
+        acc[provider] = []
+      }
+      acc[provider].push(model)
+      return acc
+    }, {} as Record<string, ComplAIModel[]>)
+
+    // Convert to array and sort providers
+    return Object.entries(grouped).sort(([a], [b]) => {
+      // Put "Autres" at the end
+      if (a === 'Autres') return 1
+      if (b === 'Autres') return -1
+      return a.localeCompare(b)
+    })
+  }
 
   const handleSave = async () => {
     try {
@@ -48,14 +100,14 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-50 transition-opacity"
+        className="fixed inset-0 backdrop-blur-sm z-[100] transition-all"
         onClick={handleCancel}
       />
       
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 pointer-events-none">
         <div 
-          className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden transform transition-all"
+          className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] transform transition-all pointer-events-auto relative"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -82,42 +134,99 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
           </div>
 
           {/* Content */}
-          <div className="p-6 space-y-4">
-            {/* Current Model Display */}
-            {currentModel && (
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <div className="text-sm font-medium text-gray-700 mb-2">Modèle actuel :</div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-gray-600" />
-                    <span className="font-medium text-gray-900">{currentModel.model_name}</span>
-                    {currentModel.model_provider && (
-                      <span className="text-gray-600">• {currentModel.model_provider}</span>
-                    )}
-                    {currentModel.version && (
-                      <span className="text-gray-500 text-sm">(v{currentModel.version})</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Model Selector */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nouveau modèle :
-              </label>
-              <ModelSelector
-                value={selectedModel?.id}
-                onChange={(modelId, modelInfo) => setSelectedModel(modelInfo)}
-                placeholder="Rechercher et sélectionner un modèle..."
-                className="w-full"
+          <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Rechercher un modèle..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
               />
             </div>
 
+            {/* Models List */}
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                <p className="text-gray-600">Chargement des modèles...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {getGroupedModels().map(([provider, providerModels]) => (
+                  <div key={provider}>
+                    {/* Provider Header */}
+                    <div className="px-3 py-2 text-sm font-semibold text-gray-600 uppercase bg-gray-50 rounded-lg mb-2">
+                      {provider}
+                    </div>
+                    
+                    {/* Models Cards */}
+                    <div className="space-y-2">
+                      {providerModels.map((model) => (
+                        <label 
+                          key={model.id} 
+                          className={`group flex flex-col p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                            selectedModel?.id === model.id
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                          }`}
+                        >
+                          <div className="flex items-start space-x-4">
+                            <div className="flex items-center h-6 mt-1">
+                              <input
+                                type="radio"
+                                name="selectedModel"
+                                value={model.id}
+                                checked={selectedModel?.id === model.id}
+                                onChange={() => setSelectedModel(model)}
+                                className="h-4 w-4 text-blue-600 border-2 border-gray-300 focus:ring-blue-500 focus:ring-2 focus:ring-offset-0"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Bot className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                <span className="font-semibold text-gray-900">
+                                  {model.model_name}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                {model.model_provider && (
+                                  <span>{model.model_provider}</span>
+                                )}
+                                {model.version && (
+                                  <>
+                                    <span>•</span>
+                                    <span>v{model.version}</span>
+                                  </>
+                                )}
+                                {model.model_type && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="capitalize">{model.model_type.replace('-', ' ')}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                
+                {getGroupedModels().length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    Aucun modèle trouvé
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Selected Model Preview */}
             {selectedModel && selectedModel.id !== currentModel?.id && (
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-4">
                 <div className="flex items-center gap-2 text-blue-800 mb-2">
                   <Check className="w-4 h-4" />
                   <span className="text-sm font-medium">Nouveau modèle sélectionné :</span>
