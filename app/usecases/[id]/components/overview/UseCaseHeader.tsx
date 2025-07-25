@@ -130,7 +130,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
     if (!onUpdateUseCase) return
     
     await onUpdateUseCase({ 
-      primary_model_id: selectedModel?.id || null 
+      primary_model_id: selectedModel?.id 
     })
   }
 

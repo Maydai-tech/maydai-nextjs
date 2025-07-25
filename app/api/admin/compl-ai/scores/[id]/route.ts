@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Vérifier l'authentification via l'en-tête Authorization
@@ -31,7 +31,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Droits insuffisants' }, { status: 403 })
     }
 
-    const evaluationId = params.id
+    const { id } = await params
+    const evaluationId = id
 
     if (!evaluationId) {
       return NextResponse.json({ error: 'ID d\'évaluation requis' }, { status: 400 })

@@ -22,7 +22,7 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
     if (!onUpdateUseCase) return
     
     await onUpdateUseCase({ 
-      primary_model_id: selectedModel?.id || null 
+      primary_model_id: selectedModel?.id 
     })
   }
 

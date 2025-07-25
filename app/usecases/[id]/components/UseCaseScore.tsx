@@ -82,9 +82,9 @@ export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseC
         {/* COMPL-AI Score Bonus */}
         {score.compl_ai_bonus && score.compl_ai_bonus > 0 && (
           <ComplAiScoreDisplay
-            score={score.compl_ai_score}
+            score={score.compl_ai_score ?? null}
             bonus={score.compl_ai_bonus}
-            modelInfo={score.model_info}
+            modelInfo={score.model_info ?? null}
             className="mb-4"
           />
         )}
