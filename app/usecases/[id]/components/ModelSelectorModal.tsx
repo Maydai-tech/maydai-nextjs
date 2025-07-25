@@ -66,10 +66,10 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Sélectionner un modèle COMPL-AI
+                  Sélectionner un modèle
                 </h2>
                 <p className="text-sm text-gray-600">
-                  Choisissez le modèle qui sera utilisé pour calculer le bonus de conformité
+                  Sélectionnez le modèle utilisé par votre cas d'usage
                 </p>
               </div>
             </div>
@@ -98,7 +98,6 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                       <span className="text-gray-500 text-sm">(v{currentModel.version})</span>
                     )}
                   </div>
-                  <ComplAiScoreBadge model={currentModel} size="sm" />
                 </div>
               </div>
             )}
@@ -134,7 +133,6 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                       <span className="text-blue-600 text-sm">(v{selectedModel.version})</span>
                     )}
                   </div>
-                  <ComplAiScoreBadge model={selectedModel} size="sm" />
                 </div>
               </div>
             )}
@@ -158,7 +156,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
               {saving ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Sauvegarde...
+                  Sauvegarde et recalcul...
                 </>
               ) : (
                 <>

@@ -27,10 +27,10 @@ const getStatusIcon = (status: string) => {
   }
 }
 
-function HeaderScore({ usecaseId }: { usecaseId: string }) {
+function HeaderScore({ usecaseId, refreshing = false }: { usecaseId: string, refreshing?: boolean }) {
   const { score, loading, error } = useUseCaseScore(usecaseId)
 
-  if (loading) {
+  if (loading || refreshing) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-4 w-full sm:w-auto">
         <div className="animate-pulse">
@@ -38,6 +38,11 @@ function HeaderScore({ usecaseId }: { usecaseId: string }) {
           <div className="h-8 bg-gray-200 rounded mb-2"></div>
           <div className="h-3 bg-gray-200 rounded w-20 mx-auto"></div>
         </div>
+        {refreshing && (
+          <div className="text-xs text-blue-600 text-center mt-2">
+            Recalcul en cours...
+          </div>
+        )}
       </div>
     )
   }
@@ -121,6 +126,7 @@ function HeaderScore({ usecaseId }: { usecaseId: string }) {
 export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = false }: UseCaseHeaderProps) {
   const frenchStatus = getUseCaseStatusInFrench(useCase.status)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isRecalculatingScore, setIsRecalculatingScore] = useState(false)
 
   const handleModelEdit = () => {
     setIsModalOpen(true)
@@ -129,9 +135,19 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const handleModelSave = async (selectedModel: ComplAIModel | null) => {
     if (!onUpdateUseCase) return
     
-    await onUpdateUseCase({ 
-      primary_model_id: selectedModel?.id || null 
-    })
+    try {
+      setIsRecalculatingScore(true)
+      await onUpdateUseCase({ 
+        primary_model_id: selectedModel?.id || null 
+      })
+      // Laisser un délai pour le recalcul du score
+      setTimeout(() => {
+        setIsRecalculatingScore(false)
+      }, 2000)
+    } catch (error) {
+      setIsRecalculatingScore(false)
+      throw error
+    }
   }
 
   const handleModalClose = () => {
@@ -238,7 +254,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           )}
 
           {/* Score Card */}
-          <HeaderScore usecaseId={useCase.id} />
+          <HeaderScore usecaseId={useCase.id} refreshing={isRecalculatingScore} />
         </div>
       </div>
 
