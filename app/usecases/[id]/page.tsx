@@ -17,7 +17,7 @@ export default function UseCaseDetailPage() {
   const [mounted, setMounted] = useState(false)
 
   const useCaseId = params.id as string
-  const { useCase, progress, loading: loadingData, error } = useUseCaseData(useCaseId)
+  const { useCase, progress, loading: loadingData, error, updateUseCase, updating } = useUseCaseData(useCaseId)
   const { goToEvaluation, goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
 
   // Prevent hydration mismatch
@@ -67,10 +67,18 @@ export default function UseCaseDetailPage() {
   }
 
   return (
-    <UseCaseLayout useCase={useCase}>
+    <UseCaseLayout 
+      useCase={useCase}
+      onUpdateUseCase={updateUseCase}
+      updating={updating}
+    >
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         {/* Main Content */}
-        <UseCaseDetails useCase={useCase} />
+        <UseCaseDetails 
+          useCase={useCase} 
+          onUpdateUseCase={updateUseCase}
+          updating={updating}
+        />
 
         {/* Sidebar */}
         <UseCaseSidebar useCase={useCase} />

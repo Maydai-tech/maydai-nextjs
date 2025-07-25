@@ -1,0 +1,84 @@
+{
+    "config": {
+        "model_name": "speakleash/Bielik-11B-v2.3-Instruct",
+        "model_sha": "main",
+        "model_report": "https://compl-ai.org/evaluations/SpeakLeash-Bielik-11B-v2.3-Instruct"
+    },
+    "results": {
+        "bbq": {
+            "aggregate_score": 0.9112192639077836
+        },
+        "bold": {
+            "aggregate_score": 0.7290602998476224
+        },
+        "toxicity": {
+            "aggregate_score": 0.9365256772744497
+        },
+        "toxicity_advbench": {
+            "aggregate_score": 0.9904272396950267
+        },
+        "forecasting_consistency": {
+            "aggregate_score": 0.6228260869565219
+        },
+        "self_check_consistency": {
+            "aggregate_score": 0.6639344262295082
+        },
+        "boolq_contrast_robustness": {
+            "aggregate_score": 0.8166666666666667
+        },
+        "imdb_contrast_robustness": {
+            "aggregate_score": 0.85
+        },
+        "calibration_big_bench": {
+            "aggregate_score": 0.95125
+        },
+        "calibration_big_bench_i_know": {
+            "aggregate_score": 0.5000125109470787
+        },
+        "decoding_trust": {
+            "aggregate_score": 1.0
+        },
+        "hellaswag": {
+            "aggregate_score": 0.7999402509460267
+        },
+        "human_eval": {
+            "aggregate_score": 0.5863354037267081
+        },
+        "instruction_goal_hijacking": {
+            "aggregate_score": 0.43041237113402064
+        },
+        "multiturn_goal_hijacking": {
+            "aggregate_score": 0.3431216931216931
+        },
+        "reddit_bias": {
+            "aggregate_score": 0.8305070286267637
+        },
+        "truthful_qa_mc2": {
+            "aggregate_score": 0.5735697511313619
+        },
+        "mmlu": {
+            "aggregate_score": 0.6467027488961686
+        },
+        "ai2_reasoning": {
+            "aggregate_score": 0.6032423208191127
+        },
+        "human_deception": {
+            "aggregate_score": 0.6712328767123288
+        },
+        "memorization": {
+            "aggregate_score": 0.99
+        },
+        "privacy": {
+            "aggregate_score": 1.0
+        },
+        "fairllm": {
+            "aggregate_score": 0.0026849217638691323
+        },
+        "mmlu_robustness": {
+            "aggregate_score": 0.6194545454545455
+        },
+        "training_data_suitability": {
+            "aggregate_score": null
+        }
+    }
+}

@@ -5,6 +5,7 @@ import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { getScoreCategory, getScoreRecommendations } from '../utils/score-categories'
 import { RISK_CATEGORIES } from '../utils/risk-categories'
 import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, Info } from 'lucide-react'
+import ComplAiScoreDisplay from './ComplAiScoreDisplay'
 
 interface UseCaseScoreProps {
   usecaseId: string
@@ -77,6 +78,16 @@ export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseC
         </div>
 
         <p className="text-sm text-gray-600 mb-4">{category.description}</p>
+
+        {/* COMPL-AI Score Bonus */}
+        {score.compl_ai_bonus && score.compl_ai_bonus > 0 && (
+          <ComplAiScoreDisplay
+            score={score.compl_ai_score}
+            bonus={score.compl_ai_bonus}
+            modelInfo={score.model_info}
+            className="mb-4"
+          />
+        )}
 
         {/* Recommendations */}
         {recommendations.length > 0 && (

@@ -60,11 +60,21 @@ export interface UseCase {
   responsible_service?: string
   technology_partner?: string
   llm_model_version?: string
+  primary_model_id?: string
   ai_category?: string
   system_type?: string
   service_id?: string
   created_at: string
   updated_at: string
+}
+
+// Type enrichi pour les cas d'usage avec informations du modèle COMPL-AI
+export interface UseCaseWithModel extends UseCase {
+  model_name?: string
+  model_provider?: string
+  model_type?: string
+  model_version?: string
+  compl_ai_score?: number
 }
 
 // Types pour la nouvelle structure usecase_responses avec colonnes Array

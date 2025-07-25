@@ -11,6 +11,8 @@ interface UseUseCaseDataReturn {
   loading: boolean
   error: string | null
   refetch: () => Promise<void>
+  updateUseCase: (updates: Partial<UseCase>) => Promise<UseCase | null>
+  updating: boolean
 }
 
 export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
@@ -19,6 +21,7 @@ export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
   const [useCase, setUseCase] = useState<UseCase | null>(null)
   const [progress, setProgress] = useState<Progress | null>(null)
   const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isFetching = useRef(false)
 
@@ -71,11 +74,59 @@ export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
     await fetchUseCaseData()
   }, [fetchUseCaseData])
 
+  const updateUseCase = useCallback(async (updates: Partial<UseCase>): Promise<UseCase | null> => {
+    if (!user || !session?.access_token || !useCaseId) {
+      throw new Error('Authentication required')
+    }
+
+    try {
+      setUpdating(true)
+      setError(null)
+
+      const response = await fetch(`/api/usecases/${useCaseId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updates)
+      })
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to update use case'
+        
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+          } catch (parseError) {
+            console.error('Error parsing error response:', parseError)
+          }
+        }
+        
+        throw new Error(errorMessage)
+      }
+
+      const updatedUseCase = await response.json()
+      setUseCase(updatedUseCase)
+      return updatedUseCase
+    } catch (err) {
+      console.error('Error updating use case:', err)
+      setError(err instanceof Error ? err.message : 'Unknown error')
+      throw err
+    } finally {
+      setUpdating(false)
+    }
+  }, [user, session?.access_token, useCaseId])
+
   return {
     useCase,
     progress,
     loading,
+    updating,
     error,
-    refetch
+    refetch,
+    updateUseCase
   }
 } 

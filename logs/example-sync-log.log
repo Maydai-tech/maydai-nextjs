@@ -1,0 +1,88 @@
+=== COMPL-AI SYNC LOG ===
+Started at: 2025-07-21T10:30:00.000Z
+=========================
+
+[2025-07-21T10:30:00.100Z] === STARTING COMPL-AI SYNC API ROUTE ===
+[2025-07-21T10:30:00.101Z] Using service role key for database operations
+[2025-07-21T10:30:00.102Z] Starting COMPL-AI sync...
+[2025-07-21T10:30:00.103Z] Mode: TEST DATA
+
+[2025-07-21T10:30:00.104Z] === Processing category: technical_robustness_safety ===
+[2025-07-21T10:30:00.105Z] Endpoint: /partial
+[2025-07-21T10:30:00.106Z] Params structure: [["MMLU: Robustness","BoolQ Contrast Set","IMDB Contrast Set","Monotonicity Checks","Self-Check Consistency"],["Goal Hijacking and Prompt Leakage","Rule Following"]]
+
+[2025-07-21T10:30:00.107Z] Step 1: Generating test data for technical_robustness_safety...
+[2025-07-21T10:30:00.108Z] 🧪 Generating DIAGNOSTIC fallback data for /partial
+[2025-07-21T10:30:00.109Z] 🧪 Headers générés pour test: ["Model","MMLU: Robustness","BoolQ Contrast Set","IMDB Contrast Set","Monotonicity Checks","Self-Check Consistency","Goal Hijacking and Prompt Leakage","Rule Following"]
+
+[2025-07-21T10:30:00.110Z] 🧪 Données test pour GPT-4 Turbo: ["GPT-4 Turbo","0.100","0.101","0.102","0.103","0.104","0.105","0.106"]
+[2025-07-21T10:30:00.111Z] 🧪 Données test pour Claude 3 Opus: ["Claude 3 Opus","0.450","0.480","N/A","0.540","0.570","0.600","0.630"]
+[2025-07-21T10:30:00.112Z] 🧪 Structure finale des données de test: {"headers":["Model","MMLU: Robustness","BoolQ Contrast Set","IMDB Contrast Set","Monotonicity Checks","Self-Check Consistency","Goal Hijacking and Prompt Leakage","Rule Following"],"dataRows":8}
+
+[2025-07-21T10:30:00.113Z] Step 1 completed for technical_robustness_safety
+[2025-07-21T10:30:00.114Z] Step 2: Parsing model scores for technical_robustness_safety...
+
+[2025-07-21T10:30:00.115Z] 🔍 === DEBUGGING MAPPING POUR technical_robustness_safety ===
+[2025-07-21T10:30:00.116Z] Headers reçus de l'API: ["Model","MMLU: Robustness","BoolQ Contrast Set","IMDB Contrast Set","Monotonicity Checks","Self-Check Consistency","Goal Hijacking and Prompt Leakage","Rule Following"]
+[2025-07-21T10:30:00.117Z] Benchmarks attendus dans la config: ["MMLU: Robustness","BoolQ Contrast Set","IMDB Contrast Set","Monotonicity Checks","Self-Check Consistency","Goal Hijacking and Prompt Leakage","Rule Following"]
+[2025-07-21T10:30:00.118Z] Index de la colonne modèle: 0
+
+[2025-07-21T10:30:00.119Z] 📊 RÉSULTATS DU MAPPING:
+[2025-07-21T10:30:00.120Z] ✅ [0] "MMLU: Robustness" → Col 1 "MMLU: Robustness" (exact)
+[2025-07-21T10:30:00.121Z] ✅ [1] "BoolQ Contrast Set" → Col 2 "BoolQ Contrast Set" (exact)
+[2025-07-21T10:30:00.122Z] ✅ [2] "IMDB Contrast Set" → Col 3 "IMDB Contrast Set" (exact)
+[2025-07-21T10:30:00.123Z] ✅ [3] "Monotonicity Checks" → Col 4 "Monotonicity Checks" (exact)
+[2025-07-21T10:30:00.124Z] ✅ [4] "Self-Check Consistency" → Col 5 "Self-Check Consistency" (exact)
+[2025-07-21T10:30:00.125Z] ✅ [5] "Goal Hijacking and Prompt Leakage" → Col 6 "Goal Hijacking and Prompt Leakage" (exact)
+[2025-07-21T10:30:00.126Z] ✅ [6] "Rule Following" → Col 7 "Rule Following" (exact)
+
+[2025-07-21T10:30:00.127Z] 📈 RÉSUMÉ: 7/7 benchmarks mappés
+
+[2025-07-21T10:30:00.128Z] 🤖 === TRAITEMENT MODÈLE: GPT-4 Turbo ===
+[2025-07-21T10:30:00.129Z] Données brutes de la ligne: ["GPT-4 Turbo","0.100","0.101","0.102","0.103","0.104","0.105","0.106"]
+[2025-07-21T10:30:00.130Z] 📊 ASSIGNATIONS DE SCORES POUR GPT-4 Turbo:
+[2025-07-21T10:30:00.131Z]   ✅ [0] MMLU: Robustness → Col 1: "0.100" = 0.1000
+[2025-07-21T10:30:00.132Z]   ✅ [1] BoolQ Contrast Set → Col 2: "0.101" = 0.1010
+[2025-07-21T10:30:00.133Z]   ✅ [2] IMDB Contrast Set → Col 3: "0.102" = 0.1020
+[2025-07-21T10:30:00.134Z]   ✅ [3] Monotonicity Checks → Col 4: "0.103" = 0.1030
+[2025-07-21T10:30:00.135Z]   ✅ [4] Self-Check Consistency → Col 5: "0.104" = 0.1040
+[2025-07-21T10:30:00.136Z]   ✅ [5] Goal Hijacking and Prompt Leakage → Col 6: "0.105" = 0.1050
+[2025-07-21T10:30:00.137Z]   ✅ [6] Rule Following → Col 7: "0.106" = 0.1060
+
+[2025-07-21T10:30:00.138Z] 🤖 === TRAITEMENT MODÈLE: Claude 3 Opus ===
+[2025-07-21T10:30:00.139Z] Données brutes de la ligne: ["Claude 3 Opus","0.450","0.480","N/A","0.540","0.570","0.600","0.630"]
+[2025-07-21T10:30:00.140Z] 📊 ASSIGNATIONS DE SCORES POUR Claude 3 Opus:
+[2025-07-21T10:30:00.141Z]   ✅ [0] MMLU: Robustness → Col 1: "0.450" = 0.4500
+[2025-07-21T10:30:00.142Z]   ✅ [1] BoolQ Contrast Set → Col 2: "0.480" = 0.4800
+[2025-07-21T10:30:00.143Z]   ✅ [2] IMDB Contrast Set → Col 3: "N/A" = N/A
+[2025-07-21T10:30:00.144Z]   ✅ [3] Monotonicity Checks → Col 4: "0.540" = 0.5400
+[2025-07-21T10:30:00.145Z]   ✅ [4] Self-Check Consistency → Col 5: "0.570" = 0.5700
+[2025-07-21T10:30:00.146Z]   ✅ [5] Goal Hijacking and Prompt Leakage → Col 6: "0.600" = 0.6000
+[2025-07-21T10:30:00.147Z]   ✅ [6] Rule Following → Col 7: "0.630" = 0.6300
+
+[2025-07-21T10:30:00.148Z] 🎯 === CONTRÔLES DE QUALITÉ POUR technical_robustness_safety ===
+[2025-07-21T10:30:00.149Z] Modèles traités: 8
+[2025-07-21T10:30:00.150Z] 🔍 VÉRIFICATION Claude 3 Opus + IMDB Contrast Set: ✅ N/A (correct)
+[2025-07-21T10:30:00.151Z] 🔍 VÉRIFICATION GPT-4 Turbo patterns:
+[2025-07-21T10:30:00.152Z]   ✅ [0] MMLU: Robustness: attendu 0.100, reçu 0.100
+[2025-07-21T10:30:00.153Z]   ✅ [1] BoolQ Contrast Set: attendu 0.101, reçu 0.101
+[2025-07-21T10:30:00.154Z]   ✅ [2] IMDB Contrast Set: attendu 0.102, reçu 0.102
+[2025-07-21T10:30:00.155Z]   ✅ [3] Monotonicity Checks: attendu 0.103, reçu 0.103
+[2025-07-21T10:30:00.156Z]   ✅ [4] Self-Check Consistency: attendu 0.104, reçu 0.104
+[2025-07-21T10:30:00.157Z]   ✅ [5] Goal Hijacking and Prompt Leakage: attendu 0.105, reçu 0.105
+[2025-07-21T10:30:00.158Z]   ✅ [6] Rule Following: attendu 0.106, reçu 0.106
+[2025-07-21T10:30:00.159Z] 📊 STATISTIQUES:
+[2025-07-21T10:30:00.160Z]   - Total scores: 56
+[2025-07-21T10:30:00.161Z]   - Scores valides: 48
+[2025-07-21T10:30:00.162Z]   - Scores N/A: 8
+[2025-07-21T10:30:00.163Z]   - Benchmarks mappés par modèle: 7/7
+
+[2025-07-21T10:30:00.164Z] ✅ === FIN DU TRAITEMENT technical_robustness_safety ===
+
+[2025-07-21T10:30:00.165Z] Step 2 completed: Parsed 8 model scores for technical_robustness_safety
+[2025-07-21T10:30:00.166Z] Step 3: Storing in database for technical_robustness_safety...
+[2025-07-21T10:30:00.167Z] Step 3 completed for technical_robustness_safety
+
+=== SYNC COMPLETED ===
+Ended at: 2025-07-21T10:30:01.000Z
+Log file: /Users/hugofaye/workspace/maydai/maydai-nextjs/logs/compl-ai-sync-2025-07-21T10-30-00-000Z.log

@@ -8,6 +8,7 @@ export interface UseCase {
   ai_category: string
   technology_partner: string
   llm_model_version?: string
+  primary_model_id?: string
   responsible_service: string
   system_type?: string
   company_id: string
@@ -18,6 +19,13 @@ export interface UseCase {
     industry: string
     city: string
     country: string
+  }
+  compl_ai_models?: {
+    id: string
+    model_name: string
+    model_provider: string
+    model_type?: string
+    version?: string
   }
 }
 
@@ -34,6 +42,7 @@ export interface QuestionOption {
   label: string
   score_impact?: number
   category_impacts?: Record<string, number>
+  is_eliminatory?: boolean
 }
 
 export interface Question {
@@ -83,6 +92,14 @@ export interface UseCaseScore {
   category_scores: CategoryScore[]
   calculated_at: string
   version: number
+  is_eliminated?: boolean
+  compl_ai_bonus?: number
+  compl_ai_score?: number | null
+  model_info?: {
+    id: string
+    name: string
+    provider: string
+  } | null
 }
 
 export interface ScoreBreakdown {

@@ -1,4 +1,40 @@
-{
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+
+// ===== CONSTANTES =====
+// Score de départ pour tous les cas d'usage
+const BASE_SCORE = 90;
+// Score maximum possible (base + bonus max)
+const MAX_POSSIBLE_SCORE = 120;
+// Multiplicateur pour convertir le score COMPL-AI en points bonus
+const COMPL_AI_MULTIPLIER = 20;
+
+// ===== FONCTIONS UTILITAIRES =====
+
+/**
+ * Arrondit un nombre à 2 décimales
+ * Exemple: 15.666 devient 15.67
+ */
+function roundToTwoDecimals(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/**
+ * Crée une réponse d'erreur standardisée
+ */
+function createErrorResponse(message: string, status: number, corsHeaders: any) {
+  return new Response(JSON.stringify({ error: message }), {
+    status: status,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json'
+    }
+  });
+}
+
+// ===== DONNÉES DES QUESTIONS =====
+// Note: Dans une vraie application, ces données viendraient de la base de données
+const QUESTIONS_DATA = {
   "E4.N7.Q1": {
     "id": "E4.N7.Q1",
     "question": "Dans cette situation, votre cas d'usage concerne :",
@@ -823,4 +859,244 @@
       }
     ]
   }
+};
+// ===== FONCTION PRINCIPALE =====
+Deno.serve(async (req) => {
+  // Configuration CORS pour permettre les appels depuis le frontend
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+  };
+  
+  // Gérer les requêtes OPTIONS (preflight CORS)
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+  
+  try {
+    // ===== ÉTAPE 1: INITIALISATION =====
+    // Récupérer les variables d'environnement
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    // Créer le client Supabase
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+    
+    // ===== ÉTAPE 2: VALIDATION DE LA REQUÊTE =====
+    // Extraire l'ID du use case depuis la requête
+    const { usecase_id } = await req.json();
+    
+    if (!usecase_id) {
+      return createErrorResponse('usecase_id est requis', 400, corsHeaders);
+    }
+    // ===== ÉTAPE 3: RÉCUPÉRATION DES RÉPONSES =====
+    // Récupérer toutes les réponses de l'utilisateur pour ce use case
+    const { data: responses, error: responsesError } = await supabase
+      .from('usecase_responses')
+      .select('*')
+      .eq('usecase_id', usecase_id);
+    
+    if (responsesError) {
+      console.error('Erreur lors de la récupération des réponses:', responsesError);
+      return createErrorResponse('Impossible de récupérer les réponses', 500, corsHeaders);
+    }
+    
+    if (!responses || responses.length === 0) {
+      return createErrorResponse('Aucune réponse trouvée pour ce use case', 404, corsHeaders);
+    }
+    // ===== ÉTAPE 4: CALCUL DU SCORE DE BASE =====
+    // Calculer le score basé sur les réponses
+    const baseScoreResult = calculateBaseScore(responses);
+    // ===== ÉTAPE 5: RÉCUPÉRATION DU MODÈLE COMPL-AI =====
+    // Récupérer les informations du modèle IA associé au use case
+    const { data: usecase, error: usecaseError } = await supabase
+      .from('usecases')
+      .select(`
+        primary_model_id,
+        compl_ai_models (
+          model_name,
+          compl_ai_evaluations (
+            score
+          )
+        )
+      `)
+      .eq('id', usecase_id)
+      .single();
+    
+    if (usecaseError) {
+      console.warn('Impossible de récupérer les infos du modèle:', usecaseError);
+    }
+    // ===== ÉTAPE 6: CALCUL DU BONUS DU MODÈLE =====
+    let modelBonus = 0;
+    
+    // Vérifier si le use case a un modèle associé avec des évaluations
+    if (usecase?.compl_ai_models?.compl_ai_evaluations) {
+      // Filtrer les scores valides (non null)
+      const validScores = usecase.compl_ai_models.compl_ai_evaluations
+        .filter((evaluation: any) => evaluation.score !== null)
+        .map((evaluation: any) => evaluation.score);
+      
+      // Calculer le score moyen si des scores existent
+      if (validScores.length > 0) {
+        const totalScore = validScores.reduce((sum: number, score: number) => sum + score, 0);
+        const averageScore = totalScore / validScores.length;
+        
+        // Convertir le score (0-1) en points bonus (0-20)
+        modelBonus = averageScore * COMPL_AI_MULTIPLIER;
+      }
+    }
+    // ===== ÉTAPE 7: CALCUL DU SCORE FINAL =====
+    // Score final = score de base + bonus du modèle (max 120)
+    let finalScore = 0;
+    
+    if (baseScoreResult.is_eliminated) {
+      // Si éliminé, le score final est toujours 0
+      finalScore = 0;
+    } else {
+      // Sinon, additionner base + bonus (plafonné à 120)
+      finalScore = Math.min(
+        baseScoreResult.score_base + modelBonus,
+        MAX_POSSIBLE_SCORE
+      );
+    }
+    
+    // ===== ÉTAPE 8: MISE À JOUR EN BASE DE DONNÉES =====
+    const { error: updateError } = await supabase
+      .from('usecases')
+      .update({
+        score_base: baseScoreResult.score_base,
+        score_model: roundToTwoDecimals(modelBonus),
+        score_final: roundToTwoDecimals(finalScore),
+        is_eliminated: baseScoreResult.is_eliminated,
+        elimination_reason: baseScoreResult.elimination_reason,
+        last_calculation_date: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', usecase_id);
+    
+    if (updateError) {
+      console.error('Erreur lors de la mise à jour:', updateError);
+      return createErrorResponse('Impossible de mettre à jour les scores', 500, corsHeaders);
+    }
+    // ===== ÉTAPE 9: RETOURNER LE RÉSULTAT =====
+    return new Response(JSON.stringify({
+      success: true,
+      usecase_id,
+      scores: {
+        score_base: baseScoreResult.score_base,
+        score_model: roundToTwoDecimals(modelBonus),
+        score_final: roundToTwoDecimals(finalScore),
+        is_eliminated: baseScoreResult.is_eliminated,
+        elimination_reason: baseScoreResult.elimination_reason
+      },
+      calculation_details: {
+        ...baseScoreResult.calculation_details,
+        model_bonus: roundToTwoDecimals(modelBonus),
+        max_possible_score: MAX_POSSIBLE_SCORE
+      }
+    }), {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    });
+  } catch (error) {
+    // Gestion des erreurs inattendues
+    console.error('Erreur inattendue:', error);
+    return createErrorResponse(
+      'Erreur serveur interne',
+      500,
+      corsHeaders
+    );
+  }
+});
+/**
+ * Récupère les codes de réponse sélectionnés par l'utilisateur
+ * @param response - Réponse de l'utilisateur à une question
+ * @returns Liste des codes de réponse
+ */
+function getSelectedCodes(response: any): string[] {
+  // Cas 1: Réponse unique (radio)
+  if (response.single_value) {
+    // Nettoyer la valeur des guillemets éventuels
+    const cleanValue = response.single_value
+      .replace(/^"|"$/g, '')
+      .replace(/\\"/g, '"');
+    return [cleanValue];
+  }
+  
+  // Cas 2: Réponses multiples (checkbox)
+  if (response.multiple_codes && Array.isArray(response.multiple_codes)) {
+    return response.multiple_codes;
+  }
+  
+  // Cas 3: Aucune réponse
+  return [];
+}
+
+/**
+ * Calcule le score de base à partir des réponses de l'utilisateur
+ * @param responses - Toutes les réponses de l'utilisateur
+ * @returns Objet contenant le score et les détails du calcul
+ */
+function calculateBaseScore(responses: any[]) {
+  let totalImpact = 0;
+  let isEliminated = false;
+  let eliminationReason = '';
+  
+  // Parcourir toutes les réponses
+  for (const response of responses) {
+    const question = QUESTIONS_DATA[response.question_code];
+    
+    // Vérifier que la question existe
+    if (!question) {
+      console.warn(`Question ${response.question_code} non trouvée`);
+      continue;
+    }
+    
+    // Récupérer les codes de réponse sélectionnés
+    const selectedCodes = getSelectedCodes(response);
+    
+    // Analyser chaque réponse sélectionnée
+    for (const selectedCode of selectedCodes) {
+      const option = question.options.find((opt: any) => opt.code === selectedCode);
+      
+      if (!option) {
+        console.warn(`Option ${selectedCode} non trouvée`);
+        continue;
+      }
+      
+      // Vérifier si c'est une réponse éliminatoire
+      if (option.is_eliminatory) {
+        isEliminated = true;
+        eliminationReason = `Réponse éliminatoire: ${option.label}`;
+        break; // Arrêter l'analyse
+      }
+      
+      // Ajouter l'impact au score total
+      if (option.score_impact) {
+        totalImpact += option.score_impact;
+      }
+    }
+    
+    // Si éliminé, arrêter l'analyse des autres questions
+    if (isEliminated) break;
+  }
+  
+  // Calculer le score final
+  // Si éliminé: score = 0
+  // Sinon: score = BASE_SCORE + impacts (minimum 0)
+  const finalScore = isEliminated ? 0 : Math.max(0, BASE_SCORE + totalImpact);
+  
+  return {
+    score_base: finalScore,
+    is_eliminated: isEliminated,
+    elimination_reason: eliminationReason,
+    calculation_details: {
+      base_score: BASE_SCORE,
+      total_impact: totalImpact,
+      final_base_score: finalScore
+    }
+  };
 }

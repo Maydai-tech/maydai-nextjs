@@ -1,8 +1,10 @@
 import { loadQuestions } from '../utils/questions-loader'
 import { UseCaseScore, ScoreBreakdown, CategoryScore } from '../types/usecase'
 import { RISK_CATEGORIES } from './risk-categories'
+import { getUseCaseComplAiBonus } from './compl-ai-scoring'
 
-const BASE_SCORE = 100
+const BASE_SCORE = 90
+const MAX_POSSIBLE_SCORE = 120 // 90 de base + 30 de bonus COMPL-AI max
 
 // Interface pour les impacts d'une réponse
 interface AnswerImpacts {
@@ -10,8 +12,13 @@ interface AnswerImpacts {
   category_impacts?: Record<string, number>
 }
 
+// Interface pour les impacts d'une réponse (étendue avec is_eliminatory)
+interface AnswerImpactsExtended extends AnswerImpacts {
+  is_eliminatory?: boolean
+}
+
 // Fonction utilitaire pour obtenir les impacts d'une réponse depuis le JSON
-function getAnswerImpactsFromJSON(questionCode: string, answerCode: string): AnswerImpacts {
+function getAnswerImpactsFromJSON(questionCode: string, answerCode: string): AnswerImpactsExtended {
   const questions = loadQuestions()
   const question = questions[questionCode]
   if (!question) return { score_impact: 0 }
@@ -19,11 +26,12 @@ function getAnswerImpactsFromJSON(questionCode: string, answerCode: string): Ans
   const option = question.options.find(opt => opt.code === answerCode)
   return {
     score_impact: option?.score_impact || 0,
-    category_impacts: option?.category_impacts || {}
+    category_impacts: option?.category_impacts || {},
+    is_eliminatory: option?.is_eliminatory || false
   }
 }
 
-export function calculateScore(usecaseId: string, responses: any[]): UseCaseScore {
+export async function calculateScore(usecaseId: string, responses: any[]): Promise<UseCaseScore> {
   try {
     // console.log('Starting score calculation for usecase:', usecaseId)
     // console.log('Number of responses to process:', responses?.length || 0)
@@ -34,6 +42,40 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
     
     let currentScore = BASE_SCORE
     const breakdown: ScoreBreakdown[] = []
+    let isEliminated = false
+    
+    // Charger les questions une seule fois
+    const questions = loadQuestions()
+
+    // PREMIÈRE PASSE : Détecter les réponses éliminatoires
+    for (const response of responses) {
+      const question = questions[response.question_code]
+      if (!question) continue
+
+      // Vérifier selon le type de réponse
+      if (question.type === 'radio' && response.single_value) {
+        const impacts = getAnswerImpactsFromJSON(response.question_code, response.single_value)
+        if (impacts.is_eliminatory) {
+          isEliminated = true
+          break
+        }
+      } else if ((question.type === 'checkbox' || question.type === 'tags') && response.multiple_codes) {
+        for (const code of response.multiple_codes) {
+          const impacts = getAnswerImpactsFromJSON(response.question_code, code)
+          if (impacts.is_eliminatory) {
+            isEliminated = true
+            break
+          }
+        }
+        if (isEliminated) break
+      } else if (question.type === 'conditional' && response.conditional_main) {
+        const impacts = getAnswerImpactsFromJSON(response.question_code, response.conditional_main)
+        if (impacts.is_eliminatory) {
+          isEliminated = true
+          break
+        }
+      }
+    }
     
     // Initialiser les compteurs par catégorie
     const categoryData: Record<string, { 
@@ -50,9 +92,7 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
       }
     })
 
-    // Charger les questions une seule fois
-    const questions = loadQuestions()
-
+    // DEUXIÈME PASSE : Calculer les scores normalement (même si éliminé, pour le breakdown)
     for (const response of responses) {
       // console.log('Processing response for question:', response.question_code)
       
@@ -178,6 +218,39 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
     // S'assurer que le score ne descend pas en dessous de 0
     currentScore = Math.max(0, currentScore)
 
+    // Si éliminé, forcer le score à zéro
+    if (isEliminated) {
+      currentScore = 0
+    }
+
+    // Calculer le bonus COMPL-AI si le use case n'est pas éliminé
+    let complAiBonus = 0
+    let complAiScore: number | null = null
+    let modelInfo: { id: string; name: string; provider: string } | null = null
+    
+    if (!isEliminated) {
+      const complAiData = await getUseCaseComplAiBonus(usecaseId)
+      complAiBonus = complAiData.bonus
+      complAiScore = complAiData.complAiScore
+      modelInfo = complAiData.modelInfo
+      
+      // Ajouter le bonus au score (selon la formule fournie)
+      currentScore = Math.min(currentScore + complAiBonus, MAX_POSSIBLE_SCORE)
+      
+      // Ajouter l'explication du bonus au breakdown
+      if (complAiBonus > 0 && modelInfo) {
+        breakdown.push({
+          question_id: 'compl_ai_bonus',
+          question_text: `Bonus COMPL-AI (${modelInfo.name} - ${modelInfo.provider})`,
+          answer_value: `Score COMPL-AI: ${Math.round((complAiScore || 0) * 100)}%`,
+          score_impact: complAiBonus,
+          reasoning: `Bonus de ${complAiBonus.toFixed(1)} points basé sur le score COMPL-AI de ${Math.round((complAiScore || 0) * 100)}%`,
+          risk_category: 'compl_ai_conformity',
+          category_impacts: {}
+        })
+      }
+    }
+
     // Calculer les scores par catégorie - toutes les catégories sont indépendantes avec le même score de base
     const categoryScores: CategoryScore[] = Object.entries(RISK_CATEGORIES).map(([categoryId, category]) => {
       const data = categoryData[categoryId]
@@ -203,11 +276,15 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
     return {
       usecase_id: usecaseId,
       score: currentScore,
-      max_score: BASE_SCORE,
+      max_score: MAX_POSSIBLE_SCORE,
       score_breakdown: breakdown,
       category_scores: categoryScores,
       calculated_at: new Date().toISOString(),
-      version: 1
+      version: 1,
+      is_eliminated: isEliminated,
+      compl_ai_bonus: complAiBonus,
+      compl_ai_score: complAiScore,
+      model_info: modelInfo
     }
   } catch (error) {
     console.error('Error in calculateScore:', error)
@@ -215,11 +292,15 @@ export function calculateScore(usecaseId: string, responses: any[]): UseCaseScor
     return {
       usecase_id: usecaseId,
       score: BASE_SCORE,
-      max_score: BASE_SCORE,
+      max_score: MAX_POSSIBLE_SCORE,
       score_breakdown: [],
       category_scores: [],
       calculated_at: new Date().toISOString(),
-      version: 1
+      version: 1,
+      is_eliminated: false,
+      compl_ai_bonus: 0,
+      compl_ai_score: null,
+      model_info: null
     }
   }
 } 
