@@ -21,7 +21,7 @@ export default function IaActAgendaPage() {
       description: "L'Europe siffle la fin de la partie pour les manipulations subliminales, l'exploitation des faibles et la notation sociale par les États. Un grand ménage de printemps réglementaire."
     },
     {
-      date: "2 mai 2025",
+      date: "10 juillet 2025",
       title: "Arrivée des codes de bonne pratique",
       description: "Les fameux « codes de bonne pratique » arrivent, agissant comme un guide de savoir-vivre pour les cerveaux numériques les plus puissants, afin d'encadrer leur développement."
     },
@@ -65,6 +65,17 @@ export default function IaActAgendaPage() {
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed mb-8">
             Ah, nous y sommes. À la veille du grand rendez-vous. Voilà un an que le grand ballet de l'AI Act a commencé et que les entreprises européennes se préparent à cette révolution réglementaire. Découvrez les dates clés qui transformeront le paysage de l'intelligence artificielle.
           </p>
+          
+          {/* Image ai-act-calendar centrée */}
+          <div className="mt-10 mb-8 flex justify-center">
+            <Image 
+              src="/illustration/ai-act-calendar.webp" 
+              alt="Calendrier et agenda complet de l'AI Act avec les dates clés et échéances"
+              width={500}
+              height={350}
+              className="rounded-xl shadow-lg max-w-full h-auto"
+            />
+          </div>
         </section>
 
         {/* Timeline Container */}

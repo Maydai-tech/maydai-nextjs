@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 export default function AuditAIActCompliance() {
   return (
     <section className="py-20 bg-gradient-to-br from-blue-50 to-white" id="audit-ai-act">
@@ -6,6 +8,17 @@ export default function AuditAIActCompliance() {
         <p className="text-lg mb-8 leading-relaxed text-gray-800">
           L'Intelligence Artificielle... Cette promesse de l'aube numérique qui, tel un génie sorti de sa lampe, nous demande soudain ce que nous désirons. Et notre premier vœu ? Un règlement. Un manuel. Un Audit. Voilà qui en dit long sur notre incurable et touchante manie de vouloir mettre de l'ordre dans le chaos que nous créons nous-mêmes.
         </p>
+        
+        {/* Image screen-mobile-ai-act après le texte d'introduction */}
+        <div className="mb-8 flex justify-center">
+          <Image 
+            src="/illustration/screen-mobile-ai-act.webp" 
+            alt="Écran mobile illustrant l'audit AI Act et la conformité des systèmes d'intelligence artificielle"
+            width={400}
+            height={300}
+            className="rounded-lg shadow-md max-w-full h-auto"
+          />
+        </div>
         
         <div className="space-y-8">
           <div>
@@ -60,6 +73,17 @@ export default function AuditAIActCompliance() {
                 <span><strong>Un partenariat, pas une simple prestation :</strong> Nous sommes là pour que l'aventure de l&apos;IA reste une belle histoire.</span>
               </li>
             </ul>
+            
+            {/* Image dice-ai-act après le texte sur le partenariat */}
+            <div className="mt-8 flex justify-center">
+              <Image 
+                src="/illustration/dice-ai-act.webp" 
+                alt="Illustration symbolique de l'audit AI Act et de la conformité IA"
+                width={350}
+                height={250}
+                className="rounded-lg shadow-md max-w-full h-auto"
+              />
+            </div>
           </div>
           
           <div className="bg-primary/10 rounded-lg p-6 mt-8">
