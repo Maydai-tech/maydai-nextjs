@@ -4,10 +4,14 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 // ===== CONSTANTES =====
 // Score de départ pour tous les cas d'usage
 const BASE_SCORE = 90;
-// Score maximum possible (base + bonus max)
-const MAX_POSSIBLE_SCORE = 120;
-// Multiplicateur pour convertir le score COMPL-AI en points bonus
+// Multiplicateur pour convertir le score COMPL-AI (0-1) en score sur 20
 const COMPL_AI_MULTIPLIER = 20;
+// Poids du score de base dans le calcul final
+const BASE_SCORE_WEIGHT = 100;
+// Poids du score modèle dans le calcul final
+const MODEL_SCORE_WEIGHT = 20;
+// Poids total pour le calcul final
+const TOTAL_WEIGHT = 120;
 
 // ===== FONCTIONS UTILITAIRES =====
 
@@ -926,8 +930,9 @@ Deno.serve(async (req) => {
     if (usecaseError) {
       console.warn('Impossible de récupérer les infos du modèle:', usecaseError);
     }
-    // ===== ÉTAPE 6: CALCUL DU BONUS DU MODÈLE =====
-    let modelBonus = 0;
+    // ===== ÉTAPE 6: CALCUL DU SCORE DU MODÈLE =====
+    let modelScore = null;
+    let hasValidModelScore = false;
     
     // Vérifier si le use case a un modèle associé avec des évaluations
     if (usecase?.compl_ai_models?.compl_ai_evaluations) {
@@ -941,23 +946,33 @@ Deno.serve(async (req) => {
         const totalScore = validScores.reduce((sum: number, score: number) => sum + score, 0);
         const averageScore = totalScore / validScores.length;
         
-        // Convertir le score (0-1) en points bonus (0-20)
-        modelBonus = averageScore * COMPL_AI_MULTIPLIER;
+        // Convertir le score (0-1) en score sur 20
+        modelScore = averageScore * COMPL_AI_MULTIPLIER;
+        hasValidModelScore = true;
       }
     }
     // ===== ÉTAPE 7: CALCUL DU SCORE FINAL =====
-    // Score final = score de base + bonus du modèle (max 120)
+    // Formule Excel : ((Score_base + (Score_model_% * 20)) / 120) * 100
+    // Si pas de modèle : ((Score_base + 0) / 120) * 100
+    // Exemple: base 90, modèle 17.41/20 (87.05%) → ((90 + (0.8705 * 20)) / 120) * 100 = 89.51%
     let finalScore = 0;
     
     if (baseScoreResult.is_eliminated) {
       // Si éliminé, le score final est toujours 0
       finalScore = 0;
     } else {
-      // Sinon, additionner base + bonus (plafonné à 120)
-      finalScore = Math.min(
-        baseScoreResult.score_base + modelBonus,
-        MAX_POSSIBLE_SCORE
-      );
+      // Calculer selon la formule Excel de moyenne pondérée
+      let modelContribution = 0;
+      
+      if (hasValidModelScore && modelScore !== null) {
+        // Convertir le score modèle (0-20) en pourcentage (0-1)
+        const modelPercentage = modelScore / COMPL_AI_MULTIPLIER;
+        // Contribution du modèle : pourcentage * poids du modèle
+        modelContribution = modelPercentage * MODEL_SCORE_WEIGHT;
+      }
+      
+      // Formule finale : ((score_base + model_contribution) / total_weight) * 100
+      finalScore = ((baseScoreResult.score_base + modelContribution) / TOTAL_WEIGHT) * 100;
     }
     
     // ===== ÉTAPE 8: MISE À JOUR EN BASE DE DONNÉES =====
@@ -965,7 +980,7 @@ Deno.serve(async (req) => {
       .from('usecases')
       .update({
         score_base: baseScoreResult.score_base,
-        score_model: roundToTwoDecimals(modelBonus),
+        score_model: modelScore !== null ? roundToTwoDecimals(modelScore) : null,
         score_final: roundToTwoDecimals(finalScore),
         is_eliminated: baseScoreResult.is_eliminated,
         elimination_reason: baseScoreResult.elimination_reason,
@@ -984,15 +999,24 @@ Deno.serve(async (req) => {
       usecase_id,
       scores: {
         score_base: baseScoreResult.score_base,
-        score_model: roundToTwoDecimals(modelBonus),
+        score_model: modelScore !== null ? roundToTwoDecimals(modelScore) : null,
         score_final: roundToTwoDecimals(finalScore),
         is_eliminated: baseScoreResult.is_eliminated,
         elimination_reason: baseScoreResult.elimination_reason
       },
       calculation_details: {
         ...baseScoreResult.calculation_details,
-        model_bonus: roundToTwoDecimals(modelBonus),
-        max_possible_score: MAX_POSSIBLE_SCORE
+        model_score: modelScore !== null ? roundToTwoDecimals(modelScore) : null,
+        model_percentage: modelScore !== null ? roundToTwoDecimals(modelScore / COMPL_AI_MULTIPLIER * 100) : null,
+        has_model_score: hasValidModelScore,
+        formula_used: hasValidModelScore && modelScore !== null 
+          ? `((${baseScoreResult.score_base} + (${roundToTwoDecimals(modelScore / COMPL_AI_MULTIPLIER * 100)}% * ${MODEL_SCORE_WEIGHT})) / ${TOTAL_WEIGHT}) * 100`
+          : `((${baseScoreResult.score_base} + 0) / ${TOTAL_WEIGHT}) * 100`,
+        weights: {
+          base_score_weight: BASE_SCORE_WEIGHT,
+          model_score_weight: MODEL_SCORE_WEIGHT,
+          total_weight: TOTAL_WEIGHT
+        }
       }
     }), {
       status: 200,

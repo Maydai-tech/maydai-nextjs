@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase, UseCase } from '@/lib/supabase'
-import { Eye, Filter, Search } from 'lucide-react'
+import { Eye, Filter, Search, Calculator } from 'lucide-react'
 
 export default function UseCasesPage() {
   const [usecases, setUsecases] = useState<UseCase[]>([])
@@ -10,6 +10,7 @@ export default function UseCasesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [riskFilter, setRiskFilter] = useState('')
+  const [recalculating, setRecalculating] = useState(false)
 
   useEffect(() => {
     fetchUseCases()
@@ -28,6 +29,52 @@ export default function UseCasesPage() {
       console.error('Erreur lors du chargement des cas d\'usage:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function recalculateAllScores() {
+    setRecalculating(true)
+
+    try {
+      // Appeler la nouvelle edge function bulk-calculate-scores
+      const { data, error } = await supabase.functions.invoke('bulk-calculate-scores', {
+        body: {
+          batch_size: 10,
+          delay_ms: 200
+        }
+      })
+
+      if (error) {
+        throw error
+      }
+
+      // Afficher le résultat détaillé
+      if (data) {
+        const message = `Recalcul terminé en ${(data.execution_time_ms / 1000).toFixed(1)}s:\n\n` +
+          `📊 Cas d'usage traités: ${data.processed_count}\n` +
+          `✅ Succès: ${data.success_count}\n` +
+          `❌ Erreurs: ${data.error_count}\n\n` +
+          `📈 Moyennes:\n` +
+          `• Score de base: ${data.summary.average_base_score}\n` +
+          `• Score modèle: ${data.summary.average_model_score ?? 'N/A'}\n` +
+          `• Score final: ${data.summary.average_final_score}\n` +
+          `• Cas éliminés: ${data.summary.eliminated_count}`
+        
+        alert(message)
+
+        // Logger les erreurs dans la console
+        if (data.errors && data.errors.length > 0) {
+          console.error('Erreurs détaillées:', data.errors)
+        }
+      }
+
+      // Rafraîchir la liste
+      await fetchUseCases()
+    } catch (error) {
+      console.error('Erreur lors du recalcul des scores:', error)
+      alert('Erreur lors du recalcul des scores. Vérifiez vos permissions administrateur.')
+    } finally {
+      setRecalculating(false)
     }
   }
 
@@ -93,8 +140,28 @@ export default function UseCasesPage() {
         </p>
       </div>
 
-      {/* Filtres et recherche */}
+      {/* Bouton de recalcul et filtres */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Gestion des scores</h2>
+          <button
+            onClick={recalculateAllScores}
+            disabled={recalculating}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {recalculating ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Recalcul en cours...
+              </>
+            ) : (
+              <>
+                <Calculator className="h-4 w-4 mr-2" />
+                Recalculer tous les scores
+              </>
+            )}
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
