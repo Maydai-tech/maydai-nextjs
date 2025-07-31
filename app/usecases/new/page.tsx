@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-auth'
 import { supabase, ComplAIModel } from '@/lib/supabase'
+import ReactFlagsSelect from 'react-flags-select'
 import { 
   ArrowLeft, 
   Brain, 
@@ -16,7 +17,8 @@ import {
   CheckCircle,
   Search,
   HelpCircle,
-  Calendar
+  Calendar,
+  X
 } from 'lucide-react'
 
 // Force dynamic rendering to prevent prerender errors
@@ -38,13 +40,14 @@ interface FormData {
   llm_model_version: string
   ai_category: string
   system_type: string
+  deployment_countries: string
   description: string
 }
 
 interface Question {
   id: keyof FormData
   question: string
-  type: 'text' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date'
+  type: 'text' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date' | 'countries'
   options?: string[] | { label: string; examples: string[] }[]
   placeholder?: string
   maxLength?: number
@@ -75,6 +78,7 @@ function NewUseCasePageContent() {
     llm_model_version: '',
     ai_category: '',
     system_type: '',
+    deployment_countries: '',
     description: ''
   })
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
@@ -87,6 +91,7 @@ function NewUseCasePageContent() {
   const [loadingPartners, setLoadingPartners] = useState(false)
   const [availableModels, setAvailableModels] = useState<ComplAIModel[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([])
   const api = useApiCall()
 
   const companyId = searchParams.get('company')
@@ -135,14 +140,14 @@ function NewUseCasePageContent() {
   const questions: Question[] = [
     {
       id: 'name',
-      question: 'Nom cas d\'usage IA ?',
+      question: 'Nom du cas d\'usage IA ?',
       type: 'text',
       placeholder: 'ex: Système de recommandation produits',
       maxLength: 50
     },
     {
       id: 'deployment_date',
-      question: 'Date de déploiement ou prévue ?',
+      question: 'Date de déploiement passée ou prévue ?',
       type: 'text',
       placeholder: 'DD/MM/YYYY (ex: 15/06/2025)',
       maxLength: 10
@@ -229,6 +234,12 @@ function NewUseCasePageContent() {
           examples: ['Fonctionnalité intégrée', 'Module IA dans une application', 'Composant d\'un service existant'] 
         }
       ]
+    },
+    {
+      id: 'deployment_countries',
+      question: 'Dans quels pays le cas d\'usage est-il utilisé ?',
+      type: 'countries',
+      placeholder: 'Sélectionnez les pays de déploiement...'
     },
     {
       id: 'description',
@@ -369,6 +380,12 @@ function NewUseCasePageContent() {
         setError('Veuillez sélectionner au moins une option')
         return false
       }
+    } else if (currentQuestion.type === 'countries') {
+      // For countries selection, check if at least one country is selected
+      if (selectedCountries.length === 0) {
+        setError('Veuillez sélectionner au moins un pays')
+        return false
+      }
     } else if (currentQuestion.id === 'deployment_date') {
       // For deployment date, validate format if provided
       if (value && !validateDateFormat(value)) {
@@ -399,6 +416,10 @@ function NewUseCasePageContent() {
           setSelectedOptions([])
           setOtherValue('')
         }
+        // Reset countries selection when moving to next question
+        if (currentQuestion.type === 'countries') {
+          setSelectedCountries([])
+        }
       }
     }
   }
@@ -412,6 +433,10 @@ function NewUseCasePageContent() {
       if (currentQuestion.type === 'checkbox') {
         setSelectedOptions([])
         setOtherValue('')
+      }
+      // Reset countries selection when moving to previous question
+      if (currentQuestion.type === 'countries') {
+        setSelectedCountries([])
       }
     }
   }
@@ -440,6 +465,7 @@ function NewUseCasePageContent() {
         primary_model_id, // Ajouter l'ID du modèle principal
         ai_category: formData.ai_category,
         system_type: formData.system_type,
+        deployment_countries: formData.deployment_countries,
         description: formData.description,
         status: 'draft',
         company_id: companyId
@@ -581,6 +607,28 @@ function NewUseCasePageContent() {
     }
     
     handleInputChange(allValues.join(', '))
+  }
+
+  const handleCountrySelect = (countryCode: string) => {
+    const newSelectedCountries = [...selectedCountries]
+    const index = newSelectedCountries.indexOf(countryCode)
+    
+    if (index > -1) {
+      // Remove country if already selected
+      newSelectedCountries.splice(index, 1)
+    } else {
+      // Add country if not selected
+      newSelectedCountries.push(countryCode)
+    }
+    
+    setSelectedCountries(newSelectedCountries)
+    handleInputChange(newSelectedCountries.join(', '))
+  }
+
+  const removeCountry = (countryCode: string) => {
+    const newSelectedCountries = selectedCountries.filter(country => country !== countryCode)
+    setSelectedCountries(newSelectedCountries)
+    handleInputChange(newSelectedCountries.join(', '))
   }
 
   const getFilteredOptions = () => {
@@ -1010,6 +1058,89 @@ function NewUseCasePageContent() {
                       </div>
                     </label>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {currentQuestion.type === 'countries' && (
+            <div className="space-y-6">
+              {/* Country Selector */}
+              <div className="relative">
+                <ReactFlagsSelect
+                  countries={['US', 'GB', 'FR', 'DE', 'ES', 'IT', 'NL', 'BE', 'CH', 'AT', 'PT', 'IE', 'DK', 'SE', 'NO', 'FI', 'PL', 'CZ', 'HU', 'SK', 'SI', 'HR', 'BG', 'RO', 'GR', 'CY', 'MT', 'LU', 'LV', 'LT', 'EE', 'CA', 'MX', 'BR', 'AR', 'CL', 'CO', 'PE', 'UY', 'VE', 'EC', 'BO', 'PY', 'SR', 'GY', 'FK', 'GF', 'AU', 'NZ', 'JP', 'KR', 'CN', 'IN', 'TH', 'VN', 'PH', 'ID', 'MY', 'SG', 'HK', 'TW', 'BD', 'PK', 'LK', 'NP', 'AF', 'IR', 'IQ', 'SA', 'AE', 'KW', 'QA', 'BH', 'OM', 'YE', 'JO', 'LB', 'SY', 'IL', 'PS', 'TR', 'EG', 'LY', 'TN', 'DZ', 'MA', 'SD', 'ET', 'KE', 'UG', 'TZ', 'RW', 'BI', 'DJ', 'SO', 'ER', 'SS', 'CF', 'TD', 'CM', 'GQ', 'GA', 'CG', 'CD', 'AO', 'ZM', 'ZW', 'BW', 'NA', 'SZ', 'LS', 'ZA', 'MZ', 'MW', 'MG', 'MU', 'SC', 'KM', 'YT', 'RE', 'MV', 'RU', 'BY', 'UA', 'MD', 'GE', 'AM', 'AZ', 'KZ', 'KG', 'TJ', 'TM', 'UZ', 'MN']}
+                  selected=""
+                  onSelect={(code) => handleCountrySelect(code)}
+                  searchable
+                  placeholder="🌍 Rechercher et sélectionner un pays..."
+                  className="w-full"
+                  selectButtonClassName={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors ${
+                    error ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  showSelectedLabel={false}
+                  showOptionLabel={true}
+                />
+              </div>
+
+              {/* Selected Countries Display */}
+              {selectedCountries.length > 0 && (
+                <div className="bg-white border-2 border-[#0080A3] rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <CheckCircle className="h-5 w-5 text-[#0080A3] mr-2" />
+                      Pays sélectionnés
+                    </h3>
+                    <span className="bg-[#0080A3] text-white text-sm font-medium px-3 py-1 rounded-full">
+                      {selectedCountries.length}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedCountries.map((countryCode) => (
+                      <div 
+                        key={countryCode} 
+                        className="group flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-all duration-200"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-6 flex items-center justify-center overflow-hidden rounded border border-gray-200">
+                            <img 
+                              src={`https://flagcdn.com/${countryCode.toLowerCase()}.svg`}
+                              alt={`Drapeau ${countryCode}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <span className="font-medium text-gray-900">
+                            {new Intl.DisplayNames(['fr'], {type: 'region'}).of(countryCode)}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => removeCountry(countryCode)}
+                          className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-all duration-200"
+                          type="button"
+                          title="Supprimer ce pays"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {selectedCountries.length === 0 && (
+                <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-8 text-center">
+                  <div className="flex flex-col items-center">
+                    <div className="bg-gray-100 p-3 rounded-full mb-4">
+                      <Search className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Aucun pays sélectionné
+                    </h3>
+                    <p className="text-gray-600 max-w-sm">
+                      Utilisez le champ de recherche ci-dessus pour trouver et sélectionner les pays où votre cas d'usage sera déployé.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
