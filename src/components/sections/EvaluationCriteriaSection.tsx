@@ -48,6 +48,17 @@ const EvaluationCriteriaSection: React.FC = () => {
             et la bienveillance d'un sage. Nos six critères forment une boussole éthique pour naviguer dans 
             l'archipel complexe de l'IA responsable.
           </p>
+          
+          {/* Image boussole AI Act centrée */}
+          <div className="mt-8 mb-4 flex justify-center">
+            <Image 
+              src="/illustration/boussole-ai-act.webp" 
+              alt="Boussole éthique pour l'IA Act et l'audit d'intelligence artificielle"
+              width={400}
+              height={300}
+              className="rounded-lg shadow-lg max-w-full h-auto"
+            />
+          </div>
         </div>
 
         {/* Grid of Criteria */}

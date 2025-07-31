@@ -6,7 +6,7 @@ import Footer from '@/components/Footer';
 const teamMembers = [
   {
     id: 'thomas',
-    image: '/screenshots/Thomas.avif',
+    image: '/screenshots/thomas.webp',
     alt: 'Photo de Thomas, Directeur chez MaydAI',
     role: 'DIRECTEUR',
     name: 'THOMAS',
@@ -15,24 +15,24 @@ const teamMembers = [
     url: 'https://maydai.io/a-propos#thomas'
   },
   {
-    id: 'hugues',
-    image: '/screenshots/Hugues.webp',
-    alt: 'Photo de Hugues, Développeur chez MaydAI',
+    id: 'hugo',
+    image: '/screenshots/hugo.webp',
+    alt: 'Photo de Hugo, Développeur chez MaydAI',
     role: 'DÉVELOPPEUR',
-    name: 'HUGUES',
+    name: 'HUGO',
     description: '10 ans d\'expériences DEV WEB & APP',
     jobTitle: 'Développeur',
-    url: 'https://maydai.io/a-propos#hugues'
+    url: 'https://maydai.io/a-propos#hugo'
   },
   {
-    id: 'anna',
-    image: '/screenshots/Anna.webp',
-    alt: 'Photo de Anna, Creative chez MaydAI',
-    role: 'CREATIVE',
-    name: 'ANNA',
-    description: '15 ans d\'expérience création de contenus',
-    jobTitle: 'Creative',
-    url: 'https://maydai.io/a-propos#anna'
+    id: 'tina',
+    image: '/screenshots/tina-light.webp',
+    alt: 'Photo de Tina, Sales chez MaydAI',
+    role: 'SALES',
+    name: 'TINA',
+    description: '20 ans d\'expérience en vente plateforme Saas',
+    jobTitle: 'Sales',
+    url: 'https://maydai.io/a-propos#tina'
   },
   {
     id: 'maxime',
