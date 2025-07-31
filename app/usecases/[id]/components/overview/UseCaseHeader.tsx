@@ -113,7 +113,7 @@ function HeaderScore({ usecaseId, refreshing = false }: { usecaseId: string, ref
           <div className="text-center">
             <div className={`text-2xl font-semibold ${professionalColors.text}`}>
               {score.score}
-              <span className="text-lg text-gray-500">/{score.max_score}</span>
+              <span className="text-lg text-gray-500">%</span>
             </div>
             <div className={`text-xs font-medium ${professionalColors.accent} mt-1`}>
               {category.category}
