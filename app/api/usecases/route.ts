@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
       primary_model_id,
       ai_category,
       system_type,
+      deployment_countries,
       description,
       status,
       risk_level,
@@ -199,6 +200,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Parse deployment_countries from string to array if needed
+    let countriesArray: string[] = []
+    if (deployment_countries) {
+      if (typeof deployment_countries === 'string') {
+        // Split by comma and clean up
+        countriesArray = deployment_countries.split(',').map(country => country.trim()).filter(Boolean)
+      } else if (Array.isArray(deployment_countries)) {
+        countriesArray = deployment_countries
+      }
+    }
+
     // Create the use case
     const insertData = {
       name,
@@ -209,6 +221,7 @@ export async function POST(request: NextRequest) {
       primary_model_id,
       ai_category,
       system_type,
+      deployment_countries: countriesArray,
       description,
       status: status || 'draft',
       risk_level,

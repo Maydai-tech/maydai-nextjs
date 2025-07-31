@@ -63,6 +63,7 @@ export interface UseCase {
   primary_model_id?: string
   ai_category?: string
   system_type?: string
+  deployment_countries?: string[]
   service_id?: string
   created_at: string
   updated_at: string

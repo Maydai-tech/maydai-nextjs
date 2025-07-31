@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-auth'
 import { supabase, ComplAIModel } from '@/lib/supabase'
+import ReactFlagsSelect from 'react-flags-select'
 import { 
   ArrowLeft, 
   Brain, 
@@ -16,7 +17,8 @@ import {
   CheckCircle,
   Search,
   HelpCircle,
-  Calendar
+  Calendar,
+  X
 } from 'lucide-react'
 
 // Force dynamic rendering to prevent prerender errors
@@ -38,13 +40,14 @@ interface FormData {
   llm_model_version: string
   ai_category: string
   system_type: string
+  deployment_countries: string
   description: string
 }
 
 interface Question {
   id: keyof FormData
   question: string
-  type: 'text' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date'
+  type: 'text' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date' | 'countries'
   options?: string[] | { label: string; examples: string[] }[]
   placeholder?: string
   maxLength?: number
@@ -75,18 +78,19 @@ function NewUseCasePageContent() {
     llm_model_version: '',
     ai_category: '',
     system_type: '',
+    deployment_countries: '',
     description: ''
   })
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string>('')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([])
-  const [otherValue, setOtherValue] = useState('')
   const [partners, setPartners] = useState<string[]>([])
   const [loadingPartners, setLoadingPartners] = useState(false)
   const [availableModels, setAvailableModels] = useState<ComplAIModel[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([])
+  const [otherRadioValue, setOtherRadioValue] = useState('')
+  const [otherRadioSelected, setOtherRadioSelected] = useState(false)
   const api = useApiCall()
 
   const companyId = searchParams.get('company')
@@ -135,14 +139,14 @@ function NewUseCasePageContent() {
   const questions: Question[] = [
     {
       id: 'name',
-      question: 'Nom cas d\'usage IA ?',
+      question: 'Nom du cas d\'usage IA ?',
       type: 'text',
       placeholder: 'ex: Système de recommandation produits',
       maxLength: 50
     },
     {
       id: 'deployment_date',
-      question: 'Date de déploiement ou prévue ?',
+      question: 'Date de déploiement passée ou prévue ?',
       type: 'text',
       placeholder: 'DD/MM/YYYY (ex: 15/06/2025)',
       maxLength: 10
@@ -169,15 +173,15 @@ function NewUseCasePageContent() {
     {
       id: 'technology_partner',
       question: 'Partenaire technologique ?',
-      type: 'checkbox',
-      options: partners, // Liste dynamique récupérée depuis la base de données
+      type: 'radio',
+      options: partners.map(partner => ({ label: partner, examples: [] })), // Liste dynamique convertie en format radio
       hasOtherOption: true
     },
     {
       id: 'llm_model_version',
       question: 'Modèle et version du LLM ?',
-      type: 'checkbox',
-      options: [], // Will be populated dynamically based on selected partners
+      type: 'radio',
+      options: [], // Will be populated dynamically based on selected partner
       hasOtherOption: true
     },
     {
@@ -229,6 +233,12 @@ function NewUseCasePageContent() {
           examples: ['Fonctionnalité intégrée', 'Module IA dans une application', 'Composant d\'un service existant'] 
         }
       ]
+    },
+    {
+      id: 'deployment_countries',
+      question: 'Dans quels pays le cas d\'usage est-il utilisé ?',
+      type: 'countries',
+      placeholder: 'Sélectionnez les pays de déploiement...'
     },
     {
       id: 'description',
@@ -283,11 +293,23 @@ function NewUseCasePageContent() {
     return model?.id || null
   }
 
-  // Update current question with dynamic models
+  // Fonction pour détecter si le partenaire technologique est personnalisé
+  const isCustomTechnologyPartner = (): boolean => {
+    const selectedPartner = formData.technology_partner?.trim()
+    if (!selectedPartner) return false
+    
+    // Vérifier si le partenaire sélectionné fait partie de la liste prédéfinie
+    return !partners.includes(selectedPartner)
+  }
+
+  // Update current question with dynamic models or text input for custom partners
   const currentQuestion = { 
     ...questions[currentQuestionIndex],
     ...(questions[currentQuestionIndex].id === 'llm_model_version' && {
-      options: getAvailableModels()
+      // Si partenaire personnalisé, utiliser un champ texte, sinon afficher les modèles radio
+      type: isCustomTechnologyPartner() ? 'text' : 'radio',
+      options: isCustomTechnologyPartner() ? [] : getAvailableModels().map(model => ({ label: model, examples: [] })),
+      placeholder: isCustomTechnologyPartner() ? 'Spécifiez le modèle utilisé...' : undefined
     })
   }
   
@@ -327,11 +349,11 @@ function NewUseCasePageContent() {
     }
   }, [mounted, user])
 
-  // Charger les modèles disponibles quand les partenaires technologiques changent
+  // Charger les modèles disponibles quand le partenaire technologique change
   useEffect(() => {
-    const selectedPartners = formData.technology_partner?.split(', ').filter(p => p.trim()) || []
-    if (selectedPartners.length > 0) {
-      fetchAvailableModels(selectedPartners)
+    const selectedPartner = formData.technology_partner?.trim()
+    if (selectedPartner) {
+      fetchAvailableModels([selectedPartner])
     } else {
       setAvailableModels([])
     }
@@ -358,15 +380,27 @@ function NewUseCasePageContent() {
   const validateCurrentQuestion = () => {
     const value = formData[currentQuestion.id]
     
-    // For checkbox questions, check if at least one option is selected or other value is provided
-    if (currentQuestion.type === 'checkbox') {
-      // Special case for LLM models: skip validation if no models are available
-      if (currentQuestion.id === 'llm_model_version' && (!currentQuestion.options || currentQuestion.options.length === 0)) {
-        return true // Allow skipping if no partners selected
+    // For radio questions (including technology partner and llm model), check if a value is selected
+    if (currentQuestion.type === 'radio' && (currentQuestion.id === 'technology_partner' || currentQuestion.id === 'llm_model_version')) {
+      // Special case for LLM models: skip validation if no models are available and no partner selected
+      if (currentQuestion.id === 'llm_model_version' && (!formData.technology_partner || !formData.technology_partner.trim())) {
+        return true // Allow skipping if no partner selected
       }
       
-      if (selectedOptions.length === 0 && !otherValue.trim()) {
-        setError('Veuillez sélectionner au moins une option')
+      if (!value || !value.trim()) {
+        setError('Veuillez sélectionner une option')
+        return false
+      }
+    } else if (currentQuestion.type === 'text' && currentQuestion.id === 'llm_model_version') {
+      // Special validation for custom LLM model text input
+      if (!value || !value.trim()) {
+        setError('Veuillez saisir le nom du modèle utilisé')
+        return false
+      }
+    } else if (currentQuestion.type === 'countries') {
+      // For countries selection, check if at least one country is selected
+      if (selectedCountries.length === 0) {
+        setError('Veuillez sélectionner au moins un pays')
         return false
       }
     } else if (currentQuestion.id === 'deployment_date') {
@@ -393,11 +427,11 @@ function NewUseCasePageContent() {
         handleSubmit()
       } else {
         setCurrentQuestionIndex(prev => prev + 1)
-        setSearchTerm('')
-        // Reset checkbox states when moving to next question
-        if (currentQuestion.type === 'checkbox') {
-          setSelectedOptions([])
-          setOtherValue('')
+        // Reset other radio value and countries selection when moving to next question
+        setOtherRadioValue('')
+        setOtherRadioSelected(false)
+        if (currentQuestion.type === 'countries') {
+          setSelectedCountries([])
         }
       }
     }
@@ -407,11 +441,11 @@ function NewUseCasePageContent() {
     if (!isFirstQuestion) {
       setCurrentQuestionIndex(prev => prev - 1)
       setError('')
-      setSearchTerm('')
-      // Reset checkbox states when moving to previous question
-      if (currentQuestion.type === 'checkbox') {
-        setSelectedOptions([])
-        setOtherValue('')
+      // Reset other radio value and countries selection when moving to previous question
+      setOtherRadioValue('')
+      setOtherRadioSelected(false)
+      if (currentQuestion.type === 'countries') {
+        setSelectedCountries([])
       }
     }
   }
@@ -420,14 +454,10 @@ function NewUseCasePageContent() {
     setSubmitting(true)
     
     try {
-      // Déterminer le primary_model_id à partir du premier modèle sélectionné
+      // Déterminer le primary_model_id à partir du modèle sélectionné
       let primary_model_id = null
       if (formData.llm_model_version) {
-        // Si plusieurs modèles sont sélectionnés, prendre le premier
-        const selectedModels = formData.llm_model_version.split(', ').filter(m => m.trim())
-        if (selectedModels.length > 0) {
-          primary_model_id = findModelId(selectedModels[0].trim())
-        }
+        primary_model_id = findModelId(formData.llm_model_version.trim())
       }
 
       // Log des données à envoyer
@@ -440,6 +470,7 @@ function NewUseCasePageContent() {
         primary_model_id, // Ajouter l'ID du modèle principal
         ai_category: formData.ai_category,
         system_type: formData.system_type,
+        deployment_countries: formData.deployment_countries,
         description: formData.description,
         status: 'draft',
         company_id: companyId
@@ -496,7 +527,6 @@ function NewUseCasePageContent() {
     
     // Format as DD/MM/YYYY with automatic slash insertion
     let formatted = ''
-    const cursorPosition = 0
     
     if (digits.length >= 1) {
       formatted = digits.substring(0, 2)
@@ -529,74 +559,29 @@ function NewUseCasePageContent() {
     }
   }
 
-  const handleChipSelect = (option: string) => {
-    handleInputChange(option)
-    setSearchTerm('')
-  }
 
-  const handleSearchInputChange = (value: string) => {
-    setSearchTerm(value)
-    // Si l'utilisateur tape, on met à jour la valeur en temps réel
-    handleInputChange(value)
-  }
-
-  const handleCheckboxChange = (option: string, checked: boolean) => {
-    let newSelectedOptions = [...selectedOptions]
+  const handleCountrySelect = (countryCode: string) => {
+    const newSelectedCountries = [...selectedCountries]
+    const index = newSelectedCountries.indexOf(countryCode)
     
-    if (checked) {
-      if (!newSelectedOptions.includes(option)) {
-        newSelectedOptions.push(option)
-      }
+    if (index > -1) {
+      // Remove country if already selected
+      newSelectedCountries.splice(index, 1)
     } else {
-      newSelectedOptions = newSelectedOptions.filter(item => item !== option)
-      // Si on décoche "Autre", on vide aussi le champ texte
-      if (option === 'Autre') {
-        setOtherValue('')
-      }
+      // Add country if not selected
+      newSelectedCountries.push(countryCode)
     }
     
-    setSelectedOptions(newSelectedOptions)
-    
-    // Combine selected options and other value
-    const allValues = [...newSelectedOptions.filter(item => item !== 'Autre')]
-    if (otherValue.trim() && newSelectedOptions.includes('Autre')) {
-      allValues.push(otherValue.trim())
-    }
-    
-    handleInputChange(allValues.join(', '))
+    setSelectedCountries(newSelectedCountries)
+    handleInputChange(newSelectedCountries.join(', '))
   }
 
-  const handleOtherValueChange = (value: string) => {
-    setOtherValue(value)
-    
-    // S'assurer que "Autre" est sélectionné quand on tape
-    if (value.trim() && !selectedOptions.includes('Autre')) {
-      setSelectedOptions(prev => [...prev, 'Autre'])
-    }
-    
-    // Combine selected options and other value
-    const allValues = [...selectedOptions.filter(item => item !== 'Autre')]
-    if (value.trim()) {
-      allValues.push(value.trim())
-    }
-    
-    handleInputChange(allValues.join(', '))
+  const removeCountry = (countryCode: string) => {
+    const newSelectedCountries = selectedCountries.filter(country => country !== countryCode)
+    setSelectedCountries(newSelectedCountries)
+    handleInputChange(newSelectedCountries.join(', '))
   }
 
-  const getFilteredOptions = () => {
-    if (!currentQuestion.options) return []
-    
-    // Handle radio buttons with {label, examples} structure
-    if (currentQuestion.type === 'radio') {
-      return []
-    }
-    
-    // Handle regular string options
-    const stringOptions = currentQuestion.options as string[]
-    return stringOptions.filter(option =>
-      option.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && currentQuestion.type !== 'textarea') {
@@ -803,7 +788,8 @@ function NewUseCasePageContent() {
             />
           )}
 
-          {currentQuestion.type === 'checkbox' && (
+
+          {currentQuestion.type === 'radio' && (
             <div className="space-y-4">
               {/* Loading state for technology partners */}
               {currentQuestion.id === 'technology_partner' && loadingPartners && (
@@ -825,8 +811,23 @@ function NewUseCasePageContent() {
                 </div>
               )}
 
-              {/* No partners selected message for LLM models */}
-              {currentQuestion.id === 'llm_model_version' && !loadingModels && (!currentQuestion.options || currentQuestion.options.length === 0) && (
+              {/* Custom partner info message for LLM models */}
+              {currentQuestion.id === 'llm_model_version' && !loadingModels && isCustomTechnologyPartner() && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
+                  <div className="flex items-center justify-center mb-3">
+                    <HelpCircle className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-blue-800 mb-2">
+                    Partenaire technologique personnalisé
+                  </h3>
+                  <p className="text-blue-700">
+                    Puisque vous avez sélectionné un partenaire personnalisé ({formData.technology_partner}), veuillez saisir manuellement le nom du modèle utilisé.
+                  </p>
+                </div>
+              )}
+
+              {/* No partners selected message for LLM models - only show if no partner at all */}
+              {currentQuestion.id === 'llm_model_version' && !loadingModels && (!formData.technology_partner || !formData.technology_partner.trim()) && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
                   <div className="flex items-center justify-center mb-3">
                     <AlertCircle className="h-6 w-6 text-amber-600" />
@@ -835,7 +836,7 @@ function NewUseCasePageContent() {
                     Aucun partenaire technologique sélectionné
                   </h3>
                   <p className="text-amber-700 mb-4">
-                    Veuillez d'abord sélectionner au moins un partenaire technologique pour voir les modèles disponibles.
+                    Veuillez d'abord sélectionner un partenaire technologique pour continuer.
                   </p>
                   <button
                     onClick={() => setCurrentQuestionIndex(questions.findIndex(q => q.id === 'technology_partner'))}
@@ -847,136 +848,7 @@ function NewUseCasePageContent() {
                 </div>
               )}
 
-              {/* Checkbox Options in Card Format */}
-              {currentQuestion.options && currentQuestion.options.length > 0 && !loadingPartners && !loadingModels && (
-                <div className="space-y-3">
-                  {(currentQuestion.options as string[]).map((option, index) => (
-                    <label 
-                      key={index} 
-                      className={`group flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                        selectedOptions.includes(option)
-                          ? 'border-[#0080A3] bg-[#0080A3]/5'
-                          : 'border-gray-200 hover:border-[#0080A3] hover:bg-[#0080A3]/5'
-                      }`}
-                    >
-                      <div className="flex items-start space-x-4">
-                        <div className="flex items-center h-6 mt-1">
-                          <input
-                            type="checkbox"
-                            checked={selectedOptions.includes(option)}
-                            onChange={(e) => handleCheckboxChange(option, e.target.checked)}
-                            className="h-5 w-5 text-[#0080A3] border-2 border-gray-300 rounded focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-lg font-semibold text-gray-900">
-                            {option}
-                          </div>
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-
-                  {/* Other Option */}
-                  {currentQuestion.hasOtherOption && (
-                    <div className="space-y-3">
-                      <label 
-                        className={`group flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                          selectedOptions.includes('Autre') || otherValue.trim() !== ''
-                            ? 'border-[#0080A3] bg-[#0080A3]/5'
-                            : 'border-gray-200 hover:border-[#0080A3] hover:bg-[#0080A3]/5'
-                        }`}
-                      >
-                        <div className="flex items-start space-x-4">
-                          <div className="flex items-center h-6 mt-1">
-                            <input
-                              type="checkbox"
-                              checked={selectedOptions.includes('Autre') || otherValue.trim() !== ''}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  if (!selectedOptions.includes('Autre')) {
-                                    handleCheckboxChange('Autre', true)
-                                  }
-                                } else {
-                                  setOtherValue('')
-                                  handleOtherValueChange('')
-                                  handleCheckboxChange('Autre', false)
-                                }
-                              }}
-                              className="h-5 w-5 text-[#0080A3] border-2 border-gray-300 rounded focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0"
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-lg font-semibold text-gray-900">
-                              Autre
-                            </div>
-                          </div>
-                        </div>
-                      </label>
-
-                      {/* Other Input Field - Only show when "Autre" is selected */}
-                      {(selectedOptions.includes('Autre') || otherValue.trim() !== '') && (
-                        <div className="ml-2 animate-fadeIn">
-                          <input
-                            type="text"
-                            value={otherValue}
-                            onChange={(e) => handleOtherValueChange(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:border-[#0080A3] focus:ring-2 focus:ring-[#0080A3] focus:ring-opacity-20 focus:outline-none transition-all duration-200"
-                            placeholder="Spécifiez le partenaire technologique..."
-                            autoFocus
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Selected Summary */}
-              {(selectedOptions.length > 0 || otherValue.trim()) && (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 shadow-sm">
-                  <p className="text-blue-800 text-sm mb-3 font-semibold">
-                    Sélections actuelles :
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedOptions.filter(option => option !== 'Autre').map((option) => (
-                      <span key={option} className="inline-flex items-center px-3 py-1 bg-[#0080A3] text-white text-sm font-medium rounded-full shadow-sm">
-                        {option}
-                        <button
-                          onClick={() => handleCheckboxChange(option, false)}
-                          className="ml-2 text-white hover:text-gray-200 transition-colors"
-                          type="button"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                    {otherValue.trim() && (
-                      <span className="inline-flex items-center px-3 py-1 bg-purple-600 text-white text-sm font-medium rounded-full shadow-sm">
-                        {otherValue.trim()}
-                        <button
-                          onClick={() => {
-                            setOtherValue('')
-                            handleOtherValueChange('')
-                            handleCheckboxChange('Autre', false)
-                          }}
-                          className="ml-2 text-white hover:text-gray-200 transition-colors"
-                          type="button"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {currentQuestion.type === 'radio' && (
-            <div className="space-y-4">
-              {Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 && (
+              {Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 && !loadingPartners && !loadingModels && (
                 <div className="space-y-3">
                   {(currentQuestion.options as { label: string; examples: string[] }[]).map((option, index) => (
                     <label 
@@ -994,7 +866,11 @@ function NewUseCasePageContent() {
                             name={currentQuestion.id}
                             value={option.label}
                             checked={formData[currentQuestion.id] === option.label}
-                            onChange={() => handleInputChange(option.label)}
+                            onChange={() => {
+                              handleInputChange(option.label)
+                              setOtherRadioValue('') // Reset other value when selecting predefined option
+                              setOtherRadioSelected(false)
+                            }}
                             className="h-5 w-5 text-[#0080A3] border-2 border-gray-300 focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0"
                           />
                         </div>
@@ -1002,14 +878,160 @@ function NewUseCasePageContent() {
                           <div className="text-lg font-semibold text-gray-900 mb-2">
                             {option.label}
                           </div>
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">Exemples : </span>
-                            <span className="text-gray-500">{option.examples.join(', ')}</span>
-                          </div>
+                          {option.examples.length > 0 && (
+                            <div className="text-sm text-gray-600">
+                              <span className="font-medium">Exemples : </span>
+                              <span className="text-gray-500">{option.examples.join(', ')}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </label>
                   ))}
+
+                  {/* Other Option for questions that have hasOtherOption */}
+                  {currentQuestion.hasOtherOption && (
+                    <div className="space-y-3">
+                      <label 
+                        className={`group flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                          otherRadioSelected
+                            ? 'border-[#0080A3] bg-[#0080A3]/5'
+                            : 'border-gray-200 hover:border-[#0080A3] hover:bg-[#0080A3]/5'
+                        }`}
+                      >
+                        <div className="flex items-start space-x-4">
+                          <div className="flex items-center h-6 mt-1">
+                            <input
+                              type="radio"
+                              name={currentQuestion.id}
+                              value="Autre"
+                              checked={otherRadioSelected}
+                              onChange={() => {
+                                setOtherRadioSelected(true)
+                                // Focus on the input field after a short delay
+                                setTimeout(() => {
+                                  const input = document.getElementById(`other-input-${currentQuestion.id}`)
+                                  if (input) input.focus()
+                                }, 100)
+                              }}
+                              className="h-5 w-5 text-[#0080A3] border-2 border-gray-300 focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-lg font-semibold text-gray-900 mb-2">
+                              Autre
+                            </div>
+                          </div>
+                        </div>
+                      </label>
+
+                      {/* Other Input Field - Only show when "Autre" is selected */}
+                      {otherRadioSelected && (
+                        <div className="ml-2 animate-fadeIn">
+                          <input
+                            id={`other-input-${currentQuestion.id}`}
+                            type="text"
+                            value={otherRadioValue}
+                            onChange={(e) => {
+                              setOtherRadioValue(e.target.value)
+                              handleInputChange(e.target.value)
+                            }}
+                            onKeyPress={handleKeyPress}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:border-[#0080A3] focus:ring-2 focus:ring-[#0080A3] focus:ring-opacity-20 focus:outline-none transition-all duration-200"
+                            placeholder={
+                              currentQuestion.id === 'technology_partner' 
+                                ? "Spécifiez le partenaire technologique..."
+                                : "Spécifiez votre réponse..."
+                            }
+                            autoFocus
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {currentQuestion.type === 'countries' && (
+            <div className="space-y-6">
+              {/* Country Selector */}
+              <div className="relative">
+                <ReactFlagsSelect
+                  countries={['US', 'GB', 'FR', 'DE', 'ES', 'IT', 'NL', 'BE', 'CH', 'AT', 'PT', 'IE', 'DK', 'SE', 'NO', 'FI', 'PL', 'CZ', 'HU', 'SK', 'SI', 'HR', 'BG', 'RO', 'GR', 'CY', 'MT', 'LU', 'LV', 'LT', 'EE', 'CA', 'MX', 'BR', 'AR', 'CL', 'CO', 'PE', 'UY', 'VE', 'EC', 'BO', 'PY', 'SR', 'GY', 'FK', 'GF', 'AU', 'NZ', 'JP', 'KR', 'CN', 'IN', 'TH', 'VN', 'PH', 'ID', 'MY', 'SG', 'HK', 'TW', 'BD', 'PK', 'LK', 'NP', 'AF', 'IR', 'IQ', 'SA', 'AE', 'KW', 'QA', 'BH', 'OM', 'YE', 'JO', 'LB', 'SY', 'IL', 'PS', 'TR', 'EG', 'LY', 'TN', 'DZ', 'MA', 'SD', 'ET', 'KE', 'UG', 'TZ', 'RW', 'BI', 'DJ', 'SO', 'ER', 'SS', 'CF', 'TD', 'CM', 'GQ', 'GA', 'CG', 'CD', 'AO', 'ZM', 'ZW', 'BW', 'NA', 'SZ', 'LS', 'ZA', 'MZ', 'MW', 'MG', 'MU', 'SC', 'KM', 'YT', 'RE', 'MV', 'RU', 'BY', 'UA', 'MD', 'GE', 'AM', 'AZ', 'KZ', 'KG', 'TJ', 'TM', 'UZ', 'MN']}
+                  selected=""
+                  onSelect={(code) => handleCountrySelect(code)}
+                  searchable
+                  placeholder="🌍 Rechercher et sélectionner un pays..."
+                  className="w-full"
+                  selectButtonClassName={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors ${
+                    error ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                  showSelectedLabel={false}
+                  showOptionLabel={true}
+                />
+              </div>
+
+              {/* Selected Countries Display */}
+              {selectedCountries.length > 0 && (
+                <div className="bg-white border-2 border-[#0080A3] rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <CheckCircle className="h-5 w-5 text-[#0080A3] mr-2" />
+                      Pays sélectionnés
+                    </h3>
+                    <span className="bg-[#0080A3] text-white text-sm font-medium px-3 py-1 rounded-full">
+                      {selectedCountries.length}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedCountries.map((countryCode) => (
+                      <div 
+                        key={countryCode} 
+                        className="group flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-all duration-200"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-6 flex items-center justify-center overflow-hidden rounded border border-gray-200">
+                            <img 
+                              src={`https://flagcdn.com/${countryCode.toLowerCase()}.svg`}
+                              alt={`Drapeau ${countryCode}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <span className="font-medium text-gray-900">
+                            {new Intl.DisplayNames(['fr'], {type: 'region'}).of(countryCode)}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => removeCountry(countryCode)}
+                          className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-all duration-200"
+                          type="button"
+                          title="Supprimer ce pays"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {selectedCountries.length === 0 && (
+                <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-8 text-center">
+                  <div className="flex flex-col items-center">
+                    <div className="bg-gray-100 p-3 rounded-full mb-4">
+                      <Search className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Aucun pays sélectionné
+                    </h3>
+                    <p className="text-gray-600 max-w-sm">
+                      Utilisez le champ de recherche ci-dessus pour trouver et sélectionner les pays où votre cas d'usage sera déployé.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
