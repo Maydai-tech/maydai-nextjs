@@ -3,7 +3,7 @@ import { UseCase } from '../../types/usecase'
 import { ComplAIModel } from '@/lib/supabase'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
-import { Calendar, Users, Shield, Bot, Edit3 } from 'lucide-react'
+import { Calendar, Users, Shield, Bot, Edit3, Globe } from 'lucide-react'
 import ModelSelectorModal from '../ModelSelectorModal'
 import ComplAiScoreBadge from '../ComplAiScoreBadge'
 
@@ -128,6 +128,15 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
             <div className="text-gray-900 flex items-center">
               <Shield className="h-4 w-4 mr-2 text-gray-400" />
               {useCase.risk_level || 'Non évalué'}
+            </div>
+          </div>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="text-sm font-medium text-gray-500 mb-1">Pays de déploiement</div>
+            <div className="text-gray-900 flex items-center">
+              <Globe className="h-4 w-4 mr-2 text-gray-400" />
+              {useCase.deployment_countries && useCase.deployment_countries.length > 0 
+                ? useCase.deployment_countries.join(', ')
+                : 'Non spécifiés'}
             </div>
           </div>
         </div>

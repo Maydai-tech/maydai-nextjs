@@ -11,6 +11,7 @@ export interface UseCase {
   primary_model_id?: string
   responsible_service: string
   system_type?: string
+  deployment_countries?: string[]
   company_id: string
   created_at: string
   updated_at: string
