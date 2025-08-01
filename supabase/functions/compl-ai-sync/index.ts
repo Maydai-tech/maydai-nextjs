@@ -410,6 +410,20 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Recalculer tous les scores MaydAI après synchronisation
+    console.log('Recalculating MaydAI scores with TypeScript logic...');
+    try {
+      // Note: Dans une Edge Function, nous devons implémenter la logique directement
+      // car nous ne pouvons pas importer de modules Next.js
+      // Pour l'instant, nous sautons le recalcul automatique ici
+      // et nous le ferons via l'API admin après la synchronisation
+      console.log('MaydAI recalculation skipped in Edge Function - use admin API endpoint');
+      
+    } catch (error) {
+      console.error('Error recalculating MaydAI scores:', error);
+      results.errors.push(`MaydAI recalc error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
     const executionTime = Date.now() - startTime;
 
     // Enregistrer le log de synchronisation

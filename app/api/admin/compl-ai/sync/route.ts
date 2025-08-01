@@ -447,6 +447,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Recalculer tous les scores MaydAI après synchronisation
+    console.log('Recalcul des scores MaydAI avec logique TypeScript...')
+    try {
+      const { recalculateAllMaydaiScores } = await import('@/lib/maydai-calculator')
+      const recalcResults = await recalculateAllMaydaiScores()
+      
+      const totalEvaluationsUpdated = recalcResults.reduce((sum, r) => sum + r.evaluations_updated, 0)
+      console.log(`Scores MaydAI recalculés pour ${recalcResults.length} modèles, ${totalEvaluationsUpdated} évaluations mises à jour`)
+      
+    } catch (error) {
+      console.error('Erreur lors du recalcul des scores MaydAI:', error)
+      stats.errors.push(`Erreur recalcul scores MaydAI: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
+    }
+
     const executionTime = Date.now() - startTime
 
     // Enregistrer le log de synchronisation

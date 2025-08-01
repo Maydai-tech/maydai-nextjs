@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BarChart3, TrendingUp, Database, RefreshCw, Trash2, Plus, Save, X, Check, Edit } from 'lucide-react'
+import { BarChart3, TrendingUp, Database, RefreshCw, Trash2, Plus, Save, X, Check, Edit, Calculator } from 'lucide-react'
 
 
 interface BenchmarkInfo {
@@ -25,6 +25,7 @@ interface BenchmarkScore {
   score_text: string
   evaluation_date: string
   evaluation_id?: string
+  maydai_score?: number
 }
 
 interface ModelPrincipleMatrix {
@@ -72,6 +73,7 @@ export default function ComplAIScoresPage() {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [clearing, setClearing] = useState(false)
+  const [calculatingMaydai, setCalculatingMaydai] = useState(false)
   const [syncMessage, setSyncMessage] = useState<string>('')
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   
@@ -157,6 +159,59 @@ export default function ComplAIScoresPage() {
       setSyncMessage('Erreur lors de la synchronisation : ' + (error instanceof Error ? error.message : 'Erreur inconnue'))
     } finally {
       setSyncing(false)
+    }
+  }
+
+  const handleCalculateMaydaiScores = async () => {
+    setCalculatingMaydai(true)
+    setSyncMessage('')
+    
+    try {
+      // Récupérer le token de session pour l'authentification
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Session non trouvée. Veuillez vous reconnecter.')
+      }
+
+      // Appeler notre endpoint pour recalculer les scores MaydAI
+      const response = await fetch('/api/admin/compl-ai/recalculate-maydai-scores', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error('API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          data
+        })
+        throw new Error(data.message || data.error || 'Erreur lors du calcul des scores MaydAI')
+      }
+
+      if (data.success) {
+        setSyncMessage(
+          `Calcul des scores MaydAI réussi ! ${data.total_models || 0} modèles traités, ${data.total_evaluations_updated || 0} évaluations mises à jour en ${data.execution_time_ms}ms.`
+        )
+        
+        // Recharger les données après le calcul
+        setLoading(true)
+        await new Promise(resolve => setTimeout(resolve, 1000)) // Attendre 1 seconde
+        
+        // Refetch data
+        await fetchScores()
+      } else {
+        setSyncMessage(`Calcul des scores MaydAI échoué : ${data.message}`)
+      }
+    } catch (error) {
+      console.error('Erreur lors du calcul des scores MaydAI:', error)
+      setSyncMessage('Erreur lors du calcul des scores MaydAI : ' + (error instanceof Error ? error.message : 'Erreur inconnue'))
+    } finally {
+      setCalculatingMaydai(false)
     }
   }
 
@@ -257,6 +312,7 @@ export default function ComplAIScoresPage() {
           score_text,
           evaluation_date,
           raw_data,
+          maydai_score,
           compl_ai_models!inner (
             id,
             model_name,
@@ -277,6 +333,15 @@ export default function ComplAIScoresPage() {
         .order('evaluation_date', { ascending: false })
 
       if (error) throw error
+
+      // Debug: Vérifier les scores MaydAI
+      console.log('Debug evaluations - premier échantillon:', evaluations?.slice(0, 3)?.map(e => ({
+        id: e.id,
+        score: e.score,
+        maydai_score: e.maydai_score,
+        model_name: e.compl_ai_models?.model_name,
+        benchmark_code: e.compl_ai_benchmarks?.code || e.raw_data?.benchmark_code
+      })))
 
       // Si aucun modèle n'existe, retourner un état vide
       if (!allModels || allModels.length === 0) {
@@ -413,11 +478,23 @@ export default function ComplAIScoresPage() {
           }
 
           const principleData = modelData.principle_scores[principleCode]
+          
+          // Debug: Vérifier les données MaydAI lors du traitement
+          if (evaluation.maydai_score !== null && evaluation.maydai_score !== undefined) {
+            console.log('MaydAI score trouvé:', {
+              model: evaluation.compl_ai_models.model_name,
+              benchmark: benchmarkCode,
+              original_score: evaluation.score,
+              maydai_score: evaluation.maydai_score
+            })
+          }
+          
           principleData.benchmark_scores[benchmarkCode] = {
             score: evaluation.score,
             score_text: evaluation.score_text || `${Math.round(evaluation.score * 100)}%`,
             evaluation_date: evaluation.evaluation_date,
-            evaluation_id: evaluation.id
+            evaluation_id: evaluation.id,
+            maydai_score: evaluation.maydai_score
           }
 
           modelData.all_scores.push(evaluation.score)
@@ -705,7 +782,7 @@ export default function ComplAIScoresPage() {
           <div className="flex items-center space-x-4">
             <button
               onClick={() => openModelForm()}
-              disabled={syncing || clearing || saving}
+              disabled={syncing || clearing || saving || calculatingMaydai}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -714,9 +791,9 @@ export default function ComplAIScoresPage() {
             
             <button
               onClick={handleSyncData}
-              disabled={syncing || clearing || saving}
+              disabled={syncing || clearing || saving || calculatingMaydai}
               className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
-                syncing || clearing || saving
+                syncing || clearing || saving || calculatingMaydai
                   ? 'bg-gray-400 cursor-not-allowed' 
                   : 'bg-blue-600 hover:bg-blue-700'
               } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
@@ -724,13 +801,26 @@ export default function ComplAIScoresPage() {
               <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
               {syncing ? 'Synchronisation...' : 'Mettre à jour les résultats'}
             </button>
+
+            <button
+              onClick={handleCalculateMaydaiScores}
+              disabled={syncing || clearing || saving || calculatingMaydai}
+              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
+                syncing || clearing || saving || calculatingMaydai
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-purple-600 hover:bg-purple-700'
+              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500`}
+            >
+              <Calculator className={`h-4 w-4 mr-2 ${calculatingMaydai ? 'animate-pulse' : ''}`} />
+              {calculatingMaydai ? 'Calcul en cours...' : 'Calculer scores MaydAI'}
+            </button>
             
             {!showClearConfirm ? (
               <button
                 onClick={() => setShowClearConfirm(true)}
-                disabled={syncing || clearing}
+                disabled={syncing || clearing || calculatingMaydai}
                 className={`ml-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
-                  syncing || clearing
+                  syncing || clearing || calculatingMaydai
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-red-600 hover:bg-red-700'
                 } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
@@ -743,9 +833,9 @@ export default function ComplAIScoresPage() {
                 <span className="text-sm text-red-600 font-medium">Êtes-vous sûr ?</span>
                 <button
                   onClick={handleClearData}
-                  disabled={clearing}
+                  disabled={clearing || calculatingMaydai}
                   className={`inline-flex items-center px-3 py-2 border border-transparent text-xs font-medium rounded-md text-white ${
-                    clearing
+                    clearing || calculatingMaydai
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-red-600 hover:bg-red-700'
                   } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
@@ -755,7 +845,7 @@ export default function ComplAIScoresPage() {
                 </button>
                 <button
                   onClick={() => setShowClearConfirm(false)}
-                  disabled={clearing}
+                  disabled={clearing || calculatingMaydai}
                   className="inline-flex items-center px-3 py-2 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Annuler
@@ -823,10 +913,24 @@ export default function ComplAIScoresPage() {
       {/* Matrice des scores par principe */}
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Matrice des Scores par Modèle et Principe</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Chaque ligne représente un modèle, chaque colonne un principe avec ses benchmarks
-          </p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-lg font-medium text-gray-900">Matrice des Scores par Modèle et Principe</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Chaque ligne représente un modèle, chaque colonne un principe avec ses benchmarks
+              </p>
+            </div>
+            <div className="flex items-center space-x-4 text-xs">
+              <div className="flex items-center space-x-2">
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">0.750</span>
+                <span className="text-gray-600">Score original</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">MaydAI: 3.2</span>
+                <span className="text-gray-600">Score MaydAI (normalisé sur 4)</span>
+              </div>
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto max-h-screen">
           <table className="min-w-full divide-y divide-gray-200">
@@ -839,7 +943,7 @@ export default function ComplAIScoresPage() {
                   Score Moyen
                 </th>
                 {principles.map((principle) => (
-                  <th key={principle.code} className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[220px] border-l border-gray-300">
+                  <th key={principle.code} className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[280px] border-l border-gray-300">
                     <div className="space-y-1">
                       <div className="font-bold text-[12px] text-purple-600">
                         {principle.code}
@@ -894,7 +998,7 @@ export default function ComplAIScoresPage() {
                     </span>
                   </td>
                   {principles.map((principle) => (
-                    <td key={principle.code} className="px-3 py-3 text-center min-w-[220px] border-l border-gray-300">
+                    <td key={principle.code} className="px-3 py-3 text-center min-w-[280px] border-l border-gray-300">
                       <div className="space-y-2">
                         {/* Score moyen du principe */}
                         <div className="flex justify-center">
@@ -948,7 +1052,7 @@ export default function ComplAIScoresPage() {
                               ) : model.principle_scores[principle.code]?.benchmark_scores[benchmark.code] ? (
                                 <div className="flex items-center gap-1">
                                   <div 
-                                    className="cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 flex items-center gap-1 flex-1"
+                                    className="cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 flex-1 space-y-1"
                                     onClick={() => model.model_id && handleEditScore(
                                       model.model_id, 
                                       benchmark.code, 
@@ -957,11 +1061,43 @@ export default function ComplAIScoresPage() {
                                     )}
                                     title={`${benchmark.name} - Cliquer pour modifier`}
                                   >
-                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${getScoreColor(model.principle_scores[principle.code].benchmark_scores[benchmark.code].score)}`}>
-                                      {model.principle_scores[principle.code].benchmark_scores[benchmark.code].score.toFixed(3)}
-                                    </span>
-                                    <div className="text-[9px] text-gray-600 truncate flex-1" title={benchmark.name}>
+                                    {/* Benchmark name */}
+                                    <div className="text-[9px] text-gray-600 truncate text-center" title={benchmark.name}>
                                       {benchmark.name.length > 18 ? benchmark.name.substring(0, 18) + '...' : benchmark.name}
+                                    </div>
+                                    
+                                    {/* Original score */}
+                                    <div className="flex justify-center">
+                                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${getScoreColor(model.principle_scores[principle.code].benchmark_scores[benchmark.code].score)}`}>
+                                        {model.principle_scores[principle.code].benchmark_scores[benchmark.code].score.toFixed(3)}
+                                      </span>
+                                    </div>
+                                    
+                                    {/* MaydAI score */}
+                                    <div className="flex justify-center">
+                                      {(() => {
+                                        const maydaiScore = model.principle_scores[principle.code].benchmark_scores[benchmark.code].maydai_score;
+                                        console.log('Debug render MaydAI:', {
+                                          model: model.model_name,
+                                          benchmark: benchmark.code,
+                                          maydaiScore,
+                                          type: typeof maydaiScore,
+                                          isNull: maydaiScore === null,
+                                          isUndefined: maydaiScore === undefined
+                                        });
+                                        
+                                        if (maydaiScore !== null && maydaiScore !== undefined) {
+                                          return (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                                              MaydAI: {maydaiScore.toFixed(2)}
+                                            </span>
+                                          );
+                                        } else {
+                                          return (
+                                            <span className="text-[9px] text-gray-400 italic">MaydAI: N/A</span>
+                                          );
+                                        }
+                                      })()}
                                     </div>
                                   </div>
                                   {model.principle_scores[principle.code].benchmark_scores[benchmark.code].evaluation_id && (

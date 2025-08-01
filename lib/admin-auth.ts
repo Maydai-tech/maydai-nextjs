@@ -40,12 +40,20 @@ export async function verifyAdminAuth(
   request: NextRequest,
   requiredRole: 'admin' | 'super_admin' = 'admin'
 ): Promise<{ user?: AdminProfile; error?: NextResponse }> {
+  console.log('verifyAdminAuth - Start')
+  
   try {
     // Vérifier les variables d'environnement
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey
+    })
+
     if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing environment variables')
       return {
         error: NextResponse.json(
           { error: 'Configuration error' },
@@ -56,7 +64,13 @@ export async function verifyAdminAuth(
 
     // Récupérer le token d'authentification
     const authHeader = request.headers.get('authorization')
+    console.log('Auth header check:', {
+      hasAuthHeader: !!authHeader,
+      startsWithBearer: authHeader?.startsWith('Bearer ') || false
+    })
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('Missing or invalid authorization header')
       return {
         error: NextResponse.json(
           { error: 'Missing or invalid authorization header' },
@@ -66,14 +80,23 @@ export async function verifyAdminAuth(
     }
 
     const token = authHeader.substring(7) // Enlever "Bearer "
+    console.log('Token extracted, length:', token.length)
 
     // Créer le client Supabase admin
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Vérifier le token et récupérer l'utilisateur
+    console.log('Getting user with token...')
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    console.log('User lookup result:', {
+      hasUser: !!user,
+      userId: user?.id,
+      error: authError
+    })
 
     if (authError || !user) {
+      console.error('User auth failed:', authError)
       return {
         error: NextResponse.json(
           { error: 'Invalid authentication token' },
@@ -83,16 +106,24 @@ export async function verifyAdminAuth(
     }
 
     // Récupérer le profil avec le rôle
+    console.log('Looking up profile for user:', user.id)
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, email, role, company_id')
+      .select('id, role, company_id')
       .eq('id', user.id)
       .single()
 
+    console.log('Profile lookup result:', {
+      hasProfile: !!profile,
+      profileError,
+      profile: profile ? { id: profile.id, role: profile.role } : null
+    })
+
     if (profileError || !profile) {
+      console.error('User profile not found:', { userId: user.id, error: profileError })
       return {
         error: NextResponse.json(
-          { error: 'User profile not found' },
+          { error: 'User profile not found', userId: user.id },
           { status: 404 }
         )
       }
@@ -125,7 +156,7 @@ export async function verifyAdminAuth(
     return {
       user: {
         id: profile.id,
-        email: profile.email || user.email || '',
+        email: user.email || '',
         role: userRole,
         company_id: profile.company_id
       }
@@ -133,9 +164,10 @@ export async function verifyAdminAuth(
 
   } catch (error) {
     console.error('Admin auth error:', error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return {
       error: NextResponse.json(
-        { error: 'Internal server error' },
+        { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
         { status: 500 }
       )
     }
@@ -178,7 +210,7 @@ export async function getAdminUsers(
 ): Promise<AdminProfile[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, role, company_id')
+    .select('id, role, company_id')
     .in('role', ['admin', 'super_admin'])
     .order('created_at', { ascending: false })
 
