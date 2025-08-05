@@ -142,41 +142,41 @@ const QUESTIONS_DATA = {
       {
         "code": "E4.N7.Q2.A",
         "label": "Emploi, gestion des travailleurs et accès à l'emploi indépendant",
-        "score_impact": -30,
+        "score_impact": -45,
         "category_impacts": {
-          "diversity_fairness": -5
+          "risk_level": -45
         }
       },
       {
         "code": "E4.N7.Q2.B",
         "label": "Administration de la justice et processus démocratiques",
-        "score_impact": -30,
+        "score_impact": -45,
         "category_impacts": {
-          "diversity_fairness": -5
+          "risk_level": -45
         }
       },
       {
         "code": "E4.N7.Q2.C",
         "label": "Migration, asile et gestion des contrôles aux frontières",
-        "score_impact": -30,
+        "score_impact": -45,
         "category_impacts": {
-          "diversity_fairness": -5
+          "risk_level": -45
         }
       },
       {
         "code": "E4.N7.Q2.D",
         "label": "Gestion et exploitation des infrastructures critiques",
-        "score_impact": -30,
+        "score_impact": -45,
         "category_impacts": {
-          "technical_robustness": -5
+          "risk_level": -45
         }
       },
       {
         "code": "E4.N7.Q2.E",
         "label": "Éducation et formation professionnelle",
-        "score_impact": -30,
+        "score_impact": -45,
         "category_impacts": {
-          "diversity_fairness": -5
+          "risk_level": -45
         }
       },
       {
@@ -184,7 +184,7 @@ const QUESTIONS_DATA = {
         "label": "Activités répressives (risque récidive, fiabilité preuves...)",
         "score_impact": -30,
         "category_impacts": {
-          "diversity_fairness": -5
+          "risk_level": -45
         }
       },
       {
@@ -203,22 +203,34 @@ const QUESTIONS_DATA = {
       {
         "code": "E4.N7.Q2.1.A",
         "label": "Identification Biométrique à Distance en Temps Réel dans les Espaces Publics",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "category_impacts": {
+          "risk_level": -80
+        }
       },
       {
         "code": "E4.N7.Q2.1.B",
         "label": "Composant de sécurité dans des secteurs critiques (santé, transports, énergies, etc.)",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "category_impacts": {
+          "risk_level": -80
+        }
       },
       {
         "code": "E4.N7.Q2.1.C",
         "label": "Évaluations dans un système d'éducation ou en entreprise",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "category_impacts": {
+          "risk_level": -80
+        }
       },
       {
         "code": "E4.N7.Q2.1.D",
         "label": "Accès et jouissance de services essentiels privés et publics",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "category_impacts": {
+          "risk_level": -80
+        }
       },
       {
         "code": "E4.N7.Q2.1.E",
@@ -514,25 +526,25 @@ const QUESTIONS_DATA = {
       {
         "code": "E4.N8.Q11.B",
         "label": "Image",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
-          "social_environmental": -5
+          "social_environmental": -3
         }
       },
       {
         "code": "E4.N8.Q11.C",
         "label": "audio",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
-          "social_environmental": -5
+          "social_environmental": -3
         }
       },
       {
         "code": "E4.N8.Q11.D",
         "label": "Vidéo",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
-          "social_environmental": -5
+          "social_environmental": -3
         }
       }
     ]
@@ -551,9 +563,9 @@ const QUESTIONS_DATA = {
       {
         "code": "E4.N8.Q12.B",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -0.8,
         "category_impacts": {
-          "privacy_data": -5
+          "privacy_data": -0.8
         }
       }
     ]
@@ -572,9 +584,9 @@ const QUESTIONS_DATA = {
       {
         "code": "E5.N9.Q1.B",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
-          "technical_robustness": -5
+          "technical_robustness": -3
         }
       }
     ]
@@ -593,9 +605,9 @@ const QUESTIONS_DATA = {
       {
         "code": "E5.N9.Q2.B",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
-          "technical_robustness": -5
+          "technical_robustness": -3
         }
       }
     ]
@@ -614,9 +626,9 @@ const QUESTIONS_DATA = {
       {
         "code": "E5.N9.Q3.B",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
-          "technical_robustness": -5
+          "technical_robustness": -3
         }
       }
     ]
@@ -635,9 +647,9 @@ const QUESTIONS_DATA = {
       {
         "code": "E5.N9.Q4.B",
         "label": "Non",
-        "score_impact": -10,
+        "score_impact": -3,
         "category_impacts": {
-          "human_oversight": -10
+          "human_oversight": -3
         }
       }
     ]
@@ -656,25 +668,25 @@ const QUESTIONS_DATA = {
       {
         "code": "E5.N9.Q5.B",
         "label": "Personnelles",
-        "score_impact": -10,
+        "score_impact": -3,
         "category_impacts": {
-          "privacy_data": -10
+          "privacy_data": -3
         }
       },
       {
         "code": "E5.N9.Q5.C",
         "label": "Stratégiques",
-        "score_impact": -10,
+        "score_impact": -3,
         "category_impacts": {
-          "privacy_data": -5
+          "privacy_data": -3
         }
       },
       {
         "code": "E5.N9.Q5.D",
         "label": "sensibles",
-        "score_impact": -10,
+        "score_impact": -3,
         "category_impacts": {
-          "privacy_data": -5
+          "privacy_data": -3
         }
       }
     ]
@@ -705,9 +717,9 @@ const QUESTIONS_DATA = {
       {
         "code": "E5.N9.Q6.A",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
-          "privacy_data": -5
+          "privacy_data": -3
         }
       }
     ]
@@ -743,9 +755,9 @@ const QUESTIONS_DATA = {
       {
         "code": "E5.N9.Q7.A",
         "label": "Non",
-        "score_impact": -10,
+        "score_impact": -5,
         "category_impacts": {
-          "human_oversight": -10
+          "human_oversight": -5
         }
       }
     ]
@@ -781,9 +793,9 @@ const QUESTIONS_DATA = {
       {
         "code": "E5.N9.Q8.A",
         "label": "Non",
-        "score_impact": -10,
+        "score_impact": -3,
         "category_impacts": {
-          "human_oversight": -10
+          "human_oversight": -3
         }
       }
     ]
@@ -814,9 +826,9 @@ const QUESTIONS_DATA = {
       {
         "code": "E5.N9.Q9.A",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
-          "technical_robustness": -5
+          "technical_robustness": -3
         }
       }
     ]
@@ -835,9 +847,9 @@ const QUESTIONS_DATA = {
       {
         "code": "E6.N10.Q1.B",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
-          "transparency": -5
+          "transparency": -3
         }
       }
     ]
@@ -856,9 +868,9 @@ const QUESTIONS_DATA = {
       {
         "code": "E6.N10.Q2.B",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
-          "transparency": -5
+          "transparency": -3
         }
       }
     ]
