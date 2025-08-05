@@ -20,6 +20,13 @@ interface PrincipleInfo {
   benchmarks: BenchmarkInfo[]
 }
 
+interface MaydaiScoreInfo {
+  model_name: string
+  model_provider: string
+  principle_code: string
+  average_maydai_score: number
+}
+
 interface BenchmarkScore {
   score: number
   score_text: string
@@ -40,6 +47,7 @@ interface ModelPrincipleMatrix {
     benchmark_scores: Record<string, BenchmarkScore>
     avg_score: number
     benchmark_count: number
+    avg_maydai_score?: number
   }>
   avg_score: number
   evaluation_count: number
@@ -70,6 +78,7 @@ interface ScoreDeleteData {
 export default function ComplAIScoresPage() {
   const [modelPrincipleMatrix, setModelPrincipleMatrix] = useState<ModelPrincipleMatrix[]>([])
   const [principles, setPrinciples] = useState<PrincipleInfo[]>([])
+  const [maydaiScores, setMaydaiScores] = useState<MaydaiScoreInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [clearing, setClearing] = useState(false)
@@ -303,6 +312,18 @@ export default function ComplAIScoresPage() {
 
       if (modelsError) throw modelsError
 
+      console.log('Debug: Modèles récupérés:', {
+        count: allModels?.length || 0,
+        sampleModels: allModels?.slice(0, 3)?.map(m => ({
+          name: m.model_name,
+          provider: m.model_provider,
+          version: m.version
+        }))
+      })
+
+      // Récupérer les scores moyens MaydAI par principe depuis la vue compl_ai_maydai_scores
+      console.log('Debug: Récupération des scores moyens MaydAI depuis la vue...')
+
       // Récupérer toutes les évaluations avec benchmarks et principes
       const { data: evaluations, error } = await supabase
         .from('compl_ai_evaluations')
@@ -339,8 +360,8 @@ export default function ComplAIScoresPage() {
         id: e.id,
         score: e.score,
         maydai_score: e.maydai_score,
-        model_name: e.compl_ai_models?.model_name,
-        benchmark_code: e.compl_ai_benchmarks?.code || e.raw_data?.benchmark_code
+        model_name: e.compl_ai_models?.[0]?.model_name || 'N/A',
+        benchmark_code: e.compl_ai_benchmarks?.[0]?.code || e.raw_data?.benchmark_code || 'N/A'
       })))
 
       // Si aucun modèle n'existe, retourner un état vide
@@ -435,6 +456,7 @@ export default function ComplAIScoresPage() {
           benchmark_scores: Record<string, BenchmarkScore>
           avg_score: number
           benchmark_count: number
+          avg_maydai_score?: number
         }>
         all_scores: number[]
         all_dates: string[]
@@ -473,7 +495,8 @@ export default function ComplAIScoresPage() {
               principle_category: evaluation.compl_ai_principles.category,
               benchmark_scores: {},
               avg_score: 0,
-              benchmark_count: 0
+              benchmark_count: 0,
+              avg_maydai_score: undefined
             }
           }
 
@@ -502,6 +525,36 @@ export default function ComplAIScoresPage() {
         })
       }
 
+      // Récupérer les scores moyens MaydAI par principe depuis la vue
+      const { data: maydaiScoresData, error: maydaiError } = await supabase
+        .from('compl_ai_maydai_scores')
+        .select(`
+          model_name,
+          model_provider,
+          principle_code,
+          average_maydai_score
+        `)
+        .order('model_name')
+
+      if (maydaiError) {
+        console.error('Erreur lors de la récupération des scores MaydAI:', maydaiError)
+        setMaydaiScores([])
+      } else {
+        console.log('Debug: Scores MaydAI récupérés depuis la vue:', {
+          totalScores: maydaiScoresData?.length || 0,
+          sampleData: maydaiScoresData?.slice(0, 3)
+        })
+        setMaydaiScores(maydaiScoresData || [])
+      }
+
+      // Debug: Comparer les données avant la construction de la matrice
+      console.log('Debug: Comparaison des données avant construction matrice:', {
+        totalModelsInGroups: Array.from(modelGroups.keys()).length,
+        sampleModelKeys: Array.from(modelGroups.keys()).slice(0, 3),
+        maydaiScoresAvailable: maydaiScoresData?.length || 0,
+        sampleMaydaiData: maydaiScoresData?.slice(0, 3)
+      })
+
       // Calculer les moyennes par principe et globales
       const matrix: ModelPrincipleMatrix[] = Array.from(modelGroups.values()).map(group => {
         // Calculer la moyenne par principe
@@ -514,6 +567,31 @@ export default function ComplAIScoresPage() {
           } else {
             principleData.avg_score = 0
             principleData.benchmark_count = 0
+          }
+
+          // Ajouter le score moyen MaydAI pour ce principe si disponible
+          const maydaiScoreMatch = (maydaiScoresData || []).find((maydai: MaydaiScoreInfo) => 
+            maydai.model_name === group.model_name &&
+            maydai.model_provider === group.model_provider &&
+            maydai.principle_code === principleCode
+          )
+          
+          console.log('Debug MaydAI matching:', {
+            model: group.model_name,
+            provider: group.model_provider,
+            version: group.version,
+            principle: principleCode,
+            maydaiScoreMatch,
+            availableScores: (maydaiScoresData || []).length
+          })
+          
+          if (maydaiScoreMatch) {
+            principleData.avg_maydai_score = maydaiScoreMatch.average_maydai_score
+            console.log('MaydAI score trouvé:', {
+              model: group.model_name,
+              principle: principleCode,
+              score: maydaiScoreMatch.average_maydai_score
+            })
           }
         })
 
@@ -1008,6 +1086,17 @@ export default function ComplAIScoresPage() {
                             </span>
                           ) : (
                             <span className="text-gray-400 text-xs">N/A</span>
+                          )}
+                        </div>
+                        
+                        {/* Score moyen MaydAI du principe */}
+                        <div className="flex justify-center mt-1">
+                          {model.principle_scores[principle.code]?.avg_maydai_score !== undefined ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                              MaydAI: {model.principle_scores[principle.code].avg_maydai_score!.toFixed(2)}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs italic">MaydAI: N/A</span>
                           )}
                         </div>
                         
