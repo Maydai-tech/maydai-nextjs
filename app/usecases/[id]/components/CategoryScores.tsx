@@ -83,7 +83,6 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
       
       <div className="space-y-4">
         {categoryScores
-          .filter(cat => cat.question_count > 0) // Afficher seulement les catégories avec des questions
           .sort((a, b) => b.percentage - a.percentage) // Trier par pourcentage décroissant
           .map((category) => {
             const percentage = Math.round((category.score / category.max_score) * 100)

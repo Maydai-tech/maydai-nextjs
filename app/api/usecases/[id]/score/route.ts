@@ -71,20 +71,33 @@ export async function GET(
       return NextResponse.json({ error: 'Error fetching use case data' }, { status: 500 })
     }
 
-    // Si un score_final existe, le retourner directement avec un format compatible
+    // Si un score_final existe, le retourner avec les category_scores calculés
     if (usecaseData.score_final !== null && usecaseData.score_final !== undefined) {
+      // Récupérer les réponses pour calculer les category_scores
+      const { data: responses, error: responsesError } = await supabase
+        .from('usecase_responses')
+        .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
+        .eq('usecase_id', usecaseId)
+
+      if (responsesError) {
+        return NextResponse.json({ error: 'Error fetching responses' }, { status: 500 })
+      }
+
+      // Calculer le score complet pour obtenir les category_scores
+      const fullScoreData = await calculateScore(usecaseId, responses || [])
+      
       return NextResponse.json({
         usecase_id: usecaseId,
         score: usecaseData.score_final,
-        max_score: 100, // Score maximum sur 100
-        score_breakdown: [], // Pas de breakdown détaillé depuis la base
-        category_scores: [], // Pas de scores par catégorie depuis la base
+        max_score: 120, // Score maximum avec bonus COMPL-AI
+        score_breakdown: fullScoreData.score_breakdown,
+        category_scores: fullScoreData.category_scores,
         calculated_at: usecaseData.last_calculation_date || new Date().toISOString(),
         version: 1,
         is_eliminated: usecaseData.is_eliminated || false,
         compl_ai_bonus: usecaseData.score_model || 0,
-        compl_ai_score: null,
-        model_info: null
+        compl_ai_score: fullScoreData.compl_ai_score,
+        model_info: fullScoreData.model_info
       })
     }
 
