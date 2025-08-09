@@ -1,77 +1,95 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
 /**
- * Interface pour la réponse de l'edge function calculate-usecase-score
+ * Interface pour la réponse de l'API de calcul du score
  */
 export interface ScoreCalculationResponse {
   success: boolean
   usecase_id: string
   scores: {
     score_base: number
-    score_model: number
+    score_model: number | null
     score_final: number
     is_eliminated: boolean
-    elimination_reason?: string
+    elimination_reason: string
   }
   calculation_details: {
     base_score: number
     total_impact: number
     final_base_score: number
-    model_bonus: number
-    max_possible_score: number
+    model_score: number | null
+    model_percentage: number | null
+    has_model_score: boolean
+    formula_used: string
+    weights: {
+      base_score_weight: number
+      model_score_weight: number
+      total_weight: number
+    }
   }
 }
 
 /**
- * Interface pour les erreurs de l'edge function
+ * Interface pour les erreurs de l'API
  */
 export interface ScoreCalculationError {
   error: string
+  details?: string
 }
 
 /**
- * Service pour appeler l'edge function de calcul du score
+ * Service pour appeler l'API de calcul du score
+ * 
+ * Ce service utilise l'API Next.js au lieu de l'edge function Supabase
+ * pour simplifier l'architecture et centraliser la logique
  */
 export class ScoreService {
-  private supabase: ReturnType<typeof createClient>
+  private accessToken?: string
 
   constructor(accessToken?: string) {
-    this.supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: accessToken ? {
-          Authorization: `Bearer ${accessToken}`
-        } : {}
-      }
-    })
+    this.accessToken = accessToken
   }
 
   /**
-   * Calcule le score d'un use case via l'edge function
+   * Calcule le score d'un use case via l'API Next.js
+   * 
    * @param usecaseId - ID du use case à calculer
    * @returns Promise avec le résultat du calcul
    */
   async calculateUseCaseScore(usecaseId: string): Promise<ScoreCalculationResponse> {
     try {
-      const { data, error } = await this.supabase.functions.invoke('calculate-usecase-score', {
-        body: {
+      // Construire l'URL de l'API
+      // Utiliser une URL relative pour fonctionner côté client et serveur
+      const url = `/api/usecases/${usecaseId}/calculate-score`
+      
+      // Préparer les headers avec le token d'authentification
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+      
+      if (this.accessToken) {
+        headers['Authorization'] = `Bearer ${this.accessToken}`
+      }
+      
+      // Appeler l'API Next.js
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
           usecase_id: usecaseId
-        }
+        })
       })
 
-      if (error) {
-        throw new Error(`Edge function error: ${error.message}`)
+      // Gérer les erreurs HTTP
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
       }
 
-      if (!data.success) {
-        throw new Error(data.error || 'Score calculation failed')
-      }
-
+      // Parser la réponse
+      const data = await response.json()
+      
       return data as ScoreCalculationResponse
     } catch (error) {
-      console.error('Error calling calculate-usecase-score edge function:', error)
+      console.error('Erreur lors de l\'appel à l\'API calculate-score:', error)
       throw error
     }
   }

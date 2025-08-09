@@ -6,12 +6,14 @@ import { useCaseRoutes } from '../../utils/routes'
 import { Calendar, Clock, CheckCircle, Bug, X } from 'lucide-react'
 import { CategoryScores } from '../CategoryScores'
 import { useUseCaseScore } from '../../hooks/useUseCaseScore'
+import { ScoreCalculation } from '../ScoreCalculation'
 
 interface UseCaseSidebarProps {
   useCase: UseCase
+  onUpdateUseCase?: (updates: Partial<UseCase>) => Promise<UseCase | null>
 }
 
-export function UseCaseSidebar({ useCase }: UseCaseSidebarProps) {
+export function UseCaseSidebar({ useCase, onUpdateUseCase }: UseCaseSidebarProps) {
   const [showDebug, setShowDebug] = useState(false)
   const { score, loading, error } = useUseCaseScore(useCase.id)
 
@@ -57,6 +59,9 @@ export function UseCaseSidebar({ useCase }: UseCaseSidebarProps) {
 
   return (
     <div className="space-y-6">
+      {/* Score de conformité */}
+      <ScoreCalculation useCase={useCase} onScoreUpdate={onUpdateUseCase} />
+      
       {/* Scores par Catégorie */}
       <CategoryScores usecaseId={useCase.id} />
 

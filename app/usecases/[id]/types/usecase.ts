@@ -15,6 +15,12 @@ export interface UseCase {
   company_id: string
   created_at: string
   updated_at: string
+  score_base?: number
+  score_model?: number | null
+  score_final?: number | null
+  is_eliminated?: boolean
+  elimination_reason?: string
+  last_calculation_date?: string
   companies?: {
     name: string
     industry: string

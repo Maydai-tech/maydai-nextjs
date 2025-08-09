@@ -81,7 +81,7 @@ export default function UseCaseDetailPage() {
         />
 
         {/* Sidebar */}
-        <UseCaseSidebar useCase={useCase} />
+        <UseCaseSidebar useCase={useCase} onUpdateUseCase={updateUseCase} />
       </div>
     </UseCaseLayout>
   )
