@@ -135,19 +135,48 @@ export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnai
   }
 
   const formatAnswerDisplay = (question: any, answer: any) => {
-    if (!answer) return { text: 'Non répondu', className: 'text-gray-500 italic' }
+    if (!answer) return { text: 'Non répondu', className: 'text-gray-500 italic', impact: null }
+    
+    // Fonction pour calculer l'impact total d'une réponse
+    const calculateImpact = (question: any, answer: any) => {
+      if (typeof answer === 'string') {
+        const option = question.options?.find((opt: any) => opt.code === answer)
+        return option?.score_impact || 0
+      }
+      
+      if (Array.isArray(answer)) {
+        let totalImpact = 0
+        answer.forEach(code => {
+          const option = question.options?.find((opt: any) => opt.code === code)
+          if (option?.score_impact) {
+            totalImpact += option.score_impact
+          }
+        })
+        return totalImpact
+      }
+      
+      if (typeof answer === 'object' && answer.selected) {
+        const option = question.options?.find((opt: any) => opt.code === answer.selected)
+        return option?.score_impact || 0
+      }
+      
+      return 0
+    }
+    
+    const impact = calculateImpact(question, answer)
     
     if (typeof answer === 'string') {
       const option = question.options?.find((opt: any) => opt.code === answer)
       return { 
         text: option?.label || answer, 
-        className: 'text-gray-900' 
+        className: 'text-gray-900',
+        impact
       }
     }
     
     if (Array.isArray(answer)) {
       if (answer.length === 0) {
-        return { text: 'Aucune sélection', className: 'text-gray-500 italic' }
+        return { text: 'Aucune sélection', className: 'text-gray-500 italic', impact: 0 }
       }
       const labels = answer.map(code => {
         const option = question.options?.find((opt: any) => opt.code === code)
@@ -155,7 +184,8 @@ export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnai
       })
       return { 
         text: labels.join(', '), 
-        className: 'text-gray-900' 
+        className: 'text-gray-900',
+        impact
       }
     }
     
@@ -168,11 +198,12 @@ export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnai
       }
       return { 
         text: result, 
-        className: 'text-gray-900' 
+        className: 'text-gray-900',
+        impact
       }
     }
     
-    return { text: JSON.stringify(answer), className: 'text-gray-900' }
+    return { text: JSON.stringify(answer), className: 'text-gray-900', impact: 0 }
   }
 
   const handleSaveAnswer = async (questionId: string, answer: any) => {
@@ -265,6 +296,22 @@ export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnai
                         <p className={`text-sm ${displayAnswer.className}`}>
                           {displayAnswer.text}
                         </p>
+                        {displayAnswer.impact !== null && (
+                          <div className="mt-2 flex items-center">
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                              displayAnswer.impact === 0
+                                ? 'bg-gray-100 text-gray-600'
+                                : displayAnswer.impact > 0 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-red-100 text-red-700'
+                            }`}>
+                              {displayAnswer.impact === 0
+                                ? 'Aucun impact sur le score'
+                                : `Impact: ${displayAnswer.impact > 0 ? '+' : ''}${displayAnswer.impact} points`
+                              }
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <button

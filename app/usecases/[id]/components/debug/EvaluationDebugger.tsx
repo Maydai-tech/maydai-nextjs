@@ -121,6 +121,107 @@ export const EvaluationDebugger = React.memo(function EvaluationDebugger({ useCa
             </div>
           )}
 
+          {/* Détails des scores par réponse */}
+          {score && score.score_breakdown && score.score_breakdown.length > 0 && (
+            <div className="bg-purple-50 rounded-lg p-4">
+              <h4 className="font-medium text-gray-900 mb-3">Détails des scores par réponse</h4>
+              <div className="bg-white rounded p-3 max-h-96 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-white border-b border-gray-200">
+                    <tr>
+                      <th className="text-left py-2 px-2 font-medium text-gray-900">Question</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-900">Réponse</th>
+                      <th className="text-center py-2 px-2 font-medium text-gray-900">Score</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-900">Catégorie</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-900">Impacts par catégorie</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {score.score_breakdown.map((item, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="py-2 px-2">
+                          <div>
+                            <div className="font-medium text-xs text-gray-900">{item.question_id}</div>
+                            <div className="text-xs text-gray-600 mt-1">{item.question_text}</div>
+                          </div>
+                        </td>
+                        <td className="py-2 px-2">
+                          <div className="text-xs text-gray-700">
+                            {typeof item.answer_value === 'object' 
+                              ? JSON.stringify(item.answer_value, null, 2)
+                              : item.answer_value || 'N/A'}
+                          </div>
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium ${
+                            item.score_impact > 0 
+                              ? 'bg-green-100 text-green-800' 
+                              : item.score_impact < 0 
+                              ? 'bg-red-100 text-red-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {item.score_impact > 0 ? '+' : ''}{item.score_impact}
+                          </span>
+                        </td>
+                        <td className="py-2 px-2">
+                          <span className="text-xs text-gray-600">
+                            {item.risk_category || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="py-2 px-2">
+                          {item.category_impacts && Object.keys(item.category_impacts).length > 0 ? (
+                            <div className="space-y-1">
+                              {Object.entries(item.category_impacts).map(([category, impact]) => (
+                                <div key={category} className="flex items-center justify-between text-xs">
+                                  <span className="text-gray-600">{category}:</span>
+                                  <span className={`ml-2 font-medium ${
+                                    impact > 0 ? 'text-green-600' : impact < 0 ? 'text-red-600' : 'text-gray-600'
+                                  }`}>
+                                    {impact > 0 ? '+' : ''}{impact}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Résumé par catégorie */}
+              {score.category_scores && score.category_scores.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h5 className="font-medium text-gray-900 mb-2 text-sm">Résumé par catégorie</h5>
+                  <div className="grid grid-cols-2 gap-2">
+                    {score.category_scores.map((category, index) => (
+                      <div key={index} className="bg-gray-50 rounded p-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-gray-700">{category.category_name}</span>
+                          <span className="text-xs text-gray-600">
+                            {category.score}/{category.max_score} ({category.percentage.toFixed(0)}%)
+                          </span>
+                        </div>
+                        <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5">
+                          <div 
+                            className="h-1.5 rounded-full" 
+                            style={{
+                              backgroundColor: category.color,
+                              width: `${category.percentage}%`
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Diagnostics */}
           <div className="bg-yellow-50 rounded-lg p-4">
             <h4 className="font-medium text-gray-900 mb-2">Diagnostics</h4>

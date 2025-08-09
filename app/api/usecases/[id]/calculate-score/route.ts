@@ -168,45 +168,49 @@ export async function POST(
     let modelScore: number | null = null;
     
     try {
-      // Récupérer les informations du modèle IA associé au cas d'usage
-      const { data: usecaseWithModel, error: modelError } = await supabase
+      // 1. D'abord récupérer le primary_model_id du cas d'usage
+      const { data: usecaseModel, error: modelError } = await supabase
         .from('usecases')
-        .select(`
-          primary_model_id,
-          compl_ai_models (
-            model_name,
-            compl_ai_evaluations (
-              score
-            )
-          )
-        `)
+        .select('primary_model_id')
         .eq('id', finalUsecaseId)
         .single();
       
       if (modelError) {
         console.warn('⚠️ Impossible de récupérer les infos du modèle:', modelError.message);
-      } else if (usecaseWithModel?.compl_ai_models && Array.isArray(usecaseWithModel.compl_ai_models)) {
-        // compl_ai_models est un tableau car c'est une relation un-à-plusieurs
-        const model = usecaseWithModel.compl_ai_models[0]; // Prendre le premier modèle
+      } else if (usecaseModel?.primary_model_id) {
+        console.log(`📋 Modèle trouvé: ${usecaseModel.primary_model_id}`);
         
-        if (model?.compl_ai_evaluations && Array.isArray(model.compl_ai_evaluations)) {
-          // Filtrer les scores valides (non null)
-          const validScores = model.compl_ai_evaluations
-            .filter((evaluation: any) => evaluation.score !== null)
-            .map((evaluation: any) => evaluation.score);
+        // 2. Récupérer les évaluations du modèle avec les scores MaydAI
+        const { data: evaluations, error: evalError } = await supabase
+          .from('compl_ai_evaluations')
+          .select('maydai_score, principle_id')
+          .eq('model_id', usecaseModel.primary_model_id)
+          .not('maydai_score', 'is', null);
         
-          // Calculer le score moyen si des scores existent
-          if (validScores.length > 0) {
-            const totalScore = validScores.reduce((sum: number, score: number) => sum + score, 0);
-            const averageScore = totalScore / validScores.length;
-            
-            // Convertir le score (0-1) en score sur 20
-            modelScore = averageScore * COMPL_AI_MULTIPLIER;
-            
-            console.log(`🎯 Score modèle COMPL-AI: ${modelScore}/20 (${Math.round(averageScore * 100)}%)`);
-          } else {
-            console.log('ℹ️ Aucun score COMPL-AI valide trouvé');
-          }
+        if (evalError) {
+          console.warn('⚠️ Erreur lors de la récupération des évaluations:', evalError.message);
+        } else if (evaluations && evaluations.length > 0) {
+          // 3. Calculer la somme des scores MaydAI par principe
+          // Les scores MaydAI sont déjà normalisés : chaque principe vaut max 4 points
+          const principleScores: Record<string, number> = {};
+          
+          evaluations.forEach((evaluation: any) => {
+            const principleId = evaluation.principle_id;
+            if (!principleScores[principleId]) {
+              principleScores[principleId] = 0;
+            }
+            principleScores[principleId] += evaluation.maydai_score;
+          });
+          
+          // 4. Calculer le score total (somme des scores par principe, max 20)
+          const totalMaydaiScore = Object.values(principleScores).reduce((sum, score) => sum + score, 0);
+          modelScore = Math.min(totalMaydaiScore, 20); // Plafonner à 20
+          
+          console.log(`📊 Scores par principe:`, principleScores);
+          console.log(`🎯 Score modèle COMPL-AI total: ${modelScore.toFixed(2)}/20 (${Math.round(modelScore / 20 * 100)}%)`);
+          console.log(`📈 Nombre de principes évalués: ${Object.keys(principleScores).length}`);
+        } else {
+          console.log('ℹ️ Aucun score MaydAI trouvé pour ce modèle');
         }
       } else {
         console.log('ℹ️ Aucun modèle COMPL-AI associé à ce cas d\'usage');
