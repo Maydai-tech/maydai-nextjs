@@ -15,6 +15,7 @@ interface UseCaseDetailsProps {
 
 export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: UseCaseDetailsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isRecalculatingScore, setIsRecalculatingScore] = useState(false)
 
   const handleModelEdit = () => {
     setIsModalOpen(true)
@@ -23,9 +24,21 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
   const handleModelSave = async (selectedModel: PartialComplAIModel | null) => {
     if (!onUpdateUseCase) return
     
-    await onUpdateUseCase({ 
-      primary_model_id: selectedModel?.id || undefined 
-    })
+    try {
+      setIsRecalculatingScore(true)
+      // Attendre que la mise à jour soit terminée (inclut le recalcul automatique du score)
+      await onUpdateUseCase({ 
+        primary_model_id: selectedModel?.id || undefined 
+      })
+      
+      // Laisser un délai supplémentaire pour que le score soit visible dans l'UI
+      setTimeout(() => {
+        setIsRecalculatingScore(false)
+      }, 1000)
+    } catch (error) {
+      setIsRecalculatingScore(false)
+      throw error
+    }
   }
 
   const handleModalClose = () => {
@@ -148,7 +161,7 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
         onClose={handleModalClose}
         currentModel={useCase.compl_ai_models || null}
         onSave={handleModelSave}
-        saving={updating}
+        saving={updating || isRecalculatingScore}
       />
     </div>
   )

@@ -139,13 +139,15 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
     
     try {
       setIsRecalculatingScore(true)
+      // Attendre que la mise à jour soit terminée (inclut le recalcul automatique du score)
       await onUpdateUseCase({ 
         primary_model_id: selectedModel?.id || undefined 
       })
-      // Laisser un délai pour le recalcul du score
+      
+      // Laisser un délai supplémentaire pour que le score soit visible dans l'UI
       setTimeout(() => {
         setIsRecalculatingScore(false)
-      }, 2000)
+      }, 1000)
     } catch (error) {
       setIsRecalculatingScore(false)
       throw error
