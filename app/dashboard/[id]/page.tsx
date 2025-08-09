@@ -21,6 +21,7 @@ import {
   Search,
   X
 } from 'lucide-react'
+import WorldMap from '@/components/WorldMap'
 
 interface Company {
   id: string
@@ -41,6 +42,7 @@ interface UseCase {
   created_at: string
   technology_partner: string
   responsible_service: string
+  deployment_countries?: string[]
 }
 
 interface DashboardProps {
@@ -207,6 +209,21 @@ export default function CompanyDashboard({ params }: DashboardProps) {
     ).length
   }
 
+  // Get all unique deployment countries from use cases
+  const getDeploymentCountries = () => {
+    const allCountries = new Set<string>()
+    useCases.forEach(useCase => {
+      if (useCase.deployment_countries && Array.isArray(useCase.deployment_countries)) {
+        useCase.deployment_countries.forEach(country => {
+          if (country && typeof country === 'string') {
+            allCountries.add(country.trim())
+          }
+        })
+      }
+    })
+    return Array.from(allCountries).sort()
+  }
+
   // Show loading state during SSR and initial client load
   if (!mounted || loading || !companyId) {
     return (
@@ -341,6 +358,12 @@ export default function CompanyDashboard({ params }: DashboardProps) {
             </div>
           </div>
         </div>
+
+        {/* World Map Section */}
+        <WorldMap 
+          deploymentCountries={getDeploymentCountries()} 
+          className=""
+        />
 
         {/* Use Cases Section */}
         <div id="use-cases-section" className="bg-white rounded-xl shadow-sm overflow-hidden">
