@@ -14,6 +14,8 @@ interface LogContext {
   ip?: string
   primary_model_id?: string
   url?: string
+  score_final?: number
+  [key: string]: any // Permet d'autres propriétés dynamiques
 }
 
 interface LogEntry {
