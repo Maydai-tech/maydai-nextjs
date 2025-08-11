@@ -11,9 +11,11 @@ import { ScoreCalculation } from '../ScoreCalculation'
 interface UseCaseSidebarProps {
   useCase: UseCase
   onUpdateUseCase?: (updates: Partial<UseCase>) => Promise<UseCase | null>
+  isRecalculating?: boolean // Propété passée depuis le parent pour indiquer un recalcul en cours
 }
 
-export function UseCaseSidebar({ useCase, onUpdateUseCase }: UseCaseSidebarProps) {
+// Composant sidebar affichant le score et les catégories
+export function UseCaseSidebar({ useCase, onUpdateUseCase, isRecalculating = false }: UseCaseSidebarProps) {
   const [showDebug, setShowDebug] = useState(false)
   const { score, loading, error } = useUseCaseScore(useCase.id)
 
@@ -59,8 +61,8 @@ export function UseCaseSidebar({ useCase, onUpdateUseCase }: UseCaseSidebarProps
 
   return (
     <div className="space-y-6">
-      {/* Score de conformité */}
-      <ScoreCalculation useCase={useCase} onScoreUpdate={onUpdateUseCase} />
+      {/* Section du score de conformité avec indicateur de recalcul */}
+      <ScoreCalculation useCase={useCase} onScoreUpdate={onUpdateUseCase} isRecalculating={isRecalculating} />
       
       {/* Scores par Catégorie */}
       <CategoryScores usecaseId={useCase.id} />

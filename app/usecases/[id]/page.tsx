@@ -17,7 +17,8 @@ export default function UseCaseDetailPage() {
   const [mounted, setMounted] = useState(false)
 
   const useCaseId = params.id as string
-  const { useCase, progress, loading: loadingData, error, updateUseCase, updating } = useUseCaseData(useCaseId)
+  // Récupération des données du use case avec état de recalcul
+  const { useCase, progress, loading: loadingData, error, updateUseCase, updating, isRecalculating } = useUseCaseData(useCaseId)
   const { goToEvaluation, goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
 
   // Prevent hydration mismatch
@@ -80,8 +81,8 @@ export default function UseCaseDetailPage() {
           updating={updating}
         />
 
-        {/* Sidebar */}
-        <UseCaseSidebar useCase={useCase} onUpdateUseCase={updateUseCase} />
+        {/* Sidebar avec transmission de l'état de recalcul */}
+        <UseCaseSidebar useCase={useCase} onUpdateUseCase={updateUseCase} isRecalculating={isRecalculating} />
       </div>
     </UseCaseLayout>
   )

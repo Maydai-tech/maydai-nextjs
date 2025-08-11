@@ -9,9 +9,11 @@ import { useAuth } from '@/lib/auth'
 interface ScoreCalculationProps {
   useCase: UseCase
   onScoreUpdate?: (updatedUseCase: Partial<UseCase>) => void
+  isRecalculating?: boolean // Indique si un recalcul est en cours suite à un changement de modèle
 }
 
-export function ScoreCalculation({ useCase, onScoreUpdate }: ScoreCalculationProps) {
+// Composant de calcul et d'affichage du score de conformité
+export function ScoreCalculation({ useCase, onScoreUpdate, isRecalculating = false }: ScoreCalculationProps) {
   const [calculating, setCalculating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -76,13 +78,23 @@ export function ScoreCalculation({ useCase, onScoreUpdate }: ScoreCalculationPro
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Score de conformité</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        Score de conformité
+        {/* Indicateur visuel pendant le recalcul automatique */}
+        {isRecalculating && (
+          <span className="ml-2 text-sm text-blue-600">
+            <RefreshCw className="h-4 w-4 inline animate-spin mr-1" />
+            Mise à jour...
+          </span>
+        )}
+      </h3>
       
       {/* Affichage du score actuel */}
       {hasScore ? (
         <div className="space-y-4">
           {/* Score principal */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg">
+          {/* Zone d'affichage du score avec effet visuel pendant le recalcul */}
+          <div className={`bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg ${isRecalculating ? 'opacity-50' : ''}`}>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-600">Score final</span>
               {useCase.is_eliminated && (
@@ -92,7 +104,12 @@ export function ScoreCalculation({ useCase, onScoreUpdate }: ScoreCalculationPro
               )}
             </div>
             <div className="text-3xl font-bold text-blue-600">
-              {useCase.score_final?.toFixed(1)}%
+              {/* Animation pendant le recalcul */}
+              {isRecalculating ? (
+                <span className="animate-pulse">...</span>
+              ) : (
+                `${useCase.score_final?.toFixed(1)}%`
+              )}
             </div>
             
             {/* Détails du score */}
@@ -149,14 +166,14 @@ export function ScoreCalculation({ useCase, onScoreUpdate }: ScoreCalculationPro
         </div>
       )}
       
-      {/* Bouton de calcul */}
+      {/* Bouton de recalcul manuel - désactivé pendant les calculs */}
       <button
         onClick={handleCalculateScore}
-        disabled={calculating}
+        disabled={calculating || isRecalculating}
         className={`
           mt-4 w-full inline-flex items-center justify-center px-4 py-2
           text-sm font-medium rounded-lg transition-colors
-          ${calculating 
+          ${calculating || isRecalculating
             ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
             : 'bg-blue-600 text-white hover:bg-blue-700'
           }
