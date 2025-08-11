@@ -84,7 +84,7 @@ export async function GET(
       }
 
       // Calculer le score complet pour obtenir les category_scores
-      const fullScoreData = await calculateScore(usecaseId, responses || [])
+      const fullScoreData = await calculateScore(usecaseId, responses || [], supabase)
       
       return NextResponse.json({
         usecase_id: usecaseId,
@@ -112,7 +112,7 @@ export async function GET(
     }
 
     // Calculer le score
-    const scoreData = await calculateScore(usecaseId, responses || [])
+    const scoreData = await calculateScore(usecaseId, responses || [], supabase)
 
     // Retourner le score calculé
     return NextResponse.json(scoreData)

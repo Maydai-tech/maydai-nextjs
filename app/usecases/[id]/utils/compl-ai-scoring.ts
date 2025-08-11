@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Interface pour le score COMPL-AI d'un modèle
 export interface ComplAiModelScore {
@@ -18,10 +19,12 @@ export interface ComplAiModelScore {
 /**
  * Récupère le score COMPL-AI complet d'un modèle par son ID (avec scores MaydAI calculés en TypeScript)
  */
-export async function getComplAiScore(modelId: string): Promise<ComplAiModelScore | null> {
+export async function getComplAiScore(modelId: string, supabaseClient?: SupabaseClient): Promise<ComplAiModelScore | null> {
   try {
+    const client = supabaseClient || supabase
+    
     // Récupérer les informations de base du modèle
-    const { data: model, error: modelError } = await supabase
+    const { data: model, error: modelError } = await client
       .from('compl_ai_models')
       .select('id, model_name, model_provider')
       .eq('id', modelId)
@@ -33,7 +36,7 @@ export async function getComplAiScore(modelId: string): Promise<ComplAiModelScor
     }
 
     // Récupérer toutes les évaluations avec les principes
-    const { data: evaluations, error: evaluationsError } = await supabase
+    const { data: evaluations, error: evaluationsError } = await client
       .from('compl_ai_evaluations')
       .select(`
         score,
@@ -128,7 +131,7 @@ export async function getComplAiScore(modelId: string): Promise<ComplAiModelScor
  * Calcule le bonus à appliquer basé sur le score COMPL-AI original
  * Selon la formule fournie : Score final = (Score de base + Bonus) / Score maximum possible
  */
-export function calculateComplAiBonus(complAiScore: number, baseScore: number = 90): number {
+export function calculateComplAiBonus(complAiScore: number): number {
   // Le score COMPL-AI est un pourcentage (0-1), on le convertit en points sur 20
   const bonusPoints = complAiScore * 20
   
@@ -148,9 +151,61 @@ export function calculateMaydAiBonus(maydaiScore: number): number {
 }
 
 /**
+ * Mapping des codes de principes COMPL-AI vers les catégories de risque MaydAI
+ */
+const PRINCIPLE_TO_CATEGORY_MAPPING: Record<string, string> = {
+  'transparency': 'transparency',
+  'technical_robustness_safety': 'technical_robustness',
+  'privacy_data_governance': 'privacy_data',
+  'social_environmental_wellbeing': 'social_environmental',
+  'diversity_non_discrimination_fairness': 'diversity_fairness'
+}
+
+/**
+ * Récupère les scores MaydAI par principe pour un modèle donné
+ */
+export async function getMaydAiScoresByPrinciple(modelId: string, supabaseClient?: SupabaseClient): Promise<Record<string, number>> {
+  try {
+    const client = supabaseClient || supabase
+    
+    const { data: scores, error } = await client
+      .from('compl_ai_maydai_scores')
+      .select('principle_code, average_maydai_score')
+      .eq('model_id', modelId)
+
+    if (error) {
+      console.error('Erreur lors de la récupération des scores MaydAI par principe:', error)
+      return {}
+    }
+
+    if (!scores || scores.length === 0) {
+      return {}
+    }
+
+    // Mapper les scores vers les catégories de risque MaydAI
+    const mappedScores: Record<string, number> = {}
+    
+    scores.forEach(score => {
+      const categoryId = PRINCIPLE_TO_CATEGORY_MAPPING[score.principle_code]
+      if (categoryId) {
+        // Convertir le score en nombre et s'assurer qu'il ne dépasse pas 4
+        const scoreValue = Math.min(Math.max(parseFloat(score.average_maydai_score) || 0, 0), 4)
+        mappedScores[categoryId] = scoreValue
+      }
+    })
+
+    return mappedScores
+
+  } catch (error) {
+    console.error('Erreur lors de la récupération des scores MaydAI par principe:', error)
+    return {}
+  }
+}
+
+/**
  * Récupère et calcule le score COMPL-AI complet pour un use case
  */
-export async function getUseCaseComplAiBonus(usecaseId: string): Promise<{
+export async function getUseCaseComplAiBonus(usecaseId: string, supabaseClient?: SupabaseClient): Promise<{
   bonus: number
   complAiScore: number | null
   maydaiBonus: number
@@ -162,12 +217,18 @@ export async function getUseCaseComplAiBonus(usecaseId: string): Promise<{
   } | null
 }> {
   try {
+    const client = supabaseClient || supabase
+    
     // Récupérer le use case avec son modèle associé
-    const { data: usecase, error: usecaseError } = await supabase
+    const { data: usecase, error: usecaseError } = await client
       .from('usecases')
       .select('primary_model_id')
       .eq('id', usecaseId)
       .single()
+
+    console.log('usecase:', usecase)
+    console.log('usecaseError:', usecaseError)
+    console.log('usecaseId:', usecaseId)
 
     if (usecaseError || !usecase || !usecase.primary_model_id) {
       return {
@@ -180,7 +241,7 @@ export async function getUseCaseComplAiBonus(usecaseId: string): Promise<{
     }
 
     // Récupérer le score COMPL-AI du modèle
-    const complAiData = await getComplAiScore(usecase.primary_model_id)
+    const complAiData = await getComplAiScore(usecase.primary_model_id, client)
     
     if (!complAiData) {
       return {

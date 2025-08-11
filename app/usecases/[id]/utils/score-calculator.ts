@@ -1,10 +1,82 @@
 import { loadQuestions } from '../utils/questions-loader'
 import { UseCaseScore, ScoreBreakdown, CategoryScore } from '../types/usecase'
 import { RISK_CATEGORIES } from './risk-categories'
-import { getUseCaseComplAiBonus } from './compl-ai-scoring'
+import { getUseCaseComplAiBonus, getMaydAiScoresByPrinciple } from './compl-ai-scoring'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 const BASE_SCORE = 90
 const MAX_POSSIBLE_SCORE = 120 // 90 de base + 30 de bonus COMPL-AI max
+
+// Fonction de mapping des catégories du JSON vers les IDs de risk-categories.ts
+function mapCategoryFromJson(jsonCategoryId: string): string {
+  // Seule différence : human_oversight (JSON) → human_agency (risk-categories)
+  if (jsonCategoryId === 'human_oversight') {
+    return 'human_agency'
+  }
+  return jsonCategoryId
+}
+
+// Calcul des scores maximum par catégorie basé sur TOUTES les questions du JSON
+function calculateMaxCategoryScoresFromAllQuestions(): Record<string, number> {
+  const questions = loadQuestions()
+  const maxScores: Record<string, number> = {}
+  
+  // Initialiser toutes les catégories à 0
+  Object.keys(RISK_CATEGORIES).forEach(categoryId => {
+    maxScores[categoryId] = 0
+  })
+  
+  // Parcourir toutes les questions pour trouver les impacts maximum
+  Object.values(questions).forEach(question => {
+    // Pour les questions radio/conditional : seule UNE option peut être sélectionnée
+    if (question.type === 'radio' || question.type === 'conditional') {
+      const categoryMaxImpacts: Record<string, number> = {}
+      
+      question.options.forEach(option => {
+        if (option.category_impacts) {
+          Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]) => {
+            if (impact < 0) { // Seuls les impacts négatifs comptent pour le maximum
+              const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+              if (maxScores[mappedCategoryId] !== undefined) {
+                // Prendre le maximum des impacts négatifs pour cette catégorie dans cette question
+                const absImpact = Math.abs(impact)
+                categoryMaxImpacts[mappedCategoryId] = Math.max(
+                  categoryMaxImpacts[mappedCategoryId] || 0,
+                  absImpact
+                )
+              }
+            }
+          })
+        }
+      })
+      
+      // Ajouter le maximum de chaque catégorie pour cette question
+      Object.entries(categoryMaxImpacts).forEach(([categoryId, maxImpact]) => {
+        maxScores[categoryId] += maxImpact
+      })
+    }
+    // Pour les questions checkbox/tags : TOUTES les options peuvent être sélectionnées
+    else if (question.type === 'checkbox' || question.type === 'tags') {
+      question.options.forEach(option => {
+        if (option.category_impacts) {
+          Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]) => {
+            if (impact < 0) { // Seuls les impacts négatifs comptent pour le maximum
+              const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+              if (maxScores[mappedCategoryId] !== undefined) {
+                maxScores[mappedCategoryId] += Math.abs(impact)
+              }
+            }
+          })
+        }
+      })
+    }
+  })
+  
+  return maxScores
+}
+
+// Constante des scores maximum par catégorie (calculée une seule fois)
+const CATEGORY_MAX_SCORES = calculateMaxCategoryScoresFromAllQuestions()
 
 // Interface pour les impacts d'une réponse
 interface AnswerImpacts {
@@ -40,26 +112,36 @@ function calculateQuestionCategoryPoints(questionCode: string, response: any, qu
   
   // Calculer les points selon le type de question
   if (question.type === 'radio' && response.single_value) {
-    // Pour radio : d'abord identifier les points possibles
+    // Pour radio : prendre le MAXIMUM des impacts négatifs par catégorie (même logique que calculateMaxCategoryScoresFromAllQuestions)
+    const categoryMaxImpacts: Record<string, number> = {}
+    
     question.options.forEach((option: any) => {
       if (option.category_impacts) {
-        Object.entries(option.category_impacts).forEach(([categoryId, impact]: [string, any]) => {
+        Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
           if (impact < 0) {
-            if (!categoryPointsData[categoryId]) {
-              categoryPointsData[categoryId] = { possible: 0, earned: 0 }
-            }
-            categoryPointsData[categoryId].possible += Math.abs(impact)
+            const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+            const absImpact = Math.abs(impact)
+            categoryMaxImpacts[mappedCategoryId] = Math.max(
+              categoryMaxImpacts[mappedCategoryId] || 0,
+              absImpact
+            )
           }
         })
       }
     })
     
+    // Initialiser les points possibles avec les maximums calculés
+    Object.entries(categoryMaxImpacts).forEach(([categoryId, maxImpact]) => {
+      categoryPointsData[categoryId] = { possible: maxImpact, earned: 0 }
+    })
+    
     // Ensuite calculer les points gagnés
     const selectedOption = question.options.find((opt: any) => opt.code === response.single_value)
     if (selectedOption?.category_impacts) {
-      Object.entries(selectedOption.category_impacts).forEach(([categoryId, impact]: [string, any]) => {
-        if (categoryPointsData[categoryId]) {
-          categoryPointsData[categoryId].earned = impact >= 0 ? categoryPointsData[categoryId].possible : 0
+      Object.entries(selectedOption.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
+        const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+        if (categoryPointsData[mappedCategoryId]) {
+          categoryPointsData[mappedCategoryId].earned = impact >= 0 ? categoryPointsData[mappedCategoryId].possible : 0
         }
       })
     } else {
@@ -77,17 +159,18 @@ function calculateQuestionCategoryPoints(questionCode: string, response: any, qu
       const isSelected = selectedCodes.includes(option.code)
       
       if (option.category_impacts) {
-        Object.entries(option.category_impacts).forEach(([categoryId, impact]: [string, any]) => {
+        Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
           if (impact < 0) {
-            if (!categoryPointsData[categoryId]) {
-              categoryPointsData[categoryId] = { possible: 0, earned: 0 }
+            const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+            if (!categoryPointsData[mappedCategoryId]) {
+              categoryPointsData[mappedCategoryId] = { possible: 0, earned: 0 }
             }
             // Points possibles
-            categoryPointsData[categoryId].possible += Math.abs(impact)
+            categoryPointsData[mappedCategoryId].possible += Math.abs(impact)
             
             // Points gagnés si l'option négative n'est PAS sélectionnée
             if (!isSelected) {
-              categoryPointsData[categoryId].earned += Math.abs(impact)
+              categoryPointsData[mappedCategoryId].earned += Math.abs(impact)
             }
           }
         })
@@ -95,25 +178,35 @@ function calculateQuestionCategoryPoints(questionCode: string, response: any, qu
     })
   }
   else if (question.type === 'conditional' && response.conditional_main) {
-    // Pour conditional : même logique que radio
+    // Pour conditional : même logique que radio - prendre le MAXIMUM des impacts négatifs par catégorie
+    const categoryMaxImpacts: Record<string, number> = {}
+    
     question.options.forEach((option: any) => {
       if (option.category_impacts) {
-        Object.entries(option.category_impacts).forEach(([categoryId, impact]: [string, any]) => {
+        Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
           if (impact < 0) {
-            if (!categoryPointsData[categoryId]) {
-              categoryPointsData[categoryId] = { possible: 0, earned: 0 }
-            }
-            categoryPointsData[categoryId].possible += Math.abs(impact)
+            const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+            const absImpact = Math.abs(impact)
+            categoryMaxImpacts[mappedCategoryId] = Math.max(
+              categoryMaxImpacts[mappedCategoryId] || 0,
+              absImpact
+            )
           }
         })
       }
     })
     
+    // Initialiser les points possibles avec les maximums calculés
+    Object.entries(categoryMaxImpacts).forEach(([categoryId, maxImpact]) => {
+      categoryPointsData[categoryId] = { possible: maxImpact, earned: 0 }
+    })
+    
     const selectedOption = question.options.find((opt: any) => opt.code === response.conditional_main)
     if (selectedOption?.category_impacts) {
-      Object.entries(selectedOption.category_impacts).forEach(([categoryId, impact]: [string, any]) => {
-        if (categoryPointsData[categoryId]) {
-          categoryPointsData[categoryId].earned = impact >= 0 ? categoryPointsData[categoryId].possible : 0
+      Object.entries(selectedOption.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
+        const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+        if (categoryPointsData[mappedCategoryId]) {
+          categoryPointsData[mappedCategoryId].earned = impact >= 0 ? categoryPointsData[mappedCategoryId].possible : 0
         }
       })
     } else {
@@ -134,7 +227,7 @@ function calculateQuestionCategoryPoints(questionCode: string, response: any, qu
   return { possiblePoints, earnedPoints }
 }
 
-export async function calculateScore(usecaseId: string, responses: any[]): Promise<UseCaseScore> {
+export async function calculateScore(usecaseId: string, responses: any[], supabaseClient?: SupabaseClient): Promise<UseCaseScore> {
   try {
     // console.log('Starting score calculation for usecase:', usecaseId)
     // console.log('Number of responses to process:', responses?.length || 0)
@@ -180,17 +273,16 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
       }
     }
     
-    // Initialiser les compteurs par catégorie avec la nouvelle logique points gagnés/possibles
+    // Initialiser les compteurs par catégorie avec la logique points perdus
     const categoryData: Record<string, { 
-      possiblePoints: number,      // Total des points possibles basé sur les questions répondues
-      earnedPoints: number,        // Points effectivement gagnés
+      lostPoints: number,          // Points perdus par les réponses malus
       questionsImpacted: Set<string>
     }> = {}
     
+
     Object.keys(RISK_CATEGORIES).forEach(categoryId => {
       categoryData[categoryId] = { 
-        possiblePoints: 0,
-        earnedPoints: 0,
+        lostPoints: 0,
         questionsImpacted: new Set()
       }
     })
@@ -217,10 +309,11 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
           const impacts = getAnswerImpactsFromJSON(response.question_code, answerCode)
           questionImpact = impacts.score_impact
           
-          // Appliquer les impacts par catégorie
+          // Appliquer les impacts par catégorie avec mapping
           if (impacts.category_impacts) {
-            Object.entries(impacts.category_impacts).forEach(([categoryId, impact]) => {
-              categoryImpactsForQuestion[categoryId] = impact
+            Object.entries(impacts.category_impacts).forEach(([jsonCategoryId, impact]) => {
+              const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+              categoryImpactsForQuestion[mappedCategoryId] = impact
             })
           }
           
@@ -242,10 +335,11 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
             totalImpact += answerImpacts.score_impact
           }
           
-          // Cumuler les impacts par catégorie
+          // Cumuler les impacts par catégorie avec mapping
           if (answerImpacts.category_impacts) {
-            Object.entries(answerImpacts.category_impacts).forEach(([categoryId, impact]) => {
-              categoryImpactsForQuestion[categoryId] = (categoryImpactsForQuestion[categoryId] || 0) + impact
+            Object.entries(answerImpacts.category_impacts).forEach(([jsonCategoryId, impact]) => {
+              const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+              categoryImpactsForQuestion[mappedCategoryId] = (categoryImpactsForQuestion[mappedCategoryId] || 0) + impact
             })
           }
         }
@@ -261,10 +355,11 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
         const impacts = getAnswerImpactsFromJSON(response.question_code, selectedCode)
         questionImpact = impacts.score_impact
         
-        // Appliquer les impacts par catégorie
+        // Appliquer les impacts par catégorie avec mapping
         if (impacts.category_impacts) {
-          Object.entries(impacts.category_impacts).forEach(([categoryId, impact]) => {
-            categoryImpactsForQuestion[categoryId] = impact
+          Object.entries(impacts.category_impacts).forEach(([jsonCategoryId, impact]) => {
+            const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+            categoryImpactsForQuestion[mappedCategoryId] = impact
           })
         }
         
@@ -274,21 +369,16 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
       // Ajouter l'impact au score total
       currentScore += questionImpact
       
-      // Calculer les points par catégorie avec la nouvelle logique
-      const categoryPoints = calculateQuestionCategoryPoints(response.question_code, response, questions)
-      
-      // Appliquer les points aux catégories concernées
-      Object.entries(categoryPoints.possiblePoints).forEach(([categoryId, possiblePoints]) => {
-        if (categoryData[categoryId]) {
-          categoryData[categoryId].possiblePoints += possiblePoints
-          categoryData[categoryId].earnedPoints += categoryPoints.earnedPoints[categoryId] || 0
+      // Calculer directement les points perdus par catégorie
+      Object.entries(categoryImpactsForQuestion).forEach(([categoryId, impact]) => {
+        if (categoryData[categoryId] && impact < 0) {
+          categoryData[categoryId].lostPoints += Math.abs(impact)
           categoryData[categoryId].questionsImpacted.add(response.question_code)
-          // console.log(`Category ${categoryId}: +${possiblePoints} possible, +${categoryPoints.earnedPoints[categoryId]} earned for question ${response.question_code}`)
         }
       })
       
       // Ajouter au breakdown si impact non nul (global ou par catégorie)
-      if (questionImpact !== 0 || Object.keys(categoryPoints.possiblePoints).length > 0) {
+      if (questionImpact !== 0 || Object.keys(categoryImpactsForQuestion).length > 0) {
         // Créer une valeur de réponse formatée selon le type
         let answerValue: any = null
         if (response.single_value) {
@@ -308,7 +398,7 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
         }
         
         // Déterminer les catégories impactées pour le breakdown
-        const impactedCategories = Object.keys(categoryPoints.possiblePoints).join(', ') || 'score_global'
+        const impactedCategories = Object.keys(categoryImpactsForQuestion).join(', ') || 'score_global'
         
         // Créer les impacts de catégorie pour le breakdown (conserver l'ancienne structure)
         const categoryImpactsForBreakdown: Record<string, number> = {}
@@ -336,16 +426,24 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
       currentScore = 0
     }
 
-    // Calculer le bonus COMPL-AI si le use case n'est pas éliminé
+    // Calculer le bonus COMPL-AI et récupérer les scores MaydAI par principe
     let complAiBonus = 0
     let complAiScore: number | null = null
     let modelInfo: { id: string; name: string; provider: string } | null = null
+    let maydaiScoresByPrinciple: Record<string, number> = {}
     
     if (!isEliminated) {
-      const complAiData = await getUseCaseComplAiBonus(usecaseId)
+      const complAiData = await getUseCaseComplAiBonus(usecaseId, supabaseClient)
+
       complAiBonus = complAiData.bonus
       complAiScore = complAiData.complAiScore
       modelInfo = complAiData.modelInfo
+      
+      // Récupérer les scores MaydAI par principe si un modèle est associé
+      if (modelInfo?.id) {
+        maydaiScoresByPrinciple = await getMaydAiScoresByPrinciple(modelInfo.id, supabaseClient)
+      }
+
       
       // Ajouter le bonus au score (selon la formule fournie)
       currentScore = Math.min(currentScore + complAiBonus, MAX_POSSIBLE_SCORE)
@@ -364,23 +462,35 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
       }
     }
 
-    // Calculer les scores par catégorie avec la nouvelle logique points gagnés/possibles
+    // Calculer les scores par catégorie avec les constantes pré-calculées
     const categoryScores: CategoryScore[] = Object.entries(RISK_CATEGORIES).map(([categoryId, category]) => {
       const data = categoryData[categoryId]
       
-      // Nouvelle logique : points gagnés / points possibles
-      const score = data.earnedPoints
-      const maxScore = data.possiblePoints
+      // Calculer le score questionnaire : maximum - points perdus
+      let maxQuestionnaireScore = CATEGORY_MAX_SCORES[categoryId] || 0
+      let questionnaireScore = Math.max(0, maxQuestionnaireScore - data.lostPoints)
+      let maydaiScore = 0
+      let maxMaydaiScore = 0
       
-      // Si aucune question n'impacte cette catégorie, score parfait (100%)
-      const percentage = maxScore > 0 ? 
-        Math.round((score / maxScore) * 100) : 100
+      // Vérifier si ce principe a un score MaydAI
+      if (maydaiScoresByPrinciple[categoryId]) {
+        maydaiScore = maydaiScoresByPrinciple[categoryId]
+        maxMaydaiScore = 4 // Chaque principe MaydAI vaut max 4 points
+      }
+
+      // Calcul final : questionnaire + MaydAI
+      const totalScore = questionnaireScore + maydaiScore
+      const totalMaxScore = maxQuestionnaireScore + maxMaydaiScore
+
+      // Si aucune question n'impacte cette catégorie et pas de score MaydAI, score parfait (100%)
+      const percentage = totalMaxScore > 0 ? 
+        Math.round((totalScore / totalMaxScore) * 100) : 100
       
       return {
         category_id: categoryId,
         category_name: category.shortName,
-        score: score,
-        max_score: maxScore,
+        score: totalScore,
+        max_score: totalMaxScore,
         percentage: percentage,
         question_count: data.questionsImpacted.size, // Nombre de questions qui ont impacté cette catégorie
         color: category.color,
