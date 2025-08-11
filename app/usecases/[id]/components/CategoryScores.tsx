@@ -15,7 +15,7 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par Catégorie</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par principes</h3>
         <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="animate-pulse">
@@ -48,7 +48,7 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
   if (!score) {
     return (
       <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par Catégorie</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par principes</h3>
         <div className="text-center py-4">
           <Info className="h-8 w-8 text-gray-400 mx-auto mb-3" />
           <p className="text-sm text-gray-600">
@@ -66,7 +66,7 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
   if (categoryScores.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par Catégorie</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par principes</h3>
         <div className="text-center py-4">
           <Info className="h-8 w-8 text-gray-400 mx-auto mb-3" />
           <p className="text-sm text-gray-600">
@@ -79,13 +79,12 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par Catégorie</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par principes</h3>
       
       <div className="space-y-4">
         {categoryScores
           .sort((a, b) => b.percentage - a.percentage) // Trier par pourcentage décroissant
           .map((category) => {
-            const percentage = Math.round((category.score / category.max_score) * 100)
             const categoryInfo = RISK_CATEGORIES[category.category_id]
             
             return (
@@ -100,7 +99,7 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="text-sm font-bold text-gray-900">
-                      {percentage}/100
+                      {category.percentage}/100
                     </span>
                   </div>
                 </div>
@@ -109,20 +108,20 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
                     className={`h-2.5 rounded-full transition-all duration-500 ${
-                      percentage >= 80 
+                      category.percentage >= 80 
                         ? 'bg-green-500' 
-                        : percentage >= 60 
+                        : category.percentage >= 60 
                         ? 'bg-yellow-500' 
-                        : percentage >= 40
+                        : category.percentage >= 40
                         ? 'bg-orange-500'
                         : 'bg-red-500'
                     }`}
-                    style={{ width: `${Math.max(percentage, 2)}%` }}
+                    style={{ width: `${Math.max(category.percentage, 2)}%` }}
                   ></div>
                 </div>
                 
                 {/* Description optionnelle pour les scores faibles */}
-                {percentage < 60 && (
+                {category.percentage < 60 && (
                   <p className="text-xs text-gray-600 italic">
                     {categoryInfo?.description}
                   </p>

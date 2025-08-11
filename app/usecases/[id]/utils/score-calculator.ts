@@ -31,6 +31,109 @@ function getAnswerImpactsFromJSON(questionCode: string, answerCode: string): Ans
   }
 }
 
+// Fonction pour calculer les points possibles et gagnés par catégorie pour une question
+function calculateQuestionCategoryPoints(questionCode: string, response: any, questions: Record<string, any>) {
+  const question = questions[questionCode]
+  if (!question) return { possiblePoints: {}, earnedPoints: {} }
+  
+  const categoryPointsData: Record<string, { possible: number, earned: number }> = {}
+  
+  // Calculer les points selon le type de question
+  if (question.type === 'radio' && response.single_value) {
+    // Pour radio : d'abord identifier les points possibles
+    question.options.forEach((option: any) => {
+      if (option.category_impacts) {
+        Object.entries(option.category_impacts).forEach(([categoryId, impact]: [string, any]) => {
+          if (impact < 0) {
+            if (!categoryPointsData[categoryId]) {
+              categoryPointsData[categoryId] = { possible: 0, earned: 0 }
+            }
+            categoryPointsData[categoryId].possible += Math.abs(impact)
+          }
+        })
+      }
+    })
+    
+    // Ensuite calculer les points gagnés
+    const selectedOption = question.options.find((opt: any) => opt.code === response.single_value)
+    if (selectedOption?.category_impacts) {
+      Object.entries(selectedOption.category_impacts).forEach(([categoryId, impact]: [string, any]) => {
+        if (categoryPointsData[categoryId]) {
+          categoryPointsData[categoryId].earned = impact >= 0 ? categoryPointsData[categoryId].possible : 0
+        }
+      })
+    } else {
+      // Aucun impact = tous les points sont gagnés
+      Object.keys(categoryPointsData).forEach(categoryId => {
+        categoryPointsData[categoryId].earned = categoryPointsData[categoryId].possible
+      })
+    }
+  }
+  else if ((question.type === 'checkbox' || question.type === 'tags') && response.multiple_codes) {
+    const selectedCodes = response.multiple_codes || []
+    
+    // Une seule boucle pour calculer à la fois les points possibles ET gagnés
+    question.options.forEach((option: any) => {
+      const isSelected = selectedCodes.includes(option.code)
+      
+      if (option.category_impacts) {
+        Object.entries(option.category_impacts).forEach(([categoryId, impact]: [string, any]) => {
+          if (impact < 0) {
+            if (!categoryPointsData[categoryId]) {
+              categoryPointsData[categoryId] = { possible: 0, earned: 0 }
+            }
+            // Points possibles
+            categoryPointsData[categoryId].possible += Math.abs(impact)
+            
+            // Points gagnés si l'option négative n'est PAS sélectionnée
+            if (!isSelected) {
+              categoryPointsData[categoryId].earned += Math.abs(impact)
+            }
+          }
+        })
+      }
+    })
+  }
+  else if (question.type === 'conditional' && response.conditional_main) {
+    // Pour conditional : même logique que radio
+    question.options.forEach((option: any) => {
+      if (option.category_impacts) {
+        Object.entries(option.category_impacts).forEach(([categoryId, impact]: [string, any]) => {
+          if (impact < 0) {
+            if (!categoryPointsData[categoryId]) {
+              categoryPointsData[categoryId] = { possible: 0, earned: 0 }
+            }
+            categoryPointsData[categoryId].possible += Math.abs(impact)
+          }
+        })
+      }
+    })
+    
+    const selectedOption = question.options.find((opt: any) => opt.code === response.conditional_main)
+    if (selectedOption?.category_impacts) {
+      Object.entries(selectedOption.category_impacts).forEach(([categoryId, impact]: [string, any]) => {
+        if (categoryPointsData[categoryId]) {
+          categoryPointsData[categoryId].earned = impact >= 0 ? categoryPointsData[categoryId].possible : 0
+        }
+      })
+    } else {
+      Object.keys(categoryPointsData).forEach(categoryId => {
+        categoryPointsData[categoryId].earned = categoryPointsData[categoryId].possible
+      })
+    }
+  }
+  
+  const possiblePoints: Record<string, number> = {}
+  const earnedPoints: Record<string, number> = {}
+  
+  Object.entries(categoryPointsData).forEach(([categoryId, data]) => {
+    possiblePoints[categoryId] = data.possible
+    earnedPoints[categoryId] = data.earned
+  })
+  
+  return { possiblePoints, earnedPoints }
+}
+
 export async function calculateScore(usecaseId: string, responses: any[]): Promise<UseCaseScore> {
   try {
     // console.log('Starting score calculation for usecase:', usecaseId)
@@ -77,18 +180,18 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
       }
     }
     
-    // Initialiser les compteurs par catégorie
+    // Initialiser les compteurs par catégorie avec la nouvelle logique points gagnés/possibles
     const categoryData: Record<string, { 
-      totalImpact: number, 
-      questionCount: number,
-      impactedQuestions: Set<string>
+      possiblePoints: number,      // Total des points possibles basé sur les questions répondues
+      earnedPoints: number,        // Points effectivement gagnés
+      questionsImpacted: Set<string>
     }> = {}
     
     Object.keys(RISK_CATEGORIES).forEach(categoryId => {
       categoryData[categoryId] = { 
-        totalImpact: 0, 
-        questionCount: 0,
-        impactedQuestions: new Set()
+        possiblePoints: 0,
+        earnedPoints: 0,
+        questionsImpacted: new Set()
       }
     })
 
@@ -171,17 +274,21 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
       // Ajouter l'impact au score total
       currentScore += questionImpact
       
-      // Appliquer les impacts aux catégories concernées
-      Object.entries(categoryImpactsForQuestion).forEach(([categoryId, impact]) => {
+      // Calculer les points par catégorie avec la nouvelle logique
+      const categoryPoints = calculateQuestionCategoryPoints(response.question_code, response, questions)
+      
+      // Appliquer les points aux catégories concernées
+      Object.entries(categoryPoints.possiblePoints).forEach(([categoryId, possiblePoints]) => {
         if (categoryData[categoryId]) {
-          categoryData[categoryId].totalImpact += impact
-          categoryData[categoryId].impactedQuestions.add(response.question_code)
-          // console.log(`Applied impact ${impact} to category ${categoryId} for question ${response.question_code}`)
+          categoryData[categoryId].possiblePoints += possiblePoints
+          categoryData[categoryId].earnedPoints += categoryPoints.earnedPoints[categoryId] || 0
+          categoryData[categoryId].questionsImpacted.add(response.question_code)
+          // console.log(`Category ${categoryId}: +${possiblePoints} possible, +${categoryPoints.earnedPoints[categoryId]} earned for question ${response.question_code}`)
         }
       })
       
       // Ajouter au breakdown si impact non nul (global ou par catégorie)
-      if (questionImpact !== 0 || Object.keys(categoryImpactsForQuestion).length > 0) {
+      if (questionImpact !== 0 || Object.keys(categoryPoints.possiblePoints).length > 0) {
         // Créer une valeur de réponse formatée selon le type
         let answerValue: any = null
         if (response.single_value) {
@@ -201,7 +308,13 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
         }
         
         // Déterminer les catégories impactées pour le breakdown
-        const impactedCategories = Object.keys(categoryImpactsForQuestion).join(', ') || 'score_global'
+        const impactedCategories = Object.keys(categoryPoints.possiblePoints).join(', ') || 'score_global'
+        
+        // Créer les impacts de catégorie pour le breakdown (conserver l'ancienne structure)
+        const categoryImpactsForBreakdown: Record<string, number> = {}
+        Object.entries(categoryImpactsForQuestion).forEach(([categoryId, impact]) => {
+          categoryImpactsForBreakdown[categoryId] = impact
+        })
         
         breakdown.push({
           question_id: response.question_code,
@@ -210,7 +323,7 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
           score_impact: questionImpact,
           reasoning,
           risk_category: impactedCategories,
-          category_impacts: categoryImpactsForQuestion
+          category_impacts: categoryImpactsForBreakdown
         })
       }
     }
@@ -251,21 +364,27 @@ export async function calculateScore(usecaseId: string, responses: any[]): Promi
       }
     }
 
-    // Calculer les scores par catégorie - toutes les catégories sont indépendantes avec le même score de base
+    // Calculer les scores par catégorie avec la nouvelle logique points gagnés/possibles
     const categoryScores: CategoryScore[] = Object.entries(RISK_CATEGORIES).map(([categoryId, category]) => {
       const data = categoryData[categoryId]
-      const baseScore = BASE_SCORE // Toutes les catégories ont le même score de base de 100
-      const adjustedScore = Math.max(0, baseScore + data.totalImpact)
+      
+      // Nouvelle logique : points gagnés / points possibles
+      const score = data.earnedPoints
+      const maxScore = data.possiblePoints
+      
+      // Si aucune question n'impacte cette catégorie, score parfait (100%)
+      const percentage = maxScore > 0 ? 
+        Math.round((score / maxScore) * 100) : 100
       
       return {
         category_id: categoryId,
         category_name: category.shortName,
-        score: adjustedScore,
-        max_score: baseScore,
-        percentage: Math.round((adjustedScore / baseScore) * 100),
-        question_count: data.impactedQuestions.size, // Nombre de questions qui ont impacté cette catégorie
+        score: score,
+        max_score: maxScore,
+        percentage: percentage,
+        question_count: data.questionsImpacted.size, // Nombre de questions qui ont impacté cette catégorie
         color: category.color,
-        icon: category.icon
+        icon: category.icon || ''
       }
     })
 

@@ -104,7 +104,7 @@
         "label": "Emploi, gestion des travailleurs et accès à l'emploi indépendant",
         "score_impact": -30,
         "category_impacts": {
-          "diversity_fairness": -5
+          "risk_level": -45
         }
       },
       {
@@ -112,7 +112,7 @@
         "label": "Administration de la justice et processus démocratiques",
         "score_impact": -30,
         "category_impacts": {
-          "diversity_fairness": -5
+          "risk_level": -45
         }
       },
       {
@@ -120,7 +120,7 @@
         "label": "Migration, asile et gestion des contrôles aux frontières",
         "score_impact": -30,
         "category_impacts": {
-          "diversity_fairness": -5
+          "risk_level": -45
         }
       },
       {
@@ -128,7 +128,7 @@
         "label": "Gestion et exploitation des infrastructures critiques",
         "score_impact": -30,
         "category_impacts": {
-          "technical_robustness": -5
+          "risk_level": -45
         }
       },
       {
@@ -136,7 +136,7 @@
         "label": "Éducation et formation professionnelle",
         "score_impact": -30,
         "category_impacts": {
-          "diversity_fairness": -5
+          "risk_level": -45
         }
       },
       {
@@ -144,7 +144,7 @@
         "label": "Activités répressives (risque récidive, fiabilité preuves...)",
         "score_impact": -30,
         "category_impacts": {
-          "diversity_fairness": -5
+          "risk_level": -45
         }
       },
       {
@@ -163,22 +163,34 @@
       {
         "code": "E4.N7.Q2.1.A",
         "label": "Identification Biométrique à Distance en Temps Réel dans les Espaces Publics",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "category_impacts": {
+          "risk_level": -80
+        }
       },
       {
         "code": "E4.N7.Q2.1.B",
         "label": "Composant de sécurité dans des secteurs critiques (santé, transports, énergies, etc.)",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "category_impacts": {
+          "risk_level": -80
+        }
       },
       {
         "code": "E4.N7.Q2.1.C",
         "label": "Évaluations dans un système d'éducation ou en entreprise",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "category_impacts": {
+          "risk_level": -80
+        }
       },
       {
         "code": "E4.N7.Q2.1.D",
         "label": "Accès et jouissance de services essentiels privés et publics",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "category_impacts": {
+          "risk_level": -80
+        }
       },
       {
         "code": "E4.N7.Q2.1.E",
