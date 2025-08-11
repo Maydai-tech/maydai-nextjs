@@ -13,6 +13,7 @@ interface LogContext {
   userAgent?: string
   ip?: string
   primary_model_id?: string
+  url?: string
 }
 
 interface LogEntry {
@@ -70,6 +71,7 @@ class SecureLogger {
     if (context.companyId) sanitized.companyId = context.companyId
     if (context.useCaseId) sanitized.useCaseId = context.useCaseId
     if (context.requestId) sanitized.requestId = context.requestId
+    if (context.primary_model_id) sanitized.primary_model_id = context.primary_model_id
     
     // Informations réseau limitées
     if (context.userAgent) {
@@ -78,6 +80,10 @@ class SecureLogger {
     if (context.ip) {
       // Masquer les derniers octets de l'IP
       sanitized.ip = context.ip.replace(/\.\d+$/, '.***')
+    }
+    if (context.url) {
+      // Conserver l'URL mais masquer les paramètres sensibles
+      sanitized.url = context.url.replace(/([?&][^=]+)=([^&]+)/g, '$1=***')
     }
 
     return sanitized
