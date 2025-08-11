@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Calculator, RefreshCw, AlertCircle, CheckCircle, Info } from 'lucide-react'
 import { UseCase } from '../types/usecase'
-import { scoreService } from '@/lib/score-service'
+import { calculateUseCaseScore } from '@/lib/score-service'
 import { useAuth } from '@/lib/auth'
 
 interface ScoreCalculationProps {
@@ -28,9 +28,7 @@ export function ScoreCalculation({ useCase, onScoreUpdate }: ScoreCalculationPro
     setSuccess(false)
 
     try {
-      // Créer une instance du service avec le token
-      const service = new scoreService.constructor(session.access_token)
-      const result = await service.calculateUseCaseScore(useCase.id)
+      const result = await calculateUseCaseScore(useCase.id, session.access_token)
       
       if (result.success) {
         setSuccess(true)
