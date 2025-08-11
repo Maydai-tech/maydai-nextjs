@@ -13,6 +13,7 @@ interface UseUseCaseDataReturn {
   refetch: () => Promise<void>
   updateUseCase: (updates: Partial<UseCase>) => Promise<UseCase | null>
   updating: boolean
+  isRecalculating: boolean // Indique si le score est en cours de recalcul après un changement de modèle
 }
 
 export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
@@ -23,6 +24,7 @@ export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isRecalculating, setIsRecalculating] = useState(false) // État pour l'animation de recalcul du score
   const isFetching = useRef(false)
 
   // Fonction pour récupérer les données du cas d'usage
@@ -111,16 +113,16 @@ export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
       const updatedUseCase = await response.json()
       setUseCase(updatedUseCase)
 
-      // Si le modèle primaire a été modifié, attendre un peu puis recharger les données
-      // pour récupérer le score mis à jour
+      // Gestion du recalcul du score lors d'un changement de modèle IA
       if (updates.primary_model_id !== undefined) {
-        setTimeout(async () => {
-          try {
-            await fetchUseCaseData()
-          } catch (refreshError) {
-            console.warn('Failed to refresh use case data after model update:', refreshError)
-          }
-        }, 1000) // Attendre 1 seconde pour laisser le temps au calcul du score
+        // Active l'indicateur visuel de recalcul pour informer l'utilisateur
+        setIsRecalculating(true)
+        
+        // Désactive l'indicateur après 2 secondes
+        // L'API retourne déjà les données mises à jour, donc pas besoin de refetch
+        setTimeout(() => {
+          setIsRecalculating(false)
+        }, 2000)
       }
 
       return updatedUseCase
@@ -140,6 +142,7 @@ export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
     updating,
     error,
     refetch,
-    updateUseCase
+    updateUseCase,
+    isRecalculating
   }
 } 

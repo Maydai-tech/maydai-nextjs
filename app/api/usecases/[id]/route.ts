@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
-import { calculateUseCaseScore } from '@/lib/score-service'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -210,19 +209,89 @@ export async function PUT(
       return NextResponse.json({ error: 'Error updating use case' }, { status: 500 })
     }
 
-    // Déclencher le recalcul automatique du score si le modèle a été modifié
+    // Recalcul automatique du score lors d'un changement de modèle IA
+    // Ce processus assure que le score de conformité est mis à jour immédiatement
     if (primary_model_id !== undefined) {
       try {
-        await calculateUseCaseScore(useCaseId, token)
-        logger.info('Score recalculated successfully after model update', { useCaseId, primary_model_id })
+        // Construction de l'URL complète pour l'appel serveur-à-serveur
+        // Les appels serveur nécessitent une URL absolue contrairement aux appels client
+        const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+        const host = request.headers.get('host') || 'localhost:3000'
+        const calculateUrl = `${protocol}://${host}/api/usecases/${useCaseId}/calculate-score`
+        
+        logger.info('Calling calculate score endpoint', { url: calculateUrl, useCaseId, primary_model_id })
+        
+        // Appel à l'endpoint de calcul de score avec authentification
+        const calcResponse = await fetch(calculateUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ usecase_id: useCaseId })
+        })
+
+        // Vérification du succès de l'appel
+        if (!calcResponse.ok) {
+          const errorText = await calcResponse.text()
+          logger.error('Failed to calculate score via API', { 
+            status: calcResponse.status, 
+            error: errorText,
+            useCaseId,
+            primary_model_id 
+          })
+          throw new Error(`Score calculation failed: ${calcResponse.status}`)
+        }
+
+        const calcResult = await calcResponse.json()
+        logger.info('Score recalculated successfully after model update', { 
+          useCaseId, 
+          primary_model_id,
+          score_final: calcResult.scores?.score_final
+        })
+        
+        // Récupération du use case avec les scores fraîchement calculés
+        // Cette requête garantit que l'API retourne les données à jour
+        const { data: useCaseWithNewScore, error: fetchError } = await supabase
+          .from('usecases')
+          .select(`
+            *,
+            companies(
+              id,
+              name,
+              industry,
+              city,
+              country
+            ),
+            compl_ai_models(
+              id,
+              model_name,
+              model_provider,
+              model_type,
+              version
+            )
+          `)
+          .eq('id', useCaseId)
+          .single()
+        
+        if (fetchError) {
+          logger.error('Failed to fetch updated use case after score calculation', fetchError, { useCaseId })
+          // En cas d'échec, on retourne quand même le use case avec le modèle mis à jour
+          return NextResponse.json(updatedUseCase)
+        }
+        
+        // Retour du use case avec les scores recalculés
+        return NextResponse.json(useCaseWithNewScore)
       } catch (scoreError) {
-        // Ne pas faire échouer la mise à jour du modèle si le calcul du score échoue
+        // Gestion d'erreur gracieuse : le changement de modèle reste valide même si le calcul échoue
         const context = createRequestContext(request)
         logger.error('Failed to recalculate score after model update', scoreError, { 
           ...context, 
           useCaseId, 
           primary_model_id 
         })
+        // Retour du use case avec le nouveau modèle mais sans les scores mis à jour
+        return NextResponse.json(updatedUseCase)
       }
     }
 
