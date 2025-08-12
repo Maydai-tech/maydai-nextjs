@@ -12,7 +12,6 @@ export function useUseCaseNavigation(useCaseId: string, companyId: string) {
   const goToCompanies = () => router.push(useCaseRoutes.companies())
 
   const getCurrentSection = () => {
-    if (pathname.includes('/evaluation')) return 'evaluation'
     if (pathname.includes('/rapport')) return 'rapport'
     return 'overview'
   }
