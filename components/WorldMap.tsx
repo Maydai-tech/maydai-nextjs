@@ -121,7 +121,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
 
     // Set up projection
     const projection = d3.geoNaturalEarth1()
-      .scale(150)
+      .scale(175)
       .translate([width / 2, height / 2])
 
     const path = d3.geoPath().projection(projection)
@@ -244,19 +244,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
           />
         </div>
         
-        {deploymentCountries && deploymentCountries.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">
-                <span className="font-medium text-gray-900">{deploymentCountries.length}</span> pays avec cas d'usage
-              </p>
-              <p className="text-sm text-gray-700">
-                {deploymentCountries.slice(0, 3).join(', ')}
-                {deploymentCountries.length > 3 && ` et ${deploymentCountries.length - 3} autres`}
-              </p>
-            </div>
-          </div>
-        )}
+        
       </div>
     </div>
   )
