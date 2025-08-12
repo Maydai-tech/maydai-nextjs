@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { UseCase } from '../../types/usecase'
 import { formatDate } from '../../utils/questionnaire'
-import { Calendar, Clock, Bug, X } from 'lucide-react'
+import { useCaseRoutes } from '../../utils/routes'
+import { Calendar, Clock, CheckCircle, Bug, X } from 'lucide-react'
 import { CategoryScores } from '../CategoryScores'
 import { useUseCaseScore } from '../../hooks/useUseCaseScore'
 import { ScoreCalculation } from '../ScoreCalculation'
@@ -180,10 +182,29 @@ export function UseCaseSidebar({ useCase, onUpdateUseCase, isRecalculating = fal
         </div>
       </div>
 
-      {/* Debug Button */}
+      {/* Quick Actions */}
       <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h3>
         <div className="space-y-3">
+          {useCase.status?.toLowerCase() === 'draft' ? (
+            <Link
+              href={useCaseRoutes.evaluation(useCase.id)}
+              className="w-full inline-flex items-center justify-center px-4 py-2 bg-[#0080A3] text-white text-sm font-medium rounded-lg hover:bg-[#006280] transition-colors"
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Compléter l'évaluation
+            </Link>
+          ) : (
+            <Link
+              href={useCaseRoutes.rapport(useCase.id)}
+              className="w-full inline-flex items-center justify-center px-4 py-2 bg-[#0080A3] text-white text-sm font-medium rounded-lg hover:bg-[#006280] transition-colors"
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Voir le rapport
+            </Link>
+          )}
+          
+          {/* Debug Button */}
           <button
             onClick={() => setShowDebug(true)}
             className="w-full inline-flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"

@@ -19,7 +19,7 @@ export default function UseCaseDetailPage() {
   const useCaseId = params.id as string
   // Récupération des données du use case avec état de recalcul
   const { useCase, progress, loading: loadingData, error, updateUseCase, updating, isRecalculating } = useUseCaseData(useCaseId)
-  const { goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
+  const { goToEvaluation, goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
 
   // Prevent hydration mismatch
   useEffect(() => {
