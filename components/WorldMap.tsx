@@ -128,7 +128,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
 
     // Load and render world map
     d3.json('/world-110m.json').then((world: any) => {
-      const countries = feature(world, world.objects.countries) as FeatureCollection
+      const countries = feature(world, world.objects.countries) as unknown as FeatureCollection<any, any>
 
       // Draw countries
       g.selectAll('path')

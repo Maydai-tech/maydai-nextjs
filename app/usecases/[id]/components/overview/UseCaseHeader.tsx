@@ -37,7 +37,7 @@ function HeaderScore({ useCase, refreshing = false }: { useCase: UseCase, refres
   
   // Préparation des données du score pour l'affichage
   const score = hasScore ? {
-    score: Math.round(useCase.score_final),
+    score: Math.round(useCase.score_final!),
     score_base: useCase.score_base,
     score_model: useCase.score_model,
     is_eliminated: useCase.is_eliminated,
