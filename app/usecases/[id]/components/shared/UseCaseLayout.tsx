@@ -1,19 +1,15 @@
 import React from 'react'
 import { UseCase } from '../../types/usecase'
-import { UseCaseNavigation } from './UseCaseNavigation'
 import { UseCaseHeader } from '../overview/UseCaseHeader'
 
 interface UseCaseLayoutProps {
   useCase: UseCase
   children: React.ReactNode
-  showNavigation?: boolean
   onUpdateUseCase?: (updates: Partial<UseCase>) => Promise<UseCase | null>
   updating?: boolean
 }
 
-export function UseCaseLayout({ useCase, children, showNavigation = true, onUpdateUseCase, updating }: UseCaseLayoutProps) {
-  const isDraft = useCase.status?.toLowerCase() === 'draft'
-
+export function UseCaseLayout({ useCase, children, onUpdateUseCase, updating }: UseCaseLayoutProps) {
   return (
     <div className="space-y-0">
       {/* Header */}
@@ -24,17 +20,6 @@ export function UseCaseLayout({ useCase, children, showNavigation = true, onUpda
           updating={updating}
         />
       </div>
-
-      {/* Navigation */}
-      {showNavigation && (
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-10 -mx-6 px-6">
-          <UseCaseNavigation 
-            useCaseId={useCase.id} 
-            companyId={useCase.company_id}
-            isDraft={isDraft}
-          />
-        </div>
-      )}
 
       {/* Content */}
       <div className="pt-6">
