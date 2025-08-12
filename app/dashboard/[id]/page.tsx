@@ -224,6 +224,22 @@ export default function CompanyDashboard({ params }: DashboardProps) {
     return Array.from(allCountries).sort()
   }
 
+  // Get count of use cases per country
+  const getCountryUseCaseCount = () => {
+    const countryCount: { [key: string]: number } = {}
+    useCases.forEach(useCase => {
+      if (useCase.deployment_countries && Array.isArray(useCase.deployment_countries)) {
+        useCase.deployment_countries.forEach(country => {
+          if (country && typeof country === 'string') {
+            const trimmedCountry = country.trim()
+            countryCount[trimmedCountry] = (countryCount[trimmedCountry] || 0) + 1
+          }
+        })
+      }
+    })
+    return countryCount
+  }
+
   // Show loading state during SSR and initial client load
   if (!mounted || loading || !companyId) {
     return (
@@ -361,7 +377,8 @@ export default function CompanyDashboard({ params }: DashboardProps) {
 
         {/* World Map Section */}
         <WorldMap 
-          deploymentCountries={getDeploymentCountries()} 
+          deploymentCountries={getDeploymentCountries()}
+          countryUseCaseCount={getCountryUseCaseCount()}
           className=""
         />
 
