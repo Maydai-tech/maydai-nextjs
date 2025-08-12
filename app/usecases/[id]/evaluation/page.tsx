@@ -5,11 +5,8 @@ import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useUseCaseData } from '../hooks/useUseCaseData'
 import { useUseCaseNavigation } from '../utils/navigation'
-import { UseCaseLayout } from '../components/shared/UseCaseLayout'
 import { UseCaseLoader } from '../components/shared/UseCaseLoader'
 import { StepByStepQuestionnaire } from '../components/evaluation/StepByStepQuestionnaire'
-import { EvaluationQuestionnaire } from '../components/evaluation/EvaluationQuestionnaire'
-import { EvaluationDebugger } from '../components/debug/EvaluationDebugger'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 
 export default function UseCaseEvaluationPage() {
@@ -22,9 +19,8 @@ export default function UseCaseEvaluationPage() {
   const { useCase, loading: loadingData, error } = useUseCaseData(useCaseId)
   const { goToOverview } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
   
-  // Check if any responses have been saved
-  const { formattedAnswers, loading: loadingResponses } = useQuestionnaireResponses(useCaseId)
-  const hasAnySavedResponses = Object.keys(formattedAnswers || {}).length > 0
+  // Load responses for potential future use
+  const { loading: loadingResponses } = useQuestionnaireResponses(useCaseId)
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -75,29 +71,15 @@ export default function UseCaseEvaluationPage() {
     )
   }
 
-  // Si aucune réponse n'a été sauvegardée, afficher le questionnaire question par question en pleine page
-  if (!hasAnySavedResponses) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <StepByStepQuestionnaire 
-            useCase={useCase} 
-            onComplete={handleQuestionnaireComplete}
-          />
-        </div>
-      </div>
-    )
-  }
-
-  // Si des réponses existent, afficher toutes les questions avec possibilité de modification
+  // Toujours afficher le questionnaire question par question en pleine page
   return (
-    <UseCaseLayout useCase={useCase}>
-      <EvaluationQuestionnaire 
-        useCase={useCase} 
-        onComplete={handleQuestionnaireComplete}
-        isReadOnly={false}
-      />
-      <EvaluationDebugger useCase={useCase} />
-    </UseCaseLayout>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <StepByStepQuestionnaire 
+          useCase={useCase} 
+          onComplete={handleQuestionnaireComplete}
+        />
+      </div>
+    </div>
   )
 } 
