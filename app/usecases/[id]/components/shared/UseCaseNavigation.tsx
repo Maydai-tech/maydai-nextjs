@@ -13,7 +13,6 @@ interface UseCaseNavigationProps {
 const getIcon = (key: string) => {
   switch (key) {
     case 'overview': return <Eye className="h-4 w-4" />
-    case 'evaluation': return <ClipboardCheck className="h-4 w-4" />
     case 'rapport': return <FileText className="h-4 w-4" />
     default: return null
   }

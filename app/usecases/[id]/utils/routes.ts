@@ -13,11 +13,6 @@ export const useCaseNavigation = [
     href: (id: string) => useCaseRoutes.overview(id)
   },
   {
-    key: 'evaluation',
-    label: 'Évaluation',
-    href: (id: string) => useCaseRoutes.evaluation(id)
-  },
-  {
     key: 'rapport',
     label: 'Rapport',
     href: (id: string) => useCaseRoutes.rapport(id)

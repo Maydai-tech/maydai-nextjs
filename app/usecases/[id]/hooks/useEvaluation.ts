@@ -4,7 +4,8 @@ import { loadQuestions } from '../utils/questions-loader'
 import { getNextQuestion, getQuestionProgress, getAbsoluteQuestionProgress, checkCanProceed, getPreviousQuestion, buildQuestionPath } from '../utils/questionnaire'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 import { supabase } from '@/lib/supabase'
-import { scoreService } from '@/lib/score-service'
+import { ScoreService } from '@/lib/score-service'
+import { useAuth } from '@/lib/auth'
 
 interface UseEvaluationReturn {
   questionnaireData: QuestionnaireData
@@ -30,6 +31,7 @@ interface UseEvaluationProps {
 }
 
 export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): UseEvaluationReturn {
+  const { session } = useAuth()
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData>({
     currentQuestionId: 'E4.N7.Q1',
     answers: {},
@@ -176,11 +178,17 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
         // Complete questionnaire
         console.log('🏁 Completing questionnaire')
         
-        // Calculate score using edge function
+        // Calculate score using API
         console.log('🧮 Calculating use case score...')
         setIsCalculatingScore(true)
         
         try {
+          if (!session?.access_token) {
+            throw new Error('Token d\'authentification manquant')
+          }
+          
+          // Create ScoreService instance with authentication token
+          const scoreService = new ScoreService(session.access_token)
           const scoreResult = await scoreService.calculateUseCaseScore(usecaseId)
           console.log('✅ Score calculated successfully:', scoreResult)
         } catch (scoreError) {

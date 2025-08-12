@@ -4,7 +4,8 @@ import { UseCase, Progress } from '../../types/usecase'
 import { ComplAIModel } from '@/lib/supabase'
 import { getRiskLevelColor, getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
 import { useCaseRoutes } from '../../utils/routes'
-import { ArrowLeft, Brain, Building, Shield, CheckCircle, Clock, Info, Bot, Edit3 } from 'lucide-react'
+import { useUseCaseNavigation } from '../../utils/navigation'
+import { ArrowLeft, Brain, Building, Shield, CheckCircle, Clock, Info, Bot, Edit3, RefreshCcw } from 'lucide-react'
 import { getScoreCategory } from '../../utils/score-categories'
 import ModelSelectorModal from '../ModelSelectorModal'
 import ComplAiScoreBadge from '../ComplAiScoreBadge'
@@ -133,6 +134,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const frenchStatus = getUseCaseStatusInFrench(useCase.status)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isRecalculatingScore, setIsRecalculatingScore] = useState(false) // État local pour l'animation du score pendant le recalcul
+  const { goToEvaluation } = useUseCaseNavigation(useCase.id, useCase.company_id)
 
   const handleModelEdit = () => {
     setIsModalOpen(true)
@@ -175,6 +177,14 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           <ArrowLeft className="h-4 w-4 mr-2" />
           <span className="text-sm font-medium">Retour au dashboard</span>
         </Link>
+        
+        <button
+          onClick={goToEvaluation}
+          className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors"
+        >
+          <RefreshCcw className="h-4 w-4 mr-2" />
+          <span className="text-sm">Réévaluer le use case</span>
+        </button>
       </div>
       
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0 lg:space-x-6">
