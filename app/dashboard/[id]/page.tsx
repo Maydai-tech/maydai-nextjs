@@ -393,9 +393,9 @@ export default function CompanyDashboard({ params }: DashboardProps) {
         </div>
 
         {/* Score and World Map Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Score Circle */}
-          <div className="bg-white rounded-xl shadow-sm">
+          <div className="bg-white rounded-xl shadow-sm lg:col-span-1">
             <ScoreCircle 
               averageScore={averageScore}
               loading={loadingScore}
@@ -405,11 +405,13 @@ export default function CompanyDashboard({ params }: DashboardProps) {
           </div>
           
           {/* World Map */}
-          <WorldMap 
-            deploymentCountries={getDeploymentCountries()}
-            countryUseCaseCount={getCountryUseCaseCount()}
-            className=""
-          />
+          <div className="lg:col-span-2">
+            <WorldMap 
+              deploymentCountries={getDeploymentCountries()}
+              countryUseCaseCount={getCountryUseCaseCount()}
+              className=""
+            />
+          </div>
         </div>
 
         {/* Use Cases Section */}
