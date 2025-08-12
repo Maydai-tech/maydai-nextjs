@@ -219,7 +219,7 @@ export async function PUT(
         const host = request.headers.get('host') || 'localhost:3000'
         const calculateUrl = `${protocol}://${host}/api/usecases/${useCaseId}/calculate-score`
         
-        logger.info('Calling calculate score endpoint', { url: calculateUrl, useCaseId, primary_model_id })
+        logger.info(`Calling calculate score endpoint: ${calculateUrl}`, { useCaseId, primary_model_id })
         
         // Appel à l'endpoint de calcul de score avec authentification
         const calcResponse = await fetch(calculateUrl, {
@@ -244,10 +244,9 @@ export async function PUT(
         }
 
         const calcResult = await calcResponse.json()
-        logger.info('Score recalculated successfully after model update', { 
+        logger.info(`Score recalculated successfully after model update - Final score: ${calcResult.scores?.score_final}`, { 
           useCaseId, 
-          primary_model_id,
-          score_final: calcResult.scores?.score_final
+          primary_model_id
         })
         
         // Récupération du use case avec les scores fraîchement calculés
