@@ -22,6 +22,7 @@ import {
   X
 } from 'lucide-react'
 import WorldMap from '@/components/WorldMap'
+import ScoreCircle from '@/components/ScoreCircle'
 
 interface Company {
   id: string
@@ -59,6 +60,12 @@ export default function CompanyDashboard({ params }: DashboardProps) {
   const [company, setCompany] = useState<Company | null>(null)
   const [useCases, setUseCases] = useState<UseCase[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  
+  // Average score state
+  const [averageScore, setAverageScore] = useState<number | null>(null)
+  const [loadingScore, setLoadingScore] = useState(true)
+  const [evaluatedCount, setEvaluatedCount] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
   
   // Search state
   const [searchTerm, setSearchTerm] = useState('')
@@ -98,15 +105,17 @@ export default function CompanyDashboard({ params }: DashboardProps) {
   const fetchDashboardData = async () => {
     try {
       setLoadingData(true)
+      setLoadingScore(true)
       
       if (!session?.access_token) {
         return
       }
       
-      // Fetch company details and use cases in parallel
-      const [companyResponse, useCasesResponse] = await Promise.all([
+      // Fetch company details, use cases, and average score in parallel
+      const [companyResponse, useCasesResponse, averageScoreResponse] = await Promise.all([
         api.get(`/api/companies/${companyId}`),
-        api.get(`/api/companies/${companyId}/usecases`)
+        api.get(`/api/companies/${companyId}/usecases`),
+        api.get(`/api/companies/${companyId}/average-score`)
       ])
       
       if (companyResponse.status === 404) {
@@ -121,10 +130,18 @@ export default function CompanyDashboard({ params }: DashboardProps) {
         // Reset to first page when data changes
         setCurrentPage(1)
       }
+
+      // Handle average score response
+      if (averageScoreResponse.data) {
+        setAverageScore(averageScoreResponse.data.average_score)
+        setEvaluatedCount(averageScoreResponse.data.evaluated_count || 0)
+        setTotalCount(averageScoreResponse.data.total_count || 0)
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
     } finally {
       setLoadingData(false)
+      setLoadingScore(false)
     }
   }
 
@@ -375,12 +392,25 @@ export default function CompanyDashboard({ params }: DashboardProps) {
           </div>
         </div>
 
-        {/* World Map Section */}
-        <WorldMap 
-          deploymentCountries={getDeploymentCountries()}
-          countryUseCaseCount={getCountryUseCaseCount()}
-          className=""
-        />
+        {/* Score and World Map Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          {/* Score Circle */}
+          <div className="bg-white rounded-xl shadow-sm">
+            <ScoreCircle 
+              averageScore={averageScore}
+              loading={loadingScore}
+              evaluatedCount={evaluatedCount}
+              totalCount={totalCount}
+            />
+          </div>
+          
+          {/* World Map */}
+          <WorldMap 
+            deploymentCountries={getDeploymentCountries()}
+            countryUseCaseCount={getCountryUseCaseCount()}
+            className=""
+          />
+        </div>
 
         {/* Use Cases Section */}
         <div id="use-cases-section" className="bg-white rounded-xl shadow-sm overflow-hidden">
