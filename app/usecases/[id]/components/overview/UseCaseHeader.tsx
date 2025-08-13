@@ -192,9 +192,6 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
       
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0 lg:space-x-6">
         <div className="flex items-start space-x-3 sm:space-x-4 flex-1">
-          <div className="bg-[#0080A3]/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
-            <Brain className="h-6 w-6 sm:h-8 sm:w-8 text-[#0080A3]" />
-          </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-start gap-3 mb-2">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{useCase.name}</h1>
@@ -208,7 +205,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
             {useCase.companies && (
               <p className="text-sm sm:text-base text-gray-600 flex items-center">
                 <Building className="h-4 w-4 mr-1" />
-                {useCase.companies.name} • {useCase.companies.industry}
+                {useCase.companies.name}
               </p>
             )}
             
