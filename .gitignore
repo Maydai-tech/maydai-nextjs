@@ -56,3 +56,6 @@ next-env.d.ts
 
 # MCP configuration files
 .mcp.json
+
+# Config Claude
+/.claude
