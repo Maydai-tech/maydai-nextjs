@@ -160,7 +160,8 @@
       {
         "code": "E4.N7.Q2.G",
         "label": "Aucun de ces domaines",
-        "score_impact": 0
+        "score_impact": 0,
+        "unique_answer": true
       }
     ]
   },
@@ -210,7 +211,8 @@
       {
         "code": "E4.N7.Q2.1.E",
         "label": "Aucun de ces cas",
-        "score_impact": 0
+        "score_impact": 0,
+        "unique_answer": true
       }
     ]
   },
@@ -248,7 +250,8 @@
       {
         "code": "E4.N7.Q3.E",
         "label": "Aucune de ces activités",
-        "score_impact": 0
+        "score_impact": 0,
+        "unique_answer": true
       }
     ]
   },
@@ -286,7 +289,8 @@
       {
         "code": "E4.N7.Q3.1.E",
         "label": "Aucune de ces situations",
-        "score_impact": 0
+        "score_impact": 0,
+        "unique_answer": true
       }
     ]
   },
