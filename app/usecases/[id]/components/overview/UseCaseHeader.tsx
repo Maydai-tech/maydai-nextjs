@@ -314,7 +314,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           )}
 
           {/* Risk Level Badge */}
-          <div className="flex justify-end transform hover:scale-105 transition-transform duration-200">
+          <div className="flex justify-end">
             <RiskLevelBadge 
               riskLevel={riskLevel} 
               loading={riskLoading} 

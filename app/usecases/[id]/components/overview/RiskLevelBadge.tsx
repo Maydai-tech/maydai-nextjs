@@ -21,8 +21,6 @@ const getRiskLevelConfig = (level: RiskLevel) => {
           border: 'border-red-300',
           text: 'text-red-800',
           iconColor: 'text-red-600',
-          hoverBg: 'hover:bg-red-100',
-          animation: 'animate-pulse'
         }
       }
     case 'high':
@@ -34,8 +32,6 @@ const getRiskLevelConfig = (level: RiskLevel) => {
           border: 'border-orange-300',
           text: 'text-orange-800',
           iconColor: 'text-orange-600',
-          hoverBg: 'hover:bg-orange-100',
-          animation: ''
         }
       }
     case 'limited':
@@ -47,8 +43,6 @@ const getRiskLevelConfig = (level: RiskLevel) => {
           border: 'border-amber-300',
           text: 'text-amber-800',
           iconColor: 'text-amber-600',
-          hoverBg: 'hover:bg-amber-100',
-          animation: ''
         }
       }
     case 'minimal':
@@ -60,8 +54,6 @@ const getRiskLevelConfig = (level: RiskLevel) => {
           border: 'border-green-300',
           text: 'text-green-800',
           iconColor: 'text-green-600',
-          hoverBg: 'hover:bg-green-100',
-          animation: ''
         }
       }
   }
@@ -93,9 +85,9 @@ export function RiskLevelBadge({ riskLevel, loading = false, error = null, class
     <div 
       className={`
         inline-flex items-center px-4 py-2 rounded-lg border-2 transition-all duration-200
-        ${config.colors.bg} ${config.colors.border} ${config.colors.hoverBg}
-        ${config.colors.animation} ${className}
-        shadow-sm hover:shadow-md
+        ${config.colors.bg} ${config.colors.border} 
+        ${className}
+        shadow-sm 
       `}
       title={`Niveau de risque selon l'IA Act: ${config.label}`}
     >
