@@ -229,6 +229,16 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
     return responses.some(r => r.question_code === questionCode)
   }, [responses])
 
+  // Fonction pour nettoyer les valeurs venant de Supabase
+  const cleanValue = (value: string): string => {
+    if (!value) return value
+    // Supprimer les guillemets échappés au début et à la fin
+    if (value.startsWith('"') && value.endsWith('"')) {
+      return value.slice(1, -1)
+    }
+    return value
+  }
+
   // Formater les réponses pour l'UI
   const formattedAnswers = useMemo(() => {
     const formatted: Record<string, any> = {}
@@ -244,10 +254,10 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
       } = response
       
       if (multiple_codes && multiple_codes.length > 0) {
-        // Réponse multiple - retourner les codes
-        formatted[question_code] = multiple_codes
+        // Réponse multiple - nettoyer les codes
+        formatted[question_code] = multiple_codes.map(code => cleanValue(code))
       } else if (conditional_main) {
-        // Réponse conditionnelle
+        // Réponse conditionnelle - nettoyer la valeur principale
         const conditionalValues: Record<string, string> = {}
         if (conditional_keys && conditional_values) {
           conditional_keys.forEach((key, index) => {
@@ -255,12 +265,12 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
           })
         }
         formatted[question_code] = {
-          selected: conditional_main,
+          selected: cleanValue(conditional_main),
           conditionalValues
         }
       } else if (single_value) {
-        // Réponse simple
-        formatted[question_code] = single_value
+        // Réponse simple - nettoyer la valeur
+        formatted[question_code] = cleanValue(single_value)
       }
     })
     

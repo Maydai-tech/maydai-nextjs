@@ -50,6 +50,7 @@ export interface QuestionOption {
   score_impact?: number
   category_impacts?: Record<string, number>
   is_eliminatory?: boolean
+  unique_answer?: boolean
 }
 
 export interface Question {

@@ -25,7 +25,9 @@ export function loadQuestions(): Record<string, Question> {
         code: option.code,
         label: option.label,
         score_impact: option.score_impact || 0,
-        category_impacts: option.category_impacts || undefined
+        category_impacts: option.category_impacts || undefined,
+        is_eliminatory: option.is_eliminatory || false,
+        unique_answer: option.unique_answer || false
       })),
       required: data.required,
       conditionalFields: data.conditionalFields || undefined

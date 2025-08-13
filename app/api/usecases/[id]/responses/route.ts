@@ -164,8 +164,8 @@ export async function POST(
       // Réponse simple
       updateData.single_value = response_value
     } else if (response_data) {
-      // Fallback: traiter response_data comme une réponse simple sérialisée
-      updateData.single_value = JSON.stringify(response_data)
+      // Fallback: traiter response_data comme une réponse simple
+      updateData.single_value = typeof response_data === 'string' ? response_data : String(response_data)
     } else {
       // Aucune donnée valide
       console.error('No valid response data provided:', { question_code, response_value, response_data })
@@ -299,8 +299,8 @@ export async function PUT(
         // Réponse simple
         updateData.single_value = response_value
       } else if (response_data) {
-        // Fallback: traiter response_data comme une réponse simple sérialisée
-        updateData.single_value = JSON.stringify(response_data)
+        // Fallback: traiter response_data comme une réponse simple
+        updateData.single_value = typeof response_data === 'string' ? response_data : String(response_data)
       } else {
         // Skip cette réponse si pas de données valides
         console.log('Skipping response with no valid data:', { question_code, response_value, response_data })

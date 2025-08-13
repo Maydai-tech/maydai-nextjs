@@ -77,14 +77,35 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
     )
   }
 
+  // Définir l'ordre spécifique des catégories
+  const categoryOrder = [
+    'risk_level',
+    'human_agency',
+    'technical_robustness',
+    'privacy_data',
+    'transparency',
+    'diversity_fairness',
+    'social_environmental'
+  ]
+
+  // Trier les catégories selon l'ordre spécifié
+  const sortedCategoryScores = [...categoryScores].sort((a, b) => {
+    const indexA = categoryOrder.indexOf(a.category_id)
+    const indexB = categoryOrder.indexOf(b.category_id)
+    
+    // Si une catégorie n'est pas dans l'ordre, la mettre à la fin
+    if (indexA === -1) return 1
+    if (indexB === -1) return -1
+    
+    return indexA - indexB
+  })
+
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par principes</h3>
       
       <div className="space-y-4">
-        {categoryScores
-          .sort((a, b) => b.percentage - a.percentage) // Trier par pourcentage décroissant
-          .map((category) => {
+        {sortedCategoryScores.map((category) => {
             const categoryInfo = RISK_CATEGORIES[category.category_id]
             
             return (
@@ -92,36 +113,28 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
                 {/* En-tête de catégorie */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <span className="text-base">{categoryInfo?.icon || '📊'}</span>
+                    <span className="text-[#0080A3] text-base">{categoryInfo?.icon || '📊'}</span>
                     <span className="text-sm font-medium text-gray-900">
                       {categoryInfo?.shortName || category.category_name}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm font-bold text-gray-900">
+                    <span className="text-sm font-bold text-[#0080A3]">
                       {category.percentage}/100
                     </span>
                   </div>
                 </div>
                 
-                {/* Barre de progression */}
+                {/* Barre de progression - toujours en bleu */}
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
-                    className={`h-2.5 rounded-full transition-all duration-500 ${
-                      category.percentage >= 80 
-                        ? 'bg-green-500' 
-                        : category.percentage >= 60 
-                        ? 'bg-yellow-500' 
-                        : category.percentage >= 40
-                        ? 'bg-orange-500'
-                        : 'bg-red-500'
-                    }`}
+                    className="h-2.5 rounded-full transition-all duration-500 bg-[#0080A3]"
                     style={{ width: `${Math.max(category.percentage, 2)}%` }}
                   ></div>
                 </div>
                 
-                {/* Description optionnelle pour les scores faibles */}
-                {category.percentage < 60 && (
+                {/* Description optionnelle pour les scores faibles - sauf pour technical_robustness */}
+                {category.percentage < 60 && category.category_id !== 'technical_robustness' && (
                   <p className="text-xs text-gray-600 italic">
                     {categoryInfo?.description}
                   </p>

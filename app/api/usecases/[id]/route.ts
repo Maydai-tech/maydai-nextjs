@@ -135,7 +135,7 @@ export async function PUT(
 
     // Parse request body
     const body = await request.json()
-    const { primary_model_id } = body
+    const { primary_model_id, deployment_countries } = body
 
     // Validate model_id if provided
     if (primary_model_id !== null && primary_model_id !== undefined) {
@@ -181,6 +181,7 @@ export async function PUT(
       .from('usecases')
       .update({ 
         primary_model_id,
+        deployment_countries,
         updated_at: new Date().toISOString()
       })
       .eq('id', useCaseId)

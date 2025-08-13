@@ -1,5 +1,5 @@
 import React from 'react'
-import { Question, QuestionAnswer } from '../../types/usecase'
+import { Question } from '../../types/usecase'
 
 interface QuestionRendererProps {
   question: Question
@@ -98,13 +98,33 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
                     console.log('Checkbox change:', {
                       option: option.code,
                       checked: e.target.checked,
-                      currentAnswers: checkboxAnswers
+                      currentAnswers: checkboxAnswers,
+                      isUniqueAnswer: option.unique_answer
                     })
                     
                     let newAnswers: string[]
                     if (e.target.checked) {
-                      // Ajouter l'option
-                      newAnswers = [...checkboxAnswers, option.code]
+                      if (option.unique_answer) {
+                        // Si cette option est une réponse unique, désélectionner toutes les autres
+                        newAnswers = [option.code]
+                      } else {
+                        // Vérifier s'il y a déjà une réponse unique sélectionnée
+                        const uniqueOptions = question.options.filter(opt => opt.unique_answer)
+                        const hasUniqueSelected = checkboxAnswers.some(answer => 
+                          uniqueOptions.some(unique => unique.code === answer)
+                        )
+                        
+                        if (hasUniqueSelected) {
+                          // Retirer les réponses uniques et ajouter la nouvelle
+                          const filteredAnswers = checkboxAnswers.filter(answer =>
+                            !uniqueOptions.some(unique => unique.code === answer)
+                          )
+                          newAnswers = [...filteredAnswers, option.code]
+                        } else {
+                          // Ajouter normalement
+                          newAnswers = [...checkboxAnswers, option.code]
+                        }
+                      }
                     } else {
                       // Retirer l'option
                       newAnswers = checkboxAnswers.filter((item: string) => item !== option.code)
@@ -153,7 +173,8 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
                     console.log('Tag click:', {
                       option: option.code,
                       isSelected,
-                      currentTags: tagAnswers
+                      currentTags: tagAnswers,
+                      isUniqueAnswer: option.unique_answer
                     })
                     
                     let newAnswers: string[]
@@ -161,8 +182,27 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
                       // Retirer le tag
                       newAnswers = tagAnswers.filter((item: string) => item !== option.code)
                     } else {
-                      // Ajouter le tag
-                      newAnswers = [...tagAnswers, option.code]
+                      if (option.unique_answer) {
+                        // Si cette option est une réponse unique, désélectionner toutes les autres
+                        newAnswers = [option.code]
+                      } else {
+                        // Vérifier s'il y a déjà une réponse unique sélectionnée
+                        const uniqueOptions = question.options.filter(opt => opt.unique_answer)
+                        const hasUniqueSelected = tagAnswers.some(answer => 
+                          uniqueOptions.some(unique => unique.code === answer)
+                        )
+                        
+                        if (hasUniqueSelected) {
+                          // Retirer les réponses uniques et ajouter la nouvelle
+                          const filteredAnswers = tagAnswers.filter(answer =>
+                            !uniqueOptions.some(unique => unique.code === answer)
+                          )
+                          newAnswers = [...filteredAnswers, option.code]
+                        } else {
+                          // Ajouter normalement
+                          newAnswers = [...tagAnswers, option.code]
+                        }
+                      }
                     }
                     
                     console.log('New tag answers:', newAnswers)
@@ -282,7 +322,7 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
             <div className="text-sm font-medium text-gray-700 mb-2">
               Veuillez préciser :
             </div>
-            {question.conditionalFields.map((field, index) => (
+            {question.conditionalFields.map((field) => (
               <div key={`${question.id}-${field.key}`}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {field.label}
