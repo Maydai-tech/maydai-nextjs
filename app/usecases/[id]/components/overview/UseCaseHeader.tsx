@@ -256,11 +256,6 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                       {useCase.compl_ai_models.model_provider && (
                         <span className="text-blue-600 text-sm">• {useCase.compl_ai_models.model_provider}</span>
                       )}
-                      {useCase.compl_ai_models.version && (
-                        <span className="text-blue-500 text-xs bg-blue-100 px-2 py-0.5 rounded-full">
-                          v{useCase.compl_ai_models.version}
-                        </span>
-                      )}
                     </div>
                   ) : (
                     <span className="text-sm text-gray-500 font-medium">Aucun modèle sélectionné</span>
@@ -319,7 +314,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           )}
 
           {/* Risk Level Badge */}
-          <div className="transform hover:scale-105 transition-transform duration-200">
+          <div className="flex justify-end transform hover:scale-105 transition-transform duration-200">
             <RiskLevelBadge 
               riskLevel={riskLevel} 
               loading={riskLoading} 
