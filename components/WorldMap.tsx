@@ -9,9 +9,10 @@ interface WorldMapProps {
   deploymentCountries: string[]
   countryUseCaseCount?: { [key: string]: number }
   className?: string
+  showUseCaseCount?: boolean
 }
 
-const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCaseCount = {}, className = "" }) => {
+const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCaseCount = {}, className = "", showUseCaseCount = true }) => {
   const svgRef = useRef<SVGSVGElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
   const countryUseCaseCountRef = useRef(countryUseCaseCount)
@@ -175,12 +176,20 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
               const shortCode = possibleKeys.find(key => ['FR', 'US', 'SI'].includes(key))
               const displayName = shortCode || possibleKeys[0] || countryName
               
-              tooltipRef.current.innerHTML = `
-                <div>
-                  <div class="font-semibold">${displayName}</div>
-                  <div class="text-xs">${useCaseCount} cas d'usage${useCaseCount > 1 ? 's' : ''}</div>
-                </div>
-              `
+              if (showUseCaseCount) {
+                tooltipRef.current.innerHTML = `
+                  <div>
+                    <div class="font-semibold">${displayName}</div>
+                    <div class="text-xs">${useCaseCount} cas d'usage${useCaseCount > 1 ? 's' : ''}</div>
+                  </div>
+                `
+              } else {
+                tooltipRef.current.innerHTML = `
+                  <div>
+                    <div class="font-semibold">${displayName}</div>
+                  </div>
+                `
+              }
             }
             
             // Change color on hover

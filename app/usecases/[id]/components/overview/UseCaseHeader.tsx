@@ -11,6 +11,7 @@ import ModelSelectorModal from '../ModelSelectorModal'
 import ComplAiScoreBadge from '../ComplAiScoreBadge'
 import { RiskLevelBadge } from './RiskLevelBadge'
 import { useRiskLevel } from '../../hooks/useRiskLevel'
+import { CountryDeploymentDisplay } from './CountryDeploymentDisplay'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
 
@@ -213,6 +214,17 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                 {useCase.companies.name}
               </p>
             )}
+            
+            {/* Pays de déploiement */}
+            <div className="mb-4">
+              <CountryDeploymentDisplay 
+                deploymentCountries={useCase.deployment_countries} 
+                onUpdateUseCase={onUpdateUseCase ? async (updates) => {
+                  await onUpdateUseCase(updates)
+                } : undefined}
+                updating={updating}
+              />
+            </div>
             
             {/* Modèle COMPL-AI */}
             <div className="flex items-center gap-3 mb-4">
