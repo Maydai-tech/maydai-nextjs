@@ -2,13 +2,15 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { UseCase, Progress } from '../../types/usecase'
 import { ComplAIModel } from '@/lib/supabase'
-import { getRiskLevelColor, getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
+import { getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
 import { useCaseRoutes } from '../../utils/routes'
 import { useUseCaseNavigation } from '../../utils/navigation'
-import { ArrowLeft, Brain, Building, Shield, CheckCircle, Clock, Info, Bot, Edit3, RefreshCcw } from 'lucide-react'
+import { ArrowLeft, Brain, Building, CheckCircle, Clock, Info, Edit3, RefreshCcw } from 'lucide-react'
 import { getScoreCategory } from '../../utils/score-categories'
 import ModelSelectorModal from '../ModelSelectorModal'
 import ComplAiScoreBadge from '../ComplAiScoreBadge'
+import { RiskLevelBadge } from './RiskLevelBadge'
+import { useRiskLevel } from '../../hooks/useRiskLevel'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
 
@@ -135,6 +137,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isRecalculatingScore, setIsRecalculatingScore] = useState(false) // État local pour l'animation du score pendant le recalcul
   const { goToEvaluation } = useUseCaseNavigation(useCase.id, useCase.company_id)
+  const { riskLevel, loading: riskLoading, error: riskError } = useRiskLevel(useCase.id)
 
   const handleModelEdit = () => {
     setIsModalOpen(true)
@@ -193,9 +196,17 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
             <Brain className="h-6 w-6 sm:h-8 sm:w-8 text-[#0080A3]" />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{useCase.name}</h1>
+            <div className="flex items-start gap-3 mb-2">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{useCase.name}</h1>
+              <RiskLevelBadge 
+                riskLevel={riskLevel} 
+                loading={riskLoading} 
+                error={riskError}
+                className="flex-shrink-0"
+              />
+            </div>
             {useCase.companies && (
-              <p className="text-sm sm:text-base text-gray-600 flex items-center mt-1">
+              <p className="text-sm sm:text-base text-gray-600 flex items-center">
                 <Building className="h-4 w-4 mr-1" />
                 {useCase.companies.name} • {useCase.companies.industry}
               </p>
@@ -235,12 +246,6 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                 {getStatusIcon(useCase.status)}
                 <span className="ml-1">{frenchStatus}</span>
               </span>
-              {useCase.risk_level && (
-                <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getRiskLevelColor(useCase.risk_level)}`}>
-                  <Shield className="h-3 w-3 mr-1" />
-                  {useCase.risk_level} risk
-                </span>
-              )}
             </div>
           </div>
         </div>

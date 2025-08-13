@@ -4,6 +4,7 @@
     "question": "Dans cette situation, votre cas d'usage concerne :",
     "type": "radio",
     "required": true,
+    "risk": "minimal",
     "options": [
       {
         "code": "E4.N7.Q1.A",
@@ -22,6 +23,7 @@
     "question": "Quelle phrase décrit le mieux votre situation ?",
     "type": "radio",
     "required": true,
+    "risk": "minimal",
     "options": [
       {
         "code": "E4.N7.Q1.1.A",
@@ -60,6 +62,7 @@
     "question": "Quelle phrase décrit le mieux votre situation ?",
     "type": "radio",
     "required": true,
+    "risk": "minimal",
     "options": [
       {
         "code": "E4.N7.Q1.2.A",
@@ -98,11 +101,13 @@
     "question": "Votre système d'IA est utilisé dans un ou des domaines suivants ?",
     "type": "checkbox",
     "required": true,
+    "risk": "high",
     "options": [
       {
         "code": "E4.N7.Q2.A",
         "label": "Emploi, gestion des travailleurs et accès à l'emploi indépendant",
         "score_impact": -30,
+        "risk": "high",
         "category_impacts": {
           "risk_level": -45
         }
@@ -111,6 +116,7 @@
         "code": "E4.N7.Q2.B",
         "label": "Administration de la justice et processus démocratiques",
         "score_impact": -30,
+        "risk": "high",
         "category_impacts": {
           "risk_level": -45
         }
@@ -119,6 +125,7 @@
         "code": "E4.N7.Q2.C",
         "label": "Migration, asile et gestion des contrôles aux frontières",
         "score_impact": -30,
+        "risk": "high",
         "category_impacts": {
           "risk_level": -45
         }
@@ -127,6 +134,7 @@
         "code": "E4.N7.Q2.D",
         "label": "Gestion et exploitation des infrastructures critiques",
         "score_impact": -30,
+        "risk": "high",
         "category_impacts": {
           "risk_level": -45
         }
@@ -135,6 +143,7 @@
         "code": "E4.N7.Q2.E",
         "label": "Éducation et formation professionnelle",
         "score_impact": -30,
+        "risk": "high",
         "category_impacts": {
           "risk_level": -45
         }
@@ -143,6 +152,7 @@
         "code": "E4.N7.Q2.F",
         "label": "Activités répressives (risque récidive, fiabilité preuves...)",
         "score_impact": -30,
+        "risk": "high",
         "category_impacts": {
           "risk_level": -45
         }
@@ -159,11 +169,13 @@
     "question": "Votre système d'IA est utilisé dans un ou plusieurs des cas suivants ?",
     "type": "checkbox",
     "required": true,
+    "risk": "unacceptable",
     "options": [
       {
         "code": "E4.N7.Q2.1.A",
         "label": "Identification Biométrique à Distance en Temps Réel dans les Espaces Publics",
         "is_eliminatory": true,
+        "risk": "unacceptable",
         "category_impacts": {
           "risk_level": -80
         }
@@ -172,6 +184,7 @@
         "code": "E4.N7.Q2.1.B",
         "label": "Composant de sécurité dans des secteurs critiques (santé, transports, énergies, etc.)",
         "is_eliminatory": true,
+        "risk": "unacceptable",
         "category_impacts": {
           "risk_level": -80
         }
@@ -180,6 +193,7 @@
         "code": "E4.N7.Q2.1.C",
         "label": "Évaluations dans un système d'éducation ou en entreprise",
         "is_eliminatory": true,
+        "risk": "unacceptable",
         "category_impacts": {
           "risk_level": -80
         }
@@ -188,6 +202,7 @@
         "code": "E4.N7.Q2.1.D",
         "label": "Accès et jouissance de services essentiels privés et publics",
         "is_eliminatory": true,
+        "risk": "unacceptable",
         "category_impacts": {
           "risk_level": -80
         }
@@ -204,26 +219,31 @@
     "question": "Votre système d'IA a pour finalité une ou des activités suivantes ?",
     "type": "checkbox",
     "required": true,
+    "risk": "unacceptable",
     "options": [
       {
         "code": "E4.N7.Q3.A",
         "label": "Identification biométrique et catégorisation des personnes physiques",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "risk": "unacceptable"
       },
       {
         "code": "E4.N7.Q3.B",
         "label": "Catégorisation biométrique basée sur des caractéristiques sensibles",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "risk": "unacceptable"
       },
       {
         "code": "E4.N7.Q3.C",
         "label": "Création de bases de données de reconnaissance faciale par moissonnage non ciblé",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "risk": "unacceptable"
       },
       {
         "code": "E4.N7.Q3.D",
         "label": "Déduction des émotions sur le lieu de travail et d'enseignement",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "risk": "unacceptable"
       },
       {
         "code": "E4.N7.Q3.E",
@@ -237,26 +257,31 @@
     "question": "Possible intervention dans l'une de ces situations ?",
     "type": "checkbox",
     "required": true,
+    "risk": "unacceptable",
     "options": [
       {
         "code": "E4.N7.Q3.1.A",
         "label": "Exploitation des vulnérabilités",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "risk": "unacceptable"
       },
       {
         "code": "E4.N7.Q3.1.B",
         "label": "Manipulation et tromperie",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "risk": "unacceptable"
       },
       {
         "code": "E4.N7.Q3.1.C",
         "label": "Notation sociale",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "risk": "unacceptable"
       },
       {
         "code": "E4.N7.Q3.1.D",
         "label": "Profilage pour évaluation du risque criminel",
-        "is_eliminatory": true
+        "is_eliminatory": true,
+        "risk": "unacceptable"
       },
       {
         "code": "E4.N7.Q3.1.E",
@@ -270,6 +295,7 @@
     "question": "Question E4.N8.Q2",
     "type": "radio",
     "required": true,
+    "risk": "minimal",
     "options": [
       {
         "code": "E4.N8.Q2.A",
@@ -288,6 +314,7 @@
     "question": "Question E4.N8.Q3",
     "type": "radio",
     "required": true,
+    "risk": "minimal",
     "options": [
       {
         "code": "E4.N8.Q3.A",
@@ -306,6 +333,7 @@
     "question": "Question E4.N8.Q4",
     "type": "radio",
     "required": true,
+    "risk": "minimal",
     "options": [
       {
         "code": "E4.N8.Q4.A",
@@ -324,6 +352,7 @@
     "question": "Question E4.N8.Q5",
     "type": "radio",
     "required": true,
+    "risk": "minimal",
     "options": [
       {
         "code": "E4.N8.Q5.A",
@@ -342,6 +371,7 @@
     "question": "Question E4.N8.Q6",
     "type": "radio",
     "required": true,
+    "risk": "minimal",
     "options": [
       {
         "code": "E4.N8.Q6.A",
@@ -360,6 +390,7 @@
     "question": "Question E4.N8.Q7",
     "type": "radio",
     "required": true,
+    "risk": "minimal",
     "options": [
       {
         "code": "E4.N8.Q7.A",
@@ -378,6 +409,7 @@
     "question": "Question E4.N8.Q8",
     "type": "radio",
     "required": true,
+    "risk": "minimal",
     "options": [
       {
         "code": "E4.N8.Q8.A",
@@ -396,11 +428,13 @@
     "question": "Votre système d'IA interagit-il avec des personnes physiques ?",
     "type": "radio",
     "required": true,
+    "risk": "limited",
     "options": [
       {
         "code": "E4.N8.Q9.A",
         "label": "Oui",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "human_oversight": -5
         }
@@ -417,6 +451,7 @@
     "question": "Utilisé par combien de personnes physiques par mois ?",
     "type": "conditional",
     "required": true,
+    "risk": "limited",
     "conditionalFields": [
       {
         "key": "other_count",
@@ -434,6 +469,7 @@
         "code": "E4.N8.Q10.B",
         "label": "> à 100",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "human_oversight": -5
         }
@@ -442,6 +478,7 @@
         "code": "E4.N8.Q10.C",
         "label": "> à 1000",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "human_oversight": -5
         }
@@ -450,6 +487,7 @@
         "code": "E4.N8.Q10.D",
         "label": "> à 10 000",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "human_oversight": -5
         }
@@ -458,6 +496,7 @@
         "code": "E4.N8.Q10.E",
         "label": "> à 100 000",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "human_oversight": -5
         }
@@ -466,6 +505,7 @@
         "code": "E4.N8.Q10.F",
         "label": "> à 1 M",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "human_oversight": -5
         }
@@ -477,16 +517,19 @@
     "question": "Utilisé pour générer ou manipuler du contenu ?",
     "type": "tags",
     "required": true,
+    "risk": "limited",
     "options": [
       {
         "code": "E4.N8.Q11.A",
         "label": "Texte",
-        "score_impact": 0
+        "score_impact": 0,
+        "risk": "limited"
       },
       {
         "code": "E4.N8.Q11.B",
         "label": "Image",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "social_environmental": -5
         }
@@ -495,6 +538,7 @@
         "code": "E4.N8.Q11.C",
         "label": "audio",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "social_environmental": -5
         }
@@ -503,6 +547,7 @@
         "code": "E4.N8.Q11.D",
         "label": "Vidéo",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "social_environmental": -5
         }
@@ -514,6 +559,7 @@
     "question": "Votre système d'IA est utilisé dans des jeux vidéos ou comme filtre anti-spam ?",
     "type": "radio",
     "required": true,
+    "risk": "minimal",
     "options": [
       {
         "code": "E4.N8.Q12.A",
@@ -535,6 +581,7 @@
     "question": "Avez-vous établi et maintenez-vous un système de gestion des risques ?",
     "type": "radio",
     "required": true,
+    "risk": "limited",
     "options": [
       {
         "code": "E5.N9.Q1.A",
@@ -545,6 +592,7 @@
         "code": "E5.N9.Q1.B",
         "label": "Non",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "technical_robustness": -5
         }
@@ -556,6 +604,7 @@
     "question": "Votre système de gestion des risques comprend-il l'identification et l'analyse des risques et des utilisations abusives ?",
     "type": "radio",
     "required": true,
+    "risk": "limited",
     "options": [
       {
         "code": "E5.N9.Q2.A",
@@ -566,6 +615,7 @@
         "code": "E5.N9.Q2.B",
         "label": "Non",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "technical_robustness": -5
         }
@@ -577,6 +627,7 @@
     "question": "Des mesures d'atténuation des risques sont-elles mises en œuvre et leur efficacité testée, garantissant que le risque résiduel est acceptable ?",
     "type": "radio",
     "required": true,
+    "risk": "limited",
     "options": [
       {
         "code": "E5.N9.Q3.A",
@@ -587,6 +638,7 @@
         "code": "E5.N9.Q3.B",
         "label": "Non",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "technical_robustness": -5
         }
@@ -598,6 +650,7 @@
     "question": "Avez-vous établi une documentation technique complète pour votre système d'IA ?",
     "type": "radio",
     "required": true,
+    "risk": "limited",
     "options": [
       {
         "code": "E5.N9.Q4.A",
@@ -608,6 +661,7 @@
         "code": "E5.N9.Q4.B",
         "label": "Non",
         "score_impact": -10,
+        "risk": "limited",
         "category_impacts": {
           "human_oversight": -10
         }
@@ -619,6 +673,7 @@
     "question": "Quelles sont les types de données traitées en entrée ?",
     "type": "tags",
     "required": true,
+    "risk": "limited",
     "options": [
       {
         "code": "E5.N9.Q5.A",
@@ -629,6 +684,7 @@
         "code": "E5.N9.Q5.B",
         "label": "Personnelles",
         "score_impact": -10,
+        "risk": "limited",
         "category_impacts": {
           "privacy_data": -10
         }
@@ -637,6 +693,7 @@
         "code": "E5.N9.Q5.C",
         "label": "Stratégiques",
         "score_impact": -10,
+        "risk": "limited",
         "category_impacts": {
           "privacy_data": -5
         }
@@ -645,6 +702,7 @@
         "code": "E5.N9.Q5.D",
         "label": "sensibles",
         "score_impact": -10,
+        "risk": "limited",
         "category_impacts": {
           "privacy_data": -5
         }
@@ -656,6 +714,7 @@
     "question": "Avez vous de procédures de vérification de la qualité des données ?",
     "type": "conditional",
     "required": true,
+    "risk": "limited",
     "conditionalFields": [
       {
         "key": "procedures_details",
@@ -678,6 +737,7 @@
         "code": "E5.N9.Q6.A",
         "label": "Non",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "privacy_data": -5
         }
@@ -689,6 +749,7 @@
     "question": "Tenez vous un registre centralisé de vos systèmes d'IA ?",
     "type": "conditional",
     "required": true,
+    "risk": "high",
     "conditionalFields": [
       {
         "key": "registry_type",
@@ -716,6 +777,7 @@
         "code": "E5.N9.Q7.A",
         "label": "Non",
         "score_impact": -10,
+        "risk": "high",
         "category_impacts": {
           "human_oversight": -10
         }
@@ -727,6 +789,7 @@
     "question": "Avez vous une étape de surveillance humaine dans votre système d'IA ?",
     "type": "conditional",
     "required": true,
+    "risk": "limited",
     "conditionalFields": [
       {
         "key": "supervisor_name",
@@ -754,6 +817,7 @@
         "code": "E5.N9.Q8.A",
         "label": "Non",
         "score_impact": -10,
+        "risk": "limited",
         "category_impacts": {
           "human_oversight": -10
         }
@@ -765,6 +829,7 @@
     "question": "Vérifiez vous l'exactitude, la robustesse et la cybersécurité de votre système d'IA ?",
     "type": "conditional",
     "required": true,
+    "risk": "limited",
     "conditionalFields": [
       {
         "key": "security_details",
@@ -787,6 +852,7 @@
         "code": "E5.N9.Q9.A",
         "label": "Non",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "technical_robustness": -5
         }
@@ -798,6 +864,7 @@
     "question": "Lorsque votre système d'IA interagit avec des personnes, sont elles informées ?",
     "type": "radio",
     "required": true,
+    "risk": "limited",
     "options": [
       {
         "code": "E6.N10.Q1.A",
@@ -808,6 +875,7 @@
         "code": "E6.N10.Q1.B",
         "label": "Non",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "transparency": -5
         }
@@ -819,6 +887,7 @@
     "question": "Lorsque votre système d'IA génère ou manipule du contenu, est ce que ce dernier est marqué par un format lisible et reconnaissable ?",
     "type": "radio",
     "required": true,
+    "risk": "limited",
     "options": [
       {
         "code": "E6.N10.Q2.A",
@@ -829,6 +898,7 @@
         "code": "E6.N10.Q2.B",
         "label": "Non",
         "score_impact": -5,
+        "risk": "limited",
         "category_impacts": {
           "transparency": -5
         }
