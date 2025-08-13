@@ -5,7 +5,7 @@ import { ComplAIModel } from '@/lib/supabase'
 import { getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
 import { useCaseRoutes } from '../../utils/routes'
 import { useUseCaseNavigation } from '../../utils/navigation'
-import { ArrowLeft, Brain, Building, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Building, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle } from 'lucide-react'
 import { getScoreCategory } from '../../utils/score-categories'
 import ModelSelectorModal from '../ModelSelectorModal'
 import ComplAiScoreBadge from '../ComplAiScoreBadge'
@@ -25,12 +25,13 @@ interface UseCaseHeaderProps {
 const getStatusIcon = (status: string) => {
   const frenchStatus = getUseCaseStatusInFrench(status)
   switch (frenchStatus.toLowerCase()) {
-    case 'terminé': return <CheckCircle className="h-4 w-4" />
+    case 'complété': return <CheckCircle className="h-4 w-4" />
     case 'en cours': return <Clock className="h-4 w-4" />
     case 'à compléter': return <Clock className="h-4 w-4" />
     default: return <Clock className="h-4 w-4" />
   }
 }
+
 
 // Composant d'affichage du score dans le header
 // Utilise directement les données du useCase pour garantir la synchronisation
@@ -205,8 +206,15 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
       <div className="flex flex-col xl:flex-row xl:justify-between xl:items-start space-y-6 xl:space-y-0 xl:space-x-8">
         <div className="flex-1 min-w-0">
           <div className="mb-4">
-            <div className="mb-3">
+            <div className="mb-3 flex flex-wrap items-center gap-3">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words leading-tight hover:text-gray-700 transition-colors duration-200">{useCase.name}</h1>
+              <div className="flex items-center">
+                <span className={`inline-flex items-center px-2 py-1 text-sm font-semibold rounded-lg ${getStatusColor(frenchStatus)}`}>
+                  <span className="text-sm text-gray-600 mr-2">Statut :</span>
+                  {getStatusIcon(useCase.status)}
+                  <span className="ml-1">{frenchStatus}</span>
+                </span>
+              </div>
             </div>
             {useCase.companies && (
               <p className="text-base text-gray-600 flex items-center font-medium mb-4">
@@ -229,35 +237,42 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
             {/* Modèle COMPL-AI */}
             <div className="flex items-center gap-3 mb-4">
               <div 
-                className={`group relative inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-xl border border-blue-200 transition-all duration-200 ${
+                className={`group relative inline-block bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-xl border border-blue-200 transition-all duration-200 ${
                   onUpdateUseCase ? 'cursor-pointer hover:from-blue-100 hover:to-indigo-100 hover:shadow-md hover:border-blue-300' : ''
                 }`}
                 onClick={onUpdateUseCase ? handleModelEdit : undefined}
                 title={onUpdateUseCase ? "Cliquer pour modifier le modèle" : undefined}
               >
-                <Brain className="h-4 w-4 mr-2 text-blue-600" />
-                {useCase.compl_ai_models ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold">{useCase.compl_ai_models.model_name}</span>
-                    {useCase.compl_ai_models.model_provider && (
-                      <span className="text-blue-600 text-sm">• {useCase.compl_ai_models.model_provider}</span>
-                    )}
-                    {useCase.compl_ai_models.version && (
-                      <span className="text-blue-500 text-xs bg-blue-100 px-2 py-0.5 rounded-full">
-                        v{useCase.compl_ai_models.version}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-sm text-gray-500 font-medium">Aucun modèle sélectionné</span>
-                )}
+                {/* En-tête avec titre */}
+                <div className="px-3 pt-2 pb-1">
+                  <h4 className="text-sm font-medium text-blue-800">Modèle utilisé</h4>
+                </div>
                 
-                {/* Icône modifier avec tooltip */}
-                {onUpdateUseCase && (
-                  <div className="ml-3 opacity-60 group-hover:opacity-100 transition-opacity duration-200">
-                    <Edit3 className="h-4 w-4 text-blue-600" />
-                  </div>
-                )}
+                {/* Contenu */}
+                <div className="px-3 pb-1 flex items-center">
+                  {useCase.compl_ai_models ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">{useCase.compl_ai_models.model_name}</span>
+                      {useCase.compl_ai_models.model_provider && (
+                        <span className="text-blue-600 text-sm">• {useCase.compl_ai_models.model_provider}</span>
+                      )}
+                      {useCase.compl_ai_models.version && (
+                        <span className="text-blue-500 text-xs bg-blue-100 px-2 py-0.5 rounded-full">
+                          v{useCase.compl_ai_models.version}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-500 font-medium">Aucun modèle sélectionné</span>
+                  )}
+                  
+                  {/* Icône modifier avec tooltip */}
+                  {onUpdateUseCase && (
+                    <div className="ml-3 opacity-60 group-hover:opacity-100 transition-opacity duration-200">
+                      <Edit3 className="h-4 w-4 text-blue-600" />
+                    </div>
+                  )}
+                </div>
                 
                 {/* Tooltip */}
                 {onUpdateUseCase && (
@@ -271,12 +286,6 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
               </div>
             </div>
             
-            <div className="flex flex-wrap gap-3">
-              <span className={`inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-lg shadow-sm transition-all duration-200 hover:shadow-md hover:scale-105 ${getStatusColor(frenchStatus)}`}>
-                {getStatusIcon(useCase.status)}
-                <span className="ml-2">{frenchStatus}</span>
-              </span>
-            </div>
           </div>
         </div>
 
