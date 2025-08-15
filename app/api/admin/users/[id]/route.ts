@@ -4,7 +4,7 @@ import { verifyAdminAuth, isSuperAdmin, UserRole } from '@/lib/admin-auth'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Vérifier l'authentification admin
   const authResult = await verifyAdminAuth(request)
@@ -13,7 +13,8 @@ export async function PATCH(
   }
 
   const currentUser = authResult.user!
-  const targetUserId = params.id
+  const { id } = await params
+  const targetUserId = id
 
   try {
     const body = await request.json()
@@ -158,7 +159,7 @@ export async function PATCH(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Vérifier l'authentification admin
   const authResult = await verifyAdminAuth(request)
@@ -166,7 +167,8 @@ export async function GET(
     return authResult.error
   }
 
-  const userId = params.id
+  const { id } = await params
+  const userId = id
 
   try {
     // Créer le client Supabase admin
