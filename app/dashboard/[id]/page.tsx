@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-auth'
@@ -13,16 +13,15 @@ import {
   AlertTriangle, 
   Clock,
   Plus,
-  FileText,
-  Calendar,
-  TrendingUp,
   ChevronLeft,
   ChevronRight,
   Search,
-  X
+  X,
+  Trash2
 } from 'lucide-react'
 import WorldMap from '@/components/WorldMap'
 import ScoreCircle from '@/components/ScoreCircle'
+import DeleteConfirmationModal from '@/app/usecases/[id]/components/DeleteConfirmationModal'
 
 interface Company {
   id: string
@@ -53,13 +52,18 @@ interface DashboardProps {
 }
 
 export default function CompanyDashboard({ params }: DashboardProps) {
-  const { user, session, loading, signOut } = useAuth()
+  const { user, session, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
   const [companyId, setCompanyId] = useState<string>('')
   const [company, setCompany] = useState<Company | null>(null)
   const [useCases, setUseCases] = useState<UseCase[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [useCaseToDelete, setUseCaseToDelete] = useState<UseCase | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   
   // Average score state
   const [averageScore, setAverageScore] = useState<number | null>(null)
@@ -85,10 +89,26 @@ export default function CompanyDashboard({ params }: DashboardProps) {
     resolveParams()
   }, [params])
 
-  // Prevent hydration mismatch
+  // Prevent hydration mismatch and check for success message
   useEffect(() => {
     setMounted(true)
-  }, [])
+    
+    // Check for deletion success message
+    if (searchParams.get('deleted') === 'true') {
+      const useCaseName = searchParams.get('useCaseName')
+      setSuccessMessage(`Le use case "${useCaseName || 'Use case'}" a été supprimé avec succès`)
+      
+      // Clear the message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage(null)
+        // Clean up the URL
+        const url = new URL(window.location.href)
+        url.searchParams.delete('deleted')
+        url.searchParams.delete('useCaseName')
+        router.replace(url.pathname)
+      }, 5000)
+    }
+  }, [searchParams, router])
 
   useEffect(() => {
     if (mounted && !loading && !user) {
@@ -173,6 +193,53 @@ export default function CompanyDashboard({ params }: DashboardProps) {
   const clearSearch = () => {
     setSearchTerm('')
     setCurrentPage(1)
+  }
+
+  const handleDeleteClick = (e: React.MouseEvent, useCase: UseCase) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setUseCaseToDelete(useCase)
+    setDeleteModalOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!useCaseToDelete || !session?.access_token) return
+    
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/usecases/${useCaseToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la suppression')
+      }
+
+      // Rafraîchir la liste
+      setSuccessMessage(`Le use case "${useCaseToDelete.name}" a été supprimé avec succès`)
+      setUseCases(useCases.filter(uc => uc.id !== useCaseToDelete.id))
+      setDeleteModalOpen(false)
+      setUseCaseToDelete(null)
+      
+      // Clear message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage(null)
+      }, 5000)
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error)
+      alert('Une erreur est survenue lors de la suppression du use case')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false)
+    setUseCaseToDelete(null)
   }
 
   const getRiskLevelColor = (riskLevel: string) => {
@@ -305,6 +372,22 @@ export default function CompanyDashboard({ params }: DashboardProps) {
 
   return (
     <div className="space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-8">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center">
+            <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+            <p className="text-green-800 font-medium">{successMessage}</p>
+          </div>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="text-green-600 hover:text-green-800 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <div className="flex flex-col space-y-4">
@@ -520,35 +603,46 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                     }
 
                     return (
-                      <Link
+                      <div
                         key={useCase.id}
-                        href={getUseCaseUrl(useCase)}
-                        className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all"
+                        className="relative group"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
-                              <h3 className="font-medium text-gray-900 truncate">{useCase.name}</h3>
-                              <div className="flex flex-wrap gap-2">
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(getUseCaseStatusInFrench(useCase.status))}`}>
-                                  {getUseCaseStatusInFrench(useCase.status)}
-                                </span>
-                                {useCase.risk_level && (
-                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRiskLevelColor(useCase.risk_level)}`}>
-                                    {useCase.risk_level} risk
+                        <Link
+                          href={getUseCaseUrl(useCase)}
+                          className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
+                                <h3 className="font-medium text-gray-900 truncate">{useCase.name}</h3>
+                                <div className="flex flex-wrap gap-2">
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(getUseCaseStatusInFrench(useCase.status))}`}>
+                                    {getUseCaseStatusInFrench(useCase.status)}
                                   </span>
-                                )}
+                                  {useCase.risk_level && (
+                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRiskLevelColor(useCase.risk_level)}`}>
+                                      {useCase.risk_level} risk
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-3 line-clamp-2">{useCase.description}</p>
+                              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
+                                {useCase.ai_category && <span>{useCase.ai_category}</span>}
+                                {useCase.technology_partner && <span className="hidden sm:inline">• {useCase.technology_partner}</span>}
+                                {useCase.technology_partner && <span className="sm:hidden text-xs">{useCase.technology_partner}</span>}
                               </div>
                             </div>
-                            <p className="text-sm text-gray-600 mb-3 line-clamp-2">{useCase.description}</p>
-                            <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
-                              {useCase.ai_category && <span>{useCase.ai_category}</span>}
-                              {useCase.technology_partner && <span className="hidden sm:inline">• {useCase.technology_partner}</span>}
-                              {useCase.technology_partner && <span className="sm:hidden text-xs">{useCase.technology_partner}</span>}
-                            </div>
                           </div>
-                        </div>
-                      </Link>
+                        </Link>
+                        <button
+                          onClick={(e) => handleDeleteClick(e, useCase)}
+                          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
+                          title="Supprimer le use case"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     )
                   })}
                 </div>
@@ -632,6 +726,15 @@ export default function CompanyDashboard({ params }: DashboardProps) {
 
       
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        useCaseName={useCaseToDelete?.name || ''}
+        deleting={isDeleting}
+      />
     </div>
   )
 } 

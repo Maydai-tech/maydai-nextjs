@@ -302,4 +302,118 @@ export async function PUT(
     logger.error('Use case PUT API error', error, context)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    
+    // Create Supabase client with the user's token
+    const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    })
+    
+    // Verify the token and get user
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    // Resolve params
+    const resolvedParams = await params
+    const useCaseId = resolvedParams.id
+
+    // Get user's profile to check access
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError) {
+      return NextResponse.json({ error: 'Error fetching profile' }, { status: 500 })
+    }
+
+    // Verify user has access to this use case
+    const { data: existingUseCase, error: useCaseError } = await supabase
+      .from('usecases')
+      .select('company_id, name')
+      .eq('id', useCaseId)
+      .single()
+
+    if (useCaseError) {
+      if (useCaseError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Use case not found' }, { status: 404 })
+      }
+      return NextResponse.json({ error: 'Error fetching use case' }, { status: 500 })
+    }
+
+    // Check if user has access to this use case
+    if (profile.company_id !== existingUseCase.company_id) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    const context = createRequestContext(request)
+    logger.info('Deleting use case and associated responses', { 
+      ...context, 
+      useCaseId,
+      useCaseName: existingUseCase.name,
+      deletedBy: user.email 
+    })
+
+    // Delete all responses associated with this use case first
+    const { error: deleteResponsesError } = await supabase
+      .from('usecase_responses')
+      .delete()
+      .eq('usecase_id', useCaseId)
+
+    if (deleteResponsesError) {
+      logger.error('Failed to delete use case responses', deleteResponsesError, { 
+        ...context, 
+        useCaseId 
+      })
+      return NextResponse.json({ error: 'Error deleting use case responses' }, { status: 500 })
+    }
+
+    // Delete the use case itself
+    const { error: deleteUseCaseError } = await supabase
+      .from('usecases')
+      .delete()
+      .eq('id', useCaseId)
+
+    if (deleteUseCaseError) {
+      logger.error('Failed to delete use case', deleteUseCaseError, { 
+        ...context, 
+        useCaseId 
+      })
+      return NextResponse.json({ error: 'Error deleting use case' }, { status: 500 })
+    }
+
+    logger.info('Successfully deleted use case and all associated data', { 
+      ...context, 
+      useCaseId,
+      useCaseName: existingUseCase.name,
+      deletedBy: user.email 
+    })
+
+    // Return 204 No Content on successful deletion
+    return new NextResponse(null, { status: 204 })
+
+  } catch (error) {
+    const context = createRequestContext(request)
+    logger.error('Use case DELETE API error', error, context)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 } 

@@ -1,17 +1,18 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { UseCase, Progress } from '../../types/usecase'
 import { ComplAIModel } from '@/lib/supabase'
 import { getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
 import { useCaseRoutes } from '../../utils/routes'
 import { useUseCaseNavigation } from '../../utils/navigation'
-import { ArrowLeft, Building, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle } from 'lucide-react'
-import { getScoreCategory } from '../../utils/score-categories'
+import { ArrowLeft, Building, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle, Trash2 } from 'lucide-react'
 import ModelSelectorModal from '../ModelSelectorModal'
-import ComplAiScoreBadge from '../ComplAiScoreBadge'
+import DeleteConfirmationModal from '../DeleteConfirmationModal'
 import { RiskLevelBadge } from './RiskLevelBadge'
 import { useRiskLevel } from '../../hooks/useRiskLevel'
 import { CountryDeploymentDisplay } from './CountryDeploymentDisplay'
+import { useAuth } from '@/lib/auth'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
 
@@ -156,9 +157,13 @@ function HeaderScore({ useCase, refreshing = false }: { useCase: UseCase, refres
 export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = false }: UseCaseHeaderProps) {
   const frenchStatus = getUseCaseStatusInFrench(useCase.status)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [isRecalculatingScore, setIsRecalculatingScore] = useState(false) // État local pour l'animation du score pendant le recalcul
   const { goToEvaluation } = useUseCaseNavigation(useCase.id, useCase.company_id)
   const { riskLevel, loading: riskLoading, error: riskError } = useRiskLevel(useCase.id)
+  const router = useRouter()
+  const { session } = useAuth()
 
   const handleModelEdit = () => {
     setIsModalOpen(true)
@@ -190,6 +195,39 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const handleModalClose = () => {
     setIsModalOpen(false)
   }
+
+  const handleDeleteClick = () => {
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/usecases/${useCase.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la suppression')
+      }
+
+      // Redirection vers le dashboard avec un message de succès
+      router.push(`/dashboard/${useCase.company_id}?deleted=true&useCaseName=${encodeURIComponent(useCase.name)}`)
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error)
+      alert('Une erreur est survenue lors de la suppression du use case')
+      setIsDeleting(false)
+      setIsDeleteModalOpen(false)
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setIsDeleteModalOpen(false)
+  }
   
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
@@ -201,6 +239,15 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-0.5 transition-transform duration-200" />
           <span className="text-sm font-medium">Retour au dashboard</span>
         </Link>
+        
+        <button
+          onClick={handleDeleteClick}
+          className="group inline-flex items-center text-gray-500 hover:text-red-600 transition-all duration-200 hover:bg-red-50 rounded-lg px-3 py-2"
+          title="Supprimer le use case"
+        >
+          <Trash2 className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+          <span className="text-sm font-medium">Supprimer</span>
+        </button>
       </div>
       
       <div className="flex flex-col xl:flex-row xl:justify-between xl:items-start space-y-6 xl:space-y-0 xl:space-x-8">
@@ -344,6 +391,15 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         currentModel={useCase.compl_ai_models || null}
         onSave={handleModelSave}
         saving={updating}
+      />
+      
+      {/* Modal de confirmation de suppression */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        useCaseName={useCase.name}
+        deleting={isDeleting}
       />
     </div>
   )
