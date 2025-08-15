@@ -92,7 +92,7 @@ export async function PATCH(
         last_name,
         role,
         company_id,
-        companies (
+        companies:company_id (
           id,
           name
         )
@@ -126,15 +126,19 @@ export async function PATCH(
     const { data: authUser } = await supabase.auth.admin.getUserById(targetUserId)
 
     // Formater la réponse
+    const companyData = Array.isArray(updatedProfile.companies)
+      ? updatedProfile.companies[0]
+      : updatedProfile.companies
+
     const responseData = {
       id: updatedProfile.id,
       email: authUser?.user?.email || 'N/A',
       first_name: updatedProfile.first_name,
       last_name: updatedProfile.last_name,
       role: updatedProfile.role,
-      company: updatedProfile.companies ? {
-        id: updatedProfile.companies.id,
-        name: updatedProfile.companies.name
+      company: companyData ? {
+        id: companyData.id,
+        name: companyData.name
       } : null
     }
 
@@ -181,7 +185,7 @@ export async function GET(
         company_id,
         created_at,
         updated_at,
-        companies (
+        companies:company_id (
           id,
           name
         )
@@ -200,15 +204,19 @@ export async function GET(
     const { data: authUser } = await supabase.auth.admin.getUserById(userId)
 
     // Formater la réponse
+    const companyData = Array.isArray(profile.companies)
+      ? profile.companies[0]
+      : profile.companies
+
     const userData = {
       id: profile.id,
       email: authUser?.user?.email || 'N/A',
       first_name: profile.first_name,
       last_name: profile.last_name,
       role: profile.role,
-      company: profile.companies ? {
-        id: profile.companies.id,
-        name: profile.companies.name
+      company: companyData ? {
+        id: companyData.id,
+        name: companyData.name
       } : null,
       created_at: authUser?.user?.created_at || profile.created_at,
       last_sign_in_at: authUser?.user?.last_sign_in_at || null,
