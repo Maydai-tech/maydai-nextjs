@@ -39,19 +39,16 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Get user's profile to check if they have access to this company
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('company_id')
-      .eq('id', user.id)
+    // Check if the user has access to this company via user_companies table
+    const { data: userCompany, error: userCompanyError } = await supabase
+      .from('user_companies')
+      .select('company_id, role')
+      .eq('user_id', user.id)
+      .eq('company_id', id)
+      .eq('is_active', true)
       .single()
 
-    if (profileError) {
-      return NextResponse.json({ error: 'Error fetching profile' }, { status: 500 })
-    }
-
-    // Check if the user has access to this company
-    if (profile.company_id !== id) {
+    if (userCompanyError || !userCompany) {
       return NextResponse.json({ error: 'Access denied to this company' }, { status: 403 })
     }
 

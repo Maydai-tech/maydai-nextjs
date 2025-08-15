@@ -35,35 +35,49 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // For now, we'll fetch all companies where the user is in the profiles table
-    // Later we can implement a proper user-company relationship table
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .single()
+    // TEMPORARY: Use hybrid approach - check both user_companies and profiles.company_id
+    // This ensures compatibility while RLS policies are being updated
+    
+    // First, try to get companies via user_companies table
+    const { data: userCompanies, error: userCompaniesError } = await supabase
+      .from('user_companies')
+      .select('company_id, role')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
 
-    if (profileError) {
-      return NextResponse.json({ error: 'Error fetching profile' }, { status: 500 })
-    }
+    let companyIds: string[] = []
+    
+    if (userCompanies && userCompanies.length > 0) {
+      companyIds = userCompanies.map(uc => uc.company_id)
+    } else {
+      // Fallback to profiles.company_id for users not yet migrated
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .single()
 
-    // If user has a company_id, fetch all companies they have access to
-    // For now, this means their primary company, but this can be extended
-    if (profile.company_id) {
-      const { data: companies, error: companiesError } = await supabase
-        .from('companies')
-        .select('*')
-        .eq('id', profile.company_id)
-
-      if (companiesError) {
-        return NextResponse.json({ error: 'Error fetching companies' }, { status: 500 })
+      if (profile?.company_id) {
+        companyIds = [profile.company_id]
       }
-
-      return NextResponse.json(companies || [])
     }
 
-    // Return empty array if no company associated
-    return NextResponse.json([])
+    if (companyIds.length === 0) {
+      return NextResponse.json([])
+    }
+
+    // Fetch companies using the .in() method
+    const { data: companies, error: companiesError } = await supabase
+      .from('companies')
+      .select('*')
+      .in('id', companyIds)
+
+    if (companiesError) {
+      console.error('Error fetching companies:', companiesError)
+      return NextResponse.json({ error: 'Error fetching companies' }, { status: 500 })
+    }
+
+    return NextResponse.json(companies || [])
 
   } catch (error) {
     const context = createRequestContext(request)
@@ -111,10 +125,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Erreur lors de la création de l'entreprise" }, { status: 500 })
     }
 
-    // Optionnel : mettre à jour le profil de l'utilisateur avec la nouvelle company_id
+    // Créer une relation user_companies avec le rôle company_owner
+    const { error: userCompanyError } = await supabase
+      .from('user_companies')
+      .insert([{
+        user_id: user.id,
+        company_id: data.id,
+        role: 'company_owner',
+        is_active: true
+      }])
+
+    if (userCompanyError) {
+      return NextResponse.json({ error: "Erreur lors de la création de la relation utilisateur-entreprise" }, { status: 500 })
+    }
+
+    // Optionnel : mettre à jour le current_company_id dans le profil
     await supabase
       .from('profiles')
-      .update({ company_id: data.id })
+      .update({ current_company_id: data.id })
       .eq('id', user.id)
 
     return NextResponse.json({ id: data.id })
