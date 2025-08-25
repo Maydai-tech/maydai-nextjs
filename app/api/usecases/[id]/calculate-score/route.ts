@@ -109,14 +109,16 @@ export async function POST(
       return createErrorResponse('Cas d\'usage non trouvé', 404);
     }
 
-    // Vérifier que l'utilisateur a accès à ce cas d'usage
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+    // Vérifier que l'utilisateur a accès à ce cas d'usage via user_companies
+    const { data: userCompany, error: userCompanyError } = await supabase
+      .from('user_companies')
       .select('company_id')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
+      .eq('company_id', usecase.company_id)
+      .eq('is_active', true)
       .single();
 
-    if (profileError || profile.company_id !== usecase.company_id) {
+    if (userCompanyError || !userCompany) {
       return createErrorResponse('Accès refusé à ce cas d\'usage', 403);
     }
     

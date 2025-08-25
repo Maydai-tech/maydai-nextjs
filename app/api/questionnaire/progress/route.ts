@@ -34,40 +34,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Get user's profile to find company_id
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+    // Get user's companies via user_companies table
+    const { data: userCompanies, error: userCompaniesError } = await supabase
+      .from('user_companies')
       .select('company_id')
-      .eq('id', user.id)
-      .single()
+      .eq('user_id', user.id)
+      .eq('is_active', true)
 
-    if (profileError) {
-      return NextResponse.json({ error: 'Error fetching profile' }, { status: 500 })
+    if (userCompaniesError) {
+      return NextResponse.json({ error: 'Error fetching user companies' }, { status: 500 })
     }
 
-    // If user has a company_id, fetch progress for that company's use cases
-    if (profile.company_id) {
-      const { data: progress, error: progressError } = await supabase
-        .from('usecase_questionnaire_progress')
-        .select(`
-          *,
-          usecases!inner(
-            id,
-            name,
-            company_id
-          )
-        `)
-        .eq('usecases.company_id', profile.company_id)
-
-      if (progressError) {
-        return NextResponse.json({ error: 'Error fetching progress' }, { status: 500 })
-      }
-
-      return NextResponse.json(progress || [])
+    if (!userCompanies || userCompanies.length === 0) {
+      return NextResponse.json([])
     }
 
-    // Return empty array if no company associated
-    return NextResponse.json([])
+    // Get company IDs the user has access to
+    const companyIds = userCompanies.map(uc => uc.company_id)
+
+    // Fetch progress for use cases from all companies the user has access to
+    const { data: progress, error: progressError } = await supabase
+      .from('usecase_questionnaire_progress')
+      .select(`
+        *,
+        usecases!inner(
+          id,
+          name,
+          company_id
+        )
+      `)
+      .in('usecases.company_id', companyIds)
+
+    if (progressError) {
+      return NextResponse.json({ error: 'Error fetching progress' }, { status: 500 })
+    }
+
+    return NextResponse.json(progress || [])
 
   } catch (error) {
     console.error('Error in questionnaire progress API:', error)

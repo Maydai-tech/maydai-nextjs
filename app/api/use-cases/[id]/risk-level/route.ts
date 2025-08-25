@@ -50,14 +50,16 @@ export async function GET(
       return NextResponse.json({ error: 'Use case not found' }, { status: 404 })
     }
 
-    // Vérifier que l'utilisateur appartient à la même entreprise
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+    // Check if user has access to this use case via user_companies
+    const { data: userCompany, error: userCompanyError } = await supabase
+      .from('user_companies')
       .select('company_id')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
+      .eq('company_id', usecase.company_id)
+      .eq('is_active', true)
       .single()
 
-    if (profileError || profile.company_id !== usecase.company_id) {
+    if (userCompanyError || !userCompany) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

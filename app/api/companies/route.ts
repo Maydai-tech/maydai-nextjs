@@ -45,26 +45,15 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .eq('is_active', true)
 
-    let companyIds: string[] = []
-    
-    if (userCompanies && userCompanies.length > 0) {
-      companyIds = userCompanies.map(uc => uc.company_id)
-    } else {
-      // Fallback to profiles.company_id for users not yet migrated
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single()
-
-      if (profile?.company_id) {
-        companyIds = [profile.company_id]
-      }
+    if (userCompaniesError) {
+      return NextResponse.json({ error: 'Error fetching user companies' }, { status: 500 })
     }
 
-    if (companyIds.length === 0) {
+    if (!userCompanies || userCompanies.length === 0) {
       return NextResponse.json([])
     }
+
+    const companyIds = userCompanies.map(uc => uc.company_id)
 
     // Fetch companies using the .in() method
     const { data: companies, error: companiesError } = await supabase

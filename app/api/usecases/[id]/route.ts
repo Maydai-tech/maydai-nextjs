@@ -74,22 +74,16 @@ export async function GET(
       return NextResponse.json({ error: 'Error fetching use case' }, { status: 500 })
     }
 
-    // Get user's profile to check access
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+    // Check if user has access to this use case via user_companies
+    const { data: userCompany, error: userCompanyError } = await supabase
+      .from('user_companies')
       .select('company_id')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
+      .eq('company_id', useCase.company_id)
+      .eq('is_active', true)
       .single()
 
-    if (profileError) {
-      return NextResponse.json({ error: 'Error fetching profile' }, { status: 500 })
-    }
-
-    // Check if user has access to this use case
-    // Users can access use cases from their company
-    const hasAccess = profile.company_id === useCase.company_id
-    
-    if (!hasAccess) {
+    if (userCompanyError || !userCompany) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -150,17 +144,6 @@ export async function PUT(
       }
     }
 
-    // Get user's profile to check access
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError) {
-      return NextResponse.json({ error: 'Error fetching profile' }, { status: 500 })
-    }
-
     // Verify user has access to this use case
     const { data: existingUseCase, error: useCaseError } = await supabase
       .from('usecases')
@@ -172,7 +155,16 @@ export async function PUT(
       return NextResponse.json({ error: 'Use case not found' }, { status: 404 })
     }
 
-    if (profile.company_id !== existingUseCase.company_id) {
+    // Check if user has access via user_companies
+    const { data: userCompany, error: userCompanyError } = await supabase
+      .from('user_companies')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .eq('company_id', existingUseCase.company_id)
+      .eq('is_active', true)
+      .single()
+
+    if (userCompanyError || !userCompany) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -335,17 +327,6 @@ export async function DELETE(
     const resolvedParams = await params
     const useCaseId = resolvedParams.id
 
-    // Get user's profile to check access
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError) {
-      return NextResponse.json({ error: 'Error fetching profile' }, { status: 500 })
-    }
-
     // Verify user has access to this use case
     const { data: existingUseCase, error: useCaseError } = await supabase
       .from('usecases')
@@ -360,8 +341,16 @@ export async function DELETE(
       return NextResponse.json({ error: 'Error fetching use case' }, { status: 500 })
     }
 
-    // Check if user has access to this use case
-    if (profile.company_id !== existingUseCase.company_id) {
+    // Check if user has access to this use case via user_companies
+    const { data: userCompany, error: userCompanyError } = await supabase
+      .from('user_companies')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .eq('company_id', existingUseCase.company_id)
+      .eq('is_active', true)
+      .single()
+
+    if (userCompanyError || !userCompany) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

@@ -46,37 +46,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Get user's profile to find company_id
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+    // Get user's companies via user_companies table
+    const { data: userCompanies, error: userCompaniesError } = await supabase
+      .from('user_companies')
       .select('company_id')
-      .eq('id', user.id)
-      .single()
+      .eq('user_id', user.id)
+      .eq('is_active', true)
 
-    if (profileError) {
-      return NextResponse.json({ error: 'Error fetching profile' }, { status: 500 })
+    if (userCompaniesError) {
+      return NextResponse.json({ error: 'Error fetching user companies' }, { status: 500 })
     }
 
-    // If user has a company_id, fetch use cases for that company
-    if (profile.company_id) {
-      const { data: usecases, error: usecasesError } = await supabase
-        .from('usecases')
-        .select(`
-          *,
-          companies(name)
-        `)
-        .eq('company_id', profile.company_id)
-        .order('created_at', { ascending: false })
-
-      if (usecasesError) {
-        return NextResponse.json({ error: 'Error fetching use cases' }, { status: 500 })
-      }
-
-      return NextResponse.json(usecases || [])
+    if (!userCompanies || userCompanies.length === 0) {
+      return NextResponse.json([])
     }
 
-    // Return empty array if no company associated
-    return NextResponse.json([])
+    // Get company IDs the user has access to
+    const companyIds = userCompanies.map(uc => uc.company_id)
+
+    // Fetch use cases for all companies the user has access to
+    const { data: usecases, error: usecasesError } = await supabase
+      .from('usecases')
+      .select(`
+        *,
+        companies(name)
+      `)
+      .in('company_id', companyIds)
+      .order('created_at', { ascending: false })
+
+    if (usecasesError) {
+      return NextResponse.json({ error: 'Error fetching use cases' }, { status: 500 })
+    }
+
+    return NextResponse.json(usecases || [])
 
   } catch (error) {
     console.error('Error in usecases API:', error)
@@ -161,43 +163,21 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Verify user has access to this company
-    console.log('Récupération du profil pour user:', user.id)
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+    // Verify user has access to this company via user_companies
+    console.log('Vérification accès company via user_companies pour user:', user.id, 'company:', company_id)
+    const { data: userCompany, error: userCompanyError } = await supabase
+      .from('user_companies')
       .select('company_id')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
+      .eq('company_id', company_id)
+      .eq('is_active', true)
       .single()
 
-    console.log('Profile result:', { profile, error: profileError })
+    console.log('User company check result:', { userCompany, error: userCompanyError })
 
-    if (profileError) {
-      console.error('Profile error:', profileError)
-      return NextResponse.json({ error: 'Error fetching profile' }, { status: 500 })
-    }
-
-    // Check if user is associated with the company or if it's an admin request
-    console.log('Vérification accès company:', {
-      userCompanyId: profile.company_id,
-      requestedCompanyId: company_id,
-      match: profile.company_id === company_id
-    })
-    
-    if (profile.company_id !== company_id) {
-      // Additional check: verify the company exists and user has access
-      console.log('User company_id ne correspond pas, vérification de l\'existence de la company')
-      const { data: company, error: companyError } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('id', company_id)
-        .single()
-
-      console.log('Company check result:', { company, error: companyError })
-
-      if (companyError || !company) {
-        console.error('Company not found or access denied')
-        return NextResponse.json({ error: 'Company not found or access denied' }, { status: 403 })
-      }
+    if (userCompanyError || !userCompany) {
+      console.error('Company not found or access denied')
+      return NextResponse.json({ error: 'Company not found or access denied' }, { status: 403 })
     }
 
     // Parse deployment_countries from string to array if needed
