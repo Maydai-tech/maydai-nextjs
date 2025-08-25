@@ -129,37 +129,11 @@ export default function AdminUsersPage() {
     }
   }
 
-  const handleCompanyChange = async (userId: string, companyId: string | null) => {
-    if (!session) {
-      alert('Session expirée. Veuillez vous reconnecter.')
-      return
-    }
-    
-    setUpdating(userId)
-    
-    try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ company_id: companyId || null })
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        alert(`Erreur: ${error.error}`)
-        return
-      }
-
-      await loadUsers()
-    } catch (error) {
-      console.error('Error updating company:', error)
-      alert('Erreur lors de la mise à jour de l\'entreprise')
-    } finally {
-      setUpdating(null)
-    }
+  // Fonction pour gérer les entreprises d'un utilisateur (à implémenter dans une modale ou un composant séparé)
+  const handleManageCompanies = (userId: string) => {
+    // TODO: Ouvrir une modale pour gérer les associations d'entreprises
+    console.log('Gérer les entreprises pour l\'utilisateur:', userId)
+    alert('La gestion des entreprises sera disponible prochainement')
   }
 
   const formatDate = (dateString?: string | null) => {
@@ -327,20 +301,24 @@ export default function AdminUsersPage() {
                             {userItem.email}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <select
-                            value={userItem.company?.id || ''}
-                            onChange={(e) => handleCompanyChange(userItem.id, e.target.value || null)}
-                            disabled={updating === userItem.id}
-                            className="text-sm border-gray-300 rounded-md focus:ring-primary focus:border-primary disabled:opacity-50"
-                          >
-                            <option value="">Sans entreprise</option>
-                            {companies.map(company => (
-                              <option key={company.id} value={company.id}>
-                                {company.name}
-                              </option>
-                            ))}
-                          </select>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-1">
+                            {userItem.companies && userItem.companies.length > 0 ? (
+                              userItem.companies.map((company) => (
+                                <span
+                                  key={company.id}
+                                  className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
+                                >
+                                  {company.name}
+                                  {company.role && company.role !== 'user' && (
+                                    <span className="ml-1 text-blue-600">({company.role})</span>
+                                  )}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-sm text-gray-500">Aucune entreprise</span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

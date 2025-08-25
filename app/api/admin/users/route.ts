@@ -58,9 +58,14 @@ export async function GET(request: NextRequest) {
         company_id,
         created_at,
         updated_at,
-        companies:company_id (
-          id,
-          name
+        user_companies (
+          company_id,
+          role,
+          is_active,
+          companies (
+            id,
+            name
+          )
         )
       `)
       .range(offset, offset + limit - 1)
@@ -70,9 +75,8 @@ export async function GET(request: NextRequest) {
     if (roleFilter) {
       profilesQuery = profilesQuery.eq('role', roleFilter)
     }
-    if (companyFilter) {
-      profilesQuery = profilesQuery.eq('company_id', companyFilter)
-    }
+    // Note: Le filtre par entreprise doit maintenant se faire après la récupération
+    // car il faut filtrer sur user_companies
 
     // Pour la recherche, on doit faire deux requêtes séparées car on ne peut pas filtrer sur auth.users
     const { data: profiles, error: profilesError } = await profilesQuery
@@ -115,6 +119,15 @@ export async function GET(request: NextRequest) {
           const email = authUser?.user?.email || 'N/A'
           const last_sign_in_at = authUser?.user?.last_sign_in_at || null
 
+          // Récupérer les entreprises depuis user_companies
+          const userCompanies = profile.user_companies
+            ?.filter((uc: any) => uc.is_active && uc.companies)
+            ?.map((uc: any) => ({
+              id: uc.companies.id,
+              name: uc.companies.name,
+              role: uc.role
+            })) || []
+
           // Appliquer le filtre de recherche côté serveur
           if (search) {
             const searchLower = search.toLowerCase()
@@ -127,9 +140,13 @@ export async function GET(request: NextRequest) {
             }
           }
 
-          const companyData = Array.isArray(profile.companies)
-            ? profile.companies[0]
-            : profile.companies
+          // Appliquer le filtre par entreprise
+          if (companyFilter) {
+            const hasCompany = userCompanies.some((uc: any) => uc.id === companyFilter)
+            if (!hasCompany) {
+              return null // Filtrer cet utilisateur
+            }
+          }
 
           return {
             id: profile.id,
@@ -137,29 +154,29 @@ export async function GET(request: NextRequest) {
             first_name: profile.first_name,
             last_name: profile.last_name,
             role: profile.role,
-            company: companyData ? {
-              id: companyData.id,
-              name: companyData.name
-            } : null,
+            companies: userCompanies,
             created_at: profile.created_at,
             last_sign_in_at,
             updated_at: profile.updated_at
           }
         } catch (error) {
           console.error(`Error processing profile ${profile.id}:`, error)
-          const companyData = Array.isArray(profile.companies)
-            ? profile.companies[0]
-            : profile.companies
+          // En cas d'erreur, récupérer quand même les entreprises
+          const userCompanies = profile.user_companies
+            ?.filter((uc: any) => uc.is_active && uc.companies)
+            ?.map((uc: any) => ({
+              id: uc.companies.id,
+              name: uc.companies.name,
+              role: uc.role
+            })) || []
+          
           return {
             id: profile.id,
             email: 'Error',
             first_name: profile.first_name,
             last_name: profile.last_name,
             role: profile.role,
-            company: companyData ? {
-              id: companyData.id,
-              name: companyData.name
-            } : null,
+            companies: userCompanies,
             created_at: profile.created_at,
             last_sign_in_at: null,
             updated_at: profile.updated_at
@@ -173,7 +190,7 @@ export async function GET(request: NextRequest) {
 
     console.log('Users after email fetch and filtering:', filteredUsers.length)
 
-    // Compter le total pour la pagination (sans filtres de recherche car c'est complexe)
+    // Compter le total pour la pagination (sans filtres de recherche et entreprise car c'est complexe avec user_companies)
     let countQuery = supabase
       .from('profiles')
       .select('id', { count: 'exact', head: true })
@@ -181,9 +198,7 @@ export async function GET(request: NextRequest) {
     if (roleFilter) {
       countQuery = countQuery.eq('role', roleFilter)
     }
-    if (companyFilter) {
-      countQuery = countQuery.eq('company_id', companyFilter)
-    }
+    // Note: Le filtre par entreprise n'est pas appliqué ici car il nécessiterait une jointure complexe
 
     const { count: totalCount, error: countError } = await countQuery
 

@@ -1,13 +1,16 @@
+export interface UserCompany {
+  id: string
+  name: string
+  role?: string
+}
+
 export interface FullUserProfile {
   id: string
   email: string
   first_name?: string | null
   last_name?: string | null
   role: 'user' | 'admin' | 'super_admin'
-  company?: {
-    id: string
-    name: string
-  } | null
+  companies: UserCompany[]
   created_at: string
   last_sign_in_at?: string | null
   updated_at?: string
@@ -33,7 +36,9 @@ export interface UserFilters {
 
 export interface UpdateUserRequest {
   role?: 'user' | 'admin' | 'super_admin'
-  company_id?: string | null
+  company_ids?: string[]  // Remplacer toutes les entreprises
+  add_company_id?: string  // Ajouter une entreprise
+  remove_company_id?: string  // Retirer une entreprise
 }
 
 export interface UpdateUserResponse {
