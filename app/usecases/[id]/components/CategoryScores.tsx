@@ -88,17 +88,22 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
     'social_environmental'
   ]
 
-  // Trier les catégories selon l'ordre spécifié
-  const sortedCategoryScores = [...categoryScores].sort((a, b) => {
-    const indexA = categoryOrder.indexOf(a.category_id)
-    const indexB = categoryOrder.indexOf(b.category_id)
-    
-    // Si une catégorie n'est pas dans l'ordre, la mettre à la fin
-    if (indexA === -1) return 1
-    if (indexB === -1) return -1
-    
-    return indexA - indexB
-  })
+  // Trier les catégories selon l'ordre spécifié et filtrer les catégories non désirées
+  const sortedCategoryScores = [...categoryScores]
+    .filter(category => 
+      category.category_id !== 'risk_level' && 
+      category.category_id !== 'prohibited_practices'
+    )
+    .sort((a, b) => {
+      const indexA = categoryOrder.indexOf(a.category_id)
+      const indexB = categoryOrder.indexOf(b.category_id)
+      
+      // Si une catégorie n'est pas dans l'ordre, la mettre à la fin
+      if (indexA === -1) return 1
+      if (indexB === -1) return -1
+      
+      return indexA - indexB
+    })
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
