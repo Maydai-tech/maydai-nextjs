@@ -511,7 +511,6 @@ function NewUseCasePageContent() {
   }
 
   const handleInputChange = (value: string) => {
-    console.log('Form input changed:', currentQuestion.id, '=', value) // Debug log
     setFormData(prev => ({ ...prev, [currentQuestion.id]: value }))
     if (error) {
       setError('')
