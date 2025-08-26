@@ -116,21 +116,24 @@ function NewUseCasePageContent() {
   const fetchPartners = async () => {
     try {
       setLoadingPartners(true)
+      // Utiliser directement notre liste mise à jour au lieu de la base de données
+      const updatedPartners = ['Anthropic', 'DeepSeek', 'Google', 'Meta', 'Microsoft', 'Mistral', 'Nvidia', 'OpenAI', 'Qwen', 'xAI']
+      setPartners(updatedPartners)
+      
+      // Optionnel : Récupérer aussi depuis la base pour la compatibilité avec d'autres fonctionnalités
       const { data, error } = await supabase
         .from('compl_ai_models')
         .select('model_provider')
         .not('model_provider', 'is', null)
         .order('model_provider', { ascending: true })
 
-      if (error) throw error
-
-      // Extraire les partenaires uniques et filtrer les valeurs null/vides
-      const uniquePartners = [...new Set(data?.map(item => item.model_provider).filter(Boolean))] as string[]
-      setPartners(uniquePartners)
+      if (error) {
+        console.warn('Erreur lors du chargement des partenaires depuis la base:', error)
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des partenaires:', error)
       // Fallback vers la liste en dur en cas d'erreur
-      setPartners(['OpenAI', 'Anthropic', 'Google', 'Meta', 'Qwen', 'Mistral', 'DeepSeek', 'xAI', 'Grok'])
+      setPartners(['Anthropic', 'DeepSeek', 'Google', 'Meta', 'Microsoft', 'Mistral', 'Nvidia', 'OpenAI', 'Qwen', 'xAI'])
     } finally {
       setLoadingPartners(false)
     }
@@ -190,8 +193,8 @@ function NewUseCasePageContent() {
       type: 'radio',
       options: [
         { 
-          label: 'Traitement du langage naturel (TAL)', 
-          examples: ['ChatGPT', 'DeepL', 'Google Traduction'] 
+          label: 'Large Language Model (LLM)', 
+          examples: ['ChatGPT', 'Claude', 'Mistral', 'Gemini'] 
         },
         { 
           label: 'Vision par ordinateur', 
@@ -889,7 +892,7 @@ function NewUseCasePageContent() {
               )}
 
               {Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 && !loadingPartners && !loadingModels && (
-                <div className="space-y-3">
+                <div className={currentQuestion.id === 'technology_partner' ? 'grid grid-cols-2 gap-4' : 'space-y-3'}>
                   {(currentQuestion.options as { label: string; examples: string[] }[]).map((option, index) => (
                     <label 
                       key={index} 
@@ -915,14 +918,39 @@ function NewUseCasePageContent() {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-lg font-semibold text-gray-900 mb-2">
-                            {option.label}
-                          </div>
-                          {option.examples.length > 0 && (
-                            <div className="text-sm text-gray-600">
-                              <span className="font-medium">Exemples : </span>
-                              <span className="text-gray-500">{option.examples.join(', ')}</span>
+                          {currentQuestion.id === 'technology_partner' ? (
+                            <div className="flex items-center space-x-3">
+                              <img 
+                                src={`/icons_providers/${option.label.toLowerCase().replace(/\s+/g, '')}.svg`} 
+                                alt={`Logo ${option.label}`}
+                                className="h-8 w-8 object-contain"
+                                onError={(e) => {
+                                  // Fallback pour les formats non-SVG
+                                  const target = e.target as HTMLImageElement;
+                                  const fallbackSrc = `/icons_providers/${option.label.toLowerCase().replace(/\s+/g, '')}.webp`;
+                                  target.src = fallbackSrc;
+                                  target.onerror = () => {
+                                    // Si aucun logo n'est trouvé, masquer l'image
+                                    target.style.display = 'none';
+                                  };
+                                }}
+                              />
+                              <div className="text-lg font-semibold text-gray-900">
+                                {option.label}
+                              </div>
                             </div>
+                          ) : (
+                            <>
+                              <div className="text-lg font-semibold text-gray-900 mb-2">
+                                {option.label}
+                              </div>
+                              {option.examples.length > 0 && (
+                                <div className="text-sm text-gray-600">
+                                  <span className="font-medium">Exemples : </span>
+                                  <span className="text-gray-500">{option.examples.join(', ')}</span>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
