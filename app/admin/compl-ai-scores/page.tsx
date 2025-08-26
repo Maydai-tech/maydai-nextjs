@@ -1092,16 +1092,6 @@ export default function ComplAIScoresPage() {
                   {principles.map((principle) => (
                     <td key={principle.code} className="px-3 py-3 text-center min-w-[280px] border-l border-gray-300">
                       <div className="space-y-2">
-                        {/* Score moyen du principe */}
-                        <div className="flex justify-center">
-                          {model.principle_scores[principle.code] && model.principle_scores[principle.code].benchmark_count > 0 ? (
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${getScoreColor(model.principle_scores[principle.code].avg_score, true)}`}>
-                              {model.principle_scores[principle.code].avg_score.toFixed(3)}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-xs">N/A</span>
-                          )}
-                        </div>
                         
                         {/* Score moyen MaydAI du principe */}
                         <div className="flex justify-center mt-1">
@@ -1171,8 +1161,10 @@ export default function ComplAIScoresPage() {
                                     
                                     {/* Original score */}
                                     <div className="flex justify-center">
-                                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${getScoreColor(model.principle_scores[principle.code].benchmark_scores[benchmark.code].score)}`}>
-                                        {model.principle_scores[principle.code].benchmark_scores[benchmark.code].score.toFixed(3)}
+                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${model.principle_scores[principle.code].benchmark_scores[benchmark.code].score == null ? 'bg-gray-100 text-gray-500' : getScoreColor(model.principle_scores[principle.code].benchmark_scores[benchmark.code].score)}`}>
+                                        {model.principle_scores[principle.code].benchmark_scores[benchmark.code].score == null
+                                          ? ''
+                                          : model.principle_scores[principle.code].benchmark_scores[benchmark.code].score.toFixed(3)}
                                       </span>
                                     </div>
                                     
