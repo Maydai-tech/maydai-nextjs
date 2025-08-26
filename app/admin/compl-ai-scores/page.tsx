@@ -371,17 +371,57 @@ export default function ComplAIScoresPage() {
         return
       }
 
-      // Extraire tous les principes et leurs benchmarks
+      // TOUJOURS récupérer tous les principes et benchmarks depuis la base de données
+      // Cela garantit que tous les benchmarks sont affichés, même sans évaluations
       const principleMap = new Map<string, PrincipleInfo>()
       const benchmarkMap = new Map<string, BenchmarkInfo>()
       
-      // Si nous avons des évaluations, extraire les principes et benchmarks
+      // D'abord, récupérer TOUS les principes et benchmarks depuis la base
+      const { data: principlesData } = await supabase
+        .from('compl_ai_principles')
+        .select(`
+          code,
+          name,
+          category,
+          compl_ai_benchmarks (
+            code,
+            name
+          )
+        `)
+        .order('code')
+
+      if (principlesData) {
+        principlesData.forEach((principle: any) => {
+          const benchmarks = (principle.compl_ai_benchmarks || []).map((benchmark: any) => {
+            const benchmarkInfo: BenchmarkInfo = {
+              code: benchmark.code,
+              name: benchmark.name,
+              principle_code: principle.code,
+              principle_name: principle.name,
+              principle_category: principle.category
+            }
+            benchmarkMap.set(benchmark.code, benchmarkInfo)
+            return benchmarkInfo
+          })
+          
+          principleMap.set(principle.code, {
+            code: principle.code,
+            name: principle.name,
+            category: principle.category,
+            benchmarks: benchmarks
+          })
+        })
+      }
+      
+      // Ensuite, si nous avons des évaluations, mettre à jour avec les données manquantes
+      // (au cas où des benchmarks seraient créés dynamiquement via les évaluations)
       if (evaluations && evaluations.length > 0) {
         evaluations.forEach((evaluation: any) => {
           const principleCode = evaluation.compl_ai_principles.code
           const benchmarkCode = evaluation.compl_ai_benchmarks?.code || evaluation.raw_data?.benchmark_code
           const benchmarkName = evaluation.compl_ai_benchmarks?.name || evaluation.raw_data?.benchmark_name || benchmarkCode
           
+          // Si le principe n'existe pas encore (ne devrait pas arriver), l'ajouter
           if (!principleMap.has(principleCode)) {
             principleMap.set(principleCode, {
               code: principleCode,
@@ -391,6 +431,7 @@ export default function ComplAIScoresPage() {
             })
           }
 
+          // Si le benchmark n'existe pas encore (peut arriver pour des benchmarks créés dynamiquement)
           if (benchmarkCode && !benchmarkMap.has(benchmarkCode)) {
             const benchmarkInfo: BenchmarkInfo = {
               code: benchmarkCode,
@@ -400,40 +441,13 @@ export default function ComplAIScoresPage() {
               principle_category: evaluation.compl_ai_principles.category
             }
             benchmarkMap.set(benchmarkCode, benchmarkInfo)
-            principleMap.get(principleCode)!.benchmarks.push(benchmarkInfo)
+            // Ajouter ce benchmark au principe correspondant
+            const principle = principleMap.get(principleCode)
+            if (principle && !principle.benchmarks.some(b => b.code === benchmarkCode)) {
+              principle.benchmarks.push(benchmarkInfo)
+            }
           }
         })
-      } else {
-        // Si pas d'évaluations, récupérer au moins la structure des principes et benchmarks
-        const { data: principlesData } = await supabase
-          .from('compl_ai_principles')
-          .select(`
-            code,
-            name,
-            category,
-            compl_ai_benchmarks (
-              code,
-              name
-            )
-          `)
-          .order('code')
-
-        if (principlesData) {
-          principlesData.forEach((principle: any) => {
-            principleMap.set(principle.code, {
-              code: principle.code,
-              name: principle.name,
-              category: principle.category,
-              benchmarks: (principle.compl_ai_benchmarks || []).map((benchmark: any) => ({
-                code: benchmark.code,
-                name: benchmark.name,
-                principle_code: principle.code,
-                principle_name: principle.name,
-                principle_category: principle.category
-              }))
-            })
-          })
-        }
       }
 
       const principlesList = Array.from(principleMap.values()).sort((a, b) => a.code.localeCompare(b.code))
