@@ -17,7 +17,8 @@ import {
   Search,
   HelpCircle,
   Calendar,
-  X
+  X,
+  Sparkles
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -92,6 +93,11 @@ function NewUseCasePageContent() {
   const [otherRadioValue, setOtherRadioValue] = useState('')
   const [otherRadioSelected, setOtherRadioSelected] = useState(false)
   const api = useApiCall()
+
+  // États pour la génération automatique avec Mistral AI
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
+  const [generatedDescription, setGeneratedDescription] = useState('')
+  const [showGeneratedDescription, setShowGeneratedDescription] = useState(false)
 
   const companyId = searchParams.get('company')
 
@@ -377,6 +383,42 @@ function NewUseCasePageContent() {
     } catch (error) {
       console.error('Error fetching company:', error)
       router.push('/dashboard/companies')
+    }
+  }
+
+  // Fonction de génération automatique avec Mistral AI
+  const generateDescriptionWithAI = async () => {
+    try {
+      setIsGeneratingDescription(true)
+      setError('')
+
+      const response = await fetch('/api/mistral/generate-description', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ formData })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erreur lors de la génération')
+      }
+
+      const data = await response.json()
+      setGeneratedDescription(data.description)
+      setShowGeneratedDescription(true)
+      
+      // Pré-remplir le champ description
+      setFormData(prev => ({
+        ...prev,
+        description: data.description
+      }))
+    } catch (error) {
+      console.error('Erreur génération:', error)
+      setError('Impossible de générer la description automatiquement. Veuillez la saisir manuellement.')
+    } finally {
+      setIsGeneratingDescription(false)
     }
   }
 
@@ -819,16 +861,73 @@ function NewUseCasePageContent() {
           )}
 
           {currentQuestion.type === 'textarea' && (
-            <textarea
-              rows={6}
-              value={formData[currentQuestion.id]}
-              onChange={(e) => handleInputChange(e.target.value)}
-              className={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors resize-none ${
-                error ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder={currentQuestion.placeholder}
-              autoFocus
-            />
+            <div className="space-y-4">
+              {/* Bouton de génération automatique pour la question description */}
+              {currentQuestion.id === 'description' && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="h-5 w-5 text-[#0080A3]" />
+                    <span className="text-sm font-medium text-gray-700">
+                      Génération automatique avec Mistral AI
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={generateDescriptionWithAI}
+                    disabled={isGeneratingDescription || !formData.name || !formData.ai_category}
+                    className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#0080A3] to-[#006080] text-white text-sm font-medium rounded-lg hover:from-[#006080] hover:to-[#005060] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                  >
+                    {isGeneratingDescription ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Génération...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Générer avec Mistral AI
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Affichage de la description générée */}
+              {currentQuestion.id === 'description' && showGeneratedDescription && generatedDescription && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-blue-800 flex items-center">
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Description générée par Mistral AI
+                    </h4>
+                    <button
+                      onClick={() => setShowGeneratedDescription(false)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <p className="text-blue-700 text-sm leading-relaxed">
+                    {generatedDescription}
+                  </p>
+                  <div className="mt-3 text-xs text-blue-600">
+                    ✅ Cette description a été pré-remplie dans le champ ci-dessous. Vous pouvez la modifier selon vos besoins.
+                  </div>
+                </div>
+              )}
+
+              {/* Champ textarea existant */}
+              <textarea
+                rows={6}
+                value={formData[currentQuestion.id]}
+                onChange={(e) => handleInputChange(e.target.value)}
+                className={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors resize-none ${
+                  error ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder={currentQuestion.placeholder}
+                autoFocus
+              />
+            </div>
           )}
 
 

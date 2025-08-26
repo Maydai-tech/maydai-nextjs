@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 
 interface GlobalLoaderProps {
@@ -8,8 +9,19 @@ interface GlobalLoaderProps {
 
 export default function GlobalLoader({ children }: GlobalLoaderProps) {
   const { loading } = useAuth()
+  const [forceShow, setForceShow] = useState(false)
 
-  if (loading) {
+  // Force l'affichage après 15 secondes pour éviter un blocage infini
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setForceShow(true)
+      console.warn('GlobalLoader: Force affichage après timeout - problème de connexion Supabase détecté')
+    }, 15000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (loading && !forceShow) {
     return (
       <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
         <div className="flex flex-col items-center">
@@ -18,6 +30,8 @@ export default function GlobalLoader({ children }: GlobalLoaderProps) {
           <div className="mt-4 w-48 h-1 bg-gray-200 rounded-full overflow-hidden">
             <div className="h-full bg-[#0080A3] rounded-full animate-pulse"></div>
           </div>
+          <p className="mt-4 text-sm text-gray-500">Tentative de connexion à Supabase...</p>
+          <p className="mt-2 text-xs text-gray-400">Si le chargement persiste, la page s'affichera automatiquement</p>
         </div>
       </div>
     )
