@@ -15,11 +15,19 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
       {/* Description - Section avec placeholder */}
       <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Description</h2>
-        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-          <p className="text-gray-500 italic">
-            {"Le résumé du cas d'usage sera disponible prochainement"}
-          </p>
-        </div>
+        {useCase.description && useCase.description.trim() ? (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+            <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+              {useCase.description}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+            <p className="text-gray-500 italic">
+              Aucune description disponible pour ce cas d'usage
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Informations de suivi */}

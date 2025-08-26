@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Image from 'next/image'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { RISK_CATEGORIES } from '../utils/risk-categories'
 import { AlertCircle, Info } from 'lucide-react'
@@ -118,7 +119,17 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
                 {/* En-tête de catégorie */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <span className="text-[#0080A3] text-base">{categoryInfo?.icon || '📊'}</span>
+                    {categoryInfo?.icon && categoryInfo.icon.startsWith('/') ? (
+                      <Image 
+                        src={categoryInfo.icon} 
+                        alt={categoryInfo.shortName}
+                        width={20}
+                        height={20}
+                        className="w-5 h-5"
+                      />
+                    ) : (
+                      <span className="text-[#0080A3] text-base">{categoryInfo?.icon || '📊'}</span>
+                    )}
                     <span className="text-sm font-medium text-gray-900">
                       {categoryInfo?.shortName || category.category_name}
                     </span>

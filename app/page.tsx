@@ -2,7 +2,6 @@ import Header from '@/components/Header';
 import HeroSection from '@/components/HeroSection';
 import TechnologiesSection from '@/components/TechnologiesSection';
 import FeaturesSection from '@/components/FeaturesSection';
-import EvaluationCriteriaSection from '@/src/components/sections/EvaluationCriteriaSection';
 import MistralDashboard from '@/components/MistralDashboard';
 import AuditAIActCompliance from '@/components/AuditAIActCompliance';
 import TestimonialsSection from '@/components/TestimonialsSection';
@@ -26,7 +25,6 @@ export default function HomePage() {
         <HeroSection />
         <TechnologiesSection />
         <FeaturesSection />
-        <EvaluationCriteriaSection />
         <MistralDashboard />
         <AuditAIActCompliance />
         <TestimonialsSection />

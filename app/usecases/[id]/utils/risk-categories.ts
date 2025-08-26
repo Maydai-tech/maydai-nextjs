@@ -21,7 +21,7 @@ export const RISK_CATEGORIES: Record<string, RiskCategory> = {
     shortName: 'Transparence',
     description: 'Explicabilité et information des utilisateurs',
     color: 'text-blue-700 bg-blue-50 border border-blue-200',
-    icon: '🔍'
+    icon: '/icons/Transpararency.png'
   },
   'technical_robustness': {
     id: 'technical_robustness',
@@ -29,7 +29,7 @@ export const RISK_CATEGORIES: Record<string, RiskCategory> = {
     shortName: 'Robustesse Technique',
     description: 'Sécurité, fiabilité et performance technique',
     color: 'text-green-700 bg-green-50 border border-green-200',
-    icon: '🛡️'
+    icon: '/icons/technology.png'
   },
   'human_agency': {
     id: 'human_agency',
@@ -37,7 +37,7 @@ export const RISK_CATEGORIES: Record<string, RiskCategory> = {
     shortName: 'Supervision Humaine',
     description: 'Contrôle et surveillance humaine',
     color: 'text-purple-700 bg-purple-50 border border-purple-200',
-    icon: '👥'
+    icon: '/icons/succes.png'
   },
   'privacy_data': {
     id: 'privacy_data',
@@ -45,7 +45,7 @@ export const RISK_CATEGORIES: Record<string, RiskCategory> = {
     shortName: 'Confidentialité & Données',
     description: 'Protection des données et de la vie privée',
     color: 'text-indigo-700 bg-indigo-50 border border-indigo-200',
-    icon: '🔒'
+    icon: '/icons/Padlock.png'
   },
   'social_environmental': {
     id: 'social_environmental',
@@ -53,7 +53,7 @@ export const RISK_CATEGORIES: Record<string, RiskCategory> = {
     shortName: 'Impact Social & Environnemental',
     description: 'Bien-être social et impact environnemental',
     color: 'text-teal-700 bg-teal-50 border border-teal-200',
-    icon: '🌱'
+    icon: '/icons/feuille.png'
   },
   'diversity_fairness': {
     id: 'diversity_fairness',
@@ -61,7 +61,7 @@ export const RISK_CATEGORIES: Record<string, RiskCategory> = {
     shortName: 'Équité & Non-discrimination',
     description: 'Diversité, équité et lutte contre les discriminations',
     color: 'text-amber-700 bg-amber-50 border border-amber-200',
-    icon: '⚖️'
+    icon: '/icons/balance-1.png'
   },
   'prohibited_practices': {
     id: 'prohibited_practices',
