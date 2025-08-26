@@ -7,6 +7,7 @@ import { getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionna
 import { useCaseRoutes } from '../../utils/routes'
 import { useUseCaseNavigation } from '../../utils/navigation'
 import { ArrowLeft, Building, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle, Trash2 } from 'lucide-react'
+import Image from 'next/image'
 import ModelSelectorModal from '../ModelSelectorModal'
 import DeleteConfirmationModal from '../DeleteConfirmationModal'
 import { RiskLevelBadge } from './RiskLevelBadge'
@@ -253,14 +254,26 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
       <div className="flex flex-col xl:flex-row xl:justify-between xl:items-start space-y-6 xl:space-y-0 xl:space-x-8">
         <div className="flex-1 min-w-0">
           <div className="mb-4">
-            <div className="mb-3 flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words leading-tight hover:text-gray-700 transition-colors duration-200">{useCase.name}</h1>
-              <div className="flex items-center">
-                <span className={`inline-flex items-center px-2 py-1 text-sm font-semibold rounded-lg ${getStatusColor(frenchStatus)}`}>
-                  <span className="text-sm text-gray-600 mr-2">Statut :</span>
-                  {getStatusIcon(useCase.status)}
-                  <span className="ml-1">{frenchStatus}</span>
-                </span>
+            <div className="flex items-start gap-3 mb-3">
+              <div className="bg-[#0080A3]/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
+                <Image 
+                  src="/icons_dash/technology.png" 
+                  alt="Icône technologie" 
+                  width={32} 
+                  height={32} 
+                  className="h-6 w-6 sm:h-8 sm:w-8" 
+                />
+              </div>
+              <div className="flex-1">
+                <div className="mb-3 flex flex-wrap items-center gap-3">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words leading-tight hover:text-gray-700 transition-colors duration-200">{useCase.name}</h1>
+                  <div className="flex items-center">
+                    <span className={`inline-flex items-center px-2 py-1 text-sm font-semibold rounded-lg ${getStatusColor(frenchStatus)}`}>
+                      <span className="text-sm text-gray-600 mr-2">Statut :</span>
+                      {getStatusIcon(useCase.status)}
+                      <span className="ml-1">{frenchStatus}</span>
+                    </span>
+                  </div>
               </div>
             </div>
             {useCase.companies && (
@@ -328,6 +341,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
               </div>
             </div>
             
+            </div>
           </div>
         </div>
 

@@ -8,7 +8,6 @@ import { useApiCall } from '@/lib/api-auth'
 import { 
   ArrowLeft, 
   Shield, 
-  Brain, 
   CheckCircle, 
   AlertTriangle, 
   Clock,
@@ -22,6 +21,7 @@ import {
 import WorldMap from '@/components/WorldMap'
 import ScoreCircle from '@/components/ScoreCircle'
 import DeleteConfirmationModal from '@/app/usecases/[id]/components/DeleteConfirmationModal'
+import Image from 'next/image'
 
 interface Company {
   id: string
@@ -423,7 +423,13 @@ export default function CompanyDashboard({ params }: DashboardProps) {
           <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
             <div className="flex flex-col sm:flex-row sm:items-center">
               <div className="bg-purple-50 p-2 sm:p-3 rounded-lg mb-2 sm:mb-0 w-fit">
-                <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+                <Image 
+                  src="/icons_dash/technology.png" 
+                  alt="Icône technologie" 
+                  width={24} 
+                  height={24} 
+                  className="h-5 w-5 sm:h-6 sm:w-6" 
+                />
               </div>
               <div className="sm:ml-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-600">Cas d'usage IA</p>
@@ -557,7 +563,13 @@ export default function CompanyDashboard({ params }: DashboardProps) {
             {useCases.length === 0 ? (
               <div className="text-center py-8 sm:py-12">
                 <div className="bg-gray-50 p-3 sm:p-4 rounded-full w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 flex items-center justify-center">
-                  <Brain className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
+                  <Image 
+                    src="/icons_dash/technology.png" 
+                    alt="Icône technologie" 
+                    width={32} 
+                    height={32} 
+                    className="h-6 w-6 sm:h-8 sm:w-8" 
+                  />
                 </div>
                 <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Aucun cas d'usage</h3>
                 <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Créez votre premier cas d'usage IA pour cette entreprise</p>

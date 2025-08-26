@@ -9,7 +9,6 @@ import { supabase, ComplAIModel } from '@/lib/supabase'
 import ReactFlagsSelect from 'react-flags-select'
 import { 
   ArrowLeft, 
-  Brain, 
   Save,
   AlertCircle,
   ChevronLeft,
@@ -20,6 +19,7 @@ import {
   Calendar,
   X
 } from 'lucide-react'
+import Image from 'next/image'
 
 // Force dynamic rendering to prevent prerender errors
 export const dynamic = 'force-dynamic'
@@ -645,7 +645,13 @@ function NewUseCasePageContent() {
           
           <div className="flex items-center justify-center mb-4">
             <div className="bg-[#0080A3]/10 p-3 rounded-lg">
-              <Brain className="h-8 w-8 text-[#0080A3]" />
+              <Image 
+                src="/icons_dash/technology.png" 
+                alt="Icône technologie" 
+                width={32} 
+                height={32} 
+                className="h-8 w-8" 
+              />
             </div>
           </div>
           
@@ -741,34 +747,69 @@ function NewUseCasePageContent() {
             <div className="space-y-4">
               {Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 && (
                 <div className="space-y-3">
-                  {(currentQuestion.options as string[]).map((option, index) => (
-                    <label 
-                      key={index} 
-                      className={`group flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                        formData[currentQuestion.id] === option
-                          ? 'border-[#0080A3] bg-[#0080A3]/5'
-                          : 'border-gray-200 hover:border-[#0080A3] hover:bg-[#0080A3]/5'
-                      }`}
-                    >
-                      <div className="flex items-start space-x-4">
-                        <div className="flex items-center h-6 mt-1">
-                          <input
-                            type="radio"
-                            name={currentQuestion.id}
-                            value={option}
-                            checked={formData[currentQuestion.id] === option}
-                            onChange={() => handleInputChange(option)}
-                            className="h-5 w-5 text-[#0080A3] border-2 border-gray-300 focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-lg font-semibold text-gray-900">
-                            {option}
+                  {/* Affichage spécial pour la question responsible_service avec 2 colonnes */}
+                  {currentQuestion.id === 'responsible_service' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {(currentQuestion.options as string[]).map((option, index) => (
+                        <label 
+                          key={index} 
+                          className={`group flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                            formData[currentQuestion.id] === option
+                              ? 'border-[#0080A3] bg-[#0080A3]/5'
+                              : 'border-gray-200 hover:border-[#0080A3] hover:bg-[#0080A3]/5'
+                          }`}
+                        >
+                          <div className="flex items-start space-x-4">
+                            <div className="flex items-center h-6 mt-1">
+                              <input
+                                type="radio"
+                                name={currentQuestion.id}
+                                value={option}
+                                checked={formData[currentQuestion.id] === option}
+                                onChange={() => handleInputChange(option)}
+                                className="h-5 w-5 text-[#0080A3] border-2 border-gray-300 focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-lg font-semibold text-gray-900">
+                                {option}
+                              </div>
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    /* Affichage normal pour les autres questions select */
+                    (currentQuestion.options as string[]).map((option, index) => (
+                      <label 
+                        key={index} 
+                        className={`group flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
+                          formData[currentQuestion.id] === option
+                            ? 'border-[#0080A3] bg-[#0080A3]/5'
+                            : 'border-gray-200 hover:border-[#0080A3] hover:bg-[#0080A3]/5'
+                        }`}
+                      >
+                        <div className="flex items-start space-x-4">
+                          <div className="flex items-center h-6 mt-1">
+                            <input
+                              type="radio"
+                              name={currentQuestion.id}
+                              value={option}
+                              checked={formData[currentQuestion.id] === option}
+                              onChange={() => handleInputChange(option)}
+                              className="h-5 w-5 text-[#0080A3] border-2 border-gray-300 focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-lg font-semibold text-gray-900">
+                              {option}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </label>
-                  ))}
+                      </label>
+                    ))
+                  )}
                 </div>
               )}
             </div>

@@ -109,7 +109,7 @@ export default function Sidebar() {
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="p-6 border-b border-[#006280]/30">
-          <h1 className="text-white text-xl font-bold tracking-wide">Maydai</h1>
+          <h1 className="text-white text-xl font-bold tracking-wide">MaydAI</h1>
         </div>
         
         <nav className="flex-1 p-4 space-y-2">
@@ -142,7 +142,7 @@ export default function Sidebar() {
         
         <div className="p-4 border-t border-[#006280]/30">
           <div className="text-center text-white/60 text-xs">
-            Maydai v{packageJson.version}
+            MaydAI v{packageJson.version}
           </div>
         </div>
       </div>
