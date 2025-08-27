@@ -15,6 +15,7 @@ import { useRiskLevel } from '../../hooks/useRiskLevel'
 import { CountryDeploymentDisplay } from './CountryDeploymentDisplay'
 import { useAuth } from '@/lib/auth'
 import WorldMap from '@/components/WorldMap'
+import { getProviderIcon } from '@/lib/provider-icons'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
 
@@ -299,8 +300,8 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                   <h3 className="text-sm font-medium text-gray-700 mb-2">Modèle utilisé</h3>
                   <div className="flex items-center space-x-2">
                     <Image
-                      src="/icons_providers/google.svg"
-                      alt="Google"
+                      src={getProviderIcon(useCase.compl_ai_models.model_provider)}
+                      alt={useCase.compl_ai_models.model_provider || 'Fournisseur'}
                       width={24}
                       height={24}
                       className="w-6 h-6"

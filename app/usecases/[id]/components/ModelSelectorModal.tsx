@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react'
-import { ComplAIModel, supabase } from '@/lib/supabase'
+import { ComplAIModel } from '@/lib/supabase'
+import { useApiCall } from '@/lib/api-auth'
 import { Bot, X, Search, Check } from 'lucide-react'
 import ComplAiScoreBadge from './ComplAiScoreBadge'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
+
+interface ModelProvider {
+  id: number
+  name: string
+}
 
 interface ModelSelectorModalProps {
   isOpen: boolean
@@ -21,65 +27,79 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   saving = false
 }) => {
   const [selectedModel, setSelectedModel] = useState<PartialComplAIModel | null>(currentModel || null)
-  const [models, setModels] = useState<ComplAIModel[]>([])
+  const [providers, setProviders] = useState<ModelProvider[]>([])
+  const [providerModels, setProviderModels] = useState<Record<number, ComplAIModel[]>>({})
   const [loading, setLoading] = useState(false)
+  const [loadingModels, setLoadingModels] = useState<Record<number, boolean>>({})
   const [searchTerm, setSearchTerm] = useState('')
+  const api = useApiCall()
 
   // Reset selected model when modal opens/closes or current model changes
   useEffect(() => {
     if (isOpen) {
       setSelectedModel(currentModel || null)
-      fetchModels()
+      fetchProviders()
     }
   }, [isOpen, currentModel])
 
-  const fetchModels = async () => {
+  const fetchProviders = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('compl_ai_models')
-        .select('*')
-        .order('model_provider', { ascending: true })
-        .order('model_name', { ascending: true })
-
-      if (error) throw error
-      setModels(data || [])
+      const response = await api.get('/api/model-providers')
+      const providersData = response.data || []
+      setProviders(providersData)
+      
+      // Fetch models for each provider
+      for (const provider of providersData) {
+        await fetchModelsForProvider(provider.id)
+      }
     } catch (error) {
-      console.error('Erreur lors du chargement des modèles:', error)
+      console.error('Erreur lors du chargement des fournisseurs:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const getGroupedModels = () => {
-    // Filter models based on search term
-    const filteredModels = models.filter(model => {
-      if (!searchTerm) return true
-      const searchLower = searchTerm.toLowerCase()
-      return (
-        model.model_name.toLowerCase().includes(searchLower) ||
-        (model.model_provider?.toLowerCase().includes(searchLower) ?? false) ||
-        (model.model_type?.toLowerCase().includes(searchLower) ?? false)
-      )
-    })
+  const fetchModelsForProvider = async (providerId: number) => {
+    try {
+      setLoadingModels(prev => ({ ...prev, [providerId]: true }))
+      const response = await api.get(`/api/model-providers/${providerId}/models`)
+      setProviderModels(prev => ({
+        ...prev,
+        [providerId]: response.data || []
+      }))
+    } catch (error) {
+      console.error(`Erreur lors du chargement des modèles pour le fournisseur ${providerId}:`, error)
+      setProviderModels(prev => ({
+        ...prev,
+        [providerId]: []
+      }))
+    } finally {
+      setLoadingModels(prev => ({ ...prev, [providerId]: false }))
+    }
+  }
 
-    // Group models by provider
-    const grouped = filteredModels.reduce((acc, model) => {
-      const provider = model.model_provider || 'Autres'
-      if (!acc[provider]) {
-        acc[provider] = []
+  const getFilteredProvidersAndModels = () => {
+    return providers.map(provider => {
+      const models = providerModels[provider.id] || []
+      
+      // Filter models based on search term
+      const filteredModels = models.filter(model => {
+        if (!searchTerm) return true
+        const searchLower = searchTerm.toLowerCase()
+        return (
+          model.model_name.toLowerCase().includes(searchLower) ||
+          provider.name.toLowerCase().includes(searchLower) ||
+          (model.model_type?.toLowerCase().includes(searchLower) ?? false)
+        )
+      })
+      
+      return {
+        provider,
+        models: filteredModels,
+        isLoading: loadingModels[provider.id] || false
       }
-      acc[provider].push(model)
-      return acc
-    }, {} as Record<string, ComplAIModel[]>)
-
-    // Convert to array and sort providers
-    return Object.entries(grouped).sort(([a], [b]) => {
-      // Put "Autres" at the end
-      if (a === 'Autres') return 1
-      if (b === 'Autres') return -1
-      return a.localeCompare(b)
-    })
+    }).filter(({ models, isLoading }) => models.length > 0 || isLoading)
   }
 
   const handleSave = async () => {
@@ -153,72 +173,77 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p className="text-gray-600">Chargement des modèles...</p>
+                <p className="text-gray-600">Chargement des fournisseurs...</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {getGroupedModels().map(([provider, providerModels]) => (
-                  <div key={provider}>
+                {getFilteredProvidersAndModels().map(({ provider, models, isLoading }) => (
+                  <div key={provider.id}>
                     {/* Provider Header */}
                     <div className="px-3 py-2 text-sm font-semibold text-gray-600 uppercase bg-gray-50 rounded-lg mb-2">
-                      {provider}
+                      {provider.name}
                     </div>
                     
                     {/* Models Cards */}
                     <div className="space-y-2">
-                      {providerModels.map((model) => (
-                        <label 
-                          key={model.id} 
-                          className={`group flex flex-col p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                            selectedModel?.id === model.id
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
-                          }`}
-                        >
-                          <div className="flex items-start space-x-4">
-                            <div className="flex items-center h-6 mt-1">
-                              <input
-                                type="radio"
-                                name="selectedModel"
-                                value={model.id}
-                                checked={selectedModel?.id === model.id}
-                                onChange={() => setSelectedModel(model)}
-                                className="h-4 w-4 text-blue-600 border-2 border-gray-300 focus:ring-blue-500 focus:ring-2 focus:ring-offset-0"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <Bot className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                                <span className="font-semibold text-gray-900">
-                                  {model.model_name}
-                                </span>
+                      {isLoading ? (
+                        <div className="text-center py-4">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                          <p className="text-sm text-gray-600">Chargement des modèles...</p>
+                        </div>
+                      ) : (
+                        models.map((model) => (
+                          <label 
+                            key={model.id} 
+                            className={`group flex flex-col p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                              selectedModel?.id === model.id
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'
+                            }`}
+                          >
+                            <div className="flex items-start space-x-4">
+                              <div className="flex items-center h-6 mt-1">
+                                <input
+                                  type="radio"
+                                  name="selectedModel"
+                                  value={model.id}
+                                  checked={selectedModel?.id === model.id}
+                                  onChange={() => setSelectedModel(model)}
+                                  className="h-4 w-4 text-blue-600 border-2 border-gray-300 focus:ring-blue-500 focus:ring-2 focus:ring-offset-0"
+                                />
                               </div>
-                              <div className="flex items-center gap-2 text-sm text-gray-600">
-                                {model.model_provider && (
-                                  <span>{model.model_provider}</span>
-                                )}
-                                {model.version && (
-                                  <>
-                                    <span>•</span>
-                                    <span>v{model.version}</span>
-                                  </>
-                                )}
-                                {model.model_type && (
-                                  <>
-                                    <span>•</span>
-                                    <span className="capitalize">{model.model_type.replace('-', ' ')}</span>
-                                  </>
-                                )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Bot className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                  <span className="font-semibold text-gray-900">
+                                    {model.model_name}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <span>{provider.name}</span>
+                                  {model.version && (
+                                    <>
+                                      <span>•</span>
+                                      <span>v{model.version}</span>
+                                    </>
+                                  )}
+                                  {model.model_type && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="capitalize">{model.model_type.replace('-', ' ')}</span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </label>
-                      ))}
+                          </label>
+                        ))
+                      )}
                     </div>
                   </div>
                 ))}
                 
-                {getGroupedModels().length === 0 && (
+                {!loading && getFilteredProvidersAndModels().length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     Aucun modèle trouvé
                   </div>
@@ -227,26 +252,32 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
             )}
 
             {/* Selected Model Preview */}
-            {selectedModel && selectedModel.id !== currentModel?.id && (
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-4">
-                <div className="flex items-center gap-2 text-blue-800 mb-2">
-                  <Check className="w-4 h-4" />
-                  <span className="text-sm font-medium">Nouveau modèle sélectionné :</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-blue-600" />
-                    <span className="font-medium text-blue-900">{selectedModel.model_name}</span>
-                    {selectedModel.model_provider && (
-                      <span className="text-blue-700">• {selectedModel.model_provider}</span>
-                    )}
-                    {selectedModel.version && (
-                      <span className="text-blue-600 text-sm">(v{selectedModel.version})</span>
-                    )}
+            {selectedModel && selectedModel.id !== currentModel?.id && (() => {
+              // Find the provider for the selected model
+              const selectedProvider = providers.find(provider => 
+                providerModels[provider.id]?.some(model => model.id === selectedModel.id)
+              )
+              return (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-4">
+                  <div className="flex items-center gap-2 text-blue-800 mb-2">
+                    <Check className="w-4 h-4" />
+                    <span className="text-sm font-medium">Nouveau modèle sélectionné :</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bot className="w-4 h-4 text-blue-600" />
+                      <span className="font-medium text-blue-900">{selectedModel.model_name}</span>
+                      {selectedProvider && (
+                        <span className="text-blue-700">• {selectedProvider.name}</span>
+                      )}
+                      {selectedModel.version && (
+                        <span className="text-blue-600 text-sm">(v{selectedModel.version})</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
           </div>
 
