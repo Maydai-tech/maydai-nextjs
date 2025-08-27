@@ -251,7 +251,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         </button>
       </div>
       
-      <div className="flex flex-col xl:flex-row xl:justify-between xl:items-start space-y-6 xl:space-y-0 xl:space-x-8">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-6 lg:space-y-0 lg:space-x-6 xl:space-x-8">
         <div className="flex-1 min-w-0">
           <div className="mb-4">
             <div className="flex items-start gap-3 mb-3">
@@ -265,23 +265,26 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                 />
               </div>
               <div className="flex-1">
-                <div className="mb-3 flex flex-wrap items-center gap-3">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words leading-tight hover:text-gray-700 transition-colors duration-200">{useCase.name}</h1>
-                  <div className="flex items-center">
-                    <span className={`inline-flex items-center px-2 py-1 text-sm font-semibold rounded-lg ${getStatusColor(frenchStatus)}`}>
-                      <span className="text-sm text-gray-600 mr-2">Statut :</span>
-                      {getStatusIcon(useCase.status)}
-                      <span className="ml-1">{frenchStatus}</span>
-                    </span>
+                <div className="mb-4">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 lg:gap-4 mb-3">
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 break-words leading-tight hover:text-gray-700 transition-colors duration-200 flex-1 min-w-0">{useCase.name}</h1>
+                    <div className="flex items-center">
+                      <span className={`inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-lg ${getStatusColor(frenchStatus)} whitespace-nowrap`}>
+                        <span className="text-sm text-gray-600 mr-2">Statut :</span>
+                        {getStatusIcon(useCase.status)}
+                        <span className="ml-1">{frenchStatus}</span>
+                      </span>
+                    </div>
                   </div>
-              </div>
+                  
+                  {useCase.companies && (
+                    <p className="text-base text-gray-600 flex items-center font-medium">
+                      <Building className="h-5 w-5 mr-2 text-gray-400" />
+                      {useCase.companies.name}
+                    </p>
+                  )}
+                </div>
             </div>
-            {useCase.companies && (
-              <p className="text-base text-gray-600 flex items-center font-medium mb-4">
-                <Building className="h-5 w-5 mr-2 text-gray-400" />
-                {useCase.companies.name}
-              </p>
-            )}
             
             {/* Pays de déploiement */}
             <div className="mb-4">
@@ -291,13 +294,14 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                   await onUpdateUseCase(updates)
                 } : undefined}
                 updating={updating}
+                className="max-w-full"
               />
             </div>
             
             {/* Modèle COMPL-AI */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="mb-4">
               <div 
-                className={`group relative inline-block bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-xl border border-blue-200 transition-all duration-200 ${
+                className={`group relative block w-full max-w-full bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-xl border border-blue-200 transition-all duration-200 ${
                   onUpdateUseCase ? 'cursor-pointer hover:from-blue-100 hover:to-indigo-100 hover:shadow-md hover:border-blue-300' : ''
                 }`}
                 onClick={onUpdateUseCase ? handleModelEdit : undefined}
@@ -309,21 +313,23 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                 </div>
                 
                 {/* Contenu */}
-                <div className="px-3 pb-1 flex items-center">
-                  {useCase.compl_ai_models ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">{useCase.compl_ai_models.model_name}</span>
-                      {useCase.compl_ai_models.model_provider && (
-                        <span className="text-blue-600 text-sm">• {useCase.compl_ai_models.model_provider}</span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-sm text-gray-500 font-medium">Aucun modèle sélectionné</span>
-                  )}
+                <div className="px-3 pb-1 flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    {useCase.compl_ai_models ? (
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <span className="text-sm font-semibold truncate">{useCase.compl_ai_models.model_name}</span>
+                        {useCase.compl_ai_models.model_provider && (
+                          <span className="text-blue-600 text-sm">• {useCase.compl_ai_models.model_provider}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-500 font-medium">Aucun modèle sélectionné</span>
+                    )}
+                  </div>
                   
                   {/* Icône modifier avec tooltip */}
                   {onUpdateUseCase && (
-                    <div className="ml-3 opacity-60 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="ml-3 opacity-60 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
                       <Edit3 className="h-4 w-4 text-blue-600" />
                     </div>
                   )}
@@ -345,7 +351,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 xl:w-80 xl:flex-shrink-0">
+        <div className="flex flex-col gap-4 lg:w-72 xl:w-80 lg:flex-shrink-0">
           {/* Progress Card */}
           {progress && (
             <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">

@@ -159,7 +159,7 @@ export function CountryDeploymentDisplay({ deploymentCountries = [], className =
       {!hasCountries ? (
         // Cas sans pays
         <div 
-          className={`group relative inline-block bg-gradient-to-r from-gray-50 to-gray-100 text-gray-600 rounded-xl border border-gray-200 transition-all duration-200 ${
+          className={`group relative block w-full max-w-full bg-gradient-to-r from-gray-50 to-gray-100 text-gray-600 rounded-xl border border-gray-200 transition-all duration-200 ${
             onUpdateUseCase ? 'cursor-pointer hover:from-gray-100 hover:to-gray-150 hover:shadow-md hover:border-gray-300' : ''
           } ${className}`}
           onClick={onUpdateUseCase ? handleClick : undefined}
@@ -204,7 +204,7 @@ export function CountryDeploymentDisplay({ deploymentCountries = [], className =
       ) : (
         // Cas avec pays
         <div 
-          className={`group relative inline-block bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-xl border border-blue-200 transition-all duration-200 cursor-pointer hover:from-blue-100 hover:to-indigo-100 hover:shadow-md hover:border-blue-300 ${className}`}
+          className={`group relative block w-full max-w-full bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-xl border border-blue-200 transition-all duration-200 cursor-pointer hover:from-blue-100 hover:to-indigo-100 hover:shadow-md hover:border-blue-300 ${className}`}
           onClick={handleClick}
           title="Cliquer pour voir la carte"
         >
@@ -215,31 +215,31 @@ export function CountryDeploymentDisplay({ deploymentCountries = [], className =
           
           {/* Contenu avec pays */}
           <div className="px-3 pb-1">
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
             {displayCountries.map((country, index) => {
               const flagCode = countryToFlagCode[country.trim()]
               const displayName = getDisplayName(country.trim())
               
               return (
-                <div key={index} className="flex items-center space-x-1">
+                <div key={index} className="flex items-center space-x-1 min-w-0">
                   {flagCode && (
                     <img
                       src={`https://flagcdn.com/w20/${flagCode}.png`}
                       alt={`Drapeau ${displayName}`}
-                      className="w-4 h-3 object-cover rounded-sm border border-gray-200"
+                      className="w-4 h-3 object-cover rounded-sm border border-gray-200 flex-shrink-0"
                       onError={(e) => {
                         // Si l'image ne charge pas, on masque l'élément
                         e.currentTarget.style.display = 'none'
                       }}
                     />
                   )}
-                  <span className="text-sm font-semibold">{displayName}</span>
+                  <span className="text-sm font-semibold truncate">{displayName}</span>
                   {index < displayCountries.length - 1 && <span className="text-blue-500">,</span>}
                 </div>
               )
             })}
               {remainingCount > 0 && (
-                <span className="text-sm text-blue-600 ml-1 bg-blue-100 px-2 py-0.5 rounded-full">
+                <span className="text-sm text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full flex-shrink-0">
                   +{remainingCount}
                 </span>
               )}
