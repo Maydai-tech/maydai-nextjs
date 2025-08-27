@@ -18,8 +18,8 @@ export class MistralAIService {
 
   constructor() {
     this.apiKey = process.env.MISTRAL_API_KEY || ''
-    this.agentId = process.env.MISTRAL_ID_API || ''
-    this.apiUrl = process.env.MISTRAL_API_URL || 'https://api.mistral.ai/v1'
+    this.agentId = 'ag:91e23ddf:20250707:resume-cas-usage-ia:9c55ed1d'
+    this.apiUrl = 'https://api.mistral.ai/v1'
   }
 
   async generateDescription(formData: any): Promise<string> {
