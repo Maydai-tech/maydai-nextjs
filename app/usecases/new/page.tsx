@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-auth'
-import { supabase, ComplAIModel } from '@/lib/supabase'
 import ReactFlagsSelect from 'react-flags-select'
 import { 
   ArrowLeft, 
@@ -16,7 +15,6 @@ import {
   CheckCircle,
   Search,
   HelpCircle,
-  Calendar,
   X,
   Sparkles
 } from 'lucide-react'
@@ -33,11 +31,24 @@ interface Company {
   country: string
 }
 
+interface ModelProvider {
+  id: number
+  name: string
+}
+
+interface ModelData {
+  id: string
+  model_name: string
+  model_type?: string
+  version?: string
+}
+
 interface FormData {
   name: string
   deployment_date: string
   responsible_service: string
   technology_partner: string
+  technology_partner_id?: number
   llm_model_version: string
   ai_category: string
   system_type: string
@@ -85,9 +96,9 @@ function NewUseCasePageContent() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string>('')
-  const [partners, setPartners] = useState<string[]>([])
+  const [partners, setPartners] = useState<ModelProvider[]>([])
   const [loadingPartners, setLoadingPartners] = useState(false)
-  const [availableModels, setAvailableModels] = useState<ComplAIModel[]>([])
+  const [availableModels, setAvailableModels] = useState<ModelData[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
   const [selectedCountries, setSelectedCountries] = useState<string[]>([])
   const [otherRadioValue, setOtherRadioValue] = useState('')
@@ -118,28 +129,23 @@ function NewUseCasePageContent() {
            date.getFullYear() == parseInt(year)
   }
 
-  // Fonction pour récupérer les partenaires depuis la base de données
+  // Fonction pour récupérer les partenaires depuis l'API
   const fetchPartners = async () => {
     try {
       setLoadingPartners(true)
-      // Utiliser directement notre liste mise à jour au lieu de la base de données
-      const updatedPartners = ['Anthropic', 'DeepSeek', 'Google', 'Meta', 'Microsoft', 'Mistral', 'Nvidia', 'OpenAI', 'Qwen', 'xAI']
-      setPartners(updatedPartners)
+      const response = await api.get('/api/model-providers')
       
-      // Optionnel : Récupérer aussi depuis la base pour la compatibilité avec d'autres fonctionnalités
-      const { data, error } = await supabase
-        .from('compl_ai_models')
-        .select('model_provider')
-        .not('model_provider', 'is', null)
-        .order('model_provider', { ascending: true })
-
-      if (error) {
-        console.warn('Erreur lors du chargement des partenaires depuis la base:', error)
+      if (!response.data || response.data.length === 0) {
+        setError('Aucun partenaire technologique disponible')
+        setPartners([])
+      } else {
+        setPartners(response.data)
+        setError('')
       }
     } catch (error) {
       console.error('Erreur lors du chargement des partenaires:', error)
-      // Fallback vers la liste en dur en cas d'erreur
-      setPartners(['Anthropic', 'DeepSeek', 'Google', 'Meta', 'Microsoft', 'Mistral', 'Nvidia', 'OpenAI', 'Qwen', 'xAI'])
+      setError('Impossible de charger les partenaires technologiques')
+      setPartners([])
     } finally {
       setLoadingPartners(false)
     }
@@ -183,7 +189,7 @@ function NewUseCasePageContent() {
       id: 'technology_partner',
       question: 'Partenaire technologique ?',
       type: 'radio',
-      options: partners.map(partner => ({ label: partner, examples: [] })), // Liste dynamique convertie en format radio
+      options: partners.map(partner => ({ label: partner.name, examples: [] })), // Liste dynamique convertie en format radio
       hasOtherOption: true
     },
     {
@@ -257,24 +263,18 @@ function NewUseCasePageContent() {
     }
   ]
 
-  // Fonction pour récupérer les modèles disponibles selon les partenaires sélectionnés
-  const fetchAvailableModels = async (selectedPartners: string[]) => {
-    if (selectedPartners.length === 0) {
+  // Fonction pour récupérer les modèles disponibles pour un provider
+  const fetchAvailableModels = async (providerId: number) => {
+    if (!providerId) {
       setAvailableModels([])
       return
     }
 
     try {
       setLoadingModels(true)
-      const { data, error } = await supabase
-        .from('compl_ai_models')
-        .select('*')
-        .in('model_provider', selectedPartners)
-        .order('model_provider', { ascending: true })
-        .order('model_name', { ascending: true })
-
-      if (error) throw error
-      setAvailableModels(data || [])
+      // Ne pas vider la liste immédiatement - maintenir l'affichage pendant le chargement
+      const response = await api.get(`/api/model-providers/${providerId}/models`)
+      setAvailableModels(response.data || [])
     } catch (error) {
       console.error('Erreur lors du chargement des modèles:', error)
       setAvailableModels([])
@@ -304,11 +304,11 @@ function NewUseCasePageContent() {
 
   // Fonction pour détecter si le partenaire technologique est personnalisé
   const isCustomTechnologyPartner = (): boolean => {
-    const selectedPartner = formData.technology_partner?.trim()
+    const selectedPartner = typeof formData.technology_partner === 'string' ? formData.technology_partner.trim() : ''
     if (!selectedPartner) return false
     
     // Vérifier si le partenaire sélectionné fait partie de la liste prédéfinie
-    return !partners.includes(selectedPartner)
+    return !partners.some(p => p.name === selectedPartner)
   }
 
   // Update current question with dynamic models or text input for custom partners
@@ -360,13 +360,26 @@ function NewUseCasePageContent() {
 
   // Charger les modèles disponibles quand le partenaire technologique change
   useEffect(() => {
-    const selectedPartner = formData.technology_partner?.trim()
-    if (selectedPartner) {
-      fetchAvailableModels([selectedPartner])
+    const selectedPartnerName = typeof formData.technology_partner === 'string' ? formData.technology_partner.trim() : ''
+    if (selectedPartnerName) {
+      // Trouver le provider correspondant
+      const provider = partners.find(p => p.name === selectedPartnerName)
+      if (provider) {
+        setFormData(prev => ({ ...prev, technology_partner_id: provider.id }))
+        // Charger les nouveaux modèles sans vider immédiatement la liste
+        fetchAvailableModels(provider.id)
+      } else {
+        // Partenaire personnalisé (option "Autre")
+        setFormData(prev => ({ ...prev, technology_partner_id: undefined }))
+        // Vider uniquement pour les partenaires personnalisés
+        setAvailableModels([])
+      }
     } else {
+      // Vider uniquement si aucun partenaire n'est sélectionné
+      setFormData(prev => ({ ...prev, technology_partner_id: undefined }))
       setAvailableModels([])
     }
-  }, [formData.technology_partner])
+  }, [formData.technology_partner, partners])
 
   const fetchCompany = async () => {
     try {
@@ -428,17 +441,19 @@ function NewUseCasePageContent() {
     // For radio questions (including technology partner and llm model), check if a value is selected
     if (currentQuestion.type === 'radio' && (currentQuestion.id === 'technology_partner' || currentQuestion.id === 'llm_model_version')) {
       // Special case for LLM models: skip validation if no models are available and no partner selected
-      if (currentQuestion.id === 'llm_model_version' && (!formData.technology_partner || !formData.technology_partner.trim())) {
+      if (currentQuestion.id === 'llm_model_version' && (!formData.technology_partner || !(typeof formData.technology_partner === 'string' ? formData.technology_partner.trim() : formData.technology_partner))) {
         return true // Allow skipping if no partner selected
       }
       
-      if (!value || !value.trim()) {
+      const valueStr = typeof value === 'string' ? value : String(value)
+      if (!value || !valueStr.trim()) {
         setError('Veuillez sélectionner une option')
         return false
       }
     } else if (currentQuestion.type === 'text' && currentQuestion.id === 'llm_model_version') {
       // Special validation for custom LLM model text input
-      if (!value || !value.trim()) {
+      const valueStr = typeof value === 'string' ? value : String(value)
+      if (!value || !valueStr.trim()) {
         setError('Veuillez saisir le nom du modèle utilisé')
         return false
       }
@@ -450,13 +465,15 @@ function NewUseCasePageContent() {
       }
     } else if (currentQuestion.id === 'deployment_date') {
       // For deployment date, validate format if provided
-      if (value && !validateDateFormat(value)) {
+      const valueStr = typeof value === 'string' ? value : String(value)
+      if (value && !validateDateFormat(valueStr)) {
         setError('Format de date invalide. Utilisez le format DD/MM/YYYY (ex: 15/06/2025)')
         return false
       }
     } else {
       // For other question types (text, textarea, etc.)
-      if (!value || !value.trim()) {
+      const valueStr = typeof value === 'string' ? value : String(value)
+      if (!value || !valueStr.trim()) {
         setError('Cette réponse est requise')
         return false
       }
@@ -501,8 +518,9 @@ function NewUseCasePageContent() {
     try {
       // Déterminer le primary_model_id à partir du modèle sélectionné
       let primary_model_id = null
-      if (formData.llm_model_version) {
-        primary_model_id = findModelId(formData.llm_model_version.trim())
+      if (formData.llm_model_version && !isCustomTechnologyPartner()) {
+        const modelVersionStr = typeof formData.llm_model_version === 'string' ? formData.llm_model_version.trim() : String(formData.llm_model_version)
+        primary_model_id = findModelId(modelVersionStr)
       }
 
       // Log des données à envoyer
@@ -511,6 +529,7 @@ function NewUseCasePageContent() {
         deployment_date: formData.deployment_date,
         responsible_service: formData.responsible_service,
         technology_partner: formData.technology_partner,
+        technology_partner_id: formData.technology_partner_id, // Ajouter l'ID du partenaire si disponible
         llm_model_version: formData.llm_model_version,
         primary_model_id, // Ajouter l'ID du modèle principal
         ai_category: formData.ai_category,
@@ -1018,25 +1037,8 @@ function NewUseCasePageContent() {
                         </div>
                         <div className="flex-1 min-w-0">
                           {currentQuestion.id === 'technology_partner' ? (
-                            <div className="flex items-center space-x-3">
-                              <img 
-                                src={`/icons_providers/${option.label.toLowerCase().replace(/\s+/g, '')}.svg`} 
-                                alt={`Logo ${option.label}`}
-                                className="h-8 w-8 object-contain"
-                                onError={(e) => {
-                                  // Fallback pour les formats non-SVG
-                                  const target = e.target as HTMLImageElement;
-                                  const fallbackSrc = `/icons_providers/${option.label.toLowerCase().replace(/\s+/g, '')}.webp`;
-                                  target.src = fallbackSrc;
-                                  target.onerror = () => {
-                                    // Si aucun logo n'est trouvé, masquer l'image
-                                    target.style.display = 'none';
-                                  };
-                                }}
-                              />
-                              <div className="text-lg font-semibold text-gray-900">
-                                {option.label}
-                              </div>
+                            <div className="text-lg font-semibold text-gray-900">
+                              {option.label}
                             </div>
                           ) : (
                             <>
