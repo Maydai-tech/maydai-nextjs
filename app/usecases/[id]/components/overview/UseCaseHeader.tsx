@@ -14,6 +14,7 @@ import { RiskLevelBadge } from './RiskLevelBadge'
 import { useRiskLevel } from '../../hooks/useRiskLevel'
 import { CountryDeploymentDisplay } from './CountryDeploymentDisplay'
 import { useAuth } from '@/lib/auth'
+import WorldMap from '@/components/WorldMap'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
 
@@ -251,45 +252,69 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         </button>
       </div>
       
-      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-6 lg:space-y-0 lg:space-x-6 xl:space-x-8">
-        <div className="flex-1 min-w-0">
-          <div className="mb-4">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="bg-[#0080A3]/10 p-2 sm:p-3 rounded-lg flex-shrink-0">
+      <div className="flex flex-col xl:flex-row xl:justify-between xl:items-start space-y-6 xl:space-y-0 xl:space-x-6">
+        {/* Colonne de gauche - Informations du cas d'usage + Pays de déploiement */}
+        <div className="xl:w-1/3">
+          <div className="space-y-4">
+            {/* Nom de l'entreprise et picto juste en dessous de "Retour au dashboard" */}
+            {useCase.companies && (
+              <div className="mb-4">
+                <p className="text-base text-gray-600 flex items-center font-medium">
+                  <Building className="h-5 w-5 mr-2 text-gray-400" />
+                  {useCase.companies.name}
+                </p>
+              </div>
+            )}
+
+            {/* Titre du cas d'usage avec icône AI */}
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
                 <Image 
                   src="/icons_dash/technology.png" 
                   alt="Icône technologie" 
-                  width={32} 
-                  height={32} 
-                  className="h-6 w-6 sm:h-8 sm:w-8" 
+                  width={48} 
+                  height={48} 
+                  className="w-12 h-12" 
                 />
               </div>
-              <div className="flex-1">
-                <div className="mb-4">
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 lg:gap-4 mb-3">
-                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 break-words leading-tight hover:text-gray-700 transition-colors duration-200 flex-1 min-w-0">{useCase.name}</h1>
-                    <div className="flex items-center">
-                      <span className={`inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-lg ${getStatusColor(frenchStatus)} whitespace-nowrap`}>
-                        <span className="text-sm text-gray-600 mr-2">Statut :</span>
-                        {getStatusIcon(useCase.status)}
-                        <span className="ml-1">{frenchStatus}</span>
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {useCase.companies && (
-                    <p className="text-base text-gray-600 flex items-center font-medium">
-                      <Building className="h-5 w-5 mr-2 text-gray-400" />
-                      {useCase.companies.name}
-                    </p>
-                  )}
-                </div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                  {useCase.name}
+                </h1>
+              </div>
             </div>
-            
+
+            {/* Statut aligné sous l'icône AI */}
+            <div className="ml-12">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                <CheckCircle className="h-4 w-4 mr-1" />
+                {frenchStatus}
+              </div>
+            </div>
+
+            {/* Modèle utilisé sous le statut aligné */}
+            {useCase.compl_ai_models && (
+              <div className="ml-12">
+                <div className="bg-white border border-gray-200 rounded-lg p-4 w-48">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Modèle utilisé</h3>
+                  <div className="flex items-center space-x-2">
+                    <Image
+                      src="/icons_providers/google.svg"
+                      alt="Google"
+                      width={24}
+                      height={24}
+                      className="w-6 h-6"
+                    />
+                    <span className="text-sm text-gray-600">{useCase.compl_ai_models.model_name}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Pays de déploiement */}
-            <div className="mb-4">
+            <div className="ml-12">
               <CountryDeploymentDisplay 
-                deploymentCountries={useCase.deployment_countries} 
+                deploymentCountries={useCase.deployment_countries}
                 onUpdateUseCase={onUpdateUseCase ? async (updates) => {
                   await onUpdateUseCase(updates)
                 } : undefined}
@@ -297,110 +322,50 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                 className="max-w-full"
               />
             </div>
-            
-            {/* Modèle COMPL-AI */}
-            <div className="mb-4">
-              <div 
-                className={`group relative block w-full max-w-full bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-xl border border-blue-200 transition-all duration-200 ${
-                  onUpdateUseCase ? 'cursor-pointer hover:from-blue-100 hover:to-indigo-100 hover:shadow-md hover:border-blue-300' : ''
-                }`}
-                onClick={onUpdateUseCase ? handleModelEdit : undefined}
-                title={onUpdateUseCase ? "Cliquer pour modifier le modèle" : undefined}
-              >
-                {/* En-tête avec titre */}
-                <div className="px-3 pt-2 pb-1">
-                  <h4 className="text-sm font-medium text-blue-800">Modèle utilisé</h4>
-                </div>
-                
-                {/* Contenu */}
-                <div className="px-3 pb-1 flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    {useCase.compl_ai_models ? (
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                        <span className="text-sm font-semibold truncate">{useCase.compl_ai_models.model_name}</span>
-                        {useCase.compl_ai_models.model_provider && (
-                          <span className="text-blue-600 text-sm">• {useCase.compl_ai_models.model_provider}</span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-500 font-medium">Aucun modèle sélectionné</span>
-                    )}
-                  </div>
-                  
-                  {/* Icône modifier avec tooltip */}
-                  {onUpdateUseCase && (
-                    <div className="ml-3 opacity-60 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
-                      <Edit3 className="h-4 w-4 text-blue-600" />
-                    </div>
-                  )}
-                </div>
-                
-                {/* Tooltip */}
-                {onUpdateUseCase && (
-                  <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 translate-y-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                    <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
-                      Cliquer pour modifier
-                    </div>
-                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 lg:w-72 xl:w-80 lg:flex-shrink-0">
-          {/* Progress Card */}
-          {progress && (
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-800">Progression</h3>
-                <div className={`p-1.5 rounded-full ${
-                  progress.is_completed 
-                    ? 'bg-green-100 text-green-600' 
-                    : 'bg-amber-100 text-amber-600'
-                }`}>
-                  {progress.is_completed ? (
-                    <CheckCircle className="h-3 w-3" />
-                  ) : (
-                    <Clock className="h-3 w-3" />
-                  )}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900 mb-1">
-                  {progress.answered_questions} / {progress.total_questions}
-                </div>
-                <div className="text-xs text-gray-600">
-                  questions répondues
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Risk Level Badge */}
-          <div className="flex justify-end">
-            <RiskLevelBadge 
-              riskLevel={riskLevel} 
-              loading={riskLoading} 
-              error={riskError}
-              className=""
+        {/* Colonne centrale - Carte géographique */}
+        <div className="xl:w-2/5 flex justify-center">
+          <div className="bg-gray-50 rounded-lg p-4 -ml-8">
+            <WorldMap 
+              deploymentCountries={useCase.deployment_countries || []} 
+              className="w-full h-80"
             />
           </div>
+        </div>
 
-          {/* Score Card */}
-          <HeaderScore useCase={useCase} refreshing={isRecalculatingScore} />
-          
-          {/* Réévaluer Button */}
-          <button
-            onClick={goToEvaluation}
-            className="group inline-flex items-center justify-center px-4 py-3 bg-[#0080A3] text-white font-semibold rounded-xl hover:bg-[#006280] hover:shadow-lg transition-all duration-200 w-full"
-          >
-            <RefreshCcw className="h-4 w-4 mr-2 group-hover:rotate-180 transition-transform duration-300" />
-            <span className="text-sm">Réévaluer le use case</span>
-          </button>
+        {/* Colonne de droite - Scores et actions */}
+        <div className="xl:w-1/4">
+          <div className="space-y-4">
+            {/* Niveau IA Act */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Niveau IA Act</h3>
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
+                <span className="text-sm text-red-600 font-medium">
+                  Risque Inacceptable
+                </span>
+              </div>
+            </div>
+
+            {/* Score de conformité */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <HeaderScore useCase={useCase} refreshing={false} />
+            </div>
+
+            {/* Bouton réévaluer */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <button
+                onClick={goToEvaluation}
+                disabled={updating}
+                className="w-full bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                <span>Réévaluer le cas d'usage</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
