@@ -4,7 +4,7 @@ import React from 'react'
 import Image from 'next/image'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { RISK_CATEGORIES } from '../utils/risk-categories'
-import { AlertCircle, Info } from 'lucide-react'
+import { AlertCircle, Info, AlertTriangle } from 'lucide-react'
 
 interface CategoryScoresProps {
   usecaseId: string
@@ -12,6 +12,29 @@ interface CategoryScoresProps {
 
 export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: CategoryScoresProps) {
   const { score, loading, error } = useUseCaseScore(usecaseId)
+
+  // Fonction pour déterminer la couleur selon le score
+  const getScoreColor = (percentage: number) => {
+    if (percentage < 30) {
+      return {
+        text: 'text-red-600',
+        bg: 'bg-red-500',
+        border: 'border-red-200'
+      }
+    } else if (percentage < 60) {
+      return {
+        text: 'text-orange-600',
+        bg: 'bg-orange-500',
+        border: 'border-orange-200'
+      }
+    } else {
+      return {
+        text: 'text-green-600',
+        bg: 'bg-green-500',
+        border: 'border-green-200'
+      }
+    }
+  }
 
   if (loading) {
     return (
@@ -54,6 +77,23 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
           <Info className="h-8 w-8 text-gray-400 mx-auto mb-3" />
           <p className="text-sm text-gray-600">
             Les scores par catégorie seront disponibles après avoir complété le questionnaire.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Vérifier si le cas d'usage est en risque inacceptable (score global = 0)
+  const isUnacceptableRisk = score.score === 0
+
+  if (isUnacceptableRisk) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par principes</h3>
+        <div className="text-center py-6">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-sm text-red-700 font-medium">
+            Votre cas d'usage présente un niveau de risque inacceptable. Les scores détaillés par principes ne sont pas disponibles dans cette situation.
           </p>
         </div>
       </div>
@@ -113,6 +153,7 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
       <div className="space-y-4">
         {sortedCategoryScores.map((category) => {
             const categoryInfo = RISK_CATEGORIES[category.category_id]
+            const scoreColors = getScoreColor(category.percentage)
             
             return (
               <div key={category.category_id} className="space-y-2">
@@ -135,16 +176,16 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm font-bold text-[#0080A3]">
+                    <span className={`text-sm font-bold ${scoreColors.text}`}>
                       {category.percentage}/100
                     </span>
                   </div>
                 </div>
                 
-                {/* Barre de progression - toujours en bleu */}
+                {/* Barre de progression avec couleur selon le score */}
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div
-                    className="h-2.5 rounded-full transition-all duration-500 bg-[#0080A3]"
+                    className={`h-2.5 rounded-full transition-all duration-500 ${scoreColors.bg}`}
                     style={{ width: `${Math.max(category.percentage, 2)}%` }}
                   ></div>
                 </div>

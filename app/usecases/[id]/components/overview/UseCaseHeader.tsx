@@ -342,12 +342,22 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
             {/* Niveau IA Act */}
             <div className="bg-white border border-gray-200 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">Niveau IA Act</h3>
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-                <span className="text-sm text-red-600 font-medium">
-                  Risque Inacceptable
-                </span>
-              </div>
+              {/* Utiliser le composant RiskLevelBadge avec la logique de score */}
+              {useCase.score_final === 0 ? (
+                <div className="flex items-center space-x-2">
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                  <span className="text-sm text-red-600 font-medium">
+                    Risque Inacceptable
+                  </span>
+                </div>
+              ) : (
+                <RiskLevelBadge 
+                  riskLevel={riskLevel} 
+                  loading={riskLoading} 
+                  error={riskError}
+                  className="w-full"
+                />
+              )}
             </div>
 
             {/* Score de conformité */}

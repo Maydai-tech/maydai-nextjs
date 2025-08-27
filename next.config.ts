@@ -13,7 +13,8 @@ const nextConfig: NextConfig = {
   // Configuration expérimentale pour optimiser les CSS
   experimental: {
     optimizePackageImports: [],
-    cssChunking: 'strict',
+    // Désactivé temporairement pour éviter les problèmes avec Next.js 15
+    // cssChunking: 'strict',
   },
   
   async headers() {
