@@ -98,7 +98,7 @@ export default function UseCaseResponsesPage() {
     if (!question?.options) return null
     
     const option = question.options.find((opt: any) => opt.code === optionCode)
-    return option?.risk || null
+    return (option as any)?.risk || null
   }
 
   // Fonction pour obtenir l'impact sur le score d'une option

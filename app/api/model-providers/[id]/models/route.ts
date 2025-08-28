@@ -12,7 +12,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authHeader = request.headers.get('authorization')
@@ -21,7 +21,7 @@ export async function GET(
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const providerId = params.id
+    const { id: providerId } = await params
     
     // Validate provider ID
     if (!providerId || isNaN(Number(providerId))) {
