@@ -24,7 +24,7 @@ export default function ResponsesPage() {
   async function fetchResponses() {
     try {
       const { data, error } = await supabase
-        .from('usecase_questionnaire_responses')
+        .from('usecase_responses')
         .select(`
           *,
           usecases:usecase_id (

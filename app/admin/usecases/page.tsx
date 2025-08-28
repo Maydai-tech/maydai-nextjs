@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase, UseCase } from '@/lib/supabase'
 import { Eye, Filter, Search, Calculator } from 'lucide-react'
 
 export default function UseCasesPage() {
+  const router = useRouter()
   const [usecases, setUsecases] = useState<UseCase[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -270,7 +272,10 @@ export default function UseCasesPage() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredUseCases.map((usecase) => (
-              <tr key={usecase.id} className="hover:bg-gray-50">
+              <tr key={usecase.id} className="hover:bg-gray-50"
+              onClick={() => {
+                router.push(`/admin/usecases/${usecase.id}/responses`)
+              }}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{usecase.name}</div>
                   {usecase.responsible_service && (
@@ -302,8 +307,7 @@ export default function UseCasesPage() {
                   <button
                     className="text-blue-600 hover:text-blue-900 flex items-center"
                     onClick={() => {
-                      // TODO: Implémenter la vue détaillée
-                      console.log('Voir détails:', usecase.id)
+                      router.push(`/admin/usecases/${usecase.id}/responses`)
                     }}
                   >
                     <Eye className="h-4 w-4 mr-1" />
