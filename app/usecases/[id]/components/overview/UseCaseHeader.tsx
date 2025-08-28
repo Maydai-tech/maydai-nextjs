@@ -253,67 +253,76 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         </button>
       </div>
       
-      <div className="flex flex-col xl:flex-row xl:justify-between xl:items-start space-y-6 xl:space-y-0 xl:space-x-6">
-        {/* Colonne de gauche - Informations du cas d'usage + Pays de déploiement */}
-        <div className="xl:w-1/3">
-          <div className="space-y-4">
-            {/* Nom de l'entreprise et picto juste en dessous de "Retour au dashboard" */}
-            {useCase.companies && (
-              <div className="mb-4">
-                <p className="text-base text-gray-600 flex items-center font-medium">
-                  <Building className="h-5 w-5 mr-2 text-gray-400" />
-                  {useCase.companies.name}
-                </p>
-              </div>
-            )}
+      <div className="space-y-6">
+        {/* Ligne 1: Titre du cas d'usage (pleine largeur) */}
+        <div className="flex items-start space-x-3">
+          <div className="flex-shrink-0">
+            <Image 
+              src="/icons_dash/technology.png" 
+              alt="Icône technologie" 
+              width={48} 
+              height={48} 
+              className="w-12 h-12" 
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              {useCase.name}
+            </h1>
+          </div>
+        </div>
 
-            {/* Titre du cas d'usage avec icône AI */}
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0">
-                <Image 
-                  src="/icons_dash/technology.png" 
-                  alt="Icône technologie" 
-                  width={48} 
-                  height={48} 
-                  className="w-12 h-12" 
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                  {useCase.name}
-                </h1>
-              </div>
+        {/* Lignes 2, 3, 4: Grille 3 colonnes */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          {/* Colonne gauche - Blocs empilés */}
+          <div className="xl:col-span-3 space-y-4">
+            {/* Ligne 2: Badge statut */}
+            <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+              <CheckCircle className="h-4 w-4 mr-1" />
+              {frenchStatus}
             </div>
 
-            {/* Statut aligné sous l'icône AI */}
-            <div className="ml-12">
-              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                <CheckCircle className="h-4 w-4 mr-1" />
-                {frenchStatus}
-              </div>
-            </div>
-
-            {/* Modèle utilisé sous le statut aligné */}
+            {/* Ligne 3: Modèle utilisé */}
             {useCase.compl_ai_models && (
-              <div className="ml-12">
-                <div className="bg-white border border-gray-200 rounded-lg p-4 w-48">
-                  <h3 className="text-sm font-medium text-gray-700 mb-2">Modèle utilisé</h3>
-                  <div className="flex items-center space-x-2">
-                    <Image
-                      src={getProviderIcon(useCase.compl_ai_models.model_provider)}
-                      alt={useCase.compl_ai_models.model_provider || 'Fournisseur'}
-                      width={24}
-                      height={24}
-                      className="w-6 h-6"
-                    />
-                    <span className="text-sm text-gray-600">{useCase.compl_ai_models.model_name}</span>
-                  </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-4 w-full">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-gray-700">Modèle utilisé</h3>
+                  <button
+                    onClick={handleModelEdit}
+                    className="text-gray-400 hover:text-blue-600 transition-colors duration-200"
+                    title="Modifier le modèle"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </button>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <Image
+                    src={`/icons_providers/${useCase.compl_ai_models?.model_provider?.toLowerCase().replace(/\s+/g, '')}.svg`}
+                    alt={useCase.compl_ai_models?.model_provider || 'Provider'}
+                    width={24}
+                    height={24}
+                    className="w-6 h-6"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      const fallbackSrc = `/icons_providers/${useCase.compl_ai_models?.model_provider?.toLowerCase().replace(/\s+/g, '')}.webp`;
+                      target.src = fallbackSrc;
+                      target.onerror = () => {
+                        target.style.display = 'none';
+                      };
+                    }}
+                  />
+                  <span className="text-sm text-gray-600">{useCase.compl_ai_models.model_name}</span>
+                </div>
+                {useCase.compl_ai_models.model_provider && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {useCase.compl_ai_models.model_provider}
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Pays de déploiement */}
-            <div className="ml-12">
+            {/* Ligne 4: Pays de déploiement */}
+            <div className="w-full">
               <CountryDeploymentDisplay 
                 deploymentCountries={useCase.deployment_countries}
                 onUpdateUseCase={onUpdateUseCase ? async (updates) => {
@@ -324,25 +333,22 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
               />
             </div>
           </div>
-        </div>
 
-        {/* Colonne centrale - Carte géographique */}
-        <div className="xl:w-2/5 flex justify-center">
-          <div className="bg-gray-50 rounded-lg p-4 -ml-8">
-            <WorldMap 
-              deploymentCountries={useCase.deployment_countries || []} 
-              className="w-full h-80"
-            />
+          {/* Colonne centre - Carte géographique (s'étend sur 3 lignes) */}
+          <div className="xl:col-span-6 flex justify-center">
+            <div className="bg-gray-50 rounded-lg p-4 w-full">
+              <WorldMap 
+                deploymentCountries={useCase.deployment_countries || []} 
+                className="w-full h-80"
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Colonne de droite - Scores et actions */}
-        <div className="xl:w-1/4">
-          <div className="space-y-4">
-            {/* Niveau IA Act */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
+          {/* Colonne droite - Blocs empilés */}
+          <div className="xl:col-span-3 space-y-4">
+            {/* Ligne 2: Niveau IA Act */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 w-full">
               <h3 className="text-sm font-medium text-gray-700 mb-2">Niveau IA Act</h3>
-              {/* Utiliser le composant RiskLevelBadge avec la logique de score */}
               {useCase.score_final === 0 ? (
                 <div className="flex items-center space-x-2">
                   <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -360,13 +366,13 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
               )}
             </div>
 
-            {/* Score de conformité */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
+            {/* Ligne 3: Score de conformité */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 w-full">
               <HeaderScore useCase={useCase} refreshing={false} />
             </div>
 
-            {/* Bouton réévaluer */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
+            {/* Ligne 4: Bouton réévaluer */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 w-full">
               <button
                 onClick={goToEvaluation}
                 disabled={updating}
