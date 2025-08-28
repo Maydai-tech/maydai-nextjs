@@ -753,7 +753,7 @@
     "question": "Tenez vous un registre centralisé de vos systèmes d'IA ?",
     "type": "conditional",
     "required": true,
-    "risk": "high",
+    "risk": "minimal",
     "conditionalFields": [
       {
         "key": "registry_type",
@@ -781,7 +781,7 @@
         "code": "E5.N9.Q7.A",
         "label": "Non",
         "score_impact": -10,
-        "risk": "high",
+        "risk": "minimal",
         "category_impacts": {
           "human_oversight": -10
         }
