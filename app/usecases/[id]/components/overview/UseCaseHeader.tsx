@@ -376,7 +376,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
               <button
                 onClick={goToEvaluation}
                 disabled={updating}
-                className="w-full bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                className="w-full bg-[#0080a3] text-white px-4 py-2 rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 <RefreshCcw className="h-4 w-4" />
                 <span>Réévaluer le cas d'usage</span>
