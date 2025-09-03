@@ -13,6 +13,7 @@ export interface UseCase {
   system_type?: string
   deployment_countries?: string[]
   company_id: string
+  company_status?: 'utilisateur' | 'fabriquant_produits' | 'distributeur' | 'importateur' | 'fournisseur' | 'mandataire' | 'unknown'  // NOUVEAU: Statut d'entreprise
   created_at: string
   updated_at: string
   score_base?: number

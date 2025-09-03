@@ -44,6 +44,11 @@ export const TOTAL_WEIGHT = 120;
 // ===== TYPES ET INTERFACES =====
 
 /**
+ * Statuts d'entreprise possibles selon l'IA Act
+ */
+export type CompanyStatus = 'utilisateur' | 'fabriquant_produits' | 'distributeur' | 'importateur' | 'fournisseur' | 'mandataire' | 'unknown';
+
+/**
  * Structure d'une réponse utilisateur
  */
 export interface UserResponse {
@@ -160,6 +165,99 @@ export function findQuestionOption(questionCode: string, answerCode: string): Qu
   }
   
   return option;
+}
+
+/**
+ * Détermine le statut d'entreprise basé sur les labels des réponses au questionnaire
+ * 
+ * Logique basée sur les labels des réponses :
+ * - "Mon entreprise utilise des systèmes d'IA tiers" → "utilisateur"
+ * - "Je suis fabricant d'un produit intégrant un système d'IA" → "fabriquant_produits"
+ * - "Je distribue et/ou déploie un système d'IA pour d'autres entreprises" → "distributeur"
+ * - "Je suis importateur d'un système d'IA" → "importateur"
+ * - "Je suis un fournisseur d'un système d'IA" → "fournisseur"
+ * - "Je suis représentant autorisé d'un fournisseur de système d'IA" → "mandataire"
+ * - "Je suis éditeur d'un logiciel intégrant un système d'IA" → "distributeur"
+ * 
+ * @param responses - Toutes les réponses de l'utilisateur
+ * @returns Statut d'entreprise déterminé
+ */
+export function determineCompanyStatus(responses: UserResponse[]): CompanyStatus {
+  console.log(`🏢 Détermination du statut d'entreprise pour ${responses.length} réponses`);
+  
+  // Parcourir toutes les réponses pour trouver les labels correspondants
+  for (const response of responses) {
+    const question = QUESTIONS_DATA[response.question_code];
+    if (!question) continue;
+    
+    const selectedCodes = getSelectedCodes(response);
+    console.log(`✅ Codes sélectionnés pour ${response.question_code}:`, selectedCodes);
+    
+    // Analyser chaque réponse sélectionnée
+    for (const selectedCode of selectedCodes) {
+      const option = findQuestionOption(response.question_code, selectedCode);
+      if (!option) continue;
+      
+      console.log(`🎯 Analyse de l'option ${selectedCode}: ${option.label}`);
+      
+      // Vérifier chaque label pour déterminer le statut
+      switch (option.label) {
+        case "Mon entreprise utilise des systèmes d'IA tiers":
+          console.log(`✅ Statut déterminé: utilisateur (utilise des systèmes d'IA tiers)`);
+          return 'utilisateur';
+          
+        case "Je suis fabricant d'un produit intégrant un système d'IA":
+          console.log(`✅ Statut déterminé: fabriquant_produits (fabricant de produit intégrant un système d'IA)`);
+          return 'fabriquant_produits';
+          
+        case "Je distribue et/ou déploie un système d'IA pour d'autres entreprises":
+          console.log(`✅ Statut déterminé: distributeur (distribue et/ou déploie un système d'IA)`);
+          return 'distributeur';
+          
+        case "Je suis importateur d'un système d'IA":
+          console.log(`✅ Statut déterminé: importateur (importateur d'un système d'IA)`);
+          return 'importateur';
+          
+        case "Je suis un fournisseur d'un système d'IA":
+          console.log(`✅ Statut déterminé: fournisseur (fournisseur d'un système d'IA)`);
+          return 'fournisseur';
+          
+        case "Je suis représentant autorisé d'un fournisseur de système d'IA":
+          console.log(`✅ Statut déterminé: mandataire (représentant autorisé)`);
+          return 'mandataire';
+          
+        case "Je suis éditeur d'un logiciel intégrant un système d'IA":
+          console.log(`✅ Statut déterminé: distributeur (éditeur de logiciel intégrant un système d'IA)`);
+          return 'distributeur';
+      }
+    }
+  }
+  
+  console.log(`⚠️ Aucune réponse reconnue pour déterminer le statut - statut: unknown`);
+  return 'unknown';
+}
+
+/**
+ * Retourne la définition du statut d'entreprise selon l'IA Act
+ */
+export function getCompanyStatusDefinition(status: CompanyStatus): string {
+  switch (status) {
+    case 'utilisateur':
+      return 'Déployeur (utilisateur) : Toute personne physique ou morale, autorité publique, agence ou autre organisme qui utilise un système d\'IA sous sa propre autorité, sauf si ce système est utilisé dans le cadre d\'une activité personnelle et non professionnelle.';
+    case 'fabriquant_produits':
+      return 'Fabricant de Produits : Il s\'agit d\'un fabricant qui met sur le marché européen un système d\'IA avec son propre produit et sous sa propre marque. Si un système d\'IA à haut risque constitue un composant de sécurité d\'un produit couvert par la législation d\'harmonisation de l\'Union, le fabricant de ce produit est considéré comme le fournisseur du système d\'IA à haut risque.';
+    case 'distributeur':
+      return 'Distributeur : Une personne physique ou morale faisant partie de la chaîne d\'approvisionnement, autre que le fournisseur ou l\'importateur, qui met un système d\'IA à disposition sur le marché de l\'Union.';
+    case 'importateur':
+      return 'Importateur : Une personne physique ou morale située ou établie dans l\'Union qui met sur le marché un système d\'IA portant le nom ou la marque d\'une personne physique ou morale établie dans un pays tiers.';
+    case 'fournisseur':
+      return 'Fournisseur : Une personne physique ou morale, une autorité publique, une agence ou tout autre organisme qui développe (ou fait développer) un système d\'IA ou un modèle d\'IA à usage général et le met sur le marché ou le met en service sous son propre nom ou sa propre marque, que ce soit à titre onéreux ou gratuit.';
+    case 'mandataire':
+      return 'Représentant autorisé (Mandataire) : Une personne physique ou morale située ou établie dans l\'Union qui a reçu et accepté un mandat écrit d\'un fournisseur de système d\'IA ou de modèle d\'IA à usage général pour s\'acquitter en son nom des obligations et des procédures établies par le règlement.';
+    case 'unknown':
+    default:
+      return 'Statut non déterminé : Impossible de déterminer le statut d\'entreprise basé sur les réponses actuelles.';
+  }
 }
 
 // ===== FONCTIONS PRINCIPALES =====

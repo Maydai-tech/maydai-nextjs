@@ -21,6 +21,8 @@ import { createClient } from '@supabase/supabase-js';
 import { 
   calculateBaseScore, 
   calculateFinalScore, 
+  determineCompanyStatus,
+  getCompanyStatusDefinition,
   COMPL_AI_MULTIPLIER,
   type UserResponse 
 } from '@/lib/score-calculator-simple';
@@ -164,6 +166,12 @@ export async function POST(
       console.log(`⚠️ Cas d'usage éliminé: ${baseScoreResult.elimination_reason}`);
     }
     
+    // ===== ÉTAPE 5.5: DÉTERMINATION DU STATUT D'ENTREPRISE =====
+    console.log('🏢 Détermination du statut d\'entreprise...');
+    
+    const companyStatus = determineCompanyStatus(userResponses);
+    console.log(`✅ Statut d'entreprise déterminé: ${companyStatus}`);
+    
     // ===== ÉTAPE 6: RÉCUPÉRATION DU SCORE MODÈLE COMPL-AI =====
     console.log('🤖 Récupération du score modèle COMPL-AI...');
     
@@ -232,17 +240,23 @@ export async function POST(
     // ===== ÉTAPE 8: MISE À JOUR EN BASE DE DONNÉES =====
     console.log('💾 Mise à jour en base de données...');
     
+    // Préparer les données de mise à jour
+    const updateData = {
+      score_base: finalResult.scores.score_base,
+      score_model: finalResult.scores.score_model,
+      score_final: finalResult.scores.score_final,
+      is_eliminated: finalResult.scores.is_eliminated,
+      elimination_reason: finalResult.scores.elimination_reason,
+      company_status: companyStatus,  // Le champ existe maintenant
+      last_calculation_date: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    console.log('✅ Mise à jour avec le statut d\'entreprise:', companyStatus);
+    
     const { error: updateError } = await supabase
       .from('usecases')
-      .update({
-        score_base: finalResult.scores.score_base,
-        score_model: finalResult.scores.score_model,
-        score_final: finalResult.scores.score_final,
-        is_eliminated: finalResult.scores.is_eliminated,
-        elimination_reason: finalResult.scores.elimination_reason,
-        last_calculation_date: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', finalUsecaseId);
     
     if (updateError) {
@@ -255,7 +269,11 @@ export async function POST(
     // ===== ÉTAPE 9: RETOURNER LE RÉSULTAT =====
     console.log('🎉 === CALCUL TERMINÉ AVEC SUCCÈS ===');
     
-    return NextResponse.json(finalResult, { status: 200 });
+    return NextResponse.json({
+      ...finalResult,
+      company_status: companyStatus,  // NOUVEAU: Inclure le statut d'entreprise dans la réponse
+      company_status_definition: getCompanyStatusDefinition(companyStatus)
+    }, { status: 200 });
     
   } catch (error) {
     // Gestion des erreurs inattendues
