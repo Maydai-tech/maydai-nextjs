@@ -213,3 +213,4 @@ WHERE company_status = 'unknown';
 console.log('Réponses analysées:', responses);
 console.log('Statut déterminé:', companyStatus);
 ```
+

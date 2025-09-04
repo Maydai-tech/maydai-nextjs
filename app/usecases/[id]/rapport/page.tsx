@@ -8,6 +8,9 @@ import { useUseCaseNavigation } from '../utils/navigation'
 import { UseCaseLayout } from '../components/shared/UseCaseLayout'
 import { UseCaseLoader } from '../components/shared/UseCaseLoader'
 import { UseCaseScore } from '../components/UseCaseScore'
+import { RiskLevelBadge } from '../components/overview/RiskLevelBadge'
+import { useRiskLevel } from '../hooks/useRiskLevel'
+import { useUseCaseScore } from '../hooks/useUseCaseScore'
 
 // Fonction utilitaire pour convertir le statut d'entreprise en libellé lisible
 function getCompanyStatusLabel(status?: string): string {
@@ -101,6 +104,8 @@ export default function UseCaseRapportPage() {
   const useCaseId = params.id as string
   const { useCase, loading: loadingData, error } = useUseCaseData(useCaseId)
   const { goToEvaluation, goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
+  const { riskLevel, loading: riskLoading, error: riskError } = useRiskLevel(useCaseId)
+  const { score, loading: scoreLoading, error: scoreError } = useUseCaseScore(useCaseId)
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -270,14 +275,706 @@ export default function UseCaseRapportPage() {
           </div>
         </div>
 
+        {/* Section 2. Classification du système d'IA */}
+        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            2. Classification du système d'IA
+          </h2>
+          
+          <div className="prose prose-gray max-w-none">
+            <p className="text-base leading-relaxed text-gray-800 mb-6">
+              L'AI Act adopte une approche fondée sur les risques, classifiant les systèmes d'IA en différentes catégories selon leur niveau de risque. Cette classification détermine les obligations réglementaires applicables.
+            </p>
+            
+            {/* Badges de classification et score */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              {/* Badge Niveau IA Act */}
+              <div className="flex-1">
+                <RiskLevelBadge 
+                  riskLevel={riskLevel} 
+                  loading={riskLoading}
+                  error={riskError}
+                  className="w-full"
+                />
+              </div>
+              
+              {/* Badge Score de conformité */}
+              <div className="flex-1">
+                <div className="inline-flex items-center px-4 py-2 rounded-lg border-2 bg-blue-50 border-blue-300 shadow-sm w-full">
+                  {scoreLoading ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full mr-2.5" />
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-blue-800 opacity-75">
+                          Score de conformité
+                        </span>
+                        <span className="text-sm font-bold text-blue-800 leading-tight">
+                          Calcul en cours...
+                        </span>
+                      </div>
+                    </>
+                  ) : scoreError || !score ? (
+                    <>
+                      <div className="h-5 w-5 text-blue-400 mr-2.5" />
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-blue-800 opacity-75">
+                          Score de conformité
+                        </span>
+                        <span className="text-sm font-bold text-blue-800 leading-tight">
+                          Non disponible
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-5 w-5 text-blue-600 mr-2.5" />
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-blue-800 opacity-75">
+                          Score de conformité
+                        </span>
+                        <span className="text-sm font-bold text-blue-800 leading-tight">
+                          {score.score}/{score.max_score}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Justification du niveau de risque */}
+            {riskLevel && (
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Justification du niveau de risque</h4>
+                <div className="text-sm text-gray-700 leading-relaxed">
+                  {riskLevel === 'unacceptable' && (
+                    <p>
+                      <strong>Risque inacceptable :</strong> Le système est potentiellement interdit en vertu de l'Article 5 de l'AI Act. Les pratiques interdites incluent la manipulation subliminale, l'exploitation des vulnérabilités, la notation sociale, l'évaluation des risques criminels basée sur le profilage, le raclage non ciblé d'images faciales, la reconnaissance des émotions sur le lieu de travail/établissements d'enseignement (sauf médical/sécurité), et l'identification biométrique à distance en temps réel dans les espaces publics (sauf exceptions strictes). L'interdiction de ces systèmes a pris effet le 2 février 2025.
+                    </p>
+                  )}
+                  
+                  {riskLevel === 'high' && (
+                    <p>
+                      <strong>Risque élevé :</strong> Le système tombe dans l'une des catégories listées à l'Annexe III de l'AI Act ou est un composant de sécurité d'un produit réglementé. Cela inclut par exemple l'IA dans les infrastructures critiques, l'éducation, l'emploi, l'accès aux services essentiels, l'application de la loi, la migration, l'asile, le contrôle aux frontières et l'administration de la justice. Ces systèmes sont soumis à des exigences strictes (évaluation et atténuation des risques, qualité des données, journalisation, documentation, transparence, contrôle humain, robustesse, cybersécurité, précision).
+                    </p>
+                  )}
+                  
+                  {riskLevel === 'limited' && (
+                    <p>
+                      <strong>Risque limité :</strong> Les systèmes d'IA à risque limité sont ceux pour lesquels il existe un besoin spécifique de transparence. La justification principale de cette classification est d'assurer que les utilisateurs soient informés lorsqu'ils interagissent avec une IA, en particulier s'il existe un risque manifeste de manipulation. Cela inclut les applications comme les chatbots, où les utilisateurs doivent savoir qu'ils communiquent avec une machine pour prendre des décisions éclairées. Cette catégorie englobe également les systèmes d'IA générative qui produisent des contenus synthétiques (audio, images, vidéo ou texte) ; les fournisseurs doivent s'assurer que ces contenus sont marqués de manière lisible par machine et identifiables comme étant générés ou manipulés par une IA. De même, les déployeurs de systèmes de reconnaissance des émotions ou de catégorisation biométrique doivent informer les personnes exposées de leur fonctionnement, et ceux qui utilisent l'IA pour générer des hyper trucages doivent clairement indiquer que le contenu a été créé ou manipulé par une IA. Ces exigences de transparence visent à préserver la confiance et à lutter contre les risques de manipulation, de tromperie et de désinformation.
+                    </p>
+                  )}
+                  
+                  {riskLevel === 'minimal' && (
+                    <p>
+                      <strong>Risque minimal :</strong> La vaste majorité des systèmes d'IA tombent dans cette catégorie, considérée comme présentant un risque minimal, voire nul. Ces systèmes sont généralement utilisés à condition de respecter la législation existante et ne sont soumis à aucune obligation légale supplémentaire spécifique à l'AI Act. La justification est que ces applications ne posent pas de risques significatifs pour la santé, la sécurité ou les droits fondamentaux des personnes. Les fournisseurs de ces systèmes sont néanmoins encouragés à appliquer volontairement les exigences relatives à une "IA digne de confiance" et à adhérer à des codes de conduite volontaires. Cette approche vise à promouvoir une utilisation éthique et responsable de l'IA sans entraver l'innovation, offrant ainsi un avantage concurrentiel aux entreprises qui respectent ces bonnes pratiques. Des exemples typiques incluent les jeux vidéo basés sur l'IA ou les filtres anti-spam.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            3. Évaluation de la Conformité et Actions Recommandées
+          </h2>
+          
+          <div className="prose prose-gray max-w-none">
+            <p className="text-base leading-relaxed text-gray-800 mb-6">
+              Cette section évalue la conformité du système d'IA aux exigences de l'AI Act, structurée autour des six principes éthiques et techniques clés. Pour chaque point, des quick wins (actions rapides) et des actions à mener sont proposées.
+            </p>
+          </div>
+        </div>
+
+        {/* Section 4. Obligations Spécifiques et Gouvernance */}
+        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            4. Obligations Spécifiques et Gouvernance
+          </h2>
+          
+          <div className="prose prose-gray max-w-none">
+            <p className="text-base leading-relaxed text-gray-800 mb-6">
+              Cette section détaille les obligations spécifiques applicables à votre système d'IA selon sa classification et votre statut d'entreprise, ainsi que les mesures de gouvernance recommandées pour assurer une conformité durable.
+            </p>
+            
+            <div className="space-y-6">
+              {/* Obligations selon le statut d'entreprise */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-blue-900 mb-4">
+                  Obligations selon votre statut d'entreprise
+                </h3>
+                <div className="text-sm text-blue-800 leading-relaxed">
+                  <p className="mb-3">
+                    <strong>Statut identifié :</strong> {getCompanyStatusLabel(useCase.company_status)}
+                  </p>
+                  <p className="mb-4">
+                    {getCompanyStatusDefinition(useCase.company_status)}
+                  </p>
+                  
+                  {useCase.company_status === 'utilisateur' && (
+                    <div className="bg-white p-4 rounded border">
+                      <h4 className="font-semibold mb-2">Obligations spécifiques aux utilisateurs :</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li>Utiliser le système d'IA conformément aux instructions du fournisseur</li>
+                        <li>Surveiller le fonctionnement du système et signaler les incidents</li>
+                        <li>Assurer un contrôle humain approprié</li>
+                        <li>Respecter les obligations de transparence envers les utilisateurs finaux</li>
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {useCase.company_status === 'fournisseur' && (
+                    <div className="bg-white p-4 rounded border">
+                      <h4 className="font-semibold mb-2">Obligations spécifiques aux fournisseurs :</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li>Évaluation et atténuation des risques</li>
+                        <li>Qualité et gouvernance des données</li>
+                        <li>Journalisation et traçabilité</li>
+                        <li>Documentation technique et déclaration de conformité</li>
+                        <li>Transparence et information des utilisateurs</li>
+                        <li>Contrôle humain et surveillance</li>
+                        <li>Robustesse, précision et cybersécurité</li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Mesures de gouvernance recommandées */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-green-900 mb-4">
+                  Mesures de gouvernance recommandées
+                </h3>
+                <div className="text-sm text-green-800 leading-relaxed">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-white p-4 rounded border">
+                      <h4 className="font-semibold mb-2">Organisation interne</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li>Désigner un responsable IA</li>
+                        <li>Créer un comité de gouvernance IA</li>
+                        <li>Établir des procédures de validation</li>
+                        <li>Former les équipes aux enjeux IA</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded border">
+                      <h4 className="font-semibold mb-2">Processus qualité</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li>Audits réguliers de conformité</li>
+                        <li>Tests de robustesse périodiques</li>
+                        <li>Monitoring des performances</li>
+                        <li>Gestion des incidents et remédiation</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions prioritaires */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-amber-900 mb-4">
+                  Actions prioritaires à mettre en œuvre
+                </h3>
+                <div className="text-sm text-amber-800 leading-relaxed">
+                  <div className="space-y-3">
+                    <div className="bg-white p-4 rounded border">
+                      <h4 className="font-semibold mb-2">Actions immédiates (0-3 mois)</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li>Cartographier les systèmes d'IA existants</li>
+                        <li>Évaluer la conformité actuelle</li>
+                        <li>Identifier les lacunes critiques</li>
+                        <li>Mettre en place un système de monitoring</li>
+                      </ul>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded border">
+                      <h4 className="font-semibold mb-2">Actions à moyen terme (3-12 mois)</h4>
+                      <ul className="list-disc list-inside space-y-1 text-sm">
+                        <li>Développer la documentation technique</li>
+                        <li>Implémenter les mesures de transparence</li>
+                        <li>Renforcer les contrôles de qualité</li>
+                        <li>Former les équipes aux obligations réglementaires</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 5. Avertissements et Sanctions */}
+        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            5. Avertissements et Sanctions
+          </h2>
+          
+          <div className="prose prose-gray max-w-none">
+            <p className="text-base leading-relaxed text-gray-800 mb-6">
+              Le non-respect de l'AI Act peut entraîner des sanctions sévères.
+            </p>
+            
+            <div className="space-y-6">
+              {/* Sanctions financières */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-red-900 mb-4">
+                  Sanctions financières
+                </h3>
+                <div className="text-sm text-red-800 leading-relaxed space-y-4">
+                  <div className="bg-white p-4 rounded border">
+                    <h4 className="font-semibold mb-2 text-red-900">Violations des pratiques interdites (Article 5) :</h4>
+                    <p className="text-red-700">Amendes jusqu'à <strong>35 millions d'euros</strong> ou <strong>7 % du chiffre d'affaires annuel mondial</strong> (le montant le plus élevé).</p>
+                  </div>
+                  
+                  <div className="bg-white p-4 rounded border">
+                    <h4 className="font-semibold mb-2 text-red-900">Violations des obligations pour les systèmes d'IA à haut risque :</h4>
+                    <p className="text-red-700">Amendes jusqu'à <strong>15 millions d'euros</strong> ou <strong>3 % du chiffre d'affaires annuel mondial</strong>.</p>
+                  </div>
+                  
+                  <div className="bg-white p-4 rounded border">
+                    <h4 className="font-semibold mb-2 text-red-900">Fourniture d'informations inexactes, incomplètes ou trompeuses :</h4>
+                    <p className="text-red-700">Amendes jusqu'à <strong>7,5 millions d'euros</strong> ou <strong>1 % du chiffre d'affaires annuel mondial</strong>.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Calendrier de mise en œuvre */}
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-orange-900 mb-4">
+                  Calendrier de mise en œuvre
+                </h3>
+                <div className="text-sm text-orange-800 leading-relaxed">
+                  <div className="space-y-3">
+                    <div className="bg-white p-4 rounded border">
+                      <h4 className="font-semibold mb-2 text-orange-900">2 février 2025 :</h4>
+                      <p className="text-orange-700">Entrée en vigueur des interdictions des systèmes d'IA à « risque inacceptable ».</p>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded border">
+                      <h4 className="font-semibold mb-2 text-orange-900">2 août 2025 :</h4>
+                      <p className="text-orange-700">Application des réglementations pour les modèles d'IA à usage général (GPAI) et les règles de gouvernance. Les codes de bonnes pratiques ont été partagés le 5 juillet 2025.</p>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded border">
+                      <h4 className="font-semibold mb-2 text-orange-900">2 août 2026 :</h4>
+                      <p className="text-orange-700">Entrée en vigueur de toutes les autres dispositions de l'AI Act.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 6. Recommandations Générales et Prochaines Étapes */}
+        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            6. Recommandations Générales et Prochaines Étapes
+          </h2>
+          
+          <div className="prose prose-gray max-w-none">
+            <div className="space-y-6">
+              {/* Intégration par design */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-blue-900 mb-3">
+                  Intégration « par design »
+                </h3>
+                <p className="text-sm text-blue-800 leading-relaxed">
+                  Intégrer les principes de l'AI Act dès la conception des produits et services IA pour assurer la pérennité et la compétitivité.
+                </p>
+              </div>
+
+              {/* Évaluation Continue */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-green-900 mb-3">
+                  Évaluation Continue
+                </h3>
+                <p className="text-sm text-green-800 leading-relaxed">
+                  L'AI est une technologie en évolution rapide. Il est crucial de procéder à des évaluations régulières et d'adapter les systèmes et les processus de conformité en continu.
+                </p>
+              </div>
+
+              {/* Formation */}
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-purple-900 mb-3">
+                  Formation
+                </h3>
+                <p className="text-sm text-purple-800 leading-relaxed">
+                  Sensibiliser et former toutes les équipes (développement, juridique, conformité, gestion) aux exigences de l'AI Act et aux meilleures pratiques en matière d'IA éthique et transparente.
+                </p>
+              </div>
+
+              {/* Outils de Conformité */}
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-indigo-900 mb-3">
+                  Outils de Conformité
+                </h3>
+                <p className="text-sm text-indigo-800 leading-relaxed">
+                  Utiliser des boîtes à outils dédiées (telles que celles de MaydAI ou le cadre COMPL-AI) pour faciliter l'identification des systèmes, la classification des risques, la cartographie des obligations réglementaires et la gestion des risques.
+                </p>
+              </div>
+
+              {/* Bac à Sable Réglementaire */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-amber-900 mb-3">
+                  Bac à Sable Réglementaire
+                </h3>
+                <div className="text-sm text-amber-800 leading-relaxed">
+                  <p className="mb-3">
+                    Envisager la participation à des « bacs à sable réglementaires » (regulatory sandboxes) pour développer et tester des systèmes d'IA innovants sous supervision réglementaire, ce qui peut renforcer la sécurité juridique et accélérer l'accès au marché pour les PME.
+                  </p>
+                  <a 
+                    href="https://artificialintelligenceact.eu/fr/article/57/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-amber-700 hover:text-amber-900 underline font-medium"
+                  >
+                    En savoir plus sur les bacs à sable réglementaires
+                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+
+              {/* Collaboration */}
+              <div className="bg-teal-50 border border-teal-200 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-teal-900 mb-3">
+                  Collaboration
+                </h3>
+                <div className="text-sm text-teal-800 leading-relaxed">
+                  <p className="mb-3">
+                    Participer aux efforts de standardisation et de développement de codes de bonne pratique, encouragés par le Bureau de l'IA.
+                  </p>
+                  <a 
+                    href="https://digital-strategy.ec.europa.eu/fr/policies/ai-office" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-teal-700 hover:text-teal-900 underline font-medium"
+                  >
+                    Découvrir le Bureau de l'IA
+                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 7. Sujets LLM indépendants */}
+        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            7. Sujets LLM indépendants
+          </h2>
+          
+          <div className="prose prose-gray max-w-none">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Impact Social & Environmental
+            </h3>
+            
+            <p className="text-base leading-relaxed text-gray-800 mb-6">
+              Les critères suivants sont intégrés aux demandes de transparence de l'AI Act mais ne sont pas encore transmises par les technologies concernées :
+            </p>
+            
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Nombre de GPUs
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Nombre total d'unités de traitement graphique (GPU) utilisées pour entraîner le modèle d'IA. Les GPUs sont des composants très puissants mais aussi très énergivores. Plus on en utilise, plus la consommation d'énergie globale augmente de manière significative. C'est un multiplicateur direct de la consommation électrique.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Consommation électrique par GPU
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Puissance électrique moyenne consommée par un seul GPU pendant l'entraînement, généralement mesurée en Watts (W). Toutes les puces graphiques ne se valent pas. Un GPU de dernière génération très performant peut consommer beaucoup plus qu'un modèle plus ancien. Cette valeur permet d'affiner le calcul de la consommation totale.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Temps d'entraînement
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Durée totale nécessaire pour entraîner le modèle, souvent exprimée en heures. Il s'agit du facteur "temps" car même avec peu de GPUs peu gourmands, un entraînement qui dure des semaines ou des mois aura un impact énergétique plus important.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Intensité carbone du datacenter
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Mesure qui indique la quantité de dioxyde de carbone (CO2) émise pour produire une unité d'énergie (par exemple, en grammes de CO2 par kilowatt-heure, gCO2eq/kWh). Cette valeur dépend de la localisation géographique du datacenter et de son mix énergétique (nucléaire, charbon, solaire, éolien, etc.). C'est le critère clé pour passer de la consommation d'énergie à l'empreinte carbone. Entraîner un modèle dans un datacenter alimenté par des énergies renouvelables en Suède aura un impact carbone bien plus faible que de l'entraîner dans un datacenter qui dépend du charbon en Pologne, même si la consommation d'énergie est identique.
+                </p>
+              </div>
+            </div>
+            
+            <p className="text-base leading-relaxed text-gray-800 mb-4">
+              Dès que ces indicateurs seront disponibles, nous les ajouterons aux évaluations des LLM.
+            </p>
+            
+            <p className="text-base leading-relaxed text-gray-800">
+              Vous serez informé par email de toute évolution des évaluations.
+            </p>
+          </div>
+        </div>
+
+        {/* Section 8. Références Légales Clés */}
+        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            8. Références Légales Clés
+          </h2>
+          
+          <div className="prose prose-gray max-w-none">
+            <p className="text-base leading-relaxed text-gray-800 mb-6">
+              Règlement (UE) 2024/1689 du Parlement européen et du Conseil du 13 juin 2024 (l'AI Act).
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 5
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Pratiques d'IA interdites.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Chapitre III, Section 2
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Exigences applicables aux systèmes d'IA à haut risque.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 9
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Système de gestion des risques.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 10
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Gouvernance des données.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 11
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Documentation technique.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 12
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Enregistrement (journaux).
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 13
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Transparence et fourniture d'informations aux déployeurs.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 14
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Contrôle humain.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 15
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Exactitude, robustesse et cybersécurité.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 17
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Système de gestion de la qualité.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 26
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Obligations incombant aux déployeurs de systèmes d'IA à haut risque.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 27
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Analyse d'impact des systèmes d'IA à haut risque sur les droits fondamentaux.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 49
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Enregistrement dans la base de données de l'UE.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 50
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Obligations de transparence pour les fournisseurs et les déployeurs de certains systèmes d'IA.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 51
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Classification de modèles d'IA à usage général en tant que modèles d'IA à usage général présentant un risque systémique.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 53
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Obligations des fournisseurs de modèles d'IA à usage général.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 55
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Obligations des fournisseurs de modèles d'IA à usage général présentant un risque systémique.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 56
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Codes de bonne pratique pour les GPAI.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 57
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Bacs à sable réglementaires de l'IA.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 60
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Essais en conditions réelles.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 72
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Surveillance après commercialisation.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 73
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Signalement d'incidents graves.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Article 99
+                </h4>
+                <p className="text-base leading-relaxed text-gray-800">
+                  Sanctions administratives.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="text-base font-semibold text-gray-900 mb-2">
+                  Annexes
+                </h4>
+                <div className="space-y-2">
+                  <p className="text-base leading-relaxed text-gray-800">
+                    <strong>Annexe III :</strong> Liste des systèmes d'IA à haut risque.
+                  </p>
+                  <p className="text-base leading-relaxed text-gray-800">
+                    <strong>Annexe IV :</strong> Documentation technique pour les systèmes d'IA à haut risque.
+                  </p>
+                  <p className="text-base leading-relaxed text-gray-800">
+                    <strong>Annexe XI :</strong> Documentation technique pour les fournisseurs de modèles d'IA à usage général.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section Rapport de conformité */}
         <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
             Rapport de conformité
           </h2>
-          
           <UseCaseScore usecaseId={useCase.id} />
         </div>
       </div>
     </UseCaseLayout>
   )
-} 
+}

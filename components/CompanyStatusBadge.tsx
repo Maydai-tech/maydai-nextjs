@@ -93,3 +93,4 @@ export default function CompanyStatusBadge({ status, showDefinition = false }: C
     </div>
   );
 }
+

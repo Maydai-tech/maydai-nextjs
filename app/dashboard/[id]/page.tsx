@@ -253,7 +253,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'terminé': return 'text-green-700 bg-green-50 border border-green-200'
+      case 'terminé': return 'border border-[#0080a3]'
       case 'en cours': return 'text-yellow-700 bg-yellow-50 border border-yellow-200'
       case 'a compléter': return 'text-gray-700 bg-gray-50 border border-gray-200'
       default: return 'text-gray-700 bg-gray-50 border border-gray-200'
@@ -440,11 +440,11 @@ export default function CompanyDashboard({ params }: DashboardProps) {
 
           <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
             <div className="flex flex-col sm:flex-row sm:items-center">
-              <div className="bg-green-50 p-2 sm:p-3 rounded-lg mb-2 sm:mb-0 w-fit">
-                <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+              <div className="p-2 sm:p-3 rounded-lg mb-2 sm:mb-0 w-fit" style={{backgroundColor: '#c6eef8'}}>
+                <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6" style={{color: '#0080a3'}} />
               </div>
               <div className="sm:ml-4">
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Conformes</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Terminés</p>
                 <p className="text-lg sm:text-2xl font-bold text-gray-900">
                   {getCompletedCount()}
                 </p>
@@ -628,7 +628,13 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                               <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
                                 <h3 className="font-medium text-gray-900 truncate">{useCase.name}</h3>
                                 <div className="flex flex-wrap gap-2">
-                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(getUseCaseStatusInFrench(useCase.status))}`}>
+                                  <span 
+                                    className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(getUseCaseStatusInFrench(useCase.status))}`}
+                                    style={getUseCaseStatusInFrench(useCase.status) === 'Terminé' ? {
+                                      color: '#0080a3',
+                                      backgroundColor: '#c6eef8'
+                                    } : {}}
+                                  >
                                     {getUseCaseStatusInFrench(useCase.status)}
                                   </span>
                                   {useCase.risk_level && (
