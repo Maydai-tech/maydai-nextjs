@@ -444,7 +444,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                 <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6" style={{color: '#0080a3'}} />
               </div>
               <div className="sm:ml-4">
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Terminés</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Complétés</p>
                 <p className="text-lg sm:text-2xl font-bold text-gray-900">
                   {getCompletedCount()}
                 </p>
