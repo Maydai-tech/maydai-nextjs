@@ -518,48 +518,140 @@ export default function UseCaseRapportPage() {
             
             <div className="space-y-6">
               {/* Sanctions financières */}
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-red-900 mb-4">
+              <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h3 className="text-xl font-semibold text-gray-900 mb-6">
                   Sanctions financières
                 </h3>
-                <div className="text-sm text-red-800 leading-relaxed space-y-4">
-                  <div className="bg-white p-4 rounded border">
-                    <h4 className="font-semibold mb-2 text-red-900">Violations des pratiques interdites (Article 5) :</h4>
-                    <p className="text-red-700">Amendes jusqu'à <strong>35 millions d'euros</strong> ou <strong>7 % du chiffre d'affaires annuel mondial</strong> (le montant le plus élevé).</p>
+                
+                {/* Éléments des sanctions */}
+                <div className="space-y-6">
+                  {/* Violations des pratiques interdites */}
+                  <div className="flex items-start">
+                    <img 
+                      src="/icons/withdraw.png" 
+                      alt="Sanctions" 
+                      width={24} 
+                      height={24} 
+                      className="mr-4 mt-1 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 mb-2">Violations des pratiques interdites (Article 5) :</h4>
+                      <p className="text-gray-800 text-sm leading-relaxed">
+                        Amendes jusqu'à <strong className="text-[#0080a3]">35 millions d'euros</strong> ou <strong className="text-[#0080a3]">7 % du chiffre d'affaires annuel mondial</strong> (le montant le plus élevé).
+                      </p>
+                    </div>
                   </div>
-                  
-                  <div className="bg-white p-4 rounded border">
-                    <h4 className="font-semibold mb-2 text-red-900">Violations des obligations pour les systèmes d'IA à haut risque :</h4>
-                    <p className="text-red-700">Amendes jusqu'à <strong>15 millions d'euros</strong> ou <strong>3 % du chiffre d'affaires annuel mondial</strong>.</p>
+
+                  {/* Violations des obligations pour les systèmes d'IA à haut risque */}
+                  <div className="flex items-start">
+                    <img 
+                      src="/icons/auction.png" 
+                      alt="Sanctions pour non-conformité" 
+                      width={24} 
+                      height={24} 
+                      className="mr-4 mt-1 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 mb-2">Violations des obligations pour les systèmes d'IA à haut risque :</h4>
+                      <p className="text-gray-800 text-sm leading-relaxed">
+                        Amendes jusqu'à <strong className="text-[#0080a3]">15 millions d'euros</strong> ou <strong className="text-[#0080a3]">3 % du chiffre d'affaires annuel mondial</strong>.
+                      </p>
+                    </div>
                   </div>
-                  
-                  <div className="bg-white p-4 rounded border">
-                    <h4 className="font-semibold mb-2 text-red-900">Fourniture d'informations inexactes, incomplètes ou trompeuses :</h4>
-                    <p className="text-red-700">Amendes jusqu'à <strong>7,5 millions d'euros</strong> ou <strong>1 % du chiffre d'affaires annuel mondial</strong>.</p>
+
+                  {/* Fourniture d'informations inexactes */}
+                  <div className="flex items-start">
+                    <img 
+                      src="/icons/lawyer.png" 
+                      alt="Sanctions pour informations incorrectes" 
+                      width={24} 
+                      height={24} 
+                      className="mr-4 mt-1 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 mb-2">Fourniture d'informations inexactes, incomplètes ou trompeuses :</h4>
+                      <p className="text-gray-800 text-sm leading-relaxed">
+                        Amendes jusqu'à <strong className="text-[#0080a3]">7,5 millions d'euros</strong> ou <strong className="text-[#0080a3]">1 % du chiffre d'affaires annuel mondial</strong>.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Calendrier de mise en œuvre */}
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-orange-900 mb-4">
+              <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+                <h3 className="text-xl font-semibold text-gray-900 mb-6">
                   Calendrier de mise en œuvre
                 </h3>
-                <div className="text-sm text-orange-800 leading-relaxed">
-                  <div className="space-y-3">
-                    <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold mb-2 text-orange-900">2 février 2025 :</h4>
-                      <p className="text-orange-700">Entrée en vigueur des interdictions des systèmes d'IA à « risque inacceptable ».</p>
+                
+                {/* Timeline Container */}
+                <div className="relative">
+                  {/* Ligne verticale */}
+                  <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-[#0080a3]"></div>
+                  
+                  {/* Éléments de la timeline */}
+                  <div className="space-y-6">
+                    {/* 2 février 2025 */}
+                    <div className="relative flex items-start">
+                      {/* Point de la timeline */}
+                      <div className="absolute left-6 w-3 h-3 bg-white rounded-full transform -translate-x-1.5 z-10 border-2 border-[#0080a3]">
+                        <div className="absolute inset-0.5 bg-[#0080a3] rounded-full"></div>
+                      </div>
+                      
+                      {/* Contenu */}
+                      <div className="ml-12 flex-1">
+                        <div className="inline-flex items-center bg-[#0080a3] text-white text-sm font-medium px-3 py-1.5 rounded-full mb-3">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          2 février 2025
+                        </div>
+                        <p className="text-gray-800 text-sm leading-relaxed">
+                          Entrée en vigueur des interdictions des systèmes d'IA à « risque inacceptable ».
+                        </p>
+                      </div>
                     </div>
-                    
-                    <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold mb-2 text-orange-900">2 août 2025 :</h4>
-                      <p className="text-orange-700">Application des réglementations pour les modèles d'IA à usage général (GPAI) et les règles de gouvernance. Les codes de bonnes pratiques ont été partagés le 5 juillet 2025.</p>
+
+                    {/* 2 août 2025 */}
+                    <div className="relative flex items-start">
+                      {/* Point de la timeline */}
+                      <div className="absolute left-6 w-3 h-3 bg-white rounded-full transform -translate-x-1.5 z-10 border-2 border-[#0080a3]">
+                        <div className="absolute inset-0.5 bg-[#0080a3] rounded-full"></div>
+                      </div>
+                      
+                      {/* Contenu */}
+                      <div className="ml-12 flex-1">
+                        <div className="inline-flex items-center bg-[#0080a3] text-white text-sm font-medium px-3 py-1.5 rounded-full mb-3">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          2 août 2025
+                        </div>
+                        <p className="text-gray-800 text-sm leading-relaxed">
+                          Application des réglementations pour les modèles d'IA à usage général (GPAI) et les règles de gouvernance. Les codes de bonnes pratiques ont été partagés le 5 juillet 2025.
+                        </p>
+                      </div>
                     </div>
-                    
-                    <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold mb-2 text-orange-900">2 août 2026 :</h4>
-                      <p className="text-orange-700">Entrée en vigueur de toutes les autres dispositions de l'AI Act.</p>
+
+                    {/* 2 août 2026 */}
+                    <div className="relative flex items-start">
+                      {/* Point de la timeline */}
+                      <div className="absolute left-6 w-3 h-3 bg-white rounded-full transform -translate-x-1.5 z-10 border-2 border-[#0080a3]">
+                        <div className="absolute inset-0.5 bg-[#0080a3] rounded-full"></div>
+                      </div>
+                      
+                      {/* Contenu */}
+                      <div className="ml-12 flex-1">
+                        <div className="inline-flex items-center bg-[#0080a3] text-white text-sm font-medium px-3 py-1.5 rounded-full mb-3">
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          2 août 2026
+                        </div>
+                        <p className="text-gray-800 text-sm leading-relaxed">
+                          Entrée en vigueur de toutes les autres dispositions de l'AI Act.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -568,60 +660,93 @@ export default function UseCaseRapportPage() {
           </div>
         </div>
 
-        {/* Section 6. Recommandations Générales et Prochaines Étapes */}
+        {/* Section 6. Recommandations Générales */}
         <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            6. Recommandations Générales et Prochaines Étapes
+            6. Recommandations Générales
           </h2>
           
-          <div className="prose prose-gray max-w-none">
-            <div className="space-y-6">
-              {/* Intégration par design */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-blue-900 mb-3">
-                  Intégration « par design »
-                </h3>
-                <p className="text-sm text-blue-800 leading-relaxed">
+          <div className="space-y-6">
+            {/* Intégration par design */}
+            <div className="flex items-start">
+              <img 
+                src="/icons/compass-icon.png" 
+                alt="Intégration par design" 
+                width={24} 
+                height={24} 
+                className="mr-4 mt-1 flex-shrink-0"
+              />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-2">Intégration « par design »</h3>
+                <p className="text-gray-800 text-sm leading-relaxed">
                   Intégrer les principes de l'AI Act dès la conception des produits et services IA pour assurer la pérennité et la compétitivité.
                 </p>
               </div>
+            </div>
 
-              {/* Évaluation Continue */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-green-900 mb-3">
-                  Évaluation Continue
-                </h3>
-                <p className="text-sm text-green-800 leading-relaxed">
+            {/* Évaluation Continue */}
+            <div className="flex items-start">
+              <img 
+                src="/icons/audit.png" 
+                alt="Évaluation Continue" 
+                width={24} 
+                height={24} 
+                className="mr-4 mt-1 flex-shrink-0"
+              />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-2">Évaluation Continue</h3>
+                <p className="text-gray-800 text-sm leading-relaxed">
                   L'AI est une technologie en évolution rapide. Il est crucial de procéder à des évaluations régulières et d'adapter les systèmes et les processus de conformité en continu.
                 </p>
               </div>
+            </div>
 
-              {/* Formation */}
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-purple-900 mb-3">
-                  Formation
-                </h3>
-                <p className="text-sm text-purple-800 leading-relaxed">
+            {/* Formation */}
+            <div className="flex items-start">
+              <img 
+                src="/icons/authenticity.png" 
+                alt="Formation" 
+                width={24} 
+                height={24} 
+                className="mr-4 mt-1 flex-shrink-0"
+              />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-2">Formation</h3>
+                <p className="text-gray-800 text-sm leading-relaxed">
                   Sensibiliser et former toutes les équipes (développement, juridique, conformité, gestion) aux exigences de l'AI Act et aux meilleures pratiques en matière d'IA éthique et transparente.
                 </p>
               </div>
+            </div>
 
-              {/* Outils de Conformité */}
-              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-indigo-900 mb-3">
-                  Outils de Conformité
-                </h3>
-                <p className="text-sm text-indigo-800 leading-relaxed">
+            {/* Outils de Conformité */}
+            <div className="flex items-start">
+              <img 
+                src="/icons/authorization.png" 
+                alt="Outils de Conformité" 
+                width={24} 
+                height={24} 
+                className="mr-4 mt-1 flex-shrink-0"
+              />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-2">Outils de Conformité</h3>
+                <p className="text-gray-800 text-sm leading-relaxed">
                   Utiliser des boîtes à outils dédiées (telles que celles de MaydAI ou le cadre COMPL-AI) pour faciliter l'identification des systèmes, la classification des risques, la cartographie des obligations réglementaires et la gestion des risques.
                 </p>
               </div>
+            </div>
 
-              {/* Bac à Sable Réglementaire */}
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-amber-900 mb-3">
-                  Bac à Sable Réglementaire
-                </h3>
-                <div className="text-sm text-amber-800 leading-relaxed">
+            {/* Bac à Sable Réglementaire */}
+            <div className="flex items-start">
+              <img 
+                src="/icons/sandbox.png" 
+                alt="Bac à Sable Réglementaire" 
+                width={24} 
+                height={24} 
+                className="mr-4 mt-1 flex-shrink-0"
+              />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-2">Bac à Sable Réglementaire</h3>
+                <div className="text-gray-800 text-sm leading-relaxed">
                   <p className="mb-3">
                     Envisager la participation à des « bacs à sable réglementaires » (regulatory sandboxes) pour développer et tester des systèmes d'IA innovants sous supervision réglementaire, ce qui peut renforcer la sécurité juridique et accélérer l'accès au marché pour les PME.
                   </p>
@@ -629,7 +754,7 @@ export default function UseCaseRapportPage() {
                     href="https://artificialintelligenceact.eu/fr/article/57/" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-amber-700 hover:text-amber-900 underline font-medium"
+                    className="inline-flex items-center text-[#0080a3] hover:text-[#006080] underline font-medium"
                   >
                     En savoir plus sur les bacs à sable réglementaires
                     <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -638,13 +763,20 @@ export default function UseCaseRapportPage() {
                   </a>
                 </div>
               </div>
+            </div>
 
-              {/* Collaboration */}
-              <div className="bg-teal-50 border border-teal-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-teal-900 mb-3">
-                  Collaboration
-                </h3>
-                <div className="text-sm text-teal-800 leading-relaxed">
+            {/* Collaboration */}
+            <div className="flex items-start">
+              <img 
+                src="/icons/teamwork.png" 
+                alt="Collaboration" 
+                width={24} 
+                height={24} 
+                className="mr-4 mt-1 flex-shrink-0"
+              />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-2">Collaboration</h3>
+                <div className="text-gray-800 text-sm leading-relaxed">
                   <p className="mb-3">
                     Participer aux efforts de standardisation et de développement de codes de bonne pratique, encouragés par le Bureau de l'IA.
                   </p>
@@ -652,7 +784,7 @@ export default function UseCaseRapportPage() {
                     href="https://digital-strategy.ec.europa.eu/fr/policies/ai-office" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-teal-700 hover:text-teal-900 underline font-medium"
+                    className="inline-flex items-center text-[#0080a3] hover:text-[#006080] underline font-medium"
                   >
                     Découvrir le Bureau de l'IA
                     <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -672,51 +804,98 @@ export default function UseCaseRapportPage() {
           </h2>
           
           <div className="prose prose-gray max-w-none">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Impact Social & Environmental
-            </h3>
+            <div className="flex items-center mb-4">
+              <img 
+                src="/icons/feuille.png" 
+                alt="Impact Social & Environmental" 
+                width={24} 
+                height={24} 
+                className="mr-3"
+              />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Impact Social & Environmental
+              </h3>
+            </div>
             
             <p className="text-base leading-relaxed text-gray-800 mb-6">
               Les critères suivants sont intégrés aux demandes de transparence de l'AI Act mais ne sont pas encore transmises par les technologies concernées :
             </p>
             
             <div className="space-y-6">
-              <div>
-                <h4 className="text-base font-semibold text-gray-900 mb-2">
-                  Nombre de GPUs
-                </h4>
-                <p className="text-base leading-relaxed text-gray-800">
-                  Nombre total d'unités de traitement graphique (GPU) utilisées pour entraîner le modèle d'IA. Les GPUs sont des composants très puissants mais aussi très énergivores. Plus on en utilise, plus la consommation d'énergie globale augmente de manière significative. C'est un multiplicateur direct de la consommation électrique.
-                </p>
+              <div className="flex items-start">
+                <img 
+                  src="/icons/app.png" 
+                  alt="Nombre de GPUs" 
+                  width={20} 
+                  height={20} 
+                  className="mr-3 mt-1 flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <h4 className="text-base font-semibold text-gray-900 mb-2">
+                    Nombre de GPUs
+                  </h4>
+                  <p className="text-base leading-relaxed text-gray-800">
+                    Nombre total d'unités de traitement graphique (GPU) utilisées pour entraîner le modèle d'IA. Les GPUs sont des composants très puissants mais aussi très énergivores. Plus on en utilise, plus la consommation d'énergie globale augmente de manière significative. C'est un multiplicateur direct de la consommation électrique.
+                  </p>
+                </div>
               </div>
               
-              <div>
-                <h4 className="text-base font-semibold text-gray-900 mb-2">
-                  Consommation électrique par GPU
-                </h4>
-                <p className="text-base leading-relaxed text-gray-800">
-                  Puissance électrique moyenne consommée par un seul GPU pendant l'entraînement, généralement mesurée en Watts (W). Toutes les puces graphiques ne se valent pas. Un GPU de dernière génération très performant peut consommer beaucoup plus qu'un modèle plus ancien. Cette valeur permet d'affiner le calcul de la consommation totale.
-                </p>
+              <div className="flex items-start">
+                <img 
+                  src="/icons/low-performance.png" 
+                  alt="Consommation électrique par GPU" 
+                  width={20} 
+                  height={20} 
+                  className="mr-3 mt-1 flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <h4 className="text-base font-semibold text-gray-900 mb-2">
+                    Consommation électrique par GPU
+                  </h4>
+                  <p className="text-base leading-relaxed text-gray-800">
+                    Puissance électrique moyenne consommée par un seul GPU pendant l'entraînement, généralement mesurée en Watts (W). Toutes les puces graphiques ne se valent pas. Un GPU de dernière génération très performant peut consommer beaucoup plus qu'un modèle plus ancien. Cette valeur permet d'affiner le calcul de la consommation totale.
+                  </p>
+                </div>
               </div>
               
-              <div>
-                <h4 className="text-base font-semibold text-gray-900 mb-2">
-                  Temps d'entraînement
-                </h4>
-                <p className="text-base leading-relaxed text-gray-800">
-                  Durée totale nécessaire pour entraîner le modèle, souvent exprimée en heures. Il s'agit du facteur "temps" car même avec peu de GPUs peu gourmands, un entraînement qui dure des semaines ou des mois aura un impact énergétique plus important.
-                </p>
+              <div className="flex items-start">
+                <img 
+                  src="/icons/level-up.png" 
+                  alt="Temps d'entraînement" 
+                  width={20} 
+                  height={20} 
+                  className="mr-3 mt-1 flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <h4 className="text-base font-semibold text-gray-900 mb-2">
+                    Temps d'entraînement
+                  </h4>
+                  <p className="text-base leading-relaxed text-gray-800">
+                    Durée totale nécessaire pour entraîner le modèle, souvent exprimée en heures. Il s'agit du facteur "temps" car même avec peu de GPUs peu gourmands, un entraînement qui dure des semaines ou des mois aura un impact énergétique plus important.
+                  </p>
+                </div>
               </div>
               
-              <div>
-                <h4 className="text-base font-semibold text-gray-900 mb-2">
-                  Intensité carbone du datacenter
-                </h4>
-                <p className="text-base leading-relaxed text-gray-800">
-                  Mesure qui indique la quantité de dioxyde de carbone (CO2) émise pour produire une unité d'énergie (par exemple, en grammes de CO2 par kilowatt-heure, gCO2eq/kWh). Cette valeur dépend de la localisation géographique du datacenter et de son mix énergétique (nucléaire, charbon, solaire, éolien, etc.). C'est le critère clé pour passer de la consommation d'énergie à l'empreinte carbone. Entraîner un modèle dans un datacenter alimenté par des énergies renouvelables en Suède aura un impact carbone bien plus faible que de l'entraîner dans un datacenter qui dépend du charbon en Pologne, même si la consommation d'énergie est identique.
-                </p>
+              <div className="flex items-start">
+                <img 
+                  src="/icons/ecosystem.png" 
+                  alt="Intensité carbone du datacenter" 
+                  width={20} 
+                  height={20} 
+                  className="mr-3 mt-1 flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <h4 className="text-base font-semibold text-gray-900 mb-2">
+                    Intensité carbone du datacenter
+                  </h4>
+                  <p className="text-base leading-relaxed text-gray-800">
+                    Mesure qui indique la quantité de dioxyde de carbone (CO2) émise pour produire une unité d'énergie (par exemple, en grammes de CO2 par kilowatt-heure, gCO2eq/kWh). Cette valeur dépend de la localisation géographique du datacenter et de son mix énergétique (nucléaire, charbon, solaire, éolien, etc.). C'est le critère clé pour passer de la consommation d'énergie à l'empreinte carbone. Entraîner un modèle dans un datacenter alimenté par des énergies renouvelables en Suède aura un impact carbone bien plus faible que de l'entraîner dans un datacenter qui dépend du charbon en Pologne, même si la consommation d'énergie est identique.
+                  </p>
+                </div>
               </div>
             </div>
+            
+            <hr className="my-6 border-gray-200" />
             
             <p className="text-base leading-relaxed text-gray-800 mb-4">
               Dès que ces indicateurs seront disponibles, nous les ajouterons aux évaluations des LLM.
@@ -735,9 +914,18 @@ export default function UseCaseRapportPage() {
           </h2>
           
           <div className="prose prose-gray max-w-none">
-            <p className="text-base leading-relaxed text-gray-800 mb-6">
-              Règlement (UE) 2024/1689 du Parlement européen et du Conseil du 13 juin 2024 (l'AI Act).
-            </p>
+            <div className="flex items-start mb-6">
+              <img 
+                src="/icons/democracy-monument.png" 
+                alt="Règlement AI Act" 
+                width={24} 
+                height={24} 
+                className="mr-3 mt-1 flex-shrink-0"
+              />
+              <p className="text-base leading-relaxed text-gray-800">
+                Règlement (UE) 2024/1689 du Parlement européen et du Conseil du 13 juin 2024 (l'AI Act).
+              </p>
+            </div>
             
             <div className="space-y-4">
               <div>
