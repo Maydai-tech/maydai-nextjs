@@ -277,7 +277,16 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           {/* Colonne gauche - Blocs empilés */}
           <div className="xl:col-span-3 space-y-4">
             {/* Ligne 2: Badge statut */}
-            <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+            <div 
+              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+              style={frenchStatus === 'Complété' ? { 
+                backgroundColor: '#f1fdfa', 
+                color: '#0080a3' 
+              } : frenchStatus === 'À compléter' ? {
+                backgroundColor: '#fefce8',
+                color: '#713f12'
+              } : {}}
+            >
               <CheckCircle className="h-4 w-4 mr-1" />
               {frenchStatus}
             </div>

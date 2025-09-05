@@ -253,10 +253,10 @@ export default function CompanyDashboard({ params }: DashboardProps) {
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'terminé': return 'border border-[#0080a3]'
+      case 'complété': return 'border border-[#0080a3]'
       case 'en cours': return 'text-yellow-700 bg-yellow-50 border border-yellow-200'
-      case 'a compléter': return 'text-gray-700 bg-gray-50 border border-gray-200'
-      default: return 'text-gray-700 bg-gray-50 border border-gray-200'
+      case 'a compléter': return 'text-gray-700 border border-gray-200'
+      default: return 'text-gray-700 border border-gray-200'
     }
   }
 
@@ -264,7 +264,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
     switch (status?.toLowerCase()) {
       case 'completed':
       case 'active': 
-        return 'Terminé'
+        return 'Complété'
       case 'in_progress':
       case 'under_review':
         return 'En cours'
@@ -440,7 +440,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
 
           <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
             <div className="flex flex-col sm:flex-row sm:items-center">
-              <div className="p-2 sm:p-3 rounded-lg mb-2 sm:mb-0 w-fit" style={{backgroundColor: '#c6eef8'}}>
+              <div className="p-2 sm:p-3 rounded-lg mb-2 sm:mb-0 w-fit" style={{backgroundColor: '#f1fdfa'}}>
                 <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6" style={{color: '#0080a3'}} />
               </div>
               <div className="sm:ml-4">
@@ -630,9 +630,12 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                                 <div className="flex flex-wrap gap-2">
                                   <span 
                                     className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(getUseCaseStatusInFrench(useCase.status))}`}
-                                    style={getUseCaseStatusInFrench(useCase.status) === 'Terminé' ? {
+                                    style={getUseCaseStatusInFrench(useCase.status) === 'Complété' ? {
                                       color: '#0080a3',
-                                      backgroundColor: '#c6eef8'
+                                      backgroundColor: '#f1fdfa'
+                                    } : getUseCaseStatusInFrench(useCase.status) === 'À compléter' ? {
+                                      color: '#713f12',
+                                      backgroundColor: '#fefce8'
                                     } : {}}
                                   >
                                     {getUseCaseStatusInFrench(useCase.status)}
