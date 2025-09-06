@@ -11,6 +11,7 @@ import { UseCaseScore } from '../components/UseCaseScore'
 import { RiskLevelBadge } from '../components/overview/RiskLevelBadge'
 import { useRiskLevel } from '../hooks/useRiskLevel'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
+import { OpenAIReportSection } from '../components/OpenAIReportSection'
 
 // Fonction utilitaire pour convertir le statut d'entreprise en libellé lisible
 function getCompanyStatusLabel(status?: string): string {
@@ -387,6 +388,9 @@ export default function UseCaseRapportPage() {
             </p>
           </div>
         </div>
+
+        {/* Section : Rapport OpenAI */}
+        <OpenAIReportSection usecaseId={useCase.id} />
 
         {/* Section 4. Obligations Spécifiques et Gouvernance */}
         <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
