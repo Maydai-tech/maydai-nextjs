@@ -159,26 +159,32 @@ export function CountryDeploymentDisplay({ deploymentCountries = [], className =
       {!hasCountries ? (
         // Cas sans pays
         <div 
-          className={`group relative block w-full max-w-full bg-gradient-to-r from-gray-50 to-gray-100 text-gray-600 rounded-xl border border-gray-200 transition-all duration-200 ${
-            onUpdateUseCase ? 'cursor-pointer hover:from-gray-100 hover:to-gray-150 hover:shadow-md hover:border-gray-300' : ''
+          className={`group relative block w-full max-w-full rounded-xl transition-all duration-200 ${
+            onUpdateUseCase ? 'cursor-pointer hover:shadow-md' : ''
           } ${className}`}
+          style={{ 
+            backgroundColor: '#f1fdfa',
+            borderColor: '#0080a3',
+            borderWidth: '1px',
+            borderStyle: 'solid'
+          }}
           onClick={onUpdateUseCase ? handleClick : undefined}
           title={onUpdateUseCase ? "Cliquer pour ajouter des pays" : undefined}
         >
           {/* En-tête avec titre */}
           <div className="px-3 pt-2 pb-1">
-            <h4 className="text-sm font-medium text-gray-700">Pays de déploiement</h4>
+            <h4 className="text-sm font-medium" style={{ color: '#0080a3' }}>Pays de déploiement</h4>
           </div>
           
           {/* Contenu */}
           <div className="px-3 pb-1">
             <div className="flex items-center">
-              <span className="text-sm font-medium">Aucun pays spécifié</span>
+              <span className="text-sm font-medium" style={{ color: '#0080a3' }}>Aucun pays spécifié</span>
               
               {/* Icône modifier */}
               {onUpdateUseCase && (
                 <div className="ml-3 opacity-60 group-hover:opacity-100 transition-opacity duration-200">
-                  <Edit3 className="h-4 w-4 text-gray-500" />
+                  <Edit3 className="h-4 w-4" style={{ color: '#0080a3' }} />
                 </div>
               )}
               
@@ -197,20 +203,26 @@ export function CountryDeploymentDisplay({ deploymentCountries = [], className =
           {/* Texte explicatif sous le contenu */}
           {onUpdateUseCase && (
             <div className="px-3 pb-2">
-              <p className="text-xs text-gray-500">Cliquer pour ajouter</p>
+              <p className="text-xs" style={{ color: '#0080a3' }}>Cliquer pour ajouter</p>
             </div>
           )}
         </div>
       ) : (
         // Cas avec pays
         <div 
-          className={`group relative block w-full max-w-full bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-xl border border-blue-200 transition-all duration-200 cursor-pointer hover:from-blue-100 hover:to-indigo-100 hover:shadow-md hover:border-blue-300 ${className}`}
+          className={`group relative block w-full max-w-full rounded-xl transition-all duration-200 cursor-pointer hover:shadow-md ${className}`}
+          style={{ 
+            backgroundColor: '#f1fdfa',
+            borderColor: '#0080a3',
+            borderWidth: '1px',
+            borderStyle: 'solid'
+          }}
           onClick={handleClick}
           title="Cliquer pour voir la carte"
         >
           {/* En-tête avec titre */}
           <div className="px-3 pt-2 pb-1">
-            <h4 className="text-sm font-medium text-blue-800">Pays de déploiement</h4>
+            <h4 className="text-sm font-medium" style={{ color: '#0080a3' }}>Pays de déploiement</h4>
           </div>
           
           {/* Contenu avec pays */}
@@ -233,13 +245,13 @@ export function CountryDeploymentDisplay({ deploymentCountries = [], className =
                       }}
                     />
                   )}
-                  <span className="text-sm font-semibold truncate">{displayName}</span>
-                  {index < displayCountries.length - 1 && <span className="text-blue-500">,</span>}
+                  <span className="text-sm font-semibold truncate" style={{ color: '#0080a3' }}>{displayName}</span>
+                  {index < displayCountries.length - 1 && <span style={{ color: '#0080a3' }}>,</span>}
                 </div>
               )
             })}
               {remainingCount > 0 && (
-                <span className="text-sm text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                <span className='text-sm px-2 py-0.5 rounded-full flex-shrink-0' style={{ color: '#0080a3', backgroundColor: '#f1fdfa' }}>
                   +{remainingCount}
                 </span>
               )}
@@ -248,7 +260,7 @@ export function CountryDeploymentDisplay({ deploymentCountries = [], className =
           
           {/* Texte explicatif sous les pays */}
           <div className="px-3 pb-2">
-            <p className="text-xs text-blue-600">Cliquer pour voir et modifier</p>
+            <p className="text-xs" style={{ color: '#0080a3' }}>Cliquer pour voir et modifier</p>
           </div>
         </div>
       )}

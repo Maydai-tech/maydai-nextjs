@@ -43,12 +43,12 @@ export function UseCaseNavigation({ useCaseId, companyId, isDraft = false }: Use
             {getIcon(item.key)}
             <span>{item.label}</span>
             {item.key === 'evaluation' && isDraft && (
-              <span className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full ml-2">
+              <span className="text-orange-800 text-xs px-2 py-0.5 rounded-full ml-2" style={{ backgroundColor: '#fefce8' }}>
                 À compléter
               </span>
             )}
             {item.key === 'evaluation' && !isDraft && (
-              <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full ml-2">
+              <span className="text-xs px-2 py-0.5 rounded-full ml-2" style={{ backgroundColor: '#f1fdfa', color: '#0080a3' }}>
                 Complété
               </span>
             )}

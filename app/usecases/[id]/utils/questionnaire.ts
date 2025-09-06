@@ -269,8 +269,8 @@ export const getStatusColor = (status: string): string => {
   switch (status?.toLowerCase()) {
     case 'complété': return 'text-green-700 bg-green-50 border border-green-200'
     case 'en cours': return 'text-yellow-700 bg-yellow-50 border border-yellow-200'
-    case 'à compléter': return 'text-gray-700 bg-gray-50 border border-gray-200'
-    default: return 'text-gray-700 bg-gray-50 border border-gray-200'
+    case 'à compléter': return 'text-gray-700 border border-gray-200'
+    default: return 'text-gray-700 border border-gray-200'
   }
 }
 

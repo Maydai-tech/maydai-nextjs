@@ -19,6 +19,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import Image from 'next/image'
+import { getProviderIcon } from '@/lib/provider-icons'
 
 // Force dynamic rendering to prevent prerender errors
 export const dynamic = 'force-dynamic'
@@ -1037,8 +1038,19 @@ function NewUseCasePageContent() {
                         </div>
                         <div className="flex-1 min-w-0">
                           {currentQuestion.id === 'technology_partner' ? (
-                            <div className="text-lg font-semibold text-gray-900">
-                              {option.label}
+                            <div className="flex items-center space-x-3">
+                              <div className="flex-shrink-0">
+                                <Image
+                                  src={getProviderIcon(option.label)}
+                                  alt={`Logo ${option.label}`}
+                                  width={24}
+                                  height={24}
+                                  className="w-6 h-6 object-contain"
+                                />
+                              </div>
+                              <div className="text-lg font-semibold text-gray-900">
+                                {option.label}
+                              </div>
                             </div>
                           ) : (
                             <>

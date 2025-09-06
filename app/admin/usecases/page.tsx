@@ -96,7 +96,7 @@ export default function UseCasesPage() {
       case 'in_progress':
         return 'bg-yellow-100 text-yellow-800'
       case 'completed':
-        return 'bg-green-100 text-green-800'
+        return 'text-[#0080a3]'
       case 'approved':
         return 'bg-blue-100 text-blue-800'
       default:
@@ -192,7 +192,7 @@ export default function UseCasesPage() {
               <option value="">Tous les statuts</option>
               <option value="draft">Brouillon</option>
               <option value="in_progress">En cours</option>
-              <option value="completed">Terminé</option>
+              <option value="completed">Complété</option>
               <option value="approved">Approuvé</option>
             </select>
           </div>
@@ -232,7 +232,7 @@ export default function UseCasesPage() {
           <div className="text-2xl font-bold text-green-600">
             {usecases.filter(u => u.status === 'completed').length}
           </div>
-          <div className="text-sm text-gray-600">Terminés</div>
+          <div className="text-sm text-gray-600">Complétés</div>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-red-600">
@@ -288,7 +288,10 @@ export default function UseCasesPage() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(usecase.status)}`}>
+                  <span 
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(usecase.status)}`}
+                    style={usecase.status === 'completed' ? { backgroundColor: '#f1fdfa' } : {}}
+                  >
                     {usecase.status}
                   </span>
                 </td>

@@ -129,10 +129,68 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
               <AlertTriangle className="h-5 w-5 text-amber-500" />
               <h3 className="font-medium text-gray-900">Avertissements</h3>
             </div>
-            <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4">
-              <p className="text-gray-500 italic text-sm">
-                {"Les points d'attention seront générés automatiquement"}
-              </p>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="space-y-4">
+                <p className="text-sm text-gray-700 mb-4">
+                  Le non-respect de l'AI Act peut entraîner des sanctions sévères.
+                </p>
+                
+                <div className="space-y-3">
+                  <div className="flex items-start">
+                    <img 
+                      src="/icons/withdraw.png" 
+                      alt="Sanctions" 
+                      width={16} 
+                      height={16} 
+                      className="mr-2 mt-0.5 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <h5 className="text-xs font-semibold text-gray-900 mb-1">
+                        Violations des pratiques interdites (Article 5)
+                      </h5>
+                      <p className="text-xs text-gray-600">
+                        Amendes jusqu'à <strong className="text-[#0080a3]">35 millions d'euros</strong> ou <strong className="text-[#0080a3]">7% du chiffre d'affaires annuel mondial</strong>.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <img 
+                      src="/icons/auction.png" 
+                      alt="Sanctions pour non-conformité" 
+                      width={16} 
+                      height={16} 
+                      className="mr-2 mt-0.5 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <h5 className="text-xs font-semibold text-gray-900 mb-1">
+                        Violations des obligations pour les systèmes d'IA à haut risque
+                      </h5>
+                      <p className="text-xs text-gray-600">
+                        Amendes jusqu'à <strong className="text-[#0080a3]">15 millions d'euros</strong> ou <strong className="text-[#0080a3]">3% du chiffre d'affaires annuel mondial</strong>.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <img 
+                      src="/icons/lawyer.png" 
+                      alt="Sanctions pour informations incorrectes" 
+                      width={16} 
+                      height={16} 
+                      className="mr-2 mt-0.5 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <h5 className="text-xs font-semibold text-gray-900 mb-1">
+                        Fourniture d'informations inexactes, incomplètes ou trompeuses
+                      </h5>
+                      <p className="text-xs text-gray-600">
+                        Amendes jusqu'à <strong className="text-[#0080a3]">7,5 millions d'euros</strong> ou <strong className="text-[#0080a3]">1% du chiffre d'affaires annuel mondial</strong>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -142,10 +200,105 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
               <Lightbulb className="h-5 w-5 text-blue-500" />
               <h3 className="font-medium text-gray-900">Sujets LLM indépendants</h3>
             </div>
-            <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4">
-              <p className="text-gray-500 italic text-sm">
-                Les recommandations générales seront générées automatiquement
-              </p>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="space-y-4">
+                <div className="flex items-center mb-3">
+                  <img 
+                    src="/icons/feuille.png" 
+                    alt="Impact Social & Environmental" 
+                    width={20} 
+                    height={20} 
+                    className="mr-2"
+                  />
+                  <h4 className="text-sm font-semibold text-gray-900">
+                    Impact Social & Environmental
+                  </h4>
+                </div>
+                
+                <p className="text-sm text-gray-700 mb-4">
+                  Les critères suivants sont intégrés aux demandes de transparence de l'AI Act mais ne sont pas encore transmises par les technologies concernées :
+                </p>
+                
+                <div className="space-y-3">
+                  <div className="flex items-start">
+                    <img 
+                      src="/icons/app.png" 
+                      alt="Nombre de GPUs" 
+                      width={16} 
+                      height={16} 
+                      className="mr-2 mt-0.5 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <h5 className="text-xs font-semibold text-gray-900 mb-1">
+                        Nombre de GPUs
+                      </h5>
+                      <p className="text-xs text-gray-600">
+                        Nombre total d'unités de traitement graphique (GPU) utilisées pour entraîner le modèle d'IA. Les GPUs sont des composants très puissants mais aussi très énergivores.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <img 
+                      src="/icons/low-performance.png" 
+                      alt="Consommation électrique par GPU" 
+                      width={16} 
+                      height={16} 
+                      className="mr-2 mt-0.5 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <h5 className="text-xs font-semibold text-gray-900 mb-1">
+                        Consommation électrique par GPU
+                      </h5>
+                      <p className="text-xs text-gray-600">
+                        Puissance électrique moyenne consommée par un seul GPU pendant l'entraînement, généralement mesurée en Watts (W).
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <img 
+                      src="/icons/level-up.png" 
+                      alt="Temps d'entraînement" 
+                      width={16} 
+                      height={16} 
+                      className="mr-2 mt-0.5 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <h5 className="text-xs font-semibold text-gray-900 mb-1">
+                        Temps d'entraînement
+                      </h5>
+                      <p className="text-xs text-gray-600">
+                        Durée totale nécessaire pour entraîner le modèle, souvent exprimée en heures.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <img 
+                      src="/icons/ecosystem.png" 
+                      alt="Intensité carbone du datacenter" 
+                      width={16} 
+                      height={16} 
+                      className="mr-2 mt-0.5 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <h5 className="text-xs font-semibold text-gray-900 mb-1">
+                        Intensité carbone du datacenter
+                      </h5>
+                      <p className="text-xs text-gray-600">
+                        Mesure qui indique la quantité de dioxyde de carbone (CO2) émise pour produire une unité d'énergie.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-4 pt-3 border-t border-gray-200">
+                  <p className="text-xs text-gray-600">
+                    Dès que ces indicateurs seront disponibles, nous les ajouterons aux évaluations des LLM.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

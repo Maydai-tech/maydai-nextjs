@@ -253,10 +253,10 @@ export default function CompanyDashboard({ params }: DashboardProps) {
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'terminé': return 'border border-[#0080a3]'
+      case 'complété': return 'border border-[#0080a3]'
       case 'en cours': return 'text-yellow-700 bg-yellow-50 border border-yellow-200'
-      case 'a compléter': return 'text-gray-700 bg-gray-50 border border-gray-200'
-      default: return 'text-gray-700 bg-gray-50 border border-gray-200'
+      case 'a compléter': return 'text-gray-700 border border-gray-200'
+      default: return 'text-gray-700 border border-gray-200'
     }
   }
 
@@ -264,7 +264,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
     switch (status?.toLowerCase()) {
       case 'completed':
       case 'active': 
-        return 'Terminé'
+        return 'Complété'
       case 'in_progress':
       case 'under_review':
         return 'En cours'
@@ -440,11 +440,11 @@ export default function CompanyDashboard({ params }: DashboardProps) {
 
           <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
             <div className="flex flex-col sm:flex-row sm:items-center">
-              <div className="p-2 sm:p-3 rounded-lg mb-2 sm:mb-0 w-fit" style={{backgroundColor: '#c6eef8'}}>
+              <div className="p-2 sm:p-3 rounded-lg mb-2 sm:mb-0 w-fit" style={{backgroundColor: '#f1fdfa'}}>
                 <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6" style={{color: '#0080a3'}} />
               </div>
               <div className="sm:ml-4">
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Terminés</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Complétés</p>
                 <p className="text-lg sm:text-2xl font-bold text-gray-900">
                   {getCompletedCount()}
                 </p>
@@ -630,9 +630,12 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                                 <div className="flex flex-wrap gap-2">
                                   <span 
                                     className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(getUseCaseStatusInFrench(useCase.status))}`}
-                                    style={getUseCaseStatusInFrench(useCase.status) === 'Terminé' ? {
+                                    style={getUseCaseStatusInFrench(useCase.status) === 'Complété' ? {
                                       color: '#0080a3',
-                                      backgroundColor: '#c6eef8'
+                                      backgroundColor: '#f1fdfa'
+                                    } : getUseCaseStatusInFrench(useCase.status) === 'À compléter' ? {
+                                      color: '#713f12',
+                                      backgroundColor: '#fefce8'
                                     } : {}}
                                   >
                                     {getUseCaseStatusInFrench(useCase.status)}
@@ -644,11 +647,59 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                                   )}
                                 </div>
                               </div>
-                              <p className="text-sm text-gray-600 mb-3 line-clamp-2">{useCase.description}</p>
-                              <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
-                                {useCase.ai_category && <span>{useCase.ai_category}</span>}
-                                {useCase.technology_partner && <span className="hidden sm:inline">• {useCase.technology_partner}</span>}
-                                {useCase.technology_partner && <span className="sm:hidden text-xs">{useCase.technology_partner}</span>}
+                              
+                              {/* Description et cartes d'information sur la même ligne */}
+                              <div className="flex flex-col xl:flex-row xl:items-start space-y-3 xl:space-y-0 xl:space-x-4">
+                                <div className="flex-1">
+                                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{useCase.description}</p>
+                                  <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
+                                    {useCase.ai_category && <span>{useCase.ai_category}</span>}
+                                    {useCase.technology_partner && <span className="hidden sm:inline">• {useCase.technology_partner}</span>}
+                                    {useCase.technology_partner && <span className="sm:hidden text-xs">{useCase.technology_partner}</span>}
+                                  </div>
+                                </div>
+                                
+                                {/* Cartes d'information alignées horizontalement */}
+                                <div className="flex flex-row gap-2">
+                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs font-medium text-gray-600">Modèle utilisé</span>
+                                      <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                      </svg>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-6 h-6 bg-gradient-to-r from-blue-500 via-red-500 via-yellow-500 to-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold">G</div>
+                                      <div>
+                                        <div className="text-sm font-medium text-gray-900">gemini-1.5-flash-001</div>
+                                        <div className="text-xs text-gray-500">Google</div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0">
+                                    <div className="text-xs font-medium text-gray-600 mb-2">Niveau IA Act</div>
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 flex items-center space-x-2">
+                                      <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                      </svg>
+                                      <div>
+                                        <div className="text-xs text-yellow-600">Niveau IA Act</div>
+                                        <div className="text-sm font-semibold text-yellow-800">Risque Limité</div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0">
+                                    <div className="flex items-center space-x-1 mb-2">
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                      <span className="text-xs font-medium text-gray-600">Score de conformité</span>
+                                    </div>
+                                    <div className="bg-blue-50 rounded-lg p-3 text-center">
+                                      <div className="text-2xl font-bold text-blue-600">73</div>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
