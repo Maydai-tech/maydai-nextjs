@@ -17,6 +17,9 @@ function createSupabaseClient() {
 // Export du client avec lazy initialization
 export const supabase = createSupabaseClient()
 
+// Export de la fonction createClient pour les API routes
+export { createClient } from '@supabase/supabase-js'
+
 // Types pour la base de données
 export interface QuestionnaireSection {
   id: string
@@ -66,6 +69,8 @@ export interface UseCase {
   deployment_countries?: string[]
   service_id?: string
   company_status?: 'utilisateur' | 'fabriquant_produits' | 'distributeur' | 'importateur' | 'fournisseur' | 'mandataire' | 'unknown'  // NOUVEAU: Statut d'entreprise
+  report_summary?: string  // NOUVEAU: Rapport d'analyse IA généré
+  report_generated_at?: string  // NOUVEAU: Date de génération du rapport
   created_at: string
   updated_at: string
 }

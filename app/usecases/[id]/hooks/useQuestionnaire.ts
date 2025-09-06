@@ -185,7 +185,33 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
       // 2. Mettre à jour le statut du use case
       await updateUsecaseStatus('completed')
       
-      // 3. Marquer comme terminé
+      // 3. Générer le rapport OpenAI automatiquement
+      console.log('🤖 Generating OpenAI report automatically...')
+      try {
+        const reportResponse = await fetch('/api/generate-report', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ usecase_id: usecaseId })
+        })
+        
+        if (reportResponse.ok) {
+          console.log('✅ OpenAI report generated successfully')
+        } else {
+          const errorData = await reportResponse.json()
+          if (errorData.requires_questionnaire) {
+            console.log('ℹ️ Questionnaire incomplet, rapport non généré')
+          } else {
+            console.warn('⚠️ OpenAI report generation failed, but continuing...')
+          }
+        }
+      } catch (reportError) {
+        console.error('❌ Error generating OpenAI report:', reportError)
+        // Continue with completion even if report generation fails
+      }
+      
+      // 4. Marquer comme terminé
       setQuestionnaireData(prev => ({
         ...prev,
         isCompleted: true
@@ -193,7 +219,7 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
       
       console.log('Questionnaire completed successfully!')
       
-      // 4. Callback après délai
+      // 5. Callback après délai
       setTimeout(() => {
         onComplete()
       }, 2000)

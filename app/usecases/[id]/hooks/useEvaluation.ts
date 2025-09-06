@@ -203,6 +203,32 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
           .from('usecases')
           .update({ status: 'completed' })
           .eq('id', usecaseId)
+
+        // Generate OpenAI report automatically after questionnaire completion
+        console.log('🤖 Generating OpenAI report automatically...')
+        try {
+          const reportResponse = await fetch('/api/generate-report', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ usecase_id: usecaseId })
+          })
+          
+          if (reportResponse.ok) {
+            console.log('✅ OpenAI report generated successfully')
+          } else {
+            const errorData = await reportResponse.json()
+            if (errorData.requires_questionnaire) {
+              console.log('ℹ️ Questionnaire incomplet, rapport non généré')
+            } else {
+              console.warn('⚠️ OpenAI report generation failed, but continuing...')
+            }
+          }
+        } catch (reportError) {
+          console.error('❌ Error generating OpenAI report:', reportError)
+          // Continue with completion even if report generation fails
+        }
         
         setQuestionnaireData(prev => ({ ...prev, isCompleted: true }))
         setTimeout(() => {
