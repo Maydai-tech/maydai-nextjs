@@ -1,30 +1,13 @@
 'use client'
 
-import { useEffect } from 'react'
 import { useOpenAIReport } from '../hooks/useOpenAIReport'
 
 interface OpenAIReportSectionProps {
   usecaseId: string
-  autoGenerate?: boolean
 }
 
-export function OpenAIReportSection({ usecaseId, autoGenerate = true }: OpenAIReportSectionProps) {
-  const { report, loading, error, generateReport, autoRegenerate } = useOpenAIReport(usecaseId)
-
-  // Génération automatique du rapport au montage du composant
-  useEffect(() => {
-    if (autoGenerate && !report && !loading) {
-      generateReport()
-    }
-  }, [autoGenerate, report, loading, generateReport])
-
-  // Régénération automatique quand le composant se recharge (après soumission de formulaire)
-  useEffect(() => {
-    if (autoGenerate && report && !loading) {
-      // Régénérer silencieusement le rapport pour s'assurer qu'il est à jour
-      autoRegenerate()
-    }
-  }, [usecaseId, autoGenerate, report, loading, autoRegenerate])
+export function OpenAIReportSection({ usecaseId }: OpenAIReportSectionProps) {
+  const { report, loading, error } = useOpenAIReport(usecaseId)
 
   // Formatage du rapport pour l'affichage
   const formatReport = (reportText: string) => {
@@ -63,7 +46,7 @@ export function OpenAIReportSection({ usecaseId, autoGenerate = true }: OpenAIRe
         </h2>
         {loading && (
           <p className="text-sm text-gray-600 mt-2">
-            Génération automatique du rapport en cours...
+            Chargement du rapport...
           </p>
         )}
       </div>
@@ -85,7 +68,7 @@ export function OpenAIReportSection({ usecaseId, autoGenerate = true }: OpenAIRe
       {loading && !report && (
         <div className="text-center py-8">
           <div className="animate-spin h-8 w-8 border-4 border-[#0080a3] border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">Génération automatique du rapport en cours...</p>
+          <p className="text-gray-600">Chargement du rapport...</p>
         </div>
       )}
 
@@ -95,12 +78,9 @@ export function OpenAIReportSection({ usecaseId, autoGenerate = true }: OpenAIRe
             <svg className="w-12 h-12 text-blue-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h3 className="text-lg font-medium text-blue-900 mb-2">Questionnaire incomplet</h3>
-            <p className="text-blue-700 mb-4">
-              Le rapport d'analyse IA Act sera généré automatiquement une fois le questionnaire complété.
-            </p>
-            <p className="text-sm text-blue-600">
-              Les questions E4.N7.Q2 et E5.N9.Q7 sont nécessaires pour l'analyse de conformité.
+            <h3 className="text-lg font-medium text-blue-900 mb-2">Aucun rapport disponible</h3>
+            <p className="text-blue-700">
+              Le rapport d'analyse IA Act sera généré automatiquement une fois le questionnaire d'évaluation complété.
             </p>
           </div>
         </div>

@@ -118,9 +118,9 @@ export function extractTargetResponses(responses: UseCaseResponse[]): UseCaseRes
   )
 }
 
-/**
- * Valide que les données transformées sont complètes pour l'analyse OpenAI
- */
+// /**
+//  * Valide que les données transformées sont complètes pour l'analyse OpenAI
+//  */
 export function validateOpenAIInput(data: OpenAIAnalysisInput): { isValid: boolean; errors: string[] } {
   const errors: string[] = []
 
@@ -130,14 +130,6 @@ export function validateOpenAIInput(data: OpenAIAnalysisInput): { isValid: boole
 
   if (!data.usecase_name) {
     errors.push('usecase_name is required')
-  }
-
-  if (!data.responses.E4_N7_Q2.selected_options.length) {
-    errors.push('E4.N7.Q2 must have at least one selected option')
-  }
-
-  if (!data.responses.E5_N9_Q7.selected_option) {
-    errors.push('E5.N9.Q7 must have a selected option')
   }
 
   return {
