@@ -61,9 +61,9 @@ export class OpenAIClient {
     this.validateEnvironmentVariables()
     
     this.client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
+      apiKey: process.env.OPENAI_API_KEY!
     })
-    this.assistantId = process.env.OPENAI_ASSISTANT_ID
+    this.assistantId = process.env.OPENAI_ASSISTANT_ID!
   }
 
   /**
