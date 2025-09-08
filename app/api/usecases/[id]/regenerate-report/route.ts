@@ -45,7 +45,15 @@ export async function PUT(
 
     // Extraire et transformer les réponses
     const targetResponses = extractTargetResponses(responses)
-    const transformedData = transformToOpenAIFormat(usecase.id, usecase.name, targetResponses)
+    const transformedData = transformToOpenAIFormat(
+      usecase.id, 
+      usecase.name, 
+      'Non spécifié', // company_name
+      undefined,      // company_industry
+      undefined,      // company_city
+      undefined,      // company_country
+      targetResponses
+    )
 
     // Valider les données transformées
     const validation = validateOpenAIInput(transformedData)
