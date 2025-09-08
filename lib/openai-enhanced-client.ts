@@ -197,7 +197,7 @@ export class EnhancedOpenAIClient {
    */
   private async cleanupThread(threadId: string): Promise<void> {
     try {
-      await this.client.beta.threads.del(threadId)
+      await this.client.beta.threads.delete(threadId)
     } catch (error) {
       console.warn('⚠️ Erreur nettoyage thread:', error)
     }
