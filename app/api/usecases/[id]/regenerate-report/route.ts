@@ -49,10 +49,10 @@ export async function PUT(
       usecase.id, 
       usecase.name, 
       'Non spécifié', // company_name
+      targetResponses,
       undefined,      // company_industry
       undefined,      // company_city
-      undefined,      // company_country
-      targetResponses
+      undefined       // company_country
     )
 
     // Valider les données transformées
