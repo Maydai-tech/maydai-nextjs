@@ -102,12 +102,12 @@ function HeaderScore({ useCase, refreshing = false }: { useCase: UseCase, refres
       }
     } else if (score.score >= 60) {
       return {
-        bg: 'bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100',
-        text: 'text-blue-800',
-        border: 'border-blue-200',
-        accent: 'text-blue-600',
-        indicator: 'bg-blue-500',
-        shadow: 'shadow-blue-100'
+        bg: 'bg-[#f1fdfa]',
+        text: 'text-green-800',
+        border: 'border-green-200',
+        accent: 'text-green-600',
+        indicator: 'bg-green-500',
+        shadow: 'shadow-green-100'
       }
     } else if (score.score >= 40) {
       return {
