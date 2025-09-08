@@ -62,10 +62,24 @@ export class EnhancedOpenAIClient {
   private assistantId: string
 
   constructor() {
+    this.validateEnvironmentVariables()
+    
     this.client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
+      apiKey: process.env.OPENAI_API_KEY!
     })
-    this.assistantId = process.env.OPENAI_ASSISTANT_ID || ''
+    this.assistantId = process.env.OPENAI_ASSISTANT_ID!
+  }
+  
+  /**
+   * Vérifie que les variables d'environnement nécessaires sont définies
+   */
+  private validateEnvironmentVariables(): void {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('Clé API OpenAI manquante. Vérifiez OPENAI_API_KEY dans votre fichier .env')
+    }
+    if (!process.env.OPENAI_ASSISTANT_ID) {
+      throw new Error('ID Assistant OpenAI manquant. Vérifiez OPENAI_ASSISTANT_ID dans votre fichier .env')
+    }
   }
 
   /**

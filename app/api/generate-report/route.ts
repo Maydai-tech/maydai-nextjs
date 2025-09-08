@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { transformToEnhancedOpenAIFormat, extractAllResponses, validateEnhancedOpenAIInput } from '@/lib/openai-enhanced-transformer'
-import { enhancedOpenAIClient } from '@/lib/openai-enhanced-client'
+import { transformToOpenAIFormat, extractTargetResponses, validateOpenAIInput } from '@/lib/openai-data-transformer'
+import { openAIClient } from '@/lib/openai-client'
 
 // GET: Récupérer un rapport existant
 export async function GET(req: NextRequest) {
@@ -64,19 +64,16 @@ export async function POST(req: NextRequest) {
 
     // Utiliser le client Supabase configuré
     
-    // Récupérer les informations complètes du use case
+    // Récupérer les informations complètes du use case avec l'entreprise
     const { data: usecase, error: usecaseError } = await supabase
-      .from('usecases')
-      .select(`
-        id, name, description, deployment_date, status, risk_level, ai_category, 
-        system_type, responsible_service, deployment_countries, company_status,
-        score_base, score_model, score_final, is_eliminated, elimination_reason,
-        last_calculation_date, technology_partner, llm_model_version, primary_model_id,
-        companies(name, industry, city, country),
-        compl_ai_models(id, model_name, model_provider, model_type, version)
-      `)
-      .eq('id', usecase_id)
-      .single()
+    .from('usecases')
+    .select(`
+      id, name, description, deployment_date, status, risk_level, ai_category, 
+      system_type, responsible_service, deployment_countries, company_status,
+      companies(name, industry, city, country)
+    `)
+    .eq('id', usecase_id)
+    .single()
 
     if (usecaseError || !usecase) {
       return NextResponse.json({ error: 'Usecase not found' }, { status: 404 })
@@ -84,21 +81,38 @@ export async function POST(req: NextRequest) {
 
     // Récupérer toutes les réponses du questionnaire
     const { data: responses, error: responseError } = await supabase
-      .from('usecase_responses')
-      .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
-      .eq('usecase_id', usecase_id)
+    .from('usecase_responses')
+    .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
+    .eq('usecase_id', usecase_id)
+    .in('question_code', ['E4.N7.Q2', 'E5.N9.Q7'])
 
     if (responseError) {
       console.error('Erreur récupération réponses:', responseError)
       return NextResponse.json({ error: 'Failed to fetch questionnaire responses' }, { status: 500 })
     }
 
-    // Extraire et transformer toutes les réponses
-    const allResponses = extractAllResponses(responses || [])
-    const transformedData = transformToEnhancedOpenAIFormat(usecase as any, allResponses)
+    // Extraire et transformer les réponses
+    const targetResponses = extractTargetResponses(responses || [])
+    
+    // Extraire les informations d'entreprise
+    const company = Array.isArray(usecase.companies) ? usecase.companies[0] : usecase.companies
+    const companyName = company?.name || 'MaydAI' // Fallback par défaut
+    const companyIndustry = company?.industry
+    const companyCity = company?.city
+    const companyCountry = company?.country
+    
+    const transformedData = transformToOpenAIFormat(
+      usecase.id, 
+      usecase.name, 
+      companyName,
+      companyIndustry,
+      companyCity,
+      companyCountry,
+      targetResponses
+    )
 
     // Valider les données transformées
-    const validation = validateEnhancedOpenAIInput(transformedData)
+    const validation = validateOpenAIInput(transformedData)
     if (!validation.isValid) {
       console.log('⚠️ Données insuffisantes pour l\'analyse OpenAI:', validation.errors)
       return NextResponse.json({ 
@@ -109,7 +123,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Générer l'analyse avec OpenAI
-    const analysis = await enhancedOpenAIClient.generateComplianceAnalysis(transformedData)
+    const analysis = await openAIClient.generateComplianceAnalysis(transformedData)
 
     // Sauvegarder le rapport dans la base de données
     const { error: saveError } = await supabase
