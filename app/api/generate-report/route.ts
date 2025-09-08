@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { transformToOpenAIFormat, extractTargetResponses, validateOpenAIInput } from '@/lib/openai-data-transformer'
-import { openAIClient } from '@/lib/openai-client'
+import { transformToEnhancedOpenAIFormat, extractAllResponses, validateEnhancedOpenAIInput } from '@/lib/openai-enhanced-transformer'
+import { enhancedOpenAIClient } from '@/lib/openai-enhanced-client'
 
 // GET: Récupérer un rapport existant
 export async function GET(req: NextRequest) {
@@ -64,10 +64,17 @@ export async function POST(req: NextRequest) {
 
     // Utiliser le client Supabase configuré
     
-    // Récupérer les informations du use case
+    // Récupérer les informations complètes du use case
     const { data: usecase, error: usecaseError } = await supabase
       .from('usecases')
-      .select('id, name')
+      .select(`
+        id, name, description, deployment_date, status, risk_level, ai_category, 
+        system_type, responsible_service, deployment_countries, company_status,
+        score_base, score_model, score_final, is_eliminated, elimination_reason,
+        last_calculation_date, technology_partner, llm_model_version, primary_model_id,
+        companies(name, industry, city, country),
+        compl_ai_models(id, model_name, model_provider, model_type, version)
+      `)
       .eq('id', usecase_id)
       .single()
 
@@ -75,24 +82,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Usecase not found' }, { status: 404 })
     }
 
-    // Récupérer les réponses du questionnaire pour les questions E4.N7.Q2 et E5.N9.Q7
+    // Récupérer toutes les réponses du questionnaire
     const { data: responses, error: responseError } = await supabase
       .from('usecase_responses')
       .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
       .eq('usecase_id', usecase_id)
-      .in('question_code', ['E4.N7.Q2', 'E5.N9.Q7'])
 
     if (responseError) {
       console.error('Erreur récupération réponses:', responseError)
       return NextResponse.json({ error: 'Failed to fetch questionnaire responses' }, { status: 500 })
     }
 
-    // Extraire et transformer les réponses
-    const targetResponses = extractTargetResponses(responses || [])
-    const transformedData = transformToOpenAIFormat(usecase.id, usecase.name, targetResponses)
+    // Extraire et transformer toutes les réponses
+    const allResponses = extractAllResponses(responses || [])
+    const transformedData = transformToEnhancedOpenAIFormat(usecase as any, allResponses)
 
     // Valider les données transformées
-    const validation = validateOpenAIInput(transformedData)
+    const validation = validateEnhancedOpenAIInput(transformedData)
     if (!validation.isValid) {
       console.log('⚠️ Données insuffisantes pour l\'analyse OpenAI:', validation.errors)
       return NextResponse.json({ 
@@ -103,7 +109,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Générer l'analyse avec OpenAI
-    const analysis = await openAIClient.generateComplianceAnalysis(transformedData)
+    const analysis = await enhancedOpenAIClient.generateComplianceAnalysis(transformedData)
 
     // Sauvegarder le rapport dans la base de données
     const { error: saveError } = await supabase

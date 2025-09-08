@@ -1,0 +1,603 @@
+{
+  "questionnaire_questions": {
+    "E4.N7.Q1": {
+      "code": "E4.N7.Q1",
+      "question_text": "Dans cette situation, votre cas d'usage concerne :",
+      "type": "radio",
+      "status": "minimal",
+      "possible_answers": [
+        "Mon entreprise travaille dans le domaine de l'informatique et de l'IA",
+        "Mon entreprise utilise des systèmes d'IA tiers"
+      ],
+      "interpretation": "Détermine le statut de l'entreprise dans la chaîne de valeur IA (fabricant vs utilisateur)",
+      "quick_wins": [
+        "Identifier clairement le rôle dans la chaîne de valeur",
+        "Documenter les responsabilités légales selon le statut"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 3 (définitions Acteur AI)",
+      "risk_category": "Acteurs IA",
+      "impact_conformite": "En fonction de la catégorie d'acteur l'application des règles et obligations spécifiques"
+    },
+    "E4.N7.Q1.1": {
+      "code": "E4.N7.Q1.1",
+      "question_text": "Quelle phrase décrit le mieux votre situation ?",
+      "type": "radio",
+      "status": "minimal",
+      "possible_answers": [
+        "Fabricant d'un produit intégrant un système d'IA",
+        "Distributeur et/ou déployeur d'un système d'IA",
+        "Éditeur d'un logiciel intégrant un système d'IA",
+        "Importateur d'un système d'IA",
+        "Fournisseur d'un système d'IA",
+        "Représentant autorisé d'un fournisseur"
+      ],
+      "interpretation": "Précise le rôle exact dans la chaîne de valeur pour déterminer les obligations légales spécifiques",
+      "quick_wins": [
+        "Clarifier les responsabilités selon l'AI Act",
+        "Mettre à jour la documentation légale"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 3 (définitions Acteur AI)",
+      "risk_category": "Acteurs IA",
+      "impact_conformite": "En fonction de la catégorie d'acteur l'application des règles et obligations spécifiques"
+    },
+    "E4.N7.Q1.2": {
+      "code": "E4.N7.Q1.2",
+      "question_text": "Quelle phrase décrit le mieux votre situation ?",
+      "type": "radio",
+      "status": "minimal",
+      "possible_answers": [
+        "Utilisateur d'un système d'IA pour mon entreprise",
+        "Idée de cas d'usage IA à tester",
+        "DPO de mon entreprise",
+        "Avocat apportant des réponses techniques",
+        "Dirigeant recensant les cas d'usage",
+        "Étudiant/chercheur"
+      ],
+      "interpretation": "Identifie le profil utilisateur pour adapter les recommandations et obligations",
+      "quick_wins": [
+        "Adapter les recommandations au profil",
+        "Identifier les besoins spécifiques selon le rôle"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 3 (définitions Acteur AI)",
+      "risk_category": "Acteurs IA",
+      "impact_conformite": "En fonction de la catégorie d'acteur l'application des règles et obligations spécifiques"
+    },
+    "E4.N7.Q2": {
+      "code": "E4.N7.Q2",
+      "question_text": "Votre système d'IA est utilisé dans un ou des domaines suivants ?",
+      "type": "checkbox",
+      "status": "high",
+      "possible_answers": [
+        "Emploi/gestion des travailleurs",
+        "Administration de la justice",
+        "Migration/asile",
+        "Infrastructures critiques",
+        "Éducation/formation",
+        "Activités répressives",
+        "Aucun de ces domaines"
+      ],
+      "interpretation": "Identifie les domaines à haut risque selon l'annexe III de l'AI Act",
+      "quick_wins": [
+        "Cartographier les domaines d'application",
+        "Vérifier les obligations par domaine",
+        "Mettre en place une surveillance renforcée"
+      ],
+      "priority": 1,
+      "article_concerne": "Article 6 (Interdiction de certaines pratiques d'IA), Articles 8 à 13 (Exigences pour les systèmes d'IA à haut risque), Annexe III",
+      "risk_category": "Niveau de risque",
+      "impact_conformite": "Une réponse 'Oui' déclenche la nécessité d'évaluer la conformité avec les exigences relatives aux systèmes d'IA à haut risque"
+    },
+    "E4.N7.Q2.1": {
+      "code": "E4.N7.Q2.1",
+      "question_text": "Votre système d'IA est utilisé dans un ou plusieurs des cas suivants ?",
+      "type": "checkbox",
+      "status": "unacceptable",
+      "possible_answers": [
+        "Identification biométrique à distance",
+        "Composant de sécurité dans secteurs critiques",
+        "Évaluations dans éducation/entreprise",
+        "Accès aux services essentiels",
+        "Aucun de ces cas"
+      ],
+      "interpretation": "Identifie les cas d'usage interdits par l'AI Act",
+      "quick_wins": [
+        "ARRÊT IMMÉDIAT du développement",
+        "Révision complète de la finalité du système",
+        "Consultation juridique urgente"
+      ],
+      "priority": 1,
+      "article_concerne": "Article 5 (Pratiques d'IA interdites)",
+      "risk_category": "Niveau de risque",
+      "impact_conformite": "Une réponse 'Oui' indique que le système relève de la catégorie de risque interdit"
+    },
+    "E4.N7.Q3": {
+      "code": "E4.N7.Q3",
+      "question_text": "Votre système d'IA a pour finalité une ou des activités suivantes ?",
+      "type": "checkbox",
+      "status": "unacceptable",
+      "possible_answers": [
+        "Identification biométrique et catégorisation",
+        "Catégorisation biométrique basée sur caractéristiques sensibles",
+        "Création de bases de données de reconnaissance faciale",
+        "Déduction des émotions au travail/enseignement",
+        "Aucune de ces activités"
+      ],
+      "interpretation": "Identifie les finalités interdites par l'AI Act",
+      "quick_wins": [
+        "ARRÊT IMMÉDIAT du développement",
+        "Révision de la finalité",
+        "Consultation juridique urgente"
+      ],
+      "priority": 1,
+      "article_concerne": "Article 5 (Pratiques d'IA interdites)",
+      "risk_category": "Niveau de risque",
+      "impact_conformite": "Une réponse 'Oui' indique que le système relève de la catégorie de risque interdit"
+    },
+    "E4.N7.Q3.1": {
+      "code": "E4.N7.Q3.1",
+      "question_text": "Possible intervention dans l'une de ces situations ?",
+      "type": "checkbox",
+      "status": "unacceptable",
+      "possible_answers": [
+        "Exploitation des vulnérabilités",
+        "Manipulation et tromperie",
+        "Notation sociale",
+        "Profilage pour évaluation du risque criminel",
+        "Aucune de ces situations"
+      ],
+      "interpretation": "Identifie les pratiques interdites par l'AI Act",
+      "quick_wins": [
+        "ARRÊT IMMÉDIAT du développement",
+        "Révision des pratiques",
+        "Consultation juridique urgente"
+      ],
+      "priority": 1,
+      "article_concerne": "Article 5 (Pratiques d'IA interdites)",
+      "risk_category": "Niveau de risque",
+      "impact_conformite": "Une réponse 'Oui' indique que le système relève de la catégorie de risque interdit"
+    },
+    "E4.N8.Q1": {
+      "code": "E4.N8.Q1",
+      "question_text": "Utilisé dans un ou des infrastructures critiques ?",
+      "type": "radio",
+      "status": "high",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Détermine si le système est utilisé dans des infrastructures critiques",
+      "quick_wins": [
+        "Évaluer l'impact sur les infrastructures critiques",
+        "Mettre en place des mesures de sécurité renforcées"
+      ],
+      "priority": 2,
+      "article_concerne": "Annexe III",
+      "risk_category": "Technical Robustness and Safety",
+      "impact_conformite": "Une réponse 'Oui' suggère un risque élevé et nécessite d'autres questions sur la conformité avec les exigences relatives aux systèmes à haut risque"
+    },
+    "E4.N8.Q2": {
+      "code": "E4.N8.Q2",
+      "question_text": "Utilisé dans un ou des contextes d'évaluation ?",
+      "type": "radio",
+      "status": "high",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Détermine si le système est utilisé dans des contextes d'évaluation",
+      "quick_wins": [
+        "Évaluer les biais potentiels",
+        "Mettre en place des tests d'équité"
+      ],
+      "priority": 2,
+      "article_concerne": "Annexe III",
+      "risk_category": "Diversity, Non-discrimination & Fairness",
+      "impact_conformite": "Une réponse 'Oui' suggère un risque élevé"
+    },
+    "E4.N8.Q3": {
+      "code": "E4.N8.Q3",
+      "question_text": "Utilisé comme composant de sécurité d'un produit ?",
+      "type": "radio",
+      "status": "high",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Détermine si le système est un composant de sécurité",
+      "quick_wins": [
+        "Renforcer les tests de sécurité",
+        "Documenter les procédures de sécurité"
+      ],
+      "priority": 2,
+      "article_concerne": "Annexe III",
+      "risk_category": "Technical Robustness and Safety",
+      "impact_conformite": "Une réponse 'Oui' suggère un risque élevé"
+    },
+    "E4.N8.Q4": {
+      "code": "E4.N8.Q4",
+      "question_text": "Utilisé dans le domaine de l'emploi ?",
+      "type": "radio",
+      "status": "high",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Détermine si le système est utilisé dans le domaine de l'emploi",
+      "quick_wins": [
+        "Évaluer les biais de recrutement",
+        "Mettre en place des audits d'équité"
+      ],
+      "priority": 2,
+      "article_concerne": "Annexe III",
+      "risk_category": "Diversity, Non-discrimination & Fairness",
+      "impact_conformite": "Une réponse 'Oui' suggère un risque élevé"
+    },
+    "E4.N8.Q5": {
+      "code": "E4.N8.Q5",
+      "question_text": "Utilisé dans des services publics ou privés essentiels ?",
+      "type": "radio",
+      "status": "high",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Détermine si le système est utilisé dans des services essentiels",
+      "quick_wins": [
+        "Évaluer l'impact sur l'accès aux services",
+        "Mettre en place des mesures d'équité"
+      ],
+      "priority": 2,
+      "article_concerne": "Annexe III",
+      "risk_category": "Diversity, Non-discrimination & Fairness",
+      "impact_conformite": "Une réponse 'Oui' suggère un risque élevé"
+    },
+    "E4.N8.Q6": {
+      "code": "E4.N8.Q6",
+      "question_text": "Utilisé avec identification biométrique, catégorisation ou reconnaissance des émotions ?",
+      "type": "radio",
+      "status": "high",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Détermine si le système utilise des technologies biométriques ou de reconnaissance des émotions",
+      "quick_wins": [
+        "Évaluer les implications éthiques",
+        "Mettre en place des garde-fous"
+      ],
+      "priority": 2,
+      "article_concerne": "Annexe III",
+      "risk_category": "Social & Environmental Well-being",
+      "impact_conformite": "Une réponse 'Oui' suggère un risque élevé"
+    },
+    "E4.N8.Q7": {
+      "code": "E4.N8.Q7",
+      "question_text": "Utilisé dans le domaine de l'immigration, l'asile ou le contrôle des frontières ?",
+      "type": "radio",
+      "status": "high",
+      "possible_answers": ["Oui (veuillez préciser)", "Non"],
+      "interpretation": "Détermine si le système est utilisé dans le domaine migratoire",
+      "quick_wins": [
+        "Évaluer les implications sur les droits fondamentaux",
+        "Mettre en place des mesures de protection"
+      ],
+      "priority": 2,
+      "article_concerne": "Annexe III",
+      "risk_category": "Technical Robustness and Safety",
+      "impact_conformite": "Une réponse 'Oui' suggère un risque élevé"
+    },
+    "E4.N8.Q8": {
+      "code": "E4.N8.Q8",
+      "question_text": "Utilisé dans l'administration de la justice ou des processus démocratiques ?",
+      "type": "radio",
+      "status": "high",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Détermine si le système est utilisé dans le domaine judiciaire ou démocratique",
+      "quick_wins": [
+        "Évaluer l'impact sur les droits démocratiques",
+        "Mettre en place des mesures de transparence"
+      ],
+      "priority": 2,
+      "article_concerne": "Annexe III",
+      "risk_category": "Technical Robustness and Safety",
+      "impact_conformite": "Une réponse 'Oui' suggère un risque élevé"
+    },
+    "E4.N8.Q9": {
+      "code": "E4.N8.Q9",
+      "question_text": "Votre système d'IA interagit-il avec des personnes physiques ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Détermine si le système nécessite des mesures de transparence et de supervision humaine",
+      "quick_wins": [
+        "Mettre en place des mécanismes de transparence",
+        "Informer les utilisateurs de l'utilisation d'IA"
+      ],
+      "priority": 4,
+      "article_concerne": "Article 52 (Obligations de transparence pour certains systèmes d'IA)",
+      "risk_category": "Human Agency & Oversight",
+      "impact_conformite": "Une réponse 'Oui' suggère un risque limité en raison des obligations de transparence (Article 52)"
+    },
+    "E4.N8.Q10": {
+      "code": "E4.N8.Q10",
+      "question_text": "Utilisé par combien de personnes physiques par mois ?",
+      "type": "conditional",
+      "status": "limited",
+      "possible_answers": [
+        "< à 100",
+        "> à 100",
+        "> à 1000",
+        "> à 10000",
+        "> à 100000",
+        "> à 1M",
+        "Autre nombre"
+      ],
+      "interpretation": "Détermine l'échelle d'impact et les obligations proportionnelles",
+      "quick_wins": [
+        "Adapter les mesures de conformité à l'échelle",
+        "Mettre en place une surveillance proportionnelle"
+      ],
+      "priority": 4,
+      "article_concerne": "Article 52 (Obligations de transparence pour certains systèmes d'IA)",
+      "risk_category": "Human Agency & Oversight",
+      "impact_conformite": "Une réponse > à 1000 par mois suggère un risque important"
+    },
+    "E4.N8.Q11": {
+      "code": "E4.N8.Q11",
+      "question_text": "Utilisé pour générer ou manipuler du contenu ?",
+      "type": "tags",
+      "status": "limited",
+      "possible_answers": ["Texte", "Image", "Audio", "Vidéo"],
+      "interpretation": "Identifie les types de contenu généré pour appliquer les obligations de marquage",
+      "quick_wins": [
+        "Mettre en place un système de marquage du contenu généré",
+        "Informer les utilisateurs"
+      ],
+      "priority": 4,
+      "article_concerne": "Article 52 (Obligations de transparence pour certains systèmes d'IA), Article 50 (Obligations de transparence pour les fournisseurs de modèles d'IA à usage général)",
+      "risk_category": "Transparency",
+      "impact_conformite": "Une réponse 'Oui' suggère un risque limité en raison des obligations de transparence (Article 52)"
+    },
+    "E4.N8.Q12": {
+      "code": "E4.N8.Q12",
+      "question_text": "Votre système d'IA est utilisé dans des jeux vidéos ou comme filtre anti-spam ?",
+      "type": "radio",
+      "status": "minimal",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Détermine si le système est exempté des obligations de l'AI Act",
+      "quick_wins": [
+        "Vérifier l'éligibilité aux exemptions",
+        "Documenter le statut d'exemption"
+      ],
+      "priority": 5,
+      "article_concerne": "Article 6 (Approche fondée sur le risque)",
+      "risk_category": "Privacy & Data Governance",
+      "impact_conformite": "Une réponse 'Oui' suggère un risque minimal"
+    },
+    "E5.N9.Q1": {
+      "code": "E5.N9.Q1",
+      "question_text": "Avez-vous établi et maintenez-vous un système de gestion des risques ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Obligation fondamentale pour les systèmes à risque limité et élevé",
+      "quick_wins": [
+        "Créer un système de gestion des risques",
+        "Documenter les processus de surveillance"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 9 (Système de gestion des risques)",
+      "risk_category": "Technical Robustness and Safety",
+      "impact_conformite": "Une réponse 'Non' indique une non-conformité pour les systèmes à haut risque"
+    },
+    "E5.N9.Q2": {
+      "code": "E5.N9.Q2",
+      "question_text": "Votre système de gestion des risques comprend-il l'identification et l'analyse des risques et des utilisations abusives ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Exigence détaillée du système de gestion des risques",
+      "quick_wins": [
+        "Développer une méthodologie d'identification des risques",
+        "Former les équipes"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 9(2)(a)",
+      "risk_category": "Technical Robustness and Safety",
+      "impact_conformite": "Une réponse 'Non' indique une non-conformité pour les systèmes à haut risque"
+    },
+    "E5.N9.Q3": {
+      "code": "E5.N9.Q3",
+      "question_text": "Des mesures d'atténuation des risques sont-elles mises en œuvre et leur efficacité testée ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Exigence de mise en œuvre et de test des mesures de mitigation",
+      "quick_wins": [
+        "Implémenter des mesures d'atténuation",
+        "Mettre en place des tests d'efficacité"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 9(2)(b)",
+      "risk_category": "Transparency",
+      "impact_conformite": "Une réponse 'Non' indique une non-conformité pour les systèmes à haut risque"
+    },
+    "E5.N9.Q4": {
+      "code": "E5.N9.Q4",
+      "question_text": "Avez-vous établi une documentation technique complète pour votre système d'IA ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Obligation de documentation technique pour la transparence et la supervision humaine",
+      "quick_wins": [
+        "Créer une documentation technique complète",
+        "Mettre à jour régulièrement"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 11 (Documentation technique), Annexe IV",
+      "risk_category": "Human Agency & Oversight",
+      "impact_conformite": "Une réponse 'Non' indique une non-conformité pour les systèmes à haut risque"
+    },
+    "E5.N9.Q5": {
+      "code": "E5.N9.Q5",
+      "question_text": "Quelles sont les types de données traitées en entrée ?",
+      "type": "tags",
+      "status": "limited",
+      "possible_answers": ["Publiques", "Personnelles", "Stratégiques", "Sensibles"],
+      "interpretation": "Détermine les obligations de protection des données et de confidentialité",
+      "quick_wins": [
+        "Mettre en place des mesures de protection appropriées",
+        "Auditer la conformité RGPD"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 10",
+      "risk_category": "Privacy & Data Governance",
+      "impact_conformite": "Une réponse autre que publique classerait le système à haut risque"
+    },
+    "E5.N9.Q6": {
+      "code": "E5.N9.Q6",
+      "question_text": "Avez-vous des procédures de vérification de la qualité des données ?",
+      "type": "conditional",
+      "status": "limited",
+      "possible_answers": ["Oui (veuillez préciser)", "Non"],
+      "interpretation": "Exigence de qualité des données pour la robustesse du système",
+      "quick_wins": [
+        "Développer des procédures de validation des données",
+        "Former les équipes"
+      ],
+      "priority": 4,
+      "article_concerne": "Article 10",
+      "risk_category": "Privacy & Data Governance",
+      "impact_conformite": "Une réponse autre que Non classerait le système à risque"
+    },
+    "E5.N9.Q7": {
+      "code": "E5.N9.Q7",
+      "question_text": "Tenez-vous un registre centralisé de vos systèmes d'IA ?",
+      "type": "conditional",
+      "status": "minimal",
+      "possible_answers": ["Oui (veuillez préciser)", "Non"],
+      "interpretation": "Obligation de registre pour les systèmes à haut risque ; recommandé pour tous",
+      "quick_wins": [
+        "Créer un registre simple (Excel, Notion, etc.)",
+        "Structurer les champs : nom, objectif, MAJ, etc."
+      ],
+      "priority": 2,
+      "article_concerne": "Article 12",
+      "risk_category": "Human Agency & Oversight",
+      "impact_conformite": "Une réponse autre que Non classerait le système à risque"
+    },
+    "E5.N9.Q8": {
+      "code": "E5.N9.Q8",
+      "question_text": "Avez-vous une étape de surveillance humaine dans votre système d'IA ?",
+      "type": "conditional",
+      "status": "limited",
+      "possible_answers": ["Oui (veuillez préciser)", "Non"],
+      "interpretation": "L'AI Act impose un contrôle humain pour les décisions à impact significatif",
+      "quick_wins": [
+        "Définir les cas où une intervention humaine est obligatoire",
+        "Tracer les décisions sensibles"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 14",
+      "risk_category": "Human Agency & Oversight",
+      "impact_conformite": "Une réponse autre que Non classerait le système à risque"
+    },
+    "E5.N9.Q9": {
+      "code": "E5.N9.Q9",
+      "question_text": "Vérifiez-vous l'exactitude, la robustesse et la cybersécurité de votre système d'IA ?",
+      "type": "conditional",
+      "status": "limited",
+      "possible_answers": ["Oui (veuillez préciser)", "Non"],
+      "interpretation": "Exigence de vérification technique pour la robustesse et la sécurité",
+      "quick_wins": [
+        "Mettre en place des tests de robustesse",
+        "Auditer la cybersécurité",
+        "Documenter les procédures"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 15",
+      "risk_category": "Technical Robustness and Safety",
+      "impact_conformite": "Une réponse autre que Non classerait le système à risque"
+    },
+    "E6.N10.Q1": {
+      "code": "E6.N10.Q1",
+      "question_text": "Lorsque votre système d'IA interagit avec des personnes, sont-elles informées ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Obligation de transparence et d'information des utilisateurs",
+      "quick_wins": [
+        "Mettre en place des notices d'information",
+        "Former les équipes sur la transparence"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 52(1)",
+      "risk_category": "Transparency",
+      "impact_conformite": "Une réponse 'Non' indique une non-conformité pour les systèmes à risque limité ayant cette fonctionnalité"
+    },
+    "E6.N10.Q2": {
+      "code": "E6.N10.Q2",
+      "question_text": "Lorsque votre système d'IA génère ou manipule du contenu, est-ce que ce dernier est marqué par un format lisible et reconnaissable ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": ["Oui", "Non"],
+      "interpretation": "Obligation de marquage du contenu généré par IA",
+      "quick_wins": [
+        "Implémenter un système de marquage automatique",
+        "Former les utilisateurs"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 52(3), Article 50(1)(c)",
+      "risk_category": "Transparency",
+      "impact_conformite": "Une réponse 'Non' indique une non-conformité pour les systèmes à risque limité ayant cette fonctionnalité"
+    }
+  },
+  "usecase_context_fields": {
+    "entreprise": {
+      "name": "Nom de l'entreprise",
+      "industry": "Secteur d'activité",
+      "city": "Ville",
+      "country": "Pays",
+      "company_status": "Statut d'entreprise dans la chaîne de valeur IA (utilisateur, fabricant, distributeur, importateur, fournisseur, mandataire)"
+    },
+    "cas_usage": {
+      "id": "Identifiant unique du cas d'usage",
+      "name": "Nom du cas d'usage",
+      "description": "Description détaillée du cas d'usage",
+      "deployment_date": "Date de déploiement",
+      "status": "Statut du cas d'usage",
+      "risk_level": "Niveau de risque calculé",
+      "ai_category": "Catégorie d'IA",
+      "system_type": "Type de système (autonome, produit, etc.)",
+      "responsible_service": "Service responsable",
+      "deployment_countries": "Pays de déploiement"
+    },
+    "technologie": {
+      "technology_partner": "Partenaire technologique",
+      "llm_model_version": "Version du modèle LLM",
+      "primary_model_id": "ID du modèle principal",
+      "model_name": "Nom du modèle",
+      "model_provider": "Fournisseur du modèle",
+      "model_type": "Type de modèle"
+    },
+    "repondant": {
+      "profile": "Profil du répondant (DPO, avocat, dirigeant, etc.)",
+      "situation": "Situation du répondant dans l'entreprise"
+    },
+    "scores": {
+      "score_base": "Score de base",
+      "score_model": "Score du modèle",
+      "score_final": "Score final",
+      "is_eliminated": "Système éliminé",
+      "elimination_reason": "Raison de l'élimination"
+    }
+  },
+  "risk_categories": {
+    "Acteurs IA": "Définit le rôle de l'entreprise dans l'écosystème IA",
+    "Niveau de risque": "Détermine le niveau de risque global du système",
+    "Technical Robustness and Safety": "Robustesse technique et sécurité",
+    "Diversity, Non-discrimination & Fairness": "Diversité, non-discrimination et équité",
+    "Social & Environmental Well-being": "Bien-être social et environnemental",
+    "Human Agency & Oversight": "Agence humaine et supervision",
+    "Transparency": "Transparence",
+    "Privacy & Data Governance": "Confidentialité et gouvernance des données"
+  },
+  "priority_levels": {
+    "1": "Critique - Actions immédiates requises",
+    "2": "Important - Actions à court terme",
+    "3": "Modéré - Actions à moyen terme",
+    "4": "Standard - Actions de routine",
+    "5": "Informatif - Actions optionnelles"
+  },
+  "status_levels": {
+    "minimal": "Risque minimal - Aucune obligation supplémentaire",
+    "limited": "Risque limité - Obligations de transparence",
+    "high": "Risque élevé - Obligations complètes de conformité",
+    "unacceptable": "Risque inacceptable - Interdiction d'utilisation"
+  }
+}
