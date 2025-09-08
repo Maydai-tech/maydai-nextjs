@@ -42,10 +42,10 @@ export function transformToOpenAIFormat(
   usecaseId: string, 
   usecaseName: string, 
   companyName: string,
+  responses: UseCaseResponse[],
   companyIndustry?: string,
   companyCity?: string,
-  companyCountry?: string,
-  responses: UseCaseResponse[]
+  companyCountry?: string
 ): OpenAIAnalysisInput {
   const result: OpenAIAnalysisInput = {
     usecase_id: usecaseId,

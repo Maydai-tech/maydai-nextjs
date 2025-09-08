@@ -105,10 +105,10 @@ export async function POST(req: NextRequest) {
       usecase.id, 
       usecase.name, 
       companyName,
+      targetResponses,
       companyIndustry,
       companyCity,
-      companyCountry,
-      targetResponses
+      companyCountry
     )
 
     // Valider les données transformées

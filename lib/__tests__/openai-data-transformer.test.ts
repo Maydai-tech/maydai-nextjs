@@ -37,6 +37,7 @@ describe('OpenAI Data Transformer', () => {
       const result = transformToOpenAIFormat(
         'uuid-du-cas-dusage', 
         'Assistant RH IA – sélection de candidats', 
+        'Test Company',
         mockResponses
       )
       
@@ -70,6 +71,7 @@ describe('OpenAI Data Transformer', () => {
       const result = transformToOpenAIFormat(
         'uuid-test', 
         'Test Use Case', 
+        'Test Company',
         emptyResponses
       )
       
@@ -94,6 +96,7 @@ describe('OpenAI Data Transformer', () => {
       const result = transformToOpenAIFormat(
         'uuid-test', 
         'Test Use Case', 
+        'Test Company',
         responsesWithCodesOnly
       )
       
@@ -114,6 +117,7 @@ describe('OpenAI Data Transformer', () => {
       const result = transformToOpenAIFormat(
         'uuid-test', 
         'Test Use Case', 
+        'Test Company',
         responsesWithoutConditional
       )
       
@@ -154,6 +158,7 @@ describe('OpenAI Data Transformer', () => {
       const validData = {
         usecase_id: 'uuid-test',
         usecase_name: 'Test Use Case',
+        company_name: 'Test Company',
         responses: {
           E4_N7_Q2: {
             question: 'Test question',
@@ -179,6 +184,7 @@ describe('OpenAI Data Transformer', () => {
       const invalidData = {
         usecase_id: '',
         usecase_name: 'Test Use Case',
+        company_name: 'Test Company',
         responses: {
           E4_N7_Q2: {
             question: 'Test question',
@@ -204,6 +210,7 @@ describe('OpenAI Data Transformer', () => {
       const invalidData = {
         usecase_id: 'uuid-test',
         usecase_name: 'Test Use Case',
+        company_name: 'Test Company',
         responses: {
           E4_N7_Q2: {
             question: 'Test question',
@@ -229,6 +236,7 @@ describe('OpenAI Data Transformer', () => {
       const invalidData = {
         usecase_id: 'uuid-test',
         usecase_name: 'Test Use Case',
+        company_name: 'Test Company',
         responses: {
           E4_N7_Q2: {
             question: 'Test question',
