@@ -12,6 +12,7 @@ export default function UseCasesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [riskFilter, setRiskFilter] = useState('')
+  const [emailFilter, setEmailFilter] = useState('')
   const [recalculating, setRecalculating] = useState(false)
 
   useEffect(() => {
@@ -22,11 +23,27 @@ export default function UseCasesPage() {
     try {
       const { data, error } = await supabase
         .from('usecases')
-        .select('*')
+        .select(`
+          *,
+          companies (
+            id,
+            name
+          ),
+          usecase_responses!inner (
+            answered_by
+          )
+        `)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setUsecases(data || [])
+      
+      // Traiter les données pour récupérer l'email unique de chaque cas d'usage
+      const processedData = (data || []).map(usecase => ({
+        ...usecase,
+        user_email: usecase.usecase_responses?.[0]?.answered_by || 'Non disponible'
+      }))
+      
+      setUsecases(processedData)
     } catch (error) {
       console.error('Erreur lors du chargement des cas d\'usage:', error)
     } finally {
@@ -85,8 +102,9 @@ export default function UseCasesPage() {
                          (usecase.description && usecase.description.toLowerCase().includes(searchTerm.toLowerCase()))
     const matchesStatus = !statusFilter || usecase.status === statusFilter
     const matchesRisk = !riskFilter || usecase.risk_level === riskFilter
+    const matchesEmail = !emailFilter || (usecase.user_email && usecase.user_email.toLowerCase().includes(emailFilter.toLowerCase()))
     
-    return matchesSearch && matchesStatus && matchesRisk
+    return matchesSearch && matchesStatus && matchesRisk && matchesEmail
   })
 
   const getStatusColor = (status: string) => {
@@ -164,7 +182,7 @@ export default function UseCasesPage() {
             )}
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Search className="h-4 w-4 inline mr-1" />
@@ -176,6 +194,20 @@ export default function UseCasesPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
               placeholder="Nom ou description du cas d'usage..."
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Search className="h-4 w-4 inline mr-1" />
+              Email utilisateur
+            </label>
+            <input
+              type="text"
+              value={emailFilter}
+              onChange={(e) => setEmailFilter(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+              placeholder="Filtrer par email..."
             />
           </div>
           
@@ -248,6 +280,12 @@ export default function UseCasesPage() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Entreprise
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Email
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Nom
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -276,6 +314,16 @@ export default function UseCasesPage() {
               onClick={() => {
                 router.push(`/admin/usecases/${usecase.id}/responses`)
               }}>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">
+                    {usecase.companies?.name || 'Non spécifié'}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">
+                    {usecase.user_email || 'Non disponible'}
+                  </div>
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{usecase.name}</div>
                   {usecase.responsible_service && (
@@ -325,7 +373,7 @@ export default function UseCasesPage() {
         {filteredUseCases.length === 0 && (
           <div className="text-center py-12">
             <div className="text-gray-500">
-              {searchTerm || statusFilter || riskFilter
+              {searchTerm || statusFilter || riskFilter || emailFilter
                 ? 'Aucun cas d\'usage ne correspond aux critères de recherche'
                 : 'Aucun cas d\'usage trouvé'}
             </div>
