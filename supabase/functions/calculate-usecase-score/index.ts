@@ -987,6 +987,9 @@ Deno.serve(async (req) => {
       finalScore = ((baseScoreResult.score_base + modelContribution) / TOTAL_WEIGHT) * 100;
     }
     
+    // ===== ÉTAPE 7.5: CALCULER LE NIVEAU DE RISQUE =====
+    const riskLevel = calculateRiskLevel(responses);
+    
     // ===== ÉTAPE 8: MISE À JOUR EN BASE DE DONNÉES =====
     const { error: updateError } = await supabase
       .from('usecases')
@@ -996,6 +999,7 @@ Deno.serve(async (req) => {
         score_final: roundToTwoDecimals(finalScore),
         is_eliminated: baseScoreResult.is_eliminated,
         elimination_reason: baseScoreResult.elimination_reason,
+        risk_level: riskLevel,
         last_calculation_date: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -1135,4 +1139,53 @@ function calculateBaseScore(responses: any[]) {
       final_base_score: finalScore
     }
   };
+}
+
+/**
+ * Calcule le niveau de risque basé sur les réponses de l'utilisateur
+ * @param responses - Toutes les réponses de l'utilisateur
+ * @returns Le niveau de risque le plus élevé
+ */
+function calculateRiskLevel(responses: any[]): string {
+  let highestRiskLevel = 'minimal';
+  const riskHierarchy = ['minimal', 'limited', 'high', 'unacceptable'];
+
+  for (const response of responses) {
+    const questionCode = response.question_code;
+    const question = QUESTIONS_DATA[questionCode as keyof typeof QUESTIONS_DATA];
+    
+    if (!question) continue;
+
+    let selectedRiskLevel: string | undefined;
+
+    // Déterminer le niveau de risque basé sur la réponse
+    if (response.single_value) {
+      // Pour les questions radio ou avec une seule valeur
+      const option = question.options?.find((opt: any) => 
+        opt.code === response.single_value || opt.label === response.single_value
+      );
+      
+      if (option && 'risk' in option) {
+        selectedRiskLevel = option.risk;
+      }
+    } else if (response.multiple_codes && Array.isArray(response.multiple_codes)) {
+      // Pour les questions multiples, prendre le risque le plus élevé parmi les options sélectionnées
+      for (const code of response.multiple_codes) {
+        const option = question.options?.find((opt: any) => opt.code === code);
+        if (option && 'risk' in option) {
+          const optionRisk = option.risk;
+          if (riskHierarchy.indexOf(optionRisk) > riskHierarchy.indexOf(selectedRiskLevel || 'minimal')) {
+            selectedRiskLevel = optionRisk;
+          }
+        }
+      }
+    }
+
+    // Mettre à jour le niveau de risque le plus élevé
+    if (selectedRiskLevel && riskHierarchy.indexOf(selectedRiskLevel) > riskHierarchy.indexOf(highestRiskLevel)) {
+      highestRiskLevel = selectedRiskLevel;
+    }
+  }
+
+  return highestRiskLevel;
 }

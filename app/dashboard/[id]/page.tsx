@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-auth'
+import { getProviderIcon } from '@/lib/provider-icons'
 import { 
   ArrowLeft, 
   Shield, 
@@ -41,8 +42,20 @@ interface UseCase {
   company_id: string
   created_at: string
   technology_partner: string
+  llm_model_version?: string
   responsible_service: string
   deployment_countries?: string[]
+  primary_model_id?: string
+  score_final?: number | null
+  is_eliminated?: boolean
+  elimination_reason?: string
+  compl_ai_models?: {
+    id: string
+    model_name: string
+    model_provider: string
+    model_type?: string
+    version?: string
+  }
 }
 
 interface DashboardProps {
@@ -146,6 +159,14 @@ export default function CompanyDashboard({ params }: DashboardProps) {
       }
 
       if (useCasesResponse.data) {
+        console.log('🔍 Debug dashboard usecases data:', useCasesResponse.data.map((uc: any) => ({
+          id: uc.id,
+          name: uc.name,
+          status: uc.status,
+          risk_level: uc.risk_level,
+          score_final: uc.score_final,
+          has_compl_ai_models: !!uc.compl_ai_models
+        })))
         setUseCases(useCasesResponse.data)
         // Reset to first page when data changes
         setCurrentPage(1)
@@ -255,6 +276,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
     switch (status?.toLowerCase()) {
       case 'complété': return 'border border-[#0080a3]'
       case 'en cours': return 'text-yellow-700 bg-yellow-50 border border-yellow-200'
+      case 'éliminé': return 'text-red-700 bg-red-50 border border-red-200'
       case 'a compléter': return 'text-gray-700 border border-gray-200'
       default: return 'text-gray-700 border border-gray-200'
     }
@@ -268,11 +290,57 @@ export default function CompanyDashboard({ params }: DashboardProps) {
       case 'in_progress':
       case 'under_review':
         return 'En cours'
+      case 'eliminated':
+      case 'rejected':
+        return 'Éliminé'
       case 'draft':
       case 'not_started':
       default:
         return 'À compléter'
     }
+  }
+
+  // Fonction pour obtenir l'icône du provider (utilise la fonction utilitaire)
+  const getProviderIconPath = (provider: string) => {
+    return getProviderIcon(provider)
+  }
+
+  // Fonction pour obtenir le nom du modèle à afficher
+  const getModelDisplayName = (useCase: UseCase) => {
+    if (useCase.compl_ai_models?.model_name) {
+      return useCase.compl_ai_models.model_name
+    }
+    if (useCase.llm_model_version) {
+      return useCase.llm_model_version
+    }
+    if (useCase.technology_partner) {
+      return useCase.technology_partner
+    }
+    return 'Modèle non renseigné'
+  }
+
+  // Fonction pour obtenir le provider à afficher
+  const getProviderDisplayName = (useCase: UseCase) => {
+    if (useCase.compl_ai_models?.model_provider) {
+      return useCase.compl_ai_models.model_provider
+    }
+    if (useCase.technology_partner) {
+      return useCase.technology_partner
+    }
+    return 'Provider inconnu'
+  }
+
+  // Fonction pour traduire le niveau de risque en français
+  const getRiskLevelInFrench = (riskLevel: string): string => {
+    const riskLevelMap: Record<string, string> = {
+      'low': 'Risque Limité',
+      'limited': 'Risque Limité', 
+      'high': 'Risque Élevé',
+      'unacceptable': 'Risque Inacceptable',
+      'minimal': 'Risque Minimal',
+      'moderate': 'Risque Modéré'
+    }
+    return riskLevelMap[riskLevel?.toLowerCase()] || riskLevel || 'Non évalué'
   }
 
   const getCompletedCount = () => {
@@ -636,6 +704,9 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                                     } : getUseCaseStatusInFrench(useCase.status) === 'À compléter' ? {
                                       color: '#713f12',
                                       backgroundColor: '#fefce8'
+                                    } : getUseCaseStatusInFrench(useCase.status) === 'Éliminé' ? {
+                                      color: '#dc2626',
+                                      backgroundColor: '#fef2f2'
                                     } : {}}
                                   >
                                     {getUseCaseStatusInFrench(useCase.status)}
@@ -661,6 +732,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                                 
                                 {/* Cartes d'information alignées horizontalement */}
                                 <div className="flex flex-row gap-2">
+                                  {/* Carte Modèle utilisé */}
                                   <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0">
                                     <div className="flex items-center justify-between mb-2">
                                       <span className="text-xs font-medium text-gray-600">Modèle utilisé</span>
@@ -668,36 +740,107 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                       </svg>
                                     </div>
-                                    <div className="flex items-center space-x-2">
-                                      <div className="w-6 h-6 bg-gradient-to-r from-blue-500 via-red-500 via-yellow-500 to-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold">G</div>
-                                      <div>
-                                        <div className="text-sm font-medium text-gray-900">gemini-1.5-flash-001</div>
-                                        <div className="text-xs text-gray-500">Google</div>
+                                    {(useCase.compl_ai_models?.model_name || useCase.llm_model_version || useCase.technology_partner) ? (
+                                      <div className="flex items-center space-x-2">
+                                        <div className="w-6 h-6 flex items-center justify-center">
+                                          <Image
+                                            src={getProviderIconPath(getProviderDisplayName(useCase))}
+                                            alt={`Logo ${getProviderDisplayName(useCase)}`}
+                                            width={24}
+                                            height={24}
+                                            className="w-6 h-6 object-contain"
+                                            onError={(e) => {
+                                              const target = e.target as HTMLImageElement;
+                                              target.style.display = 'none';
+                                            }}
+                                          />
+                                        </div>
+                                        <div>
+                                          <div className="text-sm font-medium text-gray-900">{getModelDisplayName(useCase)}</div>
+                                          <div className="text-xs text-gray-500">{getProviderDisplayName(useCase)}</div>
+                                        </div>
                                       </div>
-                                    </div>
+                                    ) : (
+                                      <div className="text-sm text-gray-500 italic">
+                                        {getUseCaseStatusInFrench(useCase.status) === 'À compléter' 
+                                          ? 'Disponible après évaluation' 
+                                          : 'Modèle non renseigné'
+                                        }
+                                      </div>
+                                    )}
                                   </div>
 
+                                  {/* Carte Niveau IA Act */}
                                   <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0">
                                     <div className="text-xs font-medium text-gray-600 mb-2">Niveau IA Act</div>
-                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 flex items-center space-x-2">
-                                      <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                      </svg>
-                                      <div>
-                                        <div className="text-xs text-yellow-600">Niveau IA Act</div>
-                                        <div className="text-sm font-semibold text-yellow-800">Risque Limité</div>
+                                    {useCase.score_final === 0 ? (
+                                      <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex items-center space-x-2">
+                                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                                        <div>
+                                          <div className="text-xs text-red-600">Niveau IA Act</div>
+                                          <div className="text-sm font-semibold text-red-800">
+                                            Risque Inacceptable
+                                          </div>
+                                        </div>
                                       </div>
-                                    </div>
+                                    ) : useCase.risk_level ? (
+                                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 flex items-center space-x-2">
+                                        <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                        </svg>
+                                        <div>
+                                          <div className="text-xs text-yellow-600">Niveau IA Act</div>
+                                          <div className="text-sm font-semibold text-yellow-800">
+                                            {getRiskLevelInFrench(useCase.risk_level)}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 flex items-center space-x-2">
+                                        <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                        </svg>
+                                        <div>
+                                          <div className="text-xs text-yellow-600">Niveau IA Act</div>
+                                          <span className="px-2 py-1 text-xs font-medium rounded-full text-gray-700 border border-gray-200" style={{
+                                            color: '#713f12',
+                                            backgroundColor: '#fefce8'
+                                          }}>
+                                            Non évalué
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
 
+                                  {/* Carte Score de conformité */}
                                   <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0">
                                     <div className="flex items-center space-x-1 mb-2">
                                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                                       <span className="text-xs font-medium text-gray-600">Score de conformité</span>
                                     </div>
-                                    <div className="bg-blue-50 rounded-lg p-3 text-center">
-                                      <div className="text-2xl font-bold text-blue-600">73</div>
-                                    </div>
+                                    {useCase.score_final !== null && useCase.score_final !== undefined ? (
+                                      <div className="bg-blue-50 rounded-lg p-3 text-center">
+                                        <div className="text-2xl font-bold text-blue-600">
+                                          {Math.round(useCase.score_final)}
+                                        </div>
+                                        {useCase.is_eliminated && (
+                                          <div className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold border border-red-200 mt-2">
+                                            <AlertTriangle className="h-3 w-3 mr-1" />
+                                            Éliminé
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="bg-blue-50 rounded-lg p-3 text-center">
+                                        <span className="px-2 py-1 text-xs font-medium rounded-full text-gray-700 border border-gray-200" style={{
+                                          color: '#713f12',
+                                          backgroundColor: '#fefce8'
+                                        }}>
+                                          N/A
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>

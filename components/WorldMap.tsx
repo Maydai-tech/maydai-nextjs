@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react'
 import * as d3 from 'd3'
+import { geoNaturalEarth1, geoPath } from 'd3-geo'
 import { feature } from 'topojson-client'
 import { FeatureCollection } from 'geojson'
 
@@ -121,11 +122,11 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
     const g = svg.append('g')
 
     // Set up projection
-    const projection = d3.geoNaturalEarth1()
+    const projection = geoNaturalEarth1()
       .scale(175)
       .translate([width / 2, height / 2])
 
-    const path = d3.geoPath().projection(projection)
+    const path = geoPath().projection(projection)
 
     // Load and render world map
     d3.json('/world-110m.json').then((world: any) => {
