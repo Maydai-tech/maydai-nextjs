@@ -64,23 +64,27 @@ export async function POST(req: NextRequest) {
 
     // Utiliser le client Supabase configuré
     
-    // Récupérer les informations du use case
+    // Récupérer les informations complètes du use case avec l'entreprise
     const { data: usecase, error: usecaseError } = await supabase
-      .from('usecases')
-      .select('id, name')
-      .eq('id', usecase_id)
-      .single()
+    .from('usecases')
+    .select(`
+      id, name, description, deployment_date, status, risk_level, ai_category, 
+      system_type, responsible_service, deployment_countries, company_status,
+      companies(name, industry, city, country)
+    `)
+    .eq('id', usecase_id)
+    .single()
 
     if (usecaseError || !usecase) {
       return NextResponse.json({ error: 'Usecase not found' }, { status: 404 })
     }
 
-    // Récupérer les réponses du questionnaire pour les questions E4.N7.Q2 et E5.N9.Q7
+    // Récupérer toutes les réponses du questionnaire
     const { data: responses, error: responseError } = await supabase
-      .from('usecase_responses')
-      .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
-      .eq('usecase_id', usecase_id)
-      .in('question_code', ['E4.N7.Q2', 'E5.N9.Q7'])
+    .from('usecase_responses')
+    .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
+    .eq('usecase_id', usecase_id)
+    .in('question_code', ['E4.N7.Q2', 'E5.N9.Q7'])
 
     if (responseError) {
       console.error('Erreur récupération réponses:', responseError)
@@ -89,7 +93,23 @@ export async function POST(req: NextRequest) {
 
     // Extraire et transformer les réponses
     const targetResponses = extractTargetResponses(responses || [])
-    const transformedData = transformToOpenAIFormat(usecase.id, usecase.name, targetResponses)
+    
+    // Extraire les informations d'entreprise
+    const company = Array.isArray(usecase.companies) ? usecase.companies[0] : usecase.companies
+    const companyName = company?.name || 'MaydAI' // Fallback par défaut
+    const companyIndustry = company?.industry
+    const companyCity = company?.city
+    const companyCountry = company?.country
+    
+    const transformedData = transformToOpenAIFormat(
+      usecase.id, 
+      usecase.name, 
+      companyName,
+      companyIndustry,
+      companyCity,
+      companyCountry,
+      targetResponses
+    )
 
     // Valider les données transformées
     const validation = validateOpenAIInput(transformedData)

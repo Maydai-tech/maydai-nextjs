@@ -7,6 +7,10 @@ import OpenAI from 'openai'
 interface OpenAIAnalysisInput {
   usecase_id: string
   usecase_name: string
+  company_name: string
+  company_industry?: string
+  company_city?: string
+  company_country?: string
   responses: {
     // Domaines d'utilisation à risque élevé
     E4_N7_Q2: {
@@ -294,9 +298,19 @@ export class OpenAIClient {
     return `
 **ANALYSE DE CONFORMITÉ IA ACT - SECTION 3**
 
-**Informations du cas d'usage :**
-- Nom : ${data.usecase_name}
+**Informations de l'entreprise :**
+- Nom de l'entreprise : ${data.company_name}
+- Secteur d'activité : ${data.company_industry || 'Non spécifié'}
+- Localisation : ${data.company_city || 'Non spécifié'}, ${data.company_country || 'Non spécifié'}
+
+**Informations du système d'IA :**
+- Nom du système : ${data.usecase_name}
 - ID : ${data.usecase_id}
+
+**IMPORTANT :** 
+- L'entreprise s'appelle "${data.company_name}"
+- Le système d'IA s'appelle "${data.usecase_name}"
+- Dans ton analyse, utilise toujours "${data.company_name}" comme nom de l'entreprise
 
 **RÉPONSES AU QUESTIONNAIRE :**
 
@@ -305,14 +319,33 @@ ${domainsSection}
 ${registrySection}
 
 **INSTRUCTIONS :**
-Analyse ces informations et fournis une évaluation de conformité structurée avec :
-1. Évaluation des domaines à risque élevé
-2. Analyse du registre centralisé
-3. Recommandations d'actions prioritaires
-4. Quick wins (actions rapides)
-5. Actions à moyen terme
+Analyse ces informations et fournis une évaluation de conformité structurée avec le formatage Markdown suivant :
+
+**FORMATAGE OBLIGATOIRE :**
+- Utilise **Titre en gras** pour tous les titres de section
+- Utilise des puces (-) pour les listes à puces
+- Utilise **Texte en gras** pour les sous-titres et éléments importants
+- Évite les traits (-) isolés en fin de ligne
+- Assure-toi que les phrases sont complètes et ne sont pas coupées
+- Structure le rapport avec les sections suivantes :
+
+**Recommandations et plan d'action**
+**Introduction contextuelle**
+**Évaluation du niveau de risque AI Act**
+**Les 3 priorités d'actions réglementaires**
+**Quick wins (actions immédiates recommandées)**
+**Actions à moyen terme**
+**Conclusion**
+
+**RÈGLES DE FORMATAGE :**
+- Chaque phrase doit être complète sur une seule ligne
+- Ne pas laisser de traits (-) isolés
+- Utiliser des puces (-) uniquement pour les listes
+- Les sous-titres doivent être suivis de deux points (:)
+- Éviter les retours à la ligne intempestifs
 
 Sois précis, professionnel et actionnable dans tes recommandations.
+**RAPPEL :** Utilise "${data.company_name}" comme nom de l'entreprise et "${data.usecase_name}" comme nom du système d'IA.
     `.trim()
   }
 
