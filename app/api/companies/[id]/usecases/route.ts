@@ -52,18 +52,39 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied to this company' }, { status: 403 })
     }
 
-    // Fetch use cases for this company
+    // Fetch use cases for this company with model information and scores
     const { data: usecases, error: usecasesError } = await supabase
       .from('usecases')
       .select(`
         *,
-        companies(name)
+        companies(name),
+        compl_ai_models(
+          id,
+          model_name,
+          model_provider,
+          model_type,
+          version
+        )
       `)
       .eq('company_id', id)
       .order('created_at', { ascending: false })
 
     if (usecasesError) {
       return NextResponse.json({ error: 'Error fetching use cases' }, { status: 500 })
+    }
+
+    // Debug: Log all use cases to check data
+    if (usecases && usecases.length > 0) {
+      console.log('🔍 Debug all usecases data:')
+      usecases.forEach((uc, index) => {
+        console.log(`  ${index + 1}. ${uc.name}:`, {
+          id: uc.id,
+          status: uc.status,
+          risk_level: uc.risk_level,
+          score_final: uc.score_final,
+          has_compl_ai_models: !!uc.compl_ai_models
+        })
+      })
     }
 
     return NextResponse.json(usecases || [])

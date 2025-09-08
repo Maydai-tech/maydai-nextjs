@@ -405,11 +405,20 @@ export default function UseCaseRapportPage() {
             
             <div className="space-y-6">
               {/* Obligations selon le statut d'entreprise */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-blue-900 mb-4">
-                  Obligations selon votre statut d'entreprise
-                </h3>
-                <div className="text-sm text-blue-800 leading-relaxed">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <img 
+                    src="/icons/business.png" 
+                    alt="Statut entreprise" 
+                    width={24} 
+                    height={24} 
+                    className="flex-shrink-0"
+                  />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Obligations selon votre statut d'entreprise
+                  </h3>
+                </div>
+                <div className="text-sm text-gray-800 leading-relaxed">
                   <p className="mb-3">
                     <strong>Statut identifié :</strong> {getCompanyStatusLabel(useCase.company_status)}
                   </p>
@@ -419,7 +428,16 @@ export default function UseCaseRapportPage() {
                   
                   {useCase.company_status === 'utilisateur' && (
                     <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold mb-2">Obligations spécifiques aux utilisateurs :</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                        <img 
+                          src="/icons/account.png" 
+                          alt="Utilisateur" 
+                          width={20} 
+                          height={20} 
+                          className="flex-shrink-0"
+                        />
+                        <h4 className="font-semibold">Obligations spécifiques aux utilisateurs :</h4>
+                      </div>
                       <ul className="list-disc list-inside space-y-1 text-sm">
                         <li>Utiliser le système d'IA conformément aux instructions du fournisseur</li>
                         <li>Surveiller le fonctionnement du système et signaler les incidents</li>
@@ -431,7 +449,16 @@ export default function UseCaseRapportPage() {
                   
                   {useCase.company_status === 'fournisseur' && (
                     <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold mb-2">Obligations spécifiques aux fournisseurs :</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                        <img 
+                          src="/icons/account.png" 
+                          alt="Fournisseur" 
+                          width={20} 
+                          height={20} 
+                          className="flex-shrink-0"
+                        />
+                        <h4 className="font-semibold">Obligations spécifiques aux fournisseurs :</h4>
+                      </div>
                       <ul className="list-disc list-inside space-y-1 text-sm">
                         <li>Évaluation et atténuation des risques</li>
                         <li>Qualité et gouvernance des données</li>
@@ -447,14 +474,32 @@ export default function UseCaseRapportPage() {
               </div>
 
               {/* Mesures de gouvernance recommandées */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-green-900 mb-4">
-                  Mesures de gouvernance recommandées
-                </h3>
-                <div className="text-sm text-green-800 leading-relaxed">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <img 
+                    src="/icons/bank.png" 
+                    alt="Gouvernance" 
+                    width={24} 
+                    height={24} 
+                    className="flex-shrink-0"
+                  />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Mesures de gouvernance recommandées
+                  </h3>
+                </div>
+                <div className="text-sm text-gray-800 leading-relaxed">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold mb-2">Organisation interne</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                        <img 
+                          src="/icons/teamwork.png" 
+                          alt="Organisation" 
+                          width={20} 
+                          height={20} 
+                          className="flex-shrink-0"
+                        />
+                        <h4 className="font-semibold">Organisation interne</h4>
+                      </div>
                       <ul className="list-disc list-inside space-y-1 text-sm">
                         <li>Désigner un responsable IA</li>
                         <li>Créer un comité de gouvernance IA</li>
@@ -464,7 +509,16 @@ export default function UseCaseRapportPage() {
                     </div>
                     
                     <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold mb-2">Processus qualité</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                        <img 
+                          src="/icons/refresh-page-option.png" 
+                          alt="Processus" 
+                          width={20} 
+                          height={20} 
+                          className="flex-shrink-0"
+                        />
+                        <h4 className="font-semibold">Processus qualité</h4>
+                      </div>
                       <ul className="list-disc list-inside space-y-1 text-sm">
                         <li>Audits réguliers de conformité</li>
                         <li>Tests de robustesse périodiques</li>
@@ -477,14 +531,32 @@ export default function UseCaseRapportPage() {
               </div>
 
               {/* Actions prioritaires */}
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-amber-900 mb-4">
-                  Actions prioritaires à mettre en œuvre
-                </h3>
-                <div className="text-sm text-amber-800 leading-relaxed">
-                  <div className="space-y-3">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <img 
+                    src="/icons/task.png" 
+                    alt="Actions prioritaires" 
+                    width={24} 
+                    height={24} 
+                    className="flex-shrink-0"
+                  />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Actions prioritaires à mettre en œuvre
+                  </h3>
+                </div>
+                <div className="text-sm text-gray-800 leading-relaxed">
+                  <div className="space-y-4">
                     <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold mb-2">Actions immédiates (0-3 mois)</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                        <img 
+                          src="/icons/schedule.png" 
+                          alt="Actions immédiates" 
+                          width={20} 
+                          height={20} 
+                          className="flex-shrink-0"
+                        />
+                        <h4 className="font-semibold">Actions immédiates (0-3 mois)</h4>
+                      </div>
                       <ul className="list-disc list-inside space-y-1 text-sm">
                         <li>Cartographier les systèmes d'IA existants</li>
                         <li>Évaluer la conformité actuelle</li>
@@ -494,7 +566,16 @@ export default function UseCaseRapportPage() {
                     </div>
                     
                     <div className="bg-white p-4 rounded border">
-                      <h4 className="font-semibold mb-2">Actions à moyen terme (3-12 mois)</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                        <img 
+                          src="/icons/calendar.png" 
+                          alt="Actions moyen terme" 
+                          width={20} 
+                          height={20} 
+                          className="flex-shrink-0"
+                        />
+                        <h4 className="font-semibold">Actions à moyen terme (3-12 mois)</h4>
+                      </div>
                       <ul className="list-disc list-inside space-y-1 text-sm">
                         <li>Développer la documentation technique</li>
                         <li>Implémenter les mesures de transparence</li>
