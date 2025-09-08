@@ -5,9 +5,21 @@ import { useRouter } from 'next/navigation'
 import { supabase, UseCase } from '@/lib/supabase'
 import { Eye, Filter, Search, Calculator } from 'lucide-react'
 
+// Type étendu pour inclure user_email
+interface UseCaseWithEmail extends UseCase {
+  user_email?: string
+  companies?: {
+    id: string
+    name: string
+  }
+  usecase_responses?: Array<{
+    answered_by: string
+  }>
+}
+
 export default function UseCasesPage() {
   const router = useRouter()
-  const [usecases, setUsecases] = useState<UseCase[]>([])
+  const [usecases, setUsecases] = useState<UseCaseWithEmail[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -41,7 +53,7 @@ export default function UseCasesPage() {
       const processedData = (data || []).map(usecase => ({
         ...usecase,
         user_email: usecase.usecase_responses?.[0]?.answered_by || 'Non disponible'
-      }))
+      })) as UseCaseWithEmail[]
       
       setUsecases(processedData)
     } catch (error) {
