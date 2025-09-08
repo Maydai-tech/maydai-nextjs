@@ -13,6 +13,10 @@ interface UseCaseResponse {
 interface OpenAIAnalysisInput {
   usecase_id: string
   usecase_name: string
+  company_name: string
+  company_industry?: string
+  company_city?: string
+  company_country?: string
   responses: {
     E4_N7_Q2: {
       question: string
@@ -37,11 +41,19 @@ interface OpenAIAnalysisInput {
 export function transformToOpenAIFormat(
   usecaseId: string, 
   usecaseName: string, 
+  companyName: string,
+  companyIndustry?: string,
+  companyCity?: string,
+  companyCountry?: string,
   responses: UseCaseResponse[]
 ): OpenAIAnalysisInput {
   const result: OpenAIAnalysisInput = {
     usecase_id: usecaseId,
     usecase_name: usecaseName,
+    company_name: companyName,
+    company_industry: companyIndustry,
+    company_city: companyCity,
+    company_country: companyCountry,
     responses: {
       E4_N7_Q2: {
         question: getQuestionText('E4.N7.Q2'),
