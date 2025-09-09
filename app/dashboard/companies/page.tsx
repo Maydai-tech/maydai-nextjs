@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-auth'
 import { Building2, Plus, Users, ChevronRight, LogOut } from 'lucide-react'
+import Footer from '@/components/Footer'
 
 interface Company {
   id: string
@@ -89,28 +91,60 @@ export default function CompanySelection() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Logout Button */}
-      <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
-        <button
-          onClick={handleSignOut}
-          className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-[#0080A3] hover:bg-white rounded-lg transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm cursor-pointer"
-          title="Se déconnecter"
-        >
-          <LogOut className="h-4 w-4" />
-          <span className="hidden sm:inline font-medium">Déconnexion</span>
-        </button>
-      </div>
+    <div className="min-h-screen bg-white">
+      {/* Header simplifié avec logo et bouton déconnexion */}
+      <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-30">
+        <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3 md:py-4">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <Image 
+              src="/logos/logo-maydai/logo-maydai-complet.png" 
+              alt="MaydAI Logo" 
+              width={134} 
+              height={32}
+              className="h-8 w-auto" 
+              priority 
+            />
+          </Link>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-[#0080A3] hover:bg-gray-50 rounded-lg transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm cursor-pointer"
+            title="Se déconnecter"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline font-medium">Déconnexion</span>
+          </button>
+        </nav>
+      </header>
 
+      {/* Bandeau principal modifié */}
+      <section className="relative bg-gradient-to-br from-primary-light to-primary-dark text-white py-20 px-4 flex flex-col items-center justify-center text-center min-h-[50vh]">
+        <div className="max-w-4xl mx-auto z-10">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
+            Bienvenue sur <span className="text-[#ffab5a]">MaydAI la plateforme de conformité AI Act</span>
+          </h1>
+        </div>
+        {/* Logo conformité IA - Optimisé pour LCP */}
+        <Image 
+          src="/content/compliance-ai-eu.webp" 
+          alt="Logo conformité IA" 
+          width={256}
+          height={256}
+          className="absolute right-8 bottom-0 w-40 md:w-64 opacity-30 pointer-events-none select-none"
+          priority
+          sizes="(max-width: 768px) 160px, 256px"
+        />
+      </section>
+
+      {/* Section de sélection des entreprises */}
       <div className="max-w-4xl mx-auto py-8 sm:py-16 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="bg-[#0080A3]/10 p-4 rounded-full w-16 h-16 mx-auto mb-6">
             <Building2 className="h-8 w-8 text-[#0080A3] mx-auto" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Choisissez votre entreprise
-          </h1>
+          </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Sélectionnez l'entreprise sur laquelle vous souhaitez travailler pour accéder au dashboard de conformité IA Act.
           </p>
@@ -196,6 +230,9 @@ export default function CompanySelection() {
           </div>
         )}
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   )
 } 
