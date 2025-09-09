@@ -11,27 +11,119 @@ export function OpenAIReportSection({ usecaseId }: OpenAIReportSectionProps) {
 
   // Formatage du rapport pour l'affichage
   const formatReport = (reportText: string) => {
+    // Nettoyer le texte avant le traitement
+    let cleanedText = reportText
+      // Supprimer les tirets isolés en fin de ligne
+      .replace(/^\s*-\s*$/gm, '')
+      // Supprimer les points isolés en début de ligne
+      .replace(/^\s*\.\s*/gm, '')
+      // Nettoyer les espaces multiples
+      .replace(/\s+/g, ' ')
+      // Nettoyer les retours à la ligne multiples
+      .replace(/\n\s*\n\s*\n/g, '\n\n')
+      .trim()
+
     // Diviser le rapport en sections
-    const sections = reportText.split(/\*\*(.*?)\*\*/g)
+    const sections = cleanedText.split(/\*\*(.*?)\*\*/g)
     
     return sections.map((section, index) => {
       if (index % 2 === 1) {
         // C'est un titre (entre **)
         return (
-          <h3 key={index} className="text-lg font-semibold text-gray-900 mb-3 mt-6 first:mt-0">
-            {section}
+          <h3 key={index} className="text-lg font-semibold text-gray-900 mb-4 mt-6 first:mt-0">
+            {section.trim()}
           </h3>
         )
       } else {
         // C'est du contenu
-        const paragraphs = section.split('\n\n').filter(p => p.trim())
+        const content = section.trim()
+        if (!content) return null
+
+        // Diviser en paragraphes
+        const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim())
+        
         return (
-          <div key={index} className="space-y-3">
-            {paragraphs.map((paragraph, pIndex) => (
-              <p key={pIndex} className="text-base leading-relaxed text-gray-800">
-                {paragraph.trim()}
-              </p>
-            ))}
+          <div key={index} className="space-y-4">
+            {paragraphs.map((paragraph, pIndex) => {
+              const trimmedParagraph = paragraph.trim()
+              if (!trimmedParagraph) return null
+
+              // Détecter si c'est une liste (commence par un tiret ou contient des éléments de liste)
+              const lines = trimmedParagraph.split('\n').map(line => line.trim()).filter(line => line)
+              const isList = lines.some(line => 
+                line.startsWith('-') || 
+                line.startsWith('•') || 
+                line.match(/^\d+\./) ||
+                line.startsWith('*')
+              )
+
+              if (isList) {
+                // Traiter comme une liste
+                return (
+                  <ul key={pIndex} className="space-y-3">
+                    {lines.map((line, lineIndex) => {
+                      // Nettoyer la ligne de liste
+                      const cleanLine = line.replace(/^[-•*]\s*/, '').trim()
+                      if (!cleanLine) return null
+
+                      // Détecter si c'est un sous-élément (indenté)
+                      const isSubItem = line.startsWith('  ') || line.startsWith('\t')
+                      
+                      // Détecter si la ligne contient du texte en gras
+                      const hasBoldText = cleanLine.includes('**')
+                      const parts = hasBoldText ? cleanLine.split(/(\*\*.*?\*\*)/) : [cleanLine]
+
+                      return (
+                        <li key={lineIndex} className={`${isSubItem ? 'ml-6' : 'ml-4'} text-base leading-relaxed text-gray-800`}>
+                          {hasBoldText ? (
+                            <span>
+                              {parts.map((part, partIndex) => {
+                                if (part.startsWith('**') && part.endsWith('**')) {
+                                  return (
+                                    <strong key={partIndex} className="font-semibold">
+                                      {part.slice(2, -2)}
+                                    </strong>
+                                  )
+                                }
+                                return part
+                              })}
+                            </span>
+                          ) : (
+                            cleanLine
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )
+              } else {
+                // Traiter comme un paragraphe normal
+                // Détecter si le paragraphe contient du texte en gras
+                const hasBoldText = trimmedParagraph.includes('**')
+                const parts = hasBoldText ? trimmedParagraph.split(/(\*\*.*?\*\*)/) : [trimmedParagraph]
+
+                return (
+                  <p key={pIndex} className="text-base leading-relaxed text-gray-800">
+                    {hasBoldText ? (
+                      <span>
+                        {parts.map((part, partIndex) => {
+                          if (part.startsWith('**') && part.endsWith('**')) {
+                            return (
+                              <strong key={partIndex} className="font-semibold">
+                                {part.slice(2, -2)}
+                              </strong>
+                            )
+                          }
+                          return part
+                        })}
+                      </span>
+                    ) : (
+                      trimmedParagraph
+                    )}
+                  </p>
+                )
+              }
+            })}
           </div>
         )
       }
