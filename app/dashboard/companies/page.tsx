@@ -117,31 +117,29 @@ export default function CompanySelection() {
       </header>
 
       {/* Bandeau principal modifié */}
-      <section className="relative bg-gradient-to-br from-primary-light to-primary-dark text-white py-20 px-4 flex flex-col items-center justify-center text-center min-h-[50vh]">
+      <section className="relative bg-gradient-to-br from-primary-light to-primary-dark text-white py-6 px-4 flex flex-col items-center justify-center text-center min-h-[20vh]">
         <div className="max-w-4xl mx-auto z-10">
           <h1 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
             Bienvenue sur <span className="text-[#ffab5a]">MaydAI la plateforme de conformité AI Act</span>
           </h1>
+          {/* Logo conformité IA - Centré sous le texte */}
+          <div className="flex justify-center mt-6">
+            <Image 
+              src="/logos/logo-conformite-ia.svg" 
+              alt="Logo conformité IA" 
+              width={128}
+              height={128}
+              className="w-20 md:w-32 opacity-80 pointer-events-none select-none"
+              priority
+            />
+          </div>
         </div>
-        {/* Logo conformité IA - Optimisé pour LCP */}
-        <Image 
-          src="/content/compliance-ai-eu.webp" 
-          alt="Logo conformité IA" 
-          width={256}
-          height={256}
-          className="absolute right-8 bottom-0 w-40 md:w-64 opacity-30 pointer-events-none select-none"
-          priority
-          sizes="(max-width: 768px) 160px, 256px"
-        />
       </section>
 
       {/* Section de sélection des entreprises */}
       <div className="max-w-4xl mx-auto py-8 sm:py-16 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="bg-[#0080A3]/10 p-4 rounded-full w-16 h-16 mx-auto mb-6">
-            <Building2 className="h-8 w-8 text-[#0080A3] mx-auto" />
-          </div>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Choisissez votre entreprise
           </h2>
