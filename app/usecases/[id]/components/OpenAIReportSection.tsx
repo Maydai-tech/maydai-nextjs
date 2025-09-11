@@ -9,124 +9,120 @@ interface OpenAIReportSectionProps {
 export function OpenAIReportSection({ usecaseId }: OpenAIReportSectionProps) {
   const { report, loading, error } = useOpenAIReport(usecaseId)
 
-  // Formatage du rapport pour l'affichage
+  // Formatage du rapport pour l'affichage avec support Markdown
   const formatReport = (reportText: string) => {
     // Nettoyer le texte avant le traitement
     let cleanedText = reportText
-      // Supprimer les tirets isolés en fin de ligne
-      .replace(/^\s*-\s*$/gm, '')
-      // Supprimer les points isolés en début de ligne
-      .replace(/^\s*\.\s*/gm, '')
-      // Nettoyer les espaces multiples
-      .replace(/\s+/g, ' ')
-      // Nettoyer les retours à la ligne multiples
-      .replace(/\n\s*\n\s*\n/g, '\n\n')
+      .replace(/\n\s*\n\s*\n/g, '\n\n') // Nettoyer les retours à la ligne multiples
       .trim()
 
-    // Diviser le rapport en sections
-    const sections = cleanedText.split(/\*\*(.*?)\*\*/g)
-    
-    return sections.map((section, index) => {
-      if (index % 2 === 1) {
-        // C'est un titre (entre **)
-        return (
-          <h3 key={index} className="text-lg font-semibold text-gray-900 mb-4 mt-6 first:mt-0">
-            {section.trim()}
+    // Diviser le texte en lignes pour traiter le Markdown
+    const lines = cleanedText.split('\n')
+    const elements: JSX.Element[] = []
+    let currentParagraph: string[] = []
+    let listItems: string[] = []
+    let inList = false
+
+    const flushParagraph = () => {
+      if (currentParagraph.length > 0) {
+        const paragraphText = currentParagraph.join(' ').trim()
+        if (paragraphText) {
+          elements.push(
+            <p key={elements.length} className="text-base leading-relaxed text-gray-800 mb-4">
+              {formatInlineMarkdown(paragraphText)}
+            </p>
+          )
+        }
+        currentParagraph = []
+      }
+    }
+
+    const flushList = () => {
+      if (listItems.length > 0) {
+        elements.push(
+          <ul key={elements.length} className="space-y-2 mb-4 ml-4">
+            {listItems.map((item, index) => (
+              <li key={index} className="text-base leading-relaxed text-gray-800">
+                {formatInlineMarkdown(item)}
+              </li>
+            ))}
+          </ul>
+        )
+        listItems = []
+        inList = false
+      }
+    }
+
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim()
+      
+      if (!trimmedLine) {
+        flushParagraph()
+        flushList()
+        return
+      }
+
+      // Détecter les titres Markdown
+      if (trimmedLine.startsWith('# ')) {
+        flushParagraph()
+        flushList()
+        elements.push(
+          <h1 key={elements.length} className="text-2xl font-bold text-gray-900 mb-6 mt-8 first:mt-0">
+            {trimmedLine.slice(2)}
+          </h1>
+        )
+      } else if (trimmedLine.startsWith('## ')) {
+        flushParagraph()
+        flushList()
+        elements.push(
+          <h2 key={elements.length} className="text-xl font-semibold text-gray-900 mb-4 mt-6">
+            {trimmedLine.slice(3)}
+          </h2>
+        )
+      } else if (trimmedLine.startsWith('### ')) {
+        flushParagraph()
+        flushList()
+        elements.push(
+          <h3 key={elements.length} className="text-lg font-medium text-gray-700 mb-3 mt-4">
+            {trimmedLine.slice(4)}
           </h3>
         )
+      } else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('* ')) {
+        flushParagraph()
+        if (!inList) {
+          inList = true
+        }
+        listItems.push(trimmedLine.slice(2))
       } else {
-        // C'est du contenu
-        const content = section.trim()
-        if (!content) return null
+        // Paragraphe normal
+        if (inList) {
+          flushList()
+        }
+        currentParagraph.push(trimmedLine)
+      }
+    })
 
-        // Diviser en paragraphes
-        const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim())
-        
+    // Flush les éléments restants
+    flushParagraph()
+    flushList()
+
+    return elements
+  }
+
+  // Fonction pour formater le Markdown inline (gras, italique, etc.)
+  const formatInlineMarkdown = (text: string) => {
+    // Traiter le texte en gras **texte**
+    const parts = text.split(/(\*\*.*?\*\*)/)
+    
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
         return (
-          <div key={index} className="space-y-4">
-            {paragraphs.map((paragraph, pIndex) => {
-              const trimmedParagraph = paragraph.trim()
-              if (!trimmedParagraph) return null
-
-              // Détecter si c'est une liste (commence par un tiret ou contient des éléments de liste)
-              const lines = trimmedParagraph.split('\n').map(line => line.trim()).filter(line => line)
-              const isList = lines.some(line => 
-                line.startsWith('-') || 
-                line.startsWith('•') || 
-                line.match(/^\d+\./) ||
-                line.startsWith('*')
-              )
-
-              if (isList) {
-                // Traiter comme une liste
-                return (
-                  <ul key={pIndex} className="space-y-3">
-                    {lines.map((line, lineIndex) => {
-                      // Nettoyer la ligne de liste
-                      const cleanLine = line.replace(/^[-•*]\s*/, '').trim()
-                      if (!cleanLine) return null
-
-                      // Détecter si c'est un sous-élément (indenté)
-                      const isSubItem = line.startsWith('  ') || line.startsWith('\t')
-                      
-                      // Détecter si la ligne contient du texte en gras
-                      const hasBoldText = cleanLine.includes('**')
-                      const parts = hasBoldText ? cleanLine.split(/(\*\*.*?\*\*)/) : [cleanLine]
-
-                      return (
-                        <li key={lineIndex} className={`${isSubItem ? 'ml-6' : 'ml-4'} text-base leading-relaxed text-gray-800`}>
-                          {hasBoldText ? (
-                            <span>
-                              {parts.map((part, partIndex) => {
-                                if (part.startsWith('**') && part.endsWith('**')) {
-                                  return (
-                                    <strong key={partIndex} className="font-semibold">
-                                      {part.slice(2, -2)}
-                                    </strong>
-                                  )
-                                }
-                                return part
-                              })}
-                            </span>
-                          ) : (
-                            cleanLine
-                          )}
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )
-              } else {
-                // Traiter comme un paragraphe normal
-                // Détecter si le paragraphe contient du texte en gras
-                const hasBoldText = trimmedParagraph.includes('**')
-                const parts = hasBoldText ? trimmedParagraph.split(/(\*\*.*?\*\*)/) : [trimmedParagraph]
-
-                return (
-                  <p key={pIndex} className="text-base leading-relaxed text-gray-800">
-                    {hasBoldText ? (
-                      <span>
-                        {parts.map((part, partIndex) => {
-                          if (part.startsWith('**') && part.endsWith('**')) {
-                            return (
-                              <strong key={partIndex} className="font-semibold">
-                                {part.slice(2, -2)}
-                              </strong>
-                            )
-                          }
-                          return part
-                        })}
-                      </span>
-                    ) : (
-                      trimmedParagraph
-                    )}
-                  </p>
-                )
-              }
-            })}
-          </div>
+          <strong key={index} className="font-semibold text-gray-900">
+            {part.slice(2, -2)}
+          </strong>
         )
       }
+      return part
     })
   }
 

@@ -1,4 +1,5 @@
 import OpenAI from 'openai'
+import { buildStandardizedPrompt } from './formatting-template'
 
 interface OpenAIAnalysisInput {
   questionnaire_metadata: any
@@ -205,6 +206,7 @@ export class EnhancedOpenAIClient {
 
   /**
    * Construit le prompt d'analyse enrichi pour l'Assistant OpenAI
+   * Utilise la structure de formatage standardisée
    */
   private buildEnhancedAnalysisPrompt(data: OpenAIAnalysisInput): string {
     const { usecase_context, questionnaire_responses } = data
@@ -217,29 +219,20 @@ export class EnhancedOpenAIClient {
     
     // Construire la section des métadonnées
     const metadataSection = this.buildMetadataSection(data.questionnaire_metadata)
+    
+    // Construire les données complètes du questionnaire
+    const questionnaireData = `${contextSection}\n\n${responsesSection}\n\n${metadataSection}`
 
-    return `
-**ANALYSE DE CONFORMITÉ IA ACT - SECTION 3**
-
-${contextSection}
-
-${responsesSection}
-
-${metadataSection}
-
-**INSTRUCTIONS :**
-Analyse ces informations complètes et fournis une évaluation de conformité structurée avec :
-1. Évaluation du niveau de risque global
-2. Analyse des domaines d'application
-3. Évaluation de la conformité technique
-4. Obligations de transparence et supervision humaine
-5. Gestion des données et confidentialité
-6. Recommandations prioritaires personnalisées
-7. Quick wins (actions rapides) adaptés au contexte
-8. Plan d'action détaillé avec échéances
-
-Sois précis, professionnel et actionnable dans tes recommandations. Adapte l'analyse au profil de l'entreprise et au contexte spécifique du cas d'usage.
-    `.trim()
+    // Utiliser le template standardisé
+    return buildStandardizedPrompt(
+      usecase_context.entreprise.name,
+      usecase_context.cas_usage.name,
+      usecase_context.cas_usage.id,
+      usecase_context.entreprise.industry,
+      usecase_context.entreprise.city,
+      usecase_context.entreprise.country,
+      questionnaireData
+    )
   }
 
   /**
