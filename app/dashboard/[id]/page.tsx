@@ -343,11 +343,78 @@ export default function CompanyDashboard({ params }: DashboardProps) {
     return riskLevelMap[riskLevel?.toLowerCase()] || riskLevel || 'Non évalué'
   }
 
+  // Fonction pour obtenir les couleurs et icônes selon le niveau de risque
+  const getRiskLevelConfig = (riskLevel: string) => {
+    switch (riskLevel?.toLowerCase()) {
+      case 'minimal':
+        return {
+          bg: 'bg-[#f1fdfa]',
+          border: 'border-green-300',
+          text: 'text-green-800',
+          iconColor: 'text-green-600',
+          icon: (
+            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          )
+        }
+      case 'limited':
+        return {
+          bg: 'bg-yellow-50',
+          border: 'border-yellow-300',
+          text: 'text-yellow-800',
+          iconColor: 'text-yellow-600',
+          icon: (
+            <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          )
+        }
+      case 'high':
+        return {
+          bg: 'bg-orange-50',
+          border: 'border-orange-300',
+          text: 'text-orange-800',
+          iconColor: 'text-orange-600',
+          icon: (
+            <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          )
+        }
+      case 'unacceptable':
+        return {
+          bg: 'bg-red-50',
+          border: 'border-red-300',
+          text: 'text-red-800',
+          iconColor: 'text-red-600',
+          icon: (
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+          )
+        }
+      default:
+        return {
+          bg: 'bg-yellow-50',
+          border: 'border-yellow-300',
+          text: 'text-yellow-800',
+          iconColor: 'text-yellow-600',
+          icon: (
+            <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          )
+        }
+    }
+  }
+
+
+
   const getCompletedCount = () => {
     return useCases.filter(useCase => 
       ['completed', 'active'].includes(useCase.status?.toLowerCase())
     ).length
   }
+
 
   const getInProgressCount = () => {
     return useCases.filter(useCase => 
@@ -777,31 +844,33 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                                       <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex items-center space-x-2">
                                         <AlertTriangle className="h-4 w-4 text-red-500" />
                                         <div>
-                                          <div className="text-xs text-red-600">Niveau IA Act</div>
+                                          <div className="text-xs text-red-600 opacity-75">Risque</div>
                                           <div className="text-sm font-semibold text-red-800">
-                                            Risque Inacceptable
+                                            Inacceptable
                                           </div>
                                         </div>
                                       </div>
                                     ) : useCase.risk_level ? (
-                                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 flex items-center space-x-2">
-                                        <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                        </svg>
-                                        <div>
-                                          <div className="text-xs text-yellow-600">Niveau IA Act</div>
-                                          <div className="text-sm font-semibold text-yellow-800">
-                                            {getRiskLevelInFrench(useCase.risk_level)}
+                                      (() => {
+                                        const config = getRiskLevelConfig(useCase.risk_level);
+                                        return (
+                                          <div className={`${config.bg} ${config.border} rounded-lg p-2 flex items-center space-x-2`}>
+                                            {config.icon}
+                                            <div>
+                                              <div className={`text-xs ${config.text} opacity-75`}>Risque</div>
+                                              <div className={`text-sm font-semibold ${config.text}`}>
+                                                {getRiskLevelInFrench(useCase.risk_level).replace('Risque ', '')}
+                                              </div>
+                                            </div>
                                           </div>
-                                        </div>
-                                      </div>
+                                        );
+                                      })()
                                     ) : (
                                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 flex items-center space-x-2">
                                         <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                                         </svg>
                                         <div>
-                                          <div className="text-xs text-yellow-600">Niveau IA Act</div>
                                           <span className="px-2 py-1 text-xs font-medium rounded-full text-gray-700 border border-gray-200" style={{
                                             color: '#713f12',
                                             backgroundColor: '#fefce8'

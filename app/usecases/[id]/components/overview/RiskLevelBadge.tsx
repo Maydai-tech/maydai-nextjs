@@ -50,7 +50,7 @@ const getRiskLevelConfig = (level: RiskLevel) => {
         label: 'Risque Minimal',
         icon: CheckCircle,
         colors: {
-          bg: 'bg-green-50',
+          bg: 'bg-[#f1fdfa]',
           border: 'border-green-300',
           text: 'text-green-800',
           iconColor: 'text-green-600',
@@ -94,10 +94,10 @@ export function RiskLevelBadge({ riskLevel, loading = false, error = null, class
       <Icon className={`h-5 w-5 ${config.colors.iconColor} mr-2.5`} />
       <div className="flex flex-col">
         <span className={`text-xs font-medium ${config.colors.text} opacity-75`}>
-          Niveau IA Act
+          Risque
         </span>
         <span className={`text-sm font-bold ${config.colors.text} leading-tight`}>
-          {config.label}
+          {config.label.replace('Risque ', '')}
         </span>
       </div>
     </div>

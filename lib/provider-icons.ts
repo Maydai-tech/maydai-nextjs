@@ -17,6 +17,11 @@ const PROVIDER_ICON_MAP: Record<string, string> = {
   'xAI': '/icons_providers/xai.svg',
   'DeepSeek': '/icons_providers/deepseek.webp',
   'Qwen': '/icons_providers/qwen.webp',
+  // Ajout des variantes de noms pour correspondre aux données COMPL-AI
+  'Mistral AI': '/icons_providers/mistral.svg',
+  'Alibaba': '/icons_providers/qwen.webp',
+  '01.AI': '/icons_providers/deepseek.webp',
+  'SpeakLeash': '/icons_providers/openai.svg', // Fallback vers OpenAI
 }
 
 /**
@@ -46,6 +51,13 @@ export function getProviderIcon(providerName?: string | null): string {
   const lowerName = normalizedName.toLowerCase()
   for (const [key, value] of Object.entries(PROVIDER_ICON_MAP)) {
     if (key.toLowerCase() === lowerName) {
+      return value
+    }
+  }
+
+  // Recherche partielle pour gérer les variations de noms
+  for (const [key, value] of Object.entries(PROVIDER_ICON_MAP)) {
+    if (key.toLowerCase().includes(lowerName) || lowerName.includes(key.toLowerCase())) {
       return value
     }
   }
