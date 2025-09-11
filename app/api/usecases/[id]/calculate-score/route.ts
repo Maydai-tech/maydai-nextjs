@@ -52,7 +52,7 @@ function calculateRiskLevel(responses: any[]): string {
     
     if (!question) continue;
 
-    let selectedRiskLevel: string | undefined;
+    let selectedRiskLevel: string = 'minimal';
 
     // Déterminer le niveau de risque basé sur la réponse
     if (response.single_value) {
@@ -61,16 +61,16 @@ function calculateRiskLevel(responses: any[]): string {
         opt.code === response.single_value || opt.label === response.single_value
       );
       
-      if (option && 'risk' in option) {
+      if (option && 'risk' in option && option.risk) {
         selectedRiskLevel = option.risk;
       }
     } else if (response.multiple_codes && Array.isArray(response.multiple_codes)) {
       // Pour les questions multiples, prendre le risque le plus élevé parmi les options sélectionnées
       for (const code of response.multiple_codes) {
         const option = question.options?.find((opt: any) => opt.code === code);
-        if (option && 'risk' in option) {
+        if (option && 'risk' in option && option.risk) {
           const optionRisk = option.risk;
-          if (riskHierarchy.indexOf(optionRisk) > riskHierarchy.indexOf(selectedRiskLevel || 'minimal')) {
+          if (riskHierarchy.indexOf(optionRisk) > riskHierarchy.indexOf(selectedRiskLevel)) {
             selectedRiskLevel = optionRisk;
           }
         }
@@ -81,7 +81,7 @@ function calculateRiskLevel(responses: any[]): string {
         opt.code === response.conditional_main || opt.label === response.conditional_main
       );
       
-      if (option && 'risk' in option) {
+      if (option && 'risk' in option && option.risk) {
         selectedRiskLevel = option.risk;
       }
     }
