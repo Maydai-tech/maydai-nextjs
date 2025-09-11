@@ -107,3 +107,4 @@ Le script `scripts/test-formatting-structure.js` vérifie que :
 3. **Valider** le rendu visuel dans l'interface
 4. **Ajuster** si nécessaire selon les retours utilisateurs
 
+

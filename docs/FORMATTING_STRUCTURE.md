@@ -139,3 +139,4 @@ node scripts/test-formatting-structure.js
 - **Tests de régression** : Validation automatique
 - **Documentation** : Mise à jour des styles Cursor
 
+

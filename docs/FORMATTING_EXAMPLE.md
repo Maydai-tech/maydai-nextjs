@@ -40,3 +40,4 @@ Ces mesures permettront à MaydAI de se conformer aux exigences de l'AI Act tout
 
 MaydAI dispose d'une base solide pour développer des solutions d'IA conformes à l'AI Act. En suivant ce plan d'action structuré, l'entreprise pourra non seulement respecter les obligations réglementaires, mais aussi renforcer sa position concurrentielle en tant qu'acteur responsable de l'IA. La clé du succès réside dans l'approche progressive et méthodique de la mise en conformité.
 
+
