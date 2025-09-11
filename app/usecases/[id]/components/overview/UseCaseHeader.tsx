@@ -306,18 +306,14 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                 </div>
                 <div className="flex items-center space-x-2">
                   <Image
-                    src={`/icons_providers/${useCase.compl_ai_models?.model_provider?.toLowerCase().replace(/\s+/g, '')}.svg`}
+                    src={getProviderIcon(useCase.compl_ai_models?.model_provider)}
                     alt={useCase.compl_ai_models?.model_provider || 'Provider'}
                     width={24}
                     height={24}
                     className="w-6 h-6"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      const fallbackSrc = `/icons_providers/${useCase.compl_ai_models?.model_provider?.toLowerCase().replace(/\s+/g, '')}.webp`;
-                      target.src = fallbackSrc;
-                      target.onerror = () => {
-                        target.style.display = 'none';
-                      };
+                      target.style.display = 'none';
                     }}
                   />
                   <span className="text-sm text-gray-600">{useCase.compl_ai_models.model_name}</span>
