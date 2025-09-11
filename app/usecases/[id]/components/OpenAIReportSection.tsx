@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { useOpenAIReport } from '../hooks/useOpenAIReport'
 
 interface OpenAIReportSectionProps {
@@ -18,7 +19,7 @@ export function OpenAIReportSection({ usecaseId }: OpenAIReportSectionProps) {
 
     // Diviser le texte en lignes pour traiter le Markdown
     const lines = cleanedText.split('\n')
-    const elements: JSX.Element[] = []
+    const elements: React.ReactElement[] = []
     let currentParagraph: string[] = []
     let listItems: string[] = []
     let inList = false
