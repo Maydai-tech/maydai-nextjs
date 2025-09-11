@@ -1,4 +1,5 @@
 import OpenAI from 'openai'
+import { buildStandardizedPrompt } from './formatting-template'
 
 /**
  * Structure des données d'entrée pour l'analyse OpenAI
@@ -280,7 +281,7 @@ export class OpenAIClient {
 
   /**
    * Construit le prompt d'analyse pour l'Assistant OpenAI
-   * Formate les données du questionnaire en prompt structuré pour l'IA
+   * Utilise la structure de formatage standardisée
    * @param data - Données du cas d'usage et réponses au questionnaire
    * @returns string - Prompt formaté prêt à être envoyé à l'assistant
    */
@@ -294,59 +295,20 @@ export class OpenAIClient {
     
     // Construire la section du registre centralisé
     const registrySection = this.buildRegistrySection(registryInfo)
+    
+    // Construire les données du questionnaire
+    const questionnaireData = `${domainsSection}\n\n${registrySection}`
 
-    return `
-**ANALYSE DE CONFORMITÉ IA ACT - SECTION 3**
-
-**Informations de l'entreprise :**
-- Nom de l'entreprise : ${data.company_name}
-- Secteur d'activité : ${data.company_industry || 'Non spécifié'}
-- Localisation : ${data.company_city || 'Non spécifié'}, ${data.company_country || 'Non spécifié'}
-
-**Informations du système d'IA :**
-- Nom du système : ${data.usecase_name}
-- ID : ${data.usecase_id}
-
-**IMPORTANT :** 
-- L'entreprise s'appelle "${data.company_name}"
-- Le système d'IA s'appelle "${data.usecase_name}"
-- Dans ton analyse, utilise toujours "${data.company_name}" comme nom de l'entreprise
-
-**RÉPONSES AU QUESTIONNAIRE :**
-
-${domainsSection}
-
-${registrySection}
-
-**INSTRUCTIONS :**
-Analyse ces informations et fournis une évaluation de conformité structurée avec le formatage Markdown suivant :
-
-**FORMATAGE OBLIGATOIRE :**
-- Utilise **Titre en gras** pour tous les titres de section
-- Utilise des puces (-) pour les listes à puces
-- Utilise **Texte en gras** pour les sous-titres et éléments importants
-- Évite les traits (-) isolés en fin de ligne
-- Assure-toi que les phrases sont complètes et ne sont pas coupées
-- Structure le rapport avec les sections suivantes :
-
-**Recommandations et plan d'action**
-**Introduction contextuelle**
-**Évaluation du niveau de risque AI Act**
-**Les 3 priorités d'actions réglementaires**
-**Quick wins (actions immédiates recommandées)**
-**Actions à moyen terme**
-**Conclusion**
-
-**RÈGLES DE FORMATAGE :**
-- Chaque phrase doit être complète sur une seule ligne
-- Ne pas laisser de traits (-) isolés
-- Utiliser des puces (-) uniquement pour les listes
-- Les sous-titres doivent être suivis de deux points (:)
-- Éviter les retours à la ligne intempestifs
-
-Sois précis, professionnel et actionnable dans tes recommandations.
-**RAPPEL :** Utilise "${data.company_name}" comme nom de l'entreprise et "${data.usecase_name}" comme nom du système d'IA.
-    `.trim()
+    // Utiliser le template standardisé
+    return buildStandardizedPrompt(
+      data.company_name,
+      data.usecase_name,
+      data.usecase_id,
+      data.company_industry,
+      data.company_city,
+      data.company_country,
+      questionnaireData
+    )
   }
 
   /**
