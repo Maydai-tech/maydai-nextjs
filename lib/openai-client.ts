@@ -2,7 +2,7 @@ import OpenAI from 'openai'
 import { buildStandardizedPrompt } from './formatting-template'
 
 /**
- * Structure des données d'entrée pour l'analyse OpenAI
+ * Structure des données d'entrée pour l'analyse OpenAI (ancien format)
  * Contient les informations du cas d'usage et les réponses au questionnaire de conformité
  */
 interface OpenAIAnalysisInput {
@@ -30,6 +30,57 @@ interface OpenAIAnalysisInput {
       }
     }
   }
+}
+
+/**
+ * Structure des données d'entrée complètes pour l'analyse OpenAI (nouveau format)
+ * Contient toutes les informations du questionnaire et du contexte
+ */
+interface OpenAIAnalysisInputComplete {
+  questionnaire_questions: Record<string, any>
+  usecase_context_fields: {
+    entreprise: {
+      name: string
+      industry: string
+      city: string
+      country: string
+      company_status: string
+    }
+    cas_usage: {
+      id: string
+      name: string
+      description: string
+      deployment_date: string
+      status: string
+      risk_level: string
+      ai_category: string
+      system_type: string
+      responsible_service: string
+      deployment_countries: string[]
+    }
+    technologie: {
+      technology_partner: string
+      llm_model_version: string
+      primary_model_id: string
+      model_name: string
+      model_provider: string
+      model_type: string
+    }
+    repondant: {
+      profile: string
+      situation: string
+    }
+    scores: {
+      score_base: number
+      score_model: number | null
+      score_final: number | null
+      is_eliminated: boolean
+      elimination_reason: string
+    }
+  }
+  risk_categories: Record<string, string>
+  priority_levels: Record<string, string>
+  status_levels: Record<string, string>
 }
 
 /**
@@ -85,7 +136,7 @@ export class OpenAIClient {
   }
 
   /**
-   * Point d'entrée principal pour générer une analyse de conformité
+   * Point d'entrée principal pour générer une analyse de conformité (ancien format)
    * @param data - Données du cas d'usage et réponses au questionnaire
    * @returns Promise<string> - Rapport d'analyse généré par l'Assistant OpenAI
    */
@@ -95,7 +146,17 @@ export class OpenAIClient {
   }
 
   /**
-   * Exécute le workflow complet avec l'Assistant OpenAI
+   * Point d'entrée principal pour générer une analyse de conformité (nouveau format complet)
+   * @param data - Données complètes du cas d'usage et réponses au questionnaire
+   * @returns Promise<string> - Rapport d'analyse généré par l'Assistant OpenAI
+   */
+  async generateComplianceAnalysisComplete(data: OpenAIAnalysisInputComplete): Promise<string> {
+    console.log('🚀 Génération d\'analyse de conformité complète avec Assistant OpenAI pour:', data.usecase_context_fields.cas_usage.name)
+    return await this.executeAssistantWorkflowComplete(data)
+  }
+
+  /**
+   * Exécute le workflow complet avec l'Assistant OpenAI (ancien format)
    * Étapes : 1) Création du thread et run, 2) Polling du statut, 3) Récupération du résultat
    * @param data - Données d'entrée pour l'analyse
    * @returns Promise<string> - Résultat de l'analyse
@@ -121,6 +182,37 @@ export class OpenAIClient {
       
     } catch (error) {
       console.error('❌ Erreur dans le workflow Assistant OpenAI:', error)
+      throw new Error(`Erreur avec l'Assistant OpenAI: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
+    }
+  }
+
+  /**
+   * Exécute le workflow complet avec l'Assistant OpenAI (nouveau format complet)
+   * Étapes : 1) Création du thread et run, 2) Polling du statut, 3) Récupération du résultat
+   * @param data - Données complètes d'entrée pour l'analyse
+   * @returns Promise<string> - Résultat de l'analyse
+   */
+  private async executeAssistantWorkflowComplete(data: OpenAIAnalysisInputComplete): Promise<string> {
+    try {
+      // Étape 1: Préparer le prompt d'analyse complet
+      const analysisPrompt = this.buildCompleteAnalysisPrompt(data)
+      
+      // Étape 2: Créer et lancer l'Assistant OpenAI
+      const assistantRun = await this.createAndRunAssistant(analysisPrompt)
+      
+      // Étape 3: Attendre la completion du traitement
+      const completedRun = await this.waitForRunCompletion(assistantRun)
+      
+      // Étape 4: Récupérer et nettoyer le résultat
+      const analysisResult = await this.retrieveAssistantResponse(completedRun.thread_id)
+      
+      // Étape 5: Nettoyer les ressources (thread)
+      await this.cleanupThread(completedRun.thread_id)
+      
+      return analysisResult
+      
+    } catch (error) {
+      console.error('❌ Erreur dans le workflow Assistant OpenAI complet:', error)
       throw new Error(`Erreur avec l'Assistant OpenAI: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
     }
   }
@@ -342,6 +434,179 @@ ${domainsText}`
 Question : ${registryInfo.question}
 Réponse : ${registryInfo.selected_label}
 ${conditionalDetails}`
+  }
+
+  /**
+   * Construit le prompt d'analyse complet pour le nouveau format
+   * @param data - Données complètes du cas d'usage et réponses au questionnaire
+   * @returns string - Prompt formaté prêt à être envoyé à l'assistant
+   */
+  private buildCompleteAnalysisPrompt(data: OpenAIAnalysisInputComplete): string {
+    const { usecase_context_fields, questionnaire_questions } = data
+    const { entreprise, cas_usage, technologie, repondant, scores } = usecase_context_fields
+
+    // Construire la section des informations de base
+    const baseInfo = `**ANALYSE DE CONFORMITÉ IA ACT - SECTION 3**
+
+**Informations de l'entreprise :**
+- Nom de l'entreprise : ${entreprise.name}
+- Secteur d'activité : ${entreprise.industry}
+- Localisation : ${entreprise.city}, ${entreprise.country}
+- Statut dans la chaîne de valeur IA : ${entreprise.company_status}
+
+**Informations du système d'IA :**
+- Nom du système : ${cas_usage.name}
+- ID : ${cas_usage.id}
+- Description : ${cas_usage.description}
+- Date de déploiement : ${cas_usage.deployment_date}
+- Statut : ${cas_usage.status}
+- Niveau de risque : ${cas_usage.risk_level}
+- Catégorie d'IA : ${cas_usage.ai_category}
+- Type de système : ${cas_usage.system_type}
+- Service responsable : ${cas_usage.responsible_service}
+- Pays de déploiement : ${cas_usage.deployment_countries.join(', ')}
+
+**Informations technologiques :**
+- Partenaire technologique : ${technologie.technology_partner}
+- Version du modèle LLM : ${technologie.llm_model_version}
+- Nom du modèle : ${technologie.model_name}
+- Fournisseur du modèle : ${technologie.model_provider}
+- Type de modèle : ${technologie.model_type}
+
+**Profil du répondant :**
+- Profil : ${repondant.profile}
+- Situation : ${repondant.situation}
+
+**Scores de conformité :**
+- Score de base : ${scores.score_base}
+- Score du modèle : ${scores.score_model || 'Non calculé'}
+- Score final : ${scores.score_final || 'Non calculé'}
+- Système éliminé : ${scores.is_eliminated ? 'Oui' : 'Non'}
+- Raison d'élimination : ${scores.elimination_reason || 'N/A'}`
+
+    // Construire la section du questionnaire
+    const questionnaireSection = this.buildQuestionnaireSection(questionnaire_questions)
+
+    // Instructions de formatage
+    const formattingInstructions = `
+**INSTRUCTIONS DE FORMATAGE OBLIGATOIRES :**
+
+Tu dois suivre EXACTEMENT cette structure Markdown, sans modification :
+
+1. **Titre principal** : "# Recommandations et plan d'action"
+
+2. **Introduction contextuelle** : "## Introduction contextuelle"
+   - Texte narratif décrivant le contexte de l'entreprise et du système IA
+
+3. **Évaluation du niveau de risque AI Act** : "## Évaluation du niveau de risque AI Act"
+   - Texte narratif évaluant le niveau de risque spécifique
+
+4. **Il est impératif de mettre en œuvre les mesures suivantes :** : "## Il est impératif de mettre en œuvre les mesures suivantes :"
+   - **Les 3 priorités d'actions réglementaires** : "### Les 3 priorités d'actions réglementaires"
+   - **Phrase 1.** Suite du texte.
+   - **Phrase 2.** Suite du texte.
+   - **Phrase 3.** Suite du texte.
+
+5. **Trois actions concrètes à mettre en œuvre rapidement :** : "## Trois actions concrètes à mettre en œuvre rapidement :"
+   - **Quick wins & actions immédiates recommandées** : "### Quick wins & actions immédiates recommandées"
+   - **Phrase 1.** Suite du texte.
+   - **Phrase 2.** Suite du texte.
+   - **Phrase 3.** Suite du texte.
+
+6. **Impact attendu** : "## Impact attendu"
+   - [Texte narratif]
+
+7. **Trois actions structurantes à mener dans les 3 à 6 mois :** : "## Trois actions structurantes à mener dans les 3 à 6 mois :"
+   - **Actions à moyen terme** : "### Actions à moyen terme"
+   - **Sous-titre 1 :** [Texte narratif]
+   - **Sous-titre 2 :** [Texte narratif]
+   - **Sous-titre 3 :** [Texte narratif]
+
+8. **Conclusion** : "## Conclusion"
+   - [Texte narratif]
+
+**RÈGLES STRICTES :**
+- Utilise EXACTEMENT la syntaxe Markdown fournie
+- Respecte EXACTEMENT cette structure
+- Ne modifie pas les titres ou sous-titres
+- Utilise des phrases complètes et professionnelles
+- Adapte le contenu selon l'entreprise et le système IA analysé
+- Utilise **texte en gras** pour les phrases d'action importantes
+- Utilise # pour les titres principaux, ## pour les sections, ### pour les sous-sections
+
+Sois précis, professionnel et actionnable dans tes recommandations.
+**RAPPEL :** Utilise "${entreprise.name}" comme nom de l'entreprise et "${cas_usage.name}" comme nom du système d'IA.`
+
+    return `${baseInfo}\n\n${questionnaireSection}\n\n${formattingInstructions}`.trim()
+  }
+
+  /**
+   * Construit la section du questionnaire complet
+   * @param questionnaireQuestions - Toutes les questions et réponses du questionnaire
+   * @returns string - Section formatée
+   */
+  private buildQuestionnaireSection(questionnaireQuestions: Record<string, any>): string {
+    let questionnaireText = "**DONNÉES DU QUESTIONNAIRE COMPLET :**\n\n"
+    
+    // Grouper les questions par catégorie de risque
+    const questionsByCategory = this.groupQuestionsByCategory(questionnaireQuestions)
+    
+    Object.entries(questionsByCategory).forEach(([category, questions]) => {
+      questionnaireText += `**${category} :**\n`
+      
+      questions.forEach((question: any) => {
+        questionnaireText += `\n**${question.code} - ${question.question_text}**\n`
+        questionnaireText += `Type : ${question.type} | Statut : ${question.status} | Priorité : ${question.priority}\n`
+        questionnaireText += `Interprétation : ${question.interpretation}\n`
+        
+        if (question.user_response && question.user_response.answered) {
+          questionnaireText += `Réponse de l'utilisateur :\n`
+          
+          if (question.user_response.single_value) {
+            questionnaireText += `- ${question.user_response.single_label}\n`
+          }
+          
+          if (question.user_response.multiple_labels && question.user_response.multiple_labels.length > 0) {
+            questionnaireText += `- ${question.user_response.multiple_labels.join(', ')}\n`
+          }
+          
+          if (question.user_response.conditional_data && Object.keys(question.user_response.conditional_data).length > 0) {
+            questionnaireText += `- Détails : ${Object.entries(question.user_response.conditional_data).map(([key, value]) => `${key}: ${value}`).join(', ')}\n`
+          }
+        } else {
+          questionnaireText += `- Aucune réponse fournie\n`
+        }
+        
+        if (question.quick_wins && question.quick_wins.length > 0) {
+          questionnaireText += `Quick wins : ${question.quick_wins.join(', ')}\n`
+        }
+        
+        questionnaireText += `Article concerné : ${question.article_concerne}\n`
+        questionnaireText += `Impact conformité : ${question.impact_conformite}\n`
+        questionnaireText += `---\n`
+      })
+    })
+    
+    return questionnaireText
+  }
+
+  /**
+   * Groupe les questions par catégorie de risque
+   * @param questionnaireQuestions - Toutes les questions du questionnaire
+   * @returns Record<string, any[]> - Questions groupées par catégorie
+   */
+  private groupQuestionsByCategory(questionnaireQuestions: Record<string, any>): Record<string, any[]> {
+    const categories: Record<string, any[]> = {}
+    
+    Object.values(questionnaireQuestions).forEach((question: any) => {
+      const category = question.risk_category || 'Conformité générale'
+      if (!categories[category]) {
+        categories[category] = []
+      }
+      categories[category].push(question)
+    })
+    
+    return categories
   }
 }
 
