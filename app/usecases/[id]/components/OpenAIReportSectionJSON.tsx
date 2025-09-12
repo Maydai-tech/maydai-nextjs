@@ -38,7 +38,7 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Il est impératif de mettre en œuvre les mesures suivantes :</h2>
             <h3 className="text-lg font-medium text-gray-700 mb-3">Les 3 priorités d'actions réglementaires</h3>
             <ul className="space-y-2 mb-4 ml-4">
-              {reportData.priorites_actions.map((action, index) => (
+              {reportData.priorites_actions.map((action: string, index: number) => (
                 <li key={index} className="text-base leading-relaxed text-gray-800">
                   {action}
                 </li>
@@ -51,7 +51,7 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Trois actions concrètes à mettre en œuvre rapidement :</h2>
             <h3 className="text-lg font-medium text-gray-700 mb-3">Quick wins & actions immédiates recommandées</h3>
             <ul className="space-y-2 mb-4 ml-4">
-              {reportData.quick_wins.map((action, index) => (
+              {reportData.quick_wins.map((action: string, index: number) => (
                 <li key={index} className="text-base leading-relaxed text-gray-800">
                   {action}
                 </li>
@@ -70,7 +70,7 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Trois actions structurantes à mener dans les 3 à 6 mois :</h2>
             <h3 className="text-lg font-medium text-gray-700 mb-3">Actions à moyen terme</h3>
             <ul className="space-y-2 mb-4 ml-4">
-              {reportData.actions_moyen_terme.map((action, index) => (
+              {reportData.actions_moyen_terme.map((action: string, index: number) => (
                 <li key={index} className="text-base leading-relaxed text-gray-800">
                   {action}
                 </li>
@@ -107,14 +107,14 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
         
         processedText = processedText.replace(sectionRegex, (match, title, content) => {
           // Diviser le contenu en phrases (séparées par des points suivis d'un espace et d'une majuscule)
-          const sentences = content.trim().split(/\.\s+(?=[A-Z])/).filter(s => s.trim())
+          const sentences = content.trim().split(/\.\s+(?=[A-Z])/).filter((s: string) => s.trim())
           
           if (sentences.length > 0) {
             // Transformer en liste à puces
-            const bulletPoints = sentences.map(sentence => {
+            const bulletPoints = sentences.map((sentence: string) => {
               const trimmed = sentence.trim()
               return trimmed.endsWith('.') ? trimmed : trimmed + '.'
-            }).map(sentence => `- ${sentence}`).join('\n')
+            }).map((sentence: string) => `- ${sentence}`).join('\n')
             
             return `${title}\n\n${bulletPoints}\n\n`
           }
@@ -148,7 +148,7 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
         if (listItems.length > 0) {
           elements.push(
             <ul key={elements.length} className="space-y-2 mb-4 ml-4">
-              {listItems.map((item, index) => (
+              {listItems.map((item: string, index: number) => (
                 <li key={index} className="text-base leading-relaxed text-gray-800">
                   {item}
                 </li>
