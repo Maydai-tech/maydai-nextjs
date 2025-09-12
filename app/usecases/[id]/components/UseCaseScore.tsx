@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
-import { getScoreCategory } from '@/lib/score-styles'
+import { getScoreCategory, getScoreStyle } from '@/lib/score-styles'
 import { getScoreRecommendations } from '../utils/score-categories'
 import { RISK_CATEGORIES } from '../utils/risk-categories'
 import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, Info } from 'lucide-react'
@@ -68,7 +68,7 @@ export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseC
 
       {/* Score Display */}
       <div className="p-6">
-        <div className={`p-4 rounded-lg ${category.color} mb-4`}>
+        <div className={`p-4 rounded-lg ${getScoreStyle(score.score).bg} ${getScoreStyle(score.score).border} border ${getScoreStyle(score.score).shadow} shadow-sm mb-4`}>
           <div className="flex items-center space-x-3">
             <span className="text-2xl">{category.icon}</span>
             <div>
