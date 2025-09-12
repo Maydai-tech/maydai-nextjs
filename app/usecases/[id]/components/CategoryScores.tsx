@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { RISK_CATEGORIES } from '../utils/risk-categories'
 import { AlertCircle, Info, AlertTriangle } from 'lucide-react'
+import { getScoreStyle } from '@/lib/score-styles'
 
 interface CategoryScoresProps {
   usecaseId: string
@@ -13,26 +14,13 @@ interface CategoryScoresProps {
 export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: CategoryScoresProps) {
   const { score, loading, error } = useUseCaseScore(usecaseId)
 
-  // Fonction pour déterminer la couleur selon le score
+  // Utilise les styles unifiés de l'application
   const getScoreColor = (percentage: number) => {
-    if (percentage < 30) {
-      return {
-        text: 'text-red-600',
-        bg: 'bg-red-500',
-        border: 'border-red-200'
-      }
-    } else if (percentage < 60) {
-      return {
-        text: 'text-orange-600',
-        bg: 'bg-orange-500',
-        border: 'border-orange-200'
-      }
-    } else {
-      return {
-        text: 'text-green-600',
-        bg: 'bg-green-500',
-        border: 'border-green-200'
-      }
+    const style = getScoreStyle(percentage)
+    return {
+      text: style.accent,
+      bg: style.indicator,
+      border: style.border
     }
   }
 
@@ -201,13 +189,6 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
           })}
       </div>
       
-      {/* Légende */}
-      <div className="mt-4 pt-3 border-t border-gray-200">
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>Score global: {score.score}/{score.max_score}</span>
-          <span>{Math.round((score.score / score.max_score) * 100)}/100</span>
-        </div>
-      </div>
     </div>
   )
 }) 

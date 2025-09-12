@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
-import { getScoreCategory, getScoreRecommendations } from '../utils/score-categories'
+import { getScoreCategory } from '@/lib/score-styles'
+import { getScoreRecommendations } from '../utils/score-categories'
 import { RISK_CATEGORIES } from '../utils/risk-categories'
 import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, Info } from 'lucide-react'
 import ComplAiScoreDisplay from './ComplAiScoreDisplay'

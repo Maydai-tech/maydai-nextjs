@@ -23,6 +23,7 @@ import WorldMap from '@/components/WorldMap'
 import ScoreCircle from '@/components/ScoreCircle'
 import DeleteConfirmationModal from '@/app/usecases/[id]/components/DeleteConfirmationModal'
 import Image from 'next/image'
+import { getCompactScoreStyle, getSpecialScoreStyles } from '@/lib/score-styles'
 
 interface Company {
   id: string
@@ -884,31 +885,36 @@ export default function CompanyDashboard({ params }: DashboardProps) {
 
                                   {/* Carte Score de conformité */}
                                   <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0">
-                                    <div className="flex items-center space-x-1 mb-2">
-                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                      <span className="text-xs font-medium text-gray-600">Score de conformité</span>
-                                    </div>
                                     {useCase.score_final !== null && useCase.score_final !== undefined ? (
-                                      <div className="bg-blue-50 rounded-lg p-3 text-center">
-                                        <div className="text-2xl font-bold text-blue-600">
-                                          {Math.round(useCase.score_final)}
+                                      <>
+                                        <div className="flex items-center space-x-1 mb-2">
+                                          <div className={`w-2 h-2 rounded-full ${getCompactScoreStyle(useCase.score_final).indicator}`}></div>
+                                          <span className="text-xs font-medium text-gray-600">Score de conformité</span>
                                         </div>
-                                        {useCase.is_eliminated && (
-                                          <div className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold border border-red-200 mt-2">
-                                            <AlertTriangle className="h-3 w-3 mr-1" />
-                                            Éliminé
+                                        <div className={`${getCompactScoreStyle(useCase.score_final).bg} rounded-lg p-3 text-center`}>
+                                          <div className={`text-2xl font-bold ${getCompactScoreStyle(useCase.score_final).accent}`}>
+                                            {Math.round(useCase.score_final)}
                                           </div>
-                                        )}
-                                      </div>
+                                          {useCase.is_eliminated && (
+                                            <div className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold border border-red-200 mt-2">
+                                              <AlertTriangle className="h-3 w-3 mr-1" />
+                                              Éliminé
+                                            </div>
+                                          )}
+                                        </div>
+                                      </>
                                     ) : (
-                                      <div className="bg-blue-50 rounded-lg p-3 text-center">
-                                        <span className="px-2 py-1 text-xs font-medium rounded-full text-gray-700 border border-gray-200" style={{
-                                          color: '#713f12',
-                                          backgroundColor: '#fefce8'
-                                        }}>
-                                          N/A
-                                        </span>
-                                      </div>
+                                      <>
+                                        <div className="flex items-center space-x-1 mb-2">
+                                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                                          <span className="text-xs font-medium text-gray-600">Score de conformité</span>
+                                        </div>
+                                        <div className="bg-gray-50 rounded-lg p-3 text-center">
+                                          <span className="px-2 py-1 text-xs font-medium rounded-full text-gray-700 border border-gray-200">
+                                            N/A
+                                          </span>
+                                        </div>
+                                      </>
                                     )}
                                   </div>
                                 </div>

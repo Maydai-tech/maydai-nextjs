@@ -1,7 +1,7 @@
 'use client'
 
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
-import { getScoreCategory } from '../utils/score-categories'
+import { getScoreCategory } from '@/lib/score-styles'
 import { AlertCircle, CheckCircle, Info } from 'lucide-react'
 
 interface CompactScoreProps {

@@ -28,8 +28,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Get initial session with error handling
     const getInitialSession = async () => {
+      console.log('Auth: Starting getInitialSession...')
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Auth timeout')), 10000)
+        )
+        
+        const sessionPromise = supabase.auth.getSession()
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]) as any
+        
+        console.log('Auth: getSession result:', { session: !!session, error })
         if (mounted) {
           if (error) {
             console.error('Error getting session:', error)
@@ -37,11 +46,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setSession(session)
             setUser(session?.user ?? null)
           }
+          console.log('Auth: Setting loading to false')
           setLoading(false)
         }
       } catch (error) {
         console.error('Error in getSession:', error)
         if (mounted) {
+          console.log('Auth: Setting loading to false after error')
           setLoading(false)
         }
       }

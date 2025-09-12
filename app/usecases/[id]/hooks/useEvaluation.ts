@@ -18,11 +18,14 @@ interface UseEvaluationReturn {
   isSubmitting: boolean
   isCompleted: boolean
   isCalculatingScore: boolean
+  isGeneratingReport: boolean
+  showProcessingAnimation: boolean
   error: string | null
   handleAnswerSelect: (answer: any) => void
   handleNext: () => void
   handlePrevious: () => void
   handleSubmit: () => Promise<void>
+  handleProcessingComplete: () => void
 }
 
 interface UseEvaluationProps {
@@ -43,6 +46,8 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
   const [error, setError] = useState<string | null>(null)
   const [initialDataLoaded, setInitialDataLoaded] = useState(false)
   const [isCalculatingScore, setIsCalculatingScore] = useState(false)
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
+  const [showProcessingAnimation, setShowProcessingAnimation] = useState(false)
 
   const {
     formattedAnswers: savedAnswers,
@@ -178,6 +183,9 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
         // Complete questionnaire
         console.log('🏁 Completing questionnaire')
         
+        // Show processing animation
+        setShowProcessingAnimation(true)
+        
         // Calculate score using API
         console.log('🧮 Calculating use case score...')
         setIsCalculatingScore(true)
@@ -206,6 +214,8 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
 
         // Generate OpenAI report automatically after questionnaire completion
         console.log('🤖 Generating OpenAI report automatically...')
+        setIsGeneratingReport(true)
+        
         try {
           const reportResponse = await fetch('/api/generate-report', {
             method: 'POST',
@@ -228,12 +238,12 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
         } catch (reportError) {
           console.error('❌ Error generating OpenAI report:', reportError)
           // Continue with completion even if report generation fails
+        } finally {
+          setIsGeneratingReport(false)
         }
         
-        setQuestionnaireData(prev => ({ ...prev, isCompleted: true }))
-        setTimeout(() => {
-          onComplete()
-        }, 1500)
+        // Note: L'animation se terminera automatiquement via handleProcessingComplete
+        // qui sera appelé par le composant ProcessingAnimation
       } else {
         // Move to next question
         const nextId = getNextQuestion(questionnaireData.currentQuestionId, questionnaireData.answers)
@@ -279,6 +289,15 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
     await handleNext()
   }
 
+  const handleProcessingComplete = useCallback(() => {
+    console.log('🎉 Processing animation completed')
+    setShowProcessingAnimation(false)
+    setQuestionnaireData(prev => ({ ...prev, isCompleted: true }))
+    setTimeout(() => {
+      onComplete()
+    }, 500)
+  }, [onComplete])
+
   return {
     questionnaireData,
     currentQuestion,
@@ -290,10 +309,13 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
     isSubmitting,
     isCompleted: questionnaireData.isCompleted,
     isCalculatingScore,
+    isGeneratingReport,
+    showProcessingAnimation,
     error,
     handleAnswerSelect,
     handleNext,
     handlePrevious,
-    handleSubmit
+    handleSubmit,
+    handleProcessingComplete
   }
 } 
