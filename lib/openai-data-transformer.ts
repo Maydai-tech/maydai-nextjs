@@ -313,8 +313,8 @@ export function transformToOpenAIFormatComplete(
     },
     scores: {
       score_base: usecase.score_base || 0,
-      score_model: usecase.score_model,
-      score_final: usecase.score_final,
+      score_model: usecase.score_model || null,
+      score_final: usecase.score_final || null,
       is_eliminated: usecase.is_eliminated || false,
       elimination_reason: usecase.elimination_reason || ''
     }
