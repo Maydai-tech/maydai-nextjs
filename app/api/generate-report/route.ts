@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { transformToOpenAIFormat, extractTargetResponses, validateOpenAIInput } from '@/lib/openai-data-transformer'
+import { transformToOpenAIFormatComplete, validateOpenAIInput } from '@/lib/openai-data-transformer'
 import { openAIClient } from '@/lib/openai-client'
 
 // GET: Récupérer un rapport existant
@@ -64,13 +64,16 @@ export async function POST(req: NextRequest) {
 
     // Utiliser le client Supabase configuré
     
-    // Récupérer les informations complètes du use case avec l'entreprise
+    // Récupérer les informations complètes du use case avec l'entreprise et le modèle
     const { data: usecase, error: usecaseError } = await supabase
     .from('usecases')
     .select(`
       id, name, description, deployment_date, status, risk_level, ai_category, 
       system_type, responsible_service, deployment_countries, company_status,
-      companies(name, industry, city, country)
+      technology_partner, llm_model_version, primary_model_id,
+      score_base, score_model, score_final, is_eliminated, elimination_reason,
+      companies(name, industry, city, country),
+      compl_ai_models(id, model_name, model_provider, model_type, version)
     `)
     .eq('id', usecase_id)
     .single()
@@ -79,51 +82,49 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Usecase not found' }, { status: 404 })
     }
 
-    // Récupérer toutes les réponses du questionnaire
+    // Récupérer TOUTES les réponses du questionnaire (pas seulement 2 questions)
     const { data: responses, error: responseError } = await supabase
     .from('usecase_responses')
-    .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
+    .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values, answered_by')
     .eq('usecase_id', usecase_id)
-    .in('question_code', ['E4.N7.Q2', 'E5.N9.Q7'])
 
     if (responseError) {
       console.error('Erreur récupération réponses:', responseError)
       return NextResponse.json({ error: 'Failed to fetch questionnaire responses' }, { status: 500 })
     }
 
-    // Extraire et transformer les réponses
-    const targetResponses = extractTargetResponses(responses || [])
-    
     // Extraire les informations d'entreprise
     const company = Array.isArray(usecase.companies) ? usecase.companies[0] : usecase.companies
-    const companyName = company?.name || 'MaydAI' // Fallback par défaut
+    const companyName = company?.name || 'MaydAI'
     const companyIndustry = company?.industry
     const companyCity = company?.city
     const companyCountry = company?.country
+
+    // Extraire les informations du modèle
+    const model = Array.isArray(usecase.compl_ai_models) ? usecase.compl_ai_models[0] : usecase.compl_ai_models
     
-    const transformedData = transformToOpenAIFormat(
-      usecase.id, 
-      usecase.name, 
-      companyName,
-      targetResponses,
-      companyIndustry,
-      companyCity,
-      companyCountry
+    // Extraire le profil du répondant
+    const respondentEmail = responses?.[0]?.answered_by || 'Non disponible'
+    
+    const transformedData = transformToOpenAIFormatComplete(
+      usecase as any, // Cast temporaire pour éviter les erreurs de type
+      company,
+      model,
+      responses || [],
+      respondentEmail
     )
 
-    // Valider les données transformées
-    const validation = validateOpenAIInput(transformedData)
-    if (!validation.isValid) {
-      console.log('⚠️ Données insuffisantes pour l\'analyse OpenAI:', validation.errors)
+    // Valider les données transformées (validation simplifiée pour le nouveau format)
+    if (!transformedData.usecase_context_fields?.cas_usage?.id) {
+      console.log('⚠️ Données insuffisantes pour l\'analyse OpenAI')
       return NextResponse.json({ 
         error: 'Données insuffisantes pour l\'analyse. Veuillez compléter le questionnaire d\'abord.', 
-        details: validation.errors,
         requires_questionnaire: true
       }, { status: 400 })
     }
 
-    // Générer l'analyse avec OpenAI
-    const analysis = await openAIClient.generateComplianceAnalysis(transformedData)
+    // Générer l'analyse avec OpenAI (nouveau format complet)
+    const analysis = await openAIClient.generateComplianceAnalysisComplete(transformedData)
 
     // Sauvegarder le rapport dans la base de données
     const { error: saveError } = await supabase
