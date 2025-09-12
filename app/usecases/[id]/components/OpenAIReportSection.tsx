@@ -23,7 +23,9 @@ export function OpenAIReportSection({ usecaseId }: OpenAIReportSectionProps) {
     // Diviser le texte en lignes pour traiter le Markdown
     const lines = cleanedText.split('\n')
     const elements: React.ReactElement[] = []
-    let currentParagraph = ''
+    let currentParagraph: string[] = []
+    let listItems: string[] = []
+    let inList = false
     let inCodeBlock = false
 
     const flushParagraph = () => {
