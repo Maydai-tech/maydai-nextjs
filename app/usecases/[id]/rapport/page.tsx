@@ -10,7 +10,7 @@ import { UseCaseLoader } from '../components/shared/UseCaseLoader'
 import { RiskLevelBadge } from '../components/overview/RiskLevelBadge'
 import { useRiskLevel } from '../hooks/useRiskLevel'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
-import { OpenAIReportSection } from '../components/OpenAIReportSection'
+import { OpenAIReportSectionJSON as OpenAIReportSection } from '../components/OpenAIReportSectionJSON'
 
 // Fonction utilitaire pour convertir le statut d'entreprise en libellé lisible
 function getCompanyStatusLabel(status?: string): string {

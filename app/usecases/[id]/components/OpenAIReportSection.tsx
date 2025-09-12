@@ -17,12 +17,14 @@ export function OpenAIReportSection({ usecaseId }: OpenAIReportSectionProps) {
       .replace(/\n\s*\n\s*\n/g, '\n\n') // Nettoyer les retours à la ligne multiples
       .trim()
 
+    // Traitement spécial pour ajouter des puces aux phrases d'action
+    cleanedText = addBulletPointsToActionPhrases(cleanedText)
+
     // Diviser le texte en lignes pour traiter le Markdown
     const lines = cleanedText.split('\n')
     const elements: React.ReactElement[] = []
-    let currentParagraph: string[] = []
-    let listItems: string[] = []
-    let inList = false
+    let currentParagraph = ''
+    let inCodeBlock = false
 
     const flushParagraph = () => {
       if (currentParagraph.length > 0) {
@@ -108,6 +110,54 @@ export function OpenAIReportSection({ usecaseId }: OpenAIReportSectionProps) {
     flushList()
 
     return elements
+  }
+
+  // Fonction pour ajouter des puces aux phrases d'action
+  const addBulletPointsToActionPhrases = (text: string) => {
+    // Détecter les sections avec des phrases d'action
+    const actionSections = [
+      '### Les 3 priorités d\'actions réglementaires',
+      '### Quick wins & actions immédiates recommandées',
+      '### Actions à moyen terme'
+    ]
+
+    let processedText = text
+
+    actionSections.forEach(sectionTitle => {
+      // Trouver la section
+      const sectionRegex = new RegExp(`(${sectionTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?)(?=###|##|$)`, 'g')
+      
+      processedText = processedText.replace(sectionRegex, (match) => {
+        // Diviser en lignes
+        const lines = match.split('\n')
+        const processedLines = lines.map(line => {
+          // Détecter les phrases qui commencent par ** et se terminent par un point
+          if (line.trim().match(/^\*\*.*\*\*\.\s*$/)) {
+            // Ajouter une puce devant la phrase
+            return `- ${line.trim()}`
+          }
+          // Détecter les paragraphes continus avec plusieurs phrases séparées par des points
+          if (line.trim().includes('.') && line.trim().length > 50) {
+            // Diviser par les points et reformater
+            const sentences = line.trim().split(/\.\s+/).filter(s => s.trim().length > 0)
+            if (sentences.length >= 3) {
+              return sentences.map(sentence => {
+                const trimmed = sentence.trim()
+                if (trimmed.endsWith('.')) {
+                  return `- ${trimmed}`
+                } else {
+                  return `- ${trimmed}.`
+                }
+              }).join('\n')
+            }
+          }
+          return line
+        })
+        return processedLines.join('\n')
+      })
+    })
+
+    return processedText
   }
 
   // Fonction pour formater le Markdown inline (gras, italique, etc.)
