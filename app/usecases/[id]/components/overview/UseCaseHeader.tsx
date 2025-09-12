@@ -16,6 +16,7 @@ import { CountryDeploymentDisplay } from './CountryDeploymentDisplay'
 import { useAuth } from '@/lib/auth'
 import WorldMap from '@/components/WorldMap'
 import { getProviderIcon } from '@/lib/provider-icons'
+import { getScoreStyle } from '@/lib/score-styles'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
 
@@ -89,48 +90,8 @@ function HeaderScore({ useCase, refreshing = false }: { useCase: UseCase, refres
     )
   }
 
-  // Style moderne avec fond coloré et effets visuels selon le score
-  const getScoreStyle = () => {
-    if (score.score >= 80) {
-      return {
-        bg: 'bg-gradient-to-br from-green-50 via-emerald-50 to-green-100',
-        text: 'text-green-800',
-        border: 'border-green-200',
-        accent: 'text-green-600',
-        indicator: 'bg-green-500',
-        shadow: 'shadow-green-100'
-      }
-    } else if (score.score >= 60) {
-      return {
-        bg: 'bg-[#f1fdfa]',
-        text: 'text-green-800',
-        border: 'border-green-200',
-        accent: 'text-green-600',
-        indicator: 'bg-green-500',
-        shadow: 'shadow-green-100'
-      }
-    } else if (score.score >= 40) {
-      return {
-        bg: 'bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100',
-        text: 'text-amber-800',
-        border: 'border-amber-200',
-        accent: 'text-amber-600',
-        indicator: 'bg-amber-500',
-        shadow: 'shadow-amber-100'
-      }
-    } else {
-      return {
-        bg: 'bg-gradient-to-br from-red-50 via-rose-50 to-red-100',
-        text: 'text-red-800',
-        border: 'border-red-200',
-        accent: 'text-red-600',
-        indicator: 'bg-red-500',
-        shadow: 'shadow-red-100'
-      }
-    }
-  }
-
-  const scoreStyle = getScoreStyle()
+  // Utilise les styles unifiés de l'application
+  const scoreStyle = getScoreStyle(score.score)
 
   return (
     <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">

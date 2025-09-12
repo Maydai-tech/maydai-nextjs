@@ -7,7 +7,6 @@ import { useUseCaseData } from '../hooks/useUseCaseData'
 import { useUseCaseNavigation } from '../utils/navigation'
 import { UseCaseLayout } from '../components/shared/UseCaseLayout'
 import { UseCaseLoader } from '../components/shared/UseCaseLoader'
-import { UseCaseScore } from '../components/UseCaseScore'
 import { RiskLevelBadge } from '../components/overview/RiskLevelBadge'
 import { useRiskLevel } from '../hooks/useRiskLevel'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
@@ -1240,13 +1239,6 @@ export default function UseCaseRapportPage() {
           </div>
         </div>
 
-        {/* Section Rapport de conformité */}
-        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            Rapport de conformité
-          </h2>
-          <UseCaseScore usecaseId={useCase.id} />
-        </div>
       </div>
     </UseCaseLayout>
   )

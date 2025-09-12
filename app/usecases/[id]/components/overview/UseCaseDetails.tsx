@@ -114,7 +114,7 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
           <div className="border-l-4 border-green-400 pl-4">
             <div className="flex items-center space-x-2 mb-2">
               <CheckCircle className="h-5 w-5 text-green-500" />
-              <h3 className="font-medium text-gray-900">Quick wins</h3>
+              <h3 className="font-medium text-gray-900">Priorités d'actions réglementaires</h3>
             </div>
             <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4">
               <p className="text-gray-500 italic text-sm">
