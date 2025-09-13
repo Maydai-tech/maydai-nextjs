@@ -70,6 +70,10 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
       <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
         {/* Progress Bar */}
         <div className="mb-8">
+          <div className="flex justify-between text-sm text-gray-600 mb-2">
+            <span className="text-gray-700 font-medium">Progression</span>
+            <span className="text-[#0080A3] font-medium">{progress.percentage}%</span>
+          </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
               className="bg-[#0080A3] h-2 rounded-full transition-all duration-300"
