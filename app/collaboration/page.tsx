@@ -66,13 +66,13 @@ export default function CollaborationPage() {
       
       // Charger les collaborateurs
       const collaboratorsResponse = await api.get('/api/collaboration/collaborators');
-      if (collaboratorsResponse.success) {
+      if (collaboratorsResponse.data && !collaboratorsResponse.error) {
         setCollaborators(collaboratorsResponse.data);
       }
 
       // Charger l'accès aux projets
       const projectsResponse = await api.get('/api/collaboration/projects-access');
-      if (projectsResponse.success) {
+      if (projectsResponse.data && !projectsResponse.error) {
         setProjectAccess(projectsResponse.data);
       }
     } catch (error) {
@@ -85,7 +85,7 @@ export default function CollaborationPage() {
   const handleInviteCollaborator = async (data: { email: string; role: string; message?: string }) => {
     try {
       const response = await api.post('/api/collaboration/collaborators', data);
-      if (response.success) {
+      if (response.data && !response.error) {
         // Recharger les données
         await loadCollaborationData();
         setShowInviteModal(false);

@@ -25,6 +25,7 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
   // Pages qui nécessitent la sidebar (pages SaaS connectées)
   const sidebarPages = [
     '/dashboard',
+    '/dossiers',
     '/collaboration',
     '/abonnement',
     '/profil',
