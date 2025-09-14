@@ -11,7 +11,11 @@ interface UseCaseDetailsProps {
 }
 
 export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: UseCaseDetailsProps) {
-  const { nextSteps, loading: nextStepsLoading, error: nextStepsError } = useNextSteps(useCase.id)
+  const { nextSteps, loading: nextStepsLoading, error: nextStepsError } = useNextSteps({
+    usecaseId: useCase.id,
+    useCaseStatus: useCase.status,
+    useCaseUpdatedAt: useCase.updated_at
+  })
   
   return (
     <div className="lg:col-span-2 space-y-6">
