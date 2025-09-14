@@ -25,3 +25,4 @@ console.log(`  -H "Content-Type: application/json" \\`)
 console.log(`  -d '{"usecase_id":"${usecaseId}"}'`)
 console.log('')
 console.log('Ou via l\'interface utilisateur en cliquant sur "Générer le rapport"')
+
