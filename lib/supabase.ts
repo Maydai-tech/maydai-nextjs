@@ -269,3 +269,85 @@ export interface UseCaseNextStepsInput {
   model_version?: string
   processing_time_ms?: number
 }
+
+/**
+ * Récupère les données nextsteps pour un cas d'usage spécifique via l'API
+ */
+export async function getUseCaseNextSteps(usecaseId: string): Promise<UseCaseNextSteps | null> {
+  try {
+    // Récupérer le token d'authentification
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      console.error('Aucun token d\'authentification trouvé')
+      return null
+    }
+
+    // Appeler l'API avec l'autorisation
+    const response = await fetch(`/api/usecases/${usecaseId}/nextsteps`, {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (response.status === 404) {
+      // Aucun enregistrement trouvé
+      return null
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error('Erreur API nextsteps:', errorData)
+      return null
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Erreur lors de la récupération des nextsteps:', error)
+    return null
+  }
+}
+
+/**
+ * Récupère les données nextsteps pour plusieurs cas d'usage
+ */
+export async function getMultipleUseCaseNextSteps(usecaseIds: string[]): Promise<Record<string, UseCaseNextSteps>> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      console.error('Aucun token d\'authentification trouvé')
+      return {}
+    }
+
+    // Récupérer les nextSteps pour chaque cas d'usage individuellement
+    const nextStepsMap: Record<string, UseCaseNextSteps> = {}
+    
+           for (const usecaseId of usecaseIds) {
+             try {
+               const response = await fetch(`/api/usecases/${usecaseId}/nextsteps`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          nextStepsMap[usecaseId] = data
+        } else if (response.status !== 404) {
+          console.error(`Erreur API nextsteps pour ${usecaseId}:`, response.status)
+        }
+      } catch (err) {
+        console.error(`Erreur lors de la récupération des nextSteps pour ${usecaseId}:`, err)
+      }
+    }
+
+    return nextStepsMap
+  } catch (error) {
+    console.error('Erreur lors de la récupération des nextsteps multiples:', error)
+    return {}
+  }
+}
