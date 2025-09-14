@@ -26,7 +26,16 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
 
           {/* Évaluation du risque */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Évaluation du niveau de risque AI Act</h2>
+            <div className="flex items-center gap-3 mb-4">
+              <img 
+                src="/icons/low-performance.png" 
+                alt="Évaluation du risque" 
+                width={24} 
+                height={24} 
+                className="flex-shrink-0"
+              />
+              <h2 className="text-xl font-semibold text-gray-900">Évaluation du niveau de risque AI Act</h2>
+            </div>
             <p className="text-base leading-relaxed text-gray-800 mb-2">
               <strong>Niveau de risque :</strong> {reportData.evaluation_risque.niveau}
             </p>
@@ -35,13 +44,24 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
 
           {/* Priorités d'actions */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Il est impératif de mettre en œuvre les mesures suivantes :</h2>
+            <div className="flex items-center gap-3 mb-4">
+              <img 
+                src="/icons/attention.png" 
+                alt="Actions prioritaires" 
+                width={24} 
+                height={24} 
+                className="flex-shrink-0"
+              />
+              <h2 className="text-xl font-semibold text-gray-900">Il est impératif de mettre en œuvre les mesures suivantes :</h2>
+            </div>
             <h3 className="text-lg font-medium text-gray-700 mb-3 italic">Les 3 priorités d'actions réglementaires</h3>
             <ul className="space-y-2 mb-4 ml-4">
               {reportData.priorites_actions.map((action: string, index: number) => (
-                <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start">
-                  <span className="w-2 h-2 bg-[#0080a3] rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                  {action}
+                <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
+                  <span className="text-[#0080a3] mr-2 text-6xl">•</span>
+                  <span className="flex-1">
+                    {action}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -49,12 +69,24 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
 
           {/* Quick wins */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Trois actions concrètes à mettre en œuvre rapidement :</h2>
-            <h3 className="text-lg font-medium text-gray-700 mb-3">Quick wins & actions immédiates recommandées</h3>
+            <div className="flex items-center gap-3 mb-4">
+              <img 
+                src="/icons/work-in-progress.png" 
+                alt="Actions rapides" 
+                width={24} 
+                height={24} 
+                className="flex-shrink-0"
+              />
+              <h2 className="text-xl font-semibold text-gray-900">Trois actions concrètes à mettre en œuvre rapidement :</h2>
+            </div>
+            <h3 className="text-lg font-medium text-gray-700 mb-3 italic">Quick wins & actions immédiates recommandées</h3>
             <ul className="space-y-2 mb-4 ml-4">
               {reportData.quick_wins.map((action: string, index: number) => (
-                <li key={index} className="text-base leading-relaxed text-gray-800">
-                  {action}
+                <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
+                  <span className="text-[#0080a3] mr-2 text-6xl">•</span>
+                  <span className="flex-1">
+                    {action}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -62,18 +94,39 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
 
           {/* Impact attendu */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Impact attendu</h2>
+            <div className="flex items-center gap-3 mb-4">
+              <img 
+                src="/icons/administrative-law.png" 
+                alt="Impact attendu" 
+                width={24} 
+                height={24} 
+                className="flex-shrink-0"
+              />
+              <h2 className="text-xl font-semibold text-gray-900">Impact attendu</h2>
+            </div>
             <p className="text-base leading-relaxed text-gray-800">{reportData.impact_attendu}</p>
           </div>
 
           {/* Actions moyen terme */}
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Trois actions structurantes à mener dans les 3 à 6 mois :</h2>
-            <h3 className="text-lg font-medium text-gray-700 mb-3">Actions à moyen terme</h3>
+            <div className="flex items-center gap-3 mb-4">
+              <img 
+                src="/icons/schedule.png" 
+                alt="Actions à moyen terme" 
+                width={24} 
+                height={24} 
+                className="flex-shrink-0"
+              />
+              <h2 className="text-xl font-semibold text-gray-900">Trois actions structurantes à mener dans les 3 à 6 mois :</h2>
+            </div>
+            <h3 className="text-lg font-medium text-gray-700 mb-3 italic">Actions à moyen terme</h3>
             <ul className="space-y-2 mb-4 ml-4">
               {reportData.actions_moyen_terme.map((action: string, index: number) => (
-                <li key={index} className="text-base leading-relaxed text-gray-800">
-                  {action}
+                <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
+                  <span className="text-[#0080a3] mr-2 text-6xl">•</span>
+                  <span className="flex-1">
+                    {action}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -150,8 +203,11 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
           elements.push(
             <ul key={elements.length} className="space-y-2 mb-4 ml-4">
               {listItems.map((item: string, index: number) => (
-                <li key={index} className="text-base leading-relaxed text-gray-800">
-                  {item}
+                <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
+                  <span className="text-[#0080a3] mr-2 text-6xl">•</span>
+                  <span className="flex-1">
+                    {item}
+                  </span>
                 </li>
               ))}
             </ul>

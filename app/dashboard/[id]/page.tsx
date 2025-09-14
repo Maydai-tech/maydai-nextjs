@@ -663,9 +663,9 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                 </div>
                 <Link
                   href={`/usecases/new?company=${companyId}`}
-                  className="inline-flex items-center justify-center px-4 py-2 bg-[#0080A3] text-white text-sm font-medium rounded-lg hover:bg-[#006280] transition-colors w-full sm:w-auto"
+                  className="inline-flex items-center justify-center px-8 py-4 bg-[#0080A3] text-white text-lg font-medium rounded-lg hover:bg-[#006280] transition-colors w-full sm:w-auto"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-8 w-8 mr-4" />
                   Nouveau cas d'usage
                 </Link>
               </div>

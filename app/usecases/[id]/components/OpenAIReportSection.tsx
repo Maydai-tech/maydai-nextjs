@@ -47,8 +47,11 @@ export function OpenAIReportSection({ usecaseId }: OpenAIReportSectionProps) {
         elements.push(
           <ul key={elements.length} className="space-y-2 mb-4 ml-4">
             {listItems.map((item, index) => (
-              <li key={index} className="text-base leading-relaxed text-gray-800">
-                {formatInlineMarkdown(item)}
+              <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
+                <span className="text-[#0080a3] mr-2 text-6xl">•</span>
+                <span className="flex-1">
+                  {formatInlineMarkdown(item)}
+                </span>
               </li>
             ))}
           </ul>

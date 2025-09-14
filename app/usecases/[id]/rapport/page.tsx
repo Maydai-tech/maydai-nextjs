@@ -11,6 +11,8 @@ import { RiskLevelBadge } from '../components/overview/RiskLevelBadge'
 import { useRiskLevel } from '../hooks/useRiskLevel'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { useNextSteps } from '../hooks/useNextSteps'
+import { getScoreStyle } from '@/lib/score-styles'
+import { AlertTriangle, RefreshCcw } from 'lucide-react'
 
 // Fonction utilitaire pour convertir le statut d'entreprise en libellé lisible
 function getCompanyStatusLabel(status?: string): string {
@@ -295,55 +297,132 @@ export default function UseCaseRapportPage() {
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
               {/* Badge Niveau IA Act */}
               <div className="flex-1">
-                <RiskLevelBadge 
-                  riskLevel={riskLevel} 
-                  loading={riskLoading}
-                  error={riskError}
-                  className="w-full"
-                />
+                {riskLoading ? (
+                  <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                      Niveau IA Act
+                    </h3>
+                    <div className="relative">
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-blue-600 mb-2 animate-pulse">--</div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-blue-600 mt-2 flex items-center justify-center">
+                        <RefreshCcw className="h-3 w-3 mr-1 animate-spin" />
+                        Analyse en cours...
+                      </div>
+                    </div>
+                  </div>
+                ) : riskError || !riskLevel ? (
+                  <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
+                      Niveau IA Act
+                    </h3>
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 text-center border border-gray-200">
+                      <div className="text-3xl font-bold text-gray-400 mb-2">--</div>
+                      <div className="text-xs text-gray-500">Non disponible</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                      <div className={`w-2 h-2 rounded-full mr-2 ${
+                        riskLevel === 'unacceptable' ? 'bg-red-500' :
+                        riskLevel === 'high' ? 'bg-orange-500' :
+                        riskLevel === 'limited' ? 'bg-amber-500' :
+                        'bg-green-500'
+                      }`}></div>
+                      Niveau IA Act
+                    </h3>
+                    
+                    <div className={`rounded-xl p-4 border shadow-sm hover:shadow-md transition-all duration-200 ${
+                      riskLevel === 'unacceptable' ? 'bg-red-50 border-red-200' :
+                      riskLevel === 'high' ? 'bg-orange-50 border-orange-200' :
+                      riskLevel === 'limited' ? 'bg-amber-50 border-amber-200' :
+                      'bg-green-50 border-green-200'
+                    }`}>
+                      <div className="text-center relative">
+                        <div className={`text-3xl font-bold mb-2 ${
+                          riskLevel === 'unacceptable' ? 'text-red-800' :
+                          riskLevel === 'high' ? 'text-orange-800' :
+                          riskLevel === 'limited' ? 'text-amber-800' :
+                          'text-green-800'
+                        }`}>
+                          {riskLevel === 'unacceptable' ? 'Inacceptable' :
+                           riskLevel === 'high' ? 'Élevé' :
+                           riskLevel === 'limited' ? 'Limité' :
+                           'Minimal'}
+                        </div>
+                        
+                        {riskLevel === 'unacceptable' && (
+                          <div className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold border border-red-200">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Interdit
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Badge Score de conformité */}
               <div className="flex-1">
-                <div className="inline-flex items-center px-4 py-2 rounded-lg border-2 bg-blue-50 border-blue-300 shadow-sm w-full">
-                  {scoreLoading ? (
-                    <>
-                      <div className="animate-spin h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full mr-2.5" />
-                      <div className="flex flex-col">
-                        <span className="text-xs font-medium text-blue-800 opacity-75">
-                          Score de conformité
-                        </span>
-                        <span className="text-sm font-bold text-blue-800 leading-tight">
-                          Calcul en cours...
-                        </span>
+                {scoreLoading ? (
+                  <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                      Score de conformité
+                    </h3>
+                    <div className="relative">
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-blue-600 mb-2 animate-pulse">--</div>
+                        </div>
                       </div>
-                    </>
-                  ) : scoreError || !score ? (
-                    <>
-                      <div className="h-5 w-5 text-blue-400 mr-2.5" />
-                      <div className="flex flex-col">
-                        <span className="text-xs font-medium text-blue-800 opacity-75">
-                          Score de conformité
-                        </span>
-                        <span className="text-sm font-bold text-blue-800 leading-tight">
-                          Non disponible
-                        </span>
+                      <div className="text-xs text-blue-600 mt-2 flex items-center justify-center">
+                        <RefreshCcw className="h-3 w-3 mr-1 animate-spin" />
+                        Recalcul en cours...
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="h-5 w-5 text-blue-600 mr-2.5" />
-                      <div className="flex flex-col">
-                        <span className="text-xs font-medium text-blue-800 opacity-75">
-                          Score de conformité
-                        </span>
-                        <span className="text-sm font-bold text-blue-800 leading-tight">
-                          {score.score}/{score.max_score}
-                        </span>
+                    </div>
+                  </div>
+                ) : scoreError || !score ? (
+                  <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
+                      Score de conformité
+                    </h3>
+                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 text-center border border-gray-200">
+                      <div className="text-3xl font-bold text-gray-400 mb-2">--</div>
+                      <div className="text-xs text-gray-500">Non disponible</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                      <div className={`w-2 h-2 rounded-full mr-2 ${getScoreStyle(score.score).indicator}`}></div>
+                      Score de conformité
+                    </h3>
+                    
+                    <div className={`${getScoreStyle(score.score).bg} rounded-xl p-4 border ${getScoreStyle(score.score).border} ${getScoreStyle(score.score).shadow} shadow-sm hover:shadow-md transition-all duration-200`}>
+                      <div className="text-center relative">
+                        <div className={`text-3xl font-bold ${getScoreStyle(score.score).text} mb-2`}>
+                          {Math.round(score.score)}
+                        </div>
+                        
+                        {score.is_eliminated && (
+                          <div className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold border border-red-200">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Éliminé
+                          </div>
+                        )}
                       </div>
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -463,7 +542,16 @@ export default function UseCaseRapportPage() {
               {/* Évaluation du niveau de risque AI Act */}
               {nextSteps.evaluation && (
                 <div className="mb-8">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Évaluation du niveau de risque AI Act</h3>
+                  <div className="flex items-center gap-3 mb-4">
+                    <img 
+                      src="/icons/low-performance.png" 
+                      alt="Évaluation du risque" 
+                      width={24} 
+                      height={24} 
+                      className="flex-shrink-0"
+                    />
+                    <h3 className="text-xl font-semibold text-gray-900">Évaluation du niveau de risque AI Act</h3>
+                  </div>
                   <div className="prose prose-gray max-w-none">
                     <p className="text-base leading-relaxed text-gray-700 whitespace-pre-line">
                       {nextSteps.evaluation}
@@ -475,15 +563,26 @@ export default function UseCaseRapportPage() {
               {/* Priorités d'actions réglementaires */}
               {nextSteps.priorite_1 && (
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Il est impératif de mettre en œuvre les mesures suivantes :</h3>
+                  <div className="flex items-center gap-3 mb-4">
+                    <img 
+                      src="/icons/attention.png" 
+                      alt="Actions prioritaires" 
+                      width={24} 
+                      height={24} 
+                      className="flex-shrink-0"
+                    />
+                    <h3 className="text-xl font-semibold text-gray-900">Il est impératif de mettre en œuvre les mesures suivantes :</h3>
+                  </div>
                   <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Les 3 priorités d'actions réglementaires</h4>
                   <ul className="space-y-2 mb-4 ml-4">
                     {[nextSteps.priorite_1, nextSteps.priorite_2, nextSteps.priorite_3]
                       .filter(Boolean)
                       .map((action, index) => (
-                        <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start">
-                          <span className="w-2 h-2 bg-[#0080a3] rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                          {action}
+                        <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
+                          <span className="text-[#0080a3] mr-2 text-6xl">•</span>
+                          <span className="flex-1">
+                            {action}
+                          </span>
                         </li>
                       ))}
                   </ul>
@@ -493,15 +592,26 @@ export default function UseCaseRapportPage() {
               {/* Quick wins */}
               {nextSteps.quick_win_1 && (
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Trois actions concrètes à mettre en œuvre rapidement :</h3>
-                  <h4 className="text-lg font-medium text-gray-700 mb-3">Quick wins & actions immédiates recommandées</h4>
+                  <div className="flex items-center gap-3 mb-4">
+                    <img 
+                      src="/icons/work-in-progress.png" 
+                      alt="Actions rapides" 
+                      width={24} 
+                      height={24} 
+                      className="flex-shrink-0"
+                    />
+                    <h3 className="text-xl font-semibold text-gray-900">Trois actions concrètes à mettre en œuvre rapidement :</h3>
+                  </div>
+                  <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Quick wins & actions immédiates recommandées</h4>
                   <ul className="space-y-2 mb-4 ml-4">
                     {[nextSteps.quick_win_1, nextSteps.quick_win_2, nextSteps.quick_win_3]
                       .filter(Boolean)
                       .map((action, index) => (
-                        <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start">
-                          <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                          {action}
+                        <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
+                          <span className="text-[#0080a3] mr-2 text-6xl">•</span>
+                          <span className="flex-1">
+                            {action}
+                          </span>
                         </li>
                       ))}
                   </ul>
@@ -511,15 +621,26 @@ export default function UseCaseRapportPage() {
               {/* Actions moyen terme */}
               {nextSteps.action_1 && (
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Trois actions structurantes à mener dans les 3 à 6 mois :</h3>
-                  <h4 className="text-lg font-medium text-gray-700 mb-3">Actions à moyen terme</h4>
+                  <div className="flex items-center gap-3 mb-4">
+                    <img 
+                      src="/icons/schedule.png" 
+                      alt="Actions à moyen terme" 
+                      width={24} 
+                      height={24} 
+                      className="flex-shrink-0"
+                    />
+                    <h3 className="text-xl font-semibold text-gray-900">Trois actions structurantes à mener dans les 3 à 6 mois :</h3>
+                  </div>
+                  <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Actions à moyen terme</h4>
                   <ul className="space-y-2 mb-4 ml-4">
                     {[nextSteps.action_1, nextSteps.action_2, nextSteps.action_3]
                       .filter(Boolean)
                       .map((action, index) => (
-                        <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start">
-                          <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                          {action}
+                        <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
+                          <span className="text-[#0080a3] mr-2 text-6xl">•</span>
+                          <span className="flex-1">
+                            {action}
+                          </span>
                         </li>
                       ))}
                   </ul>
@@ -529,7 +650,16 @@ export default function UseCaseRapportPage() {
               {/* Impact attendu */}
               {nextSteps.impact && (
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Impact attendu</h3>
+                  <div className="flex items-center gap-3 mb-4">
+                    <img 
+                      src="/icons/administrative-law.png" 
+                      alt="Impact attendu" 
+                      width={24} 
+                      height={24} 
+                      className="flex-shrink-0"
+                    />
+                    <h3 className="text-xl font-semibold text-gray-900">Impact attendu</h3>
+                  </div>
                   <p className="text-base leading-relaxed text-gray-800">{nextSteps.impact}</p>
                 </div>
               )}
