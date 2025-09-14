@@ -1,6 +1,8 @@
 import React from 'react'
 import { UseCase } from '../../types/usecase'
-import { Calendar, Users, Clock, AlertTriangle, CheckCircle, Lightbulb } from 'lucide-react'
+import { Calendar, Users, Clock, AlertTriangle, CheckCircle, Lightbulb, ArrowRight } from 'lucide-react'
+import { useNextSteps } from '../../hooks/useNextSteps'
+import Link from 'next/link'
 
 interface UseCaseDetailsProps {
   useCase: UseCase
@@ -9,6 +11,7 @@ interface UseCaseDetailsProps {
 }
 
 export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: UseCaseDetailsProps) {
+  const { nextSteps, loading: nextStepsLoading, error: nextStepsError } = useNextSteps(useCase.id)
   
   return (
     <div className="lg:col-span-2 space-y-6">
@@ -117,9 +120,58 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
               <h3 className="font-medium text-gray-900">Priorités d'actions réglementaires</h3>
             </div>
             <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-4">
-              <p className="text-gray-500 italic text-sm">
-                Les actions rapides seront générées automatiquement
-              </p>
+              {nextStepsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin h-6 w-6 border-2 border-[#0080a3] border-t-transparent rounded-full"></div>
+                  <span className="ml-2 text-gray-600">Chargement des actions prioritaires...</span>
+                </div>
+              ) : nextStepsError ? (
+                <p className="text-red-500 text-sm">
+                  Erreur lors du chargement des actions prioritaires
+                </p>
+              ) : nextSteps && (nextSteps.priorite_1 || nextSteps.priorite_2 || nextSteps.priorite_3) ? (
+                <div className="space-y-3">
+                  {nextSteps.priorite_1 && (
+                    <div className="flex items-start">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                      <p className="text-gray-800 text-sm leading-relaxed">
+                        <strong>{nextSteps.priorite_1}</strong>
+                      </p>
+                    </div>
+                  )}
+                  {nextSteps.priorite_2 && (
+                    <div className="flex items-start">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                      <p className="text-gray-800 text-sm leading-relaxed">
+                        <strong>{nextSteps.priorite_2}</strong>
+                      </p>
+                    </div>
+                  )}
+                  {nextSteps.priorite_3 && (
+                    <div className="flex items-start">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                      <p className="text-gray-800 text-sm leading-relaxed">
+                        <strong>{nextSteps.priorite_3}</strong>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-500 italic text-sm">
+                  Les actions rapides seront générées automatiquement
+                </p>
+              )}
+            </div>
+            
+            {/* Bouton pour voir le rapport complet */}
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <Link 
+                href={`/usecases/${useCase.id}/rapport`}
+                className="inline-flex items-center px-4 py-2 bg-[#0080a3] text-white text-sm font-medium rounded-lg hover:bg-[#006b8a] transition-colors duration-200"
+              >
+                <span>Voir tous les détails du plan d'action</span>
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </div>
           </div>
 
