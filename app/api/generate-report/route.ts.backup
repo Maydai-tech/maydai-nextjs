@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { transformToOpenAIFormatComplete, validateOpenAIInput } from '@/lib/openai-data-transformer'
 import { openAIClient } from '@/lib/openai-client'
-import { extractNextStepsFromReport, validateNextStepsData, logExtractionResults } from '@/lib/nextsteps-parser'
+import { extractNextStepsFromMarkdown, validateNextStepsData, logExtractionResults } from '@/lib/nextsteps-parser'
 
 // GET: Récupérer un rapport existant
 export async function GET(req: NextRequest) {
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
 
     // 🚀 ÉTAPE 1 : Extraire les prochaines étapes structurées du rapport
     console.log('🔍 Extraction des prochaines étapes depuis le rapport...')
-    const extractedNextSteps = extractNextStepsFromReport(analysis)
+    const extractedNextSteps = extractNextStepsFromMarkdown(analysis)
     
     // Ajouter l'usecase_id et les métadonnées aux données extraites
     const nextStepsData = {
@@ -168,13 +168,16 @@ export async function POST(req: NextRequest) {
 
     if (validation.isValid) {
       try {
-        // Utiliser UPSERT pour mettre à jour ou insérer les données
+        // Supprimer l'ancien enregistrement s'il existe (contrainte d'unicité)
+        await supabase
+          .from('usecase_nextsteps')
+          .delete()
+          .eq('usecase_id', usecase_id)
+
+        // Insérer les nouvelles données structurées
         const { error: nextStepsSaveError } = await supabase
           .from('usecase_nextsteps')
-          .upsert(nextStepsData, { 
-            onConflict: 'usecase_id',
-            ignoreDuplicates: false 
-          })
+          .insert(nextStepsData)
 
         if (nextStepsSaveError) {
           console.error('❌ Erreur sauvegarde prochaines étapes:', nextStepsSaveError)

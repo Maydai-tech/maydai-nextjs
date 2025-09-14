@@ -1,0 +1,16 @@
+{
+  "company": {
+    "city": "Paris",
+    "name": "MaydAI",
+    "country": "France",
+    "industry": "Technologie"
+  },
+  "model": {
+    "id": "e5b5f006-cf5a-4979-ba49-74d3c1609d5c",
+    "version": "3.0",
+    "model_name": "Claude Opus 3",
+    "model_type": "large-language-model",
+    "model_provider": "Anthropic"
+  },
+  "respondentEmail": "thomas@mayday-consulting.ai"
+}

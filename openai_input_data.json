@@ -1,0 +1,806 @@
+{
+  "questionnaire_questions": {
+    "E4.N7.Q1": {
+      "code": "E4.N7.Q1",
+      "question_text": "Dans cette situation, votre cas d'usage concerne :",
+      "type": "radio",
+      "status": "minimal",
+      "possible_answers": [
+        "Mon entreprise travaille dans le domaine de l'informatique et de l'IA",
+        "Mon entreprise utilise des systèmes d'IA tiers"
+      ],
+      "interpretation": "Détermine le statut de l'entreprise dans la chaîne de valeur IA (fabricant vs utilisateur)",
+      "quick_wins": [
+        "Identifier clairement le rôle dans la chaîne de valeur",
+        "Documenter les responsabilités légales selon le statut"
+      ],
+      "priority": 4,
+      "article_concerne": "Article 3 (définitions Acteur AI)",
+      "risk_category": "Acteurs IA",
+      "impact_conformite": "En fonction de la catégorie d'acteur l'application des règles et obligations spécifiques",
+      "user_response": {
+        "answered": true,
+        "question_code": "E4.N7.Q1",
+        "single_value": "E4.N7.Q1.B",
+        "single_label": "Mon entreprise utilise des systèmes d'IA tiers"
+      }
+    },
+    "E4.N7.Q1.1": {
+      "code": "E4.N7.Q1.1",
+      "question_text": "Quelle phrase décrit le mieux votre situation ?",
+      "type": "radio",
+      "status": "minimal",
+      "possible_answers": [
+        "Je suis fabricant d'un produit intégrant un système d'IA",
+        "Je distribue et/ou déploie un système d'IA pour d'autres entreprises",
+        "Je suis éditeur d'un logiciel intégrant un système d'IA",
+        "Je suis importateur d'un système d'IA",
+        "Je suis un fournisseur d'un système d'IA",
+        "Je suis représentant autorisé d'un fournisseur de système d'IA"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 4,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": null
+    },
+    "E4.N7.Q1.2": {
+      "code": "E4.N7.Q1.2",
+      "question_text": "Quelle phrase décrit le mieux votre situation ?",
+      "type": "radio",
+      "status": "minimal",
+      "possible_answers": [
+        "Je suis un utilisateur d'un système d'IA pour mon entreprise",
+        "J'ai une idée de cas d'usage IA et souhaite tester sa conformité",
+        "Je suis le Data Protection Officer (DPO) de mon entreprise",
+        "Je suis avocat et souhaite apporter des réponses techniques à mes clients",
+        "Je suis dirigeant et souhaite recenser tous les cas d'usage IA de mon entreprise",
+        "Je suis étudiant ou chercheur souhaitant approfondir le sujet IA Act"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 4,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E4.N7.Q1.2",
+        "single_value": "E4.N7.Q1.2.C",
+        "single_label": "Je suis le Data Protection Officer (DPO) de mon entreprise"
+      }
+    },
+    "E4.N7.Q2": {
+      "code": "E4.N7.Q2",
+      "question_text": "Votre système d'IA est utilisé dans un ou des domaines suivants ?",
+      "type": "checkbox",
+      "status": "high",
+      "possible_answers": [
+        "Emploi, gestion des travailleurs et accès à l'emploi indépendant",
+        "Administration de la justice et processus démocratiques",
+        "Migration, asile et gestion des contrôles aux frontières",
+        "Gestion et exploitation des infrastructures critiques",
+        "Éducation et formation professionnelle",
+        "Activités répressives (risque récidive, fiabilité preuves...)",
+        "Aucun de ces domaines"
+      ],
+      "interpretation": "Identifie les domaines à haut risque selon l'annexe III de l'AI Act",
+      "quick_wins": [
+        "Cartographier les domaines d'application",
+        "Vérifier les obligations par domaine",
+        "Mettre en place une surveillance renforcée"
+      ],
+      "priority": 2,
+      "article_concerne": "Article 6 (Interdiction de certaines pratiques d'IA), Articles 8 à 13 (Exigences pour les systèmes d'IA à haut risque), Annexe III",
+      "risk_category": "Niveau de risque",
+      "impact_conformite": "Une réponse 'Oui' déclenche la nécessité d'évaluer la conformité avec les exigences relatives aux systèmes d'IA à haut risque",
+      "user_response": {
+        "answered": true,
+        "question_code": "E4.N7.Q2",
+        "multiple_codes": [
+          "E4.N7.Q2.G"
+        ],
+        "multiple_labels": [
+          "Aucun de ces domaines"
+        ]
+      }
+    },
+    "E4.N7.Q2.1": {
+      "code": "E4.N7.Q2.1",
+      "question_text": "Votre système d'IA est utilisé dans un ou plusieurs des cas suivants ?",
+      "type": "checkbox",
+      "status": "unacceptable",
+      "possible_answers": [
+        "Identification Biométrique à Distance en Temps Réel dans les Espaces Publics",
+        "Composant de sécurité dans des secteurs critiques (santé, transports, énergies, etc.)",
+        "Évaluations dans un système d'éducation ou en entreprise",
+        "Accès et jouissance de services essentiels privés et publics",
+        "Aucun de ces cas"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 1,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E4.N7.Q2.1",
+        "multiple_codes": [
+          "E4.N7.Q2.1.E"
+        ],
+        "multiple_labels": [
+          "Aucun de ces cas"
+        ]
+      }
+    },
+    "E4.N7.Q3": {
+      "code": "E4.N7.Q3",
+      "question_text": "Votre système d'IA a pour finalité une ou des activités suivantes ?",
+      "type": "checkbox",
+      "status": "unacceptable",
+      "possible_answers": [
+        "Identification biométrique et catégorisation des personnes physiques",
+        "Catégorisation biométrique basée sur des caractéristiques sensibles",
+        "Création de bases de données de reconnaissance faciale par moissonnage non ciblé",
+        "Déduction des émotions sur le lieu de travail et d'enseignement",
+        "Aucune de ces activités"
+      ],
+      "interpretation": "Identifie les finalités interdites par l'AI Act",
+      "quick_wins": [
+        "ARRÊT IMMÉDIAT du développement",
+        "Révision de la finalité",
+        "Consultation juridique urgente"
+      ],
+      "priority": 1,
+      "article_concerne": "Article 5 (Pratiques d'IA interdites)",
+      "risk_category": "Niveau de risque",
+      "impact_conformite": "Une réponse 'Oui' indique que le système relève de la catégorie de risque interdit",
+      "user_response": {
+        "answered": true,
+        "question_code": "E4.N7.Q3",
+        "multiple_codes": [
+          "E4.N7.Q3.E"
+        ],
+        "multiple_labels": [
+          "Aucune de ces activités"
+        ]
+      }
+    },
+    "E4.N7.Q3.1": {
+      "code": "E4.N7.Q3.1",
+      "question_text": "Possible intervention dans l'une de ces situations ?",
+      "type": "checkbox",
+      "status": "unacceptable",
+      "possible_answers": [
+        "Exploitation des vulnérabilités",
+        "Manipulation et tromperie",
+        "Notation sociale",
+        "Profilage pour évaluation du risque criminel",
+        "Aucune de ces situations"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 1,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E4.N7.Q3.1",
+        "multiple_codes": [
+          "E4.N7.Q3.1.E"
+        ],
+        "multiple_labels": [
+          "Aucune de ces situations"
+        ]
+      }
+    },
+    "E4.N8.Q2": {
+      "code": "E4.N8.Q2",
+      "question_text": "Votre système d'IA traite-t-il des données personnelles ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": null
+    },
+    "E4.N8.Q3": {
+      "code": "E4.N8.Q3",
+      "question_text": "Votre système d'IA prend-il des décisions automatisées affectant des personnes ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": null
+    },
+    "E4.N8.Q4": {
+      "code": "E4.N8.Q4",
+      "question_text": "Votre système utilise-t-il des techniques d'apprentissage automatique ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": null
+    },
+    "E4.N8.Q5": {
+      "code": "E4.N8.Q5",
+      "question_text": "Votre système est-il en contact direct avec des utilisateurs finaux ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": null
+    },
+    "E4.N8.Q6": {
+      "code": "E4.N8.Q6",
+      "question_text": "Votre système fait-il des prédictions ou des recommandations ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": null
+    },
+    "E4.N8.Q7": {
+      "code": "E4.N8.Q7",
+      "question_text": "Votre système est-il déployé dans un environnement critique ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": null
+    },
+    "E4.N8.Q8": {
+      "code": "E4.N8.Q8",
+      "question_text": "Votre système nécessite-t-il une surveillance continue ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": null
+    },
+    "E4.N8.Q9": {
+      "code": "E4.N8.Q9",
+      "question_text": "Votre système d'IA interagit-il avec des personnes physiques ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E4.N8.Q9",
+        "single_value": "E4.N8.Q9.B",
+        "single_label": "Non"
+      }
+    },
+    "E4.N8.Q10": {
+      "code": "E4.N8.Q10",
+      "question_text": "Utilisé par combien de personnes physiques par mois ?",
+      "type": "conditional",
+      "status": "limited",
+      "possible_answers": [
+        "< de 100",
+        "> à 100",
+        "> à 1000",
+        "> à 10 000",
+        "> à 100 000",
+        "> à 1 M"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E4.N8.Q10",
+        "single_value": "E4.N8.Q10.A",
+        "single_label": "< de 100"
+      }
+    },
+    "E4.N8.Q11": {
+      "code": "E4.N8.Q11",
+      "question_text": "Utilisé pour générer ou manipuler du contenu ?",
+      "type": "tags",
+      "status": "limited",
+      "possible_answers": [
+        "Texte",
+        "Image",
+        "audio",
+        "Vidéo"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E4.N8.Q11",
+        "multiple_codes": [
+          "E4.N8.Q11.A",
+          "E4.N8.Q11.B"
+        ],
+        "multiple_labels": [
+          "Texte",
+          "Image"
+        ]
+      }
+    },
+    "E4.N8.Q12": {
+      "code": "E4.N8.Q12",
+      "question_text": "Votre système d'IA est utilisé dans des jeux vidéos ou comme filtre anti-spam ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B",
+        "single_label": "Non"
+      }
+    },
+    "E5.N9.Q1": {
+      "code": "E5.N9.Q1",
+      "question_text": "Avez-vous établi et maintenez-vous un système de gestion des risques ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Obligation fondamentale pour les systèmes à risque limité et élevé",
+      "quick_wins": [
+        "Créer un système de gestion des risques",
+        "Documenter les processus de surveillance"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 9 (Système de gestion des risques)",
+      "risk_category": "Technical Robustness and Safety",
+      "impact_conformite": "Une réponse 'Non' indique une non-conformité pour les systèmes à haut risque",
+      "user_response": null
+    },
+    "E5.N9.Q2": {
+      "code": "E5.N9.Q2",
+      "question_text": "Votre système de gestion des risques comprend-il l'identification et l'analyse des risques et des utilisations abusives ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": null
+    },
+    "E5.N9.Q3": {
+      "code": "E5.N9.Q3",
+      "question_text": "Des mesures d'atténuation des risques sont-elles mises en œuvre et leur efficacité testée, garantissant que le risque résiduel est acceptable ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": null
+    },
+    "E5.N9.Q4": {
+      "code": "E5.N9.Q4",
+      "question_text": "Avez-vous établi une documentation technique complète pour votre système d'IA ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.A",
+        "single_label": "Oui"
+      }
+    },
+    "E5.N9.Q5": {
+      "code": "E5.N9.Q5",
+      "question_text": "Quelles sont les types de données traitées en entrée ?",
+      "type": "tags",
+      "status": "limited",
+      "possible_answers": [
+        "Publiques",
+        "Personnelles",
+        "Stratégiques",
+        "sensibles"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E5.N9.Q5",
+        "multiple_codes": [
+          "E5.N9.Q5.B"
+        ],
+        "multiple_labels": [
+          "Personnelles"
+        ]
+      }
+    },
+    "E5.N9.Q6": {
+      "code": "E5.N9.Q6",
+      "question_text": "Avez vous de procédures de vérification de la qualité des données ?",
+      "type": "conditional",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Si oui préciser",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E5.N9.Q6",
+        "conditional_main": "E5.N9.Q6.B",
+        "conditional_label": "Oui",
+        "conditional_data": {
+          "procedures_details": "Data protection"
+        }
+      }
+    },
+    "E5.N9.Q7": {
+      "code": "E5.N9.Q7",
+      "question_text": "Tenez vous un registre centralisé de vos systèmes d'IA ?",
+      "type": "conditional",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Si oui préciser",
+        "Non"
+      ],
+      "interpretation": "Obligation de registre pour les systèmes à haut risque ; recommandé pour tous",
+      "quick_wins": [
+        "Créer un registre simple (Excel, Notion, etc.)",
+        "Structurer les champs : nom, objectif, MAJ, etc."
+      ],
+      "priority": 3,
+      "article_concerne": "Article 12",
+      "risk_category": "Human Agency & Oversight",
+      "impact_conformite": "Une réponse autre que Non classerait le système à risque",
+      "user_response": {
+        "answered": true,
+        "question_code": "E5.N9.Q7",
+        "conditional_main": "E5.N9.Q7.B",
+        "conditional_label": "Oui",
+        "conditional_data": {
+          "system_name": "MaydAI"
+        }
+      }
+    },
+    "E5.N9.Q8": {
+      "code": "E5.N9.Q8",
+      "question_text": "Avez vous une étape de surveillance humaine dans votre système d'IA ?",
+      "type": "conditional",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Si oui préciser",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E5.N9.Q8",
+        "conditional_main": "E5.N9.Q8.B",
+        "conditional_label": "Oui",
+        "conditional_data": {
+          "supervisor_name": "Chippeaux Thomas",
+          "supervisor_role": "Controle anti fraude"
+        }
+      }
+    },
+    "E5.N9.Q9": {
+      "code": "E5.N9.Q9",
+      "question_text": "Vérifiez vous l'exactitude, la robustesse et la cybersécurité de votre système d'IA ?",
+      "type": "conditional",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Si oui préciser",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": null
+    },
+    "E6.N10.Q1": {
+      "code": "E6.N10.Q1",
+      "question_text": "Lorsque votre système d'IA interagit avec des personnes, sont elles informées ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.A",
+        "single_label": "Oui"
+      }
+    },
+    "E6.N10.Q2": {
+      "code": "E6.N10.Q2",
+      "question_text": "Lorsque votre système d'IA génère ou manipule du contenu, est ce que ce dernier est marqué par un format lisible et reconnaissable ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui",
+        "Non"
+      ],
+      "interpretation": "Question d'évaluation de conformité IA Act",
+      "quick_wins": [
+        "Évaluer la conformité",
+        "Mettre à jour la documentation"
+      ],
+      "priority": 3,
+      "article_concerne": "AI Act - Conformité générale",
+      "risk_category": "Conformité générale",
+      "impact_conformite": "Impact sur la conformité générale",
+      "user_response": {
+        "answered": true,
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B",
+        "single_label": "Non"
+      }
+    }
+  },
+  "usecase_context_fields": {
+    "entreprise": {
+      "name": "MaydAI",
+      "industry": "Technologie",
+      "city": "Paris",
+      "country": "France",
+      "company_status": "utilisateur"
+    },
+    "cas_usage": {
+      "id": "5d996313-8484-4b15-a571-4210fcb1235f",
+      "name": "Détecteur de fraude transaction en ligne",
+      "description": "MaydAI, éditeur de logiciels basé à Paris, déploiera le 15 décembre 2025 un système autonome de détection de fraude en ligne (\"Détecteur de fraude transaction en ligne\"), géré par le service Systèmes d’Information (SI/IT).\nCe cas d’usage utilise le LLM Claude Opus 3 (Anthropic) pour analyser et identifier les transactions suspectes en temps réel. La France étant membre de l’Union européenne, ce déploiement sera soumis à l’AI Act.",
+      "deployment_date": "2025-12-15",
+      "status": "completed",
+      "risk_level": "limited",
+      "ai_category": "Large Language Model (LLM)",
+      "system_type": "Système autonome",
+      "responsible_service": "Systèmes d'Information (SI) / IT",
+      "deployment_countries": [
+        "FR"
+      ]
+    },
+    "technologie": {
+      "technology_partner": "Anthropic",
+      "llm_model_version": "Claude Opus 3",
+      "primary_model_id": "e5b5f006-cf5a-4979-ba49-74d3c1609d5c",
+      "model_name": "Claude Opus 3",
+      "model_provider": "Anthropic",
+      "model_type": "large-language-model"
+    },
+    "repondant": {
+      "profile": "Utilisateur système",
+      "situation": "Utilisateur d'un système d'IA pour mon entreprise"
+    },
+    "scores": {
+      "score_base": 80.2,
+      "score_model": 17.71,
+      "score_final": 81.59,
+      "is_eliminated": false,
+      "elimination_reason": ""
+    }
+  },
+  "risk_categories": {
+    "Acteurs IA": "Définit le rôle de l'entreprise dans l'écosystème IA",
+    "Niveau de risque": "Détermine le niveau de risque global du système",
+    "Technical Robustness and Safety": "Robustesse technique et sécurité",
+    "Diversity, Non-discrimination & Fairness": "Diversité, non-discrimination et équité",
+    "Social & Environmental Well-being": "Bien-être social et environnemental",
+    "Human Agency & Oversight": "Agence humaine et supervision",
+    "Transparency": "Transparence",
+    "Privacy & Data Governance": "Confidentialité et gouvernance des données"
+  },
+  "priority_levels": {
+    "1": "Critique - Actions immédiates requises",
+    "2": "Important - Actions à court terme",
+    "3": "Modéré - Actions à moyen terme",
+    "4": "Standard - Actions de routine",
+    "5": "Informatif - Actions optionnelles"
+  },
+  "status_levels": {
+    "minimal": "Risque minimal - Aucune obligation supplémentaire",
+    "limited": "Risque limité - Obligations de transparence",
+    "high": "Risque élevé - Obligations complètes de conformité",
+    "unacceptable": "Risque inacceptable - Interdiction d'utilisation"
+  }
+}
