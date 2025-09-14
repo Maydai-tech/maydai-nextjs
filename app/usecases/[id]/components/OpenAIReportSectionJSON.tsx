@@ -36,10 +36,11 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
           {/* Priorités d'actions */}
           <div>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Il est impératif de mettre en œuvre les mesures suivantes :</h2>
-            <h3 className="text-lg font-medium text-gray-700 mb-3">Les 3 priorités d'actions réglementaires</h3>
+            <h3 className="text-lg font-medium text-gray-700 mb-3 italic">Les 3 priorités d'actions réglementaires</h3>
             <ul className="space-y-2 mb-4 ml-4">
               {reportData.priorites_actions.map((action: string, index: number) => (
-                <li key={index} className="text-base leading-relaxed text-gray-800">
+                <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start">
+                  <span className="w-2 h-2 bg-[#0080a3] rounded-full mt-2 mr-3 flex-shrink-0"></span>
                   {action}
                 </li>
               ))}
