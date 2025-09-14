@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, User, Menu, X } from 'lucide-react';
+import { Home, User, CreditCard, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useApiCall } from '@/lib/api-auth';
@@ -58,6 +58,11 @@ export default function Sidebar() {
       name: 'Dashboard',
       href: getDashboardUrl(),
       icon: Home
+    },
+    {
+      name: 'Abonnement',
+      href: '/abonnement',
+      icon: CreditCard
     },
     {
       name: 'Profil',
