@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, User, CreditCard, Menu, X, Users } from 'lucide-react';
+import { Home, User, CreditCard, Menu, X, Users, FileText } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useApiCall } from '@/lib/api-auth';
@@ -58,6 +58,11 @@ export default function Sidebar() {
       name: 'Dashboard',
       href: getDashboardUrl(),
       icon: Home
+    },
+    {
+      name: 'Dossiers',
+      href: '/dossiers',
+      icon: FileText
     },
     {
       name: 'Collaboration',
@@ -126,8 +131,11 @@ export default function Sidebar() {
           {menuItems.map((item) => {
             const Icon = item.icon;
             // Dashboard should be highlighted when on dashboard pages or usecase pages
+            // Dossiers should be highlighted when on dossiers pages
             const isActive = item.name === 'Dashboard' 
               ? (pathname === item.href || pathname.startsWith('/usecases/'))
+              : item.name === 'Dossiers'
+              ? pathname.startsWith('/dossiers')
               : pathname === item.href;
             
             return (
