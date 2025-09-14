@@ -214,4 +214,58 @@ export interface ComplAIScore {
   evaluation_date: string
   created_at: string
   updated_at: string
-} 
+} // Types pour la table usecase_nextsteps
+export interface UseCaseNextSteps {
+  id: string
+  usecase_id: string
+  
+  // Sections fixes (toujours présentes)
+  introduction?: string
+  evaluation?: string
+  impact?: string
+  conclusion?: string
+  
+  // Les 3 priorités d'actions réglementaires
+  priorite_1?: string
+  priorite_2?: string
+  priorite_3?: string
+  
+  // Quick wins & actions immédiates
+  quick_win_1?: string
+  quick_win_2?: string
+  quick_win_3?: string
+  
+  // Actions à moyen terme
+  action_1?: string
+  action_2?: string
+  action_3?: string
+  
+  // Métadonnées
+  generated_at: string
+  model_version?: string
+  processing_time_ms?: number
+  
+  // Audit
+  created_at: string
+  updated_at: string
+}
+
+// Interface pour l'insertion/mise à jour
+export interface UseCaseNextStepsInput {
+  usecase_id: string
+  introduction?: string
+  evaluation?: string
+  impact?: string
+  conclusion?: string
+  priorite_1?: string
+  priorite_2?: string
+  priorite_3?: string
+  quick_win_1?: string
+  quick_win_2?: string
+  quick_win_3?: string
+  action_1?: string
+  action_2?: string
+  action_3?: string
+  model_version?: string
+  processing_time_ms?: number
+}
