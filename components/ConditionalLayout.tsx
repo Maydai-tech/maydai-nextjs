@@ -26,6 +26,7 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
   const sidebarPages = [
     '/dashboard',
     '/dossiers',
+    '/todo-list',
     '/collaboration',
     '/abonnement',
     '/profil',
