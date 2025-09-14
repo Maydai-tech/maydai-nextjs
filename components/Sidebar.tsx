@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, User, CreditCard, Menu, X, Users, FileText } from 'lucide-react';
+import { Home, User, CreditCard, Menu, X, Users, FileText, CheckSquare } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useApiCall } from '@/lib/api-auth';
@@ -63,6 +63,11 @@ export default function Sidebar() {
       name: 'Dossiers',
       href: '/dossiers',
       icon: FileText
+    },
+    {
+      name: 'To-do List',
+      href: '/todo-list',
+      icon: CheckSquare
     },
     {
       name: 'Collaboration',
