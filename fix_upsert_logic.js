@@ -31,3 +31,4 @@ content = content.replace(oldLogic, newLogic)
 fs.writeFileSync(filePath, content, 'utf8')
 
 console.log('✅ Correction UPSERT appliquée avec succès')
+
