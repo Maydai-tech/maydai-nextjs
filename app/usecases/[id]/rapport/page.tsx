@@ -10,7 +10,7 @@ import { UseCaseLoader } from '../components/shared/UseCaseLoader'
 import { RiskLevelBadge } from '../components/overview/RiskLevelBadge'
 import { useRiskLevel } from '../hooks/useRiskLevel'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
-import { OpenAIReportSectionJSON as OpenAIReportSection } from '../components/OpenAIReportSectionJSON'
+import { useNextSteps } from '../hooks/useNextSteps'
 
 // Fonction utilitaire pour convertir le statut d'entreprise en libellé lisible
 function getCompanyStatusLabel(status?: string): string {
@@ -103,6 +103,11 @@ export default function UseCaseRapportPage() {
 
   const useCaseId = params.id as string
   const { useCase, loading: loadingData, error } = useUseCaseData(useCaseId)
+  const { nextSteps, loading: nextStepsLoading, error: nextStepsError, refetch: refetchNextSteps } = useNextSteps({
+    usecaseId: useCaseId,
+    useCaseStatus: useCase?.status,
+    useCaseUpdatedAt: useCase?.updated_at
+  })
   const { goToEvaluation, goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
   const { riskLevel, loading: riskLoading, error: riskError } = useRiskLevel(useCaseId)
   const { score, loading: scoreLoading, error: scoreError } = useUseCaseScore(useCaseId)
@@ -388,8 +393,171 @@ export default function UseCaseRapportPage() {
           </div>
         </div>
 
-        {/* Section : Rapport OpenAI */}
-        <OpenAIReportSection usecaseId={useCase.id} />
+        {/* Section : Recommandations et plan d'action */}
+        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">
+            Recommandations et plan d'action
+          </h2>
+          
+          {/* Bande d'information */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm text-gray-600">
+                    Rapport généré le {useCase?.updated_at ? new Date(useCase.updated_at).toLocaleDateString('fr-FR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }) : 'Date non disponible'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="text-sm font-medium text-gray-700">Généré par IA</span>
+              </div>
+            </div>
+          </div>
+          
+          {nextStepsLoading && (
+            <div className="text-center py-8">
+              <div className="animate-spin h-8 w-8 border-4 border-[#0080a3] border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-gray-600">Chargement des recommandations...</p>
+            </div>
+          )}
+
+          {nextStepsError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex">
+                <svg className="w-5 h-5 text-red-400 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <h3 className="text-sm font-medium text-red-800">Erreur</h3>
+                  <p className="text-sm text-red-700 mt-1">{nextStepsError}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {nextSteps && (
+            <div className="space-y-6">
+              {/* Introduction */}
+              {nextSteps.introduction && (
+                <div className="mb-8">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Introduction</h3>
+                  <div className="prose prose-gray max-w-none">
+                    <p className="text-base leading-relaxed text-gray-700 whitespace-pre-line">
+                      {nextSteps.introduction}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Évaluation du niveau de risque AI Act */}
+              {nextSteps.evaluation && (
+                <div className="mb-8">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Évaluation du niveau de risque AI Act</h3>
+                  <div className="prose prose-gray max-w-none">
+                    <p className="text-base leading-relaxed text-gray-700 whitespace-pre-line">
+                      {nextSteps.evaluation}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Priorités d'actions réglementaires */}
+              {nextSteps.priorite_1 && (
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Il est impératif de mettre en œuvre les mesures suivantes :</h3>
+                  <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Les 3 priorités d'actions réglementaires</h4>
+                  <ul className="space-y-2 mb-4 ml-4">
+                    {[nextSteps.priorite_1, nextSteps.priorite_2, nextSteps.priorite_3]
+                      .filter(Boolean)
+                      .map((action, index) => (
+                        <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start">
+                          <span className="w-2 h-2 bg-[#0080a3] rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                          {action}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Quick wins */}
+              {nextSteps.quick_win_1 && (
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Trois actions concrètes à mettre en œuvre rapidement :</h3>
+                  <h4 className="text-lg font-medium text-gray-700 mb-3">Quick wins & actions immédiates recommandées</h4>
+                  <ul className="space-y-2 mb-4 ml-4">
+                    {[nextSteps.quick_win_1, nextSteps.quick_win_2, nextSteps.quick_win_3]
+                      .filter(Boolean)
+                      .map((action, index) => (
+                        <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start">
+                          <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                          {action}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Actions moyen terme */}
+              {nextSteps.action_1 && (
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Trois actions structurantes à mener dans les 3 à 6 mois :</h3>
+                  <h4 className="text-lg font-medium text-gray-700 mb-3">Actions à moyen terme</h4>
+                  <ul className="space-y-2 mb-4 ml-4">
+                    {[nextSteps.action_1, nextSteps.action_2, nextSteps.action_3]
+                      .filter(Boolean)
+                      .map((action, index) => (
+                        <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start">
+                          <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                          {action}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Impact attendu */}
+              {nextSteps.impact && (
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Impact attendu</h3>
+                  <p className="text-base leading-relaxed text-gray-800">{nextSteps.impact}</p>
+                </div>
+              )}
+
+              {/* Conclusion */}
+              {nextSteps.conclusion && (
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Conclusion</h3>
+                  <p className="text-base leading-relaxed text-gray-800">{nextSteps.conclusion}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!nextSteps && !nextStepsLoading && !nextStepsError && (
+            <div className="text-center py-8">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <svg className="w-12 h-12 text-blue-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="text-lg font-medium text-blue-900 mb-2">Aucune recommandation disponible</h3>
+                <p className="text-blue-700">
+                  Les recommandations détaillées seront générées automatiquement une fois le questionnaire d'évaluation complété.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Section 4. Obligations Spécifiques et Gouvernance */}
         <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">

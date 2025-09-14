@@ -89,13 +89,13 @@ export function extractNextStepsFromMarkdown(reportText: string): Partial<UseCas
   const prioritiesMatch = reportText.match(/### Les 3 priorités d'actions réglementaires\s*\n([\s\S]*?)(?=###|##|$)/)
   if (prioritiesMatch) {
     const prioritiesSection = prioritiesMatch[1]
-    // Chercher les patterns avec ou sans numérotation : **1. texte.** ou **texte.**
-    const priorityMatches = prioritiesSection.match(/\*\*(\d+\.\s*)?([^*]+)\*\*/g)
+    // Chercher le contenu des priorités au format **Titre** description complète...
+    const priorityMatches = prioritiesSection.match(/\*\*([^*]+)\*\*\s*([^\n]+)/g)
     
     if (priorityMatches && priorityMatches.length >= 3) {
-      result.priorite_1 = priorityMatches[0].replace(/\*\*/g, '').replace(/^\d+\.\s*/, '').trim()
-      result.priorite_2 = priorityMatches[1].replace(/\*\*/g, '').replace(/^\d+\.\s*/, '').trim()
-      result.priorite_3 = priorityMatches[2].replace(/\*\*/g, '').replace(/^\d+\.\s*/, '').trim()
+      result.priorite_1 = priorityMatches[0].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
+      result.priorite_2 = priorityMatches[1].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
+      result.priorite_3 = priorityMatches[2].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
     }
   }
   
@@ -104,12 +104,12 @@ export function extractNextStepsFromMarkdown(reportText: string): Partial<UseCas
   if (quickWinsMatch) {
     const quickWinsSection = quickWinsMatch[1]
     // Chercher les patterns avec ou sans numérotation : **1. texte.** ou **texte.**
-    const quickWinMatches = quickWinsSection.match(/\*\*(\d+\.\s*)?([^*]+)\*\*/g)
+    const quickWinMatches = quickWinsSection.match(/\*\*([^*]+)\*\*\s*([^\n]+)/g)
     
     if (quickWinMatches && quickWinMatches.length >= 3) {
-      result.quick_win_1 = quickWinMatches[0].replace(/\*\*/g, '').replace(/^\d+\.\s*/, '').trim()
-      result.quick_win_2 = quickWinMatches[1].replace(/\*\*/g, '').replace(/^\d+\.\s*/, '').trim()
-      result.quick_win_3 = quickWinMatches[2].replace(/\*\*/g, '').replace(/^\d+\.\s*/, '').trim()
+      result.quick_win_1 = quickWinMatches[0].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
+      result.quick_win_2 = quickWinMatches[1].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
+      result.quick_win_3 = quickWinMatches[2].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
     }
   }
   
