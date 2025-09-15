@@ -3,6 +3,70 @@ import { supabase } from '@/lib/supabase'
 import { transformToOpenAIFormatComplete, validateOpenAIInput } from '@/lib/openai-data-transformer'
 import { openAIClient } from '@/lib/openai-client'
 import { extractNextStepsFromReport, validateNextStepsData, logExtractionResults } from '@/lib/nextsteps-parser'
+import { errorMonitor, createErrorReport, createPerformanceMetrics } from '@/lib/error-monitor'
+
+// Fonction de retry automatique pour la génération d'analyse avec timeout
+async function generateAnalysisWithRetry(transformedData: any, usecaseId: string, maxRetries: number = 3): Promise<string> {
+  let lastError: Error | null = null
+  const timeoutMs = 60000 // 60 secondes de timeout par tentative
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 Tentative ${attempt}/${maxRetries} de génération d'analyse pour le cas d'usage ${usecaseId}`)
+      console.log(`⏱️  Timeout configuré: ${timeoutMs}ms`)
+      
+      // Créer un timeout pour cette tentative
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`Timeout après ${timeoutMs}ms`)), timeoutMs)
+      })
+      
+      // Exécuter la génération avec timeout
+      const analysisPromise = openAIClient.generateComplianceAnalysisComplete(transformedData)
+      const analysis = await Promise.race([analysisPromise, timeoutPromise])
+      
+      if (attempt > 1) {
+        console.log(`✅ Succès à la tentative ${attempt} pour le cas d'usage ${usecaseId}`)
+      }
+      
+      return analysis
+      
+    } catch (error) {
+      lastError = error as Error
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const isTimeout = errorMessage.includes('Timeout')
+      
+      // Enregistrer l'erreur dans le monitoring
+      errorMonitor.logError(createErrorReport(
+        usecaseId,
+        isTimeout ? 'timeout' : 'openai',
+        errorMessage,
+        attempt,
+        maxRetries,
+        {
+          transformedDataValid: !!transformedData.usecase_context_fields?.cas_usage?.id,
+          errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+          stack: error instanceof Error ? error.stack : undefined
+        }
+      ))
+      
+      console.error(`❌ Échec tentative ${attempt}/${maxRetries} pour le cas d'usage ${usecaseId}:`)
+      console.error(`   - Type d'erreur: ${errorMessage}`)
+      console.error(`   - Est un timeout: ${isTimeout}`)
+      
+      if (attempt === maxRetries) {
+        console.error(`💥 Toutes les tentatives ont échoué pour le cas d'usage ${usecaseId}`)
+        throw new Error(`Échec de génération après ${maxRetries} tentatives: ${errorMessage}`)
+      }
+      
+      // Attendre avant la prochaine tentative (backoff exponentiel)
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000) // Max 10 secondes
+      console.log(`⏳ Attente de ${delay}ms avant la tentative ${attempt + 1}...`)
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+  
+  throw lastError || new Error('Erreur inconnue lors de la génération d\'analyse')
+}
 
 // GET: Récupérer un rapport existant
 export async function GET(req: NextRequest) {
@@ -115,36 +179,135 @@ export async function POST(req: NextRequest) {
       respondentEmail
     )
 
+    // Logs de diagnostic détaillés
+    console.log('🔍 DIAGNOSTIC DÉTAILLÉ DES DONNÉES:')
+    console.log(`   - ID du cas d'usage: ${usecase_id}`)
+    console.log(`   - Nom du cas: ${usecase.name}`)
+    console.log(`   - Nombre de réponses: ${responses?.length || 0}`)
+    console.log(`   - Entreprise: ${company?.name || 'N/A'}`)
+    console.log(`   - Modèle: ${model?.model_name || 'N/A'}`)
+    console.log(`   - Email répondant: ${respondentEmail}`)
+    console.log(`   - Données transformées valides: ${!!transformedData.usecase_context_fields?.cas_usage?.id}`)
+
     // Valider les données transformées (validation simplifiée pour le nouveau format)
     if (!transformedData.usecase_context_fields?.cas_usage?.id) {
-      console.log('⚠️ Données insuffisantes pour l\'analyse OpenAI')
+      console.error('❌ ÉCHEC DE VALIDATION - Données insuffisantes pour l\'analyse OpenAI')
+      console.error('🔍 Détails de la validation:')
+      console.error(`   - usecase_context_fields: ${!!transformedData.usecase_context_fields}`)
+      console.error(`   - cas_usage: ${!!transformedData.usecase_context_fields?.cas_usage}`)
+      console.error(`   - cas_usage.id: ${transformedData.usecase_context_fields?.cas_usage?.id || 'MANQUANT'}`)
+      console.error(`   - Structure complète:`, JSON.stringify(transformedData.usecase_context_fields, null, 2))
+      
+      // Enregistrer l'erreur de validation
+      errorMonitor.logError(createErrorReport(
+        usecase_id,
+        'validation',
+        'Données insuffisantes pour l\'analyse OpenAI',
+        1,
+        1,
+        {
+          has_responses: (responses?.length || 0) > 0,
+          has_company: !!company,
+          has_model: !!model,
+          transformed_data_valid: !!transformedData.usecase_context_fields?.cas_usage?.id,
+          transformedDataStructure: transformedData.usecase_context_fields
+        }
+      ))
+      
       return NextResponse.json({ 
         error: 'Données insuffisantes pour l\'analyse. Veuillez compléter le questionnaire d\'abord.', 
-        requires_questionnaire: true
+        requires_questionnaire: true,
+        debug_info: {
+          has_responses: (responses?.length || 0) > 0,
+          has_company: !!company,
+          has_model: !!model,
+          transformed_data_valid: !!transformedData.usecase_context_fields?.cas_usage?.id
+        }
       }, { status: 400 })
     }
 
-    // Générer l'analyse avec OpenAI (nouveau format complet)
+    // Générer l'analyse avec OpenAI (nouveau format complet) avec retry automatique
     const startTime = Date.now()
-    const analysis = await openAIClient.generateComplianceAnalysisComplete(transformedData)
+    let analysis: string
+    let success = false
+    let attempt = 1
+    
+    try {
+      analysis = await generateAnalysisWithRetry(transformedData, usecase_id)
+      success = true
+    } catch (error) {
+      // L'erreur a déjà été loggée dans generateAnalysisWithRetry
+      throw error
+    }
+    
     const processingTime = Date.now() - startTime
+    
+    // Enregistrer les métriques de performance
+    errorMonitor.logPerformance(createPerformanceMetrics(
+      usecase_id,
+      processingTime,
+      success,
+      attempt,
+      analysis.length
+    ))
 
-    // Sauvegarder le rapport dans la base de données
-    const { error: saveError } = await supabase
-      .from('usecases')
-      .update({ 
-        report_summary: analysis,
-        report_generated_at: new Date().toISOString()
-      })
-      .eq('id', usecase_id)
+    // Sauvegarder le rapport dans la base de données avec retry
+    const saveStartTime = Date.now()
+    let saveError = null
+    
+    for (let saveAttempt = 1; saveAttempt <= 3; saveAttempt++) {
+      try {
+        const { error } = await supabase
+          .from('usecases')
+          .update({ 
+            report_summary: analysis,
+            report_generated_at: new Date().toISOString()
+          })
+          .eq('id', usecase_id)
+
+        if (!error) {
+          console.log(`✅ Rapport sauvegardé avec succès (tentative ${saveAttempt})`)
+          break
+        }
+        
+        saveError = error
+        
+        if (saveAttempt < 3) {
+          console.log(`⚠️ Échec sauvegarde tentative ${saveAttempt}, retry dans 1s...`)
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
+        
+      } catch (err) {
+        saveError = err
+        if (saveAttempt < 3) {
+          console.log(`⚠️ Erreur sauvegarde tentative ${saveAttempt}, retry dans 1s...`)
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
+      }
+    }
 
     if (saveError) {
-      console.error('Erreur sauvegarde rapport:', saveError)
+      console.error('❌ Échec sauvegarde rapport après 3 tentatives:', saveError)
+      
+      // Enregistrer l'erreur de base de données
+      const errorMessage = saveError instanceof Error ? saveError.message : String(saveError)
+      errorMonitor.logError(createErrorReport(
+        usecase_id,
+        'database',
+        `Échec sauvegarde rapport: ${errorMessage}`,
+        1,
+        1,
+        { saveError: errorMessage }
+      ))
+      
       return NextResponse.json({ 
         error: 'Failed to save report to database',
-        details: saveError.message 
+        details: errorMessage
       }, { status: 500 })
     }
+    
+    const saveTime = Date.now() - saveStartTime
+    console.log(`💾 Sauvegarde terminée en ${saveTime}ms`)
 
     // 🚀 ÉTAPE 1 : Extraire les prochaines étapes structurées du rapport
     console.log('🔍 Extraction des prochaines étapes depuis le rapport...')
