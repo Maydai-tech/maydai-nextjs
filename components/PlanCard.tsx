@@ -9,6 +9,7 @@ interface PlanCardProps {
     name: string
     description: string
     price: { monthly: number; yearly: number }
+    stripePriceId: { monthly: string; yearly: string }
     icon: string
     color: string
     features: string[]
@@ -20,9 +21,10 @@ interface PlanCardProps {
   billingCycle: 'monthly' | 'yearly'
   isCurrentPlan: boolean
   onSelect: (planId: string) => void
+  onPayment: (plan: any) => void
 }
 
-export default function PlanCard({ plan, billingCycle, isCurrentPlan, onSelect }: PlanCardProps) {
+export default function PlanCard({ plan, billingCycle, isCurrentPlan, onSelect, onPayment }: PlanCardProps) {
   const getPlanColor = (color: string) => {
     switch (color) {
       case 'blue':
@@ -57,9 +59,9 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onSelect }
   }
 
   const colors = getPlanColor(plan.color)
-  const isPopular = plan.popular
-  const isFree = plan.free
-  const isCustom = plan.custom
+  const isPopular = plan.popular || false
+  const isFree = plan.free || false
+  const isCustom = plan.custom || false
 
   // Check Icon component inspired by the tarifs page
   const CheckIcon = () => (
@@ -128,8 +130,8 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onSelect }
         <p className="text-gray-600 mb-6 h-20 text-center">{plan.description}</p>
 
         {/* Action Button */}
-        <a 
-          href="/contact" 
+        <button 
+          onClick={() => onPayment(plan)}
           className={`w-full text-center font-bold py-3 px-6 rounded-lg transition-colors duration-300 ${
             isCurrentPlan
               ? 'bg-[#0080A3] text-white hover:bg-[#006d8a]'
@@ -141,7 +143,7 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onSelect }
           {isCurrentPlan ? 'Plan actuel' : 
            isFree ? 'Commencer' :
            isCustom ? 'Attachez vos ceintures !' : 'C\'est parti !'}
-        </a>
+        </button>
         
         <hr className="my-6" />
         

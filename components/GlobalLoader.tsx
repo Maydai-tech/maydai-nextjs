@@ -11,12 +11,12 @@ export default function GlobalLoader({ children }: GlobalLoaderProps) {
   const { loading } = useAuth()
   const [forceShow, setForceShow] = useState(false)
 
-  // Force l'affichage après 3 secondes pour éviter un blocage infini
+  // Force l'affichage après 2 secondes pour éviter un blocage infini
   useEffect(() => {
     const timer = setTimeout(() => {
       setForceShow(true)
       console.warn('GlobalLoader: Force affichage après timeout - problème de connexion Supabase détecté')
-    }, 3000)
+    }, 2000)
 
     return () => clearTimeout(timer)
   }, [])
