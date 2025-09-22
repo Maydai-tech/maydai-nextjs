@@ -59,8 +59,8 @@ export default function AbonnementPage() {
       description: 'Vous souhaitez agir tout de suite, vous mettre en conformité ou tester des projets IA.',
       price: { monthly: 0, yearly: 0 },
       stripePriceId: { 
-        monthly: 'price_1S8JY316FiJU1KS5V9k250i7', // Gratuit
-        yearly: 'price_1S8JY316FiJU1KS5V9k250i7'   // Gratuit
+        monthly: 'prod_T6Ld2VaqZfI6iU', // Gratuit (PROD ID)
+        yearly: 'prod_T6Ld2VaqZfI6iU'   // Gratuit (PROD ID)
       },
       icon: 'level-up.png',
       color: 'blue',
@@ -81,8 +81,8 @@ export default function AbonnementPage() {
       description: "Vous avez la volonté de centraliser et d'évaluer tous les cas d'usages de votre entreprise et/ou de ses filiales.",
       price: { monthly: 10, yearly: 100 },
       stripePriceId: { 
-        monthly: 'price_1S8JkN16FiJU1KS5MjGTdcIo', // 10€/mois
-        yearly: 'price_1S8JkN16FiJU1KS5L9MBToBM'   // 100€/an
+        monthly: 'prod_T6Lazet0zet9KG', // 10€/mois (PROD ID)
+        yearly: 'prod_T6Lazet0zet9KG'   // 100€/an (PROD ID)
       },
       icon: 'le-coucher-du-soleil.png',
       color: 'purple',
@@ -104,8 +104,8 @@ export default function AbonnementPage() {
       description: "Devis entreprise: Vous avez besoin d'être accompagné en matière de formation, de création d'audit IA act et de registre entreprise.",
       price: { monthly: 1000, yearly: 10000 },
       stripePriceId: { 
-        monthly: 'price_1S8IL716FiJU1KS5cpmO81Ct', // 1000€/mois
-        yearly: 'price_1S8IL716FiJU1KS5cpmO81Ct'   // 10000€/an (même prix pour l'instant)
+        monthly: 'prod_T6Lf26aXhFagxc', // 1000€/mois (PROD ID)
+        yearly: 'prod_T6Lf26aXhFagxc'   // 1000€/mois (PROD ID)
       },
       icon: 'chapeau-de-pilote.png',
       color: 'gold',
