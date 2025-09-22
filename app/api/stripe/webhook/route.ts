@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-// Initialiser Stripe avec la clé secrète
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil',
-})
+// Fonction pour initialiser Stripe
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY manquante')
+  }
+  
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-08-27.basil',
+  })
+}
 
 // Fonction pour initialiser Supabase
 function getSupabaseClient() {
@@ -20,10 +26,8 @@ function getSupabaseClient() {
   return createClient(supabaseUrl, supabaseKey)
 }
 
-// Webhook secret pour vérifier la signature
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
-
 export async function POST(request: NextRequest) {
+  const stripe = getStripeClient() // Initialiser Stripe ici
   try {
     const body = await request.text()
     const signature = request.headers.get('stripe-signature')
@@ -46,6 +50,7 @@ export async function POST(request: NextRequest) {
 
       // Vérifier la signature du webhook
       try {
+        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
         event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
       } catch (err) {
         console.error('Webhook signature verification failed:', err)
@@ -61,27 +66,27 @@ export async function POST(request: NextRequest) {
     // Traiter les différents types d'événements
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session)
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, stripe)
         break
 
       case 'customer.subscription.created':
-        await handleSubscriptionCreated(event.data.object as Stripe.Subscription)
+        await handleSubscriptionCreated(event.data.object as Stripe.Subscription, stripe)
         break
 
       case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription, stripe)
         break
 
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription, stripe)
         break
 
       case 'invoice.payment_succeeded':
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice)
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice, stripe)
         break
 
       case 'invoice.payment_failed':
-        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice)
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice, stripe)
         break
 
       default:
@@ -99,7 +104,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Gérer la session de checkout complétée
-async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, stripe: Stripe) {
   console.log('Checkout session completed:', session.id)
 
   if (session.mode === 'subscription' && session.subscription) {
@@ -109,12 +114,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       { expand: ['customer'] }
     )
 
-    await handleSubscriptionCreated(subscription)
+    await handleSubscriptionCreated(subscription, stripe)
   }
 }
 
 // Gérer la création d'un abonnement
-async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+async function handleSubscriptionCreated(subscription: Stripe.Subscription, stripe: Stripe) {
   console.log('Subscription created:', subscription.id)
 
   try {
@@ -170,7 +175,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 }
 
 // Gérer la mise à jour d'un abonnement
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription, stripe: Stripe) {
   console.log('Subscription updated:', subscription.id)
 
   try {
@@ -201,7 +206,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 }
 
 // Gérer la suppression d'un abonnement
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription, stripe: Stripe) {
   console.log('Subscription deleted:', subscription.id)
 
   try {
@@ -225,7 +230,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 }
 
 // Gérer le paiement d'une facture réussi
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, stripe: Stripe) {
   console.log('Invoice payment succeeded:', invoice.id)
 
   if ((invoice as any).subscription) {
@@ -246,7 +251,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 }
 
 // Gérer l'échec du paiement d'une facture
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, stripe: Stripe) {
   console.log('Invoice payment failed:', invoice.id)
 
   if ((invoice as any).subscription) {
