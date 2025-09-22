@@ -7,15 +7,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-08-27.basil',
 })
 
-// Initialiser Supabase avec les variables d'environnement côté serveur
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// Fonction pour initialiser Supabase
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Variables d\'environnement Supabase manquantes dans webhook')
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Variables d\'environnement Supabase manquantes dans webhook')
+    throw new Error('Supabase configuration missing')
+  }
+
+  return createClient(supabaseUrl, supabaseKey)
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey)
 
 // Webhook secret pour vérifier la signature
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
@@ -138,6 +141,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     const planId = getPlanIdFromPriceId(subscription.items.data[0]?.price.id)
 
     // Insérer ou mettre à jour l'abonnement
+    const supabase = getSupabaseClient()
     const { error } = await supabase
       .from('subscriptions')
       .upsert({
@@ -170,6 +174,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   console.log('Subscription updated:', subscription.id)
 
   try {
+    const supabase = getSupabaseClient()
     const { error } = await supabase
       .from('subscriptions')
       .update({
@@ -200,6 +205,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   console.log('Subscription deleted:', subscription.id)
 
   try {
+    const supabase = getSupabaseClient()
     const { error } = await supabase
       .from('subscriptions')
       .update({
@@ -224,6 +230,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 
   if ((invoice as any).subscription) {
     // Mettre à jour le statut de l'abonnement
+    const supabase = getSupabaseClient()
     const { error } = await supabase
       .from('subscriptions')
       .update({
@@ -244,6 +251,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
   if ((invoice as any).subscription) {
     // Mettre à jour le statut de l'abonnement
+    const supabase = getSupabaseClient()
     const { error } = await supabase
       .from('subscriptions')
       .update({

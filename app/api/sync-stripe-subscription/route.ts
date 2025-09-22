@@ -7,10 +7,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-08-27.basil',
 })
 
-// Initialiser Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
+// Fonction pour initialiser Supabase
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Variables d\'environnement Supabase manquantes')
+    throw new Error('Supabase configuration missing')
+  }
+
+  return createClient(supabaseUrl, supabaseKey)
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,6 +48,7 @@ export async function POST(request: NextRequest) {
     })
 
     // 2. Utiliser un utilisateur existant (la table profiles n'a pas de colonne email)
+    const supabase = getSupabaseClient()
     const { data: testUser, error: testUserError } = await supabase
       .from('profiles')
       .select('id')

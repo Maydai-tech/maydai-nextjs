@@ -1,23 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Initialiser Supabase avec les variables d'environnement côté serveur
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// Fonction pour initialiser Supabase
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Variables d\'environnement Supabase manquantes')
-  console.error('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅' : '❌')
-  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseKey ? '✅' : '❌')
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Variables d\'environnement Supabase manquantes')
+    console.error('NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅' : '❌')
+    console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseKey ? '✅' : '❌')
+    throw new Error('Supabase configuration missing')
+  }
+
+  return createClient(supabaseUrl, supabaseKey)
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey)
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🧪 Test de synchronisation Stripe-Supabase...')
     
     // 1. D'abord, récupérer un utilisateur existant ou créer un profil de test
+    const supabase = getSupabaseClient()
     const { data: existingUsers, error: usersError } = await supabase
       .from('profiles')
       .select('id')
@@ -114,6 +118,7 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Récupération des subscriptions...')
     
+    const supabase = getSupabaseClient()
     const { data, error } = await supabase
       .from('subscriptions')
       .select('*')
