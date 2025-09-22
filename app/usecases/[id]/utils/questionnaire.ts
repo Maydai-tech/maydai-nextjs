@@ -1,4 +1,6 @@
 import { Question, QuestionAnswer, QuestionProgress } from '../types/usecase'
+import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
+
 // Note: Ce fichier sera mis à jour dans une future étape pour utiliser loadQuestions()
 // import { loadQuestions } from './questions-loader'
 
@@ -157,16 +159,9 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
 export const getAbsoluteQuestionProgress = (currentQuestionId: string): QuestionProgress => {
   // Nombre maximum absolu de questions possibles dans le questionnaire
   // 6 (base) + 9 (high-risk) + 1 (critical) + 3 (additional) + 2 (transparency) = 21
-  const MAX_QUESTIONS = 21
-  
-  // Ordre global de toutes les questions possibles
-  const ALL_QUESTIONS = [
-    'E4.N7.Q1', 'E4.N7.Q1.1', 'E4.N7.Q1.2', 'E4.N7.Q2', 'E4.N7.Q2.1', 'E4.N7.Q3', 'E4.N7.Q3.1', // Base questions (7)
-    'E5.N8.Q1', 'E5.N8.Q2', 'E5.N9.Q3', 'E5.N9.Q4', 'E5.N9.Q5', 'E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8', 'E5.N9.Q9', // High-risk sequence (9)
-    'E4.N8.Q12', // Critical question (1)
-    'E4.N8.Q9', 'E4.N8.Q10', 'E4.N8.Q11', // Additional questions (3)
-    'E6.N10.Q1', 'E6.N10.Q2' // Transparency questions (2)
-  ]
+  const MAX_QUESTIONS = Object.keys(questionsData).length
+
+  const ALL_QUESTIONS = Object.keys(questionsData)
   
   // Trouver l'index de la question courante
   const currentIndex = ALL_QUESTIONS.indexOf(currentQuestionId)
@@ -297,4 +292,96 @@ export const formatDate = (dateString: string): string => {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+// Helper function to calculate maximum remaining questions from a given position
+const getMaxRemainingQuestions = (questionId: string, visited: Set<string> = new Set()): number => {
+  // Avoid infinite loops by tracking visited questions
+  if (visited.has(questionId)) {
+    return 0
+  }
+
+  visited.add(questionId)
+
+  // Get all possible next questions for this question ID
+  const possibleNextQuestions = getAllPossibleNextQuestions(questionId)
+
+  if (possibleNextQuestions.length === 0) {
+    // End of questionnaire
+    return 1
+  }
+
+  // Find the maximum path length among all possible branches
+  let maxRemainingFromBranches = 0
+  for (const nextQuestionId of possibleNextQuestions) {
+    const remainingFromThisBranch = getMaxRemainingQuestions(nextQuestionId, new Set(visited))
+    maxRemainingFromBranches = Math.max(maxRemainingFromBranches, remainingFromThisBranch)
+  }
+
+  return 1 + maxRemainingFromBranches
+}
+
+// Helper function to generate answer contexts for a given question to explore all possible paths
+const generateAnswerContexts = (questionId: string): Record<string, any>[] => {
+  switch (questionId) {
+    case 'E4.N7.Q1':
+      // Test both possible answers
+      return [
+        { 'E4.N7.Q1': 'E4.N7.Q1.A' },
+        { 'E4.N7.Q1': 'E4.N7.Q1.B' }
+      ]
+
+    case 'E5.N9.Q4':
+      // Test both answers and different previous answer combinations
+      return [
+        // Answer A - goes to Q5
+        { 'E5.N9.Q4': 'E5.N9.Q4.A' },
+        // Answer B with "all none" answers - goes to Q5
+        {
+          'E5.N9.Q4': 'E5.N9.Q4.B',
+          'E4.N7.Q2': ['E4.N7.Q2.G'],
+          'E4.N7.Q2.1': ['E4.N7.Q2.1.E'],
+          'E4.N7.Q3': ['E4.N7.Q3.E'],
+          'E4.N7.Q3.1': ['E4.N7.Q3.1.E']
+        },
+        // Answer B with any non-"none" answer - goes to Q1
+        {
+          'E5.N9.Q4': 'E5.N9.Q4.B',
+          'E4.N7.Q2': ['E4.N7.Q2.A'], // Any non-G answer
+          'E4.N7.Q2.1': ['E4.N7.Q2.1.E'],
+          'E4.N7.Q3': ['E4.N7.Q3.E'],
+          'E4.N7.Q3.1': ['E4.N7.Q3.1.E']
+        }
+      ]
+
+    default:
+      // For questions without conditional logic, return empty context
+      return [{}]
+  }
+}
+
+// Helper function to get all possible next questions from a given question using getNextQuestion
+const getAllPossibleNextQuestions = (questionId: string): string[] => {
+  const possibleNext = new Set<string>()
+
+  // Generate all possible answer contexts for this question
+  const answerContexts = generateAnswerContexts(questionId)
+
+  for (const answers of answerContexts) {
+    const next = getNextQuestion(questionId, answers)
+    if (next) {
+      possibleNext.add(next)
+    }
+  }
+
+  return Array.from(possibleNext)
+}
+
+// Function to get the minimum position of a question based on the maximum possible questions after it
+export const getCurrentQuestionPosition = (currentQuestionId: string): number => {
+  const totalQuestions = Object.keys(questionsData).length // 29 questions total
+  const maxQuestionsRemaining = getMaxRemainingQuestions(currentQuestionId)
+
+  // Position = Total questions - Maximum remaining questions + 1
+  return totalQuestions - maxQuestionsRemaining + 1
 } 
