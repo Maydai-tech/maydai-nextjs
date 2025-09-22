@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-// Initialiser Stripe avec la clé secrète
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil',
-})
+// Fonction pour initialiser Stripe
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY manquante')
+  }
+  
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-08-27.basil',
+  })
+}
 
 // Fonction pour initialiser Supabase
 function getSupabaseClient() {
@@ -21,6 +27,7 @@ function getSupabaseClient() {
 }
 
 export async function POST(request: NextRequest) {
+  const stripe = getStripeClient() // Initialiser Stripe ici
   try {
     const { subscriptionId } = await request.json()
 
