@@ -1,94 +1,15 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { generateNonce, createCSPHeader } from '@/lib/csp-nonce';
-import { getAuthStatus } from '@/lib/middleware-auth';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Générer un nonce unique pour cette requête
-  const nonce = generateNonce()
-
-  // Autoriser les fichiers statiques et les API routes en premier
-  const isStaticFile = pathname.startsWith('/_next/') || 
-                      pathname.startsWith('/api/') ||
-                      pathname.includes('.')
-
-  // Si c'est un fichier statique ou une API route, laisser passer immédiatement
-  if (isStaticFile) {
-    const response = NextResponse.next();
-    response.headers.set('x-nonce', nonce);
-    return response;
-  }
-
-  // Middleware d'authentification désactivé - utilise l'authentification côté client
-
-  // Force la vérification en production (pas de bypass en développement)
-  const isProduction = process.env.NODE_ENV === 'production' || 
-                      (!request.nextUrl.hostname.includes('localhost') && 
-                       !request.nextUrl.hostname.includes('127.0.0.1'));
+  // Middleware simplifié pour tester la connexion Supabase
+  console.log('Middleware - Processing request:', pathname);
   
-  // Pages à bloquer spécifiquement en production
-  const blockedPaths = [
-    '/signup',
-  ];
-
-  // Test spécifique pour les pages bloquées - toujours bloquer en production
-  if (isProduction && blockedPaths.some(blockedPath => pathname.startsWith(blockedPath))) {
-    console.log('Middleware - Blocking access to private page:', pathname);
-    return NextResponse.redirect(new URL('/not-found', request.url));
-  }
-
-  // Debug: ajouter un log pour vérifier l'environnement
-  console.log('Middleware - NODE_ENV:', process.env.NODE_ENV, 'hostname:', request.nextUrl.hostname, 'isProduction:', isProduction, 'pathname:', pathname);
-
-  // En production, vérifier les pages autorisées
-  if (isProduction) {
-    const allowedPaths = [
-      '/',
-      '/a-propos',
-      '/conditions-generales',
-      '/contact',
-      '/fonctionnalites',
-      '/ia-act-ue',
-      '/ia-act-ue/calendrier',
-      '/ia-act-ue/risques',
-      '/politique-confidentialite',
-      '/tarifs',
-      '/admin',
-      '/login',
-      '/dashboard',
-      '/companies',
-      '/usecases',
-      '/profil'
-    ];
-
-    // Si la page n'est pas dans la liste des pages autorisées, rediriger vers 404
-    if (!allowedPaths.some(path => pathname.startsWith(path))) {
-      console.log('Middleware - Blocking access to:', pathname);
-      return NextResponse.redirect(new URL('/not-found', request.url));
-    }
-  }
-
-  // Créer la réponse avec les headers de sécurité
+  // Laisser passer toutes les requêtes pour l'instant
   const response = NextResponse.next();
   
-  // Ajouter le nonce aux headers
-  response.headers.set('x-nonce', nonce);
-  
-  // En production, ajouter les headers de sécurité avec le nonce
-  if (isProduction) {
-    response.headers.set('Content-Security-Policy', createCSPHeader(nonce));
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-    response.headers.set('X-Frame-Options', 'DENY');
-    response.headers.set('X-XSS-Protection', '1; mode=block');
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-    
-    // IMPORTANT: Supprimer les headers Link problématiques générés par Next.js
-    response.headers.delete('link');
-  }
-
   return response;
 }
 
