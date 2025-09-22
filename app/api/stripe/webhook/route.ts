@@ -277,9 +277,10 @@ function getPlanIdFromPriceId(priceId: string | undefined): string {
 
   // Mapping des price_id vers les plan_id (PRODUCTION)
   const priceToPlanMap: Record<string, string> = {
-    'prod_T6Ld2VaqZfI6iU': 'starter', // Gratuit (PROD ID)
-    'prod_T6Lazet0zet9KG': 'pro', // 10€/mois (PROD ID)
-    'prod_T6Lf26aXhFagxc': 'enterprise', // 1000€/mois (PROD ID)
+    'price_1SA8wX1ALRgJSDBxK8g4bH8q': 'starter', // Gratuit (PRICE ID)
+    'price_1SA8t21ALRgJSDBxFaYrH1d7': 'pro', // 10€/mois (PRICE ID)
+    'price_1SA8v81ALRgJSDBx0CDPDcid': 'pro', // 100€/an (PRICE ID)
+    'price_1SA8xx1ALRgJSDBxUrh2lJwg': 'enterprise', // 1000€/mois (PRICE ID)
   }
 
   return priceToPlanMap[priceId] || 'starter'
