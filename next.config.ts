@@ -70,8 +70,8 @@ const nextConfig: NextConfig = {
               // Source par défaut - Autoriser uniquement le domaine actuel
               "default-src 'self'",
               
-              // Scripts - Autoriser GTM, CookieYes et les scripts nécessaires à Next.js
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://cdn-cookieyes.com",
+              // Scripts - Autoriser GTM, CookieYes, Stripe et les scripts nécessaires à Next.js
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://cdn-cookieyes.com https://js.stripe.com",
               
               // Styles - Autoriser les styles inline (nécessaire pour Next.js et les bandeaux)
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
@@ -79,14 +79,14 @@ const nextConfig: NextConfig = {
               // Images - Autoriser toutes les images HTTPS et data URIs + GA4/GTM
               "img-src 'self' data: https: https://www.google-analytics.com https://www.googletagmanager.com",
               
-              // Connexions - Autoriser les appels API nécessaires (Supabase + GA4 + GTM + CookieYes)
-              "connect-src 'self' https://*.supabase.co https://region1.google-analytics.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://cdn-cookieyes.com",
+              // Connexions - Autoriser les appels API nécessaires (Supabase + GA4 + GTM + CookieYes + Stripe)
+              "connect-src 'self' https://*.supabase.co https://region1.google-analytics.com https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://cdn-cookieyes.com https://api.stripe.com",
               
               // Polices - Autoriser les polices personnalisées et Google Fonts
               "font-src 'self' data: https://fonts.gstatic.com",
               
-              // Frames - Autoriser les iframes pour GTM noscript
-              "frame-src 'self' https://www.googletagmanager.com",
+              // Frames - Autoriser les iframes pour GTM noscript et Stripe Checkout
+              "frame-src 'self' https://www.googletagmanager.com https://js.stripe.com",
               
               // Objets - Interdire tous les objets pour la sécurité
               "object-src 'none'",
