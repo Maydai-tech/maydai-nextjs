@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
       status: subscription.status,
       customer: subscription.customer,
       items: subscription.items.data.length,
-      current_period_start: subscription.current_period_start,
-      current_period_end: subscription.current_period_end
+      current_period_start: (subscription as any).current_period_start,
+      current_period_end: (subscription as any).current_period_end
     })
 
     // 2. Utiliser un utilisateur existant (la table profiles n'a pas de colonne email)
@@ -62,19 +62,19 @@ export async function POST(request: NextRequest) {
 
     // 4. Créer ou mettre à jour la subscription dans Supabase
     console.log('🔧 Conversion des dates:', {
-      current_period_start_raw: subscription.current_period_start,
-      current_period_end_raw: subscription.current_period_end,
-      current_period_start_js: new Date(subscription.current_period_start * 1000),
-      current_period_end_js: new Date(subscription.current_period_end * 1000)
+      current_period_start_raw: (subscription as any).current_period_start,
+      current_period_end_raw: (subscription as any).current_period_end,
+      current_period_start_js: new Date((subscription as any).current_period_start * 1000),
+      current_period_end_js: new Date((subscription as any).current_period_end * 1000)
     })
 
     // Conversion sécurisée des dates
-    const currentPeriodStart = subscription.current_period_start 
-      ? new Date(subscription.current_period_start * 1000).toISOString()
+    const currentPeriodStart = (subscription as any).current_period_start 
+      ? new Date((subscription as any).current_period_start * 1000).toISOString()
       : new Date().toISOString()
     
-    const currentPeriodEnd = subscription.current_period_end 
-      ? new Date(subscription.current_period_end * 1000).toISOString()
+    const currentPeriodEnd = (subscription as any).current_period_end 
+      ? new Date((subscription as any).current_period_end * 1000).toISOString()
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
     const subscriptionData = {
