@@ -275,12 +275,11 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, stripe: Strip
 function getPlanIdFromPriceId(priceId: string | undefined): string {
   if (!priceId) return 'starter'
 
-  // Mapping des price_id vers les plan_id
+  // Mapping des price_id vers les plan_id (PRODUCTION)
   const priceToPlanMap: Record<string, string> = {
-    'price_1S8JY316FiJU1KS5V9k250i7': 'starter', // Gratuit
-    'price_1S8JkN16FiJU1KS5MjGTdcIo': 'pro', // 10€/mois
-    'price_1S8JkN16FiJU1KS5L9MBToBM': 'pro', // 100€/an
-    'price_1S8IL716FiJU1KS5cpmO81Ct': 'enterprise', // 1000€/mois
+    'prod_T6Ld2VaqZfI6iU': 'starter', // Gratuit (PROD ID)
+    'prod_T6Lazet0zet9KG': 'pro', // 10€/mois (PROD ID)
+    'prod_T6Lf26aXhFagxc': 'enterprise', // 1000€/mois (PROD ID)
   }
 
   return priceToPlanMap[priceId] || 'starter'
