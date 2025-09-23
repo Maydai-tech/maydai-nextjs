@@ -3,7 +3,7 @@ export const useCaseRoutes = {
   evaluation: (id: string) => `/usecases/${id}/evaluation`,
   rapport: (id: string) => `/usecases/${id}/rapport`,
   dashboard: (companyId: string) => `/dashboard/${companyId}`,
-  companies: () => '/dashboard/companies'
+  companies: () => '/dashboard/registries'
 }
 
 export const useCaseNavigation = [

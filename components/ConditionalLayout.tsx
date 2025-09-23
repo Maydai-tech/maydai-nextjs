@@ -36,7 +36,8 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
 
   // Pages à exclure de la sidebar même si elles commencent par un préfixe autorisé
   const excludedPages = [
-    '/dashboard/companies'
+    '/dashboard/registries',
+    '/dashboard/registries/new'
   ];
 
   // Vérifier si c'est une page qui nécessite la sidebar

@@ -22,7 +22,7 @@ export default function LoginPage() {
   // Redirection automatique pour les utilisateurs connectés
   useEffect(() => {
     if (user && !loading) {
-      router.replace('/dashboard/companies')
+      router.replace('/dashboard/registries')
     }
   }, [user, loading, router])
 
@@ -77,7 +77,7 @@ export default function LoginPage() {
         }
       } else {
         // Succès - rediriger vers le dashboard
-        router.replace('/dashboard/companies')
+        router.replace('/dashboard/registries')
       }
     } catch (err) {
       setError('Une erreur est survenue lors de la vérification')

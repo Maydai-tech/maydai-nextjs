@@ -151,7 +151,7 @@ export default function UseCaseRapportPage() {
             onClick={goToCompanies}
             className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors"
           >
-            Retour aux entreprises
+            Retour à l'accueil
           </button>
         </div>
       </div>
