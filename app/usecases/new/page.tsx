@@ -724,7 +724,7 @@ function NewUseCasePageContent() {
             Nouveau cas d'usage IA
           </h1>
           <p className="text-gray-600">
-            {company.name} • {company.industry}
+            Registre : {company.name}
           </p>
         </div>
 

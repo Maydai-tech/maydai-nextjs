@@ -12,9 +12,6 @@ import Footer from '@/components/Footer'
 interface Company {
   id: string
   name: string
-  industry: string
-  city: string
-  country: string
 }
 
 export default function CompanySelection() {
@@ -55,10 +52,10 @@ export default function CompanySelection() {
       if (result.data) {
         setCompanies(result.data)
       } else if (result.error) {
-        console.error('Erreur lors du chargement des entreprises:', result.error)
+        console.error('Erreur lors du chargement des registres:', result.error)
       }
     } catch (error) {
-      console.error('Error fetching companies:', error)
+      console.error('Error fetching registries:', error)
     } finally {
       setLoadingData(false)
     }
