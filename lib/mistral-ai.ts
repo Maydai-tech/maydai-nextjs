@@ -81,14 +81,20 @@ export class MistralAIService {
     return `
 
 
-**Nom du cas d'usage :** ${formData.name || 'Non spécifié'}
-**Catégorie d'IA :** ${formData.ai_category || 'Non spécifiée'}
-**Type de système :** ${formData.system_type || 'Non spécifié'}
-**Pays de déploiement :** ${formData.deployment_countries || 'Non spécifiés'}
-**Partenaire technologique :** ${formData.technology_partner || 'Non spécifié'}
-**Modèle LLM :** ${formData.llm_model_version || 'Non spécifié'}
-**Service responsable :** ${formData.responsible_service || 'Non spécifié'}
-**Date de déploiement :** ${formData.deployment_date || 'Non spécifiée'}
+**Informations de l'entreprise :**
+- Nom de l'entreprise : ${formData.company_name || 'Non spécifié'}
+- Secteur d'activité : ${formData.company_industry || 'Non spécifié'}
+- Localisation : ${formData.company_city || 'Non spécifié'}, ${formData.company_country || 'Non spécifié'}
+
+**Informations du cas d'usage :**
+- Nom du cas d'usage : ${formData.name || 'Non spécifié'}
+- Catégorie d'IA : ${formData.ai_category || 'Non spécifiée'}
+- Type de système : ${formData.system_type || 'Non spécifié'}
+- Pays de déploiement : ${formData.deployment_countries || 'Non spécifiés'}
+- Partenaire technologique : ${formData.technology_partner || 'Non spécifié'}
+- Modèle LLM : ${formData.llm_model_version || 'Non spécifié'}
+- Service responsable : ${formData.responsible_service || 'Non spécifié'}
+- Date de déploiement : ${formData.deployment_date || 'Non spécifiée'}
 
 
     `.trim()

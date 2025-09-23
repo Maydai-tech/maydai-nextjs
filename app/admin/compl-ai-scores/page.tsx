@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BarChart3, TrendingUp, Database, RefreshCw, Trash2, Plus, Save, X, Check, Edit, Calculator } from 'lucide-react'
+import { BarChart3, TrendingUp, Database, RefreshCw, Trash2, Plus, Save, X, Check, Edit, Calculator, Download, Upload, FileText } from 'lucide-react'
 
 
 interface BenchmarkInfo {
@@ -98,6 +98,13 @@ export default function ComplAIScoresPage() {
   const [editingScore, setEditingScore] = useState<ScoreEditData | null>(null)
   const [deletingScore, setDeletingScore] = useState<ScoreDeleteData | null>(null)
   const [saving, setSaving] = useState(false)
+  
+  // États pour l'import/export CSV
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importMode, setImportMode] = useState<'create' | 'update'>('create')
+  const [importing, setImporting] = useState(false)
+  const [importResults, setImportResults] = useState<any>(null)
 
   useEffect(() => {
     fetchScores()
@@ -299,6 +306,167 @@ export default function ComplAIScoresPage() {
     } finally {
       setClearing(false)
       setShowClearConfirm(false)
+    }
+  }
+
+  // Fonction pour parser le CSV
+  const parseCSV = (csvText: string): any[] => {
+    const lines = csvText.split('\n')
+    const headers = lines[0].split(',').map(h => h.trim())
+    const rows = []
+
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].trim()) {
+        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''))
+        const row: any = {}
+        headers.forEach((header, index) => {
+          row[header] = values[index] || null
+        })
+        rows.push(row)
+      }
+    }
+
+    return rows
+  }
+
+  // Fonction pour l'export CSV
+  const handleExportCSV = async () => {
+    try {
+      // Récupérer le token de session pour l'authentification
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        setSyncMessage('Erreur: Session non trouvée')
+        return
+      }
+
+      // Appeler l'API d'export
+      const response = await fetch('/api/admin/compl-ai/export-csv', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        let errorMessage = 'Erreur lors de l\'export'
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData?.error || errorMessage
+        } catch (jsonError) {
+          // Si on ne peut pas parser le JSON, utiliser le message d'erreur par défaut
+          errorMessage = `Erreur ${response.status}: ${response.statusText}`
+        }
+        throw new Error(errorMessage)
+      }
+
+      // Créer un blob et télécharger le fichier
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `compl-ai-scores-export-${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      setSyncMessage('Export CSV réussi !')
+      setTimeout(() => setSyncMessage(''), 3000)
+
+    } catch (error) {
+      console.error('Erreur export CSV:', error)
+      setSyncMessage(`Erreur export: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
+      setTimeout(() => setSyncMessage(''), 5000)
+    }
+  }
+
+  // Fonction pour télécharger le template CSV
+  const handleDownloadTemplate = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        setSyncMessage('Erreur: Session non trouvée')
+        return
+      }
+
+      const response = await fetch('/api/admin/compl-ai/import-csv', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erreur lors du téléchargement')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'compl-ai-import-template.csv'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+    } catch (error) {
+      console.error('Erreur téléchargement template:', error)
+      setSyncMessage(`Erreur template: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
+    }
+  }
+
+  // Fonction pour gérer l'import CSV
+  const handleImportCSV = async () => {
+    if (!importFile) return
+
+    setImporting(true)
+    setImportResults(null)
+
+    try {
+      const csvText = await importFile.text()
+      const csvData = parseCSV(csvText)
+
+      // Récupérer le token de session
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        setSyncMessage('Erreur: Session non trouvée')
+        return
+      }
+
+      // Appeler l'API d'import
+      const response = await fetch('/api/admin/compl-ai/import-csv', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          csvData,
+          updateMode: importMode
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de l\'import')
+      }
+
+      setImportResults(result.stats)
+      setSyncMessage(`Import terminé: ${result.stats.modelsCreated} modèles créés, ${result.stats.evaluationsCreated} évaluations créées`)
+      
+      // Recharger les données
+      await fetchScores()
+
+    } catch (error) {
+      console.error('Erreur import CSV:', error)
+      setSyncMessage(`Erreur import: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -906,6 +1074,45 @@ export default function ComplAIScoresPage() {
               <Calculator className={`h-4 w-4 mr-2 ${calculatingMaydai ? 'animate-pulse' : ''}`} />
               {calculatingMaydai ? 'Calcul en cours...' : 'Calculer scores MaydAI'}
             </button>
+
+            <button
+              onClick={handleExportCSV}
+              disabled={syncing || clearing || saving || calculatingMaydai}
+              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
+                syncing || clearing || saving || calculatingMaydai
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-orange-600 hover:bg-orange-700'
+              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500`}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exporter CSV
+            </button>
+
+            <button
+              onClick={() => setShowImportModal(true)}
+              disabled={syncing || clearing || saving || calculatingMaydai}
+              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
+                syncing || clearing || saving || calculatingMaydai
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-green-600 hover:bg-green-700'
+              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Importer CSV
+            </button>
+
+            <button
+              onClick={handleDownloadTemplate}
+              disabled={syncing || clearing || saving || calculatingMaydai}
+              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
+                syncing || clearing || saving || calculatingMaydai
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Template CSV
+            </button>
             
             {!showClearConfirm ? (
               <button
@@ -1393,6 +1600,143 @@ export default function ComplAIScoresPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Modal d'import CSV */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Importer des données CSV</h3>
+                <button
+                  onClick={() => {
+                    setShowImportModal(false)
+                    setImportFile(null)
+                    setImportResults(null)
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Mode d'import */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Mode d'import
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="create"
+                        checked={importMode === 'create'}
+                        onChange={(e) => setImportMode(e.target.value as 'create' | 'update')}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Créer uniquement (ignorer les existants)</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        value="update"
+                        checked={importMode === 'update'}
+                        onChange={(e) => setImportMode(e.target.value as 'create' | 'update')}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">Mettre à jour les existants</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Upload de fichier */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Fichier CSV
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {importFile && (
+                    <p className="mt-1 text-sm text-gray-600">
+                      Fichier sélectionné: {importFile.name}
+                    </p>
+                  )}
+                </div>
+
+                {/* Boutons d'action */}
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowImportModal(false)
+                      setImportFile(null)
+                      setImportResults(null)
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleImportCSV}
+                    disabled={!importFile || importing}
+                    className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
+                      !importFile || importing
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700'
+                    }`}
+                  >
+                    {importing ? 'Import en cours...' : 'Importer'}
+                  </button>
+                </div>
+
+                {/* Résultats de l'import */}
+                {importResults && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Résultats de l'import</h4>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>Lignes traitées: {importResults.totalRows}</p>
+                      <p>Modèles créés: {importResults.modelsCreated}</p>
+                      <p>Modèles mis à jour: {importResults.modelsUpdated}</p>
+                      <p>Évaluations créées: {importResults.evaluationsCreated}</p>
+                      <p>Évaluations mises à jour: {importResults.evaluationsUpdated}</p>
+                      {importResults.errors.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-red-600 font-medium">Erreurs ({importResults.errors.length}):</p>
+                          <ul className="text-red-600 text-xs list-disc list-inside">
+                            {importResults.errors.slice(0, 5).map((error: string, index: number) => (
+                              <li key={index}>{error}</li>
+                            ))}
+                            {importResults.errors.length > 5 && (
+                              <li>... et {importResults.errors.length - 5} autres erreurs</li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
+                      {importResults.warnings.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-yellow-600 font-medium">Avertissements ({importResults.warnings.length}):</p>
+                          <ul className="text-yellow-600 text-xs list-disc list-inside">
+                            {importResults.warnings.slice(0, 3).map((warning: string, index: number) => (
+                              <li key={index}>{warning}</li>
+                            ))}
+                            {importResults.warnings.length > 3 && (
+                              <li>... et {importResults.warnings.length - 3} autres avertissements</li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
