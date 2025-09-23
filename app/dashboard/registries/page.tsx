@@ -6,8 +6,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-auth'
-import { Building2, Plus, Users, ChevronRight, LogOut } from 'lucide-react'
+import { Building2, Plus, Users, ChevronRight } from 'lucide-react'
 import Footer from '@/components/Footer'
+import ProfileDropdown from '@/components/NavBar/ProfileDropdown'
 
 interface Company {
   id: string
@@ -15,7 +16,7 @@ interface Company {
 }
 
 export default function CompanySelection() {
-  const { user, session, loading, signOut } = useAuth()
+  const { user, session, loading } = useAuth()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [companies, setCompanies] = useState<Company[]>([])
@@ -61,14 +62,6 @@ export default function CompanySelection() {
     }
   }
 
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-      router.push('/login')
-    } catch (error) {
-      console.error('Error signing out:', error)
-    }
-  }
 
   // Show loading state during SSR and initial client load
   if (!mounted || loading) {
@@ -102,14 +95,7 @@ export default function CompanySelection() {
               priority 
             />
           </Link>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-[#0080A3] hover:bg-gray-50 rounded-lg transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm cursor-pointer"
-            title="Se déconnecter"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline font-medium">Déconnexion</span>
-          </button>
+          <ProfileDropdown />
         </nav>
       </header>
 
