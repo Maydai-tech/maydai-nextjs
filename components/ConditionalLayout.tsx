@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import Sidebar from '@/components/Sidebar';
 import { useEffect, useState } from 'react';
 import { useCleanupBrowserExtensions } from '@/hooks/useCleanupBrowserExtensions';
+import NavBar from './NavBar/NavBar';
 
 interface ConditionalLayoutProps {
   children: React.ReactNode;
