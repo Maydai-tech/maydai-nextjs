@@ -11,7 +11,7 @@ export default function ProfileDropdown() {
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Fermer le dropdown quand on clique � l'ext�rieur
+  // Fermer le dropdown quand on clique à l'extérieur
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
