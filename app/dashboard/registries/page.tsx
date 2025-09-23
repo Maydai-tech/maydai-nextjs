@@ -6,9 +6,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-auth'
-import { Building2, Plus, Users, ChevronRight } from 'lucide-react'
+import { Building2, Plus, ChevronRight } from 'lucide-react'
 import Footer from '@/components/Footer'
-import ProfileDropdown from '@/components/NavBar/ProfileDropdown'
+import NavBar from '@/components/NavBar/NavBar'
 
 interface Company {
   id: string
@@ -16,7 +16,7 @@ interface Company {
 }
 
 export default function CompanySelection() {
-  const { user, session, loading } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [companies, setCompanies] = useState<Company[]>([])
@@ -82,22 +82,7 @@ export default function CompanySelection() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header simplifié avec logo et bouton déconnexion */}
-      <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-30">
-        <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3 md:py-4">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <Image 
-              src="/logos/logo-maydai/logo-maydai-complet.png" 
-              alt="MaydAI Logo" 
-              width={134} 
-              height={32}
-              className="h-8 w-auto" 
-              priority 
-            />
-          </Link>
-          <ProfileDropdown />
-        </nav>
-      </header>
+      <NavBar />
 
       {/* Bandeau principal modifié */}
       <section className="relative bg-gradient-to-br from-primary-light to-primary-dark text-white py-6 px-4 flex flex-col items-center justify-center text-center min-h-[20vh]">
