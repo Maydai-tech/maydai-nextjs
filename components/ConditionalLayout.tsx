@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import Sidebar from '@/components/Sidebar';
 import { useEffect, useState } from 'react';
 import { useCleanupBrowserExtensions } from '@/hooks/useCleanupBrowserExtensions';
+import NavBar from './NavBar/NavBar';
 
 interface ConditionalLayoutProps {
   children: React.ReactNode;
@@ -29,15 +30,14 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
     '/todo-list',
     '/collaboration',
     '/abonnement',
-    '/profil',
     '/usecases',
-    '/companies'
   ];
 
   // Pages à exclure de la sidebar même si elles commencent par un préfixe autorisé
   const excludedPages = [
     '/dashboard/registries',
-    '/dashboard/registries/new'
+    '/dashboard/registries/new',
+    '/profil'
   ];
 
   // Vérifier si c'est une page qui nécessite la sidebar
