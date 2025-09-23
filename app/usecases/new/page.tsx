@@ -342,7 +342,7 @@ function NewUseCasePageContent() {
     if (user && mounted && companyId) {
       fetchCompany()
     } else if (mounted && !companyId) {
-      router.push('/dashboard/companies')
+      router.push('/dashboard/registries')
     }
   }, [user, mounted, companyId])
 
@@ -389,14 +389,14 @@ function NewUseCasePageContent() {
       const response = await api.get(`/api/companies/${companyId}`)
       
       if (response.status === 404) {
-        router.push('/dashboard/companies')
+        router.push('/dashboard/registries')
         return
       } else if (response.data) {
         setCompany(response.data)
       }
     } catch (error) {
       console.error('Error fetching company:', error)
-      router.push('/dashboard/companies')
+      router.push('/dashboard/registries')
     }
   }
 
@@ -724,7 +724,7 @@ function NewUseCasePageContent() {
             Nouveau cas d'usage IA
           </h1>
           <p className="text-gray-600">
-            {company.name} • {company.industry}
+            Registre : {company.name}
           </p>
         </div>
 

@@ -50,7 +50,7 @@ export default function Sidebar() {
     }
     
     // Fallback to company selection page
-    return '/dashboard/companies';
+    return '/dashboard/registries';
   };
 
   const menuItems = [

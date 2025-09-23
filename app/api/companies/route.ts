@@ -98,20 +98,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, industry, city, country } = body
-    if (!name || !industry || !city || !country) {
-      return NextResponse.json({ error: 'Champs manquants' }, { status: 400 })
+    const { name} = body
+    if (!name ) {
+      return NextResponse.json({ error: 'Champ name manquant' }, { status: 400 })
     }
 
     // Créer la compagnie
     const { data, error } = await supabase
       .from('companies')
-      .insert([{ name, industry, city, country }])
+      .insert([{ name }])
       .select('id')
       .single()
 
     if (error) {
-      return NextResponse.json({ error: "Erreur lors de la création de l'entreprise" }, { status: 500 })
+      return NextResponse.json({ error: "Erreur lors de la création du registre" }, { status: 500 })
     }
 
     // Créer une relation user_companies avec le rôle company_owner

@@ -12,9 +12,6 @@ import Footer from '@/components/Footer'
 interface Company {
   id: string
   name: string
-  industry: string
-  city: string
-  country: string
 }
 
 export default function CompanySelection() {
@@ -55,10 +52,10 @@ export default function CompanySelection() {
       if (result.data) {
         setCompanies(result.data)
       } else if (result.error) {
-        console.error('Erreur lors du chargement des entreprises:', result.error)
+        console.error('Erreur lors du chargement des registres:', result.error)
       }
     } catch (error) {
-      console.error('Error fetching companies:', error)
+      console.error('Error fetching registries:', error)
     } finally {
       setLoadingData(false)
     }
@@ -141,17 +138,17 @@ export default function CompanySelection() {
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-            Choisissez votre entreprise
+            Vos registres
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Sélectionnez l'entreprise sur laquelle vous souhaitez travailler pour accéder au dashboard de conformité IA Act.
+            Sélectionnez le registre sur lequel vous souhaitez travailler pour accéder au dashboard de conformité IA Act.
           </p>
         </div>
 
         {loadingData ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0080A3]"></div>
-            <span className="ml-3 text-gray-600">Chargement des entreprises...</span>
+            <span className="ml-3 text-gray-600">Chargement des registres...</span>
           </div>
         ) : (
           <div className="space-y-6">
@@ -161,16 +158,16 @@ export default function CompanySelection() {
                 <div className="bg-gray-50 p-4 rounded-full w-16 h-16 mx-auto mb-6">
                   <Building2 className="h-8 w-8 text-gray-400 mx-auto" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Aucune entreprise trouvée</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">Aucun registre trouvé</h3>
                 <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                  Commencez par créer votre première entreprise pour accéder au dashboard de conformité IA Act.
+                  Commencez par créer votre premier registre pour accéder au dashboard de conformité IA Act.
                 </p>
                 <Link
-                  href="/companies/new"
+                  href="/registries/new"
                   className="inline-flex items-center px-6 py-3 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors"
                 >
                   <Plus className="h-5 w-5 mr-2" />
-                  Créer une entreprise
+                  Créer un registre
                 </Link>
               </div>
             ) : (
@@ -191,12 +188,6 @@ export default function CompanySelection() {
                             <h3 className="text-lg font-semibold text-gray-900 group-hover:text-[#0080A3] transition-colors">
                               {company.name}
                             </h3>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {company.industry}
-                            </p>
-                            <p className="text-sm text-gray-500 mt-1">
-                              {company.city}, {company.country}
-                            </p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
@@ -214,13 +205,13 @@ export default function CompanySelection() {
                 {/* Add New Company */}
                 <div className="bg-white rounded-xl shadow-sm border-2 border-dashed border-gray-200 p-6 hover:border-[#0080A3]/50 transition-colors">
                   <Link
-                    href="/companies/new"
+                    href="/registries/new"
                     className="flex items-center justify-center space-x-3 text-gray-600 hover:text-[#0080A3] transition-colors group"
                   >
                     <div className="bg-gray-50 p-2 rounded-lg group-hover:bg-[#0080A3]/10 transition-colors">
                       <Plus className="h-5 w-5" />
                     </div>
-                    <span className="font-medium">Ajouter une nouvelle entreprise</span>
+                    <span className="font-medium">Ajouter un nouveau registre</span>
                   </Link>
                 </div>
               </>
