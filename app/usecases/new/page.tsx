@@ -406,12 +406,21 @@ function NewUseCasePageContent() {
       setIsGeneratingDescription(true)
       setError('')
 
+      // Préparer les données avec les informations de l'entreprise
+      const dataToSend = {
+        ...formData,
+        company_name: company?.name,
+        company_industry: company?.industry,
+        company_city: company?.city,
+        company_country: company?.country
+      }
+
       const response = await fetch('/api/mistral/generate-description', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ formData })
+        body: JSON.stringify({ formData: dataToSend })
       })
 
       if (!response.ok) {
