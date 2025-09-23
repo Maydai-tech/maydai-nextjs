@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { Mail, LogOut, Settings, X, CreditCard, UserCircle } from 'lucide-react'
+import { Mail, LogOut, Settings, X, CreditCard, ArrowLeft } from 'lucide-react'
 import NavBar from '@/components/NavBar/NavBar'
 
 type MenuSection = 'general' | 'subscription' | 'logout'
@@ -158,6 +158,13 @@ export default function ProfilPage() {
       <div className="max-w-6xl mx-auto p-6">
         {/* Header avec design amélioré */}
         <div className="mb-10">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 mb-4 group"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:translate-x-[-2px] transition-transform duration-200" />
+            <span className="text-sm font-medium">Retour</span>
+          </button>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
             Paramètres du compte
           </h1>

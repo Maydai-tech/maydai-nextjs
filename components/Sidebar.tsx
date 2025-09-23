@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, User, CreditCard, Menu, X, Users, FileText, CheckSquare } from 'lucide-react';
+import { Home, User, CreditCard, Menu, X, Users, FileText, CheckSquare, Settings } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useApiCall } from '@/lib/api-auth';
@@ -78,11 +78,6 @@ export default function Sidebar() {
       name: 'Abonnement',
       href: '/abonnement',
       icon: CreditCard
-    },
-    {
-      name: 'Profil',
-      href: '/profil',
-      icon: User
     }
   ];
 
@@ -109,7 +104,7 @@ export default function Sidebar() {
       {/* Burger Menu Button - Mobile/Tablet Only */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 bg-[#0080A3] text-white p-2 rounded-lg shadow-lg hover:bg-[#006280] transition-colors"
+        className="lg:hidden fixed top-4 left-4 z-60 bg-[#0080A3] text-white p-2 rounded-lg shadow-lg hover:bg-[#006280] transition-colors"
         aria-label="Toggle menu"
       >
         {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -164,9 +159,21 @@ export default function Sidebar() {
         </nav>
         
         <div className="p-4 border-t border-[#006280]/30">
-          <div className="text-center text-white/60 text-xs">
-            MaydAI v{packageJson.version}
-          </div>
+          <Link
+            href="/profil"
+            className={`
+              flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group mb-4
+              ${pathname === '/profil'
+                ? 'bg-white text-[#0080A3] shadow-lg font-medium'
+                : 'text-white/90 hover:bg-white/10 hover:text-white'
+              }
+            `}
+            onClick={() => setIsOpen(false)}
+          >
+            <Settings className={`w-5 h-5 ${pathname === '/profil' ? 'text-[#0080A3]' : 'text-white/90 group-hover:text-white'}`} />
+            <span className="font-medium">Paramètres</span>
+          </Link>
+
         </div>
       </div>
     </>
