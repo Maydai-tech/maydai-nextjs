@@ -19,7 +19,7 @@ export default function UseCaseDetailPage() {
   const useCaseId = params.id as string
   // Récupération des données du use case avec état de recalcul
   const { useCase, progress, loading: loadingData, error, updateUseCase, updating, isRecalculating } = useUseCaseData(useCaseId)
-  const { goToEvaluation, goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
+  const { goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function UseCaseDetailPage() {
             onClick={goToCompanies}
             className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors"
           >
-            Retour aux entreprises
+            Retour à l'accueil
           </button>
         </div>
       </div>

@@ -153,7 +153,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
       ])
       
       if (companyResponse.status === 404) {
-        router.push('/dashboard/companies')
+        router.push('/dashboard/registries')
         return
       } else if (companyResponse.data) {
         setCompany(companyResponse.data)
@@ -495,11 +495,11 @@ export default function CompanyDashboard({ params }: DashboardProps) {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Entreprise non trouvée</h1>
           <p className="text-gray-600 mb-4">L'entreprise que vous recherchez n'existe pas ou vous n'y avez pas accès.</p>
           <Link
-            href="/dashboard/companies"
+            href="/dashboard/registries"
             className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Retour aux entreprises
+            Retour aux registres
           </Link>
         </div>
       </div>
@@ -529,11 +529,11 @@ export default function CompanyDashboard({ params }: DashboardProps) {
         <div className="flex flex-col space-y-4">
           <div className="flex items-center justify-between">
             <Link
-              href="/dashboard/companies"
+              href="/dashboard/registries"
               className="inline-flex items-center text-gray-600 hover:text-[#0080A3] transition-colors"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">Retour aux entreprises</span>
+              <span className="text-sm font-medium">Retour aux registres</span>
             </Link>
           </div>
           
@@ -544,9 +544,6 @@ export default function CompanyDashboard({ params }: DashboardProps) {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{company.name}</h1>
-                <p className="text-sm sm:text-base text-gray-600">
-                  {company.industry} • {company.city}, {company.country}
-                </p>
               </div>
             </div>
           </div>
@@ -708,7 +705,7 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                   />
                 </div>
                 <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">Aucun cas d'usage</h3>
-                <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Créez votre premier cas d'usage IA pour cette entreprise</p>
+                <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Créez votre premier cas d'usage IA pour ce registre</p>
                 <Link
                   href={`/usecases/new?company=${companyId}`}
                   className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white text-sm font-medium rounded-lg hover:bg-[#006280] transition-colors"
