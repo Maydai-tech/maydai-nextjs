@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import ConditionalLayout from "@/components/ConditionalLayout";
 import GlobalLoader from "@/components/GlobalLoader";
+import SmartLoader from "@/components/SmartLoader";
 import { getNonce } from "@/lib/csp-nonce";
 
 const geistSans = Geist({
@@ -107,11 +108,11 @@ export default async function RootLayout({
         )}
         
         <AuthProvider>
-          <GlobalLoader>
+          <SmartLoader>
             <ConditionalLayout>
               {children}
             </ConditionalLayout>
-          </GlobalLoader>
+          </SmartLoader>
         </AuthProvider>
       </body>
     </html>
