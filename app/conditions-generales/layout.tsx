@@ -6,7 +6,13 @@ export const metadata: Metadata = {
   keywords: "conditions générales, CGU, MaydAI, utilisation site, propriété intellectuelle, termes conditions",
   robots: "index, follow",
   alternates: {
-    canonical: '/conditions-generales',
+    canonical: 'https://www.maydai.io/conditions-generales',
+  },
+  openGraph: {
+    title: "Conditions Générales d'Utilisation (CGU) | MaydAI",
+    description: "Consultez les conditions générales d'utilisation du site MaydAI.io. En utilisant notre site, vous acceptez nos termes sur la propriété intellectuelle.",
+    url: 'https://www.maydai.io/conditions-generales',
+    type: 'website',
   },
 };
 
