@@ -6,7 +6,13 @@ export const metadata: Metadata = {
   keywords: "politique confidentialité, RGPD, protection données, MaydAI, données personnelles, droits utilisateur",
   robots: "index, follow",
   alternates: {
-    canonical: '/politique-confidentialite',
+    canonical: 'https://www.maydai.io/politique-confidentialite',
+  },
+  openGraph: {
+    title: "Politique de Confidentialité | MaydAI - Protection de vos Données",
+    description: "Consultez la politique de confidentialité de MaydAI. Nous nous engageons à protéger vos données personnelles conformément au RGPD.",
+    url: 'https://www.maydai.io/politique-confidentialite',
+    type: 'website',
   },
 };
 
