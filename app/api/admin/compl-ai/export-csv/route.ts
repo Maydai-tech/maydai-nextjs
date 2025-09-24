@@ -104,9 +104,9 @@ export async function GET(request: NextRequest) {
     
     evaluations?.forEach(evaluation => {
       // Vérifier que nous avons les données nécessaires
-      const model = evaluation.compl_ai_models
-      const principle = evaluation.compl_ai_principles
-      const benchmark = evaluation.compl_ai_benchmarks
+      const model = Array.isArray(evaluation.compl_ai_models) ? evaluation.compl_ai_models[0] : evaluation.compl_ai_models
+      const principle = Array.isArray(evaluation.compl_ai_principles) ? evaluation.compl_ai_principles[0] : evaluation.compl_ai_principles
+      const benchmark = Array.isArray(evaluation.compl_ai_benchmarks) ? evaluation.compl_ai_benchmarks[0] : evaluation.compl_ai_benchmarks
       
       if (!model || !principle || !benchmark) {
         console.log('Debug: Évaluation ignorée - données manquantes:', {
