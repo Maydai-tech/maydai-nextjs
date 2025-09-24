@@ -6,17 +6,18 @@ import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
-/*
-  Suggestion de métadonnées pour le SEO (à placer dans le layout.tsx parent) :
-
-  export const metadata = {
+export const metadata = {
+  title: "Tarifs MaydAI | Audit IA Act Gratuit & Plans de Conformité",
+  description: "Découvrez les tarifs de MaydAI. Commencez avec notre audit IA Act gratuit, choisissez un plan mensuel, ou demandez un devis sur mesure pour une conformité totale.",
+  alternates: {
+    canonical: 'https://www.maydai.io/tarifs',
+  },
+  openGraph: {
     title: "Tarifs MaydAI | Audit IA Act Gratuit & Plans de Conformité",
     description: "Découvrez les tarifs de MaydAI. Commencez avec notre audit IA Act gratuit, choisissez un plan mensuel, ou demandez un devis sur mesure pour une conformité totale.",
-    alternates: {
-      canonical: '/tarifs',
-    },
-  };
-*/
+    url: 'https://www.maydai.io/tarifs',
+  },
+};
 
 // Icône "Check" pour les listes de fonctionnalités
 const CheckIcon = () => (

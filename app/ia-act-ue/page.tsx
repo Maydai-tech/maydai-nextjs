@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "Qu'est-ce que l'IA Act UE ? Guide Complet de la Réglementation Européenne | MaydAI.io",
   description: "Découvrez l'IA Act UE, la première réglementation mondiale sur l'intelligence artificielle. Comprenez sa classification des risques, ses principes clés et son impact sur le développement de l'IA.",
   alternates: {
-    canonical: '/ia-act-ue',
+    canonical: 'https://www.maydai.io/ia-act-ue',
   },
   openGraph: {
     title: "Qu'est-ce que l'IA Act UE ? Guide Complet de la Réglementation Européenne | MaydAI.io",

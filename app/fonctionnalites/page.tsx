@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "MaydAI : Votre Plateforme IA Act pour une IA Digne de Confiance | Fonctionnalités",
   description: "Découvrez comment notre Plateforme IA Act vous aide à naviguer les complexités de l'AI Act. De l'audit à la gouvernance, MaydAI est votre allié pour une IA de confiance.",
   alternates: {
-    canonical: '/fonctionnalites',
+    canonical: 'https://www.maydai.io/fonctionnalites',
   },
   openGraph: {
     title: "MaydAI : Votre Plateforme IA Act pour une IA Digne de Confiance | Fonctionnalités",

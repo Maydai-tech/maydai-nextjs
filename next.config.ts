@@ -17,6 +17,33 @@ const nextConfig: NextConfig = {
     // cssChunking: 'strict',
   },
   
+  // Ajout des redirections
+  async redirects() {
+    return [
+      {
+        source: '/favicon.ico',
+        destination: '/favicon.png',
+        permanent: true, // Redirection 301
+      },
+      // Redirections pour éviter les doublons de contenu
+      {
+        source: '/home',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/index',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/index.html',
+        destination: '/',
+        permanent: true,
+      },
+    ];
+  },
+  
   async headers() {
     // En développement, utilisez des en-têtes plus permissifs
     if (process.env.NODE_ENV === 'development') {
