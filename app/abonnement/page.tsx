@@ -203,6 +203,9 @@ export default function AbonnementPage() {
         onManage={() => console.log('Gérer l\'abonnement')}
       />
 
+      {/* Espace entre Plan actuel et Plans Grid */}
+      <div className="py-12"></div>
+
       {/* Plans Grid */}
       <section className="pb-20 px-4">
         <div className="container mx-auto">
@@ -267,72 +270,6 @@ export default function AbonnementPage() {
         </div>
       </div>
 
-      {/* FAQ Section */}
-      <section className="py-20 px-4 bg-gray-50">
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-12">
-            <div className="flex flex-col items-center mb-4">
-              <Image src="/icons/chats.png" alt="Chat" width={64} height={64} className="w-16 h-16 mb-4" />
-              <h2 className="text-3xl md:text-4xl font-extrabold text-[#0080a3]">
-                FAQ MaydAI
-              </h2>
-            </div>
-            <p className="mt-3 text-lg text-gray-600">
-              La Boussole Éthique pour l'Ère Numérique
-            </p>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="border border-gray-200 rounded-lg">
-              <button className="w-full flex justify-between items-center p-5 text-left font-semibold text-gray-800 hover:bg-gray-100">
-                <span>Puis-je changer de plan à tout moment sans me perdre dans les méandres bureaucratiques ?</span>
-                <svg className="w-6 h-6 text-[#0080a3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-              </button>
-              <div className="p-5 pt-0 text-gray-600">
-                <p>Absolument ! Chez MaydAI, nous croyons en la liberté de mouvement. Vous pouvez upgrader ou downgrader votre plan à tout moment, comme changer de chaussures selon la météo. Les changements prennent effet immédiatement, sans paperasserie ni délai d'attente.</p>
-              </div>
-            </div>
-            
-            <div className="border border-gray-200 rounded-lg">
-              <button className="w-full flex justify-between items-center p-5 text-left font-semibold text-gray-800 hover:bg-gray-100">
-                <span>Y a-t-il un engagement qui m'enchaînerait à vie à votre service ?</span>
-                <svg className="w-6 h-6 text-[#0080a3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-              </button>
-              <div className="p-5 pt-0 text-gray-600">
-                <p>Non, nous ne sommes pas des geôliers numériques ! Tous nos plans sont sans engagement. Vous pouvez annuler à tout moment sans frais, comme quitter une conversation qui ne vous intéresse plus. La liberté, c'est notre credo.</p>
-              </div>
-            </div>
-            
-            <div className="border border-gray-200 rounded-lg">
-              <button className="w-full flex justify-between items-center p-5 text-left font-semibold text-gray-800 hover:bg-gray-100">
-                <span>Quels moyens de paiement acceptez-vous pour ne pas me compliquer la vie ?</span>
-                <svg className="w-6 h-6 text-[#0080a3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-              </button>
-              <div className="p-5 pt-0 text-gray-600">
-                <p>Nous acceptons les cartes bancaires, virements SEPA et PayPal pour les entreprises. Pas de monnaie de singe ni de coquillages, juste les moyens de paiement modernes que vous connaissez déjà.</p>
-              </div>
-            </div>
-            
-            <div className="border border-gray-200 rounded-lg">
-              <button className="w-full flex justify-between items-center p-5 text-left font-semibold text-gray-800 hover:bg-gray-100">
-                <span>Puis-je tester avant de m'engager, comme goûter un vin avant de commander la bouteille ?</span>
-                <svg className="w-6 h-6 text-[#0080a3]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-              </button>
-              <div className="p-5 pt-0 text-gray-600">
-                <p>Bien sûr ! Nous offrons un essai gratuit pour tous nos plans, sans carte bancaire requise. C'est comme une dégustation gratuite dans un restaurant : vous goûtez, vous appréciez, et seulement après vous commandez. L'art de la dégustation numérique !</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* CTA Section */}
       <section className="py-20 px-4">
