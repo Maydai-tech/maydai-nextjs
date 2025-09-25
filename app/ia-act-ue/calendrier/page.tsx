@@ -4,8 +4,14 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
 export const metadata: Metadata = {
-  title: "Agenda IA Act : Le Calendrier Complet des Échéances 2025-2030",
-  description: "Découvrez le calendrier détaillé et l'agenda complet de l'AI Act. Suivez les dates clés et les obligations pour les entreprises et les modèles d'IA."
+  title: "Agenda IA Act : Le Calendrier Complet des Échéances 2025-2030 | MaydAI",
+  description: "Calendrier complet de l'AI Act européen : dates clés, échéances réglementaires 2025-2030, conformité IA, obligations entreprises. Guide expert pour naviguer dans la réglementation européenne de l'intelligence artificielle.",
+  keywords: "AI Act, calendrier, échéances, conformité IA, réglementation européenne, intelligence artificielle, 2025, 2026, 2030, obligations, entreprise, GPAI, systèmes à haut risque",
+  openGraph: {
+    title: "Agenda IA Act : Le Calendrier Complet des Échéances 2025-2030",
+    description: "Découvrez toutes les dates clés de l'AI Act européen et préparez votre entreprise à la conformité réglementaire.",
+    type: "website"
+  }
 };
 
 export default function IaActAgendaPage() {
@@ -13,32 +19,44 @@ export default function IaActAgendaPage() {
     {
       date: "1er août 2024",
       title: "Acte I, Scène 1 : Le Lever de Rideau",
-      description: "Ce jour-là, le rideau s'est levé sur une pièce un peu folle : l'AI Act. L'Europe, en bonne mère de famille soucieuse, a officiellement donné le coup d'envoi à son épopée administrative. C'est ici que le calendrier de la mise au pas de nos créatures de silicium a été figé, que la promesse de leur apprendre les bonnes manières a été gravée dans le marbre du Journal Officiel."
+      description: "Ce jour-là, le rideau s'est levé sur une pièce un peu folle : l'AI Act. L'Europe, en bonne mère de famille soucieuse, a officiellement donné le coup d'envoi à son épopée administrative. C'est ici que le calendrier de la mise au pas de nos créatures de silicium a été figé, que la promesse de leur apprendre les bonnes manières a été gravée dans le marbre du Journal Officiel.",
+      details: "Publication officielle au Journal Officiel de l'Union Européenne. Entrée en vigueur du règlement (UE) 2024/1689. Début de la période de transition de 24 mois pour les entreprises. Première étape vers l'harmonisation réglementaire de l'IA en Europe.",
+      impact: "Les entreprises ont désormais un cadre légal clair pour développer leurs stratégies de conformité. Les investissements en R&D IA doivent intégrer les exigences réglementaires dès la conception."
     },
     {
       date: "2 février 2025",
       title: "Fin des usages inacceptables",
-      description: "L'Europe siffle la fin de la partie pour les manipulations subliminales, l'exploitation des faibles et la notation sociale par les États. Un grand ménage de printemps réglementaire."
+      description: "L'Europe siffle la fin de la partie pour les manipulations subliminales, l'exploitation des faibles et la notation sociale par les États. Un grand ménage de printemps réglementaire.",
+      details: "Interdiction définitive des systèmes d'IA considérés comme inacceptables : manipulation subliminale, exploitation des vulnérabilités, notation sociale par les États, reconnaissance biométrique en temps réel dans l'espace public (sauf exceptions strictes).",
+      impact: "Les entreprises doivent immédiatement cesser tout usage de ces systèmes. Sanctions pouvant aller jusqu'à 35 millions d'euros ou 7% du chiffre d'affaires annuel mondial."
     },
     {
       date: "10 juillet 2025",
       title: "Arrivée des codes de bonne pratique",
-      description: "Les fameux « codes de bonne pratique » arrivent, agissant comme un guide de savoir-vivre pour les cerveaux numériques les plus puissants, afin d'encadrer leur développement."
+      description: "Les fameux « codes de bonne pratique » arrivent, agissant comme un guide de savoir-vivre pour les cerveaux numériques les plus puissants, afin d'encadrer leur développement.",
+      details: "Publication des codes de conduite volontaires pour les modèles d'IA générative (GPAI). Guidelines pour la transparence, la sécurité et l'éthique. Collaboration entre la Commission européenne et les acteurs de l'industrie.",
+      impact: "Les développeurs de GPAI peuvent s'appuyer sur ces codes pour anticiper les exigences réglementaires. Meilleure préparation à la conformité obligatoire d'août 2025."
     },
     {
       date: "2 août 2025",
       title: "Le Grand Rendez-vous : Gouvernance et Transparence",
-      description: "Les États membres doivent mettre en place leurs autorités de surveillance. Les fournisseurs de modèles d'IA à usage général (GPAI) doivent fournir une documentation technique, respecter les droits d'auteur et publier un résumé de leurs données d'entraînement."
+      description: "Les États membres doivent mettre en place leurs autorités de surveillance. Les fournisseurs de modèles d'IA à usage général (GPAI) doivent fournir une documentation technique, respecter les droits d'auteur et publier un résumé de leurs données d'entraînement.",
+      details: "Mise en place des autorités nationales de surveillance dans chaque État membre. Obligations de transparence pour les GPAI : documentation technique, résumé des données d'entraînement, respect des droits d'auteur, évaluation des risques systémiques.",
+      impact: "Les entreprises utilisant des GPAI doivent s'assurer que leurs fournisseurs respectent ces obligations. Nouveaux processus de due diligence à mettre en place."
     },
     {
       date: "2 août 2026",
       title: "Le Grand Jour de la Responsabilité",
-      description: "La majorité des dispositions de l'AI Act deviennent la norme. Les systèmes d'IA « à haut risque » doivent se conformer à des exigences strictes et les « bacs à sable réglementaires » doivent être opérationnels."
+      description: "La majorité des dispositions de l'AI Act deviennent la norme. Les systèmes d'IA « à haut risque » doivent se conformer à des exigences strictes et les « bacs à sable réglementaires » doivent être opérationnels.",
+      details: "Application pleine et entière de l'AI Act. Conformité obligatoire pour tous les systèmes à haut risque : évaluation de conformité, gestion des risques, traçabilité, transparence, surveillance humaine. Mise en place des bacs à sable réglementaires pour tester l'IA dans un environnement contrôlé.",
+      impact: "Toutes les entreprises développant ou utilisant des systèmes d'IA à haut risque doivent être conformes. Processus d'audit et de certification obligatoires. Nouveaux coûts de conformité à intégrer."
     },
     {
       date: "2027 & 2030",
       title: "Le Temps des Règlements de Comptes",
-      description: "Dernières échéances pour le grand rattrapage. Les systèmes à haut risque déjà sur le marché et les grands systèmes informatiques publics devront, eux aussi, se plier à la règle commune."
+      description: "Dernières échéances pour le grand rattrapage. Les systèmes à haut risque déjà sur le marché et les grands systèmes informatiques publics devront, eux aussi, se plier à la règle commune.",
+      details: "2027 : Conformité obligatoire pour les systèmes à haut risque déjà commercialisés avant août 2026. 2030 : Conformité pour les grands systèmes informatiques publics (systèmes de gestion des dossiers, systèmes de gestion des ressources humaines, systèmes de gestion des finances publiques).",
+      impact: "Les systèmes legacy doivent être mis à niveau ou remplacés. Investissements importants en modernisation des infrastructures publiques et privées. Dernière chance pour les entreprises de se conformer sans sanctions."
     }
   ];
 
@@ -62,9 +80,17 @@ export default function IaActAgendaPage() {
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
             L'Agenda de l'AI Act
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed mb-8">
-            Ah, nous y sommes. À la veille du grand rendez-vous. Voilà un an que le grand ballet de l'AI Act a commencé et que les entreprises européennes se préparent à cette révolution réglementaire. Découvrez les dates clés qui transformeront le paysage de l'intelligence artificielle.
-          </p>
+          <div className="text-xl text-gray-600 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed mb-8 space-y-4">
+            <p>
+              L'AI Act européen représente la première réglementation mondiale complète de l'intelligence artificielle. Adopté le 13 mars 2024 et entré en vigueur le 1er août 2024, ce texte historique transforme radicalement le paysage de l'IA en Europe et au-delà.
+            </p>
+            <p>
+              <strong>Pourquoi ce calendrier est-il crucial ?</strong> L'AI Act introduit un système de classification des risques unique au monde, avec des obligations proportionnelles au niveau de dangerosité des systèmes d'IA. Les entreprises qui négligent ces échéances s'exposent à des sanctions pouvant atteindre 7% de leur chiffre d'affaires mondial.
+            </p>
+            <p>
+              Découvrez dans ce guide complet toutes les dates clés, les obligations spécifiques et les impacts concrets pour votre entreprise. Une roadmap indispensable pour naviguer dans cette nouvelle ère réglementaire.
+            </p>
+          </div>
           
           {/* Image ai-act-calendar centrée */}
           <div className="mt-10 mb-8 flex justify-center">
@@ -140,14 +166,137 @@ export default function IaActAgendaPage() {
                       </h2>
                       
                       {/* Description */}
-                      <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg">
+                      <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg mb-4">
                         {event.description}
                       </p>
+                      
+                      {/* Détails supplémentaires */}
+                      {event.details && (
+                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-4">
+                          <h4 className="font-semibold text-gray-900 dark:text-white mb-2">📋 Détails techniques :</h4>
+                          <p className="text-gray-700 dark:text-gray-300 text-sm">{event.details}</p>
+                        </div>
+                      )}
+                      
+                      {/* Impact sur les entreprises */}
+                      {event.impact && (
+                        <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
+                          <h4 className="font-semibold text-gray-900 dark:text-white mb-2">⚡ Impact entreprise :</h4>
+                          <p className="text-gray-700 dark:text-gray-300 text-sm">{event.impact}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               </article>
             ))}
+          </div>
+        </section>
+
+        {/* Section : Pourquoi ce calendrier est-il important pour votre entreprise ? */}
+        <section className="mt-24">
+          <div className="bg-gradient-to-r from-[#0080a3]/10 to-blue-50 dark:from-[#0080a3]/20 dark:to-blue-900/20 rounded-3xl p-12 border border-[#0080a3]/20 dark:border-[#0080a3]/30">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+                Pourquoi ce calendrier est-il crucial pour votre entreprise ?
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                  <div className="flex items-center mb-4">
+                    <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center mr-4">
+                      <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Sanctions financières majeures</h3>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Non-conformité = jusqu'à 35M€ ou 7% du CA mondial. Les PME ne sont pas épargnées avec des sanctions pouvant atteindre 7,5M€ ou 1,5% du CA.
+                  </p>
+                </div>
+                
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                  <div className="flex items-center mb-4">
+                    <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center mr-4">
+                      <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Délais courts et complexes</h3>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Seulement 24 mois de transition. Les processus de conformité peuvent prendre 6-12 mois selon la complexité de vos systèmes d'IA.
+                  </p>
+                </div>
+                
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                  <div className="flex items-center mb-4">
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center mr-4">
+                      <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Avantage concurrentiel</h3>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    La conformité précoce devient un facteur de différenciation. Vos clients et partenaires vous feront davantage confiance.
+                  </p>
+                </div>
+                
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                  <div className="flex items-center mb-4">
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center mr-4">
+                      <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Innovation responsable</h3>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    L'AI Act encourage l'innovation éthique. Vos produits IA seront plus sûrs, transparents et acceptés par le marché.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="mt-24">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-12 text-center">
+              Questions fréquentes sur le calendrier AI Act
+            </h2>
+            
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                  🤔 Mon entreprise utilise ChatGPT et autres IA génératives. Quelles sont mes obligations ?
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  <strong>Dès août 2025 :</strong> Vérifiez que vos fournisseurs (OpenAI, Google, etc.) respectent les obligations de transparence (documentation technique, résumé des données d'entraînement). <strong>Dès août 2026 :</strong> Si vous utilisez ces IA pour des décisions automatisées affectant les personnes, vous devez vous conformer aux exigences des systèmes à haut risque. Cela inclut la traçabilité, la surveillance humaine et l'évaluation des risques.
+                </p>
+              </div>
+              
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                  ⏰ J'ai raté l'échéance du 2 février 2025. Que faire ?
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  <strong>Action immédiate requise :</strong> Cessez immédiatement tout usage de systèmes d'IA inacceptables (manipulation subliminale, notation sociale, etc.). Contactez un expert en conformité AI Act pour un audit d'urgence. Les sanctions peuvent être appliquées dès le 2 février 2025. Plus vous agissez rapidement, plus vous réduisez les risques de sanctions et les coûts de mise en conformité.
+                </p>
+              </div>
+              
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                  💰 Combien coûte la conformité à l'AI Act pour une PME ?
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  <strong>Coûts variables selon la complexité :</strong> Pour une PME utilisant des IA standard (ChatGPT, outils de recrutement), comptez 15 000 à 50 000€ pour l'audit et la mise en conformité. Pour des systèmes d'IA développés en interne, les coûts peuvent atteindre 100 000 à 500 000€. <strong>ROI positif :</strong> La conformité précoce évite les sanctions (jusqu'à 7,5M€) et améliore la confiance clients. MaydAI propose des solutions automatisées réduisant ces coûts de 60-70%.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
