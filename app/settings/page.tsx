@@ -269,10 +269,10 @@ export default function ProfilPage() {
 
               <button
                 onClick={() => setShowSuccessPopup(false)}
-                className="w-full px-6 py-3 bg-gradient-to-r from-[#0080A3] to-blue-600 text-white hover:from-[#006d8a] hover:to-blue-700 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.02] shadow-lg"
+                className="w-full px-6 py-3 bg-[#0080A3] text-white hover:bg-[#006d8a] rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
               >
                 <CheckCircle className="w-4 h-4" />
-                Parfait !
+                OK
               </button>
             </div>
           </div>
