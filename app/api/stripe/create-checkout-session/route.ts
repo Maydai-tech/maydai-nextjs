@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : process.env.NEXT_PUBLIC_APP_URL}/settings?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings`,
       metadata: {
         ...(userId && { user_id: userId }),
