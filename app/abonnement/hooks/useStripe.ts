@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
-import { StripeCheckoutRequest, StripeCheckoutResponse } from '@/types/stripe'
+import { CreateCheckoutSessionRequest, CreateCheckoutSessionResponse } from '@/lib/stripe/types'
 
 // Initialiser Stripe côté client
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null
 
 export function useStripe() {
   const [loading, setLoading] = useState(false)
@@ -16,13 +17,22 @@ export function useStripe() {
     setError(null)
 
     try {
+      // Vérifier si Stripe est configuré
+      if (!stripePublishableKey) {
+        throw new Error('Stripe n\'est pas configuré. Veuillez ajouter NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY dans les variables d\'environnement.')
+      }
+
+      if(process.env.NODE_ENV === 'development') {
+        priceId = 'price_1S8JkN16FiJU1KS5MjGTdcIo'
+      }
+
       // Appeler notre API route
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ priceId, mode } as StripeCheckoutRequest),
+        body: JSON.stringify({ priceId, mode } as CreateCheckoutSessionRequest),
       })
 
       if (!response.ok) {
@@ -30,7 +40,7 @@ export function useStripe() {
         throw new Error(errorData.error || 'Erreur lors de la création de la session')
       }
 
-      const { sessionId } = await response.json() as StripeCheckoutResponse
+      const { sessionId } = await response.json() as CreateCheckoutSessionResponse
 
       // Rediriger vers Stripe Checkout
       const stripe = await stripePromise
