@@ -42,8 +42,8 @@ export default function ProfileDropdown() {
     {
       label: 'Paramètres',
       icon: Settings,
-      href: '/profil',
-      action: () => router.push('/profil')
+      href: '/settings',
+      action: () => router.push('/settings')
     },
     {
       label: 'Se déconnecter',

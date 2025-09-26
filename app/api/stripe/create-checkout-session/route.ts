@@ -1,55 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
-
-// Fonction pour initialiser Stripe
-function getStripeClient() {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('STRIPE_SECRET_KEY manquante')
-  }
-  
-  return new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-08-27.basil',
-  })
-}
+import { getStripeClient } from '@/lib/stripe/config/client'
+import { validateCheckoutSessionRequest } from '@/lib/stripe/utils/validation'
+import { handleStripeError, handleValidationError } from '@/lib/stripe/utils/error-handling'
+import type { CreateCheckoutSessionRequest, CreateCheckoutSessionResponse } from '@/lib/stripe/types'
 
 export async function POST(request: NextRequest) {
   try {
-    // Vérifier que les variables d'environnement sont disponibles
-    if (!process.env.STRIPE_SECRET_KEY) {
-      console.error('❌ STRIPE_SECRET_KEY manquante')
-      return NextResponse.json(
-        { error: 'Configuration Stripe manquante' },
-        { status: 500 }
-      )
+    // Récupérer les données de la requête
+    const requestData = await request.json()
+
+    // Valider les paramètres de la requête
+    const requestValidation = validateCheckoutSessionRequest(requestData)
+    if (!requestValidation.isValid) {
+      return handleValidationError(requestValidation.error!)
     }
 
-    if (!process.env.NEXT_PUBLIC_APP_URL) {
-      console.error('❌ NEXT_PUBLIC_APP_URL manquante')
-      return NextResponse.json(
-        { error: 'Configuration application manquante' },
-        { status: 500 }
-      )
-    }
+    // Typer les données validées
+    const { priceId, mode, userId }: CreateCheckoutSessionRequest = requestData
 
-    // Initialiser Stripe
+    // Initialiser Stripe avec la configuration centralisée
+    // Cette fonction inclut déjà la validation d'environnement
     const stripe = getStripeClient()
-
-    const { priceId, mode } = await request.json()
-
-    // Validation des paramètres requis
-    if (!priceId) {
-      return NextResponse.json(
-        { error: 'priceId est requis' },
-        { status: 400 }
-      )
-    }
-
-    if (!mode || !['subscription', 'payment'].includes(mode)) {
-      return NextResponse.json(
-        { error: 'mode doit être "subscription" ou "payment"' },
-        { status: 400 }
-      )
-    }
 
     // Créer la session de paiement Stripe
     const session = await stripe.checkout.sessions.create({
@@ -60,26 +31,16 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/abonnement`,
-      // Métadonnées pour identifier l'utilisateur (optionnel)
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings`,
       metadata: {
-        // Tu pourras ajouter l'ID utilisateur ici plus tard
+        ...(userId && { user_id: userId }),
       },
     })
 
-    return NextResponse.json({ sessionId: session.id }, { status: 200 })
+    const response: CreateCheckoutSessionResponse = { sessionId: session.id }
+    return NextResponse.json(response, { status: 200 })
   } catch (error) {
-    console.error('Erreur lors de la création de la session Stripe:', error)
-    return NextResponse.json(
-      { error: 'Erreur interne du serveur' },
-      { status: 500 }
-    )
+    return handleStripeError(error)
   }
 }
-
-
-
-
-
-
