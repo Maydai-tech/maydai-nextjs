@@ -16,17 +16,30 @@ import BillingToggle from '@/components/Subscriptions/BillingToggle'
 import { useStripe } from '@/app/abonnement/hooks/useStripe'
 import { getPlans } from '@/lib/stripe/config/plans'
 import type { MaydAIPlan } from '@/lib/stripe/types'
+import SuccessPaymentPopup from '@/components/Subscriptions/SuccessPaymentPopup'
 
-export default function SubscriptionPage() {
+interface SubscriptionPageProps {
+  showSuccessPopup?: boolean
+  onCloseSuccessPopup?: () => void
+}
+
+export default function SubscriptionPage({
+  showSuccessPopup: externalShowSuccessPopup,
+  onCloseSuccessPopup
+}: SubscriptionPageProps = {}) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [currentPlan, setCurrentPlan] = useState('starter') // starter, pro, enterprise
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly') // monthly, yearly
   const { createCheckoutSession, error: stripeError } = useStripe()
+  const [localShowSuccessPopup, setLocalShowSuccessPopup] = useState(false)
 
   // Récupérer les plans depuis la configuration centralisée
   const plans: MaydAIPlan[] = getPlans()
+
+  // Utiliser le state externe si fourni, sinon le state local
+  const showSuccessPopup = externalShowSuccessPopup ?? localShowSuccessPopup
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -66,6 +79,7 @@ export default function SubscriptionPage() {
     if (plan.free) {
       // Pour le plan gratuit, on peut directement activer
       setCurrentPlan(plan.id)
+      setLocalShowSuccessPopup(true)
       return
     }
 
@@ -240,6 +254,12 @@ export default function SubscriptionPage() {
           </div>
         </div>
       </div>
+
+      {showSuccessPopup && (
+        <SuccessPaymentPopup
+          onClose={onCloseSuccessPopup || (() => setLocalShowSuccessPopup(false))}
+        />
+      )}
     </div>
   )
 }
