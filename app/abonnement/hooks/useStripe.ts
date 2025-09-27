@@ -12,7 +12,7 @@ export function useStripe() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const createCheckoutSession = async (priceId: string, mode: 'subscription' | 'payment') => {
+  const createCheckoutSession = async (priceId: string, mode: 'subscription' | 'payment', userId?: string) => {
     setLoading(true)
     setError(null)
 
@@ -32,7 +32,7 @@ export function useStripe() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ priceId, mode } as CreateCheckoutSessionRequest),
+        body: JSON.stringify({ priceId, mode, userId } as CreateCheckoutSessionRequest),
       })
 
       if (!response.ok) {

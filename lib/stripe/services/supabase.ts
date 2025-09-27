@@ -124,28 +124,55 @@ export async function deleteSubscription(stripeSubscriptionId: string) {
   return true
 }
 
-export async function syncSubscriptionFromStripe(stripeSubscription: Stripe.Subscription, stripe: Stripe) {
+export async function syncSubscriptionFromStripe(stripeSubscription: Stripe.Subscription, stripe: Stripe, sessionUserId?: string) {
   let userId: string | null = null
 
+  // 1. Essayer les métadonnées de la subscription
   if (stripeSubscription.metadata?.user_id) {
     userId = stripeSubscription.metadata.user_id
-  } else if (stripeSubscription.customer) {
-    const customer = await stripe.customers.retrieve(stripeSubscription.customer as string)
+  }
+  // 2. Essayer les métadonnées du customer
+  else if (stripeSubscription.customer) {
+    let customer: Stripe.Customer | null = null
+
+    // Vérifier si customer est déjà un objet ou juste un ID
+    if (typeof stripeSubscription.customer === 'string') {
+      customer = await stripe.customers.retrieve(stripeSubscription.customer) as Stripe.Customer
+    } else if (typeof stripeSubscription.customer === 'object' && stripeSubscription.customer.id) {
+      customer = stripeSubscription.customer as Stripe.Customer
+    }
+
     if (customer && !customer.deleted && customer.metadata?.user_id) {
       userId = customer.metadata.user_id
     }
   }
 
+  // 3. Utiliser le fallback de la session checkout
+  if (!userId && sessionUserId) {
+    userId = sessionUserId
+  }
+
   if (!userId) {
+    console.error('❌ Aucun user_id trouvé pour la subscription:', {
+      subscriptionId: stripeSubscription.id,
+      subscriptionMetadata: stripeSubscription.metadata,
+      customerType: typeof stripeSubscription.customer,
+      sessionUserId: sessionUserId
+    })
     throw new Error('No user_id found for subscription')
   }
 
   const planId = getPlanIdFromPriceId(stripeSubscription.items.data[0]?.price.id)
 
+  // Récupérer l'ID du customer (string ou depuis l'objet)
+  const customerId = typeof stripeSubscription.customer === 'string'
+    ? stripeSubscription.customer
+    : stripeSubscription.customer?.id || ''
+
   const subscriptionData: SubscriptionData = {
     user_id: userId,
     stripe_subscription_id: stripeSubscription.id,
-    stripe_customer_id: stripeSubscription.customer as string,
+    stripe_customer_id: customerId,
     plan_id: planId,
     status: stripeSubscription.status,
     current_period_start: (stripeSubscription as any).current_period_start 
