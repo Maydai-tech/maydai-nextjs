@@ -22,8 +22,26 @@ export async function POST(request: NextRequest) {
     // Cette fonction inclut déjà la validation d'environnement
     const stripe = getStripeClient()
 
+    let customerId: string | undefined = undefined
+
+    // Si un userId est fourni, créer un customer avec métadonnées
+    if (userId) {
+      try {
+        // Créer un nouveau customer avec user_id dans les métadonnées
+        const customer = await stripe.customers.create({
+          metadata: {
+            user_id: userId
+          }
+        })
+        customerId = customer.id
+      } catch (error) {
+        console.error('❌ Erreur lors de la création du customer:', error)
+        // Continuer sans customer si erreur
+      }
+    }
+
     // Créer la session de paiement Stripe
-    const session = await stripe.checkout.sessions.create({
+    const sessionConfig: any = {
       mode: mode as 'subscription' | 'payment',
       line_items: [
         {
@@ -36,7 +54,17 @@ export async function POST(request: NextRequest) {
       metadata: {
         ...(userId && { user_id: userId }),
       },
-    })
+    }
+
+    // Ajouter le customer si disponible
+    if (customerId) {
+      sessionConfig.customer = customerId
+    } else {
+      // Forcer la création d'un customer pendant le checkout
+      sessionConfig.customer_creation = 'always'
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig)
 
     const response: CreateCheckoutSessionResponse = { sessionId: session.id }
     return NextResponse.json(response, { status: 200 })

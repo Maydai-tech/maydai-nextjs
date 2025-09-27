@@ -87,7 +87,7 @@ export default function SubscriptionPage({
     const mode = plan.custom ? 'payment' : 'subscription'
 
     try {
-      await createCheckoutSession(priceId, mode)
+      await createCheckoutSession(priceId, mode, user?.id)
     } catch (error) {
       console.error('Erreur lors du paiement:', error)
     }
