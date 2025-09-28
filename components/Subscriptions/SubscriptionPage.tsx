@@ -14,9 +14,12 @@ import PlanCard from '@/components/Subscriptions/PlanCard'
 import CurrentPlanStatus from '@/components/Subscriptions/CurrentPlanStatus'
 import BillingToggle from '@/components/Subscriptions/BillingToggle'
 import { useStripe } from '@/app/abonnement/hooks/useStripe'
+import { useSubscription } from '@/app/abonnement/hooks/useSubscription'
 import { getPlans } from '@/lib/stripe/config/plans'
 import type { MaydAIPlan } from '@/lib/stripe/types'
 import SuccessPaymentPopup from '@/components/Subscriptions/SuccessPaymentPopup'
+import { getPlanInfo, getDefaultPlan } from '@/lib/subscription/plans'
+import { formatBillingCycle, formatNextBillingDate, calculateNextBillingAmount } from '@/lib/subscription/utils'
 
 interface SubscriptionPageProps {
   showSuccessPopup?: boolean
@@ -33,10 +36,26 @@ export default function SubscriptionPage({
   const [currentPlan, setCurrentPlan] = useState('starter') // starter, pro, enterprise
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly') // monthly, yearly
   const { createCheckoutSession, error: stripeError } = useStripe()
+  const { subscription, loading: subscriptionLoading, error: subscriptionError } = useSubscription()
   const [localShowSuccessPopup, setLocalShowSuccessPopup] = useState(false)
 
   // Récupérer les plans depuis la configuration centralisée
   const plans: MaydAIPlan[] = getPlans()
+
+  // Calculer les données d'affichage basées sur l'abonnement réel
+  const currentPlanInfo = subscription
+    ? getPlanInfo(subscription.plan_id)
+    : getDefaultPlan()
+
+  const currentBillingCycle = subscription
+    ? formatBillingCycle(subscription.plan_id)
+    : billingCycle
+
+  const nextBillingDate = formatNextBillingDate(subscription?.current_period_end)
+  const nextBillingAmount = calculateNextBillingAmount(
+    subscription?.plan_id || 'starter',
+    currentBillingCycle
+  )
 
   // Utiliser le state externe si fourni, sinon le state local
   const showSuccessPopup = externalShowSuccessPopup ?? localShowSuccessPopup
@@ -53,7 +72,7 @@ export default function SubscriptionPage({
   }, [user, loading, router, mounted])
 
   // Show loading state during SSR and initial client load
-  if (!mounted || loading) {
+  if (!mounted || loading || subscriptionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -83,7 +102,7 @@ export default function SubscriptionPage({
       return
     }
 
-    const priceId = plan.stripePriceId[billingCycle]
+    const priceId = plan.stripePriceId[currentBillingCycle]
     const mode = plan.custom ? 'payment' : 'subscription'
 
     try {
@@ -111,8 +130,8 @@ export default function SubscriptionPage({
           </div>
         </div>
 
-        {/* Affichage des erreurs Stripe */}
-        {stripeError && (
+        {/* Affichage des erreurs Stripe et abonnement */}
+        {(stripeError || subscriptionError) && (
           <div className="mb-8">
             <div className="bg-red-50/70 backdrop-blur-sm border border-red-200 rounded-xl p-4 shadow-sm">
               <div className="flex">
@@ -123,10 +142,10 @@ export default function SubscriptionPage({
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-red-800">
-                    Erreur de paiement
+                    {subscriptionError ? 'Erreur d\'abonnement' : 'Erreur de paiement'}
                   </h3>
                   <div className="mt-2 text-sm text-red-700">
-                    <p>{stripeError}</p>
+                    <p>{subscriptionError || stripeError}</p>
                   </div>
                 </div>
               </div>
@@ -137,10 +156,10 @@ export default function SubscriptionPage({
         {/* Current Plan Status */}
         <div className="mb-12">
           <CurrentPlanStatus
-            planName="La Mise en Bouche"
-            billingCycle={billingCycle}
-            nextBillingDate="Gratuit"
-            nextBillingAmount={0}
+            planName={currentPlanInfo.displayName}
+            billingCycle={currentBillingCycle}
+            nextBillingDate={nextBillingDate}
+            nextBillingAmount={nextBillingAmount}
             onManage={() => console.log('Gérer l\'abonnement')}
           />
         </div>
@@ -150,7 +169,7 @@ export default function SubscriptionPage({
             {/* Billing Toggle */}
             <div className="mb-8">
               <BillingToggle
-                billingCycle={billingCycle}
+                billingCycle={currentBillingCycle}
                 onToggle={handleBillingToggle}
               />
             </div>
@@ -159,8 +178,8 @@ export default function SubscriptionPage({
               <PlanCard
                 key={plan.id}
                 plan={plan}
-                billingCycle={billingCycle}
-                isCurrentPlan={currentPlan === plan.id}
+                billingCycle={currentBillingCycle}
+                isCurrentPlan={currentPlanInfo.id === plan.id}
                 onPayment={handlePayment}
               />
             ))}
