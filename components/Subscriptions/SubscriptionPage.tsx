@@ -51,7 +51,7 @@ export default function SubscriptionPage({
     ? formatBillingCycle(subscription.plan_id)
     : billingCycle
 
-  const nextBillingDate = formatNextBillingDate(subscription?.current_period_end)
+  const nextBillingDate = formatNextBillingDate(subscription?.current_period_end || null)
   const nextBillingAmount = calculateNextBillingAmount(
     subscription?.plan_id || 'starter',
     currentBillingCycle
