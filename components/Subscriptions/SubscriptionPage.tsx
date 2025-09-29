@@ -177,113 +177,35 @@ export default function SubscriptionPage({
         </div>
 
         {/* Plans Grid */}
-        <div className="mb-12">
-            {/* Billing Toggle */}
-            <div className="mb-8">
-              <BillingToggle
-                billingCycle={currentBillingCycle}
-                onToggle={handleBillingToggle}
-              />
-            </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 items-stretch">
-            {plans.map((plan) => (
-              <PlanCard
-                key={plan.id}
-                plan={plan}
-                billingCycle={currentBillingCycle}
-                isCurrentPlan={currentPlanInfo.id === plan.id}
-                onPayment={handlePayment}
-              />
-            ))}
-          </div>
-
-          {/* Notes additionnelles sous les cartes */}
-          <div className="text-center mt-12 text-gray-500 text-sm max-w-2xl mx-auto">
-            <p>Tout abonnement peut être arrêté à tout moment.</p>
-            <p>Les audits IA Act gratuits sont protégés et ne sont pas utilisés à des fins d'entraînement (ce qui est hélas le cas aujourd'hui de l'IA gratuite).</p>
-          </div>
-        </div>
-
-        {/* Additional Features Section */}
-        <div className="bg-gray-50/70 backdrop-blur-sm rounded-2xl p-8 mb-12 border border-gray-100 shadow-sm">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent text-center mb-8">
-            Fonctionnalités incluses dans tous les plans
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="text-center p-4 bg-white/50 rounded-xl border border-gray-100 hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
-              <div className="bg-[#0080A3]/10 p-4 rounded-xl w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Shield className="h-8 w-8 text-[#0080A3]" />
+        {(!subscription || currentPlanInfo.isFree) && (
+          <div className="mb-12">
+              {/* Billing Toggle */}
+              <div className="mb-8">
+                <BillingToggle
+                  billingCycle={currentBillingCycle}
+                  onToggle={handleBillingToggle}
+                />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Conformité IA Act</h3>
-              <p className="text-sm text-gray-600">Audit complet selon les réglementations européennes</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 items-stretch">
+              {plans.map((plan) => (
+                <PlanCard
+                  key={plan.id}
+                  plan={plan}
+                  billingCycle={currentBillingCycle}
+                  isCurrentPlan={currentPlanInfo.id === plan.id}
+                  onPayment={handlePayment}
+                />
+              ))}
             </div>
 
-            <div className="text-center p-4 bg-white/50 rounded-xl border border-gray-100 hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
-              <div className="bg-[#0080A3]/10 p-4 rounded-xl w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <BarChart3 className="h-8 w-8 text-[#0080A3]" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Rapports détaillés</h3>
-              <p className="text-sm text-gray-600">Analyses approfondies avec recommandations</p>
-            </div>
-
-            <div className="text-center p-4 bg-white/50 rounded-xl border border-gray-100 hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
-              <div className="bg-[#0080A3]/10 p-4 rounded-xl w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Bell className="h-8 w-8 text-[#0080A3]" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Alertes automatiques</h3>
-              <p className="text-sm text-gray-600">Notifications des changements réglementaires</p>
-            </div>
-
-            <div className="text-center p-4 bg-white/50 rounded-xl border border-gray-100 hover:shadow-md transition-all duration-200 hover:scale-[1.02]">
-              <div className="bg-[#0080A3]/10 p-4 rounded-xl w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Download className="h-8 w-8 text-[#0080A3]" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Export PDF</h3>
-              <p className="text-sm text-gray-600">Téléchargement des rapports en PDF</p>
+            {/* Notes additionnelles sous les cartes */}
+            <div className="text-center mt-12 text-gray-500 text-sm max-w-2xl mx-auto">
+              <p>Tout abonnement peut être arrêté à tout moment.</p>
+              <p>Les audits IA Act gratuits sont protégés et ne sont pas utilisés à des fins d'entraînement (ce qui est hélas le cas aujourd'hui de l'IA gratuite).</p>
             </div>
           </div>
-        </div>
-
-        {/* CTA Section */}
-        <div className="mb-12">
-          <div className="bg-white/70 backdrop-blur-sm border border-gray-100 rounded-2xl p-8 md:p-12 text-center shadow-sm hover:shadow-md transition-all duration-200">
-            <div className="mb-6">
-              <Image
-                src="/icons/speedometer.png"
-                alt="Compteur de vitesse"
-                width={64}
-                height={64}
-                className="mx-auto mb-4"
-              />
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-4">
-              Prêt à accélérer votre <span className="text-[#0080a3]">conformité IA</span> ?
-            </h2>
-            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-              Choisissez votre rythme et démarrez dès aujourd'hui. Que vous souhaitiez tester gratuitement ou bénéficier d'un accompagnement complet, MaydAI s'adapte à vos besoins et à votre budget.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <a
-                href="/contact"
-                className="bg-white/80 text-[#0080a3] border-2 border-[#0080a3] px-8 py-4 rounded-full font-semibold text-lg hover:bg-[#0080a3] hover:text-white transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] no-underline flex items-center gap-2"
-              >
-                <Image src="/icons/space-rocket-launch.png" alt="Fusée" width={20} height={20} className="w-5 h-5" />
-                Commencer gratuitement
-              </a>
-              <a
-                href="/contact"
-                className="bg-white/80 text-gray-700 px-8 py-4 rounded-full font-semibold text-lg border border-gray-300 hover:bg-gray-50/80 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] no-underline flex items-center gap-2"
-              >
-                <Image src="/icons/chats.png" alt="Chat" width={20} height={20} className="w-5 h-5" />
-                Parler à un expert
-              </a>
-            </div>
-            <p className="text-sm text-gray-500 mt-6">
-              Aucun engagement • Support inclus • Conformité garantie
-            </p>
-          </div>
-        </div>
+        )}
+       
       </div>
 
       {showSuccessPopup && (
