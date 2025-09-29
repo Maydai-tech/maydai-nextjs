@@ -34,6 +34,18 @@ export interface WebhookResponse {
   received: boolean
 }
 
+// Types pour l'annulation d'abonnement
+export interface CancelSubscriptionRequest {
+  subscriptionId?: string // Optionnel si récupéré depuis la DB
+}
+
+export interface CancelSubscriptionResponse {
+  success: boolean
+  message: string
+  cancelAtPeriodEnd?: boolean
+  periodEnd?: string
+}
+
 // Types pour les données de subscription
 export interface SubscriptionData {
   user_id: string

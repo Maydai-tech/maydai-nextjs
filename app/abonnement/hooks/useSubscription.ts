@@ -57,6 +57,39 @@ export function useSubscription(): UseSubscriptionReturn {
   }, [user?.id])
 
   /**
+   * Fonction pour annuler l'abonnement
+   */
+  const cancelSubscription = useCallback(async () => {
+    if (!user?.id || !subscription) {
+      throw new Error('Aucun abonnement à annuler')
+    }
+
+    try {
+      const response = await fetch('/api/stripe/cancel-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erreur lors de l\'annulation')
+      }
+
+      const result = await response.json()
+
+      // Rafraîchir les données après annulation
+      await fetchSubscription()
+
+      return result
+    } catch (error) {
+      console.error('Erreur lors de l\'annulation:', error)
+      throw error
+    }
+  }, [user?.id, subscription, fetchSubscription])
+
+  /**
    * Fonction pour forcer le rafraîchissement des données
    */
   const refreshSubscription = useCallback(async () => {
@@ -78,6 +111,7 @@ export function useSubscription(): UseSubscriptionReturn {
     subscription,
     loading: authLoading || loading,
     error,
-    refreshSubscription
+    refreshSubscription,
+    cancelSubscription
   }
 }

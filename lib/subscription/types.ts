@@ -36,6 +36,7 @@ export interface UseSubscriptionReturn {
   loading: boolean
   error: string | null
   refreshSubscription: () => Promise<void>
+  cancelSubscription: () => Promise<any>
 }
 
 // Interface pour les données calculées à afficher
