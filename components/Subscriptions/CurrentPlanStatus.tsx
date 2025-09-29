@@ -116,26 +116,6 @@ export default function CurrentPlanStatus({
           )}
         </div>
       </div>
-      
-      {/* Quick Actions */}
-      <div className="mt-6 pt-6 border-t border-gray-100">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <button className="flex items-center justify-center space-x-2 px-4 py-3 bg-gray-50/80 rounded-lg hover:bg-gray-100/80 transition-all duration-200 hover:scale-[1.02]">
-            <Download className="h-4 w-4 text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Télécharger facture</span>
-          </button>
-
-          <button className="flex items-center justify-center space-x-2 px-4 py-3 bg-gray-50/80 rounded-lg hover:bg-gray-100/80 transition-all duration-200 hover:scale-[1.02]">
-            <Calendar className="h-4 w-4 text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Historique</span>
-          </button>
-
-          <button className="flex items-center justify-center space-x-2 px-4 py-3 bg-gray-50/80 rounded-lg hover:bg-gray-100/80 transition-all duration-200 hover:scale-[1.02]">
-            <Settings className="h-4 w-4 text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Paramètres</span>
-          </button>
-        </div>
-      </div>
 
       {/* Modal d'annulation */}
       <CancelSubscriptionModal
