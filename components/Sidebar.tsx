@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Home, User, CreditCard, Menu, X, Users, FileText, CheckSquare, Settings } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
-import { useApiCall } from '@/lib/api-auth';
+import { useApiCall } from '@/lib/api-client-legacy';
 import packageJson from '../package.json';
 
 export default function Sidebar() {
