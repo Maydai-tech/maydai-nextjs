@@ -19,11 +19,16 @@ export async function cancelStripeSubscription(
       // Annulation immédiate
       const canceledSubscription = await stripe.subscriptions.cancel(subscriptionId)
 
+      const periodEndTimestamp = canceledSubscription.current_period_end
+      const periodEnd = periodEndTimestamp
+        ? new Date(periodEndTimestamp * 1000).toISOString()
+        : new Date().toISOString()
+
       return {
         success: true,
         message: 'Abonnement annulé immédiatement',
         cancelAtPeriodEnd: false,
-        periodEnd: new Date(canceledSubscription.current_period_end * 1000).toISOString()
+        periodEnd
       }
     } else {
       // Annulation à la fin de la période (recommandé pour UX)
@@ -31,11 +36,20 @@ export async function cancelStripeSubscription(
         cancel_at_period_end: true
       })
 
+      const periodEndTimestamp = updatedSubscription.current_period_end
+      const periodEnd = periodEndTimestamp
+        ? new Date(periodEndTimestamp * 1000).toISOString()
+        : new Date().toISOString()
+
+      const formattedEndDate = periodEndTimestamp
+        ? new Date(periodEndTimestamp * 1000).toLocaleDateString('fr-FR')
+        : 'immédiatement'
+
       return {
         success: true,
-        message: `Abonnement annulé. Vous gardez l'accès jusqu'au ${new Date(updatedSubscription.current_period_end * 1000).toLocaleDateString('fr-FR')}`,
+        message: `Abonnement annulé. Vous gardez l'accès jusqu'au ${formattedEndDate}`,
         cancelAtPeriodEnd: true,
-        periodEnd: new Date(updatedSubscription.current_period_end * 1000).toISOString()
+        periodEnd
       }
     }
   } catch (error: any) {

@@ -44,6 +44,8 @@ export interface CancelSubscriptionResponse {
   message: string
   cancelAtPeriodEnd?: boolean
   periodEnd?: string
+  syncViaWebhook?: boolean
+  stripeSubscriptionId?: string
 }
 
 // Types pour les données de subscription

@@ -1,15 +1,16 @@
 'use client'
 
-import { useState } from 'react'
-import { CreditCard, Calendar, Download, Settings, AlertTriangle } from 'lucide-react'
+import React, { useState } from 'react'
+import { CreditCard, Calendar, Download, Settings, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
 import CancelSubscriptionModal from './CancelSubscriptionModal'
+import { useCancelSubscriptionWithSync } from '@/app/abonnement/hooks/useCancelSubscriptionWithSync'
 
 interface CurrentPlanStatusProps {
   planName: string
   billingCycle: 'monthly' | 'yearly'
   nextBillingDate: string
   nextBillingAmount: number
-  onCancel?: () => void
+  onCancelSuccess?: () => void // Callback pour rafraîchir les données parent après annulation
   isFreePlan?: boolean
   isCanceled?: boolean
   cancelAtPeriodEnd?: boolean
@@ -20,34 +21,45 @@ export default function CurrentPlanStatus({
   billingCycle,
   nextBillingDate,
   nextBillingAmount,
-  onCancel,
+  onCancelSuccess,
   isFreePlan = false,
   isCanceled = false,
   cancelAtPeriodEnd = false
 }: CurrentPlanStatusProps) {
   const [showCancelModal, setShowCancelModal] = useState(false)
-  const [cancelLoading, setCancelLoading] = useState(false)
+  const { cancelWithSync, isLoading, syncCompleted, error, reset } = useCancelSubscriptionWithSync()
 
   const handleCancelClick = () => {
+    reset() // Réinitialiser l'état
     setShowCancelModal(true)
   }
 
   const handleConfirmCancel = async () => {
-    if (!onCancel) return
-
-    setCancelLoading(true)
     try {
-      await onCancel()
-      setShowCancelModal(false)
+      await cancelWithSync()
+      // La synchronisation est gérée par le hook, le modal se fermera automatiquement
+      // quand syncCompleted deviendra true dans le modal
     } catch (error) {
       console.error('Erreur lors de l\'annulation:', error)
-    } finally {
-      setCancelLoading(false)
     }
   }
 
+  // Fermer le modal et rafraîchir quand la synchronisation est terminée
+  React.useEffect(() => {
+    if (syncCompleted && showCancelModal) {
+      setTimeout(() => {
+        setShowCancelModal(false)
+        onCancelSuccess?.() // Rafraîchir les données parent
+        reset() // Réinitialiser pour la prochaine fois
+      }, 2000) // Laisser 2 secondes pour voir le message de succès
+    }
+  }, [syncCompleted, showCancelModal, onCancelSuccess, reset])
+
   const handleCloseModal = () => {
-    setShowCancelModal(false)
+    if (!isLoading) {
+      setShowCancelModal(false)
+      reset()
+    }
   }
   return (
     <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
@@ -61,7 +73,7 @@ export default function CurrentPlanStatus({
             <p className="text-gray-600">
               {planName} • Facturation {billingCycle === 'monthly' ? 'mensuelle' : 'annuelle'}
             </p>
-            {!isFreePlan && !cancelAtPeriodEnd && onCancel && (
+            {!isFreePlan && !cancelAtPeriodEnd && (
             <button
               onClick={handleCancelClick}
               className="text-sm text-red-600 hover:text-red-700 transition-colors duration-200 underline"
@@ -132,7 +144,9 @@ export default function CurrentPlanStatus({
         onConfirm={handleConfirmCancel}
         nextBillingDate={nextBillingDate}
         planName={planName}
-        loading={cancelLoading}
+        loading={isLoading}
+        syncCompleted={syncCompleted}
+        error={error}
       />
     </div>
   )
