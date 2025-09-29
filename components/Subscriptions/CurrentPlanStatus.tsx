@@ -1,22 +1,54 @@
 'use client'
 
-import { CreditCard, Calendar, Download, Settings } from 'lucide-react'
+import { useState } from 'react'
+import { CreditCard, Calendar, Download, Settings, AlertTriangle } from 'lucide-react'
+import CancelSubscriptionModal from './CancelSubscriptionModal'
 
 interface CurrentPlanStatusProps {
   planName: string
   billingCycle: 'monthly' | 'yearly'
   nextBillingDate: string
   nextBillingAmount: number
-  onManage: () => void
+  onCancel?: () => void
+  isFreePlan?: boolean
+  isCanceled?: boolean
+  cancelAtPeriodEnd?: boolean
 }
 
-export default function CurrentPlanStatus({ 
-  planName, 
-  billingCycle, 
-  nextBillingDate, 
-  nextBillingAmount, 
-  onManage 
+export default function CurrentPlanStatus({
+  planName,
+  billingCycle,
+  nextBillingDate,
+  nextBillingAmount,
+  onCancel,
+  isFreePlan = false,
+  isCanceled = false,
+  cancelAtPeriodEnd = false
 }: CurrentPlanStatusProps) {
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelLoading, setCancelLoading] = useState(false)
+
+  const handleCancelClick = () => {
+    setShowCancelModal(true)
+  }
+
+  const handleConfirmCancel = async () => {
+    if (!onCancel) return
+
+    setCancelLoading(true)
+    try {
+      await onCancel()
+      setShowCancelModal(false)
+    } catch (error) {
+      console.error('Erreur lors de l\'annulation:', error)
+    } finally {
+      setCancelLoading(false)
+    }
+  }
+
+  const handleCloseModal = () => {
+    setShowCancelModal(false)
+  }
   return (
     <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
       <div className="flex items-center justify-between">
@@ -29,21 +61,47 @@ export default function CurrentPlanStatus({
             <p className="text-gray-600">
               {planName} • Facturation {billingCycle === 'monthly' ? 'mensuelle' : 'annuelle'}
             </p>
+            {!isFreePlan && !cancelAtPeriodEnd && onCancel && (
+            <button
+              onClick={handleCancelClick}
+              className="text-sm text-red-600 hover:text-red-700 transition-colors duration-200 underline"
+            >
+              Annuler mon abonnement
+            </button>
+          )}
           </div>
         </div>
         
         <div className="flex items-center space-x-4">
           <div className="text-right">
-            <p className="text-sm text-gray-500">Prochaine facturation</p>
-            <p className="text-lg font-semibold text-gray-900">{nextBillingAmount}€</p>
-            <p className="text-sm text-gray-500">{nextBillingDate}</p>
+            {cancelAtPeriodEnd ? (
+              <>
+                <p className="text-sm text-red-500">Abonnement annulé</p>
+                <p className="text-lg font-semibold text-red-600">Expire le {nextBillingDate}</p>
+                <p className="text-sm text-gray-500">Plus de renouvellement</p>
+              </>
+            ) : !isFreePlan ? (
+              <>
+                <p className="text-sm text-gray-500">Prochaine facturation</p>
+                <p className="text-lg font-semibold text-gray-900">{nextBillingAmount}€</p>
+                <p className="text-sm text-gray-500">{nextBillingDate}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500">Plan gratuit</p>
+                <p className="text-lg font-semibold text-gray-900">0€</p>
+                <p className="text-sm text-gray-500">Aucune facturation</p>
+              </>
+            )}
           </div>
-          <button
-            onClick={onManage}
-            className="px-4 py-2 text-sm font-medium text-[#0080A3] border border-[#0080A3] rounded-lg hover:bg-[#0080A3]/10 transition-all duration-200 hover:scale-[1.02]"
-          >
-            Gérer
-          </button>
+
+
+
+          {cancelAtPeriodEnd && (
+            <div className="px-4 py-2 text-sm font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-lg">
+              Annulation programmée
+            </div>
+          )}
         </div>
       </div>
       
@@ -66,6 +124,16 @@ export default function CurrentPlanStatus({
           </button>
         </div>
       </div>
+
+      {/* Modal d'annulation */}
+      <CancelSubscriptionModal
+        isOpen={showCancelModal}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmCancel}
+        nextBillingDate={nextBillingDate}
+        planName={planName}
+        loading={cancelLoading}
+      />
     </div>
   )
 }

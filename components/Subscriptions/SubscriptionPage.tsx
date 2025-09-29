@@ -36,7 +36,7 @@ export default function SubscriptionPage({
   const [currentPlan, setCurrentPlan] = useState('starter') // starter, pro, enterprise
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly') // monthly, yearly
   const { createCheckoutSession, error: stripeError } = useStripe()
-  const { subscription, loading: subscriptionLoading, error: subscriptionError } = useSubscription()
+  const { subscription, loading: subscriptionLoading, error: subscriptionError, cancelSubscription } = useSubscription()
   const [localShowSuccessPopup, setLocalShowSuccessPopup] = useState(false)
 
   // Récupérer les plans depuis la configuration centralisée
@@ -112,6 +112,16 @@ export default function SubscriptionPage({
     }
   }
 
+  const handleCancelSubscription = async () => {
+    try {
+      await cancelSubscription()
+      // Le hook se charge de rafraîchir les données
+    } catch (error) {
+      console.error('Erreur lors de l\'annulation:', error)
+      // Ici on pourrait afficher une notification d'erreur
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="max-w-6xl mx-auto p-6">
@@ -160,7 +170,9 @@ export default function SubscriptionPage({
             billingCycle={currentBillingCycle}
             nextBillingDate={nextBillingDate}
             nextBillingAmount={nextBillingAmount}
-            onManage={() => console.log('Gérer l\'abonnement')}
+            onCancel={handleCancelSubscription}
+            isFreePlan={currentPlanInfo.isFree}
+            cancelAtPeriodEnd={subscription?.cancel_at_period_end || false}
           />
         </div>
 
