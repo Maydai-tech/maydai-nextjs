@@ -122,12 +122,6 @@ export default function CancelSubscriptionModal({
                     <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
                     <div>
                       <p className="text-blue-800 font-medium">Annulation en cours...</p>
-                      <p className="text-blue-600 text-sm">
-                        {syncCompleted
-                          ? 'Synchronisation terminée ✓'
-                          : 'Étape 1: Annulation Stripe → Étape 2: Synchronisation Supabase'
-                        }
-                      </p>
                     </div>
                   </div>
                 </div>
