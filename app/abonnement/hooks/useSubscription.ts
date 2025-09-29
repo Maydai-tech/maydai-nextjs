@@ -9,12 +9,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { Subscription, UseSubscriptionReturn } from '@/lib/subscription/types'
+import { useApiClient } from '@/lib/api-client'
 
 export function useSubscription(): UseSubscriptionReturn {
   const { user, loading: authLoading } = useAuth()
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const apiClient = useApiClient()
 
   /**
    * Récupère l'abonnement de l'utilisateur depuis Supabase
@@ -65,12 +67,7 @@ export function useSubscription(): UseSubscriptionReturn {
     }
 
     try {
-      const response = await fetch('/api/stripe/cancel-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
+      const response = await apiClient.postJson('/api/stripe/cancel-subscription', {})
 
       if (!response.ok) {
         const errorData = await response.json()

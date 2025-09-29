@@ -1,22 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { cancelStripeSubscription } from '@/lib/stripe/services/subscription'
 import { handleStripeError } from '@/lib/stripe/utils/error-handling'
 import type { CancelSubscriptionResponse } from '@/lib/stripe/types'
 
 export async function POST(request: NextRequest) {
   try {
-    // Créer le client Supabase pour l'authentification
-    const supabase = createRouteHandlerClient({ cookies })
+    // Authentification Bearer token uniquement
+    const { user, supabase } = await getAuthenticatedSupabaseClient(request)
 
-    // Vérifier l'authentification
-    const {
-      data: { user },
-      error: authError
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Non autorisé' },
         { status: 401 }
@@ -94,15 +87,10 @@ export async function POST(request: NextRequest) {
 // Méthode GET pour vérifier si l'annulation est possible
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
+    // Authentification Bearer token uniquement
+    const { user, supabase } = await getAuthenticatedSupabaseClient(request)
 
-    // Vérifier l'authentification
-    const {
-      data: { user },
-      error: authError
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Non autorisé' },
         { status: 401 }

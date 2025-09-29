@@ -14,6 +14,7 @@ interface AuthContextType {
   verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
+  getAccessToken: () => string | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -22,6 +23,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Fonction pour obtenir l'access token pour les headers Bearer
+  const getAccessToken = useCallback(() => {
+    return session?.access_token || null;
+  }, [session]);
 
   useEffect(() => {
     let mounted = true
@@ -163,8 +169,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     refreshSession,
     signInWithOtp,
-    verifyOtp
-  }), [user, session, loading, signIn, signUp, signOut, refreshSession, signInWithOtp, verifyOtp])
+    verifyOtp,
+    getAccessToken
+  }), [user, session, loading, signIn, signUp, signOut, refreshSession, signInWithOtp, verifyOtp, getAccessToken])
 
   return (
     <AuthContext.Provider value={value}>
