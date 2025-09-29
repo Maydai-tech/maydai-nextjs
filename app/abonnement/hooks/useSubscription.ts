@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { Subscription, UseSubscriptionReturn } from '@/lib/subscription/types'
+import { CancelSubscriptionResponse } from '@/lib/stripe/types'
 import { useApiClient } from '@/lib/api-client'
 
 export function useSubscription(): UseSubscriptionReturn {
@@ -60,6 +61,8 @@ export function useSubscription(): UseSubscriptionReturn {
 
   /**
    * Fonction pour annuler l'abonnement
+   * Note: Cette version est compatible avec l'ancien système sans synchronisation
+   * Pour la nouvelle version avec synchronisation, utilisez useCancelSubscriptionWithSync
    */
   const cancelSubscription = useCallback(async () => {
     if (!user?.id || !subscription) {
@@ -74,7 +77,18 @@ export function useSubscription(): UseSubscriptionReturn {
         throw new Error(errorData.error || 'Erreur lors de l\'annulation')
       }
 
-      const result = await response.json()
+      const result: CancelSubscriptionResponse = await response.json()
+
+      // Vérifier que l'annulation a réussi
+      if (!result.success) {
+        throw new Error(result.message || 'Échec de l\'annulation')
+      }
+
+      // Si la synchronisation se fait via webhook, attendre un peu avant de rafraîchir
+      if (result.syncViaWebhook) {
+        console.log('🔄 Synchronisation via webhook, attente de 2 secondes...')
+        await new Promise(resolve => setTimeout(resolve, 2000))
+      }
 
       // Rafraîchir les données après annulation
       await fetchSubscription()

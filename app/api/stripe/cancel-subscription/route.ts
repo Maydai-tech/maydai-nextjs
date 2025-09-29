@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       .eq('status', 'active')
       .single()
 
+
     if (subscriptionError || !subscription) {
       return NextResponse.json(
         { error: 'Aucun abonnement actif trouvé' },
@@ -52,26 +53,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Mettre à jour l'abonnement dans Supabase
-    const { error: updateError } = await supabase
-      .from('subscriptions')
-      .update({
-        cancel_at_period_end: true,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', subscription.id)
-
-    if (updateError) {
-      console.error('❌ Erreur lors de la mise à jour Supabase:', updateError)
-      // L'annulation Stripe a réussi, mais pas la mise à jour locale
-      // On peut continuer car le webhook Stripe synchronisera les données
-    }
+    // La synchronisation sera automatique via le webhook Stripe
+    console.log('✅ Abonnement annulé dans Stripe, synchronisation via webhook en cours...')
 
     const response: CancelSubscriptionResponse = {
       success: true,
-      message: cancelResult.message,
+      message: 'Abonnement annulé dans Stripe. Synchronisation automatique en cours via webhook.',
       cancelAtPeriodEnd: cancelResult.cancelAtPeriodEnd,
-      periodEnd: cancelResult.periodEnd
+      periodEnd: cancelResult.periodEnd,
+      syncViaWebhook: true,
+      stripeSubscriptionId: subscription.stripe_subscription_id
     }
 
     return NextResponse.json(response, { status: 200 })
@@ -104,6 +95,8 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .eq('status', 'active')
       .single()
+
+      console.log('subscription:', subscription)
 
     if (subscriptionError || !subscription) {
       return NextResponse.json({

@@ -73,6 +73,9 @@ export async function POST(request: NextRequest) {
 
       case 'customer.subscription.updated':
         const updatedSubscription = event.data.object as Stripe.Subscription
+        console.log(`🔄 Webhook: Mise à jour abonnement ${updatedSubscription.id}`)
+        console.log(`   - Status: ${updatedSubscription.status}`)
+        console.log(`   - Cancel at period end: ${updatedSubscription.cancel_at_period_end}`)
         try {
           await updateSubscription(updatedSubscription.id, {
             status: updatedSubscription.status,
@@ -84,6 +87,7 @@ export async function POST(request: NextRequest) {
               : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             cancel_at_period_end: updatedSubscription.cancel_at_period_end,
           })
+          console.log(`✅ Webhook: Abonnement ${updatedSubscription.id} mis à jour dans Supabase`)
         } catch (error) {
           console.error('❌ Erreur lors de la mise à jour subscription:', error)
           throw error
@@ -92,10 +96,12 @@ export async function POST(request: NextRequest) {
 
       case 'customer.subscription.deleted':
         const deletedSubscription = event.data.object as Stripe.Subscription
+        console.log(`🗑️ Webhook: Suppression abonnement ${deletedSubscription.id}`)
         try {
           await updateSubscription(deletedSubscription.id, {
             status: 'canceled',
           })
+          console.log(`✅ Webhook: Abonnement ${deletedSubscription.id} marqué comme annulé dans Supabase`)
         } catch (error) {
           console.error('❌ Erreur lors de la suppression subscription:', error)
           throw error

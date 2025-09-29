@@ -36,7 +36,7 @@ export default function SubscriptionPage({
   const [currentPlan, setCurrentPlan] = useState('starter') // starter, pro, enterprise
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly') // monthly, yearly
   const { createCheckoutSession, error: stripeError } = useStripe()
-  const { subscription, loading: subscriptionLoading, error: subscriptionError, cancelSubscription } = useSubscription()
+  const { subscription, loading: subscriptionLoading, error: subscriptionError, cancelSubscription, refreshSubscription } = useSubscription()
   const [localShowSuccessPopup, setLocalShowSuccessPopup] = useState(false)
 
   // Récupérer les plans depuis la configuration centralisée
@@ -170,7 +170,7 @@ export default function SubscriptionPage({
             billingCycle={currentBillingCycle}
             nextBillingDate={nextBillingDate}
             nextBillingAmount={nextBillingAmount}
-            onCancel={handleCancelSubscription}
+            onCancelSuccess={refreshSubscription}
             isFreePlan={currentPlanInfo.isFree}
             cancelAtPeriodEnd={subscription?.cancel_at_period_end || false}
           />

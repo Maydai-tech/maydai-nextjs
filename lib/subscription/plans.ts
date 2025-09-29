@@ -10,21 +10,21 @@ const PLAN_MAPPING: Record<string, PlanInfo> = {
   'starter': {
     id: 'starter',
     name: 'starter',
-    displayName: 'La Mise en Bouche',
+    displayName: 'Gratuit',
     description: 'Plan gratuit pour découvrir MaydAI',
     isFree: true
   },
   'pro': {
     id: 'pro',
     name: 'pro',
-    displayName: 'L\'Appétit Vient en Mangeant',
+    displayName: 'Pro',
     description: 'Plan professionnel pour les organisations',
     isFree: false
   },
   'enterprise': {
     id: 'enterprise',
     name: 'enterprise',
-    displayName: 'Le Pilote',
+    displayName: 'Enterprise',
     description: 'Plan entreprise avec accompagnement',
     isFree: false
   }
