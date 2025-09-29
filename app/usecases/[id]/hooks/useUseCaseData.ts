@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { useApiCall } from '@/lib/api-auth'
+import { useApiCall } from '@/lib/api-client-legacy'
 import { UseCase, Progress } from '../types/usecase'
 import { useCaseRoutes } from '../utils/routes'
 

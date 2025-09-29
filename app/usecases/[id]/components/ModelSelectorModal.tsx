@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { ComplAIModel } from '@/lib/supabase'
-import { useApiCall } from '@/lib/api-auth'
+import { useApiCall } from '@/lib/api-client-legacy'
 import { Bot, X, Search, Check } from 'lucide-react'
 import ComplAiScoreBadge from './ComplAiScoreBadge'
 
