@@ -126,7 +126,7 @@ export default function SubscriptionPage({
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="max-w-6xl mx-auto p-6">
         {/* Header avec design moderne */}
-        {(!subscription && !currentPlanInfo.isFree) && (
+        {(!subscription || currentPlanInfo.isFree) && (
           <div className="mb-10">
             <div className="bg-white/70 backdrop-blur-sm border border-gray-100 rounded-xl p-8 shadow-sm">
               <div className="flex flex-col items-center mb-6">
