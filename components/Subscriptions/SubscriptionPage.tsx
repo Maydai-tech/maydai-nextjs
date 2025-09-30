@@ -126,20 +126,21 @@ export default function SubscriptionPage({
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
       <div className="max-w-6xl mx-auto p-6">
         {/* Header avec design moderne */}
-        <div className="mb-10">
-          <div className="bg-white/70 backdrop-blur-sm border border-gray-100 rounded-xl p-8 shadow-sm">
-            <div className="flex flex-col items-center mb-6">
-              <Image src="/icons/tag.png" alt="Étiquette de prix" width={64} height={64} className="w-16 h-16 mb-4" />
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
-                Abonnements MaydAI
-              </h1>
+        {(!subscription && !currentPlanInfo.isFree) && (
+          <div className="mb-10">
+            <div className="bg-white/70 backdrop-blur-sm border border-gray-100 rounded-xl p-8 shadow-sm">
+              <div className="flex flex-col items-center mb-6">
+                <Image src="/icons/tag.png" alt="Étiquette de prix" width={64} height={64} className="w-16 h-16 mb-4" />
+                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
+                  Abonnements MaydAI
+                </h1>
+              </div>
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-8">
+                Trouvez le plan adapté à votre situation : audit IA gratuit pour démarrer ou tester une idée de cas d'usage IA, un abonnement mensuel pour les organisations plus complexes ou un devis sur mesure pour intégrer dès à présent l'IA Act dans votre entreprise.
+              </p>
             </div>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-8">
-              Trouvez le plan adapté à votre situation : audit IA gratuit pour démarrer ou tester une idée de cas d'usage IA, un abonnement mensuel pour les organisations plus complexes ou un devis sur mesure pour intégrer dès à présent l'IA Act dans votre entreprise.
-            </p>
           </div>
-        </div>
-
+        )}
         {/* Affichage des erreurs Stripe et abonnement */}
         {(stripeError || subscriptionError) && (
           <div className="mb-8">
@@ -164,18 +165,19 @@ export default function SubscriptionPage({
         )}
 
         {/* Current Plan Status */}
-        <div className="mb-12">
-          <CurrentPlanStatus
-            planName={currentPlanInfo.displayName}
-            billingCycle={currentBillingCycle}
-            nextBillingDate={nextBillingDate}
-            nextBillingAmount={nextBillingAmount}
-            onCancelSuccess={refreshSubscription}
-            isFreePlan={currentPlanInfo.isFree}
-            cancelAtPeriodEnd={subscription?.cancel_at_period_end || false}
-          />
-        </div>
-
+        { (subscription && !currentPlanInfo.isFree) && (
+          <div className="mb-12">
+            <CurrentPlanStatus
+              planName={currentPlanInfo.displayName}
+              billingCycle={currentBillingCycle}
+              nextBillingDate={nextBillingDate}
+              nextBillingAmount={nextBillingAmount}
+              onCancelSuccess={refreshSubscription}
+              isFreePlan={currentPlanInfo.isFree}
+              cancelAtPeriodEnd={subscription?.cancel_at_period_end || false}
+            />
+          </div>
+        )}
         {/* Plans Grid */}
         {(!subscription || currentPlanInfo.isFree) && (
           <div className="mb-12">
