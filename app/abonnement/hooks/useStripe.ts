@@ -24,10 +24,6 @@ export function useStripe() {
         throw new Error('Stripe n\'est pas configuré. Veuillez ajouter NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY dans les variables d\'environnement.')
       }
 
-      if(process.env.NODE_ENV === 'development') {
-        priceId = 'price_1S8JkN16FiJU1KS5MjGTdcIo'
-      }
-
       // Appeler notre API route avec le client universel
       const response = await apiClient.postJson('/api/stripe/create-checkout-session',
         { priceId, mode, userId } as CreateCheckoutSessionRequest
