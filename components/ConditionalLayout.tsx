@@ -37,7 +37,7 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
   const excludedPages = [
     '/dashboard/registries',
     '/dashboard/registries/new',
-    '/profil'
+    '/settings'
   ];
 
   // Vérifier si c'est une page qui nécessite la sidebar

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
-import { useApiCall } from '@/lib/api-auth';
+import { useApiCall } from '@/lib/api-client-legacy';
 import { 
   Activity, 
   Calendar, 

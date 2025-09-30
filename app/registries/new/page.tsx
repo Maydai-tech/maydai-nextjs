@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useApiCall } from '@/lib/api-auth'
+import { useApiCall } from '@/lib/api-client-legacy'
 import { Building2, ArrowLeft } from "lucide-react"
 
 export default function NewCompanyPage() {

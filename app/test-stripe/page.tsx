@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useStripe } from '@/hooks/useStripe'
+import { useStripe } from '@/app/abonnement/hooks/useStripe'
 
 // Plans de test simplifiés
 const testPlans = [
