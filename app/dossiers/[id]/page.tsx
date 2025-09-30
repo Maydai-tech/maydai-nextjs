@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { useApiCall } from '@/lib/api-auth'
+import { useApiCall } from '@/lib/api-client-legacy'
 import { 
   ArrowLeft,
   FileText, 

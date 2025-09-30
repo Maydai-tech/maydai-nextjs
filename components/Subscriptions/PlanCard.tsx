@@ -2,29 +2,16 @@
 
 import { CheckCircle, Star } from 'lucide-react'
 import Image from 'next/image'
+import type { MaydAIPlan } from '@/lib/stripe/types'
 
 interface PlanCardProps {
-  plan: {
-    id: string
-    name: string
-    description: string
-    price: { monthly: number; yearly: number }
-    stripePriceId: { monthly: string; yearly: string }
-    icon: string
-    color: string
-    features: string[]
-    limitations?: string[]
-    popular?: boolean
-    free?: boolean
-    custom?: boolean
-  }
+  plan: MaydAIPlan
   billingCycle: 'monthly' | 'yearly'
   isCurrentPlan: boolean
-  onSelect: (planId: string) => void
-  onPayment: (plan: any) => void
+  onPayment: (plan: MaydAIPlan) => void
 }
 
-export default function PlanCard({ plan, billingCycle, isCurrentPlan, onSelect, onPayment }: PlanCardProps) {
+export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment }: PlanCardProps) {
   const getPlanColor = (color: string) => {
     switch (color) {
       case 'blue':
@@ -58,7 +45,7 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onSelect, 
     }
   }
 
-  const colors = getPlanColor(plan.color)
+  const colors = getPlanColor(plan.color || 'gray')
   const isPopular = plan.popular || false
   const isFree = plan.free || false
   const isCustom = plan.custom || false
@@ -72,12 +59,12 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onSelect, 
 
   return (
     <div
-      className={`relative bg-white rounded-2xl shadow-sm border-2 transition-all duration-300 hover:shadow-xl flex flex-col ${
-        isCurrentPlan 
-          ? 'border-[#0080A3] ring-2 ring-[#0080A3]/20' 
+      className={`relative bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm border-2 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] flex flex-col h-full ${
+        isCurrentPlan
+          ? 'border-[#0080A3] ring-2 ring-[#0080A3]/20'
           : isPopular
           ? 'border-[#0080A3] shadow-2xl'
-          : 'border-gray-200'
+          : 'border-gray-100'
       }`}
     >
       {isPopular && (
@@ -86,16 +73,16 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onSelect, 
         </span>
       )}
       
-      <div className="p-8 flex flex-col flex-grow">
+      <div className="p-8 flex flex-col h-full">
         {/* Plan Header */}
-        <div className="flex flex-col items-center mb-2">
+        <div className="flex flex-col items-center mb-4">
           <div className="mb-3">
-            <Image 
-              src={`/icons/${plan.icon}`} 
-              alt={plan.name} 
-              width={48} 
-              height={48} 
-              className="w-12 h-12" 
+            <Image
+              src={`/icons/${plan.icon || 'default-plan.png'}`}
+              alt={plan.name}
+              width={48}
+              height={48}
+              className="w-12 h-12"
             />
           </div>
           <h2 className="text-2xl font-bold text-center" style={{ color: '#0080a3' }}>
@@ -104,7 +91,7 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onSelect, 
         </div>
         
         {/* Price */}
-        <div className="mb-4 text-center">
+        <div className="mb-6 text-center">
           {isFree ? (
             <>
               <span className="text-5xl font-extrabold" style={{ color: '#0080a3' }}>0€</span>
@@ -127,35 +114,42 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onSelect, 
           )}
         </div>
         
-        <p className="text-gray-600 mb-6 h-20 text-center">{plan.description}</p>
+        {/* Description avec hauteur flexible */}
+        <div className="mb-6 flex-grow-0">
+          <p className="text-gray-600 text-center leading-relaxed">{plan.description}</p>
+        </div>
 
         {/* Action Button */}
-        <button 
-          onClick={() => onPayment(plan)}
-          className={`w-full text-center font-bold py-3 px-6 rounded-lg transition-colors duration-300 ${
-            isCurrentPlan
-              ? 'bg-[#0080A3] text-white hover:bg-[#006d8a]'
-              : isPopular
-              ? 'bg-[#0080A3] text-white hover:bg-[#006d8a]'
-              : 'bg-white text-[#0080A3] border border-[#0080A3] hover:bg-[#0080A3] hover:bg-opacity-10'
-          }`}
-        >
-          {isCurrentPlan ? 'Plan actuel' : 
-           isFree ? 'Commencer' :
-           isCustom ? 'Attachez vos ceintures !' : 'C\'est parti !'}
-        </button>
+        <div className="mb-6">
+          <button
+            onClick={() => onPayment(plan)}
+            className={`w-full text-center font-bold py-3 px-6 rounded-lg transition-all duration-300 hover:scale-[1.02] ${
+              isCurrentPlan
+                ? 'bg-[#0080A3] text-white hover:bg-[#006d8a] shadow-lg hover:shadow-xl'
+                : isPopular
+                ? 'bg-[#0080A3] text-white hover:bg-[#006d8a] shadow-lg hover:shadow-xl'
+                : 'bg-white/80 text-[#0080A3] border border-[#0080A3] hover:bg-[#0080A3]/10 hover:shadow-md'
+            }`}
+          >
+            {isCurrentPlan ? 'Plan actuel' : 
+             isFree ? 'Commencer' :
+             isCustom ? 'Attachez vos ceintures !' : 'C\'est parti !'}
+          </button>
+        </div>
         
-        <hr className="my-6" />
+        <hr className="my-4" />
         
-        {/* Features */}
-        <ul className="space-y-4 flex-grow">
-          {plan.features.map((feature, index) => (
-            <li key={index} className="flex items-start">
-              <CheckIcon />
-              <span className="text-gray-700">{feature}</span>
-            </li>
-          ))}
-        </ul>
+        {/* Features - prend l'espace restant */}
+        <div className="flex-grow">
+          <ul className="space-y-3">
+            {plan.features.map((feature, index) => (
+              <li key={index} className="flex items-start">
+                <CheckIcon />
+                <span className="text-gray-700 leading-relaxed">{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   )

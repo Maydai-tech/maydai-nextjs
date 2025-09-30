@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Home, User, CreditCard, Menu, X, Users, FileText, CheckSquare, Settings } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
-import { useApiCall } from '@/lib/api-auth';
+import { useApiCall } from '@/lib/api-client-legacy';
 import packageJson from '../package.json';
 
 export default function Sidebar() {
@@ -160,17 +160,17 @@ export default function Sidebar() {
         
         <div className="p-4 border-t border-[#006280]/30">
           <Link
-            href="/profil"
+            href="/settings"
             className={`
               flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group mb-4
-              ${pathname === '/profil'
+              ${pathname === '/settings'
                 ? 'bg-white text-[#0080A3] shadow-lg font-medium'
                 : 'text-white/90 hover:bg-white/10 hover:text-white'
               }
             `}
             onClick={() => setIsOpen(false)}
           >
-            <Settings className={`w-5 h-5 ${pathname === '/profil' ? 'text-[#0080A3]' : 'text-white/90 group-hover:text-white'}`} />
+            <Settings className={`w-5 h-5 ${pathname === '/settings' ? 'text-[#0080A3]' : 'text-white/90 group-hover:text-white'}`} />
             <span className="font-medium">Paramètres</span>
           </Link>
 

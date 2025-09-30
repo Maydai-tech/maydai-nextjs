@@ -1,34 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
-
-// Fonction pour initialiser Stripe
-function getStripeClient() {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('STRIPE_SECRET_KEY manquante')
-  }
-  
-  return new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-08-27.basil',
-  })
-}
-
-// Fonction pour initialiser Supabase
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('❌ Variables d\'environnement Supabase manquantes dans webhook')
-    throw new Error('Supabase configuration missing')
-  }
-
-  return createClient(supabaseUrl, supabaseKey)
-}
+import { getStripeClient } from '@/lib/stripe/config/client'
+import { syncSubscriptionFromStripe, updateSubscription } from '@/lib/stripe/services/supabase'
+import { validateWebhookSignature } from '@/lib/stripe/utils/validation'
+import { handleWebhookError, handleValidationError, logError } from '@/lib/stripe/utils/error-handling'
+import type { WebhookResponse } from '@/lib/stripe/types'
 
 export async function POST(request: NextRequest) {
-  const stripe = getStripeClient() // Initialiser Stripe ici
   try {
+    // Initialiser Stripe avec la configuration centralisée
+    const stripe = getStripeClient()
+
+    // Récupérer le body et la signature
     const body = await request.text()
     const signature = request.headers.get('stripe-signature')
 
@@ -40,250 +23,129 @@ export async function POST(request: NextRequest) {
       event = JSON.parse(body) as Stripe.Event
     } else {
       // Mode production : vérifier la signature
-      if (!signature) {
-        console.error('Missing stripe-signature header')
-        return NextResponse.json(
-          { error: 'Missing stripe-signature header' },
-          { status: 400 }
-        )
+      const signatureValidation = validateWebhookSignature(signature)
+      if (!signatureValidation.isValid) {
+        return handleValidationError(signatureValidation.error!)
       }
 
-      // Vérifier la signature du webhook
+      // Construire l'événement avec vérification de signature
       try {
         const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
-        event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+        event = stripe.webhooks.constructEvent(body, signature!, webhookSecret)
       } catch (err) {
-        console.error('Webhook signature verification failed:', err)
-        return NextResponse.json(
-          { error: 'Invalid signature' },
-          { status: 400 }
-        )
+        logError('Webhook signature verification failed', err)
+        return handleValidationError('Invalid signature')
       }
     }
 
-    console.log('Webhook event received:', event.type)
-
-    // Traiter les différents types d'événements
+    // Traitement direct des événements Stripe
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, stripe)
+        const session = event.data.object as Stripe.Checkout.Session
+
+        // Si c'est un abonnement, traiter la création
+        if (session.mode === 'subscription' && session.subscription) {
+          try {
+            // Récupérer l'abonnement complet avec les détails
+            const subscription = await stripe.subscriptions.retrieve(
+              session.subscription as string,
+              { expand: ['customer'] }
+            )
+
+            // Passer les métadonnées de la session comme fallback
+            await syncSubscriptionFromStripe(subscription, stripe, session.metadata?.user_id)
+          } catch (error) {
+            console.error('❌ Erreur lors du traitement checkout session:', error)
+            throw error
+          }
+        }
         break
 
       case 'customer.subscription.created':
-        await handleSubscriptionCreated(event.data.object as Stripe.Subscription, stripe)
+        const createdSubscription = event.data.object as Stripe.Subscription
+        try {
+          await syncSubscriptionFromStripe(createdSubscription, stripe)
+        } catch (error) {
+          console.error('❌ Erreur lors de la création subscription:', error)
+          throw error
+        }
         break
 
       case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription, stripe)
+        const updatedSubscription = event.data.object as Stripe.Subscription
+        console.log(`🔄 Webhook: Mise à jour abonnement ${updatedSubscription.id}`)
+        console.log(`   - Status: ${updatedSubscription.status}`)
+        console.log(`   - Cancel at period end: ${updatedSubscription.cancel_at_period_end}`)
+        try {
+          await updateSubscription(updatedSubscription.id, {
+            status: updatedSubscription.status,
+            current_period_start: (updatedSubscription as any).current_period_start
+              ? new Date((updatedSubscription as any).current_period_start * 1000).toISOString()
+              : new Date().toISOString(),
+            current_period_end: (updatedSubscription as any).current_period_end
+              ? new Date((updatedSubscription as any).current_period_end * 1000).toISOString()
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            cancel_at_period_end: updatedSubscription.cancel_at_period_end,
+          })
+          console.log(`✅ Webhook: Abonnement ${updatedSubscription.id} mis à jour dans Supabase`)
+        } catch (error) {
+          console.error('❌ Erreur lors de la mise à jour subscription:', error)
+          throw error
+        }
         break
 
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription, stripe)
+        const deletedSubscription = event.data.object as Stripe.Subscription
+        console.log(`🗑️ Webhook: Suppression abonnement ${deletedSubscription.id}`)
+        try {
+          await updateSubscription(deletedSubscription.id, {
+            status: 'canceled',
+          })
+          console.log(`✅ Webhook: Abonnement ${deletedSubscription.id} marqué comme annulé dans Supabase`)
+        } catch (error) {
+          console.error('❌ Erreur lors de la suppression subscription:', error)
+          throw error
+        }
         break
 
       case 'invoice.payment_succeeded':
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice, stripe)
+        const successInvoice = event.data.object as Stripe.Invoice
+        if ((successInvoice as any).subscription) {
+          try {
+            await updateSubscription((successInvoice as any).subscription as string, {
+              status: 'active',
+            })
+          } catch (error) {
+            console.error('❌ Erreur lors de la mise à jour après paiement:', error)
+            throw error
+          }
+        }
         break
 
       case 'invoice.payment_failed':
-        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice, stripe)
+        const failedInvoice = event.data.object as Stripe.Invoice
+        if ((failedInvoice as any).subscription) {
+          try {
+            await updateSubscription((failedInvoice as any).subscription as string, {
+              status: 'past_due',
+            })
+          } catch (error) {
+            console.error('❌ Erreur lors de la mise à jour après échec paiement:', error)
+            throw error
+          }
+        }
         break
 
       default:
-        console.log(`Unhandled event type: ${event.type}`)
+        // Ne pas lancer d'erreur pour les événements non gérés
+        break
     }
 
-    return NextResponse.json({ received: true })
+    const response: WebhookResponse = { received: true }
+    return NextResponse.json(response)
   } catch (error) {
-    console.error('Webhook error:', error)
-    return NextResponse.json(
-      { error: 'Webhook handler failed' },
-      { status: 500 }
-    )
+    return handleWebhookError(error)
   }
-}
-
-// Gérer la session de checkout complétée
-async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, stripe: Stripe) {
-  console.log('Checkout session completed:', session.id)
-
-  if (session.mode === 'subscription' && session.subscription) {
-    // Récupérer l'abonnement complet
-    const subscription = await stripe.subscriptions.retrieve(
-      session.subscription as string,
-      { expand: ['customer'] }
-    )
-
-    await handleSubscriptionCreated(subscription, stripe)
-  }
-}
-
-// Gérer la création d'un abonnement
-async function handleSubscriptionCreated(subscription: Stripe.Subscription, stripe: Stripe) {
-  console.log('Subscription created:', subscription.id)
-
-  try {
-    // Récupérer l'utilisateur depuis les métadonnées ou le customer
-    let userId: string | null = null
-
-    // Essayer de récupérer l'user_id depuis les métadonnées
-    if (subscription.metadata?.user_id) {
-      userId = subscription.metadata.user_id
-    } else if (subscription.customer) {
-      // Si pas de métadonnées, essayer de récupérer depuis le customer
-      const customer = await stripe.customers.retrieve(subscription.customer as string)
-      if (customer && !customer.deleted && customer.metadata?.user_id) {
-        userId = customer.metadata.user_id
-      }
-    }
-
-    if (!userId) {
-      console.error('No user_id found for subscription:', subscription.id)
-      return
-    }
-
-    // Déterminer le plan_id basé sur le price_id
-    const planId = getPlanIdFromPriceId(subscription.items.data[0]?.price.id)
-
-    // Insérer ou mettre à jour l'abonnement
-    const supabase = getSupabaseClient()
-    const { error } = await supabase
-      .from('subscriptions')
-      .upsert({
-        user_id: userId,
-        stripe_subscription_id: subscription.id,
-        stripe_customer_id: subscription.customer as string,
-        plan_id: planId,
-        status: subscription.status,
-        current_period_start: (subscription as any).current_period_start 
-          ? new Date((subscription as any).current_period_start * 1000).toISOString()
-          : new Date().toISOString(),
-        current_period_end: (subscription as any).current_period_end 
-          ? new Date((subscription as any).current_period_end * 1000).toISOString()
-          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 jours par défaut
-        cancel_at_period_end: subscription.cancel_at_period_end,
-      })
-
-    if (error) {
-      console.error('Error inserting subscription:', error)
-    } else {
-      console.log('Subscription inserted successfully:', subscription.id)
-    }
-  } catch (error) {
-    console.error('Error handling subscription created:', error)
-  }
-}
-
-// Gérer la mise à jour d'un abonnement
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription, stripe: Stripe) {
-  console.log('Subscription updated:', subscription.id)
-
-  try {
-    const supabase = getSupabaseClient()
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({
-        status: subscription.status,
-        current_period_start: (subscription as any).current_period_start 
-          ? new Date((subscription as any).current_period_start * 1000).toISOString()
-          : new Date().toISOString(),
-        current_period_end: (subscription as any).current_period_end 
-          ? new Date((subscription as any).current_period_end * 1000).toISOString()
-          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 jours par défaut
-        cancel_at_period_end: subscription.cancel_at_period_end,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('stripe_subscription_id', subscription.id)
-
-    if (error) {
-      console.error('Error updating subscription:', error)
-    } else {
-      console.log('Subscription updated successfully:', subscription.id)
-    }
-  } catch (error) {
-    console.error('Error handling subscription updated:', error)
-  }
-}
-
-// Gérer la suppression d'un abonnement
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription, stripe: Stripe) {
-  console.log('Subscription deleted:', subscription.id)
-
-  try {
-    const supabase = getSupabaseClient()
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({
-        status: 'canceled',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('stripe_subscription_id', subscription.id)
-
-    if (error) {
-      console.error('Error updating deleted subscription:', error)
-    } else {
-      console.log('Subscription marked as canceled:', subscription.id)
-    }
-  } catch (error) {
-    console.error('Error handling subscription deleted:', error)
-  }
-}
-
-// Gérer le paiement d'une facture réussi
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, stripe: Stripe) {
-  console.log('Invoice payment succeeded:', invoice.id)
-
-  if ((invoice as any).subscription) {
-    // Mettre à jour le statut de l'abonnement
-    const supabase = getSupabaseClient()
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({
-        status: 'active',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('stripe_subscription_id', (invoice as any).subscription as string)
-
-    if (error) {
-      console.error('Error updating subscription after payment:', error)
-    }
-  }
-}
-
-// Gérer l'échec du paiement d'une facture
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, stripe: Stripe) {
-  console.log('Invoice payment failed:', invoice.id)
-
-  if ((invoice as any).subscription) {
-    // Mettre à jour le statut de l'abonnement
-    const supabase = getSupabaseClient()
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({
-        status: 'past_due',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('stripe_subscription_id', (invoice as any).subscription as string)
-
-    if (error) {
-      console.error('Error updating subscription after payment failure:', error)
-    }
-  }
-}
-
-// Fonction utilitaire pour déterminer le plan_id depuis le price_id
-function getPlanIdFromPriceId(priceId: string | undefined): string {
-  if (!priceId) return 'starter'
-
-  // Mapping des price_id vers les plan_id (PRODUCTION)
-  const priceToPlanMap: Record<string, string> = {
-    'price_1SA8wX1ALRgJSDBxK8g4bH8q': 'starter', // Gratuit (PRICE ID)
-    'price_1SA8t21ALRgJSDBxFaYrH1d7': 'pro', // 10€/mois (PRICE ID)
-    'price_1SA8v81ALRgJSDBx0CDPDcid': 'pro', // 100€/an (PRICE ID)
-    'price_1SA8xx1ALRgJSDBxUrh2lJwg': 'enterprise', // 1000€/mois (PRICE ID)
-  }
-
-  return priceToPlanMap[priceId] || 'starter'
 }
 
 

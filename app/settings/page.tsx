@@ -1,24 +1,45 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { Mail, LogOut, Settings, X, CreditCard, ArrowLeft } from 'lucide-react'
 import NavBar from '@/components/NavBar/NavBar'
+import SubscriptionPage from '@/components/Subscriptions/SubscriptionPage'
 
 type MenuSection = 'general' | 'subscription' | 'logout'
 
 export default function ProfilPage() {
   const { user, loading, signOut } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
   const [activeSection, setActiveSection] = useState<MenuSection>('general')
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false)
 
   // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Vérifier le succès du paiement
+  useEffect(() => {
+    if (mounted && searchParams.get('payment_success') === 'true') {
+      setActiveSection('subscription')
+      setShowSuccessPopup(true)
+
+      // Nettoyer l'URL après 100ms
+      const timer = setTimeout(() => {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('payment_success')
+        url.searchParams.delete('session_id')
+        window.history.replaceState({}, '', url.toString())
+      }, 100)
+
+      return () => clearTimeout(timer)
+    }
+  }, [mounted, searchParams])
 
   useEffect(() => {
     if (mounted && !loading && !user) {
@@ -114,38 +135,10 @@ export default function ProfilPage() {
         )
       case 'subscription':
         return (
-          <div className="space-y-8">
-            {/* Header Abonnement */}
-            <div className="flex items-center space-x-6 p-6 bg-blue-50/50 rounded-xl border border-gray-100">
-              <div className="flex-shrink-0">
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Abonnement</h2>
-                <p className="text-gray-500">Gérez votre abonnement et vos paramètres de facturation</p>
-              </div>
-            </div>
-
-            {/* Carte Plan */}
-            <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-                  <CreditCard className="w-5 h-5 text-[#0080A3] mr-2" />
-                  Plan actuel
-                </h3>
-                <p className="text-gray-500 text-sm">Informations sur votre plan d'abonnement</p>
-              </div>
-
-              <div className="p-4 bg-gray-50/80 border border-gray-100 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                    <span className="text-gray-900 font-medium">Plan gratuit</span>
-                  </div>
-                  <span className="text-xs text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full font-medium">Actif</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <SubscriptionPage
+            showSuccessPopup={showSuccessPopup}
+            onCloseSuccessPopup={() => setShowSuccessPopup(false)}
+          />
         )
       default:
         return null
@@ -259,6 +252,7 @@ export default function ProfilPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 } 

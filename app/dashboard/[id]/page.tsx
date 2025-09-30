@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
-import { useApiCall } from '@/lib/api-auth'
+import { useApiCall } from '@/lib/api-client-legacy'
 import { getProviderIcon } from '@/lib/provider-icons'
 import { 
   ArrowLeft, 
