@@ -102,7 +102,7 @@ export default function SubscriptionPage({
       return
     }
 
-    const priceId = plan.stripePriceId[currentBillingCycle]
+    const priceId = plan.stripePriceId[billingCycle]
     const mode = plan.custom ? 'payment' : 'subscription'
 
     try {
