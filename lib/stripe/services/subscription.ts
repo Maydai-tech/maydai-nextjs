@@ -1,5 +1,6 @@
 import { getStripeClient } from '@/lib/stripe/config/client'
 import type { CancelSubscriptionResponse } from '@/lib/stripe/types'
+import Stripe from 'stripe'
 
 /**
  * Annule un abonnement Stripe
@@ -17,9 +18,9 @@ export async function cancelStripeSubscription(
 
     if (immediately) {
       // Annulation immédiate
-      const canceledSubscription = await stripe.subscriptions.cancel(subscriptionId)
+      const canceledSubscription = await stripe.subscriptions.cancel(subscriptionId) as any
 
-      const periodEndTimestamp = canceledSubscription.current_period_end
+      const periodEndTimestamp = canceledSubscription.items?.data?.[0]?.current_period_end
       const periodEnd = periodEndTimestamp
         ? new Date(periodEndTimestamp * 1000).toISOString()
         : new Date().toISOString()
@@ -34,9 +35,9 @@ export async function cancelStripeSubscription(
       // Annulation à la fin de la période (recommandé pour UX)
       const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
         cancel_at_period_end: true
-      })
+      }) as any
 
-      const periodEndTimestamp = updatedSubscription.current_period_end
+      const periodEndTimestamp = updatedSubscription.items?.data?.[0]?.current_period_end
       const periodEnd = periodEndTimestamp
         ? new Date(periodEndTimestamp * 1000).toISOString()
         : new Date().toISOString()
@@ -87,17 +88,17 @@ export async function cancelStripeSubscription(
 export async function getStripeSubscription(subscriptionId: string) {
   try {
     const stripe = getStripeClient()
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId) as any
 
     return {
       id: subscription.id,
       status: subscription.status,
-      current_period_start: subscription.current_period_start,
-      current_period_end: subscription.current_period_end,
+      current_period_start: subscription.items?.data?.[0]?.current_period_start,
+      current_period_end: subscription.items?.data?.[0]?.current_period_end,
       cancel_at_period_end: subscription.cancel_at_period_end,
       canceled_at: subscription.canceled_at,
       customer: subscription.customer as string,
-      items: subscription.items.data.map(item => ({
+      items: subscription.items.data.map((item: any) => ({
         id: item.id,
         price_id: item.price.id,
         quantity: item.quantity
