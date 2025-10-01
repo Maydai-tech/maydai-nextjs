@@ -384,7 +384,7 @@ export default function ProfilPage() {
       <InviteCollaboratorModal
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
-        onInvite={handleInviteCollaborator}
+        onInvite={(data) => handleInviteCollaborator({ ...data, scope: 'all' })}
       />
 
     </div>
