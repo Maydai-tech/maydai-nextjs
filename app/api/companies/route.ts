@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       .insert([{
         user_id: user.id,
         company_id: data.id,
-        role: 'company_owner',
+        role: 'owner',
         is_active: true
       }])
 
