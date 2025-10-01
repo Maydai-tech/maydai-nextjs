@@ -3,20 +3,25 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { Mail, LogOut, Settings, X, CreditCard, ArrowLeft } from 'lucide-react'
+import { Mail, LogOut, Settings, X, CreditCard, ArrowLeft, Users } from 'lucide-react'
 import NavBar from '@/components/NavBar/NavBar'
 import SubscriptionPage from '@/components/Subscriptions/SubscriptionPage'
+import InviteCollaboratorModal from '@/components/InviteCollaboratorModal'
+import CollaboratorList from '@/components/CollaboratorList'
 
-type MenuSection = 'general' | 'subscription' | 'logout'
+type MenuSection = 'general' | 'collaboration' | 'subscription' | 'logout'
 
 export default function ProfilPage() {
-  const { user, loading, signOut } = useAuth()
+  const { user, loading, signOut, getAccessToken } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
   const [activeSection, setActiveSection] = useState<MenuSection>('general')
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [collaborators, setCollaborators] = useState<any[]>([])
+  const [loadingCollaborators, setLoadingCollaborators] = useState(false)
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -80,6 +85,11 @@ export default function ProfilPage() {
       icon: Settings
     },
     {
+      id: 'collaboration' as MenuSection,
+      name: 'Collaboration',
+      icon: Users
+    },
+    {
       id: 'subscription' as MenuSection,
       name: 'Abonnement',
       icon: CreditCard
@@ -96,7 +106,77 @@ export default function ProfilPage() {
       setShowLogoutModal(true)
     } else {
       setActiveSection(sectionId)
+      if (sectionId === 'collaboration') {
+        fetchCollaborators()
+      }
     }
+  }
+
+  const fetchCollaborators = async () => {
+    if (!user) return
+
+    setLoadingCollaborators(true)
+    try {
+      const token = getAccessToken()
+      if (!token) {
+        throw new Error('No access token available')
+      }
+      const response = await fetch(`/api/profiles/${user.id}/collaborators`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch collaborators')
+      }
+
+      const data = await response.json()
+      setCollaborators(data)
+    } catch (error) {
+      console.error('Error fetching collaborators:', error)
+    } finally {
+      setLoadingCollaborators(false)
+    }
+  }
+
+  const handleInviteCollaborator = async (data: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    scope: 'all' | 'specific';
+    companyId?: string;
+  }) => {
+    if (!user) return
+
+    const token = getAccessToken()
+    if (!token) {
+      throw new Error('No access token available')
+    }
+    const endpoint = data.scope === 'all'
+      ? `/api/profiles/${user.id}/collaborators`
+      : `/api/companies/${data.companyId}/collaborators`
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName
+      })
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to invite collaborator')
+    }
+
+    // Refresh the collaborators list
+    await fetchCollaborators()
   }
 
   const renderContent = () => {
@@ -130,6 +210,53 @@ export default function ProfilPage() {
                   <span className="text-gray-900 font-medium">{user.email}</span>
                 </div>
               </div>
+            </div>
+          </div>
+        )
+      case 'collaboration':
+        return (
+          <div className="space-y-8">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 bg-blue-50/50 rounded-xl border border-gray-100">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Collaboration</h2>
+                <p className="text-gray-500">Gérez les accès de vos collaborateurs à vos registres</p>
+              </div>
+              <button
+                onClick={() => setShowInviteModal(true)}
+                className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white rounded-lg hover:bg-[#006280] transition-colors"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Inviter un collaborateur
+              </button>
+            </div>
+
+            {/* Collaborators list */}
+            <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Collaborateurs</h3>
+                <p className="text-gray-500 text-sm">Liste de tous vos collaborateurs et le nombre de registres auxquels ils ont accès</p>
+              </div>
+
+              <CollaboratorList
+                collaborators={collaborators}
+                loading={loadingCollaborators}
+                showCompanyCount={true}
+                emptyMessage="Aucun collaborateur pour le moment. Invitez votre première personne !"
+              />
+            </div>
+
+            {/* Info box */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+              <h3 className="text-sm font-medium text-blue-900 mb-3 flex items-center">
+                <Settings className="w-4 h-4 mr-2" />
+                À propos des collaborateurs
+              </h3>
+              <ul className="text-sm text-blue-800 space-y-2">
+                <li>• Les collaborateurs peuvent consulter et modifier les registres partagés</li>
+                <li>• Ils ne peuvent pas créer de nouveaux registres</li>
+                <li>• Ils ne peuvent pas inviter d'autres collaborateurs</li>
+              </ul>
             </div>
           </div>
         )
@@ -252,6 +379,13 @@ export default function ProfilPage() {
           </div>
         </div>
       )}
+
+      {/* Invite Collaborator Modal */}
+      <InviteCollaboratorModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onInvite={handleInviteCollaborator}
+      />
 
     </div>
   );
