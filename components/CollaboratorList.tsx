@@ -1,6 +1,7 @@
 'use client';
 
 import { Users, UserX, Building2, Crown, User as UserIcon } from 'lucide-react';
+import Avatar from './Profile/Avatar';
 
 interface Collaborator {
   id: string;
@@ -53,13 +54,13 @@ export default function CollaboratorList({
         >
           <div className="flex items-center space-x-3 flex-1">
             {/* Avatar */}
-            <div className="w-10 h-10 rounded-full bg-[#0080A3] bg-opacity-10 flex items-center justify-center flex-shrink-0">
-              {collaborator.role === 'owner' ? (
+            {collaborator.role === 'owner' ? (
+              <div className="w-10 h-10 rounded-full bg-[#0080A3] bg-opacity-10 flex items-center justify-center flex-shrink-0">
                 <Crown className="w-5 h-5 text-[#0080A3]" />
-              ) : (
-                <UserIcon className="w-5 h-5 text-[#0080A3]" />
-              )}
-            </div>
+              </div>
+            ) : (
+              <Avatar firstName={collaborator.firstName} />
+            )}
 
             {/* Info */}
             <div className="flex-1 min-w-0">

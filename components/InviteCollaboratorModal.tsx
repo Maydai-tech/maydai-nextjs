@@ -6,29 +6,22 @@ import { UserPlus, X, Mail, User, AlertCircle, CheckCircle, Building2 } from 'lu
 interface InviteCollaboratorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  companyId?: string;
-  companyName?: string;
   onInvite?: (data: {
     email: string;
     firstName: string;
     lastName: string;
-    scope: 'all' | 'specific';
-    companyId?: string;
   }) => Promise<void>;
 }
 
 export default function InviteCollaboratorModal({
   isOpen,
   onClose,
-  companyId,
-  companyName,
   onInvite
 }: InviteCollaboratorModalProps) {
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
-    lastName: '',
-    scope: (companyId ? 'specific' : 'all') as 'all' | 'specific'
+    lastName: ''
   });
 
   const [loading, setLoading] = useState(false);
@@ -49,9 +42,7 @@ export default function InviteCollaboratorModal({
       await onInvite({
         email: formData.email,
         firstName: formData.firstName,
-        lastName: formData.lastName,
-        scope: formData.scope,
-        companyId: formData.scope === 'specific' ? companyId : undefined
+        lastName: formData.lastName
       });
 
       setSuccess('Invitation envoyée avec succès');
@@ -61,8 +52,7 @@ export default function InviteCollaboratorModal({
         setFormData({
           email: '',
           firstName: '',
-          lastName: '',
-          scope: (companyId ? 'specific' : 'all') as 'all' | 'specific'
+          lastName: ''
         });
         setSuccess('');
         onClose();
@@ -179,77 +169,30 @@ export default function InviteCollaboratorModal({
             </p>
           </div>
 
-          {/* Scope selection (only if not already constrained) */}
-          {!companyId && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Portée de l'invitation
-              </label>
-              <div className="space-y-3">
-                <label className="flex items-start space-x-3 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="scope"
-                    value="all"
-                    checked={formData.scope === 'all'}
-                    onChange={(e) => setFormData({ ...formData, scope: 'all' })}
-                    className="mt-1 text-[#0080A3] focus:ring-[#0080A3]"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-900">
-                        Tous mes registres
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Donne accès à tous vos registres existants (pas les futurs en V1)
-                    </p>
-                  </div>
-                </label>
-
-                <label className="flex items-start space-x-3 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="scope"
-                    value="specific"
-                    checked={formData.scope === 'specific'}
-                    onChange={(e) => setFormData({ ...formData, scope: 'specific' })}
-                    className="mt-1 text-[#0080A3] focus:ring-[#0080A3]"
-                    disabled
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-400">
-                        Un registre spécifique
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Disponible depuis les paramètres du registre
-                    </p>
-                  </div>
-                </label>
+          {/* Info box */}
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="flex items-start space-x-2">
+              <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs text-blue-700 mt-1">
+                  Le collaborateur aura accès à tous vos registres.
+                </p>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Company info if specific scope */}
-          {companyId && companyName && (
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <div className="flex items-start space-x-2">
-                <Building2 className="w-5 h-5 text-blue-600 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-blue-900">
-                    Invitation sur un registre spécifique
-                  </p>
-                  <p className="text-xs text-blue-700 mt-1">
-                    Le collaborateur aura accès uniquement au registre : <strong>{companyName}</strong>
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Permissions info */}
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h3 className="text-sm font-medium text-gray-900 mb-2">
+              Permissions des collaborateurs
+            </h3>
+            <ul className="text-xs text-gray-600 space-y-1">
+              <li>✓ Peuvent consulter et modifier les registres partagés</li>
+              <li>✓ Peuvent gérer les cas d'usage des registres</li>
+              <li>✗ Ne peuvent pas créer de nouveaux registres</li>
+              <li>✗ Ne peuvent pas inviter d'autres collaborateurs</li>
+            </ul>
+          </div>
 
           {/* Action buttons */}
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
