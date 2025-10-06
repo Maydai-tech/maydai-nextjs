@@ -13,13 +13,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-// POST /api/companies/[companyId]/collaborators - Invite collaborator to specific company
+// POST /api/companies/[id]/collaborators - Invite collaborator to specific company
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ companyId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { companyId } = await params
+    const { id: companyId } = await params
 
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
@@ -186,13 +186,13 @@ export async function POST(
   }
 }
 
-// GET /api/companies/[companyId]/collaborators - Get all collaborators for a company
+// GET /api/companies/[id]/collaborators - Get all collaborators for a company
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ companyId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { companyId } = await params
+    const { id: companyId } = await params
 
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
