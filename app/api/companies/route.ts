@@ -66,7 +66,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Error fetching companies' }, { status: 500 })
     }
 
-    return NextResponse.json(companies || [])
+    // Create a map of companyId -> role
+    const roleMap = new Map(userCompanies.map(uc => [uc.company_id, uc.role]))
+
+    // Enrich companies with user role
+    const companiesWithRole = companies?.map(company => ({
+      ...company,
+      role: roleMap.get(company.id)
+    })) || []
+
+    return NextResponse.json(companiesWithRole)
 
   } catch (error) {
     const context = createRequestContext(request)
@@ -95,6 +104,29 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    // Check if user is only a collaborator (has only 'user' roles, no 'owner' roles)
+    const { data: userCompanies, error: checkError } = await supabase
+      .from('user_companies')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+
+    if (checkError) {
+      return NextResponse.json({ error: 'Error checking user permissions' }, { status: 500 })
+    }
+
+    // If user has any companies and ALL of them are as 'user' role (collaborator), deny creation
+    if (userCompanies && userCompanies.length > 0) {
+      const hasOwnerRole = userCompanies.some(uc => uc.role === 'owner' || uc.role === 'company_owner')
+      const hasOnlyUserRole = userCompanies.every(uc => uc.role === 'user')
+
+      if (hasOnlyUserRole && !hasOwnerRole) {
+        return NextResponse.json({
+          error: 'Collaborators cannot create new companies. Only company owners can create new companies.'
+        }, { status: 403 })
+      }
     }
 
     const body = await request.json()
