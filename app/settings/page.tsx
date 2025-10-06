@@ -8,6 +8,7 @@ import NavBar from '@/components/NavBar/NavBar'
 import SubscriptionPage from '@/components/Subscriptions/SubscriptionPage'
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
 import CollaboratorList from '@/components/Collaboration/CollaboratorList'
+import ConfirmRemoveCollaboratorModal from '@/components/Collaboration/ConfirmRemoveCollaboratorModal'
 
 type MenuSection = 'general' | 'collaboration' | 'subscription' | 'logout'
 
@@ -20,6 +21,8 @@ export default function ProfilPage() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
+  const [showRemoveModal, setShowRemoveModal] = useState(false)
+  const [selectedCollaborator, setSelectedCollaborator] = useState<any | null>(null)
   const [collaborators, setCollaborators] = useState<any[]>([])
   const [loadingCollaborators, setLoadingCollaborators] = useState(false)
 
@@ -179,28 +182,37 @@ export default function ProfilPage() {
     await fetchCollaborators()
   }
 
-  const handleRemoveCollaborator = async (collaboratorId: string) => {
-    if (!user) return
-  
+  const handleRemoveCollaboratorClick = (collaboratorId: string) => {
+    const collaborator = collaborators.find(c => c.id === collaboratorId)
+    if (collaborator) {
+      setSelectedCollaborator(collaborator)
+      setShowRemoveModal(true)
+    }
+  }
+
+  const handleConfirmRemoveCollaborator = async () => {
+    if (!user || !selectedCollaborator) return
+
     const token = getAccessToken()
     if (!token) {
       throw new Error('No access token available')
     }
-    const response = await fetch(`/api/profiles/${user.id}/collaborators/${collaboratorId}`, {
+    const response = await fetch(`/api/profiles/${user.id}/collaborators/${selectedCollaborator.id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`
       }
     })
-  
+
     if (!response.ok) {
       throw new Error('Failed to remove collaborator')
     }
 
     // Refresh the collaborators list
     await fetchCollaborators()
-  
-}
+    setShowRemoveModal(false)
+    setSelectedCollaborator(null)
+  }
 
   const renderContent = () => {
     switch (activeSection) {
@@ -266,7 +278,7 @@ export default function ProfilPage() {
                 loading={loadingCollaborators}
                 showCompanyCount={true}
                 emptyMessage="Aucun collaborateur pour le moment. Invitez votre première personne !"
-                onRemove={handleRemoveCollaborator}
+                onRemove={handleRemoveCollaboratorClick}
               />
             </div>
 
@@ -409,6 +421,17 @@ export default function ProfilPage() {
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         onInvite={(data) => handleInviteCollaborator({ ...data, scope: 'all' })}
+      />
+
+      {/* Confirm Remove Collaborator Modal */}
+      <ConfirmRemoveCollaboratorModal
+        isOpen={showRemoveModal}
+        onClose={() => {
+          setShowRemoveModal(false)
+          setSelectedCollaborator(null)
+        }}
+        onConfirm={handleConfirmRemoveCollaborator}
+        collaborator={selectedCollaborator}
       />
 
     </div>
