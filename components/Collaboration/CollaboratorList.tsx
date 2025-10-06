@@ -1,7 +1,7 @@
 'use client';
 
 import { Users, UserX, Building2, Crown, User as UserIcon } from 'lucide-react';
-import Avatar from './Profile/Avatar';
+import Avatar from '../Profile/Avatar';
 
 interface Collaborator {
   id: string;

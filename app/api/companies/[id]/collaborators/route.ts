@@ -268,3 +268,58 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+// DELETE /api/companies/[id]/collaborators/[collaboratorId] - Delete a collaborator from a company
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string, collaboratorId: string }> }
+) {
+  try {
+    const { id: companyId, collaboratorId } = await params
+
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    })
+
+    // Verify user
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    // Verify user has access to this company (owner or collaborator)
+    const hasAccess = await hasAccessToCompany(user.id, companyId, token)
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Delete collaborator from company
+    const { error: deleteError } = await supabase
+      .from('user_companies')
+      .delete()
+      .eq('user_id', collaboratorId)
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+
+    if (deleteError) {
+      logger.error('Failed to delete collaborator from company', deleteError, createRequestContext(request))
+      return NextResponse.json({ error: 'Failed to delete collaborator' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    const context = createRequestContext(request)
+    logger.error('Failed to delete collaborator from company', error, context)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

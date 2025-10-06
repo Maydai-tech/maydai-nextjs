@@ -6,8 +6,8 @@ import { useAuth } from '@/lib/auth'
 import { Mail, LogOut, Settings, X, CreditCard, ArrowLeft, Users } from 'lucide-react'
 import NavBar from '@/components/NavBar/NavBar'
 import SubscriptionPage from '@/components/Subscriptions/SubscriptionPage'
-import InviteCollaboratorModal from '@/components/InviteCollaboratorModal'
-import CollaboratorList from '@/components/CollaboratorList'
+import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
+import CollaboratorList from '@/components/Collaboration/CollaboratorList'
 
 type MenuSection = 'general' | 'collaboration' | 'subscription' | 'logout'
 
@@ -179,6 +179,29 @@ export default function ProfilPage() {
     await fetchCollaborators()
   }
 
+  const handleRemoveCollaborator = async (collaboratorId: string) => {
+    if (!user) return
+  
+    const token = getAccessToken()
+    if (!token) {
+      throw new Error('No access token available')
+    }
+    const response = await fetch(`/api/profiles/${user.id}/collaborators/${collaboratorId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+  
+    if (!response.ok) {
+      throw new Error('Failed to remove collaborator')
+    }
+
+    // Refresh the collaborators list
+    await fetchCollaborators()
+  
+}
+
   const renderContent = () => {
     switch (activeSection) {
       case 'general':
@@ -243,6 +266,7 @@ export default function ProfilPage() {
                 loading={loadingCollaborators}
                 showCompanyCount={true}
                 emptyMessage="Aucun collaborateur pour le moment. Invitez votre première personne !"
+                onRemove={handleRemoveCollaborator}
               />
             </div>
 
