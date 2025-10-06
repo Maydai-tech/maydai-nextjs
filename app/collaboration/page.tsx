@@ -18,7 +18,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
-import CollaborationModal from '@/components/CollaborationModal';
+import CollaborationModal from '@/components/Collaboration/CollaborationModal';
 
 interface Collaborator {
   id: string;

@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
     console.log('Vérification accès company via user_companies pour user:', user.id, 'company:', company_id)
     const { data: userCompany, error: userCompanyError } = await supabase
       .from('user_companies')
-      .select('company_id')
+      .select('company_id, role')
       .eq('user_id', user.id)
       .eq('company_id', company_id)
       .eq('is_active', true)
@@ -178,6 +178,12 @@ export async function POST(request: NextRequest) {
     if (userCompanyError || !userCompany) {
       console.error('Company not found or access denied')
       return NextResponse.json({ error: 'Company not found or access denied' }, { status: 403 })
+    }
+
+    // Only owners can create use cases (collaborators cannot)
+    if (userCompany.role !== 'owner' && userCompany.role !== 'company_owner') {
+      console.error('User is not an owner, cannot create use case')
+      return NextResponse.json({ error: 'Only company owners can create use cases' }, { status: 403 })
     }
 
     // Parse deployment_countries from string to array if needed
