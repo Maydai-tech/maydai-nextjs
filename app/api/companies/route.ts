@@ -66,7 +66,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Error fetching companies' }, { status: 500 })
     }
 
-    return NextResponse.json(companies || [])
+    // Create a map of companyId -> role
+    const roleMap = new Map(userCompanies.map(uc => [uc.company_id, uc.role]))
+
+    // Enrich companies with user role
+    const companiesWithRole = companies?.map(company => ({
+      ...company,
+      role: roleMap.get(company.id)
+    })) || []
+
+    return NextResponse.json(companiesWithRole)
 
   } catch (error) {
     const context = createRequestContext(request)
