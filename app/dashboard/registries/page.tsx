@@ -13,6 +13,7 @@ import NavBar from '@/components/NavBar/NavBar'
 interface Company {
   id: string
   name: string
+  role: string
 }
 
 export default function CompanySelection() {
@@ -143,34 +144,39 @@ export default function CompanySelection() {
               </div>
             ) : (
               <>
-                <div className="grid gap-4 sm:gap-6">
-                  {companies.map((company) => (
-                    <Link
-                      key={company.id}
-                      href={`/dashboard/${company.id}`}
-                      className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md hover:border-[#0080A3]/20 border border-transparent transition-all group"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="bg-[#0080A3]/10 p-3 rounded-lg group-hover:bg-[#0080A3]/20 transition-colors">
-                            <Building2 className="h-6 w-6 text-[#0080A3]" />
+                {/* Owned/Admin Registries Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold text-gray-900">Mes registres</h3>
+                  <div className="grid gap-4 sm:gap-6">
+                    {companies.filter((company) => (company.role === 'owner' || company.role === 'company_owner')).map((company) => (
+                      <Link
+                        key={company.id}
+                        href={`/dashboard/${company.id}`}
+                        className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md hover:border-[#0080A3]/20 border border-transparent transition-all group"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="bg-[#0080A3]/10 p-3 rounded-lg group-hover:bg-[#0080A3]/20 transition-colors">
+                              <Building2 className="h-6 w-6 text-[#0080A3]" />
+                            </div>
+                            <div>
+                              <h4 className="text-lg font-semibold text-gray-900 group-hover:text-[#0080A3] transition-colors">
+                                {company.name}
+                              </h4>
+                              <p className="text-xs text-gray-500">Propriétaire</p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-[#0080A3] transition-colors">
-                              {company.name}
-                            </h3>
+                          <div className="flex items-center space-x-3">
+                            <div className="text-right">
+                              <p className="text-sm font-medium text-gray-900">Dashboard</p>
+                              <p className="text-xs text-gray-500">Conformité IA Act</p>
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-[#0080A3] transition-colors" />
                           </div>
                         </div>
-                        <div className="flex items-center space-x-3">
-                          <div className="text-right">
-                            <p className="text-sm font-medium text-gray-900">Dashboard</p>
-                            <p className="text-xs text-gray-500">Conformité IA Act</p>
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-[#0080A3] transition-colors" />
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Add New Company */}
@@ -184,6 +190,47 @@ export default function CompanySelection() {
                     </div>
                     <span className="font-medium">Ajouter un nouveau registre</span>
                   </Link>
+                </div>
+
+                {/* Collaborator Registries Section */}
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold text-gray-900">Registres collaboratifs</h3>
+                  <div className="grid gap-4 sm:gap-6">
+                    { companies.filter((company) => company.role === 'user').length === 0 ? (
+                      <div className="bg-white rounded-xl shadow-sm p-6 text-center">
+                        <p className="text-gray-600">Vous n'avez accès à aucun registre collaboratif</p>
+                      </div>
+                    ) : (
+                      companies.filter((company) => company.role === 'user').map((company) => (
+                      <Link
+                        key={company.id}
+                        href={`/dashboard/${company.id}`}
+                        className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md hover:border-purple-500/20 border border-transparent transition-all group"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="bg-purple-50 p-3 rounded-lg group-hover:bg-purple-100 transition-colors">
+                              <Building2 className="h-6 w-6 text-purple-600" />
+                            </div>
+                            <div>
+                              <h4 className="text-lg font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
+                                {company.name}
+                              </h4>
+                              <p className="text-xs text-gray-500">Collaborateur</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <div className="text-right">
+                              <p className="text-sm font-medium text-gray-900">Dashboard</p>
+                              <p className="text-xs text-gray-500">Conformité IA Act</p>
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                          </div>
+                        </div>
+                        </Link>
+                      ))
+                    )}
+                  </div>
                 </div>
               </>
             )}
