@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
       .from('user_companies')
       .select('company_id')
       .eq('user_id', user.id)
-      .eq('is_active', true)
       .single();
 
     if (userCompanyError || !userCompany) {

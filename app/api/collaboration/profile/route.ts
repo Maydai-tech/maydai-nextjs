@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getUserOwnedCompanies } from '@/lib/permissions'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { getUserByEmail, inviteUserByEmail, createProfileForUser } from '@/lib/invite-user'
 
@@ -13,14 +12,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-// POST /api/profiles/[profileId]/collaborators - Invitation globale
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ profileId: string }> }
-) {
+// POST /api/collaboration/profile - Invite collaborator at profile level (full access)
+export async function POST(request: NextRequest) {
   try {
-    const { profileId } = await params
-
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
       return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
@@ -41,13 +35,8 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Verify that profileId matches the authenticated user
-    if (user.id !== profileId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
     const body = await request.json()
-    const { email, firstName, lastName } = body
+    const { email, firstName, lastName, role = 'user' } = body
 
     if (!email || !firstName || !lastName) {
       return NextResponse.json({ error: 'Missing required fields: email, firstName, lastName' }, { status: 400 })
@@ -59,16 +48,15 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
     }
 
-    // Get all companies where user is owner
-    const ownedCompanyIds = await getUserOwnedCompanies(user.id, token)
-
-    if (ownedCompanyIds.length === 0) {
-      return NextResponse.json({ error: 'You do not own any companies' }, { status: 400 })
+    // Validate role
+    const validRoles = ['owner', 'user']
+    if (!validRoles.includes(role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
     }
 
     // Check if user exists in auth.users by email
     let collaboratorProfileId: string | null = null
-    const { user: existingAuthUser, error: getUserError } = await getUserByEmail(email)
+    const { user: existingAuthUser } = await getUserByEmail(email)
 
     if (existingAuthUser) {
       // User already exists in auth
@@ -126,37 +114,30 @@ export async function POST(
       }
     }
 
-    // Check if collaborator is already added to any of the companies
-    const { data: existingCollaborations } = await supabase
-      .from('user_companies')
-      .select('company_id')
-      .eq('user_id', collaboratorProfileId)
-      .in('company_id', ownedCompanyIds)
+    // Check if collaborator already has profile-level access
+    const { data: existingCollaboration } = await supabase
+      .from('user_profiles')
+      .select('id, role')
+      .eq('inviter_user_id', user.id)
+      .eq('invited_user_id', collaboratorProfileId)
+      .single()
 
-    const existingCompanyIds = existingCollaborations?.map(uc => uc.company_id) || []
-    const newCompanyIds = ownedCompanyIds.filter(id => !existingCompanyIds.includes(id))
-
-    if (newCompanyIds.length === 0) {
-      return NextResponse.json({
-        error: 'This user is already a collaborator on all your companies',
-        alreadySharedCount: existingCompanyIds.length
-      }, { status: 400 })
+    if (existingCollaboration) {
+      return NextResponse.json({ error: 'This user is already a collaborator at profile level' }, { status: 400 })
     }
 
-    // Create user_companies entries for all owned companies
-    const userCompaniesInserts = newCompanyIds.map(companyId => ({
-      user_id: collaboratorProfileId,
-      company_id: companyId,
-      role: 'user',
-      is_active: true
-    }))
-
+    // Create user_profiles entry
     const { error: insertError } = await supabase
-      .from('user_companies')
-      .insert(userCompaniesInserts)
+      .from('user_profiles')
+      .insert({
+        inviter_user_id: user.id,
+        invited_user_id: collaboratorProfileId,
+        role: role,
+        added_by: user.id
+      })
 
     if (insertError) {
-      logger.error('Failed to create user_companies entries', insertError, createRequestContext(request))
+      logger.error('Failed to create user_profiles entry', insertError, createRequestContext(request))
       return NextResponse.json({ error: 'Failed to add collaborator' }, { status: 500 })
     }
 
@@ -173,28 +154,21 @@ export async function POST(
         id: collaboratorProfile?.id,
         firstName: collaboratorProfile?.first_name,
         lastName: collaboratorProfile?.last_name,
-        email
-      },
-      newCompaniesShared: newCompanyIds.length,
-      alreadySharedCount: existingCompanyIds.length,
-      totalCompanies: ownedCompanyIds.length
+        email,
+        role
+      }
     })
 
   } catch (error) {
     const context = createRequestContext(request)
-    logger.error('Failed to invite collaborator', error, context)
+    logger.error('Failed to invite collaborator at profile level', error, context)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-// GET /api/profiles/[profileId]/collaborators - Get all collaborators
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ profileId: string }> }
-) {
+// GET /api/collaboration/profile - Get all profile-level collaborators
+export async function GET(request: NextRequest) {
   try {
-    const { profileId } = await params
-
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
       return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
@@ -215,67 +189,42 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Verify that profileId matches the authenticated user
-    if (user.id !== profileId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
-    // Get all companies where user is owner
-    const ownedCompanyIds = await getUserOwnedCompanies(user.id, token)
-
-    if (ownedCompanyIds.length === 0) {
-      return NextResponse.json([])
-    }
-
-    // Get all distinct collaborators across all owned companies
-    const { data: collaborations, error: fetchError } = await supabase
-      .from('user_companies')
-      .select('user_id, company_id')
-      .in('company_id', ownedCompanyIds)
-      .eq('role', 'user')
+    // Get all profile-level collaborators
+    const { data: profileCollaborators, error: fetchError } = await supabase
+      .from('user_profiles')
+      .select(`
+        id,
+        invited_user_id,
+        role,
+        created_at,
+        profiles:invited_user_id (
+          id,
+          first_name,
+          last_name
+        )
+      `)
+      .eq('inviter_user_id', user.id)
 
     if (fetchError) {
-      logger.error('Failed to fetch collaborations', fetchError, createRequestContext(request))
+      logger.error('Failed to fetch user_profiles', fetchError, createRequestContext(request))
       return NextResponse.json({ error: 'Failed to fetch collaborators' }, { status: 500 })
     }
 
-    if (!collaborations || collaborations.length === 0) {
-      return NextResponse.json([])
-    }
-
-    // Group by user_id and count companies
-    const collaboratorMap = new Map<string, number>()
-    collaborations.forEach(collab => {
-      const count = collaboratorMap.get(collab.user_id) || 0
-      collaboratorMap.set(collab.user_id, count + 1)
-    })
-
-    const collaboratorIds = Array.from(collaboratorMap.keys())
-
-    // Fetch collaborator profiles
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name')
-      .in('id', collaboratorIds)
-
-    if (profilesError) {
-      logger.error('Failed to fetch profiles', profilesError, createRequestContext(request))
-      return NextResponse.json({ error: 'Failed to fetch collaborator details' }, { status: 500 })
-    }
-
-    // Combine data
-    const collaborators = profiles?.map(profile => ({
-      id: profile.id,
-      firstName: profile.first_name,
-      lastName: profile.last_name,
-      companiesCount: collaboratorMap.get(profile.id) || 0
-    })) || []
+    // Format results
+    const collaborators = (profileCollaborators || []).map(pc => ({
+      id: pc.invited_user_id,
+      firstName: (pc.profiles as any)?.first_name,
+      lastName: (pc.profiles as any)?.last_name,
+      role: pc.role,
+      scope: 'account' as const,
+      addedAt: pc.created_at
+    }))
 
     return NextResponse.json(collaborators)
 
   } catch (error) {
     const context = createRequestContext(request)
-    logger.error('Failed to fetch collaborators', error, context)
+    logger.error('Failed to fetch profile-level collaborators', error, context)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

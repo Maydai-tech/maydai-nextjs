@@ -12,13 +12,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-// DELETE /api/companies/[id]/collaborators/[collaboratorId] - Delete a collaborator from a company
+// DELETE /api/usecases/[id]/collaborators/[collaboratorId] - Delete a collaborator from a use case
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; collaboratorId: string }> }
 ) {
   try {
-    const { id: companyId, collaboratorId } = await params
+    const { id: usecaseId, collaboratorId } = await params
 
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
@@ -40,40 +40,39 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Verify user is owner of this company
-    const userIsOwner = await isOwner(user.id, 'company', companyId)
+    // Get use case to verify ownership via company
+    const { data: usecase } = await supabase
+      .from('usecases')
+      .select('company_id')
+      .eq('id', usecaseId)
+      .single()
+
+    if (!usecase) {
+      return NextResponse.json({ error: 'Use case not found' }, { status: 404 })
+    }
+
+    // Verify user is owner of the parent company
+    const userIsOwner = await isOwner(user.id, 'company', usecase.company_id)
     if (!userIsOwner) {
       return NextResponse.json({ error: 'Only company owners can remove collaborators' }, { status: 403 })
     }
 
-    // Check if the collaborator to remove is the owner
-    const { data: userCompany } = await supabase
-      .from('user_companies')
-      .select('role')
-      .eq('user_id', collaboratorId)
-      .eq('company_id', companyId)
-      .single()
-
-    if (userCompany?.role === 'owner') {
-      return NextResponse.json({ error: 'Cannot remove the owner of the company' }, { status: 400 })
-    }
-
-    // Delete collaborator from company (hard delete)
+    // Delete collaborator from use case (hard delete)
     const { error: deleteError } = await supabase
-      .from('user_companies')
+      .from('user_usecases')
       .delete()
       .eq('user_id', collaboratorId)
-      .eq('company_id', companyId)
+      .eq('usecase_id', usecaseId)
 
     if (deleteError) {
-      logger.error('Failed to delete collaborator from company', deleteError, createRequestContext(request))
+      logger.error('Failed to delete collaborator from use case', deleteError, createRequestContext(request))
       return NextResponse.json({ error: 'Failed to delete collaborator' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     const context = createRequestContext(request)
-    logger.error('Failed to delete collaborator from company', error, context)
+    logger.error('Failed to delete collaborator from use case', error, context)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
