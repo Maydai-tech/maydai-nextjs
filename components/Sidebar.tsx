@@ -43,12 +43,29 @@ export default function Sidebar() {
     if (dashboardMatch && dashboardMatch[1] !== 'companies') {
       return `/dashboard/${dashboardMatch[1]}`;
     }
-    
+
     // If we have a company ID from the API, use it
     if (companyId) {
       return `/dashboard/${companyId}`;
     }
-    
+
+    // Fallback to company selection page
+    return '/dashboard/registries';
+  };
+
+  // Determine collaboration URL based on current context
+  const getCollaborationUrl = () => {
+    // If we're currently on a company dashboard page, extract the company ID from the URL
+    const dashboardMatch = pathname.match(/^\/dashboard\/([^\/]+)/);
+    if (dashboardMatch && dashboardMatch[1] !== 'companies' && dashboardMatch[1] !== 'registries') {
+      return `/dashboard/${dashboardMatch[1]}/collaboration`;
+    }
+
+    // If we have a company ID from the API, use it
+    if (companyId) {
+      return `/dashboard/${companyId}/collaboration`;
+    }
+
     // Fallback to company selection page
     return '/dashboard/registries';
   };
@@ -71,7 +88,7 @@ export default function Sidebar() {
     },
     {
       name: 'Collaboration',
-      href: '/collaboration',
+      href: getCollaborationUrl(),
       icon: Users
     },
     {
@@ -132,10 +149,13 @@ export default function Sidebar() {
             const Icon = item.icon;
             // Dashboard should be highlighted when on dashboard pages or usecase pages
             // Dossiers should be highlighted when on dossiers pages
-            const isActive = item.name === 'Dashboard' 
+            // Collaboration should be highlighted when on collaboration pages
+            const isActive = item.name === 'Dashboard'
               ? (pathname === item.href || pathname.startsWith('/usecases/'))
               : item.name === 'Dossiers'
               ? pathname.startsWith('/dossiers')
+              : item.name === 'Collaboration'
+              ? pathname.includes('/collaboration')
               : pathname === item.href;
             
             return (
