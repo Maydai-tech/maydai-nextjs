@@ -238,6 +238,29 @@ export async function GET(
 
     const userIds = userCompanies.map(uc => uc.user_id)
 
+    // Get owner of this company to check for account-level collaborators
+    const { data: company } = await supabase
+      .from('companies')
+      .select('user_id')
+      .eq('id', companyId)
+      .single()
+
+    const ownerId = company?.user_id
+
+    // For each non-owner user, check if they have access to ALL companies owned by the owner
+    // If yes, they were invited at account-level. If no, they were invited at registry-level.
+    let allOwnedCompanyIds: string[] = []
+    if (ownerId) {
+      const { data: ownedCompanies } = await supabase
+        .from('user_companies')
+        .select('company_id')
+        .eq('user_id', ownerId)
+        .eq('role', 'owner')
+        .eq('is_active', true)
+
+      allOwnedCompanyIds = ownedCompanies?.map(uc => uc.company_id) || []
+    }
+
     // Fetch user profiles
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
@@ -249,77 +272,50 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch user details' }, { status: 500 })
     }
 
-    // Combine data
-    const collaborators = profiles?.map(profile => {
+    // Filter out owners and only process collaborators
+    const collaboratorProfiles = profiles?.filter(profile => {
       const userCompany = userCompanies.find(uc => uc.user_id === profile.id)
-      return {
-        id: profile.id,
-        firstName: profile.first_name,
-        lastName: profile.last_name,
-        role: userCompany?.role === 'owner' || userCompany?.role === 'company_owner' ? 'owner' : 'user'
-      }
+      const isOwner = userCompany?.role === 'owner' || userCompany?.role === 'company_owner'
+      return !isOwner
     }) || []
 
-    return NextResponse.json(collaborators)
+    // For each collaborator (non-owner), determine their scope
+    const collaboratorsWithScope = await Promise.all(
+      collaboratorProfiles.map(async (profile) => {
+        let scope: 'account' | 'registry' = 'registry'
+
+        if (allOwnedCompanyIds.length > 0) {
+          // Check if user has access to ALL companies owned by the owner
+          const { data: userAccessibleCompanies } = await supabase
+            .from('user_companies')
+            .select('company_id')
+            .eq('user_id', profile.id)
+            .in('company_id', allOwnedCompanyIds)
+            .eq('is_active', true)
+
+          const accessibleCompanyIds = userAccessibleCompanies?.map(uc => uc.company_id) || []
+
+          // If user has access to all companies, they were invited at account-level
+          if (accessibleCompanyIds.length === allOwnedCompanyIds.length) {
+            scope = 'account'
+          }
+        }
+
+        return {
+          id: profile.id,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+          role: 'user',
+          scope
+        }
+      })
+    )
+
+    return NextResponse.json(collaboratorsWithScope)
 
   } catch (error) {
     const context = createRequestContext(request)
     logger.error('Failed to fetch company collaborators', error, context)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-// DELETE /api/companies/[id]/collaborators/[collaboratorId] - Delete a collaborator from a company
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string, collaboratorId: string }> }
-) {
-  try {
-    const { id: companyId, collaboratorId } = await params
-
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    })
-
-    // Verify user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
-
-    // Verify user has access to this company (owner or collaborator)
-    const hasAccess = await hasAccessToCompany(user.id, companyId, token)
-    if (!hasAccess) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-    }
-
-    // Delete collaborator from company
-    const { error: deleteError } = await supabase
-      .from('user_companies')
-      .delete()
-      .eq('user_id', collaboratorId)
-      .eq('company_id', companyId)
-      .eq('is_active', true)
-
-    if (deleteError) {
-      logger.error('Failed to delete collaborator from company', deleteError, createRequestContext(request))
-      return NextResponse.json({ error: 'Failed to delete collaborator' }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    const context = createRequestContext(request)
-    logger.error('Failed to delete collaborator from company', error, context)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
