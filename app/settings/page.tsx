@@ -124,7 +124,7 @@ export default function ProfilPage() {
       if (!token) {
         throw new Error('No access token available')
       }
-      const response = await fetch(`/api/profiles/${user.id}/collaborators`, {
+      const response = await fetch('/api/collaboration/profile', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -147,8 +147,6 @@ export default function ProfilPage() {
     email: string;
     firstName: string;
     lastName: string;
-    scope: 'all' | 'specific';
-    companyId?: string;
   }) => {
     if (!user) return
 
@@ -156,11 +154,8 @@ export default function ProfilPage() {
     if (!token) {
       throw new Error('No access token available')
     }
-    const endpoint = data.scope === 'all'
-      ? `/api/profiles/${user.id}/collaborators`
-      : `/api/companies/${data.companyId}/collaborators`
 
-    const response = await fetch(endpoint, {
+    const response = await fetch('/api/collaboration/profile', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -197,7 +192,7 @@ export default function ProfilPage() {
     if (!token) {
       throw new Error('No access token available')
     }
-    const response = await fetch(`/api/profiles/${user.id}/collaborators/${selectedCollaborator.id}`, {
+    const response = await fetch(`/api/collaboration/profile/${selectedCollaborator.id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -290,7 +285,7 @@ export default function ProfilPage() {
               </h3>
               <ul className="text-sm text-blue-800 space-y-2">
                 <li>• Les collaborateurs peuvent consulter et modifier les registres partagés</li>
-                <li>• Ils ne peuvent pas créer de nouveaux registres</li>
+                <li>• Ils peuvent créer de nouveaux registres</li>
                 <li>• Ils ne peuvent pas inviter d'autres collaborateurs</li>
               </ul>
             </div>
@@ -420,7 +415,7 @@ export default function ProfilPage() {
       <InviteCollaboratorModal
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
-        onInvite={(data) => handleInviteCollaborator({ ...data, scope: 'all' })}
+        onInvite={handleInviteCollaborator}
       />
 
       {/* Confirm Remove Collaborator Modal */}

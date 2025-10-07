@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { hasAccessToResource, isOwner as isResourceOwner, getUserHighestRole, type CollaboratorRole } from './collaborators'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -12,12 +13,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 /**
  * Get user role for a specific company
  * @returns 'owner', 'user', or null if no access
+ * @deprecated Use getUserHighestRole from collaborators.ts instead
  */
 export async function getUserRoleForCompany(
   userId: string,
   companyId: string,
   token: string
-): Promise<'owner' | 'user' | null> {
+): Promise<CollaboratorRole | null> {
   const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
     global: {
       headers: {
@@ -26,24 +28,30 @@ export async function getUserRoleForCompany(
     }
   })
 
+  // Check if user is the direct owner
+  const { data: company } = await supabase
+    .from('companies')
+    .select('user_id')
+    .eq('id', companyId)
+    .single()
+
+  if (company?.user_id === userId) {
+    return 'owner'
+  }
+
+  // Check user_companies table (no more is_active filter)
   const { data, error } = await supabase
     .from('user_companies')
     .select('role')
     .eq('user_id', userId)
     .eq('company_id', companyId)
-    .eq('is_active', true)
     .single()
 
   if (error || !data) {
     return null
   }
 
-  // Normalize role: 'company_owner' is treated as 'owner'
-  if (data.role === 'owner' || data.role === 'company_owner') {
-    return 'owner'
-  }
-
-  return data.role as 'owner' | 'user'
+  return data.role as CollaboratorRole
 }
 
 /**
@@ -85,16 +93,28 @@ export async function getUserOwnedCompanies(
     }
   })
 
-  const { data, error } = await supabase
+  // Get companies directly owned by the user
+  const { data: ownedCompanies } = await supabase
+    .from('companies')
+    .select('id')
+    .eq('user_id', userId)
+
+  // Get companies where user has owner role via user_companies
+  const { data: collaboratorCompanies } = await supabase
     .from('user_companies')
     .select('company_id')
     .eq('user_id', userId)
-    .in('role', ['owner', 'company_owner'])
-    .eq('is_active', true)
+    .eq('role', 'owner')
 
-  if (error || !data) {
-    return []
+  const companyIds = new Set<string>()
+
+  if (ownedCompanies) {
+    ownedCompanies.forEach(c => companyIds.add(c.id))
   }
 
-  return data.map(uc => uc.company_id)
+  if (collaboratorCompanies) {
+    collaboratorCompanies.forEach(uc => companyIds.add(uc.company_id))
+  }
+
+  return Array.from(companyIds)
 }

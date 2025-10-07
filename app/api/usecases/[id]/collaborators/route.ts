@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { hasAccessToCompany } from '@/lib/permissions'
-import { isOwner, hasAccessToResource } from '@/lib/collaborators'
+import { isOwner } from '@/lib/collaborators'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { getUserByEmail, inviteUserByEmail, createProfileForUser } from '@/lib/invite-user'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
@@ -15,19 +13,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-if (!supabaseServiceRoleKey) {
-  throw new Error(
-    'La variable d\'environnement SUPABASE_SERVICE_ROLE_KEY doit être définie'
-  )
-}
-
-// POST /api/companies/[id]/collaborators - Invite collaborator to specific company
+// POST /api/usecases/[id]/collaborators - Invite collaborator to specific use case
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: companyId } = await params
+    const { id: usecaseId } = await params
 
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
@@ -49,8 +41,19 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Verify user is owner of this company
-    const userIsOwner = await isOwner(user.id, 'company', companyId)
+    // Get use case to verify ownership via company
+    const { data: usecase } = await supabase
+      .from('usecases')
+      .select('company_id, name')
+      .eq('id', usecaseId)
+      .single()
+
+    if (!usecase) {
+      return NextResponse.json({ error: 'Use case not found' }, { status: 404 })
+    }
+
+    // Verify user is owner of the parent company
+    const userIsOwner = await isOwner(user.id, 'company', usecase.company_id)
     if (!userIsOwner) {
       return NextResponse.json({ error: 'Only company owners can invite collaborators' }, { status: 403 })
     }
@@ -128,33 +131,30 @@ export async function POST(
       }
     }
 
-    // Check if collaborator already has access to this company
+    // Check if collaborator already has access to this use case
     const { data: existingCollaboration } = await supabase
-      .from('user_companies')
+      .from('user_usecases')
       .select('id, role')
       .eq('user_id', collaboratorProfileId)
-      .eq('company_id', companyId)
+      .eq('usecase_id', usecaseId)
       .single()
 
     if (existingCollaboration) {
-      if (existingCollaboration.role === 'owner') {
-        return NextResponse.json({ error: 'This user is already an owner of this company' }, { status: 400 })
-      }
-      return NextResponse.json({ error: 'This user is already a collaborator on this company' }, { status: 400 })
+      return NextResponse.json({ error: 'This user is already a collaborator on this use case' }, { status: 400 })
     }
 
-    // Create user_companies entry with default role 'user'
+    // Create user_usecases entry with default role 'user'
     const { error: insertError } = await supabase
-      .from('user_companies')
+      .from('user_usecases')
       .insert({
         user_id: collaboratorProfileId,
-        company_id: companyId,
+        usecase_id: usecaseId,
         role: 'user',
         added_by: user.id
       })
 
     if (insertError) {
-      logger.error('Failed to create user_companies entry', insertError, createRequestContext(request))
+      logger.error('Failed to create user_usecases entry', insertError, createRequestContext(request))
       return NextResponse.json({ error: 'Failed to add collaborator' }, { status: 500 })
     }
 
@@ -165,13 +165,6 @@ export async function POST(
       .eq('id', collaboratorProfileId)
       .single()
 
-    // Get company details
-    const { data: company } = await supabase
-      .from('companies')
-      .select('name')
-      .eq('id', companyId)
-      .single()
-
     return NextResponse.json({
       success: true,
       collaborator: {
@@ -180,26 +173,26 @@ export async function POST(
         lastName: collaboratorProfile?.last_name,
         email
       },
-      company: {
-        id: companyId,
-        name: company?.name
+      usecase: {
+        id: usecaseId,
+        name: usecase.name
       }
     })
 
   } catch (error) {
     const context = createRequestContext(request)
-    logger.error('Failed to invite collaborator to company', error, context)
+    logger.error('Failed to invite collaborator to use case', error, context)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-// GET /api/companies/[id]/collaborators - Get all collaborators for a company
+// GET /api/usecases/[id]/collaborators - Get all collaborators for a use case
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: companyId } = await params
+    const { id: usecaseId } = await params
 
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
@@ -221,14 +214,42 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Verify user has access to this company (owner, account-level collaborator, or registry-level collaborator)
-    const hasAccess = await hasAccessToResource(user.id, 'company', companyId, supabase)
-    if (!hasAccess) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    // Get use case to find owner
+    const { data: usecase } = await supabase
+      .from('usecases')
+      .select('user_id, company_id')
+      .eq('id', usecaseId)
+      .single()
+
+    if (!usecase) {
+      return NextResponse.json({ error: 'Use case not found' }, { status: 404 })
     }
 
-    // Get collaborators at company level
-    const { data: userCompanies, error: fetchError } = await supabase
+    const ownerId = usecase.user_id
+
+    // Get collaborators at use case level
+    const { data: usecaseCollaborators, error: fetchError } = await supabase
+      .from('user_usecases')
+      .select(`
+        id,
+        user_id,
+        role,
+        created_at,
+        profiles:user_id (
+          id,
+          first_name,
+          last_name
+        )
+      `)
+      .eq('usecase_id', usecaseId)
+
+    if (fetchError) {
+      logger.error('Failed to fetch user_usecases', fetchError, createRequestContext(request))
+      return NextResponse.json({ error: 'Failed to fetch collaborators' }, { status: 500 })
+    }
+
+    // Get collaborators at company level (inherited access)
+    const { data: companyCollaborators } = await supabase
       .from('user_companies')
       .select(`
         id,
@@ -241,115 +262,76 @@ export async function GET(
           last_name
         )
       `)
-      .eq('company_id', companyId)
-
-    if (fetchError) {
-      logger.error('Failed to fetch user_companies', fetchError, createRequestContext(request))
-      return NextResponse.json({ error: 'Failed to fetch collaborators' }, { status: 500 })
-    }
-
-    // Find owner from userCompanies
-    const ownerEntry = userCompanies?.find(uc => uc.role === 'owner')
-    const ownerId = ownerEntry?.user_id
+      .eq('company_id', usecase.company_id)
+      .neq('role', 'owner')
 
     // Get collaborators at profile level (account-level access)
-    const profileCollaborators = []
-    if (ownerId) {
-      const { data: userProfiles } = await supabase
-        .from('user_profiles')
-        .select(`
+    const { data: profileCollaborators } = await supabase
+      .from('user_profiles')
+      .select(`
+        id,
+        invited_user_id,
+        role,
+        created_at,
+        profiles:invited_user_id (
           id,
-          invited_user_id,
-          role,
-          created_at,
-          profiles:invited_user_id (
-            id,
-            first_name,
-            last_name
-          )
-        `)
-        .eq('inviter_user_id', ownerId)
+          first_name,
+          last_name
+        )
+      `)
+      .eq('inviter_user_id', ownerId)
 
-      if (userProfiles) {
-        profileCollaborators.push(...userProfiles)
-      }
-    }
-
-    // Combine and format the results
-    const companyCollaborators = (userCompanies || [])
-      .filter(uc => uc.role !== 'owner')
-      .map(uc => ({
-        id: uc.user_id,
-        firstName: (uc.profiles as any)?.first_name,
-        lastName: (uc.profiles as any)?.last_name,
-        role: uc.role,
-        scope: 'registry' as const,
-        addedAt: uc.created_at
-      }))
-
-    const accountCollaborators = profileCollaborators.map(up => ({
-      id: up.invited_user_id,
-      firstName: (up.profiles as any)?.first_name,
-      lastName: (up.profiles as any)?.last_name,
-      role: up.role,
-      scope: 'account' as const,
-      addedAt: up.created_at
+    // Combine and format results
+    const usecaseCollab = (usecaseCollaborators || []).map(uc => ({
+      id: uc.user_id,
+      firstName: (uc.profiles as any)?.first_name,
+      lastName: (uc.profiles as any)?.last_name,
+      role: uc.role,
+      scope: 'usecase' as const,
+      addedAt: uc.created_at
     }))
 
-    // Merge both lists, account-level takes precedence
-    const allCollaborators = [...accountCollaborators, ...companyCollaborators]
+    const companyCollab = (companyCollaborators || []).map(cc => ({
+      id: cc.user_id,
+      firstName: (cc.profiles as any)?.first_name,
+      lastName: (cc.profiles as any)?.last_name,
+      role: cc.role,
+      scope: 'registry' as const,
+      addedAt: cc.created_at
+    }))
 
-    // Remove duplicates (account-level takes precedence)
+    const accountCollab = (profileCollaborators || []).map(pc => ({
+      id: pc.invited_user_id,
+      firstName: (pc.profiles as any)?.first_name,
+      lastName: (pc.profiles as any)?.last_name,
+      role: pc.role,
+      scope: 'account' as const,
+      addedAt: pc.created_at
+    }))
+
+    // Merge all lists, higher scope takes precedence
+    const allCollaborators = [...accountCollab, ...companyCollab, ...usecaseCollab]
+
+    // Remove duplicates (account > registry > usecase)
     const uniqueCollaborators = allCollaborators.reduce((acc, collab) => {
       const existing = acc.find(c => c.id === collab.id)
       if (!existing) {
         acc.push(collab)
-      } else if (collab.scope === 'account' && existing.scope === 'registry') {
-        // Replace registry with account if both exist
-        const index = acc.findIndex(c => c.id === collab.id)
-        acc[index] = collab
+      } else {
+        const scopePriority = { account: 3, registry: 2, usecase: 1 }
+        if (scopePriority[collab.scope] > scopePriority[existing.scope]) {
+          const index = acc.findIndex(c => c.id === collab.id)
+          acc[index] = collab
+        }
       }
       return acc
     }, [] as typeof allCollaborators)
 
-    // Fetch emails from auth.users for all collaborators using service role key
-    const collaboratorIds = uniqueCollaborators.map(c => c.id)
-    const emailsMap = new Map<string, string>()
-
-    if (collaboratorIds.length > 0) {
-      // Create admin client with service role key
-      const supabaseAdmin = createClient(supabaseUrl!, supabaseServiceRoleKey!, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      })
-
-      // Fetch emails using admin client
-      for (const collaboratorId of collaboratorIds) {
-        try {
-          const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(collaboratorId)
-          if (authUser?.user?.email) {
-            emailsMap.set(collaboratorId, authUser.user.email)
-          }
-        } catch (error) {
-          // Skip if we can't get the email for this user
-          logger.error(`Failed to fetch email for user ${collaboratorId}`, error, createRequestContext(request))
-        }
-      }
-    }
-
-    // Add emails to collaborators
-    const collaboratorsWithEmails = uniqueCollaborators.map(collab => ({
-      ...collab,
-      email: emailsMap.get(collab.id)
-    }))
-
-    return NextResponse.json(collaboratorsWithEmails)
+    return NextResponse.json(uniqueCollaborators)
 
   } catch (error) {
     const context = createRequestContext(request)
-    logger.error('Failed to fetch company collaborators', error, context)
+    logger.error('Failed to fetch use case collaborators', error, context)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

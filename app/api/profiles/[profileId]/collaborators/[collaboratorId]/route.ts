@@ -58,7 +58,6 @@ export async function DELETE(
       .delete()
       .eq('user_id', collaboratorId)
       .in('company_id', ownedCompanyIds)
-      .eq('is_active', true)
 
     if (deleteError) {
       logger.error('Failed to delete collaborator from owned companies', deleteError, createRequestContext(request))

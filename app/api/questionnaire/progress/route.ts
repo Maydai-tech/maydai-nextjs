@@ -39,7 +39,6 @@ export async function GET(request: NextRequest) {
       .from('user_companies')
       .select('company_id')
       .eq('user_id', user.id)
-      .eq('is_active', true)
 
     if (userCompaniesError) {
       return NextResponse.json({ error: 'Error fetching user companies' }, { status: 500 })

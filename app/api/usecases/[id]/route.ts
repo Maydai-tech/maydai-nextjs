@@ -80,7 +80,6 @@ export async function GET(
       .select('company_id')
       .eq('user_id', user.id)
       .eq('company_id', useCase.company_id)
-      .eq('is_active', true)
       .single()
 
     if (userCompanyError || !userCompany) {
@@ -161,7 +160,6 @@ export async function PUT(
       .select('company_id')
       .eq('user_id', user.id)
       .eq('company_id', existingUseCase.company_id)
-      .eq('is_active', true)
       .single()
 
     if (userCompanyError || !userCompany) {
@@ -347,7 +345,6 @@ export async function DELETE(
       .select('company_id')
       .eq('user_id', user.id)
       .eq('company_id', existingUseCase.company_id)
-      .eq('is_active', true)
       .single()
 
     if (userCompanyError || !userCompany) {

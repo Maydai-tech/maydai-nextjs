@@ -189,7 +189,7 @@ export default function InviteCollaboratorModal({
             <ul className="text-xs text-gray-600 space-y-1">
               <li>✓ Peuvent consulter et modifier les registres partagés</li>
               <li>✓ Peuvent gérer les cas d'usage des registres</li>
-              <li>✗ Ne peuvent pas créer de nouveaux registres</li>
+              <li>✓ Peuvent créer de nouveaux registres</li>
               <li>✗ Ne peuvent pas inviter d'autres collaborateurs</li>
             </ul>
           </div>
