@@ -143,22 +143,28 @@ export async function hasAccessToResource(
  * @param userId - L'ID de l'utilisateur
  * @param resourceType - Le type de ressource
  * @param resourceId - L'ID de la ressource
+ * @param supabaseClient - Client Supabase optionnel (utilise le client par défaut si non fourni)
  * @returns true si l'utilisateur est owner, false sinon
  */
 export async function isOwner(
   userId: string,
   resourceType: ResourceType,
-  resourceId: string
+  resourceId: string,
+  supabaseClient?: SupabaseClient
 ): Promise<boolean> {
+  const supabase = supabaseClient || defaultSupabase;
 
   if (resourceType === 'company') {
-    const { data: company } = await supabase
-      .from('companies')
-      .select('user_id')
-      .eq('id', resourceId)
+    // Check if user has owner role in user_companies
+    const { data: ownerEntry } = await supabase
+      .from('user_companies')
+      .select('role')
+      .eq('company_id', resourceId)
+      .eq('user_id', userId)
+      .eq('role', 'owner')
       .single();
 
-    return company?.user_id === userId;
+    return !!ownerEntry;
   } else if (resourceType === 'usecase') {
     const { data: usecase } = await supabase
       .from('usecases')
@@ -179,23 +185,29 @@ export async function isOwner(
  * @param userId - L'ID de l'utilisateur
  * @param resourceType - Le type de ressource
  * @param resourceId - L'ID de la ressource
+ * @param supabaseClient - Client Supabase optionnel (utilise le client par défaut si non fourni)
  * @returns Le rôle le plus élevé ou null si aucun accès
  */
 export async function getUserHighestRole(
   userId: string,
   resourceType: ResourceType,
-  resourceId: string
+  resourceId: string,
+  supabaseClient?: SupabaseClient
 ): Promise<CollaboratorRole | null> {
+  const supabase = supabaseClient || defaultSupabase;
 
   // 1. Vérifier si l'utilisateur est le propriétaire direct
   if (resourceType === 'company') {
-    const { data: company } = await supabase
-      .from('companies')
-      .select('user_id')
-      .eq('id', resourceId)
+    // Check if user has owner role in user_companies
+    const { data: ownerEntry } = await supabase
+      .from('user_companies')
+      .select('role')
+      .eq('company_id', resourceId)
+      .eq('user_id', userId)
+      .eq('role', 'owner')
       .single();
 
-    if (company?.user_id === userId) return 'owner';
+    if (ownerEntry) return 'owner';
   } else if (resourceType === 'usecase') {
     const { data: usecase } = await supabase
       .from('usecases')
@@ -208,17 +220,19 @@ export async function getUserHighestRole(
 
   // 2. Vérifier au niveau Profile
   if (resourceType === 'company') {
-    const { data: company } = await supabase
-      .from('companies')
+    // Get owner of the company via user_companies
+    const { data: ownerEntry } = await supabase
+      .from('user_companies')
       .select('user_id')
-      .eq('id', resourceId)
+      .eq('company_id', resourceId)
+      .eq('role', 'owner')
       .single();
 
-    if (company) {
+    if (ownerEntry) {
       const { data: profileCollaborator } = await supabase
         .from('user_profiles')
         .select('role')
-        .eq('inviter_user_id', company.user_id)
+        .eq('inviter_user_id', ownerEntry.user_id)
         .eq('invited_user_id', userId)
         .single();
 
@@ -292,9 +306,11 @@ export async function getUserHighestRole(
  * Cela donne accès complet à toutes les ressources du propriétaire du compte
  *
  * @param userId - L'ID de l'utilisateur à vérifier
+ * @param supabaseClient - Client Supabase optionnel (utilise le client par défaut si non fourni)
  * @returns true si l'utilisateur a accès au niveau profile de quelqu'un
  */
-export async function hasProfileLevelAccess(userId: string): Promise<boolean> {
+export async function hasProfileLevelAccess(userId: string, supabaseClient?: SupabaseClient): Promise<boolean> {
+  const supabase = supabaseClient || defaultSupabase;
 
   // Vérifier si l'utilisateur est invité au niveau profile par quelqu'un
   const { data } = await supabase
@@ -314,12 +330,14 @@ export async function hasProfileLevelAccess(userId: string): Promise<boolean> {
  * - A un accès au niveau profile (est collaborateur de compte de quelqu'un)
  *
  * @param userId - L'ID de l'utilisateur
+ * @param supabaseClient - Client Supabase optionnel (utilise le client par défaut si non fourni)
  * @returns true si l'utilisateur peut créer des registres
  */
-export async function canCreateCompany(userId: string): Promise<boolean> {
+export async function canCreateCompany(userId: string, supabaseClient?: SupabaseClient): Promise<boolean> {
+  const supabase = supabaseClient || defaultSupabase;
 
   // 1. Vérifier s'il a un accès au niveau profile
-  const hasProfileAccess = await hasProfileLevelAccess(userId);
+  const hasProfileAccess = await hasProfileLevelAccess(userId, supabase);
   if (hasProfileAccess) return true;
 
   // 2. Vérifier s'il a au moins un rôle owner
@@ -339,12 +357,15 @@ export async function canCreateCompany(userId: string): Promise<boolean> {
  *
  * @param resourceType - Le type de ressource
  * @param resourceId - L'ID de la ressource
+ * @param supabaseClient - Client Supabase optionnel (utilise le client par défaut si non fourni)
  * @returns Liste des collaborateurs avec leurs profils
  */
 export async function getResourceCollaborators(
   resourceType: ResourceType,
-  resourceId: string
+  resourceId: string,
+  supabaseClient?: SupabaseClient
 ) {
+  const supabase = supabaseClient || defaultSupabase;
 
   if (resourceType === 'company') {
     const { data, error } = await supabase

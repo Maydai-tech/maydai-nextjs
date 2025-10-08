@@ -28,18 +28,7 @@ export async function getUserRoleForCompany(
     }
   })
 
-  // Check if user is the direct owner
-  const { data: company } = await supabase
-    .from('companies')
-    .select('user_id')
-    .eq('id', companyId)
-    .single()
-
-  if (company?.user_id === userId) {
-    return 'owner'
-  }
-
-  // Check user_companies table (no more is_active filter)
+  // Check user_companies table for role
   const { data, error } = await supabase
     .from('user_companies')
     .select('role')
@@ -93,12 +82,6 @@ export async function getUserOwnedCompanies(
     }
   })
 
-  // Get companies directly owned by the user
-  const { data: ownedCompanies } = await supabase
-    .from('companies')
-    .select('id')
-    .eq('user_id', userId)
-
   // Get companies where user has owner role via user_companies
   const { data: collaboratorCompanies } = await supabase
     .from('user_companies')
@@ -106,15 +89,9 @@ export async function getUserOwnedCompanies(
     .eq('user_id', userId)
     .eq('role', 'owner')
 
-  const companyIds = new Set<string>()
-
-  if (ownedCompanies) {
-    ownedCompanies.forEach(c => companyIds.add(c.id))
+  if (!collaboratorCompanies) {
+    return []
   }
 
-  if (collaboratorCompanies) {
-    collaboratorCompanies.forEach(uc => companyIds.add(uc.company_id))
-  }
-
-  return Array.from(companyIds)
+  return collaboratorCompanies.map(uc => uc.company_id)
 }
