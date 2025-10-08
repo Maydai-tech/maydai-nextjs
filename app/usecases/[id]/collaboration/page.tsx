@@ -10,12 +10,7 @@ import ConfirmRemoveCollaboratorModal from '@/components/Collaboration/ConfirmRe
 import { UseCaseLayout } from '../components/shared/UseCaseLayout';
 import { UseCaseLoader } from '../components/shared/UseCaseLoader';
 import { useUseCaseCollaborators } from '../hooks/useUseCaseCollaborators';
-
-interface UseCase {
-  id: string;
-  name: string;
-  company_id: string;
-}
+import { UseCase } from '../types/usecase';
 
 interface Collaborator {
   id: string;
@@ -220,13 +215,13 @@ export default function CollaborationPage() {
               <li className="flex items-start">
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 mr-2 mt-0.5">
                   <FileText className="w-3 h-3 mr-1" />
-                  Use Case
+                  Cas d'usage
                 </span>
-                <span>Invités spécifiquement pour CE cas d'usage uniquement</span>
+                <span>Invités spécifiquement pour ce cas d'usage uniquement</span>
               </li>
               <li>• Les collaborateurs "Compte" ne peuvent être supprimés que depuis la page Paramètres</li>
               <li>• Les collaborateurs "Registre" ne peuvent être supprimés que depuis la page du Registre</li>
-              <li>• Les collaborateurs "Use Case" peuvent être supprimés directement ici</li>
+              <li>• Les collaborateurs "Cas d'usage" peuvent être supprimés directement ici</li>
             </ul>
           </div>
         )}

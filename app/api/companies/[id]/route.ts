@@ -90,7 +90,11 @@ export async function GET(
       return NextResponse.json({ error: 'Error fetching company' }, { status: 500 })
     }
 
-    return NextResponse.json(companyData)
+    // Include user's role in the response
+    return NextResponse.json({
+      ...companyData,
+      role: userCompany?.role || null
+    })
 
   } catch (error) {
     console.error('Error in company API:', error)
