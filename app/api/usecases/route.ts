@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
       .from('user_companies')
       .select('company_id')
       .eq('user_id', user.id)
-      .eq('is_active', true)
 
     if (userCompaniesError) {
       return NextResponse.json({ error: 'Error fetching user companies' }, { status: 500 })
@@ -170,7 +169,6 @@ export async function POST(request: NextRequest) {
       .select('company_id, role')
       .eq('user_id', user.id)
       .eq('company_id', company_id)
-      .eq('is_active', true)
       .single()
 
     console.log('User company check result:', { userCompany, error: userCompanyError })

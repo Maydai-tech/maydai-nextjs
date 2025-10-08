@@ -187,7 +187,6 @@ export async function POST(
       .select('company_id')
       .eq('user_id', user.id)
       .eq('company_id', usecase.company_id)
-      .eq('is_active', true)
       .single();
 
     if (userCompanyError || !userCompany) {

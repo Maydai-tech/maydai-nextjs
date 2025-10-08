@@ -11,12 +11,14 @@ interface InviteCollaboratorModalProps {
     firstName: string;
     lastName: string;
   }) => Promise<void>;
+  scope: 'company' | 'registry';
 }
 
 export default function InviteCollaboratorModal({
   isOpen,
   onClose,
-  onInvite
+  onInvite,
+  scope
 }: InviteCollaboratorModalProps) {
   const [formData, setFormData] = useState({
     email: '',
@@ -59,7 +61,17 @@ export default function InviteCollaboratorModal({
       }, 1500);
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+      const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
+      console.error('Erreur lors de l\'invitation:', err);
+
+      // Traduire les erreurs courantes
+      if (errorMessage.includes('email_address_invalid')) {
+        setError('Configuration email Supabase requise. Vérifiez Authentication > Providers > Email dans votre dashboard Supabase.');
+      } else if (errorMessage.includes('Failed to invite user')) {
+        setError('Impossible d\'envoyer l\'invitation. Vérifiez la configuration SMTP de Supabase.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -164,9 +176,6 @@ export default function InviteCollaboratorModal({
                 placeholder="jean.dupont@entreprise.com"
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              L'utilisateur doit avoir un compte MaydAI existant
-            </p>
           </div>
 
           {/* Info box */}
@@ -175,7 +184,7 @@ export default function InviteCollaboratorModal({
               <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-xs text-blue-700 mt-1">
-                  Le collaborateur aura accès à tous vos registres.
+                  Le collaborateur aura accès {scope === 'company' ? 'à tous vos registres' : 'à ce registre uniquement'}.
                 </p>
               </div>
             </div>
@@ -183,13 +192,13 @@ export default function InviteCollaboratorModal({
 
           {/* Permissions info */}
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-900 mb-2">
+            <h3 className="text-sm font-medium text-gray-900 mb-2"> 
               Permissions des collaborateurs
             </h3>
             <ul className="text-xs text-gray-600 space-y-1">
-              <li>✓ Peuvent consulter et modifier les registres partagés</li>
+              <li>✓ Peuvent consulter et modifier {scope === 'company' ? 'les registres partagés' : 'ce registre uniquement'}</li>
               <li>✓ Peuvent gérer les cas d'usage des registres</li>
-              <li>✗ Ne peuvent pas créer de nouveaux registres</li>
+              <li>✓ Peuvent créer de nouveaux {scope === 'company' ? 'registres' : 'cas d\'usage'}</li>
               <li>✗ Ne peuvent pas inviter d'autres collaborateurs</li>
             </ul>
           </div>

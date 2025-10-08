@@ -45,7 +45,6 @@ export async function GET(
       .select('company_id, role')
       .eq('user_id', user.id)
       .eq('company_id', id)
-      .eq('is_active', true)
       .single()
 
     if (userCompanyError || !userCompany) {

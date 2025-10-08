@@ -24,6 +24,9 @@ export async function getUserByEmail(email: string) {
 /**
  * Invite un utilisateur par email et crée son compte auth
  * L'utilisateur recevra un email d'invitation pour définir son mot de passe
+ *
+ * En développement, si l'invitation échoue (ex: pas de SMTP configuré),
+ * on crée directement l'utilisateur sans envoyer d'email
  */
 export async function inviteUserByEmail(
   email: string,
@@ -33,7 +36,9 @@ export async function inviteUserByEmail(
   }
 ) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const isDev = process.env.NODE_ENV === 'development'
 
+  // Tenter d'inviter l'utilisateur normalement
   const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
     data: {
       first_name: metadata.firstName,
@@ -41,6 +46,23 @@ export async function inviteUserByEmail(
     },
     redirectTo: `${appUrl}/auth/callback`
   })
+
+  // En développement, si l'invitation échoue, créer l'utilisateur directement sans email
+  if (error && isDev) {
+    console.log('⚠️ Invitation failed in dev mode, creating user without email:', error.message)
+
+    // Créer l'utilisateur directement sans envoyer d'email
+    const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      email_confirm: true, // Confirmer l'email automatiquement en dev
+      user_metadata: {
+        first_name: metadata.firstName,
+        last_name: metadata.lastName
+      }
+    })
+
+    return { data: createData, error: createError }
+  }
 
   return { data, error }
 }
