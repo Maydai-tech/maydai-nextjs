@@ -2,6 +2,7 @@ export const useCaseRoutes = {
   overview: (id: string) => `/usecases/${id}`,
   evaluation: (id: string) => `/usecases/${id}/evaluation`,
   rapport: (id: string) => `/usecases/${id}/rapport`,
+  collaboration: (id: string) => `/usecases/${id}/collaboration`,
   dashboard: (companyId: string) => `/dashboard/${companyId}`,
   companies: () => '/dashboard/registries'
 }
@@ -16,5 +17,10 @@ export const useCaseNavigation = [
     key: 'rapport',
     label: 'Rapport',
     href: (id: string) => useCaseRoutes.rapport(id)
+  },
+  {
+    key: 'collaboration',
+    label: 'Collaboration',
+    href: (id: string) => useCaseRoutes.collaboration(id)
   }
 ] 
