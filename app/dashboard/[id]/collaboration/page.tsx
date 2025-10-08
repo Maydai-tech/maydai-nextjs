@@ -292,6 +292,7 @@ export default function CollaborationPage() {
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         onInvite={handleInviteCollaborator}
+        scope="registry"
       />
 
       <ConfirmRemoveCollaboratorModal

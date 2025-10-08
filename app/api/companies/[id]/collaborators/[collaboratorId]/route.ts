@@ -41,7 +41,7 @@ export async function DELETE(
     }
 
     // Verify user is owner of this company
-    const userIsOwner = await isOwner(user.id, 'company', companyId)
+    const userIsOwner = await isOwner(user.id, 'company', companyId, supabase)
     if (!userIsOwner) {
       return NextResponse.json({ error: 'Only company owners can remove collaborators' }, { status: 403 })
     }

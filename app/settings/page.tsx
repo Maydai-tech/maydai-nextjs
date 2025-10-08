@@ -416,6 +416,7 @@ export default function ProfilPage() {
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         onInvite={handleInviteCollaborator}
+        scope="company"
       />
 
       {/* Confirm Remove Collaborator Modal */}
