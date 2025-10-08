@@ -76,7 +76,7 @@ export default function UseCaseCollaboratorList({
         title="Accès uniquement à ce cas d'usage"
       >
         <FileText className="w-3 h-3 mr-1" />
-        Use Case
+        Cas d'usage
       </span>
     );
   };
