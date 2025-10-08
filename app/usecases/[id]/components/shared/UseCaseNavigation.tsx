@@ -2,7 +2,7 @@ import React from 'react'
 import Link from 'next/link'
 import { useCaseNavigation } from '../../utils/routes'
 import { useUseCaseNavigation } from '../../utils/navigation'
-import { Eye, ClipboardCheck, FileText } from 'lucide-react'
+import { Eye, Users, FileText } from 'lucide-react'
 
 interface UseCaseNavigationProps {
   useCaseId: string
@@ -14,6 +14,7 @@ const getIcon = (key: string) => {
   switch (key) {
     case 'overview': return <Eye className="h-4 w-4" />
     case 'rapport': return <FileText className="h-4 w-4" />
+    case 'collaboration': return <Users className="h-4 w-4" />
     default: return null
   }
 }
