@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/lib/auth';
 
 interface Collaborator {
   id: string;
@@ -21,12 +22,23 @@ export function useUseCaseCollaborators(useCaseId: string) {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getAccessToken } = useAuth();
 
   const fetchCollaborators = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/usecases/${useCaseId}/collaborators`);
+
+      const token = getAccessToken();
+      if (!token) {
+        throw new Error('No access token available');
+      }
+
+      const response = await fetch(`/api/usecases/${useCaseId}/collaborators`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
       if (!response.ok) {
         throw new Error('Erreur lors du chargement des collaborateurs');
@@ -39,7 +51,7 @@ export function useUseCaseCollaborators(useCaseId: string) {
     } finally {
       setLoading(false);
     }
-  }, [useCaseId]);
+  }, [useCaseId, getAccessToken]);
 
   useEffect(() => {
     fetchCollaborators();
@@ -47,12 +59,18 @@ export function useUseCaseCollaborators(useCaseId: string) {
 
   const inviteCollaborator = async (data: InviteCollaboratorData) => {
     try {
+      const token = getAccessToken();
+      if (!token) {
+        throw new Error('No access token available');
+      }
+
       const response = await fetch(`/api/usecases/${useCaseId}/collaborators`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(data)
       });
 
       if (!response.ok) {
@@ -72,10 +90,18 @@ export function useUseCaseCollaborators(useCaseId: string) {
 
   const removeCollaborator = async (collaboratorId: string) => {
     try {
+      const token = getAccessToken();
+      if (!token) {
+        throw new Error('No access token available');
+      }
+
       const response = await fetch(
         `/api/usecases/${useCaseId}/collaborators/${collaboratorId}`,
         {
           method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         }
       );
 
