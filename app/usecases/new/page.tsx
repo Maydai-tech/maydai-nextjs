@@ -173,7 +173,7 @@ function NewUseCasePageContent() {
       type: 'select',
       options: [
         'Ressources Humaines (RH)',
-        'Marketing',
+        'Communication / Marketing',
         'Commercial / Ventes',
         'Finance / Comptabilité',
         'Production / Opérations',
@@ -214,7 +214,7 @@ function NewUseCasePageContent() {
           examples: ['DALL-E', 'Midjourney'] 
         },
         { 
-          label: 'Apprentissage automatique (Machine Learning)', 
+          label: 'Machine Learning', 
           examples: ['TensorFlow', 'scikit-learn'] 
         },
         { 
@@ -227,7 +227,7 @@ function NewUseCasePageContent() {
         },
         { 
           label: 'Logiciels métiers', 
-          examples: ['Salesforce Einstein AI', 'Diabolocom AI', 'Guru'] 
+          examples: ['Salesforce Einstein', 'Adobe Firefly'] 
         },
         { 
           label: 'Apprentissage / e-learning', 
@@ -260,7 +260,7 @@ function NewUseCasePageContent() {
       id: 'description',
       question: 'Brève description du système IA ?',
       type: 'textarea',
-      placeholder: 'Décrivez en détail le cas d\'usage, son objectif et son fonctionnement...'
+      placeholder: 'Créez le résumé en cliquant sur le bouton AI, vous pourrez toujours le modifier…'
     }
   ]
 
@@ -914,7 +914,7 @@ function NewUseCasePageContent() {
                     ) : (
                       <>
                         <Sparkles className="h-4 w-4 mr-2" />
-                        Générer avec Mistral AI
+                        Générer avec AI
                       </>
                     )}
                   </button>
@@ -1020,7 +1020,7 @@ function NewUseCasePageContent() {
               )}
 
               {Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 && !loadingPartners && !loadingModels && (
-                <div className={currentQuestion.id === 'technology_partner' ? 'grid grid-cols-2 gap-4' : 'space-y-3'}>
+                <div className={currentQuestion.id === 'technology_partner' || currentQuestion.id === 'ai_category' ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : 'space-y-3'}>
                   {(currentQuestion.options as { label: string; examples: string[] }[]).map((option, index) => (
                     <label 
                       key={index} 
