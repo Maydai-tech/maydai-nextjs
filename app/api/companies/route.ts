@@ -87,6 +87,28 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get companies from use cases the user has access to
+    const { data: usecaseAccess } = await supabase
+      .from('user_usecases')
+      .select(`
+        usecase_id,
+        usecases!inner (
+          company_id
+        )
+      `)
+      .eq('user_id', user.id)
+
+    if (usecaseAccess) {
+      usecaseAccess.forEach(ua => {
+        const companyId = (ua.usecases as any).company_id
+        companyIds.add(companyId)
+        // Only set role if not already set by higher-level access
+        if (!roleMap.has(companyId)) {
+          roleMap.set(companyId, 'user')
+        }
+      })
+    }
+
     if (companyIds.size === 0) {
       return NextResponse.json([])
     }

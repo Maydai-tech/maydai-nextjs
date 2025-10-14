@@ -147,20 +147,20 @@ export default function Sidebar() {
         <nav className="flex-1 p-4 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            // Dashboard should be highlighted when on dashboard pages or usecase pages
+            // Dashboard should be highlighted when on dashboard pages or usecase pages (including usecase collaboration)
             // Dossiers should be highlighted when on dossiers pages
-            // Collaboration should be highlighted when on collaboration pages
+            // Collaboration should be highlighted when on company collaboration pages only
             const isActive = item.name === 'Dashboard'
               ? (pathname === item.href || pathname.startsWith('/usecases/'))
               : item.name === 'Dossiers'
               ? pathname.startsWith('/dossiers')
               : item.name === 'Collaboration'
-              ? pathname.includes('/collaboration')
+              ? pathname.includes('/collaboration') && pathname.startsWith('/dashboard/')
               : pathname === item.href;
             
             return (
               <Link
-                key={item.href}
+                key={item.name}
                 href={item.href}
                 className={`
                   flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group
