@@ -11,7 +11,7 @@ interface InviteCollaboratorModalProps {
     firstName: string;
     lastName: string;
   }) => Promise<void>;
-  scope: 'company' | 'registry';
+  scope: 'company' | 'registry' | 'usecase';
 }
 
 export default function InviteCollaboratorModal({
@@ -184,7 +184,7 @@ export default function InviteCollaboratorModal({
               <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-xs text-blue-700 mt-1">
-                  Le collaborateur aura accès {scope === 'company' ? 'à tous vos registres' : 'à ce registre uniquement'}.
+                  Le collaborateur aura accès {scope === 'company' ? 'à tous vos registres' : scope === 'registry' ? 'à ce registre uniquement' : 'à ce cas d\'usage uniquement'}.
                 </p>
               </div>
             </div>
@@ -196,9 +196,9 @@ export default function InviteCollaboratorModal({
               Permissions des collaborateurs
             </h3>
             <ul className="text-xs text-gray-600 space-y-1">
-              <li>✓ Peuvent consulter et modifier {scope === 'company' ? 'les registres partagés' : 'ce registre uniquement'}</li>
+              <li>✓ Peuvent consulter et modifier {scope === 'company' ? 'les registres partagés' : scope === 'registry' ? 'ce registre uniquement' : 'ce cas d\'usage uniquement'}</li>
               <li>✓ Peuvent gérer les cas d'usage des registres</li>
-              <li>✓ Peuvent créer de nouveaux {scope === 'company' ? 'registres' : 'cas d\'usage'}</li>
+              <li>✓ Peuvent créer de nouveaux {scope === 'company' ? 'registres' : scope === 'registry' ? 'cas d\'usage' : 'cas d\'usage'}</li>
               <li>✗ Ne peuvent pas inviter d'autres collaborateurs</li>
             </ul>
           </div>

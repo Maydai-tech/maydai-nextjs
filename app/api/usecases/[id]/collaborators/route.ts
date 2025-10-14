@@ -6,10 +6,17 @@ import { getUserByEmail, inviteUserByEmail, createProfileForUser } from '@/lib/i
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     'Les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être définies'
+  )
+}
+
+if (!supabaseServiceRoleKey) {
+  throw new Error(
+    'La variable d\'environnement SUPABASE_SERVICE_ROLE_KEY doit être définie'
   )
 }
 
@@ -19,7 +26,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: usecaseId } = await params
+    const resolvedParams = await params
+    const usecaseId = resolvedParams.id
 
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
@@ -192,7 +200,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: usecaseId } = await params
+    const resolvedParams = await params
+    const usecaseId = resolvedParams.id
 
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
@@ -214,18 +223,36 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Get use case to find owner
-    const { data: usecase } = await supabase
+    // Get use case to find company
+    const { data: usecase, error: usecaseError } = await supabase
       .from('usecases')
-      .select('user_id, company_id')
+      .select('company_id')
       .eq('id', usecaseId)
       .single()
 
+    if (usecaseError) {
+      logger.error('Failed to fetch usecase', usecaseError, createRequestContext(request))
+    }
     if (!usecase) {
       return NextResponse.json({ error: 'Use case not found' }, { status: 404 })
     }
 
-    const ownerId = usecase.user_id
+    // Get the owner of the company
+    const { data: companyOwner, error: ownerError } = await supabase
+      .from('user_companies')
+      .select('user_id')
+      .eq('company_id', usecase.company_id)
+      .eq('role', 'owner')
+      .single()
+
+    if (ownerError) {
+      logger.error('Failed to fetch company owner', ownerError, createRequestContext(request))
+    }
+    if (!companyOwner) {
+      return NextResponse.json({ error: 'Company owner not found' }, { status: 404 })
+    }
+
+    const ownerId = companyOwner.user_id
 
     // Get collaborators at use case level
     const { data: usecaseCollaborators, error: fetchError } = await supabase
@@ -327,7 +354,40 @@ export async function GET(
       return acc
     }, [] as typeof allCollaborators)
 
-    return NextResponse.json(uniqueCollaborators)
+    // Fetch emails from auth.users for all collaborators using service role key
+    const collaboratorIds = uniqueCollaborators.map(c => c.id)
+    const emailsMap = new Map<string, string>()
+
+    if (collaboratorIds.length > 0) {
+      // Create admin client with service role key
+      const supabaseAdmin = createClient(supabaseUrl!, supabaseServiceRoleKey!, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      })
+
+      // Fetch emails using admin client
+      for (const collaboratorId of collaboratorIds) {
+        try {
+          const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(collaboratorId)
+          if (authUser?.user?.email) {
+            emailsMap.set(collaboratorId, authUser.user.email)
+          }
+        } catch (error) {
+          // Skip if we can't get the email for this user
+          logger.error(`Failed to fetch email for user ${collaboratorId}`, error, createRequestContext(request))
+        }
+      }
+    }
+
+    // Add emails to collaborators
+    const collaboratorsWithEmails = uniqueCollaborators.map(collab => ({
+      ...collab,
+      email: emailsMap.get(collab.id)
+    }))
+
+    return NextResponse.json(collaboratorsWithEmails)
 
   } catch (error) {
     const context = createRequestContext(request)
