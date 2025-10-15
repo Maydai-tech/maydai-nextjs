@@ -12,16 +12,22 @@
   },
   "redirects": [
     {
-      "source": "/:path*/",
-      "destination": "/:path*",
-      "permanent": true
-    },
-    {
       "source": "/:path*",
       "has": [
         {
           "type": "host",
           "value": "maydai.io"
+        }
+      ],
+      "destination": "https://www.maydai.io/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*/",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.maydai.io"
         }
       ],
       "destination": "https://www.maydai.io/:path*",
