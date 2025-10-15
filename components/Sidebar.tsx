@@ -95,6 +95,11 @@ export default function Sidebar() {
       name: 'Abonnement',
       href: '/abonnement',
       icon: CreditCard
+    },
+    {
+      name: 'Paramètres',
+      href: '/settings',
+      icon: Settings
     }
   ];
 
@@ -150,12 +155,15 @@ export default function Sidebar() {
             // Dashboard should be highlighted when on dashboard pages or usecase pages (including usecase collaboration)
             // Dossiers should be highlighted when on dossiers pages
             // Collaboration should be highlighted when on company collaboration pages only
+            // Paramètres should be highlighted when on settings page
             const isActive = item.name === 'Dashboard'
               ? (pathname === item.href || pathname.startsWith('/usecases/'))
               : item.name === 'Dossiers'
               ? pathname.startsWith('/dossiers')
               : item.name === 'Collaboration'
               ? pathname.includes('/collaboration') && pathname.startsWith('/dashboard/')
+              : item.name === 'Paramètres'
+              ? pathname === '/settings'
               : pathname === item.href;
             
             return (
@@ -177,24 +185,6 @@ export default function Sidebar() {
             );
           })}
         </nav>
-        
-        <div className="p-4 border-t border-[#006280]/30">
-          <Link
-            href="/settings"
-            className={`
-              flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group mb-4
-              ${pathname === '/settings'
-                ? 'bg-white text-[#0080A3] shadow-lg font-medium'
-                : 'text-white/90 hover:bg-white/10 hover:text-white'
-              }
-            `}
-            onClick={() => setIsOpen(false)}
-          >
-            <Settings className={`w-5 h-5 ${pathname === '/settings' ? 'text-[#0080A3]' : 'text-white/90 group-hover:text-white'}`} />
-            <span className="font-medium">Paramètres</span>
-          </Link>
-
-        </div>
       </div>
     </>
   );
