@@ -114,8 +114,8 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment 
           )}
         </div>
         
-        {/* Description avec hauteur flexible */}
-        <div className="mb-6 flex-grow-0">
+        {/* Description avec hauteur fixe pour aligner les boutons */}
+        <div className="mb-6 h-40 flex items-center justify-center">
           <p className="text-gray-600 text-center leading-relaxed">{plan.description}</p>
         </div>
 
@@ -125,20 +125,20 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment 
             onClick={() => onPayment(plan)}
             className={`w-full text-center font-bold py-3 px-6 rounded-lg transition-all duration-300 hover:scale-[1.02] ${
               isCurrentPlan
-                ? 'bg-[#0080A3] text-white hover:bg-[#006d8a] shadow-lg hover:shadow-xl'
+                ? 'bg-white/80 text-[#0080A3] border border-[#0080A3] hover:bg-[#0080A3]/10 hover:shadow-md'
                 : isPopular
                 ? 'bg-[#0080A3] text-white hover:bg-[#006d8a] shadow-lg hover:shadow-xl'
-                : 'bg-white/80 text-[#0080A3] border border-[#0080A3] hover:bg-[#0080A3]/10 hover:shadow-md'
+                : 'bg-[#0080A3] text-white hover:bg-[#006d8a] shadow-lg hover:shadow-xl'
             }`}
           >
-            {isCurrentPlan ? 'Plan actuel' : 
+            {isCurrentPlan ? 'Plan actuel' :
              isFree ? 'Commencer' :
-             isCustom ? 'Attachez vos ceintures !' : 'C\'est parti !'}
+             isCustom ? 'Attachez vos ceintures !' : 'Souscrire'}
           </button>
         </div>
-        
+
         <hr className="my-4" />
-        
+
         {/* Features - prend l'espace restant */}
         <div className="flex-grow">
           <ul className="space-y-3">

@@ -15,10 +15,10 @@ import CurrentPlanStatus from '@/components/Subscriptions/CurrentPlanStatus'
 import BillingToggle from '@/components/Subscriptions/BillingToggle'
 import { useStripe } from '@/app/abonnement/hooks/useStripe'
 import { useSubscription } from '@/app/abonnement/hooks/useSubscription'
-import { getPlans } from '@/lib/stripe/config/plans'
+import { usePlans } from '@/app/abonnement/hooks/usePlans'
+import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import type { MaydAIPlan } from '@/lib/stripe/types'
 import SuccessPaymentPopup from '@/components/Subscriptions/SuccessPaymentPopup'
-import { getPlanInfo, getDefaultPlan } from '@/lib/subscription/plans'
 import { formatBillingCycle, formatNextBillingDate, calculateNextBillingAmount } from '@/lib/subscription/utils'
 
 interface SubscriptionPageProps {
@@ -37,25 +37,34 @@ export default function SubscriptionPage({
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly') // monthly, yearly
   const { createCheckoutSession, error: stripeError } = useStripe()
   const { subscription, loading: subscriptionLoading, error: subscriptionError, cancelSubscription, refreshSubscription } = useSubscription()
+  const { plans, loading: plansLoading, error: plansError } = usePlans()
+  const { plan: currentPlanInfo, loading: userPlanLoading, error: userPlanError, refresh: refreshUserPlan } = useUserPlan()
   const [localShowSuccessPopup, setLocalShowSuccessPopup] = useState(false)
+  const [nextBillingAmount, setNextBillingAmount] = useState<number>(0)
 
-  // Récupérer les plans depuis la configuration centralisée
-  const plans: MaydAIPlan[] = getPlans()
-
-  // Calculer les données d'affichage basées sur l'abonnement réel
-  const currentPlanInfo = subscription
-    ? getPlanInfo(subscription.plan_id)
-    : getDefaultPlan()
-
+  // Déterminer le cycle de facturation actuel
   const currentBillingCycle = subscription
     ? formatBillingCycle(subscription.plan_id)
     : billingCycle
 
   const nextBillingDate = formatNextBillingDate(subscription?.current_period_end || null)
-  const nextBillingAmount = calculateNextBillingAmount(
-    subscription?.plan_id || 'starter',
-    currentBillingCycle
-  )
+
+  // Charger le montant de la prochaine facturation de manière asynchrone
+  useEffect(() => {
+    async function loadNextBillingAmount() {
+      const cycle = subscription
+        ? formatBillingCycle(subscription.plan_id)
+        : billingCycle
+
+      // Utiliser l'ID textuel du plan (ex: "starter", "pro") au lieu de l'UUID
+      const amount = await calculateNextBillingAmount(
+        currentPlanInfo.id,
+        cycle
+      )
+      setNextBillingAmount(amount)
+    }
+    loadNextBillingAmount()
+  }, [currentPlanInfo.id, subscription, billingCycle])
 
   // Utiliser le state externe si fourni, sinon le state local
   const showSuccessPopup = externalShowSuccessPopup ?? localShowSuccessPopup
@@ -72,7 +81,7 @@ export default function SubscriptionPage({
   }, [user, loading, router, mounted])
 
   // Show loading state during SSR and initial client load
-  if (!mounted || loading || subscriptionLoading) {
+  if (!mounted || loading || subscriptionLoading || plansLoading || userPlanLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -124,7 +133,7 @@ export default function SubscriptionPage({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="w-full mx-auto px-4 py-6">
         {/* Header avec design moderne */}
         {(!subscription || currentPlanInfo.isFree) && (
           <div className="mb-10">
@@ -141,8 +150,8 @@ export default function SubscriptionPage({
             </div>
           </div>
         )}
-        {/* Affichage des erreurs Stripe et abonnement */}
-        {(stripeError || subscriptionError) && (
+        {/* Affichage des erreurs Stripe, abonnement, plans et plan utilisateur */}
+        {(stripeError || subscriptionError || plansError || userPlanError) && (
           <div className="mb-8">
             <div className="bg-red-50/70 backdrop-blur-sm border border-red-200 rounded-xl p-4 shadow-sm">
               <div className="flex">
@@ -153,10 +162,10 @@ export default function SubscriptionPage({
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-red-800">
-                    {subscriptionError ? 'Erreur d\'abonnement' : 'Erreur de paiement'}
+                    {plansError ? 'Erreur de chargement des plans' : userPlanError ? 'Erreur de chargement du plan utilisateur' : subscriptionError ? 'Erreur d\'abonnement' : 'Erreur de paiement'}
                   </h3>
                   <div className="mt-2 text-sm text-red-700">
-                    <p>{subscriptionError || stripeError}</p>
+                    <p>{plansError || userPlanError || subscriptionError || stripeError}</p>
                   </div>
                 </div>
               </div>
@@ -188,7 +197,7 @@ export default function SubscriptionPage({
                   onToggle={handleBillingToggle}
                 />
               </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 items-stretch">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
               {plans.map((plan) => (
                 <PlanCard
                   key={plan.id}

@@ -41,22 +41,30 @@ export function formatNextBillingDate(date: string | null): string {
 
 /**
  * Calcule le montant de la prochaine facturation
- * Basé sur le plan et le cycle de facturation
+ * Récupère les prix en temps réel depuis la table plans
  */
-export function calculateNextBillingAmount(planId: string, billingCycle: BillingCycle): number {
-  // Mapping des prix par plan et cycle
-  const prices = {
-    starter: { monthly: 0, yearly: 0 },
-    pro: { monthly: 10, yearly: 100 },
-    enterprise: { monthly: 1000, yearly: 10000 }
-  }
+export async function calculateNextBillingAmount(planId: string, billingCycle: BillingCycle): Promise<number> {
+  try {
+    // Importer la fonction de récupération des plans
+    const { fetchPlans } = await import('@/lib/api/plans')
 
-  const planPrices = prices[planId as keyof typeof prices]
-  if (!planPrices) {
-    return 0 // Plan inconnu = gratuit
-  }
+    // Récupérer tous les plans (avec cache de 5 minutes)
+    const plans = await fetchPlans()
 
-  return planPrices[billingCycle]
+    // Trouver le plan correspondant
+    const plan = plans.find(p => p.id === planId)
+
+    if (!plan) {
+      console.warn(`Plan ${planId} not found, returning 0`)
+      return 0
+    }
+
+    // Retourner le prix selon le cycle de facturation
+    return billingCycle === 'monthly' ? plan.price.monthly : plan.price.yearly
+  } catch (error) {
+    console.error('Error calculating next billing amount:', error)
+    return 0
+  }
 }
 
 /**
