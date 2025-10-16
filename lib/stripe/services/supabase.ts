@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
-import { getPlanIdFromPriceId } from '../config/plans'
 
 interface SubscriptionData {
   user_id: string
@@ -30,6 +29,43 @@ function getSupabaseClient() {
   }
 
   return createClient(supabaseUrl, supabaseKey)
+}
+
+/**
+ * Récupère l'UUID du plan depuis un price_id Stripe
+ * Recherche dans la table plans pour trouver le plan correspondant
+ */
+async function getPlanUuidFromPriceId(priceId: string | undefined): Promise<string> {
+  if (!priceId) {
+    // Retourner l'UUID du plan freemium par défaut
+    return 'c854ba82-7d81-41fb-b670-d86173b99c1c'
+  }
+
+  const supabase = getSupabaseClient()
+
+  // Déterminer si on est en mode test
+  const isTestMode = process.env.NODE_ENV === 'development' ||
+                     process.env.NEXT_PUBLIC_STRIPE_TEST_MODE === 'true'
+
+  // Chercher le plan par price_id (test ou prod selon l'environnement)
+  const { data, error } = await supabase
+    .from('plans')
+    .select('id, plan_id')
+    .or(
+      isTestMode
+        ? `test_stripe_price_id_monthly.eq.${priceId},test_stripe_price_id_yearly.eq.${priceId}`
+        : `stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId}`
+    )
+    .single()
+
+  if (error || !data) {
+    console.warn(`⚠️ Plan non trouvé pour price_id ${priceId}, utilisation du plan freemium par défaut`)
+    // Retourner l'UUID du plan freemium par défaut
+    return 'c854ba82-7d81-41fb-b670-d86173b99c1c'
+  }
+
+  console.log(`✅ Plan trouvé: ${data.plan_id} (UUID: ${data.id}) pour price_id ${priceId}`)
+  return data.id
 }
 
 export async function createSubscription(subscriptionData: SubscriptionData) {
@@ -162,7 +198,8 @@ export async function syncSubscriptionFromStripe(stripeSubscription: Stripe.Subs
     throw new Error('No user_id found for subscription')
   }
 
-  const planId = getPlanIdFromPriceId(stripeSubscription.items.data[0]?.price.id)
+  // Récupérer l'UUID du plan depuis le price_id Stripe
+  const planUuid = await getPlanUuidFromPriceId(stripeSubscription.items.data[0]?.price.id)
 
   // Récupérer l'ID du customer (string ou depuis l'objet)
   const customerId = typeof stripeSubscription.customer === 'string'
@@ -173,7 +210,7 @@ export async function syncSubscriptionFromStripe(stripeSubscription: Stripe.Subs
     user_id: userId,
     stripe_subscription_id: stripeSubscription.id,
     stripe_customer_id: customerId,
-    plan_id: planId,
+    plan_id: planUuid,
     status: stripeSubscription.status,
     current_period_start: (stripeSubscription as any).current_period_start 
       ? new Date((stripeSubscription as any).current_period_start * 1000).toISOString()
