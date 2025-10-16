@@ -1,6 +1,7 @@
 'use client';
 
 import { X, AlertCircle, Lock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface RegistryLimitModalProps {
   isOpen: boolean;
@@ -13,10 +14,10 @@ interface RegistryLimitModalProps {
 export default function RegistryLimitModal({
   isOpen,
   onClose,
-  currentCount,
   maxLimit,
   planName
 }: RegistryLimitModalProps) {
+  const router = useRouter()
   if (!isOpen) return null;
 
   return (
@@ -50,12 +51,6 @@ export default function RegistryLimitModal({
             Vous avez atteint la limite de <span className="font-semibold text-gray-900">{maxLimit} {maxLimit === 1 ? 'registre' : 'registres'}</span> autorisée par votre plan <span className="font-semibold text-gray-900">{planName}</span>.
           </p>
 
-          <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
-            <span className="text-sm text-gray-600">
-              Registres actuels : <span className="font-semibold text-gray-900">{currentCount}/{maxLimit}</span>
-            </span>
-          </div>
-
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <div className="flex items-start space-x-2">
               <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -69,10 +64,10 @@ export default function RegistryLimitModal({
         {/* Action button */}
         <div className="flex space-x-4">
           <button
-            onClick={onClose}
+            onClick={() => router.push('/settings')}
             className="flex-1 px-6 py-3 bg-gradient-to-r from-[#0080A3] to-[#006280] text-white hover:from-[#006280] hover:to-[#004d60] rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.02] shadow-lg"
           >
-            J'ai compris
+            Choisir un plan
           </button>
         </div>
       </div>
