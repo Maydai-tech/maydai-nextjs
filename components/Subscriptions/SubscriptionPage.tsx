@@ -188,12 +188,12 @@ export default function SubscriptionPage({
           </div>
         )}
         {/* Plans Grid */}
-        {(!subscription || currentPlanInfo.isFree) && (
+        
           <div className="mb-12">
               {/* Billing Toggle */}
               <div className="mb-8">
                 <BillingToggle
-                  billingCycle={currentBillingCycle}
+                  billingCycle={billingCycle}
                   onToggle={handleBillingToggle}
                 />
               </div>
@@ -202,7 +202,7 @@ export default function SubscriptionPage({
                 <PlanCard
                   key={plan.id}
                   plan={plan}
-                  billingCycle={currentBillingCycle}
+                  billingCycle={billingCycle}
                   isCurrentPlan={currentPlanInfo.id === plan.id}
                   onPayment={handlePayment}
                 />
@@ -215,7 +215,6 @@ export default function SubscriptionPage({
               <p>Les audits IA Act gratuits sont protégés et ne sont pas utilisés à des fins d'entraînement (ce qui est hélas le cas aujourd'hui de l'IA gratuite).</p>
             </div>
           </div>
-        )}
        
       </div>
 

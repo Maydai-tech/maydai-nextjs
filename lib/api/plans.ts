@@ -53,33 +53,21 @@ const PLAN_STYLES: Record<string, { icon: string; color: string }> = {
   enterprise: { icon: 'chapeau-de-pilote.png', color: 'gold' }
 }
 
-// Features par défaut (à adapter selon vos besoins)
-const PLAN_FEATURES: Record<string, string[]> = {
-  starter: [
-    '1 registre IA Act',
-    '1 Dashboard Entreprise',
-    "6 cas d'usage IA disponibles",
-    "6 modèles de cas d'usage disponibles",
-    '3 invitations pour collaborer',
-    'Support Email'
-  ],
-  pro: [
-    '1 super registre IA Act',
-    '3 registres IA Act',
-    '4 Dashboards Entreprise',
-    "12 cas d'usage IA disponibles",
-    "12 modèles de cas d'usage disponibles",
-    '6 invitations pour collaborer',
-    'Support prioritaire'
-  ],
-  enterprise: [
-    '1 formation sur site',
-    '1 atelier audit IA act',
-    'Création du Dashboard Entreprise',
-    "Cas d'usage IA illimités",
-    'Collaboration illimitée',
-    "Support juridique relecture cas d'usage",
-    'Support prioritaire'
+/**
+ * Génère dynamiquement les features d'un plan en fonction des limites définies dans la DB
+ */
+function generateDynamicFeatures(maxRegistries: number, maxCollaborators: number): string[] {
+  const registriesText = maxRegistries === 1
+    ? '1 registre IA Act'
+    : `${maxRegistries} registres IA Act`
+
+  const collaboratorsText = maxCollaborators === 1
+    ? '1 collaborateur'
+    : `${maxCollaborators} collaborateurs`
+
+  return [
+    registriesText,
+    collaboratorsText
   ]
 }
 
@@ -115,7 +103,7 @@ export async function fetchPlans(): Promise<MaydAIPlan[]> {
  */
 export function mapDBPlanToMaydAIPlan(planDB: PlanFromDB): MaydAIPlan {
   const styles = PLAN_STYLES[planDB.plan_id] || PLAN_STYLES.starter
-  const features = PLAN_FEATURES[planDB.plan_id] || []
+  const features = generateDynamicFeatures(planDB.max_registries, planDB.max_collaborators)
 
   // Utiliser les price IDs de test en environnement de développement
   const isTestMode = process.env.NODE_ENV === 'development' ||
