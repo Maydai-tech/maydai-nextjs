@@ -39,7 +39,9 @@ export function useUserPlan(): UseUserPlanReturn {
     name: 'freemium',
     displayName: 'Freemium',
     description: 'Plan gratuit',
-    isFree: true
+    isFree: true,
+    maxRegistries: 1,
+    maxCollaborators: 0
   })
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -58,7 +60,9 @@ export function useUserPlan(): UseUserPlanReturn {
         name: 'freemium',
         displayName: 'Freemium',
         description: 'Plan gratuit',
-        isFree: true
+        isFree: true,
+        maxRegistries: 1,
+        maxCollaborators: 0
       })
       setHasActiveSubscription(false)
       setLoading(false)
@@ -93,7 +97,9 @@ export function useUserPlan(): UseUserPlanReturn {
         name: 'freemium',
         displayName: 'Freemium',
         description: 'Plan gratuit',
-        isFree: true
+        isFree: true,
+        maxRegistries: 1,
+        maxCollaborators: 0
       })
       setHasActiveSubscription(false)
     } finally {
