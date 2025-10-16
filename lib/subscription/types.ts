@@ -25,6 +25,8 @@ export interface PlanInfo {
   displayName: string
   description: string
   isFree: boolean
+  maxRegistries?: number
+  maxCollaborators?: number
 }
 
 // Type pour les cycles de facturation

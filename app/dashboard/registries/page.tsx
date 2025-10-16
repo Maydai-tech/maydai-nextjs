@@ -6,9 +6,11 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
+import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { Building2, Plus, ChevronRight } from 'lucide-react'
 import Footer from '@/components/Footer'
 import NavBar from '@/components/NavBar/NavBar'
+import RegistryLimitModal from '@/components/Registries/RegistryLimitModal'
 
 interface Company {
   id: string
@@ -22,7 +24,9 @@ export default function CompanySelection() {
   const [mounted, setMounted] = useState(false)
   const [companies, setCompanies] = useState<Company[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  const [showLimitModal, setShowLimitModal] = useState(false)
   const api = useApiCall()
+  const { plan } = useUserPlan()
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -181,15 +185,24 @@ export default function CompanySelection() {
 
                 {/* Add New Company */}
                 <div className="bg-white rounded-xl shadow-sm border-2 border-dashed border-gray-200 p-6 hover:border-[#0080A3]/50 transition-colors">
-                  <Link
-                    href="/registries/new"
-                    className="flex items-center justify-center space-x-3 text-gray-600 hover:text-[#0080A3] transition-colors group"
+                  <button
+                    onClick={() => {
+                      const ownedRegistriesCount = companies.filter(c => c.role === 'owner' || c.role === 'company_owner').length
+                      const maxRegistries = plan.maxRegistries || 1
+
+                      if (ownedRegistriesCount >= maxRegistries) {
+                        setShowLimitModal(true)
+                      } else {
+                        router.push('/registries/new')
+                      }
+                    }}
+                    className="w-full flex items-center justify-center space-x-3 text-gray-600 hover:text-[#0080A3] transition-colors group"
                   >
                     <div className="bg-gray-50 p-2 rounded-lg group-hover:bg-[#0080A3]/10 transition-colors">
                       <Plus className="h-5 w-5" />
                     </div>
                     <span className="font-medium">Ajouter un nouveau registre</span>
-                  </Link>
+                  </button>
                 </div>
 
                 {/* Collaborator Registries Section */}
@@ -240,6 +253,15 @@ export default function CompanySelection() {
 
       {/* Footer */}
       <Footer />
+
+      {/* Registry Limit Modal */}
+      <RegistryLimitModal
+        isOpen={showLimitModal}
+        onClose={() => setShowLimitModal(false)}
+        currentCount={companies.filter(c => c.role === 'owner' || c.role === 'company_owner').length}
+        maxLimit={plan.maxRegistries || 1}
+        planName={plan.displayName}
+      />
     </div>
   )
 } 

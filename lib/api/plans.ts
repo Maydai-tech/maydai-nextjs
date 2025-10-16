@@ -42,6 +42,8 @@ export interface MaydAIPlan {
   free?: boolean
   popular?: boolean
   custom?: boolean
+  maxRegistries?: number
+  maxCollaborators?: number
 }
 
 // Mapping des icônes et couleurs par défaut selon le plan_id
@@ -137,7 +139,9 @@ export function mapDBPlanToMaydAIPlan(planDB: PlanFromDB): MaydAIPlan {
     limitations: [],
     free: planDB.price_monthly === 0 && planDB.price_yearly === 0,
     popular: planDB.plan_id === 'pro',
-    custom: planDB.plan_id === 'corporate'
+    custom: planDB.plan_id === 'corporate',
+    maxRegistries: planDB.max_registries,
+    maxCollaborators: planDB.max_collaborators
   }
 }
 
