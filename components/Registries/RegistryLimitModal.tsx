@@ -64,7 +64,7 @@ export default function RegistryLimitModal({
         {/* Action button */}
         <div className="flex space-x-4">
           <button
-            onClick={() => router.push('/settings')}
+            onClick={() => router.push('/settings?section=subscription')}
             className="flex-1 px-6 py-3 bg-gradient-to-r from-[#0080A3] to-[#006280] text-white hover:from-[#006280] hover:to-[#004d60] rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 hover:scale-[1.02] shadow-lg"
           >
             Choisir un plan
