@@ -27,95 +27,7 @@ export default function ProfilPage() {
   const [collaborators, setCollaborators] = useState<any[]>([])
   const [loadingCollaborators, setLoadingCollaborators] = useState(false)
 
-  // Prevent hydration mismatch
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // Vérifier le succès du paiement
-  useEffect(() => {
-    if (mounted && searchParams.get('payment_success') === 'true') {
-      setActiveSection('subscription')
-      setShowSuccessPopup(true)
-
-      // Nettoyer l'URL après 100ms
-      const timer = setTimeout(() => {
-        const url = new URL(window.location.href)
-        url.searchParams.delete('payment_success')
-        url.searchParams.delete('session_id')
-        window.history.replaceState({}, '', url.toString())
-      }, 100)
-
-      return () => clearTimeout(timer)
-    }
-  }, [mounted, searchParams])
-
-  useEffect(() => {
-    if (mounted && !loading && !user) {
-      router.push('/login')
-    }
-  }, [user, loading, router, mounted])
-
-  // Show loading state during SSR and initial client load
-  if (!mounted || loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0080A3] mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Chargement...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Redirect if no user
-  if (!user) {
-    return null
-  }
-
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-      router.push('/login')
-    } catch (error) {
-      console.error('Error signing out:', error)
-    }
-  }
-
-  const menuItems = [
-    {
-      id: 'general' as MenuSection,
-      name: 'Général',
-      icon: Settings
-    },
-    {
-      id: 'collaboration' as MenuSection,
-      name: 'Collaboration',
-      icon: Users
-    },
-    {
-      id: 'subscription' as MenuSection,
-      name: 'Abonnement',
-      icon: CreditCard
-    },
-    {
-      id: 'logout' as MenuSection,
-      name: 'Déconnexion',
-      icon: LogOut
-    }
-  ]
-
-  const handleMenuClick = (sectionId: MenuSection) => {
-    if (sectionId === 'logout') {
-      setShowLogoutModal(true)
-    } else {
-      setActiveSection(sectionId)
-      if (sectionId === 'collaboration') {
-        fetchCollaborators()
-      }
-    }
-  }
-
+  // Define functions before useEffect hooks to avoid hoisting issues
   const fetchCollaborators = async () => {
     if (!user) return
 
@@ -208,6 +120,119 @@ export default function ProfilPage() {
     await fetchCollaborators()
     setShowRemoveModal(false)
     setSelectedCollaborator(null)
+  }
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Read section parameter from URL and set active section
+  useEffect(() => {
+    if (!mounted) return
+
+    const section = searchParams.get('section')
+    if (section) {
+      const validSections: MenuSection[] = ['general', 'collaboration', 'subscription']
+      if (validSections.includes(section as MenuSection)) {
+        setActiveSection(section as MenuSection)
+
+        // Load collaborators if section is collaboration
+        if (section === 'collaboration') {
+          fetchCollaborators()
+        }
+      }
+    }
+  }, [mounted, searchParams])
+
+  // Vérifier le succès du paiement
+  useEffect(() => {
+    if (mounted && searchParams.get('payment_success') === 'true') {
+      setActiveSection('subscription')
+      setShowSuccessPopup(true)
+
+      // Nettoyer l'URL après 100ms
+      const timer = setTimeout(() => {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('payment_success')
+        url.searchParams.delete('session_id')
+        window.history.replaceState({}, '', url.toString())
+      }, 100)
+
+      return () => clearTimeout(timer)
+    }
+  }, [mounted, searchParams])
+
+  useEffect(() => {
+    if (mounted && !loading && !user) {
+      router.push('/login')
+    }
+  }, [user, loading, router, mounted])
+
+  // Show loading state during SSR and initial client load
+  if (!mounted || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0080A3] mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Chargement...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Redirect if no user
+  if (!user) {
+    return null
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      router.push('/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
+
+  const menuItems = [
+    {
+      id: 'general' as MenuSection,
+      name: 'Général',
+      icon: Settings
+    },
+    {
+      id: 'collaboration' as MenuSection,
+      name: 'Collaboration',
+      icon: Users
+    },
+    {
+      id: 'subscription' as MenuSection,
+      name: 'Abonnement',
+      icon: CreditCard
+    },
+    {
+      id: 'logout' as MenuSection,
+      name: 'Déconnexion',
+      icon: LogOut
+    }
+  ]
+
+  const handleMenuClick = (sectionId: MenuSection) => {
+    if (sectionId === 'logout') {
+      setShowLogoutModal(true)
+    } else {
+      setActiveSection(sectionId)
+
+      // Update URL with section parameter
+      const url = new URL(window.location.href)
+      url.searchParams.set('section', sectionId)
+      window.history.pushState({}, '', url.toString())
+
+      if (sectionId === 'collaboration') {
+        fetchCollaborators()
+      }
+    }
   }
 
   const renderContent = () => {
