@@ -2,6 +2,7 @@ export const useCaseRoutes = {
   overview: (id: string) => `/usecases/${id}`,
   evaluation: (id: string) => `/usecases/${id}/evaluation`,
   rapport: (id: string) => `/usecases/${id}/rapport`,
+  conformite: (id: string) => `/usecases/${id}/conformite`,
   annexes: (id: string) => `/usecases/${id}/annexes`,
   collaboration: (id: string) => `/usecases/${id}/collaboration`,
   dashboard: (companyId: string) => `/dashboard/${companyId}`,
@@ -18,6 +19,11 @@ export const useCaseNavigation = [
     key: 'rapport',
     label: 'Rapport',
     href: (id: string) => useCaseRoutes.rapport(id)
+  },
+  {
+    key: 'conformite',
+    label: 'Conformité',
+    href: (id: string) => useCaseRoutes.conformite(id)
   },
   {
     key: 'annexes',
