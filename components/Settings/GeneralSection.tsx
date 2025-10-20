@@ -3,7 +3,7 @@
 import { Mail } from 'lucide-react'
 
 interface GeneralSectionProps {
-  userEmail: string
+  userEmail: string | undefined
 }
 
 export default function GeneralSection({ userEmail }: GeneralSectionProps) {
