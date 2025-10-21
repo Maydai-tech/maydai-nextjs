@@ -20,6 +20,7 @@ interface ChangePlanModalProps {
   loading?: boolean
   success?: boolean
   error?: string | null
+  cancelAtPeriodEnd?: boolean
 }
 
 export default function ChangePlanModal({
@@ -31,7 +32,8 @@ export default function ChangePlanModal({
   billingCycle,
   loading = false,
   success = false,
-  error = null
+  error = null,
+  cancelAtPeriodEnd = false
 }: ChangePlanModalProps) {
   const [confirmationChecked, setConfirmationChecked] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -169,6 +171,23 @@ export default function ChangePlanModal({
                     </div>
                   </div>
                 </div>
+
+                {/* Reactivation Notice */}
+                {cancelAtPeriodEnd && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-green-900 mb-1">Réactivation automatique</p>
+                        <p className="text-sm text-green-800">
+                          Votre abonnement était prévu pour être annulé à la fin de la période. En reprenant un plan, votre abonnement sera <strong>automatiquement réactivé</strong> et ne sera plus marqué pour annulation.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Loading State */}
