@@ -48,6 +48,18 @@ export interface CancelSubscriptionResponse {
   stripeSubscriptionId?: string
 }
 
+// Types pour la modification d'abonnement
+export interface UpdateSubscriptionRequest {
+  newPriceId: string
+}
+
+export interface UpdateSubscriptionResponse {
+  success: boolean
+  message: string
+  prorationAmount?: number
+  newPlanId?: string
+}
+
 // Types pour les données de subscription
 export interface SubscriptionData {
   user_id: string
@@ -65,6 +77,7 @@ export interface SubscriptionData {
 // Types pour les mises à jour de subscription
 export interface SubscriptionUpdateData {
   status?: string
+  plan_id?: string
   current_period_start?: string
   current_period_end?: string
   cancel_at_period_end?: boolean

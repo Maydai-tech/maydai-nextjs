@@ -9,9 +9,11 @@ interface PlanCardProps {
   billingCycle: 'monthly' | 'yearly'
   isCurrentPlan: boolean
   onPayment: (plan: MaydAIPlan) => void
+  hasActiveSubscription?: boolean
+  onDowngradeToFree?: () => void
 }
 
-export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment }: PlanCardProps) {
+export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment, hasActiveSubscription = false, onDowngradeToFree }: PlanCardProps) {
   const getPlanColor = (color: string) => {
     switch (color) {
       case 'blue':
@@ -120,7 +122,14 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment 
         {/* Action Button */}
         <div className="mb-6">
           <button
-            onClick={() => onPayment(plan)}
+            onClick={() => {
+              // Si l'utilisateur a un abonnement actif et clique sur le plan gratuit, déclencher le downgrade
+              if (isFree && hasActiveSubscription && !isCurrentPlan && onDowngradeToFree) {
+                onDowngradeToFree()
+              } else {
+                onPayment(plan)
+              }
+            }}
             disabled={isCurrentPlan}
             className={`w-full text-center font-bold py-3 px-6 rounded-lg transition-all duration-300 ${
               isCurrentPlan
@@ -128,9 +137,11 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment 
                 : 'hover:scale-[1.02] bg-[#0080A3] text-white hover:bg-[#006d8a] shadow-lg hover:shadow-xl'
             }`}
           >
-            {isCurrentPlan ? 'Plan actuel' :
+            {isCurrentPlan ? 'Actuel' :
+             isFree && hasActiveSubscription ? 'Revenir au gratuit' :
              isFree ? 'Choisir' :
-             isCustom ? 'Attachez vos ceintures !' : 'Choisir'}
+             isCustom ? 'Attachez vos ceintures !' :
+             hasActiveSubscription ? 'Changer de plan' : 'Choisir'}
           </button>
         </div>
 
@@ -140,9 +151,9 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment 
         <div className="flex-grow">
           <ul className="space-y-3">
             {plan.features.map((feature, index) => (
-              <li key={index} className="flex items-center">
+              <li key={index} className="flex items-start">
                 <CheckIcon />
-                <span className="text-sm font-semibold text-gray-700 leading-relaxed whitespace-nowrap">{feature}</span>
+                <span className="text-sm font-semibold text-gray-700 leading-relaxed break-words">{feature}</span>
               </li>
             ))}
           </ul>

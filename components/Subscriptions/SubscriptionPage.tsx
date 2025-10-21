@@ -19,7 +19,11 @@ import { usePlans } from '@/app/abonnement/hooks/usePlans'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import type { MaydAIPlan } from '@/lib/stripe/types'
 import SuccessPaymentPopup from '@/components/Subscriptions/SuccessPaymentPopup'
+import CancelSubscriptionModal from '@/components/Subscriptions/CancelSubscriptionModal'
+import ChangePlanModal from '@/components/Subscriptions/ChangePlanModal'
 import { formatBillingCycle, formatNextBillingDate, calculateNextBillingAmount } from '@/lib/subscription/utils'
+import { useCancelSubscriptionWithSync } from '@/app/abonnement/hooks/useCancelSubscriptionWithSync'
+import { useUpdateSubscription } from '@/app/abonnement/hooks/useUpdateSubscription'
 
 interface SubscriptionPageProps {
   showSuccessPopup?: boolean
@@ -41,6 +45,11 @@ export default function SubscriptionPage({
   const { plan: currentPlanInfo, loading: userPlanLoading, error: userPlanError, refresh: refreshUserPlan } = useUserPlan()
   const [localShowSuccessPopup, setLocalShowSuccessPopup] = useState(false)
   const [nextBillingAmount, setNextBillingAmount] = useState<number>(0)
+  const [showDowngradeModal, setShowDowngradeModal] = useState(false)
+  const [showChangePlanModal, setShowChangePlanModal] = useState(false)
+  const [pendingPlan, setPendingPlan] = useState<MaydAIPlan | null>(null)
+  const { cancelWithSync, isLoading: isCancelling, syncCompleted, error: cancelError, reset: resetCancel } = useCancelSubscriptionWithSync()
+  const { updateSubscription, isLoading: isUpdating, error: updateError, success: updateSuccess, reset: resetUpdate } = useUpdateSubscription()
 
   // Déterminer le cycle de facturation actuel
   const currentBillingCycle = subscription
@@ -80,6 +89,27 @@ export default function SubscriptionPage({
     }
   }, [user, loading, router, mounted])
 
+  // Fermer le modal de downgrade et rafraîchir quand la synchronisation est terminée
+  useEffect(() => {
+    if (syncCompleted && showDowngradeModal) {
+      setTimeout(() => {
+        setShowDowngradeModal(false)
+        refreshSubscription()
+        refreshUserPlan()
+        resetCancel()
+      }, 2000)
+    }
+  }, [syncCompleted, showDowngradeModal, refreshSubscription, refreshUserPlan, resetCancel])
+
+  // Fermer le modal immédiatement quand le changement est terminé
+  useEffect(() => {
+    if (updateSuccess && showChangePlanModal) {
+      setShowChangePlanModal(false)
+      setPendingPlan(null)
+      resetUpdate()
+    }
+  }, [updateSuccess, showChangePlanModal, resetUpdate])
+
   // Show loading state during SSR and initial client load
   if (!mounted || loading || subscriptionLoading || plansLoading || userPlanLoading) {
     return (
@@ -114,10 +144,24 @@ export default function SubscriptionPage({
     const priceId = plan.stripePriceId[billingCycle]
     const mode = plan.custom ? 'payment' : 'subscription'
 
-    try {
-      await createCheckoutSession(priceId, mode, user?.id)
-    } catch (error) {
-      console.error('Erreur lors du paiement:', error)
+    // Détecter si l'utilisateur a déjà un abonnement actif et payant
+    const hasActivePaidSubscription = subscription &&
+                                      subscription.status === 'active' &&
+                                      !currentPlanInfo.isFree
+
+    // Si l'utilisateur a déjà un abonnement payant et veut changer de plan
+    if (hasActivePaidSubscription && !plan.custom) {
+      // Stocker le plan sélectionné et ouvrir le modal de confirmation
+      setPendingPlan(plan)
+      setShowChangePlanModal(true)
+      return
+    } else {
+      // Créer un nouvel abonnement (comportement actuel)
+      try {
+        await createCheckoutSession(priceId, mode, user?.id)
+      } catch (error) {
+        console.error('Erreur lors du paiement:', error)
+      }
     }
   }
 
@@ -128,6 +172,70 @@ export default function SubscriptionPage({
     } catch (error) {
       console.error('Erreur lors de l\'annulation:', error)
       // Ici on pourrait afficher une notification d'erreur
+    }
+  }
+
+  // Vérifier si l'utilisateur peut downgrader vers le plan gratuit
+  const canDowngrade = () => {
+    // Pas d'abonnement ou plan déjà gratuit
+    if (!subscription || currentPlanInfo.isFree) {
+      return false
+    }
+
+    // Vérifier que le status est 'active' et pas déjà marqué pour annulation
+    return subscription.status === 'active' && !subscription.cancel_at_period_end
+  }
+
+  const handleDowngradeToFree = () => {
+    if (!canDowngrade()) {
+      console.error('Impossible de downgrader : aucun abonnement actif annulable')
+      return
+    }
+    resetCancel()
+    setShowDowngradeModal(true)
+  }
+
+  const handleConfirmDowngrade = async () => {
+    try {
+      await cancelWithSync()
+      // La synchronisation est gérée par le hook, le modal se fermera automatiquement
+    } catch (error) {
+      console.error('Erreur lors du downgrade:', error)
+    }
+  }
+
+  const handleCloseDowngradeModal = () => {
+    if (!isCancelling) {
+      setShowDowngradeModal(false)
+      resetCancel()
+    }
+  }
+
+  const handleConfirmPlanChange = async () => {
+    if (!pendingPlan) return
+
+    const priceId = pendingPlan.stripePriceId[billingCycle]
+
+    try {
+      await updateSubscription(priceId)
+
+      // Rafraîchir les données après mise à jour
+      await refreshSubscription()
+      await refreshUserPlan()
+
+      // Le modal se fermera automatiquement après le succès
+      // grâce au useEffect qui détecte updateSuccess
+    } catch (error) {
+      console.error('Erreur lors du changement de plan:', error)
+      // L'erreur sera affichée dans le modal via updateError
+    }
+  }
+
+  const handleCloseChangePlanModal = () => {
+    if (!isUpdating) {
+      setShowChangePlanModal(false)
+      setPendingPlan(null)
+      resetUpdate()
     }
   }
 
@@ -151,7 +259,7 @@ export default function SubscriptionPage({
           </div>
         )}
         {/* Affichage des erreurs Stripe, abonnement, plans et plan utilisateur */}
-        {(stripeError || subscriptionError || plansError || userPlanError) && (
+        {(stripeError || subscriptionError || plansError || userPlanError || updateError) && (
           <div className="mb-8">
             <div className="bg-red-50/70 backdrop-blur-sm border border-red-200 rounded-xl p-4 shadow-sm">
               <div className="flex">
@@ -162,10 +270,10 @@ export default function SubscriptionPage({
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-red-800">
-                    {plansError ? 'Erreur de chargement des plans' : userPlanError ? 'Erreur de chargement du plan utilisateur' : subscriptionError ? 'Erreur d\'abonnement' : 'Erreur de paiement'}
+                    {updateError ? 'Erreur de changement de plan' : plansError ? 'Erreur de chargement des plans' : userPlanError ? 'Erreur de chargement du plan utilisateur' : subscriptionError ? 'Erreur d\'abonnement' : 'Erreur de paiement'}
                   </h3>
                   <div className="mt-2 text-sm text-red-700">
-                    <p>{plansError || userPlanError || subscriptionError || stripeError}</p>
+                    <p>{updateError || plansError || userPlanError || subscriptionError || stripeError}</p>
                   </div>
                 </div>
               </div>
@@ -205,6 +313,8 @@ export default function SubscriptionPage({
                   billingCycle={billingCycle}
                   isCurrentPlan={currentPlanInfo.id === plan.id}
                   onPayment={handlePayment}
+                  hasActiveSubscription={canDowngrade()}
+                  onDowngradeToFree={handleDowngradeToFree}
                 />
               ))}
             </div>
@@ -223,6 +333,49 @@ export default function SubscriptionPage({
           onClose={onCloseSuccessPopup || (() => setLocalShowSuccessPopup(false))}
         />
       )}
+
+      {/* Modal de downgrade vers Freemium */}
+      <CancelSubscriptionModal
+        isOpen={showDowngradeModal}
+        onClose={handleCloseDowngradeModal}
+        onConfirm={handleConfirmDowngrade}
+        nextBillingDate={nextBillingDate}
+        planName={currentPlanInfo.displayName}
+        loading={isCancelling}
+        syncCompleted={syncCompleted}
+        error={cancelError}
+      />
+
+      {/* Modal de changement de plan */}
+      {pendingPlan && (() => {
+        // Trouver le plan actuel complet depuis la liste des plans
+        const currentFullPlan = plans.find(p => p.id === currentPlanInfo.id)
+
+        return currentFullPlan ? (
+          <ChangePlanModal
+            isOpen={showChangePlanModal}
+            onClose={handleCloseChangePlanModal}
+            onConfirm={handleConfirmPlanChange}
+            currentPlan={{
+              name: currentFullPlan.name,
+              price: billingCycle === 'monthly'
+                ? currentFullPlan.price.monthly
+                : currentFullPlan.price.yearly
+            }}
+            newPlan={{
+              name: pendingPlan.name,
+              price: billingCycle === 'monthly'
+                ? pendingPlan.price.monthly
+                : pendingPlan.price.yearly
+            }}
+            billingCycle={billingCycle}
+            loading={isUpdating}
+            success={updateSuccess}
+            error={updateError}
+            cancelAtPeriodEnd={subscription?.cancel_at_period_end || false}
+          />
+        ) : null
+      })()}
     </div>
   )
 }

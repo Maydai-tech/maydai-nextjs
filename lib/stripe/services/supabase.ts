@@ -14,6 +14,7 @@ interface SubscriptionData {
 
 interface SubscriptionUpdateData {
   status?: string
+  plan_id?: string
   current_period_start?: string
   current_period_end?: string
   cancel_at_period_end?: boolean
@@ -64,7 +65,6 @@ async function getPlanUuidFromPriceId(priceId: string | undefined): Promise<stri
     return 'c854ba82-7d81-41fb-b670-d86173b99c1c'
   }
 
-  console.log(`✅ Plan trouvé: ${data.plan_id} (UUID: ${data.id}) pour price_id ${priceId}`)
   return data.id
 }
 
