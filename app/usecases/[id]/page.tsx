@@ -9,6 +9,52 @@ import { UseCaseLayout } from './components/shared/UseCaseLayout'
 import { UseCaseLoader } from './components/shared/UseCaseLoader'
 import { UseCaseDetails } from './components/overview/UseCaseDetails'
 import { UseCaseSidebar } from './components/overview/UseCaseSidebar'
+import { useNextSteps } from './hooks/useNextSteps'
+import { useRiskLevel } from './hooks/useRiskLevel'
+import { useUseCaseScore } from './hooks/useUseCaseScore'
+import { AlertTriangle, RefreshCcw } from 'lucide-react'
+import { getScoreStyle } from '@/lib/score-styles'
+import { RiskLevelBadge } from './components/overview/RiskLevelBadge'
+
+// Fonction utilitaire pour convertir le statut d'entreprise en libellé lisible
+function getCompanyStatusLabel(status?: string): string {
+  switch (status) {
+    case 'utilisateur':
+      return 'Utilisateur (Déployeur)';
+    case 'fabriquant_produits':
+      return 'Fabricant de Produits';
+    case 'fabriquant_systemes':
+      return 'Fabricant de Systèmes';
+    case 'importateur':
+      return 'Importateur';
+    case 'distributeur':
+      return 'Distributeur';
+    case 'deployeur':
+      return 'Déployeur';
+    default:
+      return 'Non spécifié';
+  }
+}
+
+// Fonction utilitaire pour obtenir la définition du statut d'entreprise selon l'AI Act
+function getCompanyStatusDefinition(status?: string): string {
+  switch (status) {
+    case 'utilisateur':
+      return 'Entité qui utilise un système d\'IA dans le cadre de son activité professionnelle. Responsable de l\'utilisation conforme du système.';
+    case 'fabriquant_produits':
+      return 'Entité qui développe et met sur le marché un produit contenant un système d\'IA. Responsable de la conformité du produit.';
+    case 'fabriquant_systemes':
+      return 'Entité qui développe et met sur le marché un système d\'IA autonome. Responsable de la conformité du système.';
+    case 'importateur':
+      return 'Entité qui met sur le marché de l\'UE un système d\'IA ou un produit contenant un système d\'IA provenant d\'un pays tiers.';
+    case 'distributeur':
+      return 'Entité qui met sur le marché un système d\'IA ou un produit contenant un système d\'IA sans en être le fabricant.';
+    case 'deployeur':
+      return 'Entité qui utilise un système d\'IA à haut risque dans le cadre de son activité professionnelle. Responsable de l\'utilisation conforme.';
+    default:
+      return 'Statut d\'entreprise non défini selon l\'AI Act.';
+  }
+}
 
 export default function UseCaseDetailPage() {
   const { user, loading } = useAuth()
@@ -20,6 +66,15 @@ export default function UseCaseDetailPage() {
   // Récupération des données du use case avec état de recalcul
   const { useCase, progress, loading: loadingData, error, updateUseCase, updating, isRecalculating } = useUseCaseData(useCaseId)
   const { goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
+
+  // Hooks pour les sections extraites - seulement si useCase est chargé
+  const { nextSteps, loading: nextStepsLoading, error: nextStepsError } = useNextSteps({
+    usecaseId: useCase?.id || '',
+    useCaseStatus: useCase?.status,
+    useCaseUpdatedAt: useCase?.updated_at
+  })
+  const { riskLevel, loading: riskLoading, error: riskError } = useRiskLevel(useCase?.id || '')
+  const { score, loading: scoreLoading, error: scoreError } = useUseCaseScore(useCase?.id || '')
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -73,16 +128,298 @@ export default function UseCaseDetailPage() {
       onUpdateUseCase={updateUseCase}
       updating={updating}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-        {/* Main Content */}
-        <UseCaseDetails 
-          useCase={useCase} 
-          onUpdateUseCase={updateUseCase}
-          updating={updating}
-        />
+      <div className="space-y-6 sm:space-y-8">
+        {/* Grid principal avec contenu et sidebar */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+          {/* Main Content */}
+          <UseCaseDetails 
+            useCase={useCase} 
+            onUpdateUseCase={updateUseCase}
+            updating={updating}
+          />
 
-        {/* Sidebar avec transmission de l'état de recalcul */}
-        <UseCaseSidebar useCase={useCase} onUpdateUseCase={updateUseCase} isRecalculating={isRecalculating} />
+          {/* Sidebar avec transmission de l'état de recalcul */}
+          <UseCaseSidebar useCase={useCase} onUpdateUseCase={updateUseCase} isRecalculating={isRecalculating} />
+        </div>
+
+        {/* Sections en pleine largeur */}
+        <div className="space-y-6 sm:space-y-8">
+          {/* Rapport d'Audit Préliminaire */}
+          <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              Rapport d'Audit Préliminaire
+            </h2>
+            
+            <div className="prose prose-gray max-w-none">
+              <p className="text-base leading-relaxed text-gray-800 mb-4">
+                Ce rapport réalisé par l'entreprise <strong className="text-[#0080a3]">{useCase.companies?.name || '[Nom de l\'entreprise]'}</strong> présente les conclusions d'un audit préliminaire du système d'IA <strong className="text-[#0080a3]">{useCase.name || '[Nom du système]'}</strong> au regard des exigences du règlement (UE) 2024/1689 du Parlement européen et du Conseil du 13 juin 2024 établissant des règles harmonisées concernant l'intelligence artificielle « AI Act ».
+              </p>
+              
+              <p className="text-base leading-relaxed text-gray-800 mb-4">
+                <strong>Statut de l'entreprise :</strong> <span className="text-[#0080a3]">{getCompanyStatusLabel(useCase.company_status)}</span>
+              </p>
+              
+              <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg border mb-4">
+                <p className="font-medium text-gray-800 mb-2">Définition IA Act :</p>
+                <p className="text-gray-700 leading-relaxed">{getCompanyStatusDefinition(useCase.company_status)}</p>
+              </div>
+              
+              <p className="text-base leading-relaxed text-gray-800 mb-4">
+                <strong>Résumé du cas d'usage :</strong> {useCase.description || '[Description du cas d\'usage]'}
+              </p>
+              
+              <p className="text-base leading-relaxed text-gray-800 mb-4">
+                L'objectif de cet audit préliminaire est d'identifier les domaines de conformité actuels et les lacunes, afin de proposer des actions correctives immédiates (quick wins) et des plans d'action à moyen et long terme, en soulignant les spécificités des grands modèles linguistiques (LLM) et de leur transparence.
+              </p>
+              
+              <p className="text-base leading-relaxed text-gray-800 mb-4">
+                Une partie des conclusions de cette évaluation est basée sur les tests effectués par l'équipe MayDAI sur les principaux LLM dont <strong className="text-[#0080a3]">{useCase.compl_ai_models?.model_name || useCase.llm_model_version || '[Nom du modèle utilisé]'}</strong>. Si certaines lacunes en matière de robustesse, de sécurité, de diversité et d'équité peuvent être relevées, d'autres informations demandées par l'AI Act ne sont pas encore disponibles (ou transmises par les technologies concernées).
+              </p>
+              
+              <p className="text-base leading-relaxed text-gray-800">
+                Ce rapport vise à fournir une feuille de route aux entreprises pour naviguer dans ce paysage réglementaire complexe.
+              </p>
+            </div>
+          </div>
+
+          {/* Classification du système d'IA */}
+          <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              Classification du système d'IA
+            </h2>
+            
+            <div className="prose prose-gray max-w-none">
+              <p className="text-base leading-relaxed text-gray-800 mb-6">
+                L'AI Act adopte une approche fondée sur les risques, classifiant les systèmes d'IA en différentes catégories selon leur niveau de risque. Cette classification détermine les obligations réglementaires applicables.
+              </p>
+              
+              {/* Badges de classification et score */}
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                {/* Badge Niveau IA Act */}
+                <div className="flex-1">
+                  <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
+                    <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full mr-2"></div>
+                      Niveau IA Act
+                    </h3>
+                    <RiskLevelBadge 
+                      riskLevel={riskLevel} 
+                      loading={riskLoading} 
+                      error={riskError}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+                
+                {/* Badge Score de conformité */}
+                <div className="flex-1">
+                  {scoreLoading ? (
+                    <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                        Score de conformité
+                      </h3>
+                      <div className="relative">
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                          <div className="text-center">
+                            <div className="text-3xl font-bold text-blue-600 mb-2 animate-pulse">--</div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-blue-600 mt-2 flex items-center justify-center">
+                          <RefreshCcw className="h-3 w-3 mr-1 animate-spin" />
+                          Recalcul en cours...
+                        </div>
+                      </div>
+                    </div>
+                  ) : scoreError || !score ? (
+                    <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
+                        Score de conformité
+                      </h3>
+                      <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 text-center border border-gray-200">
+                        <div className="text-3xl font-bold text-gray-400 mb-2">--</div>
+                        <div className="text-xs text-gray-500">Non disponible</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
+                      <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                        <div className={`w-2 h-2 rounded-full mr-2 ${getScoreStyle(score.score).indicator}`}></div>
+                        Score de conformité
+                      </h3>
+                      
+                      <div className={`${getScoreStyle(score.score).bg} rounded-xl p-4 border ${getScoreStyle(score.score).border} ${getScoreStyle(score.score).shadow} shadow-sm hover:shadow-md transition-all duration-200`}>
+                        <div className="text-center">
+                          <div className={`text-3xl font-bold ${getScoreStyle(score.score).text} mb-2`}>
+                            {Math.round(score.score)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recommandations et plan d'action */}
+          <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-6">
+              Recommandations et plan d'action
+            </h2>
+            
+            {nextStepsLoading && (
+              <div className="text-center py-8">
+                <div className="animate-spin h-8 w-8 border-4 border-[#0080a3] border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-gray-600">Chargement des recommandations...</p>
+              </div>
+            )}
+
+            {nextStepsError && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex">
+                  <svg className="w-5 h-5 text-red-400 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <h3 className="text-sm font-medium text-red-800">Erreur</h3>
+                    <p className="text-sm text-red-700 mt-1">{nextStepsError}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {nextSteps && (
+              <div className="space-y-6">
+                {/* Évaluation du niveau de risque AI Act */}
+                {nextSteps.evaluation && (
+                  <div className="mb-8">
+                    <div className="flex items-center gap-3 mb-4">
+                      <img 
+                        src="/icons/low-performance.png" 
+                        alt="Évaluation du risque" 
+                        width={24} 
+                        height={24} 
+                        className="flex-shrink-0"
+                      />
+                      <h3 className="text-xl font-semibold text-gray-900">Évaluation du niveau de risque AI Act</h3>
+                    </div>
+                    <div className="prose prose-gray max-w-none">
+                      <p className="text-base leading-relaxed text-gray-700 whitespace-pre-line">
+                        {nextSteps.evaluation}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Priorités d'actions réglementaires */}
+                {nextSteps.priorite_1 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <img 
+                        src="/icons/attention.png" 
+                        alt="Actions prioritaires" 
+                        width={24} 
+                        height={24} 
+                        className="flex-shrink-0"
+                      />
+                      <h3 className="text-xl font-semibold text-gray-900">Il est impératif de mettre en œuvre les mesures suivantes :</h3>
+                    </div>
+                    <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Les 3 priorités d'actions réglementaires</h4>
+                    <ul className="space-y-2 mb-4 ml-4">
+                      {[nextSteps.priorite_1, nextSteps.priorite_2, nextSteps.priorite_3]
+                        .filter(Boolean)
+                        .map((action, index) => (
+                          <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
+                            <span className="text-[#0080a3] mr-2 text-6xl">•</span>
+                            <span className="flex-1">
+                              {action}
+                            </span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Quick wins */}
+                {nextSteps.quick_win_1 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <img 
+                        src="/icons/work-in-progress.png" 
+                        alt="Actions rapides" 
+                        width={24} 
+                        height={24} 
+                        className="flex-shrink-0"
+                      />
+                      <h3 className="text-xl font-semibold text-gray-900">Trois actions concrètes à mettre en œuvre rapidement :</h3>
+                    </div>
+                    <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Quick wins & actions immédiates recommandées</h4>
+                    <ul className="space-y-2 mb-4 ml-4">
+                      {[nextSteps.quick_win_1, nextSteps.quick_win_2, nextSteps.quick_win_3]
+                        .filter(Boolean)
+                        .map((action, index) => (
+                          <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
+                            <span className="text-[#0080a3] mr-2 text-6xl">•</span>
+                            <span className="flex-1">
+                              {action}
+                            </span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Actions moyen terme */}
+                {nextSteps.action_1 && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <img 
+                        src="/icons/schedule.png" 
+                        alt="Actions à moyen terme" 
+                        width={24} 
+                        height={24} 
+                        className="flex-shrink-0"
+                      />
+                      <h3 className="text-xl font-semibold text-gray-900">Trois actions structurantes à mener dans les 3 à 6 mois :</h3>
+                    </div>
+                    <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Actions à moyen terme</h4>
+                    <ul className="space-y-2 mb-4 ml-4">
+                      {[nextSteps.action_1, nextSteps.action_2, nextSteps.action_3]
+                        .filter(Boolean)
+                        .map((action, index) => (
+                          <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
+                            <span className="text-[#0080a3] mr-2 text-6xl">•</span>
+                            <span className="flex-1">
+                              {action}
+                            </span>
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Impact attendu */}
+                {nextSteps.impact && (
+                  <div>
+                    <div className="flex items-center gap-3 mb-4">
+                      <img 
+                        src="/icons/administrative-law.png" 
+                        alt="Impact attendu" 
+                        width={24} 
+                        height={24} 
+                        className="flex-shrink-0"
+                      />
+                      <h3 className="text-xl font-semibold text-gray-900">Impact attendu</h3>
+                    </div>
+                    <p className="text-base leading-relaxed text-gray-800">{nextSteps.impact}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </UseCaseLayout>
   )

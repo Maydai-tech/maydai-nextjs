@@ -12,7 +12,7 @@ export const useCaseRoutes = {
 export const useCaseNavigation = [
   {
     key: 'overview',
-    label: 'Aperçu',
+    label: 'Synthèse',
     href: (id: string) => useCaseRoutes.overview(id)
   },
   {

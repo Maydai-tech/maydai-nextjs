@@ -17,7 +17,7 @@ export function useRiskLevel(useCaseId: string): UseRiskLevelReturn {
   const [error, setError] = useState<string | null>(null)
 
   const fetchRiskLevel = useCallback(async () => {
-    if (!session?.access_token || !useCaseId) {
+    if (!session?.access_token || !useCaseId || useCaseId === '') {
       setLoading(false)
       return
     }
