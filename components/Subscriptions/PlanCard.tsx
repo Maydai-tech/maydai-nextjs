@@ -9,9 +9,11 @@ interface PlanCardProps {
   billingCycle: 'monthly' | 'yearly'
   isCurrentPlan: boolean
   onPayment: (plan: MaydAIPlan) => void
+  hasActiveSubscription?: boolean
+  onDowngradeToFree?: () => void
 }
 
-export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment }: PlanCardProps) {
+export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment, hasActiveSubscription = false, onDowngradeToFree }: PlanCardProps) {
   const getPlanColor = (color: string) => {
     switch (color) {
       case 'blue':
@@ -120,7 +122,14 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment 
         {/* Action Button */}
         <div className="mb-6">
           <button
-            onClick={() => onPayment(plan)}
+            onClick={() => {
+              // Si l'utilisateur a un abonnement actif et clique sur le plan gratuit, déclencher le downgrade
+              if (isFree && hasActiveSubscription && !isCurrentPlan && onDowngradeToFree) {
+                onDowngradeToFree()
+              } else {
+                onPayment(plan)
+              }
+            }}
             disabled={isCurrentPlan}
             className={`w-full text-center font-bold py-3 px-6 rounded-lg transition-all duration-300 ${
               isCurrentPlan
@@ -129,8 +138,10 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment 
             }`}
           >
             {isCurrentPlan ? 'Plan actuel' :
+             isFree && hasActiveSubscription ? 'Revenir au gratuit' :
              isFree ? 'Choisir' :
-             isCustom ? 'Attachez vos ceintures !' : 'Choisir'}
+             isCustom ? 'Attachez vos ceintures !' :
+             hasActiveSubscription ? 'Changer de plan' : 'Choisir'}
           </button>
         </div>
 
