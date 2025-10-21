@@ -127,3 +127,29 @@ export async function canCancelSubscription(subscriptionId: string): Promise<boo
     return false
   }
 }
+
+/**
+ * Réactive un abonnement Stripe marqué pour annulation
+ *
+ * @param subscriptionId - ID de l'abonnement Stripe à réactiver
+ * @returns Promise avec les détails de l'abonnement réactivé
+ */
+export async function reactivateStripeSubscription(subscriptionId: string) {
+  try {
+    const stripe = getStripeClient()
+
+    // Réactiver l'abonnement en annulant la demande d'annulation
+    const reactivatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: false
+    })
+
+    return {
+      success: true,
+      message: 'Abonnement réactivé avec succès',
+      subscription: reactivatedSubscription
+    }
+  } catch (error: any) {
+    console.error('❌ Erreur lors de la réactivation de l\'abonnement:', error)
+    throw new Error('Erreur lors de la réactivation de l\'abonnement: ' + error.message)
+  }
+}

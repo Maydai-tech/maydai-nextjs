@@ -372,6 +372,7 @@ export default function SubscriptionPage({
             loading={isUpdating}
             success={updateSuccess}
             error={updateError}
+            cancelAtPeriodEnd={subscription?.cancel_at_period_end || false}
           />
         ) : null
       })()}

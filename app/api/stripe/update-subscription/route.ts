@@ -24,11 +24,9 @@ async function getPlanUuidFromPriceId(priceId: string, request: NextRequest): Pr
     .single()
 
   if (error || !data) {
-    console.warn(`⚠️ Plan non trouvé pour price_id ${priceId}`)
     return null
   }
 
-  console.log(`✅ Plan trouvé: ${data.plan_id} (UUID: ${data.id}) pour price_id ${priceId}`)
   return data.id
 }
 
@@ -106,27 +104,39 @@ export async function POST(request: NextRequest) {
 
     const subscriptionItemId = stripeSubscription.items.data[0].id
 
+    // Préparer les paramètres de mise à jour
+    const updateParams: any = {
+      items: [{
+        id: subscriptionItemId,
+        price: newPriceId,
+      }],
+      proration_behavior: 'create_prorations', // Calcul automatique du prorata
+    }
+
+    // Si l'abonnement est marqué pour annulation, le réactiver
+    if (stripeSubscription.cancel_at_period_end) {
+      updateParams.cancel_at_period_end = false
+    }
+
     // Modifier l'abonnement dans Stripe
     const updatedSubscription = await stripe.subscriptions.update(
       subscription.stripe_subscription_id,
-      {
-        items: [{
-          id: subscriptionItemId,
-          price: newPriceId,
-        }],
-        proration_behavior: 'create_prorations', // Calcul automatique du prorata
-      }
+      updateParams
     )
 
-    console.log('✅ Abonnement Stripe mis à jour:', updatedSubscription.id)
-
-    // Mettre à jour le plan_id dans Supabase
-    await updateSubscription(subscription.stripe_subscription_id, {
+    // Préparer les données de mise à jour pour Supabase
+    const supabaseUpdateData: any = {
       plan_id: newPlanUuid,
       updated_at: new Date().toISOString()
-    })
+    }
 
-    console.log('✅ Abonnement Supabase mis à jour avec le nouveau plan_id')
+    // Si l'abonnement a été réactivé, mettre à jour également cancel_at_period_end dans Supabase
+    if (stripeSubscription.cancel_at_period_end) {
+      supabaseUpdateData.cancel_at_period_end = false
+    }
+
+    // Mettre à jour le plan_id et éventuellement cancel_at_period_end dans Supabase
+    await updateSubscription(subscription.stripe_subscription_id, supabaseUpdateData)
 
     // Calculer le montant du prorata si disponible
     const latestInvoice = updatedSubscription.latest_invoice
