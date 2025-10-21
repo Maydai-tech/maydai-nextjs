@@ -9,7 +9,7 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
   const { user, session } = useAuth()
 
   const fetchScore = async () => {
-    if (!user || !usecaseId) return
+    if (!user || !usecaseId || usecaseId === '') return
 
     setLoading(true)
     setError(null)
@@ -60,7 +60,7 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
   }
 
   const recalculateScore = async () => {
-    if (!user || !usecaseId) return
+    if (!user || !usecaseId || usecaseId === '') return
 
     setLoading(true)
     setError(null)

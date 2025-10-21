@@ -27,7 +27,7 @@ export function useNextSteps({ usecaseId, useCaseStatus, useCaseUpdatedAt }: Use
 
   // Récupérer les next steps existants
   const fetchNextSteps = useCallback(async () => {
-    if (!usecaseId) return
+    if (!usecaseId || usecaseId === '') return
 
     setLoading(true)
     setError(null)
