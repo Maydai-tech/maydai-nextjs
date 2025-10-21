@@ -73,12 +73,39 @@ export async function POST(request: NextRequest) {
 
       case 'customer.subscription.updated':
         const updatedSubscription = event.data.object as Stripe.Subscription
-        console.log(`🔄 Webhook: Mise à jour abonnement ${updatedSubscription.id}`)
-        console.log(`   - Status: ${updatedSubscription.status}`)
-        console.log(`   - Cancel at period end: ${updatedSubscription.cancel_at_period_end}`)
         try {
+          // Récupérer le plan_id depuis le price_id si le plan a changé
+          let planUuid: string | undefined = undefined
+          const priceId = updatedSubscription.items.data[0]?.price.id
+
+          if (priceId) {
+            const { createClient } = await import('@supabase/supabase-js')
+            const supabase = createClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL!,
+              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            )
+
+            const isTestMode = process.env.NODE_ENV === 'development' ||
+                              process.env.NEXT_PUBLIC_STRIPE_TEST_MODE === 'true'
+
+            const { data: planData } = await supabase
+              .from('plans')
+              .select('id, plan_id')
+              .or(
+                isTestMode
+                  ? `test_stripe_price_id_monthly.eq.${priceId},test_stripe_price_id_yearly.eq.${priceId}`
+                  : `stripe_price_id_monthly.eq.${priceId},stripe_price_id_yearly.eq.${priceId}`
+              )
+              .single()
+
+            if (planData) {
+              planUuid = planData.id
+            }
+          }
+
           await updateSubscription(updatedSubscription.id, {
             status: updatedSubscription.status,
+            ...(planUuid && { plan_id: planUuid }),
             current_period_start: (updatedSubscription as any).current_period_start
               ? new Date((updatedSubscription as any).current_period_start * 1000).toISOString()
               : new Date().toISOString(),
