@@ -20,6 +20,7 @@ export interface PlanFromDB {
   price_yearly: number
   max_registries: number
   max_collaborators: number
+  max_usecases_per_registry: number | null
   display_order: number
   created_at: string
   updated_at: string
@@ -44,6 +45,7 @@ export interface MaydAIPlan {
   custom?: boolean
   maxRegistries?: number
   maxCollaborators?: number
+  maxUseCasesPerRegistry?: number
 }
 
 // Mapping des icônes et couleurs par défaut selon le plan_id
@@ -56,7 +58,7 @@ const PLAN_STYLES: Record<string, { icon: string; color: string }> = {
 /**
  * Génère dynamiquement les features d'un plan en fonction des limites définies dans la DB
  */
-function generateDynamicFeatures(maxRegistries: number, maxCollaborators: number): string[] {
+function generateDynamicFeatures(maxRegistries: number, maxCollaborators: number, maxUseCasesPerRegistry: number | null): string[] {
   const registriesText = maxRegistries === 1
     ? '1 registre IA Act'
     : `${maxRegistries} registres IA Act`
@@ -65,9 +67,16 @@ function generateDynamicFeatures(maxRegistries: number, maxCollaborators: number
     ? '1 collaborateur'
     : `${maxCollaborators} collaborateurs`
 
+  const useCasesText = maxUseCasesPerRegistry === null || maxUseCasesPerRegistry === -1
+    ? 'Cas d\'usage illimités'
+    : maxUseCasesPerRegistry === 1
+    ? '1 cas d\'usage par registre'
+    : `${maxUseCasesPerRegistry} cas d\'usage par registre`
+
   return [
     registriesText,
-    collaboratorsText
+    collaboratorsText,
+    useCasesText
   ]
 }
 
@@ -103,7 +112,7 @@ export async function fetchPlans(): Promise<MaydAIPlan[]> {
  */
 export function mapDBPlanToMaydAIPlan(planDB: PlanFromDB): MaydAIPlan {
   const styles = PLAN_STYLES[planDB.plan_id] || PLAN_STYLES.starter
-  const features = generateDynamicFeatures(planDB.max_registries, planDB.max_collaborators)
+  const features = generateDynamicFeatures(planDB.max_registries, planDB.max_collaborators, planDB.max_usecases_per_registry)
 
   // Utiliser les price IDs de test en environnement de développement
   const isTestMode = process.env.NODE_ENV === 'development' ||
@@ -129,7 +138,8 @@ export function mapDBPlanToMaydAIPlan(planDB: PlanFromDB): MaydAIPlan {
     popular: planDB.plan_id === 'pro',
     custom: planDB.plan_id === 'corporate',
     maxRegistries: planDB.max_registries,
-    maxCollaborators: planDB.max_collaborators
+    maxCollaborators: planDB.max_collaborators,
+    maxUseCasesPerRegistry: planDB.max_usecases_per_registry ?? undefined
   }
 }
 

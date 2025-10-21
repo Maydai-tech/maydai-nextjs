@@ -41,7 +41,8 @@ export function useUserPlan(): UseUserPlanReturn {
     description: 'Plan gratuit',
     isFree: true,
     maxRegistries: 1,
-    maxCollaborators: 0
+    maxCollaborators: 0,
+    maxUseCasesPerRegistry: 3
   })
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -62,7 +63,8 @@ export function useUserPlan(): UseUserPlanReturn {
         description: 'Plan gratuit',
         isFree: true,
         maxRegistries: 1,
-        maxCollaborators: 0
+        maxCollaborators: 0,
+        maxUseCasesPerRegistry: 3
       })
       setHasActiveSubscription(false)
       setLoading(false)
@@ -99,7 +101,8 @@ export function useUserPlan(): UseUserPlanReturn {
         description: 'Plan gratuit',
         isFree: true,
         maxRegistries: 1,
-        maxCollaborators: 0
+        maxCollaborators: 0,
+        maxUseCasesPerRegistry: 3
       })
       setHasActiveSubscription(false)
     } finally {
