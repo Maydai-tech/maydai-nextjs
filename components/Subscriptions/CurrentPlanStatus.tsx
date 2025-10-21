@@ -47,11 +47,9 @@ export default function CurrentPlanStatus({
   // Fermer le modal et rafraîchir quand la synchronisation est terminée
   React.useEffect(() => {
     if (syncCompleted && showCancelModal) {
-      setTimeout(() => {
-        setShowCancelModal(false)
-        onCancelSuccess?.() // Rafraîchir les données parent
-        reset() // Réinitialiser pour la prochaine fois
-      }, 2000) // Laisser 2 secondes pour voir le message de succès
+      setShowCancelModal(false)
+      onCancelSuccess?.() // Rafraîchir les données parent
+      reset() // Réinitialiser pour la prochaine fois
     }
   }, [syncCompleted, showCancelModal, onCancelSuccess, reset])
 
