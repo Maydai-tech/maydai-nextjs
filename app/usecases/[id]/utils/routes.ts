@@ -16,14 +16,14 @@ export const useCaseNavigation = [
     href: (id: string) => useCaseRoutes.overview(id)
   },
   {
-    key: 'rapport',
-    label: 'Rapport',
-    href: (id: string) => useCaseRoutes.rapport(id)
-  },
-  {
     key: 'conformite',
     label: 'Conformité',
     href: (id: string) => useCaseRoutes.conformite(id)
+  },
+  {
+    key: 'rapport',
+    label: 'Actions',
+    href: (id: string) => useCaseRoutes.rapport(id)
   },
   {
     key: 'annexes',

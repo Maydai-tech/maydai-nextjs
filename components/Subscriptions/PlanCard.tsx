@@ -52,7 +52,7 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment 
 
   // Check Icon component inspired by the tarifs page
   const CheckIcon = () => (
-    <svg className="w-6 h-6 text-[#0080a3] mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <svg className="w-5 h-5 text-[#0080a3] mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
     </svg>
   )
@@ -60,9 +60,7 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment 
   return (
     <div
       className={`relative bg-white/70 backdrop-blur-sm rounded-2xl shadow-sm border-2 transition-all duration-300 hover:shadow-xl hover:scale-[1.02] flex flex-col h-full ${
-        isCurrentPlan
-          ? 'border-[#0080A3] ring-2 ring-[#0080A3]/20'
-          : isPopular
+        isPopular
           ? 'border-[#0080A3] shadow-2xl'
           : 'border-gray-100'
       }`}
@@ -114,8 +112,8 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment 
           )}
         </div>
         
-        {/* Description avec hauteur flexible */}
-        <div className="mb-6 flex-grow-0">
+        {/* Description avec hauteur fixe pour aligner les boutons */}
+        <div className="mb-6 h-40 flex items-center justify-center">
           <p className="text-gray-600 text-center leading-relaxed">{plan.description}</p>
         </div>
 
@@ -123,29 +121,28 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment 
         <div className="mb-6">
           <button
             onClick={() => onPayment(plan)}
-            className={`w-full text-center font-bold py-3 px-6 rounded-lg transition-all duration-300 hover:scale-[1.02] ${
+            disabled={isCurrentPlan}
+            className={`w-full text-center font-bold py-3 px-6 rounded-lg transition-all duration-300 ${
               isCurrentPlan
-                ? 'bg-[#0080A3] text-white hover:bg-[#006d8a] shadow-lg hover:shadow-xl'
-                : isPopular
-                ? 'bg-[#0080A3] text-white hover:bg-[#006d8a] shadow-lg hover:shadow-xl'
-                : 'bg-white/80 text-[#0080A3] border border-[#0080A3] hover:bg-[#0080A3]/10 hover:shadow-md'
+                ? 'bg-white/80 text-[#0080A3] border border-[#0080A3] cursor-not-allowed opacity-70'
+                : 'hover:scale-[1.02] bg-[#0080A3] text-white hover:bg-[#006d8a] shadow-lg hover:shadow-xl'
             }`}
           >
-            {isCurrentPlan ? 'Plan actuel' : 
-             isFree ? 'Commencer' :
-             isCustom ? 'Attachez vos ceintures !' : 'C\'est parti !'}
+            {isCurrentPlan ? 'Plan actuel' :
+             isFree ? 'Choisir' :
+             isCustom ? 'Attachez vos ceintures !' : 'Choisir'}
           </button>
         </div>
-        
+
         <hr className="my-4" />
-        
+
         {/* Features - prend l'espace restant */}
         <div className="flex-grow">
           <ul className="space-y-3">
             {plan.features.map((feature, index) => (
-              <li key={index} className="flex items-start">
+              <li key={index} className="flex items-center">
                 <CheckIcon />
-                <span className="text-gray-700 leading-relaxed">{feature}</span>
+                <span className="text-sm font-semibold text-gray-700 leading-relaxed whitespace-nowrap">{feature}</span>
               </li>
             ))}
           </ul>

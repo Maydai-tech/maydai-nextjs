@@ -1,22 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/lib/auth'
-import {
-  Shield,
-  BarChart3,
-  Download,
-  Bell,
-  CheckCircle
-} from 'lucide-react'
-import Image from 'next/image'
-import PlanCard from '@/components/Subscriptions/PlanCard'
-import CurrentPlanStatus from '@/components/Subscriptions/CurrentPlanStatus'
-import BillingToggle from '@/components/Subscriptions/BillingToggle'
-import { useStripe } from '@/app/abonnement/hooks/useStripe'
-import { getPlans } from '@/lib/stripe/config/plans'
-import type { MaydAIPlan } from '@/lib/stripe/types'
+import { CheckCircle } from 'lucide-react'
 
 interface SuccessPaymentPopupProps {
   onClose: () => void

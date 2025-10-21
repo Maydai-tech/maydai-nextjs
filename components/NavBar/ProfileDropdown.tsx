@@ -4,10 +4,12 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { User as UserIcon, Settings, LogOut } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
+import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 
 export default function ProfileDropdown() {
   const [isOpen, setIsOpen] = useState(false)
   const { user, signOut } = useAuth()
+  const { plan } = useUserPlan()
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -69,9 +71,16 @@ export default function ProfileDropdown() {
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 animate-in fade-in-0 zoom-in-95 duration-200">
           {/* Info utilisateur */}
           {user?.email && (
-            <div className="px-4 py-2 border-b border-gray-100 flex items-center">
-              <UserIcon className="h-4 w-4 mr-3 text-gray-400" />
-              <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
+            <div className="px-4 py-2 border-b border-gray-100">
+              <div className="flex items-center mb-1">
+                <UserIcon className="h-4 w-4 mr-3 text-gray-400" />
+                <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
+              </div>
+              <div className="ml-7">
+                <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-[#0080A3]/10 text-[#0080A3]">
+                  {plan.displayName}
+                </span>
+              </div>
             </div>
           )}
 

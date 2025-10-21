@@ -1,174 +1,65 @@
 /**
  * Configuration centralisée des plans Stripe MaydAI
- * 
+ *
  * Ce fichier contient :
- * - Définition des plans de production et de test
  * - Mapping price_id → plan_id pour les webhooks
  * - Fonctions utilitaires pour récupérer les plans
+ * - Les plans sont maintenant récupérés depuis l'API /api/plans
  */
 
 import { MaydAIPlan } from '@/lib/stripe/types'
+import { fetchPlans } from '@/lib/api/plans'
 
-// ==================== PLANS DE PRODUCTION ====================
-
-export const PRODUCTION_PLANS: MaydAIPlan[] = [
-  {
-    id: 'starter',
-    name: 'La Mise en Bouche',
-    description: 'Vous souhaitez agir tout de suite, vous mettre en conformité ou tester des projets IA.',
-    price: { monthly: 0, yearly: 0 },
-    stripePriceId: {
-      monthly: 'price_1SA8wX1ALRgJSDBxK8g4bH8q', // Gratuit (PRICE ID)
-      yearly: 'price_1SA8wX1ALRgJSDBxK8g4bH8q'   // Gratuit (PRICE ID)
-    },
-    icon: 'level-up.png',
-    color: 'blue',
-    features: [
-      '1 registre IA Act',
-      '1 Dashboard Entreprise',
-      "6 cas d'usage IA disponibles",
-      "6 modèles de cas d'usage disponibles",
-      '3 invitations pour collaborer',
-      'Support Email'
-    ],
-    limitations: [],
-    free: true
-  },
-  {
-    id: 'pro',
-    name: 'Le Lève-tôt',
-    description: "Vous avez la volonté de centraliser et d'évaluer tous les cas d'usages de votre entreprise et/ou de ses filiales.",
-    price: { monthly: 10, yearly: 100 },
-    stripePriceId: {
-      monthly: 'price_1SA8t21ALRgJSDBxFaYrH1d7', // 10€/mois (PRICE ID)
-      yearly: 'price_1SA8v81ALRgJSDBx0CDPDcid'   // 100€/an (PRICE ID)
-    },
-    icon: 'le-coucher-du-soleil.png',
-    color: 'purple',
-    features: [
-      '1 super registre IA Act',
-      '3 registres IA Act',
-      '4 Dashboards Entreprise',
-      "12 cas d'usage IA disponibles",
-      "12 modèles de cas d'usage disponibles",
-      '6 invitations pour collaborer',
-      'Support prioritaire'
-    ],
-    limitations: [],
-    popular: true
-  },
-  {
-    id: 'enterprise',
-    name: 'Le Pilote',
-    description: "Devis entreprise: Vous avez besoin d'être accompagné en matière de formation, de création d'audit IA act et de registre entreprise.",
-    price: { monthly: 1000, yearly: 10000 },
-    stripePriceId: {
-      monthly: 'price_1SA8xx1ALRgJSDBxUrh2lJwg', // 1000€/mois (PRICE ID)
-      yearly: 'price_1SA8xx1ALRgJSDBxUrh2lJwg'   // 1000€/mois (PRICE ID)
-    },
-    icon: 'chapeau-de-pilote.png',
-    color: 'gold',
-    features: [
-      '1 formation sur site',
-      '1 atelier audit IA act',
-      'Création du Dashboard Entreprise',
-      "Cas d'usage IA illimités",
-      'Collaboration illimitée',
-      "Support juridique relecture cas d'usage",
-      'Support prioritaire'
-    ],
-    limitations: [],
-    custom: true
-  }
-]
-
-// ==================== PLANS DE TEST ====================
-
-export const TEST_PLANS: MaydAIPlan[] = [
-  {
-    id: 'starter',
-    name: 'Test Gratuit',
-    description: 'Plan de test gratuit',
-    price: { monthly: 0, yearly: 0 },
-    stripePriceId: { 
-      monthly: 'price_1S8JY316FiJU1KS5V9k250i7',
-      yearly: 'price_1S8JY316FiJU1KS5V9k250i7'
-    },
-    icon: 'level-up.png',
-    color: 'blue',
-    features: [
-      '1 registre IA Act',
-      '1 Dashboard Entreprise',
-      "6 cas d'usage IA disponibles",
-      "6 modèles de cas d'usage disponibles",
-      '3 invitations pour collaborer',
-      'Support Email'
-    ],
-    limitations: [],
-    free: true
-  },
-  {
-    id: 'pro',
-    name: 'Test Pro',
-    description: 'Plan de test Pro - 10€/mois',
-    price: { monthly: 10, yearly: 100 },
-    stripePriceId: { 
-      monthly: 'price_1S8JkN16FiJU1KS5MjGTdcIo',
-      yearly: 'price_1S8JkN16FiJU1KS5L9MBToBM'
-    },
-    icon: 'le-coucher-du-soleil.png',
-    color: 'purple',
-    features: [
-      '1 super registre IA Act',
-      '3 registres IA Act',
-      '4 Dashboards Entreprise',
-      "12 cas d'usage IA disponibles",
-      "12 modèles de cas d'usage disponibles",
-      '6 invitations pour collaborer',
-      'Support prioritaire'
-    ],
-    limitations: [],
-    popular: true
-  },
-  {
-    id: 'enterprise',
-    name: 'Test Enterprise',
-    description: 'Plan de test Enterprise - 1000€/mois',
-    price: { monthly: 1000, yearly: 10000 },
-    stripePriceId: { 
-      monthly: 'price_1S8IL716FiJU1KS5cpmO81Ct',
-      yearly: 'price_1S8IL716FiJU1KS5cpmO81Ct'
-    },
-    icon: 'chapeau-de-pilote.png',
-    color: 'gold',
-    features: [
-      '1 formation sur site',
-      '1 atelier audit IA act',
-      'Création du Dashboard Entreprise',
-      "Cas d'usage IA illimités",
-      'Collaboration illimitée',
-      "Support juridique relecture cas d'usage",
-      'Support prioritaire'
-    ],
-    limitations: [],
-    custom: true
-  }
-]
+// Cache des plans pour éviter les appels répétés
+let plansCache: MaydAIPlan[] | null = null
+let cacheTimestamp: number = 0
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 // ==================== FONCTIONS UTILITAIRES ====================
 
 /**
- * Récupère les plans selon l'environnement (production ou test)
+ * Récupère les plans depuis l'API avec cache
+ * Note: Cette fonction est asynchrone maintenant
  */
-export function getPlans(): MaydAIPlan[] {
-  return process.env.NODE_ENV === 'development' ? TEST_PLANS : PRODUCTION_PLANS
+export async function getPlans(): Promise<MaydAIPlan[]> {
+  const now = Date.now()
+
+  // Utiliser le cache si valide
+  if (plansCache && (now - cacheTimestamp) < CACHE_DURATION) {
+    return plansCache
+  }
+
+  // Récupérer depuis l'API
+  try {
+    const plans = await fetchPlans()
+    plansCache = plans
+    cacheTimestamp = now
+    return plans
+  } catch (error) {
+    console.error('Error fetching plans:', error)
+    // Si le cache existe, l'utiliser même s'il est expiré
+    if (plansCache) {
+      return plansCache
+    }
+    // Sinon, retourner un tableau vide
+    return []
+  }
+}
+
+/**
+ * Version synchrone de getPlans pour les cas où on a besoin d'une valeur immédiate
+ * Retourne le cache ou un tableau vide
+ * @deprecated Utilisez getPlans() qui est maintenant asynchrone
+ */
+export function getPlansSync(): MaydAIPlan[] {
+  return plansCache || []
 }
 
 /**
  * Récupère un plan spécifique par son ID
  */
-export function getPlanById(planId: string): MaydAIPlan | undefined {
-  const plans = getPlans()
+export async function getPlanById(planId: string): Promise<MaydAIPlan | undefined> {
+  const plans = await getPlans()
   return plans.find(plan => plan.id === planId)
 }
 
@@ -176,71 +67,62 @@ export function getPlanById(planId: string): MaydAIPlan | undefined {
  * Détermine le plan_id depuis un price_id Stripe
  * Fonction utilisée par les webhooks pour identifier le plan associé
  */
-export function getPlanIdFromPriceId(priceId: string | undefined): string {
-  if (!priceId) return 'starter'
+export async function getPlanIdFromPriceId(priceId: string | undefined): Promise<string> {
+  if (!priceId) return 'freemium'
 
-  let planId
+  const plans = await getPlans()
+  const plan = plans.find(p => p.stripePriceId.monthly === priceId || p.stripePriceId.yearly === priceId)
 
-  if(process.env.NODE_ENV === 'development') {
-    planId = TEST_PLANS.find(plan => plan.stripePriceId.monthly === priceId || plan.stripePriceId.yearly === priceId)?.id || 'starter'
-  } else {
-    planId = PRODUCTION_PLANS.find(plan => plan.stripePriceId.monthly === priceId || plan.stripePriceId.yearly === priceId)?.id || 'starter'
-  }
-
-  return planId
+  return plan?.id || 'freemium'
 }
 
 /**
  * Récupère un plan par son price_id Stripe
  */
-export function getPlanByPriceId(priceId: string): MaydAIPlan | undefined {
-  const planId = getPlanIdFromPriceId(priceId)
+export async function getPlanByPriceId(priceId: string): Promise<MaydAIPlan | undefined> {
+  const planId = await getPlanIdFromPriceId(priceId)
   return getPlanById(planId)
 }
 
 /**
  * Récupère tous les price_id pour un plan donné
  */
-export function getPriceIdsForPlan(planId: string): { monthly: string; yearly: string } | undefined {
-  const plan = getPlanById(planId)
+export async function getPriceIdsForPlan(planId: string): Promise<{ monthly: string; yearly: string } | undefined> {
+  const plan = await getPlanById(planId)
   return plan?.stripePriceId
 }
 
 /**
  * Vérifie si un price_id est valide
  */
-export function isValidPriceId(priceId: string): boolean {
-    
-  let priceMap: MaydAIPlan | undefined
-
-  if(process.env.NODE_ENV === 'development') {
-    priceMap = TEST_PLANS.find(plan => plan.stripePriceId.monthly === priceId || plan.stripePriceId.yearly === priceId)
-  } else {
-    priceMap = PRODUCTION_PLANS.find(plan => plan.stripePriceId.monthly === priceId || plan.stripePriceId.yearly === priceId)
-  }
-  
+export async function isValidPriceId(priceId: string): Promise<boolean> {
+  const plans = await getPlans()
+  const priceMap = plans.find(plan => plan.stripePriceId.monthly === priceId || plan.stripePriceId.yearly === priceId)
   return priceMap !== undefined
 }
 
 /**
  * Récupère le plan par défaut (gratuit)
  */
-export function getDefaultPlan(): MaydAIPlan {
-  return getPlanById('starter') || getPlans()[0]
+export async function getDefaultPlan(): Promise<MaydAIPlan> {
+  const plans = await getPlans()
+  return plans.find(p => p.id === 'freemium') || plans[0]
 }
 
 /**
  * Récupère tous les plans payants (non gratuits)
  */
-export function getPaidPlans(): MaydAIPlan[] {
-  return getPlans().filter(plan => !plan.free)
+export async function getPaidPlans(): Promise<MaydAIPlan[]> {
+  const plans = await getPlans()
+  return plans.filter(plan => !plan.free)
 }
 
 /**
  * Récupère le plan populaire (recommandé)
  */
-export function getPopularPlan(): MaydAIPlan | undefined {
-  return getPlans().find(plan => plan.popular)
+export async function getPopularPlan(): Promise<MaydAIPlan | undefined> {
+  const plans = await getPlans()
+  return plans.find(plan => plan.popular)
 }
 
 // ==================== CONSTANTES ====================
@@ -248,7 +130,7 @@ export function getPopularPlan(): MaydAIPlan | undefined {
 /**
  * Liste des IDs de plans disponibles
  */
-export const PLAN_IDS = ['starter', 'pro', 'enterprise'] as const
+export const PLAN_IDS = ['freemium', 'starter', 'pro', 'enterprise'] as const
 
 /**
  * Type pour les IDs de plans
