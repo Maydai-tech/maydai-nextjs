@@ -28,7 +28,7 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
               Introduction
             </Text>
             <Text style={[styles.text, { lineHeight: 1.4, fontSize: 9 }]}>
-              {data.nextSteps?.introduction || `${data.useCase.companies?.name || 'L\'entreprise'} a prévu de déployer le ${data.useCase.deployment_date ? new Date(data.useCase.deployment_date).toLocaleDateString('fr-FR') : 'prochainement'} ${data.useCase.name}, un produit basé sur l'IA classé dans les ${data.useCase.ai_category || 'systèmes d\'IA'}. Ce cas d'usage, géré par le service ${data.useCase.responsible_service || 'le service concerné'}, utilise différents modèles dont ${data.useCase.compl_ai_models?.model_name || 'un modèle d\'IA'} de ${data.useCase.compl_ai_models?.model_provider || 'un fournisseur'} pour ${data.useCase.description || 'automatiser diverses tâches'}. Le déploiement concernera ${data.useCase.deployment_countries?.join(', ') || 'la France'}, pays membre de l'Union européenne, ce qui soumet ce cas d'usage à l'AI Act. L'évaluation de conformité indique un niveau de risque ${data.riskLevel.risk_level}, impliquant des obligations spécifiques en matière de transparence et de gestion des risques.`}
+              {data.nextSteps?.introduction || `${data.useCase.companies?.name || 'L\'entreprise'} a prévu de déployer le ${data.useCase.deployment_date ? new Date(data.useCase.deployment_date).toLocaleDateString('fr-FR') : 'prochainement'} ${data.useCase.name}, un produit basé sur l'IA classé dans les ${data.useCase.ai_category || 'systèmes d\'IA'}. Ce cas d'usage, géré par le service ${data.useCase.responsible_service || 'le service concerné'}, utilise différents modèles dont ${data.useCase.compl_ai_models?.model_name || 'un modèle d\'IA'} de ${data.useCase.compl_ai_models?.model_provider || 'un fournisseur'} pour ${data.useCase.description || 'automatiser diverses tâches'}. Le déploiement concernera ${data.useCase.deployment_countries?.join(', ') || 'la France'}, pays membre de l'Union européenne, ce qui soumet ce cas d'usage à l'AI Act. L'évaluation de conformité indique un niveau de risque ${data.riskLevel?.risk_level || 'limited'}, impliquant des obligations spécifiques en matière de transparence et de gestion des risques.`}
             </Text>
           </View>
 
@@ -38,7 +38,7 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
               Évaluation du niveau de risque AI Act
             </Text>
             <Text style={[styles.text, { lineHeight: 1.4, fontSize: 9 }]}>
-              {data.nextSteps?.evaluation || `Le niveau de risque de ${data.useCase.name} est classé comme ${data.riskLevel.risk_level}. Cette évaluation repose sur l'analyse des réponses au questionnaire et des caractéristiques spécifiques du système d'IA. Les obligations réglementaires applicables dépendent de ce niveau de risque et des articles pertinents de l'AI Act.`}
+              {data.nextSteps?.evaluation || `Le niveau de risque de ${data.useCase.name} est classé comme ${data.riskLevel?.risk_level || 'limited'}. Cette évaluation repose sur l'analyse des réponses au questionnaire et des caractéristiques spécifiques du système d'IA. Les obligations réglementaires applicables dépendent de ce niveau de risque et des articles pertinents de l'AI Act.`}
             </Text>
           </View>
 
