@@ -3,7 +3,7 @@
 import { X, AlertCircle, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-interface RegistryLimitModalProps {
+interface UseCaseLimitModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentCount: number;
@@ -11,12 +11,13 @@ interface RegistryLimitModalProps {
   planName: string;
 }
 
-export default function RegistryLimitModal({
+export default function UseCaseLimitModal({
   isOpen,
   onClose,
+  currentCount,
   maxLimit,
   planName
-}: RegistryLimitModalProps) {
+}: UseCaseLimitModalProps) {
   const router = useRouter()
   if (!isOpen) return null;
 
@@ -48,14 +49,14 @@ export default function RegistryLimitModal({
         {/* Content */}
         <div className="mb-6">
           <p className="text-gray-600 mb-4 leading-relaxed">
-            Vous avez atteint la limite de <span className="font-semibold text-gray-900">{maxLimit} {maxLimit === 1 ? 'registre' : 'registres'}</span> autorisée par votre plan <span className="font-semibold text-gray-900">{planName}</span>.
+            Vous avez atteint la limite de <span className="font-semibold text-gray-900">{maxLimit} {maxLimit === 1 ? 'cas d\'usage' : 'cas d\'usage'}</span> par registre autorisée par votre plan <span className="font-semibold text-gray-900">{planName}</span>.
           </p>
 
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <div className="flex items-start space-x-2">
               <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-blue-800">
-                Pour créer plus de registres, vous devez passer à un plan supérieur.
+                Pour créer plus de cas d'usage dans ce registre, vous devez passer à un plan supérieur.
               </div>
             </div>
           </div>

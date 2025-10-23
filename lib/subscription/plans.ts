@@ -23,7 +23,8 @@ function mapMaydAIPlanToPlanInfo(plan: MaydAIPlan): PlanInfo {
     description: plan.description,
     isFree: plan.free || false,
     maxRegistries: plan.maxRegistries,
-    maxCollaborators: plan.maxCollaborators
+    maxCollaborators: plan.maxCollaborators,
+    maxUseCasesPerRegistry: plan.maxUseCasesPerRegistry
   }
 }
 
@@ -63,7 +64,8 @@ async function fetchPlanByUuid(uuid: string): Promise<PlanInfo | null> {
       description: plan.description || '',
       isFree: plan.price_monthly === 0 && plan.price_yearly === 0,
       maxRegistries: plan.max_registries,
-      maxCollaborators: plan.max_collaborators
+      maxCollaborators: plan.max_collaborators,
+      maxUseCasesPerRegistry: plan.max_usecases_per_registry ?? undefined
     }
   } catch (error) {
     console.error('Error fetching plan by UUID:', error)

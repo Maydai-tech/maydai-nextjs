@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
+import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { getProviderIcon } from '@/lib/provider-icons'
 import { 
   ArrowLeft, 
@@ -22,6 +23,7 @@ import {
 import WorldMap from '@/components/WorldMap'
 import ScoreCircle from '@/components/ScoreCircle'
 import DeleteConfirmationModal from '@/app/usecases/[id]/components/DeleteConfirmationModal'
+import UseCaseLimitModal from '@/components/UseCases/UseCaseLimitModal'
 import Image from 'next/image'
 import { getCompactScoreStyle, getSpecialScoreStyles } from '@/lib/score-styles'
 
@@ -78,7 +80,9 @@ export default function CompanyDashboard({ params }: DashboardProps) {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [useCaseToDelete, setUseCaseToDelete] = useState<UseCase | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  
+  const [showUseCaseLimitModal, setShowUseCaseLimitModal] = useState(false)
+  const { plan } = useUserPlan()
+
   // Average score state
   const [averageScore, setAverageScore] = useState<number | null>(null)
   const [loadingScore, setLoadingScore] = useState(true)
@@ -658,13 +662,21 @@ export default function CompanyDashboard({ params }: DashboardProps) {
                     </span>
                   )}
                 </div>
-                <Link
-                  href={`/usecases/new?company=${companyId}`}
+                <button
+                  onClick={() => {
+                    const maxUseCases = plan.maxUseCasesPerRegistry || 3
+
+                    if (useCases.length >= maxUseCases) {
+                      setShowUseCaseLimitModal(true)
+                    } else {
+                      router.push(`/usecases/new?company=${companyId}`)
+                    }
+                  }}
                   className="inline-flex items-center justify-center px-8 py-4 bg-[#0080A3] text-white text-lg font-medium rounded-lg hover:bg-[#006280] transition-colors w-full sm:w-auto"
                 >
                   <Plus className="h-8 w-8 mr-4" />
                   Nouveau cas d'usage
-                </Link>
+                </button>
               </div>
               
               {/* Search Bar */}
@@ -1018,6 +1030,15 @@ export default function CompanyDashboard({ params }: DashboardProps) {
         onConfirm={handleDeleteConfirm}
         useCaseName={useCaseToDelete?.name || ''}
         deleting={isDeleting}
+      />
+
+      {/* Use Case Limit Modal */}
+      <UseCaseLimitModal
+        isOpen={showUseCaseLimitModal}
+        onClose={() => setShowUseCaseLimitModal(false)}
+        currentCount={useCases.length}
+        maxLimit={plan.maxUseCasesPerRegistry || 3}
+        planName={plan.displayName}
       />
     </div>
   )

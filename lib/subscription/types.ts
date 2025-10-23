@@ -27,6 +27,7 @@ export interface PlanInfo {
   isFree: boolean
   maxRegistries?: number
   maxCollaborators?: number
+  maxUseCasesPerRegistry?: number
 }
 
 // Type pour les cycles de facturation

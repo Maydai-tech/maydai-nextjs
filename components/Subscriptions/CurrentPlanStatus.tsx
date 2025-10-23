@@ -3,7 +3,9 @@
 import React, { useState } from 'react'
 import { CreditCard, Calendar, Download, Settings, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
 import CancelSubscriptionModal from './CancelSubscriptionModal'
+import ReactivateSubscriptionModal from './ReactivateSubscriptionModal'
 import { useCancelSubscriptionWithSync } from '@/app/abonnement/hooks/useCancelSubscriptionWithSync'
+import { useReactivateSubscription } from '@/app/abonnement/hooks/useReactivateSubscription'
 
 interface CurrentPlanStatusProps {
   planName: string
@@ -27,7 +29,9 @@ export default function CurrentPlanStatus({
   cancelAtPeriodEnd = false
 }: CurrentPlanStatusProps) {
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [showReactivateModal, setShowReactivateModal] = useState(false)
   const { cancelWithSync, isLoading, syncCompleted, error, reset } = useCancelSubscriptionWithSync()
+  const { reactivateSubscription, isLoading: isReactivating, error: reactivateError, success: reactivateSuccess, reset: resetReactivate } = useReactivateSubscription()
 
   const handleCancelClick = () => {
     reset() // Réinitialiser l'état
@@ -47,11 +51,9 @@ export default function CurrentPlanStatus({
   // Fermer le modal et rafraîchir quand la synchronisation est terminée
   React.useEffect(() => {
     if (syncCompleted && showCancelModal) {
-      setTimeout(() => {
-        setShowCancelModal(false)
-        onCancelSuccess?.() // Rafraîchir les données parent
-        reset() // Réinitialiser pour la prochaine fois
-      }, 2000) // Laisser 2 secondes pour voir le message de succès
+      setShowCancelModal(false)
+      onCancelSuccess?.() // Rafraîchir les données parent
+      reset() // Réinitialiser pour la prochaine fois
     }
   }, [syncCompleted, showCancelModal, onCancelSuccess, reset])
 
@@ -61,6 +63,38 @@ export default function CurrentPlanStatus({
       reset()
     }
   }
+
+  const handleReactivateClick = () => {
+    resetReactivate()
+    setShowReactivateModal(true)
+  }
+
+  const handleConfirmReactivate = async () => {
+    try {
+      await reactivateSubscription()
+      // Le modal se fermera automatiquement après succès
+    } catch (error) {
+      console.error('Erreur lors de la réactivation:', error)
+    }
+  }
+
+  const handleCloseReactivateModal = () => {
+    if (!isReactivating) {
+      setShowReactivateModal(false)
+      resetReactivate()
+    }
+  }
+
+  // Fermer le modal de réactivation et rafraîchir quand le succès est atteint
+  React.useEffect(() => {
+    if (reactivateSuccess && showReactivateModal) {
+      setTimeout(() => {
+        setShowReactivateModal(false)
+        onCancelSuccess?.() // Rafraîchir les données parent
+        resetReactivate()
+      }, 2000) // Fermer après 2s pour montrer le succès
+    }
+  }, [reactivateSuccess, showReactivateModal, onCancelSuccess, resetReactivate])
   return (
     <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-200">
       <div className="flex items-center justify-between">
@@ -74,13 +108,21 @@ export default function CurrentPlanStatus({
               {planName} • Facturation {billingCycle === 'monthly' ? 'mensuelle' : 'annuelle'}
             </p>
             {!isFreePlan && !cancelAtPeriodEnd && (
-            <button
-              onClick={handleCancelClick}
-              className="text-sm text-red-600 hover:text-red-700 transition-colors duration-200 underline"
-            >
-              Annuler mon abonnement
-            </button>
-          )}
+              <button
+                onClick={handleCancelClick}
+                className="text-sm text-red-600 hover:text-red-700 transition-colors duration-200 underline"
+              >
+                Annuler mon abonnement
+              </button>
+            )}
+            {cancelAtPeriodEnd && !isFreePlan && (
+              <button
+                onClick={handleReactivateClick}
+                className="text-sm text-green-600 hover:text-green-700 transition-colors duration-200 underline"
+              >
+                Réactiver mon abonnement
+              </button>
+            )}
           </div>
         </div>
         
@@ -106,7 +148,6 @@ export default function CurrentPlanStatus({
               </>
             )}
           </div>
-
         </div>
       </div>
 
@@ -120,6 +161,18 @@ export default function CurrentPlanStatus({
         loading={isLoading}
         syncCompleted={syncCompleted}
         error={error}
+      />
+
+      {/* Modal de réactivation */}
+      <ReactivateSubscriptionModal
+        isOpen={showReactivateModal}
+        onClose={handleCloseReactivateModal}
+        onConfirm={handleConfirmReactivate}
+        nextBillingDate={nextBillingDate}
+        planName={planName}
+        loading={isReactivating}
+        success={reactivateSuccess}
+        error={reactivateError}
       />
     </div>
   )

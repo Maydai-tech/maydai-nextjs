@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { Mail, LogOut, Settings, X, CreditCard, ArrowLeft, Users } from 'lucide-react'
+import { LogOut, Settings, X, CreditCard, ArrowLeft, Users } from 'lucide-react'
 import NavBar from '@/components/NavBar/NavBar'
-import SubscriptionPage from '@/components/Subscriptions/SubscriptionPage'
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
-import CollaboratorList from '@/components/Collaboration/CollaboratorList'
 import ConfirmRemoveCollaboratorModal from '@/components/Collaboration/ConfirmRemoveCollaboratorModal'
+import GeneralSection from '@/components/Settings/GeneralSection'
+import CollaborationSection from '@/components/Settings/CollaborationSection'
+import SubscriptionSection from '@/components/Settings/SubscriptionSection'
 
 type MenuSection = 'general' | 'collaboration' | 'subscription' | 'logout'
 
@@ -26,95 +27,7 @@ export default function ProfilPage() {
   const [collaborators, setCollaborators] = useState<any[]>([])
   const [loadingCollaborators, setLoadingCollaborators] = useState(false)
 
-  // Prevent hydration mismatch
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // Vérifier le succès du paiement
-  useEffect(() => {
-    if (mounted && searchParams.get('payment_success') === 'true') {
-      setActiveSection('subscription')
-      setShowSuccessPopup(true)
-
-      // Nettoyer l'URL après 100ms
-      const timer = setTimeout(() => {
-        const url = new URL(window.location.href)
-        url.searchParams.delete('payment_success')
-        url.searchParams.delete('session_id')
-        window.history.replaceState({}, '', url.toString())
-      }, 100)
-
-      return () => clearTimeout(timer)
-    }
-  }, [mounted, searchParams])
-
-  useEffect(() => {
-    if (mounted && !loading && !user) {
-      router.push('/login')
-    }
-  }, [user, loading, router, mounted])
-
-  // Show loading state during SSR and initial client load
-  if (!mounted || loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0080A3] mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Chargement...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Redirect if no user
-  if (!user) {
-    return null
-  }
-
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-      router.push('/login')
-    } catch (error) {
-      console.error('Error signing out:', error)
-    }
-  }
-
-  const menuItems = [
-    {
-      id: 'general' as MenuSection,
-      name: 'Général',
-      icon: Settings
-    },
-    {
-      id: 'collaboration' as MenuSection,
-      name: 'Collaboration',
-      icon: Users
-    },
-    {
-      id: 'subscription' as MenuSection,
-      name: 'Abonnement',
-      icon: CreditCard
-    },
-    {
-      id: 'logout' as MenuSection,
-      name: 'Déconnexion',
-      icon: LogOut
-    }
-  ]
-
-  const handleMenuClick = (sectionId: MenuSection) => {
-    if (sectionId === 'logout') {
-      setShowLogoutModal(true)
-    } else {
-      setActiveSection(sectionId)
-      if (sectionId === 'collaboration') {
-        fetchCollaborators()
-      }
-    }
-  }
-
+  // Define functions before useEffect hooks to avoid hoisting issues
   const fetchCollaborators = async () => {
     if (!user) return
 
@@ -209,91 +122,135 @@ export default function ProfilPage() {
     setSelectedCollaborator(null)
   }
 
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Read section parameter from URL and set active section
+  useEffect(() => {
+    if (!mounted) return
+
+    const section = searchParams.get('section')
+    if (section) {
+      const validSections: MenuSection[] = ['general', 'collaboration', 'subscription']
+      if (validSections.includes(section as MenuSection)) {
+        setActiveSection(section as MenuSection)
+
+        // Load collaborators if section is collaboration
+        if (section === 'collaboration') {
+          fetchCollaborators()
+        }
+      }
+    }
+  }, [mounted, searchParams])
+
+  // Vérifier le succès du paiement
+  useEffect(() => {
+    if (mounted && searchParams.get('payment_success') === 'true') {
+      setActiveSection('subscription')
+      setShowSuccessPopup(true)
+
+      // Nettoyer l'URL après 100ms
+      const timer = setTimeout(() => {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('payment_success')
+        url.searchParams.delete('session_id')
+        window.history.replaceState({}, '', url.toString())
+      }, 100)
+
+      return () => clearTimeout(timer)
+    }
+  }, [mounted, searchParams])
+
+  useEffect(() => {
+    if (mounted && !loading && !user) {
+      router.push('/login')
+    }
+  }, [user, loading, router, mounted])
+
+  // Show loading state during SSR and initial client load
+  if (!mounted || loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0080A3] mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Chargement...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Redirect if no user
+  if (!user) {
+    return null
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      router.push('/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
+
+  const menuItems = [
+    {
+      id: 'general' as MenuSection,
+      name: 'Général',
+      icon: Settings
+    },
+    {
+      id: 'collaboration' as MenuSection,
+      name: 'Collaboration',
+      icon: Users
+    },
+    {
+      id: 'subscription' as MenuSection,
+      name: 'Abonnement',
+      icon: CreditCard
+    },
+    {
+      id: 'logout' as MenuSection,
+      name: 'Déconnexion',
+      icon: LogOut
+    }
+  ]
+
+  const handleMenuClick = (sectionId: MenuSection) => {
+    if (sectionId === 'logout') {
+      setShowLogoutModal(true)
+    } else {
+      setActiveSection(sectionId)
+
+      // Update URL with section parameter
+      const url = new URL(window.location.href)
+      url.searchParams.set('section', sectionId)
+      window.history.pushState({}, '', url.toString())
+
+      if (sectionId === 'collaboration') {
+        fetchCollaborators()
+      }
+    }
+  }
+
   const renderContent = () => {
     switch (activeSection) {
       case 'general':
-        return (
-          <div className="space-y-8">
-            {/* Header avec avatar */}
-            <div className="flex items-center space-x-6 p-6 bg-blue-50/50 rounded-xl border border-gray-100">
-              <div className="flex-shrink-0">
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Informations générales</h2>
-                <p className="text-gray-500">Gérez vos informations personnelles et les paramètres de votre compte</p>
-              </div>
-            </div>
-
-            {/* Carte Email */}
-            <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-                  <Mail className="w-5 h-5 text-[#0080A3] mr-2" />
-                  Adresse e-mail
-                </h3>
-                <p className="text-gray-500 text-sm">Votre adresse e-mail associée à ce compte</p>
-              </div>
-
-              <div className="p-4 bg-gray-50/80 border border-gray-100 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-gray-900 font-medium">{user.email}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
+        return <GeneralSection userEmail={user.email} />
       case 'collaboration':
         return (
-          <div className="space-y-8">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 bg-blue-50/50 rounded-xl border border-gray-100">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Collaboration</h2>
-                <p className="text-gray-500">Gérez les accès de vos collaborateurs à vos registres</p>
-              </div>
-              <button
-                onClick={() => setShowInviteModal(true)}
-                className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white rounded-lg hover:bg-[#006280] transition-colors"
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Inviter un collaborateur
-              </button>
-            </div>
-
-            {/* Collaborators list */}
-            <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Collaborateurs</h3>
-                <p className="text-gray-500 text-sm">Liste de tous vos collaborateurs et le nombre de registres auxquels ils ont accès</p>
-              </div>
-
-              <CollaboratorList
-                collaborators={collaborators}
-                loading={loadingCollaborators}
-                showCompanyCount={true}
-                emptyMessage="Aucun collaborateur pour le moment. Invitez votre première personne !"
-                onRemove={handleRemoveCollaboratorClick}
-              />
-            </div>
-
-            {/* Info box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-              <h3 className="text-sm font-medium text-blue-900 mb-3 flex items-center">
-                <Settings className="w-4 h-4 mr-2" />
-                À propos des collaborateurs
-              </h3>
-              <ul className="text-sm text-blue-800 space-y-2">
-                <li>• Les collaborateurs peuvent consulter et modifier les registres partagés</li>
-                <li>• Ils peuvent créer de nouveaux registres</li>
-                <li>• Ils ne peuvent pas inviter d'autres collaborateurs</li>
-              </ul>
-            </div>
-          </div>
+          <CollaborationSection
+            collaborators={collaborators}
+            loadingCollaborators={loadingCollaborators}
+            onInvite={() => setShowInviteModal(true)}
+            onRemove={handleRemoveCollaboratorClick}
+          />
         )
       case 'subscription':
         return (
-          <SubscriptionPage
+          <SubscriptionSection
             showSuccessPopup={showSuccessPopup}
             onCloseSuccessPopup={() => setShowSuccessPopup(false)}
           />
