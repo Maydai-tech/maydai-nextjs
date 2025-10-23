@@ -11,50 +11,11 @@ import { RiskLevelBadge } from '../components/overview/RiskLevelBadge'
 import { useRiskLevel } from '../hooks/useRiskLevel'
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { useNextSteps } from '../hooks/useNextSteps'
+import { usePDFExport } from '../hooks/usePDFExport'
 import { getScoreStyle } from '@/lib/score-styles'
-import { AlertTriangle, RefreshCcw } from 'lucide-react'
+import { AlertTriangle, RefreshCcw, Download } from 'lucide-react'
+import { getCompanyStatusLabel, getCompanyStatusDefinition, getRiskLevelJustification } from '../utils/company-status'
 
-// Fonction utilitaire pour convertir le statut d'entreprise en libellé lisible
-function getCompanyStatusLabel(status?: string): string {
-  switch (status) {
-    case 'utilisateur':
-      return 'Utilisateur (Déployeur)';
-    case 'fabriquant_produits':
-      return 'Fabricant de Produits';
-    case 'distributeur':
-      return 'Distributeur';
-    case 'importateur':
-      return 'Importateur';
-    case 'fournisseur':
-      return 'Fournisseur';
-    case 'mandataire':
-      return 'Mandataire (Représentant autorisé)';
-    case 'unknown':
-    default:
-      return 'Non déterminé';
-  }
-}
-
-// Fonction utilitaire pour obtenir la définition du statut d'entreprise selon l'IA Act
-function getCompanyStatusDefinition(status?: string): string {
-  switch (status) {
-    case 'utilisateur':
-      return 'Toute personne physique ou morale, autorité publique, agence ou autre organisme qui utilise un système d\'IA sous sa propre autorité, sauf si ce système est utilisé dans le cadre d\'une activité personnelle et non professionnelle.';
-    case 'fabriquant_produits':
-      return 'Il s\'agit d\'un fabricant qui met sur le marché européen un système d\'IA avec son propre produit et sous sa propre marque. Si un système d\'IA à haut risque constitue un composant de sécurité d\'un produit couvert par la législation d\'harmonisation de l\'Union, le fabricant de ce produit est considéré comme le fournisseur du système d\'IA à haut risque.';
-    case 'distributeur':
-      return 'Une personne physique ou morale faisant partie de la chaîne d\'approvisionnement, autre que le fournisseur ou l\'importateur, qui met un système d\'IA à disposition sur le marché de l\'Union.';
-    case 'importateur':
-      return 'Une personne physique ou morale située ou établie dans l\'Union qui met sur le marché un système d\'IA portant le nom ou la marque d\'une personne physique ou morale établie dans un pays tiers.';
-    case 'fournisseur':
-      return 'Une personne physique ou morale, une autorité publique, une agence ou tout autre organisme qui développe (ou fait développer) un système d\'IA ou un modèle d\'IA à usage général et le met sur le marché ou le met en service sous son propre nom ou sa propre marque, que ce soit à titre onéreux ou gratuit.';
-    case 'mandataire':
-      return 'Une personne physique ou morale située ou établie dans l\'Union qui a reçu et accepté un mandat écrit d\'un fournisseur de système d\'IA ou de modèle d\'IA à usage général pour s\'acquitter en son nom des obligations et des procédures établies par le règlement.';
-    case 'unknown':
-    default:
-      return 'Impossible de déterminer le statut d\'entreprise basé sur les réponses actuelles.';
-  }
-}
 
 // Hook pour récupérer les informations de profil de l'utilisateur
 function useUserProfile() {
@@ -113,6 +74,7 @@ export default function UseCaseRapportPage() {
   const { goToEvaluation, goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
   const { riskLevel, loading: riskLoading, error: riskError } = useRiskLevel(useCaseId)
   const { score, loading: scoreLoading, error: scoreError } = useUseCaseScore(useCaseId)
+  const { isGenerating, error: pdfError, generatePDF } = usePDFExport(useCaseId)
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -198,9 +160,45 @@ export default function UseCaseRapportPage() {
       <div className="space-y-6 sm:space-y-8">
         {/* Section d'informations du rapport d'audit */}
         <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-            Rapport d'Audit Préliminaire du Système d'IA : <span className="text-[#0080a3]">{useCase.name || 'Nom du Cas d\'usage IA'}</span>
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4 sm:mb-0">
+              Rapport d'Audit Préliminaire du Système d'IA : <span className="text-[#0080a3]">{useCase.name || 'Nom du Cas d\'usage IA'}</span>
+            </h2>
+            
+            {/* Bouton de téléchargement PDF */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={generatePDF}
+                disabled={isGenerating}
+                className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGenerating ? (
+                  <>
+                    <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
+                    Génération...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Télécharger PDF
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+          
+          {/* Message d'erreur PDF */}
+          {pdfError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex">
+                <AlertTriangle className="w-5 h-5 text-red-400 mr-3 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-medium text-red-800">Erreur de génération PDF</h3>
+                  <p className="text-sm text-red-700 mt-1">{pdfError}</p>
+                </div>
+              </div>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-base">
             <div className="space-y-4">
@@ -431,29 +429,7 @@ export default function UseCaseRapportPage() {
               <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <h4 className="text-sm font-semibold text-gray-900 mb-3">Justification du niveau de risque</h4>
                 <div className="text-sm text-gray-700 leading-relaxed">
-                  {riskLevel === 'unacceptable' && (
-                    <p>
-                      <strong>Risque inacceptable :</strong> Le système est potentiellement interdit en vertu de l'Article 5 de l'AI Act. Les pratiques interdites incluent la manipulation subliminale, l'exploitation des vulnérabilités, la notation sociale, l'évaluation des risques criminels basée sur le profilage, le raclage non ciblé d'images faciales, la reconnaissance des émotions sur le lieu de travail/établissements d'enseignement (sauf médical/sécurité), et l'identification biométrique à distance en temps réel dans les espaces publics (sauf exceptions strictes). L'interdiction de ces systèmes a pris effet le 2 février 2025.
-                    </p>
-                  )}
-                  
-                  {riskLevel === 'high' && (
-                    <p>
-                      <strong>Risque élevé :</strong> Le système tombe dans l'une des catégories listées à l'Annexe III de l'AI Act ou est un composant de sécurité d'un produit réglementé. Cela inclut par exemple l'IA dans les infrastructures critiques, l'éducation, l'emploi, l'accès aux services essentiels, l'application de la loi, la migration, l'asile, le contrôle aux frontières et l'administration de la justice. Ces systèmes sont soumis à des exigences strictes (évaluation et atténuation des risques, qualité des données, journalisation, documentation, transparence, contrôle humain, robustesse, cybersécurité, précision).
-                    </p>
-                  )}
-                  
-                  {riskLevel === 'limited' && (
-                    <p>
-                      <strong>Risque limité :</strong> Les systèmes d'IA à risque limité sont ceux pour lesquels il existe un besoin spécifique de transparence. La justification principale de cette classification est d'assurer que les utilisateurs soient informés lorsqu'ils interagissent avec une IA, en particulier s'il existe un risque manifeste de manipulation. Cela inclut les applications comme les chatbots, où les utilisateurs doivent savoir qu'ils communiquent avec une machine pour prendre des décisions éclairées. Cette catégorie englobe également les systèmes d'IA générative qui produisent des contenus synthétiques (audio, images, vidéo ou texte) ; les fournisseurs doivent s'assurer que ces contenus sont marqués de manière lisible par machine et identifiables comme étant générés ou manipulés par une IA. De même, les déployeurs de systèmes de reconnaissance des émotions ou de catégorisation biométrique doivent informer les personnes exposées de leur fonctionnement, et ceux qui utilisent l'IA pour générer des hyper trucages doivent clairement indiquer que le contenu a été créé ou manipulé par une IA. Ces exigences de transparence visent à préserver la confiance et à lutter contre les risques de manipulation, de tromperie et de désinformation.
-                    </p>
-                  )}
-                  
-                  {riskLevel === 'minimal' && (
-                    <p>
-                      <strong>Risque minimal :</strong> La vaste majorité des systèmes d'IA tombent dans cette catégorie, considérée comme présentant un risque minimal, voire nul. Ces systèmes sont généralement utilisés à condition de respecter la législation existante et ne sont soumis à aucune obligation légale supplémentaire spécifique à l'AI Act. La justification est que ces applications ne posent pas de risques significatifs pour la santé, la sécurité ou les droits fondamentaux des personnes. Les fournisseurs de ces systèmes sont néanmoins encouragés à appliquer volontairement les exigences relatives à une "IA digne de confiance" et à adhérer à des codes de conduite volontaires. Cette approche vise à promouvoir une utilisation éthique et responsable de l'IA sans entraver l'innovation, offrant ainsi un avantage concurrentiel aux entreprises qui respectent ces bonnes pratiques. Des exemples typiques incluent les jeux vidéo basés sur l'IA ou les filtres anti-spam.
-                    </p>
-                  )}
+                  <p>{getRiskLevelJustification(riskLevel)}</p>
                 </div>
               </div>
             )}
