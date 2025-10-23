@@ -1,5 +1,5 @@
 import React from 'react'
-import { Document, Font } from '@react-pdf/renderer'
+import { Document } from '@react-pdf/renderer'
 import { PDFReportData } from './types'
 import { PDFCoverPage } from './PDFCoverPage'
 import { PDFDashboardFixed } from './PDFDashboardFixed'
@@ -11,25 +11,6 @@ import { PDFAnnexesFixed } from './PDFAnnexesFixed'
 interface PDFDocumentProps {
   data: PDFReportData
 }
-
-// Configuration des polices système pour éviter les problèmes de chargement
-Font.register({
-  family: 'Helvetica',
-  fonts: [
-    {
-      src: 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2',
-      fontWeight: 400,
-    },
-    {
-      src: 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiA.woff2',
-      fontWeight: 600,
-    },
-    {
-      src: 'https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hiA.woff2',
-      fontWeight: 700,
-    },
-  ]
-})
 
 export const PDFDocument: React.FC<PDFDocumentProps> = ({ data }) => {
   return (
