@@ -28,7 +28,7 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
               Introduction
             </Text>
             <Text style={[styles.text, { lineHeight: 1.4, fontSize: 9 }]}>
-              {data.nextSteps.introduction || `${data.useCase.companies?.name || 'L\'entreprise'} a prévu de déployer le ${data.useCase.deployment_date ? new Date(data.useCase.deployment_date).toLocaleDateString('fr-FR') : 'prochainement'} ${data.useCase.name}, un produit basé sur l'IA classé dans les ${data.useCase.ai_category || 'systèmes d\'IA'}. Ce cas d'usage, géré par le service ${data.useCase.responsible_service || 'le service concerné'}, utilise différents modèles dont ${data.useCase.compl_ai_models?.model_name || 'un modèle d\'IA'} de ${data.useCase.compl_ai_models?.model_provider || 'un fournisseur'} pour ${data.useCase.description || 'automatiser diverses tâches'}. Le déploiement concernera ${data.useCase.deployment_countries?.join(', ') || 'la France'}, pays membre de l'Union européenne, ce qui soumet ce cas d'usage à l'AI Act. L'évaluation de conformité indique un niveau de risque ${data.riskLevel.risk_level}, impliquant des obligations spécifiques en matière de transparence et de gestion des risques.`}
+              {data.nextSteps?.introduction || `${data.useCase.companies?.name || 'L\'entreprise'} a prévu de déployer le ${data.useCase.deployment_date ? new Date(data.useCase.deployment_date).toLocaleDateString('fr-FR') : 'prochainement'} ${data.useCase.name}, un produit basé sur l'IA classé dans les ${data.useCase.ai_category || 'systèmes d\'IA'}. Ce cas d'usage, géré par le service ${data.useCase.responsible_service || 'le service concerné'}, utilise différents modèles dont ${data.useCase.compl_ai_models?.model_name || 'un modèle d\'IA'} de ${data.useCase.compl_ai_models?.model_provider || 'un fournisseur'} pour ${data.useCase.description || 'automatiser diverses tâches'}. Le déploiement concernera ${data.useCase.deployment_countries?.join(', ') || 'la France'}, pays membre de l'Union européenne, ce qui soumet ce cas d'usage à l'AI Act. L'évaluation de conformité indique un niveau de risque ${data.riskLevel.risk_level}, impliquant des obligations spécifiques en matière de transparence et de gestion des risques.`}
             </Text>
           </View>
 
@@ -38,7 +38,7 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
               Évaluation du niveau de risque AI Act
             </Text>
             <Text style={[styles.text, { lineHeight: 1.4, fontSize: 9 }]}>
-              {data.nextSteps.evaluation || `Le niveau de risque de ${data.useCase.name} est classé comme ${data.riskLevel.risk_level}. Cette évaluation repose sur l'analyse des réponses au questionnaire et des caractéristiques spécifiques du système d'IA. Les obligations réglementaires applicables dépendent de ce niveau de risque et des articles pertinents de l'AI Act.`}
+              {data.nextSteps?.evaluation || `Le niveau de risque de ${data.useCase.name} est classé comme ${data.riskLevel.risk_level}. Cette évaluation repose sur l'analyse des réponses au questionnaire et des caractéristiques spécifiques du système d'IA. Les obligations réglementaires applicables dépendent de ce niveau de risque et des articles pertinents de l'AI Act.`}
             </Text>
           </View>
 
@@ -52,10 +52,10 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
             </Text>
             
             <View style={styles.list}>
-              {data.nextSteps.priorite_1 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.priorite_1}</Text>}
-              {data.nextSteps.priorite_2 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.priorite_2}</Text>}
-              {data.nextSteps.priorite_3 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.priorite_3}</Text>}
-              {!data.nextSteps.priorite_1 && !data.nextSteps.priorite_2 && !data.nextSteps.priorite_3 && (
+              {data.nextSteps?.priorite_1 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.priorite_1}</Text>}
+              {data.nextSteps?.priorite_2 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.priorite_2}</Text>}
+              {data.nextSteps?.priorite_3 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.priorite_3}</Text>}
+              {!data.nextSteps?.priorite_1 && !data.nextSteps?.priorite_2 && !data.nextSteps?.priorite_3 && (
                 <>
                   <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Établir un système de gestion des risques pour {data.useCase.name} (Article 9 de l'AI Act).</Text>
                   <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Implémenter des procédures de vérification de la qualité des données (Article 10).</Text>
@@ -86,10 +86,10 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
             </Text>
             
             <View style={styles.list}>
-              {data.nextSteps.quick_win_1 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.quick_win_1}</Text>}
-              {data.nextSteps.quick_win_2 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.quick_win_2}</Text>}
-              {data.nextSteps.quick_win_3 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.quick_win_3}</Text>}
-              {!data.nextSteps.quick_win_1 && !data.nextSteps.quick_win_2 && !data.nextSteps.quick_win_3 && (
+              {data.nextSteps?.quick_win_1 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.quick_win_1}</Text>}
+              {data.nextSteps?.quick_win_2 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.quick_win_2}</Text>}
+              {data.nextSteps?.quick_win_3 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.quick_win_3}</Text>}
+              {!data.nextSteps?.quick_win_1 && !data.nextSteps?.quick_win_2 && !data.nextSteps?.quick_win_3 && (
                 <>
                   <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Évaluer la conformité actuelle de {data.useCase.name} aux exigences de l'AI Act pour identifier les lacunes et prioriser les actions nécessaires.</Text>
                   <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Mettre à jour la documentation juridique pour refléter le rôle de {data.useCase.companies?.name || 'l\'entreprise'} en tant que {data.useCase.company_status} et les obligations qui en découlent, conformément à l'Article 3.</Text>
@@ -108,10 +108,10 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
             </Text>
             
             <View style={styles.list}>
-              {data.nextSteps.action_1 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.action_1}</Text>}
-              {data.nextSteps.action_2 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.action_2}</Text>}
-              {data.nextSteps.action_3 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.action_3}</Text>}
-              {!data.nextSteps.action_1 && !data.nextSteps.action_2 && !data.nextSteps.action_3 && (
+              {data.nextSteps?.action_1 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.action_1}</Text>}
+              {data.nextSteps?.action_2 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.action_2}</Text>}
+              {data.nextSteps?.action_3 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.action_3}</Text>}
+              {!data.nextSteps?.action_1 && !data.nextSteps?.action_2 && !data.nextSteps?.action_3 && (
                 <>
                   <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Établir un registre centralisé des systèmes d'IA utilisés par {data.useCase.companies?.name || 'l\'entreprise'}, conformément à l'Article 12, pour assurer une traçabilité et une conformité continues.</Text>
                   <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Mettre en place des mesures de supervision humaine pour garantir que les décisions automatisées respectent les droits des utilisateurs, conformément à l'Article 14.</Text>
