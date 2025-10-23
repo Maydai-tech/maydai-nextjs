@@ -15,46 +15,8 @@ import { useUseCaseScore } from './hooks/useUseCaseScore'
 import { AlertTriangle, RefreshCcw } from 'lucide-react'
 import { getScoreStyle } from '@/lib/score-styles'
 import { RiskLevelBadge } from './components/overview/RiskLevelBadge'
+import { getCompanyStatusLabel, getCompanyStatusDefinition } from './utils/company-status'
 
-// Fonction utilitaire pour convertir le statut d'entreprise en libellé lisible
-function getCompanyStatusLabel(status?: string): string {
-  switch (status) {
-    case 'utilisateur':
-      return 'Utilisateur (Déployeur)';
-    case 'fabriquant_produits':
-      return 'Fabricant de Produits';
-    case 'fabriquant_systemes':
-      return 'Fabricant de Systèmes';
-    case 'importateur':
-      return 'Importateur';
-    case 'distributeur':
-      return 'Distributeur';
-    case 'deployeur':
-      return 'Déployeur';
-    default:
-      return 'Non spécifié';
-  }
-}
-
-// Fonction utilitaire pour obtenir la définition du statut d'entreprise selon l'AI Act
-function getCompanyStatusDefinition(status?: string): string {
-  switch (status) {
-    case 'utilisateur':
-      return 'Entité qui utilise un système d\'IA dans le cadre de son activité professionnelle. Responsable de l\'utilisation conforme du système.';
-    case 'fabriquant_produits':
-      return 'Entité qui développe et met sur le marché un produit contenant un système d\'IA. Responsable de la conformité du produit.';
-    case 'fabriquant_systemes':
-      return 'Entité qui développe et met sur le marché un système d\'IA autonome. Responsable de la conformité du système.';
-    case 'importateur':
-      return 'Entité qui met sur le marché de l\'UE un système d\'IA ou un produit contenant un système d\'IA provenant d\'un pays tiers.';
-    case 'distributeur':
-      return 'Entité qui met sur le marché un système d\'IA ou un produit contenant un système d\'IA sans en être le fabricant.';
-    case 'deployeur':
-      return 'Entité qui utilise un système d\'IA à haut risque dans le cadre de son activité professionnelle. Responsable de l\'utilisation conforme.';
-    default:
-      return 'Statut d\'entreprise non défini selon l\'AI Act.';
-  }
-}
 
 export default function UseCaseDetailPage() {
   const { user, loading } = useAuth()
