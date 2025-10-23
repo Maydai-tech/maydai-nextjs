@@ -36,8 +36,8 @@ export const PDFDocumentSimple: React.FC<PDFDocumentSimpleProps> = ({ data }) =>
       <Page size="A4" style={styles.page}>
         <Text style={styles.title}>Rapport d'Audit IA</Text>
         <Text style={styles.text}>Nom du cas d'usage: {data.useCase.name}</Text>
-        <Text style={styles.text}>Score: {data.score.score}</Text>
-        <Text style={styles.text}>Niveau de risque: {data.riskLevel.risk_level}</Text>
+        <Text style={styles.text}>Score: {data.score?.score || 0}</Text>
+        <Text style={styles.text}>Niveau de risque: {data.riskLevel?.risk_level || 'limited'}</Text>
         <Text style={styles.text}>Date de génération: {data.generatedDate}</Text>
       </Page>
     </Document>
