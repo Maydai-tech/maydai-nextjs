@@ -7,48 +7,8 @@ import { useUseCaseData } from '../hooks/useUseCaseData'
 import { useUseCaseNavigation } from '../utils/navigation'
 import { UseCaseLayout } from '../components/shared/UseCaseLayout'
 import { UseCaseLoader } from '../components/shared/UseCaseLoader'
+import { getCompanyStatusLabel, getCompanyStatusDefinition } from '../utils/company-status'
 
-// Fonction utilitaire pour convertir le statut d'entreprise en libellé lisible
-function getCompanyStatusLabel(status?: string): string {
-  switch (status) {
-    case 'utilisateur':
-      return 'Utilisateur (Déployeur)';
-    case 'fabriquant_produits':
-      return 'Fabricant de Produits';
-    case 'distributeur':
-      return 'Distributeur';
-    case 'importateur':
-      return 'Importateur';
-    case 'fournisseur':
-      return 'Fournisseur';
-    case 'mandataire':
-      return 'Mandataire (Représentant autorisé)';
-    case 'unknown':
-    default:
-      return 'Non déterminé';
-  }
-}
-
-// Fonction utilitaire pour obtenir la définition du statut d'entreprise selon l'IA Act
-function getCompanyStatusDefinition(status?: string): string {
-  switch (status) {
-    case 'utilisateur':
-      return 'Toute personne physique ou morale, autorité publique, agence ou autre organisme qui utilise un système d\'IA sous sa propre autorité, sauf si ce système est utilisé dans le cadre d\'une activité personnelle et non professionnelle.';
-    case 'fabriquant_produits':
-      return 'Il s\'agit d\'un fabricant qui met sur le marché européen un système d\'IA avec son propre produit et sous sa propre marque. Si un système d\'IA à haut risque constitue un composant de sécurité d\'un produit couvert par la législation d\'harmonisation de l\'Union, le fabricant de ce produit est considéré comme le fournisseur du système d\'IA à haut risque.';
-    case 'distributeur':
-      return 'Une personne physique ou morale faisant partie de la chaîne d\'approvisionnement, autre que le fournisseur ou l\'importateur, qui met un système d\'IA à disposition sur le marché de l\'Union.';
-    case 'importateur':
-      return 'Une personne physique ou morale située ou établie dans l\'Union qui met sur le marché un système d\'IA portant le nom ou la marque d\'une personne physique ou morale établie dans un pays tiers.';
-    case 'fournisseur':
-      return 'Une personne physique ou morale, une autorité publique, une agence ou tout autre organisme qui développe (ou fait développer) un système d\'IA ou un modèle d\'IA à usage général et le met sur le marché ou le met en service sous son propre nom ou sa propre marque, que ce soit à titre onéreux ou gratuit.';
-    case 'mandataire':
-      return 'Une personne physique ou morale située ou établie dans l\'Union qui a reçu et accepté un mandat écrit d\'un fournisseur de système d\'IA ou de modèle d\'IA à usage général pour s\'acquitter en son nom des obligations et des procédures établies par le règlement.';
-    case 'unknown':
-    default:
-      return 'Impossible de déterminer le statut d\'entreprise basé sur les réponses actuelles.';
-  }
-}
 
 export default function UseCaseConformitePage() {
   const { user, loading } = useAuth()
