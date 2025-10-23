@@ -6,7 +6,7 @@ import { ComplAIModel } from '@/lib/supabase'
 import { getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
 import { useCaseRoutes } from '../../utils/routes'
 import { useUseCaseNavigation } from '../../utils/navigation'
-import { ArrowLeft, Building, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle, Trash2 } from 'lucide-react'
+import { ArrowLeft, Building, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle, Trash2, Download } from 'lucide-react'
 import Image from 'next/image'
 import ModelSelectorModal from '../ModelSelectorModal'
 import DeleteConfirmationModal from '../DeleteConfirmationModal'
@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/auth'
 import WorldMap from '@/components/WorldMap'
 import { getProviderIcon } from '@/lib/provider-icons'
 import { getScoreStyle } from '@/lib/score-styles'
+import { usePDFExport } from '../../hooks/usePDFExport'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
 
@@ -126,6 +127,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const [isRecalculatingScore, setIsRecalculatingScore] = useState(false) // État local pour l'animation du score pendant le recalcul
   const { goToEvaluation } = useUseCaseNavigation(useCase.id, useCase.company_id)
   const { riskLevel, loading: riskLoading, error: riskError } = useRiskLevel(useCase.id)
+  const { isGenerating, error: pdfError, generatePDF } = usePDFExport(useCase.id)
   const router = useRouter()
   const { session } = useAuth()
 
@@ -204,15 +206,47 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           <span className="text-sm font-medium">Retour au dashboard</span>
         </Link>
         
-        <button
-          onClick={handleDeleteClick}
-          className="group inline-flex items-center text-gray-500 hover:text-red-600 transition-all duration-200 hover:bg-red-50 rounded-lg px-3 py-2"
-          title="Supprimer le use case"
-        >
-          <Trash2 className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-          <span className="text-sm font-medium">Supprimer</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          {/* Bouton Télécharger PDF */}
+          <button
+            onClick={generatePDF}
+            disabled={isGenerating || useCase.status?.toLowerCase() !== 'completed'}
+            className="group inline-flex items-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-blue-50 rounded-lg px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={useCase.status?.toLowerCase() !== 'completed' ? 'Le cas d\'usage doit être complété pour générer le PDF' : 'Télécharger le rapport PDF'}
+          >
+            {isGenerating ? (
+              <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+            )}
+            <span className="text-sm font-medium">
+              {isGenerating ? 'Génération...' : 'Télécharger PDF'}
+            </span>
+          </button>
+          
+          <button
+            onClick={handleDeleteClick}
+            className="group inline-flex items-center text-gray-500 hover:text-red-600 transition-all duration-200 hover:bg-red-50 rounded-lg px-3 py-2"
+            title="Supprimer le use case"
+          >
+            <Trash2 className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+            <span className="text-sm font-medium">Supprimer</span>
+          </button>
+        </div>
       </div>
+      
+      {/* Message d'erreur PDF */}
+      {pdfError && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex">
+            <AlertTriangle className="w-5 h-5 text-red-400 mr-3 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-medium text-red-800">Erreur de génération PDF</h3>
+              <p className="text-sm text-red-700 mt-1">{pdfError}</p>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="space-y-6">
         {/* Ligne 1: Titre du cas d'usage (pleine largeur) */}
