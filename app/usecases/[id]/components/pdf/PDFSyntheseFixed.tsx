@@ -9,7 +9,7 @@ interface PDFSyntheseFixedProps {
 }
 
 export const PDFSyntheseFixed: React.FC<PDFSyntheseFixedProps> = ({ data }) => {
-  const riskLevelStyle = riskLevelStyles[data.riskLevel.risk_level as keyof typeof riskLevelStyles] || riskLevelStyles.limited
+  const riskLevelStyle = riskLevelStyles[(data.riskLevel?.risk_level || 'limited') as keyof typeof riskLevelStyles] || riskLevelStyles.limited
 
   return (
     <>
@@ -86,8 +86,8 @@ export const PDFSyntheseFixed: React.FC<PDFSyntheseFixedProps> = ({ data }) => {
               <Text style={[styles.textSmall, styles.bold, { marginBottom: 8 }]}>
                 Score de conformité
               </Text>
-              <Text style={[styles.scoreValue, { color: getScoreColor(data.score.score) }]}>
-                {Math.round(data.score.score)}
+              <Text style={[styles.scoreValue, { color: getScoreColor(data.score?.score || 0) }]}>
+                {Math.round(data.score?.score || 0)}
               </Text>
             </View>
           </View>
@@ -95,7 +95,7 @@ export const PDFSyntheseFixed: React.FC<PDFSyntheseFixedProps> = ({ data }) => {
           <View style={[styles.cardWhite, { marginTop: 20 }]}>
             <Text style={[styles.text, styles.bold, { marginBottom: 12 }]}>Justification du niveau de risque</Text>
             <Text style={[styles.text, { lineHeight: 1.4 }]}>
-              {getRiskLevelJustification(data.riskLevel.risk_level)}
+              {getRiskLevelJustification(data.riskLevel?.risk_level || 'limited')}
             </Text>
           </View>
         </View>

@@ -15,7 +15,7 @@ interface PDFDocumentProps {
 export const PDFDocument: React.FC<PDFDocumentProps> = ({ data }) => {
   return (
     <Document
-      title={`Rapport d'Audit - ${data.useCase.name}`}
+      title={`Rapport d'Audit - ${data.useCase.name || 'Système d\'IA'}`}
       author="MaydAI"
       subject="Rapport d'Audit Préliminaire du Système d'IA"
       creator="MaydAI Platform"

@@ -37,8 +37,9 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
     'social_environmental'
   ]
 
-  const sortedCategoryScores = data.score.category_scores
-    ?.filter(category => 
+  const sortedCategoryScores = (data.score.category_scores || [])
+    .filter(category => 
+      category && 
       category.category_id !== 'risk_level' && 
       category.category_id !== 'prohibited_practices'
     )
@@ -48,7 +49,7 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
       if (indexA === -1) return 1
       if (indexB === -1) return -1
       return indexA - indexB
-    }) || []
+    })
 
   const getCategoryName = (categoryId: string) => {
     const names: { [key: string]: string } = {
@@ -62,7 +63,7 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
     return names[categoryId] || categoryId
   }
 
-  const riskLevelStyle = riskLevelStyles[data.riskLevel.risk_level as keyof typeof riskLevelStyles] || riskLevelStyles.limited
+  const riskLevelStyle = riskLevelStyles[(data.riskLevel?.risk_level || 'limited') as keyof typeof riskLevelStyles] || riskLevelStyles.limited
 
   return (
     <Page size="A4" style={styles.page}>
@@ -128,10 +129,10 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
               Score de conformité
             </Text>
               <Text style={[styles.scoreValue, { 
-                color: getScoreColor(data.score.score), 
+                color: getScoreColor(data.score?.score || 0), 
                 textAlign: 'center' 
               }]}>
-                {Math.round(data.score.score)}
+                {Math.round(data.score?.score || 0)}
               </Text>
           </View>
         </View>
@@ -193,8 +194,8 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
                 <Text style={[styles.tableHeader, { flex: 1, fontSize: 7 }]}>Score</Text>
               </View>
               {categoryOrder.slice(0, 3).map((categoryId, index) => {
-                const categoryScore = data.score.category_scores.find(
-                  cat => cat.category_id === categoryId
+                const categoryScore = (data.score.category_scores || []).find(
+                  cat => cat && cat.category_id === categoryId
                 )
                 
                 return (
@@ -217,8 +218,8 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
                 <Text style={[styles.tableHeader, { flex: 1, fontSize: 7 }]}>Score</Text>
               </View>
               {categoryOrder.slice(3, 6).map((categoryId, index) => {
-                const categoryScore = data.score.category_scores.find(
-                  cat => cat.category_id === categoryId
+                const categoryScore = (data.score.category_scores || []).find(
+                  cat => cat && cat.category_id === categoryId
                 )
                 
                 return (
