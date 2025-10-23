@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { renderToBuffer } from '@react-pdf/renderer'
+import { renderToBuffer, Document } from '@react-pdf/renderer'
 import React from 'react'
 import { PDFDocument } from '@/app/usecases/[id]/components/pdf/PDFDocument'
 import { PDFReportData } from '@/app/usecases/[id]/components/pdf/types'
@@ -189,7 +189,16 @@ export async function GET(
     let buffer: Buffer
     try {
       console.log('🎨 Début du rendu PDF...')
-      buffer = await renderToBuffer(React.createElement(PDFDocument, { data: pdfData }))
+      // Créer un wrapper qui utilise directement Document de @react-pdf/renderer
+      const PDFWrapper = () => React.createElement(PDFDocument, { data: pdfData })
+      buffer = await renderToBuffer(React.createElement(Document, {
+        title: `Rapport d'Audit - ${pdfData.useCase.name}`,
+        author: "MaydAI",
+        subject: "Rapport d'Audit Préliminaire du Système d'IA",
+        creator: "MaydAI Platform",
+        producer: "MaydAI",
+        keywords: "IA, AI Act, Conformité, Audit, MaydAI"
+      }, React.createElement(PDFWrapper)))
       console.log('✅ PDF généré avec succès, taille:', buffer.length, 'bytes')
     } catch (renderError) {
       console.error('🚨 ERREUR RENDU PDF:', renderError)
