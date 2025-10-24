@@ -20,6 +20,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   console.log('🚀 DÉBUT génération PDF')
+  let resolvedParams: { id: string } | undefined
+  let user: any
   try {
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
@@ -38,13 +40,14 @@ export async function GET(
     })
     
     // Verify the token and get user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !authUser) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
+    user = authUser
 
     // Resolve params
-    const resolvedParams = await params
+    resolvedParams = await params
     const useCaseId = resolvedParams.id
     console.log('📋 UseCase ID:', useCaseId)
 
@@ -112,17 +115,29 @@ export async function GET(
       .eq('usecase_id', useCaseId)
 
     if (responsesError) {
-      console.error('Error fetching responses:', responsesError)
+      console.error('⚠️ Error fetching responses:', responsesError)
     }
 
-    // Calculer le score complet pour obtenir les category_scores
-    const { calculateScore } = await import('@/app/usecases/[id]/utils/score-calculator')
-    const fullScoreData = await calculateScore(useCaseId, responses || [], supabase)
+    // Calculer le score complet pour obtenir les category_scores avec gestion d'erreur
+    let fullScoreData
+    try {
+      const { calculateScore } = await import('@/app/usecases/[id]/utils/score-calculator')
+      fullScoreData = await calculateScore(useCaseId, responses || [], supabase)
+      console.log('✅ Score calculé avec succès:', fullScoreData)
+    } catch (scoreError) {
+      console.error('⚠️ Erreur lors du calcul du score, utilisation des valeurs par défaut:', scoreError)
+      // Valeurs par défaut en cas d'erreur de calcul
+      fullScoreData = {
+        score: useCase.score_final || 0,
+        is_eliminated: false,
+        category_scores: []
+      }
+    }
 
     const scoreData = {
-      score: useCase.score_final || fullScoreData.score,
+      score: useCase.score_final || fullScoreData.score || 0,
       is_eliminated: fullScoreData.is_eliminated || false,
-      category_scores: fullScoreData.category_scores  // ← VRAIS SCORES !
+      category_scores: fullScoreData.category_scores || []
     }
 
     // Récupérer les données nextSteps depuis la table usecase_nextsteps
@@ -159,9 +174,47 @@ export async function GET(
       last_name: user.user_metadata?.last_name
     }
 
+    // Sécuriser l'extraction des données relationnelles
+    const companyData = Array.isArray(useCase.companies) ? useCase.companies[0] : useCase.companies
+    const modelData = Array.isArray(useCase.compl_ai_models) ? useCase.compl_ai_models[0] : useCase.compl_ai_models
+
+    console.log('🏢 Company data:', companyData)
+    console.log('🤖 Model data:', modelData)
+
+    // Préparer les données useCase avec les relations sécurisées
+    const safeUseCase = {
+      ...useCase,
+      companies: companyData ? {
+        id: companyData.id || '',
+        name: companyData.name || 'Entreprise non spécifiée',
+        industry: companyData.industry || 'Non spécifié',
+        city: companyData.city || 'Non spécifié',
+        country: companyData.country || 'Non spécifié'
+      } : {
+        id: '',
+        name: 'Entreprise non spécifiée',
+        industry: 'Non spécifié',
+        city: 'Non spécifié',
+        country: 'Non spécifié'
+      },
+      compl_ai_models: modelData ? {
+        id: modelData.id || '',
+        model_name: modelData.model_name || 'Modèle non spécifié',
+        model_provider: modelData.model_provider || 'Fournisseur non spécifié',
+        model_type: modelData.model_type || 'Type non spécifié',
+        version: modelData.version || 'Version non spécifiée'
+      } : {
+        id: '',
+        model_name: 'Modèle non spécifié',
+        model_provider: 'Fournisseur non spécifié',
+        model_type: 'Type non spécifié',
+        version: 'Version non spécifiée'
+      }
+    }
+
     // Prepare PDF data
     const pdfData: PDFReportData = {
-      useCase,
+      useCase: safeUseCase,
       riskLevel: {
         risk_level: riskLevelData.risk_level,
         justification: riskLevelData.justification
@@ -189,21 +242,31 @@ export async function GET(
     let buffer: Buffer
     try {
       console.log('🎨 Début du rendu PDF...')
-      // Créer un wrapper qui utilise directement Document de @react-pdf/renderer
-      const PDFWrapper = () => React.createElement(PDFDocument, { data: pdfData })
-      buffer = await renderToBuffer(React.createElement(Document, {
-        title: `Rapport d'Audit - ${pdfData.useCase.name}`,
-        author: "MaydAI",
-        subject: "Rapport d'Audit Préliminaire du Système d'IA",
-        creator: "MaydAI Platform",
-        producer: "MaydAI",
-        keywords: "IA, AI Act, Conformité, Audit, MaydAI"
-      }, React.createElement(PDFWrapper)))
+      // CORRECTION CRITIQUE: Utiliser directement PDFDocument sans double wrapper Document
+      // PDFDocument contient déjà un <Document> wrapper, pas besoin d'en ajouter un autre
+      const pdfElement = React.createElement(PDFDocument, { data: pdfData })
+      buffer = await renderToBuffer(pdfElement as any)
       console.log('✅ PDF généré avec succès, taille:', buffer.length, 'bytes')
     } catch (renderError) {
       console.error('🚨 ERREUR RENDU PDF:', renderError)
       console.error('Stack:', renderError instanceof Error ? renderError.stack : 'Pas de stack')
       console.error('Message:', renderError instanceof Error ? renderError.message : String(renderError))
+      
+      // Log détaillé des données PDF en cas d'erreur pour debugging
+      console.error('📊 Données PDF complètes lors de l\'erreur:')
+      console.error(JSON.stringify(pdfData, null, 2))
+      
+      // Distinguer les types d'erreurs
+      if (renderError instanceof Error) {
+        if (renderError.message.includes('Document')) {
+          console.error('🔍 Erreur liée au composant Document - possible double wrapper')
+        } else if (renderError.message.includes('undefined')) {
+          console.error('🔍 Erreur liée à des propriétés undefined dans les données')
+        } else if (renderError.message.includes('render')) {
+          console.error('🔍 Erreur de rendu des composants PDF')
+        }
+      }
+      
       throw renderError
     }
     
@@ -243,10 +306,41 @@ export async function GET(
     console.error('Stack:', error instanceof Error ? error.stack : 'Pas de stack')
     console.error('Message:', error instanceof Error ? error.message : String(error))
     
+    // Log du contexte de l'erreur
+    console.error('📋 Contexte de l\'erreur:')
+    console.error('- UseCase ID:', resolvedParams?.id || 'Non disponible')
+    console.error('- User ID:', user?.id || 'Non disponible')
+    console.error('- User Email:', user?.email || 'Non disponible')
+    
+    // Déterminer le type d'erreur pour un message plus précis
+    let errorMessage = 'Internal server error during PDF generation'
+    let errorDetails = error instanceof Error ? error.message : String(error)
+    
+    if (error instanceof Error) {
+      if (error.message.includes('Document')) {
+        errorMessage = 'Erreur de structure du document PDF'
+        errorDetails = 'Problème de configuration du composant Document'
+      } else if (error.message.includes('render')) {
+        errorMessage = 'Erreur de rendu des composants PDF'
+        errorDetails = 'Impossible de générer le contenu du PDF'
+      } else if (error.message.includes('undefined') || error.message.includes('null')) {
+        errorMessage = 'Données manquantes pour la génération PDF'
+        errorDetails = 'Certaines données requises ne sont pas disponibles'
+      } else if (error.message.includes('score') || error.message.includes('category')) {
+        errorMessage = 'Erreur de calcul des scores'
+        errorDetails = 'Impossible de calculer les scores de conformité'
+      }
+    }
+    
     return NextResponse.json({ 
-      error: 'Internal server error during PDF generation',
-      details: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
+      error: errorMessage,
+      details: errorDetails,
+      stack: error instanceof Error ? error.stack : undefined,
+      context: {
+        useCaseId: resolvedParams?.id,
+        userId: user?.id,
+        timestamp: new Date().toISOString()
+      }
     }, { status: 500 })
   }
 }
