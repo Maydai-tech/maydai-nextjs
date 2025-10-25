@@ -729,8 +729,10 @@ function NewUseCasePageContent() {
             </div>
           </div>
           
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Nouveau cas d'usage IA
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">
+            {currentQuestionIndex > 0 && formData.name 
+              ? formData.name 
+              : "Nouveau cas d'usage IA"}
           </h1>
           <p className="text-gray-600">
             Registre : {company.name}
