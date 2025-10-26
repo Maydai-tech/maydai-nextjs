@@ -466,7 +466,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
           svg.transition()
             .duration(750)
             .call(
-              zoom.transform,
+              zoom.transform as any,
               d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
             )
         }
