@@ -187,11 +187,11 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
 
       const processCoords = (coords: number[] | number[][] | number[][][]): void => {
         if (Array.isArray(coords)) {
-          if (coords.length === 2 && typeof coords[0] === 'number') {
-            minLon = Math.min(minLon, coords[0])
-            maxLon = Math.max(maxLon, coords[0])
-            minLat = Math.min(minLat, coords[1])
-            maxLat = Math.max(maxLat, coords[1])
+          if (coords.length === 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+            minLon = Math.min(minLon, coords[0] as number)
+            maxLon = Math.max(maxLon, coords[0] as number)
+            minLat = Math.min(minLat, coords[1] as number)
+            maxLat = Math.max(maxLat, coords[1] as number)
           } else {
             (coords as (number[] | number[][] | number[][][])[]).forEach(processCoords)
           }
