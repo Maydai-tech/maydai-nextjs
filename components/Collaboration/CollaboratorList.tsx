@@ -10,6 +10,7 @@ interface Collaborator {
   email?: string;
   role?: 'owner' | 'user';
   companiesCount?: number;
+  scope?: 'account' | 'registry';
 }
 
 interface CollaboratorListProps {
@@ -74,8 +75,15 @@ export default function CollaboratorList({
                   </span>
                 )}
                 {collaborator.role === 'user' && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                    Collaborateur
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                    collaborator.scope === 'account'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-green-100 text-green-700'
+                  }`}>
+                    {collaborator.scope === 'account'
+                      ? 'Accès global'
+                      : `Accès à ${collaborator.companiesCount || 0} registre${(collaborator.companiesCount || 0) > 1 ? 's' : ''}`
+                    }
                   </span>
                 )}
               </div>
@@ -83,14 +91,6 @@ export default function CollaboratorList({
                 <p className="text-xs text-gray-500 truncate mt-0.5">
                   {collaborator.email}
                 </p>
-              )}
-              {showCompanyCount && collaborator.companiesCount !== undefined && (
-                <div className="flex items-center space-x-1 mt-1">
-                  <Building2 className="w-3 h-3 text-gray-400" />
-                  <p className="text-xs text-gray-500">
-                    {collaborator.companiesCount} registre{collaborator.companiesCount > 1 ? 's' : ''}
-                  </p>
-                </div>
               )}
             </div>
 

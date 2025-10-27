@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/collaboration/profile - Get all profile-level collaborators
+// GET /api/collaboration/profile - Get all collaborators (profile and company level)
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization')
@@ -189,7 +189,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Get all profile-level collaborators
+    // Get all companies owned by the user
+    const { data: ownedCompanies } = await supabase
+      .from('user_companies')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .eq('role', 'owner')
+
+    const ownedCompanyIds = ownedCompanies?.map(uc => uc.company_id) || []
+
+    // Get all profile-level collaborators (account-level access)
     const { data: profileCollaborators, error: fetchError } = await supabase
       .from('user_profiles')
       .select(`
@@ -210,21 +219,78 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch collaborators' }, { status: 500 })
     }
 
-    // Format results
-    const collaborators = (profileCollaborators || []).map(pc => ({
-      id: pc.invited_user_id,
-      firstName: (pc.profiles as any)?.first_name,
-      lastName: (pc.profiles as any)?.last_name,
-      role: pc.role,
-      scope: 'account' as const,
-      addedAt: pc.created_at
-    }))
+    // Get all company-level collaborators for owned companies
+    let companyCollaborations: any[] = []
+    if (ownedCompanyIds.length > 0) {
+      const { data, error: companyFetchError } = await supabase
+        .from('user_companies')
+        .select(`
+          user_id,
+          company_id,
+          role,
+          created_at,
+          profiles:user_id (
+            id,
+            first_name,
+            last_name
+          )
+        `)
+        .in('company_id', ownedCompanyIds)
+        .eq('role', 'user')
 
-    return NextResponse.json(collaborators)
+      if (companyFetchError) {
+        logger.error('Failed to fetch user_companies', companyFetchError, createRequestContext(request))
+      } else {
+        companyCollaborations = data || []
+      }
+    }
+
+    // Format profile-level collaborators
+    const profileCollaboratorMap = new Map<string, any>()
+    ;(profileCollaborators || []).forEach(pc => {
+      profileCollaboratorMap.set(pc.invited_user_id, {
+        id: pc.invited_user_id,
+        firstName: (pc.profiles as any)?.first_name,
+        lastName: (pc.profiles as any)?.last_name,
+        role: pc.role,
+        scope: 'account' as const,
+        companiesCount: ownedCompanyIds.length, // Account-level = all companies
+        addedAt: pc.created_at
+      })
+    })
+
+    // Count companies for company-level collaborators
+    const companyCollaboratorMap = new Map<string, any>()
+    companyCollaborations.forEach(cc => {
+      const existing = companyCollaboratorMap.get(cc.user_id)
+      if (existing) {
+        existing.companiesCount++
+      } else {
+        companyCollaboratorMap.set(cc.user_id, {
+          id: cc.user_id,
+          firstName: (cc.profiles as any)?.first_name,
+          lastName: (cc.profiles as any)?.last_name,
+          role: cc.role,
+          scope: 'registry' as const,
+          companiesCount: 1,
+          addedAt: cc.created_at
+        })
+      }
+    })
+
+    // Merge both maps, with profile-level taking precedence
+    const allCollaborators = Array.from(profileCollaboratorMap.values())
+    companyCollaboratorMap.forEach((collab, userId) => {
+      if (!profileCollaboratorMap.has(userId)) {
+        allCollaborators.push(collab)
+      }
+    })
+
+    return NextResponse.json(allCollaborators)
 
   } catch (error) {
     const context = createRequestContext(request)
-    logger.error('Failed to fetch profile-level collaborators', error, context)
+    logger.error('Failed to fetch collaborators', error, context)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
