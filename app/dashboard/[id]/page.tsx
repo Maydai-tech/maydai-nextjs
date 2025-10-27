@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import WorldMap from '@/components/WorldMap'
 import ScoreCircle from '@/components/ScoreCircle'
+import RiskPyramid from '@/components/RiskPyramid'
 import DeleteConfirmationModal from '@/app/usecases/[id]/components/DeleteConfirmationModal'
 import UseCaseLimitModal from '@/components/UseCases/UseCaseLimitModal'
 import Image from 'next/image'
@@ -620,17 +621,22 @@ export default function CompanyDashboard({ params }: DashboardProps) {
 
         {/* Score and World Map Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* Score Circle */}
-          <div className="bg-white rounded-xl shadow-sm lg:col-span-1">
-            <ScoreCircle 
-              averageScore={averageScore}
-              loading={loadingScore}
-              evaluatedCount={evaluatedCount}
-              totalCount={totalCount}
-            />
+          {/* Colonne gauche - ScoreCircle et RiskPyramid */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white rounded-xl shadow-sm">
+              <ScoreCircle 
+                averageScore={averageScore}
+                loading={loadingScore}
+                evaluatedCount={evaluatedCount}
+                totalCount={totalCount}
+              />
+            </div>
+            <div className="bg-white rounded-xl shadow-sm">
+              <RiskPyramid useCases={useCases} />
+            </div>
           </div>
           
-          {/* World Map */}
+          {/* Colonne droite - World Map */}
           <div className="lg:col-span-2">
             <WorldMap 
               deploymentCountries={getDeploymentCountries()}
