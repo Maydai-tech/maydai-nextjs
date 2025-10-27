@@ -4,6 +4,7 @@ import { hasAccessToCompany } from '@/lib/permissions'
 import { isOwner, hasAccessToResource } from '@/lib/collaborators'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { getUserByEmail, inviteUserByEmail, createProfileForUser } from '@/lib/invite-user'
+import { sendRegistryCollaborationInvite } from '@/lib/email/mailjet'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -171,6 +172,17 @@ export async function POST(
       .select('name')
       .eq('id', companyId)
       .single()
+
+    // Envoi email (non-bloquant, ne fait pas échouer la création)
+    sendRegistryCollaborationInvite({
+      collaboratorEmail: email,
+      collaboratorName: `${firstName} ${lastName}`,
+      inviterName: user.user_metadata?.first_name || 'Équipe MaydAI',
+      companyName: company?.name || 'votre entreprise'
+    }).catch(err => {
+      console.error('Failed to send invitation email:', err)
+      // Continue silently, email failure doesn't block user creation
+    })
 
     return NextResponse.json({
       success: true,
