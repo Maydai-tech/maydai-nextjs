@@ -10,7 +10,7 @@ import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { Building2, Plus, ChevronRight } from 'lucide-react'
 import Footer from '@/components/Footer'
 import NavBar from '@/components/NavBar/NavBar'
-import RegistryLimitModal from '@/components/Registries/RegistryLimitModal'
+import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 
 interface Company {
   id: string
@@ -254,13 +254,14 @@ export default function CompanySelection() {
       {/* Footer */}
       <Footer />
 
-      {/* Registry Limit Modal */}
-      <RegistryLimitModal
+      {/* Plan Limit Modal */}
+      <PlanLimitModal
         isOpen={showLimitModal}
         onClose={() => setShowLimitModal(false)}
         currentCount={companies.filter(c => c.role === 'owner' || c.role === 'company_owner').length}
         maxLimit={plan.maxRegistries || 1}
         planName={plan.displayName}
+        resourceType="registry"
       />
     </div>
   )

@@ -39,6 +39,30 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
+    // Get all companies owned by the user
+    const { data: ownedCompanies } = await supabase
+      .from('user_companies')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .eq('role', 'owner')
+
+    const ownedCompanyIds = ownedCompanies?.map(uc => uc.company_id) || []
+
+    // Delete all registry-level accesses for this collaborator in owner's companies
+    if (ownedCompanyIds.length > 0) {
+      const { error: registryDeleteError } = await supabase
+        .from('user_companies')
+        .delete()
+        .eq('user_id', collaboratorId)
+        .in('company_id', ownedCompanyIds)
+        .eq('role', 'user')
+
+      if (registryDeleteError) {
+        logger.error('Failed to delete registry-level collaborator accesses', registryDeleteError, createRequestContext(request))
+        return NextResponse.json({ error: 'Failed to delete collaborator registry accesses' }, { status: 500 })
+      }
+    }
+
     // Delete collaborator from profile level (hard delete)
     const { error: deleteError } = await supabase
       .from('user_profiles')
