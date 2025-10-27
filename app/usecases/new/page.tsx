@@ -20,6 +20,8 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import { getProviderIcon } from '@/lib/provider-icons'
+import QuestionTooltip from '@/components/QuestionTooltip'
+import PartnerTooltip from '@/components/PartnerTooltip'
 
 // Force dynamic rendering to prevent prerender errors
 export const dynamic = 'force-dynamic'
@@ -65,6 +67,12 @@ interface Question {
   placeholder?: string
   maxLength?: number
   hasOtherOption?: boolean
+  tooltip?: {
+    title: string
+    shortContent: string
+    fullContent?: string
+    icon?: string
+  }
 }
 
 function NewUseCasePageContent() {
@@ -105,6 +113,40 @@ function NewUseCasePageContent() {
   const [otherRadioValue, setOtherRadioValue] = useState('')
   const [otherRadioSelected, setOtherRadioSelected] = useState(false)
   const api = useApiCall()
+
+  // Données des infobulles pour chaque partenaire technologique
+  const partnerInfo = {
+    'Anthropic': {
+      shortContent: 'Laboratoire d\'IA alignée créé par les frères Amodei, développeur de Claude.',
+      fullContent: 'Fondé en 2021 par d\'anciens chercheurs seniors d\'OpenAI (dont les frères et sœurs Amodei). Anthropic est un laboratoire de recherche axé sur la sécurité et l\'alignement de l\'IA (notamment via son approche "IA Constitutionnelle"). Ils développent la famille de modèles Claude et sont soutenus par des acteurs majeurs comme Google et Amazon.',
+      rank: 3
+    },
+    'Google': {
+      shortContent: 'Division IA de Google avec Gemini, fondée en 2023.',
+      fullContent: 'Google développe la famille de modèles Gemini depuis 2023. Leader technologique avec d\'importants investissements en recherche IA.',
+      rank: 2
+    },
+    'Meta': {
+      shortContent: 'Meta développe des modèles open-source avec Llama.',
+      fullContent: 'Meta développe la famille de modèles Llama, open-source, depuis 2023. Approche communautaire et collaborative.',
+      rank: 4
+    },
+    'Mistral': {
+      shortContent: 'Startup française spécialisée en IA générative, développeur de Mistral.',
+      fullContent: 'Startup française fondée en 2023 par d\'anciens de Google et Meta. Spécialisée en IA générative avec Mistral, approche européenne.',
+      rank: 5
+    },
+    'OpenAI': {
+      shortContent: 'Leader mondial de l\'IA générative avec ChatGPT et GPT-4.',
+      fullContent: 'OpenAI est le leader mondial de l\'IA générative avec ChatGPT et GPT-4. Fondée en 2015, pionnière dans le domaine.',
+      rank: 1
+    },
+    'Qwen': {
+      shortContent: 'Modèle IA développé par Alibaba Cloud.',
+      fullContent: 'Qwen est développé par Alibaba Cloud. Approche orientée performance et efficacité.',
+      rank: 6
+    }
+  }
 
   // États pour la génération automatique avec Mistral AI
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
@@ -191,7 +233,19 @@ function NewUseCasePageContent() {
       question: 'Partenaire technologique ?',
       type: 'radio',
       options: partners.map(partner => ({ label: partner.name, examples: [] })), // Liste dynamique convertie en format radio
-      hasOtherOption: true
+      hasOtherOption: true,
+      tooltip: {
+        title: 'Pourquoi suivre le partenaire technologique ?',
+        shortContent: 'Documentez le fournisseur de votre modèle IA selon les exigences de l\'IA Act.',
+        fullContent: `L'IA Act européen impose des obligations différentes selon votre rôle dans la chaîne de valeur de l'IA.
+
+Traçabilité & Risque : Pour chaque cas d'usage, vous devez documenter l'ensemble du système, y compris le modèle de fondation (GPAI - General Purpose AI) sur lequel il s'appuie.
+
+Obligations Partagées : Les fournisseurs de GPAI (comme Google, OpenAI, Mistral...) ont leurs propres obligations de transparence (documentation technique, instructions d'usage).
+
+Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bonne documentation et à évaluer précisément les risques transférés de leur modèle vers votre cas d'usage.`,
+        icon: '💡'
+      }
     },
     {
       id: 'llm_model_version',
@@ -763,9 +817,19 @@ function NewUseCasePageContent() {
           )}
 
           <div className="mb-6">
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
-              {currentQuestion.question}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-0">
+                {currentQuestion.question}
+              </h2>
+              {currentQuestion.tooltip && (
+                <QuestionTooltip 
+                  title={currentQuestion.tooltip.title}
+                  shortContent={currentQuestion.tooltip.shortContent}
+                  fullContent={currentQuestion.tooltip.fullContent}
+                  icon={currentQuestion.tooltip.icon}
+                />
+              )}
+            </div>
             {currentQuestion.maxLength && (
               <p className="text-sm text-gray-500">
                 Maximum {currentQuestion.maxLength} caractères
@@ -1059,8 +1123,17 @@ function NewUseCasePageContent() {
                                   className="w-6 h-6 object-contain"
                                 />
                               </div>
-                              <div className="text-lg font-semibold text-gray-900">
-                                {option.label}
+                              <div className="flex-1 flex items-center justify-between">
+                                <div className="text-lg font-semibold text-gray-900">
+                                  {option.label}
+                                </div>
+                                {partnerInfo[option.label as keyof typeof partnerInfo] && (
+                                  <PartnerTooltip
+                                    shortContent={partnerInfo[option.label as keyof typeof partnerInfo].shortContent}
+                                    fullContent={partnerInfo[option.label as keyof typeof partnerInfo].fullContent}
+                                    rank={partnerInfo[option.label as keyof typeof partnerInfo].rank}
+                                  />
+                                )}
                               </div>
                             </div>
                           ) : (
