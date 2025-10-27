@@ -7,6 +7,8 @@ import { Users, UserPlus, Info, Building2, Globe } from 'lucide-react';
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal';
 import RegistryCollaboratorList from '@/components/Collaboration/RegistryCollaboratorList';
 import ConfirmRemoveCollaboratorModal from '@/components/Collaboration/ConfirmRemoveCollaboratorModal';
+import PlanLimitModal from '@/components/Shared/PlanLimitModal';
+import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan';
 
 interface Company {
   id: string;
@@ -27,13 +29,16 @@ export default function CollaborationPage() {
   const { user, getAccessToken } = useAuth();
   const params = useParams();
   const companyId = params.id as string;
+  const { plan } = useUserPlan();
 
   const [company, setCompany] = useState<Company | null>(null);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [totalCollaborators, setTotalCollaborators] = useState<any[]>([]);
   const [loadingCompany, setLoadingCompany] = useState(true);
   const [loadingCollaborators, setLoadingCollaborators] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const [selectedCollaborator, setSelectedCollaborator] = useState<Collaborator | null>(null);
 
   useEffect(() => {
@@ -43,6 +48,7 @@ export default function CollaborationPage() {
   useEffect(() => {
     if (company) {
       fetchCollaborators();
+      fetchTotalCollaborators();
     }
   }, [company]);
 
@@ -110,6 +116,42 @@ export default function CollaborationPage() {
     }
   };
 
+  const fetchTotalCollaborators = async () => {
+    if (!user) return;
+
+    try {
+      const token = getAccessToken();
+      if (!token) {
+        throw new Error('No access token available');
+      }
+
+      const response = await fetch('/api/collaboration/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch total collaborators');
+      }
+
+      const data = await response.json();
+      setTotalCollaborators(data);
+    } catch (error) {
+      console.error('Error fetching total collaborators:', error);
+    }
+  };
+
+  const handleInviteClick = () => {
+    const maxCollaborators = plan.maxCollaborators ?? Infinity;
+
+    if (totalCollaborators.length >= maxCollaborators) {
+      setShowLimitModal(true);
+    } else {
+      setShowInviteModal(true);
+    }
+  };
+
   const handleInviteCollaborator = async (data: {
     email: string;
     firstName: string;
@@ -141,6 +183,7 @@ export default function CollaborationPage() {
     }
 
     await fetchCollaborators();
+    await fetchTotalCollaborators();
     setShowInviteModal(false);
   };
 
@@ -172,6 +215,7 @@ export default function CollaborationPage() {
     }
 
     await fetchCollaborators();
+    await fetchTotalCollaborators();
     setShowRemoveModal(false);
     setSelectedCollaborator(null);
   };
@@ -231,7 +275,7 @@ export default function CollaborationPage() {
             </div>
             {isOwner && (
               <button
-                onClick={() => setShowInviteModal(true)}
+                onClick={handleInviteClick}
                 className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white rounded-lg hover:bg-[#006280] transition-colors"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
@@ -303,6 +347,15 @@ export default function CollaborationPage() {
         }}
         onConfirm={handleConfirmRemoveCollaborator}
         collaborator={selectedCollaborator}
+      />
+
+      <PlanLimitModal
+        isOpen={showLimitModal}
+        onClose={() => setShowLimitModal(false)}
+        currentCount={totalCollaborators.length}
+        maxLimit={plan.maxCollaborators ?? 0}
+        planName={plan.displayName}
+        resourceType="collaborator"
       />
     </div>
   );
