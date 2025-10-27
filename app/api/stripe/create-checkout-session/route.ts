@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         ...(userId && { user_id: userId }),
       },
+      automatic_tax: { enabled: true },
     }
 
     // Ajouter le customer si disponible
