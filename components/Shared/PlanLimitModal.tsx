@@ -3,22 +3,55 @@
 import { X, AlertCircle, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-interface RegistryLimitModalProps {
+type ResourceType = 'registry' | 'usecase' | 'collaborator';
+
+interface PlanLimitModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentCount: number;
   maxLimit: number;
   planName: string;
+  resourceType: ResourceType;
+  customMessage?: string;
 }
 
-export default function RegistryLimitModal({
+const getResourceText = (resourceType: ResourceType, count: number): string => {
+  switch (resourceType) {
+    case 'registry':
+      return count === 1 ? 'registre' : 'registres';
+    case 'usecase':
+      return count === 1 ? 'cas d\'usage' : 'cas d\'usage';
+    case 'collaborator':
+      return count === 1 ? 'collaborateur' : 'collaborateurs';
+  }
+};
+
+const getContextMessage = (resourceType: ResourceType): string => {
+  switch (resourceType) {
+    case 'registry':
+      return 'Pour créer plus de registres, vous devez passer à un plan supérieur.';
+    case 'usecase':
+      return 'Pour créer plus de cas d\'usage dans ce registre, vous devez passer à un plan supérieur.';
+    case 'collaborator':
+      return 'Pour inviter plus de collaborateurs, vous devez passer à un plan supérieur.';
+  }
+};
+
+export default function PlanLimitModal({
   isOpen,
   onClose,
+  currentCount,
   maxLimit,
-  planName
-}: RegistryLimitModalProps) {
-  const router = useRouter()
+  planName,
+  resourceType,
+  customMessage
+}: PlanLimitModalProps) {
+  const router = useRouter();
+
   if (!isOpen) return null;
+
+  const resourceText = getResourceText(resourceType, maxLimit);
+  const contextMessage = customMessage || getContextMessage(resourceType);
 
   return (
     <div
@@ -48,14 +81,20 @@ export default function RegistryLimitModal({
         {/* Content */}
         <div className="mb-6">
           <p className="text-gray-600 mb-4 leading-relaxed">
-            Vous avez atteint la limite de <span className="font-semibold text-gray-900">{maxLimit} {maxLimit === 1 ? 'registre' : 'registres'}</span> autorisée par votre plan <span className="font-semibold text-gray-900">{planName}</span>.
+            Vous avez atteint la limite de{' '}
+            <span className="font-semibold text-gray-900">
+              {maxLimit} {resourceText}
+            </span>{' '}
+            {resourceType === 'usecase' && 'par registre '}
+            autorisée par votre plan{' '}
+            <span className="font-semibold text-gray-900">{planName}</span>.
           </p>
 
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <div className="flex items-start space-x-2">
               <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-blue-800">
-                Pour créer plus de registres, vous devez passer à un plan supérieur.
+                {contextMessage}
               </div>
             </div>
           </div>

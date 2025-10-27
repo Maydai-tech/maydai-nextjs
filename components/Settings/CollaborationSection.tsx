@@ -1,7 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { Users, Settings } from 'lucide-react'
 import CollaboratorList from '@/components/Collaboration/CollaboratorList'
+import PlanLimitModal from '@/components/Shared/PlanLimitModal'
+import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 
 interface CollaborationSectionProps {
   collaborators: any[]
@@ -16,6 +19,18 @@ export default function CollaborationSection({
   onInvite,
   onRemove
 }: CollaborationSectionProps) {
+  const { plan } = useUserPlan()
+  const [showLimitModal, setShowLimitModal] = useState(false)
+
+  const handleInviteClick = () => {
+    const maxCollaborators = plan.maxCollaborators ?? Infinity
+
+    if (collaborators.length >= maxCollaborators) {
+      setShowLimitModal(true)
+    } else {
+      onInvite()
+    }
+  }
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -25,7 +40,7 @@ export default function CollaborationSection({
           <p className="text-gray-500">Gérez les accès de vos collaborateurs à vos registres</p>
         </div>
         <button
-          onClick={onInvite}
+          onClick={handleInviteClick}
           className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white rounded-lg hover:bg-[#006280] transition-colors"
         >
           <Users className="w-4 h-4 mr-2" />
@@ -61,6 +76,16 @@ export default function CollaborationSection({
           <li>• Ils ne peuvent pas inviter d'autres collaborateurs</li>
         </ul>
       </div>
+
+      {/* Plan Limit Modal */}
+      <PlanLimitModal
+        isOpen={showLimitModal}
+        onClose={() => setShowLimitModal(false)}
+        currentCount={collaborators.length}
+        maxLimit={plan.maxCollaborators ?? 0}
+        planName={plan.displayName}
+        resourceType="collaborator"
+      />
     </div>
   )
 }
