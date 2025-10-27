@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, User, CreditCard, Menu, X, Users, FileText, CheckSquare, Settings } from 'lucide-react';
+import { Home, User, Menu, X, Users, FileText, CheckSquare, Settings } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useApiCall } from '@/lib/api-client-legacy';
+import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan';
 import packageJson from '../package.json';
 
 export default function Sidebar() {
@@ -13,6 +14,7 @@ export default function Sidebar() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
+  const { plan, loading: planLoading } = useUserPlan();
   const [companyId, setCompanyId] = useState<string | null>(null);
   const api = useApiCall();
 
@@ -70,7 +72,7 @@ export default function Sidebar() {
     return '/dashboard/registries';
   };
 
-  const menuItems = [
+  const mainMenuItems = [
     {
       name: 'Dashboard',
       href: getDashboardUrl(),
@@ -90,16 +92,6 @@ export default function Sidebar() {
       name: 'Collaboration',
       href: getCollaborationUrl(),
       icon: Users
-    },
-    {
-      name: 'Abonnement',
-      href: '/abonnement',
-      icon: CreditCard
-    },
-    {
-      name: 'Paramètres',
-      href: '/settings',
-      icon: Settings
     }
   ];
 
@@ -148,32 +140,29 @@ export default function Sidebar() {
         <div className="p-6 border-b border-[#006280]/30">
           <h1 className="text-white text-xl font-bold tracking-wide">MaydAI</h1>
         </div>
-        
+
         <nav className="flex-1 p-4 space-y-2">
-          {menuItems.map((item) => {
+          {mainMenuItems.map((item) => {
             const Icon = item.icon;
             // Dashboard should be highlighted when on dashboard pages or usecase pages (including usecase collaboration)
             // Dossiers should be highlighted when on dossiers pages
             // Collaboration should be highlighted when on company collaboration pages only
-            // Paramètres should be highlighted when on settings page
             const isActive = item.name === 'Dashboard'
               ? (pathname === item.href || pathname.startsWith('/usecases/'))
               : item.name === 'Dossiers'
               ? pathname.startsWith('/dossiers')
               : item.name === 'Collaboration'
               ? pathname.includes('/collaboration') && pathname.startsWith('/dashboard/')
-              : item.name === 'Paramètres'
-              ? pathname === '/settings'
               : pathname === item.href;
-            
+
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={`
                   flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group
-                  ${isActive 
-                    ? 'bg-white text-[#0080A3] shadow-lg font-medium' 
+                  ${isActive
+                    ? 'bg-white text-[#0080A3] shadow-lg font-medium'
                     : 'text-white/90 hover:bg-white/10 hover:text-white'
                   }
                 `}
@@ -185,6 +174,43 @@ export default function Sidebar() {
             );
           })}
         </nav>
+
+        {/* User info and settings section */}
+        <div className="p-4 border-t border-[#006280]/30 mb-20">
+          {user?.email && (
+            <div className="bg-white/5 rounded-lg">
+              <div className="px-3 py-2">
+                <div className="flex items-center mb-2">
+                  <User className="h-4 w-4 mr-2 text-white/60 flex-shrink-0" />
+                  <p className="text-sm font-medium text-white truncate">{user.email}</p>
+                </div>
+                <div className="flex justify-between items-center pl-6">
+                  {planLoading ? (
+                    <div className="h-5 w-16 rounded-full bg-white/10 animate-pulse" />
+                  ) : (
+                    <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-white/10 text-white">
+                      {plan.displayName}
+                    </span>
+                  )}
+                  <Link
+                    href="/settings"
+                    className={`
+                      p-2 rounded-lg transition-all duration-200 flex-shrink-0
+                      ${pathname === '/settings'
+                        ? 'bg-white text-[#0080A3]'
+                        : 'text-white/90 hover:bg-white/10 hover:text-white'
+                      }
+                    `}
+                    onClick={() => setIsOpen(false)}
+                    title="Paramètres"
+                  >
+                    <Settings className={`w-5 h-5 ${pathname === '/settings' ? 'text-[#0080A3]' : ''}`} />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );

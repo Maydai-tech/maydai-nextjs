@@ -24,7 +24,7 @@ import WorldMap from '@/components/WorldMap'
 import ScoreCircle from '@/components/ScoreCircle'
 import RiskPyramid from '@/components/RiskPyramid'
 import DeleteConfirmationModal from '@/app/usecases/[id]/components/DeleteConfirmationModal'
-import UseCaseLimitModal from '@/components/UseCases/UseCaseLimitModal'
+import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import Image from 'next/image'
 import { getCompactScoreStyle, getSpecialScoreStyles } from '@/lib/score-styles'
 
@@ -1039,12 +1039,13 @@ export default function CompanyDashboard({ params }: DashboardProps) {
       />
 
       {/* Use Case Limit Modal */}
-      <UseCaseLimitModal
+      <PlanLimitModal
         isOpen={showUseCaseLimitModal}
         onClose={() => setShowUseCaseLimitModal(false)}
         currentCount={useCases.length}
         maxLimit={plan.maxUseCasesPerRegistry || 3}
         planName={plan.displayName}
+        resourceType="usecase"
       />
     </div>
   )
