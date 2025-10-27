@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { getUserByEmail, inviteUserByEmail, createProfileForUser } from '@/lib/invite-user'
+import { sendAccountCollaborationInvite } from '@/lib/email/mailjet'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -147,6 +148,16 @@ export async function POST(request: NextRequest) {
       .select('id, first_name, last_name')
       .eq('id', collaboratorProfileId)
       .single()
+
+    // Envoi email (non-bloquant, ne fait pas échouer la création)
+    sendAccountCollaborationInvite({
+      collaboratorEmail: email,
+      collaboratorName: `${firstName} ${lastName}`,
+      inviterName: user.user_metadata?.first_name || 'Équipe MaydAI'
+    }).catch(err => {
+      console.error('Failed to send account invitation email:', err)
+      // Continue silently, email failure doesn't block user creation
+    })
 
     return NextResponse.json({
       success: true,
