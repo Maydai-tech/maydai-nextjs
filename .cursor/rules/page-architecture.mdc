@@ -1,0 +1,76 @@
+# Architecture des Pages Next.js
+
+## Convention à suivre systématiquement
+
+### Pour toutes les **nouvelles pages** :
+
+1. **Créer un fichier descriptif avec la logique** : `NomDescriptifPage.tsx`
+   - Contient tout le code, les hooks, la logique métier
+   - Nom explicite qui décrit le rôle de la page (ex: `CompanyDashboardPage.tsx`, `RegistriesPage.tsx`)
+
+2. **Créer un `page.tsx` minimaliste** :
+   - Sert uniquement de point d'entrée Next.js
+   - Fait uniquement un import et un export
+   - Maximum 5-10 lignes
+
+### Pour les **pages existantes** en "ancien format" :
+
+Quand tu modifies une page qui a tout son code directement dans `page.tsx` :
+
+1. **Extraire le code** vers un nouveau fichier `NomDescriptifPage.tsx`
+2. **Refactoriser `page.tsx`** pour ne garder qu'un simple export
+
+## Exemples
+
+### ✅ Bonne architecture
+
+```tsx
+// app/dashboard/[id]/page.tsx
+import CompanyDashboardPage from './CompanyDashboardPage'
+
+interface DashboardProps {
+  params: Promise<{ id: string }>
+}
+
+export default function CompanyDashboard({ params }: DashboardProps) {
+  return <CompanyDashboardPage params={params} />
+}
+```
+
+```tsx
+// app/dashboard/[id]/CompanyDashboardPage.tsx
+'use client'
+
+import { useState, useEffect } from 'react'
+// ... tous les imports
+
+export default function CompanyDashboardPage({ params }: DashboardProps) {
+  // Toute la logique métier ici
+  // ...
+}
+```
+
+### ❌ Mauvaise architecture (ancien format)
+
+```tsx
+// app/dashboard/[id]/page.tsx
+'use client'
+
+import { useState, useEffect } from 'react'
+// 500+ lignes de code directement dans page.tsx
+export default function CompanyDashboard({ params }: DashboardProps) {
+  // Toute la logique ici - À ÉVITER
+}
+```
+
+## Avantages
+
+✅ **Séparation claire** entre point d'entrée Next.js et logique métier
+✅ **Noms explicites** : on sait immédiatement ce que fait la page
+✅ **Meilleure organisation** : facilite la maintenance et les tests
+✅ **Navigation facilitée** : plus facile de trouver le bon fichier dans le codebase
+✅ **Réutilisabilité** : le composant peut être importé ailleurs si nécessaire
+
+## Rappel Important
+
+⚠️ **À chaque fois que tu crées ou modifies une page Next.js, applique cette architecture !**
