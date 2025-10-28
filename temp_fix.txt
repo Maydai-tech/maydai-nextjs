@@ -1,6 +1,0 @@
-        "6 cas d'usage IA disponibles",
-        "6 modèles de cas d'usage disponibles",
-        "12 cas d'usage IA disponibles", 
-        "12 modèles de cas d'usage disponibles",
-        "Cas d'usage IA illimités",
-        "Support juridique relecture cas d'usage",
