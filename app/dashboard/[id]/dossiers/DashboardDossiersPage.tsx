@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
-import { 
-  FileText, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
+import {
+  FileText,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
   Search,
   BarChart3,
   Clock,
@@ -45,7 +45,7 @@ interface UseCase {
   }
 }
 
-export default function DossiersPage() {
+export default function DossiersComplianceView() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const api = useApiCall()
@@ -70,7 +70,7 @@ export default function DossiersPage() {
       try {
         setLoadingData(true)
         const result = await api.get('/api/usecases')
-        
+
         if (result.data) {
           // Tous les scores à 0% comme demandé (fonctionnalité en développement)
           const useCasesWithCompliance = result.data.map((uc: any) => ({
@@ -91,7 +91,7 @@ export default function DossiersPage() {
               monitoring: 0,
             }
           }))
-          
+
           setUseCases(useCasesWithCompliance)
           setHasFetched(true)
         }
@@ -110,7 +110,7 @@ export default function DossiersPage() {
     const statuses = useCase.compliance_status
     const completedCount = Object.values(statuses).filter(Boolean).length
     const totalCount = Object.keys(statuses).length
-    
+
     if (completedCount === totalCount) return 'compliant'
     if (completedCount === 0) return 'non-compliant'
     return 'partial'
@@ -152,7 +152,7 @@ export default function DossiersPage() {
                          useCase.description.toLowerCase().includes(searchTerm.toLowerCase())
     const complianceStatus = getComplianceStatus(useCase)
     const matchesFilter = filterStatus === 'all' || complianceStatus === filterStatus
-    
+
     return matchesSearch && matchesFilter
   })
 
@@ -197,7 +197,7 @@ export default function DossiersPage() {
               <h3 className="text-lg font-semibold text-gray-900">Fonctionnalité en développement</h3>
             </div>
             <p className="text-gray-600 mb-6">
-              La plateforme MaydAI est en Beta test, il n'est pas encore possible de soumettre des documents de conformité. 
+              La plateforme MaydAI est en Beta test, il n'est pas encore possible de soumettre des documents de conformité.
               Cette fonctionnalité sera disponible dans une prochaine version.
             </p>
             <div className="flex justify-end">
@@ -288,7 +288,7 @@ export default function DossiersPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-yellow-100 rounded-lg">
@@ -302,7 +302,7 @@ export default function DossiersPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-red-100 rounded-lg">
@@ -316,7 +316,7 @@ export default function DossiersPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -339,9 +339,9 @@ export default function DossiersPage() {
             <div>
               <h3 className="text-lg font-semibold text-blue-900 mb-2">Fonctionnalité en développement</h3>
               <p className="text-blue-800">
-                La rubrique "Dossiers de Conformité" est actuellement en phase de développement. 
-                Tous les scores sont affichés à 0% car la fonctionnalité de chargement de documents 
-                n'est pas encore disponible. Cette section illustre les futures capacités de suivi 
+                La rubrique "Dossiers de Conformité" est actuellement en phase de développement.
+                Tous les scores sont affichés à 0% car la fonctionnalité de chargement de documents
+                n'est pas encore disponible. Cette section illustre les futures capacités de suivi
                 de conformité réglementaire.
               </p>
             </div>
@@ -355,7 +355,7 @@ export default function DossiersPage() {
               <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun cas d'usage trouvé</h3>
               <p className="text-gray-600">
-                {searchTerm || filterStatus !== 'all' 
+                {searchTerm || filterStatus !== 'all'
                   ? 'Aucun cas d\'usage ne correspond à vos critères de recherche.'
                   : 'Commencez par créer votre premier cas d\'usage.'
                 }
@@ -366,7 +366,7 @@ export default function DossiersPage() {
               const complianceStatus = getComplianceStatus(useCase)
               const completedCount = Object.values(useCase.compliance_status).filter(Boolean).length
               const totalCount = Object.keys(useCase.compliance_status).length
-              
+
               return (
                 <div
                   key={useCase.id}
@@ -384,7 +384,7 @@ export default function DossiersPage() {
                           </span>
                         </div>
                         <p className="text-gray-600 mb-4">{useCase.description}</p>
-                        
+
                         {/* Barre de progression */}
                         <div className="mb-4">
                           <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
@@ -392,7 +392,7 @@ export default function DossiersPage() {
                             <span>{completedCount}/{totalCount} éléments</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
+                            <div
                               className="bg-red-500 h-2 rounded-full transition-all duration-300"
                               style={{ width: '0%' }}
                             />
@@ -419,7 +419,7 @@ export default function DossiersPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2 ml-4">
                         <div className="text-right">
                           <div className="text-2xl font-bold text-gray-900">0%</div>

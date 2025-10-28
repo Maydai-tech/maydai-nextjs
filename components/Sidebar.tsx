@@ -72,6 +72,23 @@ export default function Sidebar() {
     return '/dashboard/registries';
   };
 
+  // Determine dossiers URL based on current context
+  const getDossiersUrl = () => {
+    // If we're currently on a company dashboard page, extract the company ID from the URL
+    const dashboardMatch = pathname.match(/^\/dashboard\/([^\/]+)/);
+    if (dashboardMatch && dashboardMatch[1] !== 'companies' && dashboardMatch[1] !== 'registries') {
+      return `/dashboard/${dashboardMatch[1]}/dossiers`;
+    }
+
+    // If we have a company ID from the API, use it
+    if (companyId) {
+      return `/dashboard/${companyId}/dossiers`;
+    }
+
+    // Fallback to company selection page
+    return '/dashboard/registries';
+  };
+
   const mainMenuItems = [
     {
       name: 'Dashboard',
@@ -80,7 +97,7 @@ export default function Sidebar() {
     },
     {
       name: 'Dossiers',
-      href: '/dossiers',
+      href: getDossiersUrl(),
       icon: FileText
     },
     {
@@ -150,7 +167,7 @@ export default function Sidebar() {
             const isActive = item.name === 'Dashboard'
               ? (pathname === item.href || pathname.startsWith('/usecases/'))
               : item.name === 'Dossiers'
-              ? pathname.startsWith('/dossiers')
+              ? pathname.includes('/dossiers')
               : item.name === 'Collaboration'
               ? pathname.includes('/collaboration') && pathname.startsWith('/dashboard/')
               : pathname === item.href;
