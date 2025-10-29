@@ -364,8 +364,8 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
           examples: ['Chatbot indépendant', 'Assistant virtuel', 'Système de recommandation autonome'],
           tooltip: {
             title: 'Système autonome',
-            shortContent: 'Système IA fonctionnant de manière indépendante sans être intégré dans un produit.',
-            fullContent: 'Un système autonome est une solution IA qui opère de façon indépendante (ex: chatbot, assistant virtuel). Selon l\'IA Act, ces systèmes ont des obligations spécifiques de transparence et de documentation.',
+            shortContent: 'Système automatisé fonctionnant avec différents niveaux d\'autonomie.',
+            fullContent: 'Un système automatisé conçu pour fonctionner avec différents niveaux d\'autonomie, capable de déduire des sorties (prédictions, contenus) qui influencent les environnements physiques ou virtuels.',
             icon: '🤖'
           }
         },
@@ -374,8 +374,8 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
           examples: ['Fonctionnalité intégrée', 'Module IA dans une application', 'Composant d\'un service existant'],
           tooltip: {
             title: 'Produit',
-            shortContent: 'Fonctionnalité IA intégrée dans un produit ou service existant.',
-            fullContent: 'Un produit intègre l\'IA comme composant d\'une solution plus large (ex: module de recommandation dans une app). Les obligations réglementaires dépendent du contexte d\'intégration.',
+            shortContent: 'Système IA intégré comme composant dans un produit physique ou logiciel.',
+            fullContent: 'Le système d\'IA peut être intégré en tant que composant dans un produit (physique ou logiciel) soumis à la législation de l\'UE.',
             icon: '📦'
           }
         }
@@ -385,7 +385,13 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
       id: 'deployment_countries',
       question: 'Dans quels pays le cas d\'usage est-il utilisé ?',
       type: 'countries',
-      placeholder: 'Sélectionnez les pays de déploiement...'
+      placeholder: 'Sélectionnez les pays de déploiement...',
+      tooltip: {
+        title: 'Application territoriale de l\'AI Act',
+        shortContent: 'L\'AI Act s\'applique dans tous les États membres de l\'UE.',
+        fullContent: 'L\'AI Act s\'applique dans tous les États membres de l\'UE. Il s\'applique également aux cas d\'usage IA utilisés par des acteurs établis dans un pays tiers si les résultats produits par le système sont destinées à être utilisés sur le territoire de l\'UE.',
+        icon: '🌍'
+      }
     },
     {
       id: 'description',
@@ -1220,8 +1226,20 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
                             </div>
                           ) : (
                             <>
-                              <div className="text-lg font-semibold text-gray-900 mb-2">
-                                {option.label}
+                              <div className="flex items-center justify-between w-full mb-2">
+                                <div className="text-lg font-semibold text-gray-900">
+                                  {option.label}
+                                </div>
+                                {option.tooltip && (
+                                  <Tooltip
+                                    title={option.tooltip.title}
+                                    shortContent={option.tooltip.shortContent}
+                                    fullContent={option.tooltip.fullContent}
+                                    icon={option.tooltip.icon}
+                                    type="answer"
+                                    position="auto"
+                                  />
+                                )}
                               </div>
                               {option.examples.length > 0 && (
                                 <div className="text-sm text-gray-600">
