@@ -1,5 +1,6 @@
 import React from 'react'
 import { Question } from '../../types/usecase'
+import Tooltip from '@/components/Tooltip'
 
 interface QuestionRendererProps {
   question: Question
@@ -49,9 +50,21 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
               }}
               className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3] disabled:opacity-50"
             />
-            <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
-              {option.label}
-            </span>
+            <div className="flex items-center flex-1">
+              <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
+                {option.label}
+              </span>
+              {(option as any).tooltip && (
+                <Tooltip
+                  title={(option as any).tooltip.title}
+                  shortContent={(option as any).tooltip.shortContent}
+                  fullContent={(option as any).tooltip.fullContent}
+                  icon={(option as any).tooltip.icon}
+                  type="answer"
+                  position="auto"
+                />
+              )}
+            </div>
           </label>
         )
       })}
@@ -136,9 +149,21 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
                 }}
                 className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3] disabled:opacity-50"
               />
-              <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
-                {option.label}
-              </span>
+              <div className="flex items-center flex-1">
+                <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
+                  {option.label}
+                </span>
+                {(option as any).tooltip && (
+                  <Tooltip
+                    title={(option as any).tooltip.title}
+                    shortContent={(option as any).tooltip.shortContent}
+                    fullContent={(option as any).tooltip.fullContent}
+                    icon={(option as any).tooltip.icon}
+                    type="answer"
+                    position="auto"
+                  />
+                )}
+              </div>
             </label>
           )
         })}
@@ -164,61 +189,72 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
             const isSelected = tagAnswers.includes(option.code)
             
             return (
-              <button
-                key={`${question.id}-${option.code}-${index}`}
-                type="button"
-                disabled={isReadOnly}
-                onClick={() => {
-                  if (!isReadOnly) {
-                    console.log('Tag click:', {
-                      option: option.code,
-                      isSelected,
-                      currentTags: tagAnswers,
-                      isUniqueAnswer: option.unique_answer
-                    })
-                    
-                    let newAnswers: string[]
-                    if (isSelected) {
-                      // Retirer le tag
-                      newAnswers = tagAnswers.filter((item: string) => item !== option.code)
-                    } else {
-                      if (option.unique_answer) {
-                        // Si cette option est une réponse unique, désélectionner toutes les autres
-                        newAnswers = [option.code]
+              <div key={`${question.id}-${option.code}-${index}`} className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={isReadOnly}
+                  onClick={() => {
+                    if (!isReadOnly) {
+                      console.log('Tag click:', {
+                        option: option.code,
+                        isSelected,
+                        currentTags: tagAnswers,
+                        isUniqueAnswer: option.unique_answer
+                      })
+                      
+                      let newAnswers: string[]
+                      if (isSelected) {
+                        // Retirer le tag
+                        newAnswers = tagAnswers.filter((item: string) => item !== option.code)
                       } else {
-                        // Vérifier s'il y a déjà une réponse unique sélectionnée
-                        const uniqueOptions = question.options.filter(opt => opt.unique_answer)
-                        const hasUniqueSelected = tagAnswers.some(answer => 
-                          uniqueOptions.some(unique => unique.code === answer)
-                        )
-                        
-                        if (hasUniqueSelected) {
-                          // Retirer les réponses uniques et ajouter la nouvelle
-                          const filteredAnswers = tagAnswers.filter(answer =>
-                            !uniqueOptions.some(unique => unique.code === answer)
-                          )
-                          newAnswers = [...filteredAnswers, option.code]
+                        if (option.unique_answer) {
+                          // Si cette option est une réponse unique, désélectionner toutes les autres
+                          newAnswers = [option.code]
                         } else {
-                          // Ajouter normalement
-                          newAnswers = [...tagAnswers, option.code]
+                          // Vérifier s'il y a déjà une réponse unique sélectionnée
+                          const uniqueOptions = question.options.filter(opt => opt.unique_answer)
+                          const hasUniqueSelected = tagAnswers.some(answer => 
+                            uniqueOptions.some(unique => unique.code === answer)
+                          )
+                          
+                          if (hasUniqueSelected) {
+                            // Retirer les réponses uniques et ajouter la nouvelle
+                            const filteredAnswers = tagAnswers.filter(answer =>
+                              !uniqueOptions.some(unique => unique.code === answer)
+                            )
+                            newAnswers = [...filteredAnswers, option.code]
+                          } else {
+                            // Ajouter normalement
+                            newAnswers = [...tagAnswers, option.code]
+                          }
                         }
                       }
+                      
+                      console.log('New tag answers:', newAnswers)
+                      onAnswerChange(newAnswers)
                     }
-                    
-                    console.log('New tag answers:', newAnswers)
-                    onAnswerChange(newAnswers)
-                  }
-                }}
-                className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
-                  isSelected
-                    ? 'bg-[#0080A3] text-white'
-                    : isReadOnly
-                    ? 'bg-gray-100 text-gray-600 cursor-not-allowed'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                } ${isReadOnly ? 'opacity-75' : ''}`}
-              >
-                {option.label}
-              </button>
+                  }}
+                  className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+                    isSelected
+                      ? 'bg-[#0080A3] text-white'
+                      : isReadOnly
+                      ? 'bg-gray-100 text-gray-600 cursor-not-allowed'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  } ${isReadOnly ? 'opacity-75' : ''}`}
+                >
+                  {option.label}
+                </button>
+                {(option as any).tooltip && (
+                  <Tooltip
+                    title={(option as any).tooltip.title}
+                    shortContent={(option as any).tooltip.shortContent}
+                    fullContent={(option as any).tooltip.fullContent}
+                    icon={(option as any).tooltip.icon}
+                    type="answer"
+                    position="auto"
+                  />
+                )}
+              </div>
             )
           })}
         </div>
@@ -308,9 +344,21 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
                   }}
                   className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3] disabled:opacity-50"
                 />
-                <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
-                  {option.label}
-                </span>
+                <div className="flex items-center flex-1">
+                  <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
+                    {option.label}
+                  </span>
+                  {(option as any).tooltip && (
+                    <Tooltip
+                      title={(option as any).tooltip.title}
+                      shortContent={(option as any).tooltip.shortContent}
+                      fullContent={(option as any).tooltip.fullContent}
+                      icon={(option as any).tooltip.icon}
+                      type="answer"
+                      position="auto"
+                    />
+                  )}
+                </div>
               </label>
             )
           })}

@@ -87,7 +87,6 @@ export default function DeleteRegistryModal({
                   <li>Le registre "{registryName}"</li>
                   <li>Tous les cas d'usage associés</li>
                   <li>Toutes les réponses aux questionnaires</li>
-                  <li>Tous les rapports générés</li>
                   <li>Les accès collaborateurs au registre</li>
                 </ul>
               </div>
