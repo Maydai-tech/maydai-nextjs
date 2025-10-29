@@ -20,8 +20,7 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import { getProviderIcon } from '@/lib/provider-icons'
-import QuestionTooltip from '@/components/QuestionTooltip'
-import PartnerTooltip from '@/components/PartnerTooltip'
+import Tooltip from '@/components/Tooltip'
 
 // Force dynamic rendering to prevent prerender errors
 export const dynamic = 'force-dynamic'
@@ -63,7 +62,7 @@ interface Question {
   id: keyof FormData
   question: string
   type: 'text' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date' | 'countries'
-  options?: string[] | { label: string; examples: string[] }[]
+  options?: string[] | { label: string; examples: string[]; tooltip?: { title: string; shortContent: string; fullContent?: string; icon?: string } }[]
   placeholder?: string
   maxLength?: number
   hasOtherOption?: boolean
@@ -117,33 +116,45 @@ function NewUseCasePageContent() {
   // Données des infobulles pour chaque partenaire technologique
   const partnerInfo = {
     'Anthropic': {
+      title: 'Anthropic',
       shortContent: 'Laboratoire d\'IA alignée créé par les frères Amodei, développeur de Claude.',
-      fullContent: 'Fondé en 2021 par d\'anciens chercheurs seniors d\'OpenAI (dont les frères et sœurs Amodei). Anthropic est un laboratoire de recherche axé sur la sécurité et l\'alignement de l\'IA (notamment via son approche "IA Constitutionnelle"). Ils développent la famille de modèles Claude et sont soutenus par des acteurs majeurs comme Google et Amazon.',
+      fullContent: 'Fondé en 2021 par d\'anciens chercheurs seniors d\'OpenAI. Anthropic est axé sur la sécurité et l\'alignement de l\'IA via l\'approche "IA Constitutionnelle". Ils développent Claude et sont soutenus par Google et Amazon.',
+      icon: '🧠',
       rank: 3
     },
     'Google': {
-      shortContent: 'Division IA de Google avec Gemini, fondée en 2023.',
-      fullContent: 'Google développe la famille de modèles Gemini depuis 2023. Leader technologique avec d\'importants investissements en recherche IA.',
+      title: 'Google',
+      shortContent: 'Division IA de Google avec Gemini, leader technologique mondial.',
+      fullContent: 'Google développe la famille Gemini depuis 2023. Leader technologique avec d\'importants investissements en recherche IA et infrastructure mondiale.',
+      icon: '🔍',
       rank: 2
     },
     'Meta': {
+      title: 'Meta',
       shortContent: 'Meta développe des modèles open-source avec Llama.',
-      fullContent: 'Meta développe la famille de modèles Llama, open-source, depuis 2023. Approche communautaire et collaborative.',
+      fullContent: 'Meta développe la famille Llama, open-source, depuis 2023. Approche communautaire favorisant l\'innovation collaborative mondiale.',
+      icon: '👥',
       rank: 4
     },
     'Mistral': {
+      title: 'Mistral',
       shortContent: 'Startup française spécialisée en IA générative, développeur de Mistral.',
-      fullContent: 'Startup française fondée en 2023 par d\'anciens de Google et Meta. Spécialisée en IA générative avec Mistral, approche européenne.',
+      fullContent: 'Startup française fondée en 2023 par d\'anciens de Google et Meta. Spécialisée en IA générative, approche souveraine européenne.',
+      icon: '🇫🇷',
       rank: 5
     },
     'OpenAI': {
+      title: 'OpenAI',
       shortContent: 'Leader mondial de l\'IA générative avec ChatGPT et GPT-4.',
-      fullContent: 'OpenAI est le leader mondial de l\'IA générative avec ChatGPT et GPT-4. Fondée en 2015, pionnière dans le domaine.',
+      fullContent: 'OpenAI est le leader mondial de l\'IA générative avec ChatGPT et GPT-4. Fondée en 2015, pionnière ayant popularisé les LLM grand public.',
+      icon: '🤖',
       rank: 1
     },
     'Qwen': {
+      title: 'Qwen',
       shortContent: 'Modèle IA développé par Alibaba Cloud.',
-      fullContent: 'Qwen est développé par Alibaba Cloud. Approche orientée performance et efficacité.',
+      fullContent: 'Qwen est développé par Alibaba Cloud. Approche orientée performance et efficacité pour les applications d\'entreprise.',
+      icon: '☁️',
       rank: 6
     }
   }
@@ -199,7 +210,7 @@ function NewUseCasePageContent() {
       id: 'name',
       question: 'Nom du cas d\'usage IA ?',
       type: 'text',
-      placeholder: 'ex: Système de recommandation produits',
+      placeholder: 'ex: Système IA Anti-Fraude',
       maxLength: 50
     },
     {
@@ -207,7 +218,13 @@ function NewUseCasePageContent() {
       question: 'Date de déploiement passée ou prévue ?',
       type: 'text',
       placeholder: 'DD/MM/YYYY (ex: 15/06/2025)',
-      maxLength: 10
+      maxLength: 10,
+      tooltip: {
+        title: 'Pourquoi documenter la date de déploiement ?',
+        shortContent: 'Cette question permet d\'améliorer les recommandations de l\'audit du cas d\'usage IA.',
+        fullContent: 'Cette question permet d\'améliorer les recommandations de l\'audit du cas d\'usage IA.',
+        icon: '💡'
+      }
     },
     {
       id: 'responsible_service',
@@ -226,7 +243,13 @@ function NewUseCasePageContent() {
         'Service Client',
         'Qualité',
         'Autre'
-      ]
+      ],
+      tooltip: {
+        title: 'Pourquoi documenter le service responsable ?',
+        shortContent: 'Renseignez le service de l\'entreprise responsable du suivi opérationnel du cas d\'usage IA.',
+        fullContent: 'Renseignez le service de l\'entreprise responsable du suivi opérationnel du cas d\'usage IA.',
+        icon: '💡'
+      }
     },
     {
       id: 'technology_partner',
@@ -261,31 +284,73 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
       options: [
         { 
           label: 'Large Language Model (LLM)', 
-          examples: ['ChatGPT', 'Claude', 'Mistral', 'Gemini'] 
+          examples: ['ChatGPT', 'Claude', 'Mistral', 'Gemini'],
+          tooltip: {
+            title: 'Large Language Model (LLM)',
+            shortContent: 'Modèles de langage génératifs capables de comprendre et générer du texte.',
+            fullContent: 'Les LLM sont entraînés sur d\'immenses corpus de texte. Ils peuvent générer, traduire, résumer du contenu. L\'IA Act classe ces modèles comme GPAI à usage général.',
+            icon: '💬'
+          }
         },
         { 
           label: 'Vision par ordinateur', 
-          examples: ['DALL-E', 'Midjourney'] 
+          examples: ['DALL-E', 'Midjourney'],
+          tooltip: {
+            title: 'Vision par ordinateur',
+            shortContent: 'IA capable d\'analyser, comprendre et générer des images.',
+            fullContent: 'La vision par ordinateur permet l\'analyse d\'images, la détection d\'objets, la reconnaissance faciale ou la génération d\'images. Risques spécifiques selon l\'usage.',
+            icon: '👁️'
+          }
         },
         { 
           label: 'Machine Learning', 
-          examples: ['TensorFlow', 'scikit-learn'] 
+          examples: ['TensorFlow', 'scikit-learn'],
+          tooltip: {
+            title: 'Machine Learning',
+            shortContent: 'Apprentissage automatique pour prédictions et classifications basées sur des données.',
+            fullContent: 'Le ML utilise des algorithmes pour apprendre des patterns dans les données et faire des prédictions. Applications variées : scoring, détection d\'anomalies, etc.',
+            icon: '📊'
+          }
         },
         { 
           label: 'Robotique', 
-          examples: ['Boston Dynamics Atlas', 'ASIMO'] 
+          examples: ['Boston Dynamics Atlas', 'ASIMO'],
+          tooltip: {
+            title: 'Robotique',
+            shortContent: 'Systèmes physiques intelligents capables d\'interagir avec leur environnement.',
+            fullContent: 'La robotique IA combine capteurs, actionneurs et IA pour l\'autonomie. L\'IA Act impose des règles strictes pour les robots en contact avec le public.',
+            icon: '🦾'
+          }
         },
         { 
           label: 'Systèmes experts', 
-          examples: ['MYCIN', 'DENDRAL'] 
+          examples: ['MYCIN', 'DENDRAL'],
+          tooltip: {
+            title: 'Systèmes experts',
+            shortContent: 'Systèmes basés sur des règles métier et l\'expertise humaine formalisée.',
+            fullContent: 'Les systèmes experts utilisent une base de connaissances et des règles logiques pour simuler le raisonnement d\'un expert. Moins courants aujourd\'hui.',
+            icon: '🎓'
+          }
         },
         { 
           label: 'Logiciels métiers', 
-          examples: ['Salesforce Einstein', 'Adobe Firefly'] 
+          examples: ['Salesforce Einstein', 'Adobe Firefly'],
+          tooltip: {
+            title: 'Logiciels métiers',
+            shortContent: 'Applications professionnelles intégrant des fonctionnalités IA.',
+            fullContent: 'Logiciels d\'entreprise enrichis par l\'IA (CRM, ERP, outils créatifs). L\'IA est un composant parmi d\'autres fonctionnalités métier.',
+            icon: '💼'
+          }
         },
         { 
           label: 'Apprentissage / e-learning', 
-          examples: ['Didask'] 
+          examples: ['Didask'],
+          tooltip: {
+            title: 'Apprentissage / e-learning',
+            shortContent: 'Plateformes d\'apprentissage utilisant l\'IA pour personnaliser la formation.',
+            fullContent: 'L\'IA adapte les parcours pédagogiques selon les profils et progressions des apprenants. Enjeux de transparence sur les décisions d\'orientation.',
+            icon: '📚'
+          }
         }
       ]
     },
@@ -296,11 +361,23 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
       options: [
         { 
           label: 'Système autonome', 
-          examples: ['Chatbot indépendant', 'Assistant virtuel', 'Système de recommandation autonome'] 
+          examples: ['Chatbot indépendant', 'Assistant virtuel', 'Système de recommandation autonome'],
+          tooltip: {
+            title: 'Système autonome',
+            shortContent: 'Système IA fonctionnant de manière indépendante sans être intégré dans un produit.',
+            fullContent: 'Un système autonome est une solution IA qui opère de façon indépendante (ex: chatbot, assistant virtuel). Selon l\'IA Act, ces systèmes ont des obligations spécifiques de transparence et de documentation.',
+            icon: '🤖'
+          }
         },
         { 
           label: 'Produit', 
-          examples: ['Fonctionnalité intégrée', 'Module IA dans une application', 'Composant d\'un service existant'] 
+          examples: ['Fonctionnalité intégrée', 'Module IA dans une application', 'Composant d\'un service existant'],
+          tooltip: {
+            title: 'Produit',
+            shortContent: 'Fonctionnalité IA intégrée dans un produit ou service existant.',
+            fullContent: 'Un produit intègre l\'IA comme composant d\'une solution plus large (ex: module de recommandation dans une app). Les obligations réglementaires dépendent du contexte d\'intégration.',
+            icon: '📦'
+          }
         }
       ]
     },
@@ -822,11 +899,12 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
                 {currentQuestion.question}
               </h2>
               {currentQuestion.tooltip && (
-                <QuestionTooltip 
+                <Tooltip 
                   title={currentQuestion.tooltip.title}
                   shortContent={currentQuestion.tooltip.shortContent}
                   fullContent={currentQuestion.tooltip.fullContent}
                   icon={currentQuestion.tooltip.icon}
+                  type="question"
                 />
               )}
             </div>
@@ -1087,7 +1165,7 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
 
               {Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 && !loadingPartners && !loadingModels && (
                 <div className={currentQuestion.id === 'technology_partner' || currentQuestion.id === 'ai_category' ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : 'space-y-3'}>
-                  {(currentQuestion.options as { label: string; examples: string[] }[]).map((option, index) => (
+                  {(currentQuestion.options as { label: string; examples: string[]; tooltip?: { title: string; shortContent: string; fullContent?: string; icon?: string } }[]).map((option, index) => (
                     <label 
                       key={index} 
                       className={`group flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
@@ -1128,10 +1206,14 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
                                   {option.label}
                                 </div>
                                 {partnerInfo[option.label as keyof typeof partnerInfo] && (
-                                  <PartnerTooltip
+                                  <Tooltip
+                                    title={partnerInfo[option.label as keyof typeof partnerInfo].title}
                                     shortContent={partnerInfo[option.label as keyof typeof partnerInfo].shortContent}
                                     fullContent={partnerInfo[option.label as keyof typeof partnerInfo].fullContent}
+                                    icon={partnerInfo[option.label as keyof typeof partnerInfo].icon}
                                     rank={partnerInfo[option.label as keyof typeof partnerInfo].rank}
+                                    type="answer"
+                                    position="auto"
                                   />
                                 )}
                               </div>
