@@ -397,7 +397,13 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
       id: 'description',
       question: 'Brève description du système IA ?',
       type: 'textarea',
-      placeholder: 'Créez le résumé en cliquant sur le bouton AI, vous pourrez toujours le modifier…'
+      placeholder: 'Créez le résumé en cliquant sur le bouton AI, vous pourrez toujours le modifier…',
+      tooltip: {
+        title: 'Guide pour la description du système IA',
+        shortContent: 'Résumez votre système IA : objectif principal, fonction clé, utilisateurs cibles, contexte métier et technologie utilisée.',
+        fullContent: 'Résumez votre système IA : objectif principal, fonction clé, utilisateurs cibles, contexte métier et technologie utilisée (type d\'IA, modèle, fournisseur). Utilisez le bouton de génération automatique pour obtenir une première version, puis ajustez-la selon vos besoins.',
+        icon: '📝'
+      }
     }
   ]
 
