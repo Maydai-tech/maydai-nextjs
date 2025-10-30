@@ -535,7 +535,8 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
     }
   }, [mounted, user])
 
-  // Charger les modèles disponibles quand le partenaire technologique change
+  // Mettre à jour l'ID du partenaire quand le partenaire technologique change
+  // Les modèles seront chargés lors du clic sur "Suivant" pour éviter les re-renders
   useEffect(() => {
     const selectedPartnerName = typeof formData.technology_partner === 'string' ? formData.technology_partner.trim() : ''
     if (selectedPartnerName) {
@@ -543,8 +544,7 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
       const provider = partners.find(p => p.name === selectedPartnerName)
       if (provider) {
         setFormData(prev => ({ ...prev, technology_partner_id: provider.id }))
-        // Charger les nouveaux modèles sans vider immédiatement la liste
-        fetchAvailableModels(provider.id)
+        // Les modèles seront chargés dans handleNext() pour éviter le lag
       } else {
         // Partenaire personnalisé (option "Autre")
         setFormData(prev => ({ ...prev, technology_partner_id: undefined }))
@@ -669,18 +669,35 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
     return true
   }
 
-  const handleNext = () => {
-    if (validateCurrentQuestion()) {
-      if (isLastQuestion) {
-        handleSubmit()
-      } else {
-        setCurrentQuestionIndex(prev => prev + 1)
-        // Reset other radio value and countries selection when moving to next question
-        setOtherRadioValue('')
-        setOtherRadioSelected(false)
-        if (currentQuestion.type === 'countries') {
-          setSelectedCountries([])
-        }
+  const handleNext = async () => {
+    if (!validateCurrentQuestion()) return
+    
+    // Si on est à la question "technology_partner" (question 4), charger les modèles avant de continuer
+    if (currentQuestion.id === 'technology_partner' && formData.technology_partner_id) {
+      try {
+        setSubmitting(true) // Activer l'indicateur de chargement
+        setError('')
+        await fetchAvailableModels(formData.technology_partner_id)
+      } catch (error) {
+        console.error('Erreur chargement modèles:', error)
+        setError('Impossible de charger les modèles. Veuillez réessayer.')
+        setSubmitting(false)
+        return
+      } finally {
+        setSubmitting(false)
+      }
+    }
+    
+    // Navigation normale
+    if (isLastQuestion) {
+      handleSubmit()
+    } else {
+      setCurrentQuestionIndex(prev => prev + 1)
+      // Reset other radio value and countries selection when moving to next question
+      setOtherRadioValue('')
+      setOtherRadioSelected(false)
+      if (currentQuestion.type === 'countries') {
+        setSelectedCountries([])
       }
     }
   }
