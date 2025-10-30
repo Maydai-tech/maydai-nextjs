@@ -74,6 +74,39 @@ interface Question {
   }
 }
 
+// Mapping des codes ISO vers les noms de pays en français
+const isoToCountryName: { [key: string]: string } = {
+  'fr': 'France',
+  'us': 'États-Unis',
+  'ca': 'Canada',
+  'gb': 'Royaume-Uni',
+  'de': 'Allemagne',
+  'es': 'Espagne',
+  'it': 'Italie',
+  'au': 'Australie',
+  'jp': 'Japon',
+  'cn': 'Chine',
+  'in': 'Inde',
+  'br': 'Brésil',
+  'mx': 'Mexique',
+  'nl': 'Pays-Bas',
+  'be': 'Belgique',
+  'ch': 'Suisse',
+  'se': 'Suède',
+  'no': 'Norvège',
+  'dk': 'Danemark',
+  'fi': 'Finlande',
+  'pt': 'Portugal',
+  'pl': 'Pologne',
+  'ru': 'Russie',
+  'kr': 'Corée du Sud',
+  'sg': 'Singapour',
+  'nz': 'Nouvelle-Zélande',
+  'ar': 'Argentine',
+  'za': 'Afrique du Sud',
+  'si': 'Slovénie'
+}
+
 function NewUseCasePageContent() {
   // Add animation styles
   const animationStyles = `
@@ -676,6 +709,20 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
         primary_model_id = findModelId(modelVersionStr)
       }
 
+      // Convertir deployment_countries de chaîne vers tableau de noms français
+      let deploymentCountriesArray: string[] = []
+      if (formData.deployment_countries) {
+        // Si c'est une chaîne, la splitter par virgule
+        if (typeof formData.deployment_countries === 'string') {
+          const countries = formData.deployment_countries.split(',')
+          deploymentCountriesArray = countries
+            .map(country => country.trim())
+            .filter(country => country.length > 0)
+        } else if (Array.isArray(formData.deployment_countries)) {
+          deploymentCountriesArray = formData.deployment_countries
+        }
+      }
+
       // Log des données à envoyer
       const payload = {
         name: formData.name,
@@ -687,7 +734,7 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
         primary_model_id, // Ajouter l'ID du modèle principal
         ai_category: formData.ai_category,
         system_type: formData.system_type,
-        deployment_countries: formData.deployment_countries,
+        deployment_countries: deploymentCountriesArray,
         description: formData.description,
         status: 'draft',
         company_id: companyId
@@ -789,13 +836,25 @@ Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bon
     }
     
     setSelectedCountries(newSelectedCountries)
-    handleInputChange(newSelectedCountries.join(', '))
+    
+    // Convertir les codes ISO en noms français avant de mettre à jour formData
+    const countryNames = newSelectedCountries
+      .map(code => isoToCountryName[code.toLowerCase()] || code)
+      .filter(name => name) // Filtrer les noms non trouvés
+    
+    handleInputChange(countryNames.join(', '))
   }
 
   const removeCountry = (countryCode: string) => {
     const newSelectedCountries = selectedCountries.filter(country => country !== countryCode)
     setSelectedCountries(newSelectedCountries)
-    handleInputChange(newSelectedCountries.join(', '))
+    
+    // Convertir les codes ISO en noms français avant de mettre à jour formData
+    const countryNames = newSelectedCountries
+      .map(code => isoToCountryName[code.toLowerCase()] || code)
+      .filter(name => name) // Filtrer les noms non trouvés
+    
+    handleInputChange(countryNames.join(', '))
   }
 
 

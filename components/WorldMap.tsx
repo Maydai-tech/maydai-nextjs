@@ -232,58 +232,127 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
     'États-Unis': '840',
     'Etats-Unis': '840',
     'Canada': '124',
+    'CA': '124',
     'Royaume-Uni': '826',
     'United Kingdom': '826',
     'UK': '826',
+    'GB': '826',
     'Allemagne': '276',
     'Germany': '276',
+    'DE': '276',
     'Espagne': '724',
     'Spain': '724',
+    'ES': '724',
     'Italie': '380',
     'Italy': '380',
+    'IT': '380',
     'Australie': '036',
     'Australia': '036',
+    'AU': '036',
     'Japon': '392',
     'Japan': '392',
+    'JP': '392',
     'Chine': '156',
     'China': '156',
+    'CN': '156',
     'Inde': '356',
     'India': '356',
+    'IN': '356',
     'Brésil': '076',
     'Brazil': '076',
+    'BR': '076',
     'Mexique': '484',
     'Mexico': '484',
+    'MX': '484',
     'Pays-Bas': '528',
     'Netherlands': '528',
+    'NL': '528',
     'Belgique': '056',
     'Belgium': '056',
+    'BE': '056',
     'Suisse': '756',
     'Switzerland': '756',
+    'CH': '756',
     'Suède': '752',
     'Sweden': '752',
+    'SE': '752',
     'Norvège': '578',
     'Norway': '578',
+    'NO': '578',
     'Danemark': '208',
     'Denmark': '208',
+    'DK': '208',
     'Finlande': '246',
     'Finland': '246',
+    'FI': '246',
     'Portugal': '620',
+    'PT': '620',
     'Pologne': '616',
     'Poland': '616',
+    'PL': '616',
     'Russie': '643',
     'Russia': '643',
+    'RU': '643',
     'Corée du Sud': '410',
     'South Korea': '410',
+    'KR': '410',
     'Singapour': '702',
     'Singapore': '702',
+    'SG': '702',
     'Nouvelle-Zélande': '554',
     'New Zealand': '554',
+    'NZ': '554',
     'Argentine': '032',
+    'AR': '032',
     'Afrique du Sud': '710',
     'South Africa': '710',
+    'ZA': '710',
     'Slovénie': '705',
     'Slovenia': '705',
     'SI': '705'
+  }
+
+  // Mapping pour normaliser les codes ISO en noms français
+  const codeToCountryName: { [key: string]: string } = {
+    'FR': 'France',
+    'US': 'États-Unis',
+    'CA': 'Canada',
+    'GB': 'Royaume-Uni',
+    'DE': 'Allemagne',
+    'ES': 'Espagne',
+    'IT': 'Italie',
+    'AU': 'Australie',
+    'JP': 'Japon',
+    'CN': 'Chine',
+    'IN': 'Inde',
+    'BR': 'Brésil',
+    'MX': 'Mexique',
+    'NL': 'Pays-Bas',
+    'BE': 'Belgique',
+    'CH': 'Suisse',
+    'SE': 'Suède',
+    'NO': 'Norvège',
+    'DK': 'Danemark',
+    'FI': 'Finlande',
+    'PT': 'Portugal',
+    'PL': 'Pologne',
+    'RU': 'Russie',
+    'KR': 'Corée du Sud',
+    'SG': 'Singapour',
+    'NZ': 'Nouvelle-Zélande',
+    'AR': 'Argentine',
+    'ZA': 'Afrique du Sud',
+    'SI': 'Slovénie'
+  }
+
+  // Normaliser les pays : convertir les codes ISO en noms si nécessaire
+  const normalizeCountryForMap = (country: string): string => {
+    const trimmed = country.trim()
+    // Si c'est un code ISO (2 lettres majuscules), le convertir en nom
+    if (trimmed.length === 2 && trimmed === trimmed.toUpperCase() && codeToCountryName[trimmed]) {
+      return codeToCountryName[trimmed]
+    }
+    return trimmed
   }
 
   // Get numeric IDs for deployment countries
@@ -293,8 +362,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
     const ids = new Set<string>()
     countries.forEach(country => {
       if (typeof country === 'string') {
-        const trimmedCountry = country.trim()
-        const id = countryNameToID[trimmedCountry]
+        const normalized = normalizeCountryForMap(country.trim())
+        const id = countryNameToID[normalized]
         if (id) {
           ids.add(id)
         }
@@ -303,7 +372,12 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
     return ids
   }
 
-  const activeCountryIDs = getActiveCountryIDs(deploymentCountries)
+  // Normaliser les pays pour la détection de zone géographique également
+  const normalizedCountries = deploymentCountries.map(country => 
+    typeof country === 'string' ? normalizeCountryForMap(country) : country
+  )
+
+  const activeCountryIDs = getActiveCountryIDs(normalizedCountries)
 
   // Update the ref when countryUseCaseCount changes
   useEffect(() => {
@@ -326,7 +400,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
     const g = svg.append('g')
 
     // 1. Détecter la zone géographique
-    const detectedZone = detectGeographicZone(deploymentCountries)
+    const detectedZone = detectGeographicZone(normalizedCountries)
     const zoneConfig = ZONE_CONFIGS[detectedZone]
     
     // Mettre à jour la zone actuelle
@@ -472,7 +546,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
         }
       }
     })
-  }, [deploymentCountries, activeCountryIDs])
+  }, [normalizedCountries, activeCountryIDs])
 
   // Fonction pour obtenir le nom de la zone en français
   const getZoneDisplayName = (zone: GeographicZone): string => {

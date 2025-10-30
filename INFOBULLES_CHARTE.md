@@ -16,12 +16,12 @@ Affichées à côté des options de réponse pour clarifier le sens d'une option
 
 ### Limites de Caractères
 
-| Type | Contenu Court (Hover) | Contenu Complet (Modal) | Seuil Modal |
-|------|----------------------|-------------------------|-------------|
-| Questions | 100 caractères max | 300 caractères max | > 200 caractères |
-| Réponses | 100 caractères max | 300 caractères max | > 200 caractères |
+| Type | Contenu Hover | Modal |
+|------|--------------|-------|
+| Questions | 300 caractères max | N/A (supprimé) |
+| Réponses | 300 caractères max | N/A (supprimé) |
 
-**Règle importante** : Si le contenu total fait moins de 200 caractères, aucune modal n'est affichée. Seul le hover est utilisé.
+**Règle importante** : Le contenu complet est affiché directement au hover pour préserver l'intégrité des textes juridiques. Aucun contenu n'est tronqué.
 
 ### Dimensions
 
@@ -31,14 +31,13 @@ Affichées à côté des options de réponse pour clarifier le sens d'une option
 | Réponses | 350px | 500px | Automatique (adaptative) |
 | Mobile (< 640px) | - | 90vw (max 400px) | Automatique |
 
-**Note** : Les largeurs sont adaptatives entre min et max selon le contenu, garantissant une lisibilité optimale pour ~100 caractères sur une ligne.
+**Note** : Les largeurs sont adaptatives entre min et max selon le contenu, garantissant une lisibilité optimale pour jusqu'à 300 caractères sur plusieurs lignes.
 
 ### Typographie
 
 | Contexte | Taille de police |
 |----------|------------------|
-| Hover (tooltip preview) | 14px (`text-sm`) |
-| Modal (détails complets) | 14px (`text-sm`) |
+| Hover (tooltip complet) | 14px (`text-sm`) |
 
 ### Positionnement
 
@@ -58,12 +57,10 @@ Affichées à côté des options de réponse pour clarifier le sens d'une option
 ### Comportement Interactif
 
 #### Desktop (≥ 640px)
-1. **Hover** : Affiche un aperçu du contenu court
-2. **Clic** : Ouvre la modal avec le contenu complet (si > 200 caractères)
+- **Hover** : Affiche le contenu complet (jusqu'à 300 caractères)
 
 #### Mobile/Tablette (< 640px)
-- **Pas de hover** : L'interaction hover est désactivée
-- **Clic uniquement** : Ouvre directement la modal (si > 200 caractères)
+- **Clic** : Affiche le hover avec le contenu complet
 
 ### Style Visuel
 
@@ -87,9 +84,9 @@ import Tooltip from '@/components/Tooltip'
 
 ```typescript
 interface TooltipProps {
-  title: string              // Titre affiché dans la modal
-  shortContent: string       // Contenu affiché au hover (max 100 caractères)
-  fullContent?: string       // Contenu complet (optionnel, max 300 caractères)
+  title: string              // Titre de l'infobulle
+  shortContent: string       // Contenu de base affiché au hover (max 300 caractères)
+  fullContent?: string       // Contenu étendu (optionnel, max 300 caractères, prioritaire si présent)
   icon?: string             // Emoji ou icône (défaut : '💡')
   type?: 'question' | 'answer'  // Type d'infobulle (défaut : 'question')
   position?: 'left' | 'right' | 'bottom' | 'auto'  // Position (défaut : 'auto')
@@ -135,32 +132,20 @@ interface TooltipProps {
 
 ## Règles Éditoriales
 
-### Contenu Court (Hover)
+### Contenu des Infobulles
 
 ✅ **À faire** :
-- Rester concis (idéalement 50-80 caractères)
-- Utiliser un langage simple et direct
-- Donner une définition claire et immédiate
-- Éviter les phrases complexes
-
-❌ **À éviter** :
-- Dépasser 100 caractères
-- Utiliser du jargon technique sans explication
-- Faire des phrases à rallonge
-- Répéter le texte de la question/réponse
-
-### Contenu Complet (Modal)
-
-✅ **À faire** :
-- Fournir le contexte légal ou technique
+- Utiliser un langage précis et technique pour les textes juridiques
+- Préserver chaque mot important dans le contenu
+- Fournir le contexte légal ou technique complet
 - Expliquer l'impact sur l'évaluation
 - Donner des exemples concrets si pertinent
 - Rester dans la limite de 300 caractères
 
 ❌ **À éviter** :
-- Écrire des paragraphes longs et denses
-- Citer intégralement la loi (résumer)
-- Inclure des informations non pertinentes
+- Tronquer le contenu juridique
+- Enlever des mots "importants" pour raccourcir
+- Citer intégralement de longs passages de loi (résumer précisément)
 - Dépasser 300 caractères
 
 ### Tone & Voice
@@ -174,36 +159,31 @@ interface TooltipProps {
 
 ### ✅ Bon Exemple
 
-**Contenu court** : "Système fonctionnant sans supervision humaine constante."
-
-**Contenu complet** : "Un système autonome prend des décisions seul. Selon l'IA Act, plus un système est autonome, plus les exigences de transparence et de surveillance sont élevées."
+**Contenu** : "Un système autonome prend des décisions seul. Selon l'IA Act, plus un système est autonome, plus les exigences de transparence et de surveillance sont élevées. Cela impacte directement l'évaluation des risques du cas d'usage."
 
 **Pourquoi c'est bon** :
-- Court est < 80 caractères
-- Complet est < 300 caractères
+- Contenu complet < 300 caractères
 - Définition claire
 - Contexte légal mentionné
 - Impact expliqué
+- Aucun mot important tronqué
 
 ### ❌ Mauvais Exemple
 
-**Contenu court** : "Un système autonome est un système qui fonctionne de manière indépendante sans avoir besoin d'une supervision humaine directe à chaque étape."
-
-**Contenu complet** : "Selon l'article 3, paragraphe 1, du règlement européen sur l'intelligence artificielle (IA Act), un système d'IA autonome est défini comme un système basé sur une machine qui, pour des objectifs explicites ou implicites, déduit, à partir des données d'entrée qu'il reçoit, comment générer des sorties telles que des prédictions, du contenu, des recommandations ou des décisions qui peuvent influencer des environnements physiques ou virtuels..."
+**Contenu** : "Selon l'article 3, paragraphe 1, du règlement européen sur l'intelligence artificielle (IA Act), un système d'IA autonome est défini comme un système basé sur une machine qui, pour des objectifs explicites ou implicites, déduit, à partir des données d'entrée qu'il reçoit, comment générer des sorties telles que des prédictions, du contenu, des recommandations ou des décisions qui peuvent influencer des environnements physiques ou virtuels..."
 
 **Pourquoi c'est mauvais** :
-- Court dépasse 100 caractères
-- Complet dépasse largement 300 caractères
+- Dépasse largement 300 caractères
 - Citation trop littérale de la loi
-- Trop technique et indigeste
-- Pas assez actionnable
+- Trop technique et indigeste pour un utilisateur non-juriste
+- Pas assez actionnable et pratique
 
 ## Checklist de Validation
 
 Avant d'ajouter une nouvelle infobulle, vérifier :
 
-- [ ] Le contenu court fait moins de 100 caractères
-- [ ] Le contenu complet fait moins de 300 caractères (si présent)
+- [ ] Le contenu fait moins de 300 caractères
+- [ ] Si `fullContent` est fourni, tous les mots importants sont préservés
 - [ ] Le type (`question` ou `answer`) est correct
 - [ ] Le `title` est clair et descriptif
 - [ ] L'icône est pertinente (émoji approprié)
@@ -280,8 +260,8 @@ Le composant utilise :
 ### Responsive
 
 - Breakpoint : `640px` (Tailwind `sm`)
-- Mobile : Désactivation du hover, modal uniquement
-- Desktop : Hover + modal
+- Mobile : Affichage via clic sur l'icône
+- Desktop : Affichage via hover
 
 ## Support et Questions
 
@@ -289,8 +269,8 @@ Pour toute question concernant l'utilisation ou la modification de cette charte,
 
 ---
 
-**Version** : 1.0  
+**Version** : 2.0  
 **Date de création** : Octobre 2025  
-**Dernière mise à jour** : Octobre 2025  
+**Dernière mise à jour** : Janvier 2025  
 **Auteurs** : Équipe MaydAI
 

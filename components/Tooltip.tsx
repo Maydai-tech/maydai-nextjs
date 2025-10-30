@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { HelpCircle, X } from 'lucide-react'
+import { HelpCircle } from 'lucide-react'
 
 interface TooltipProps {
   title: string
@@ -23,15 +23,12 @@ export default function Tooltip({
   rank
 }: TooltipProps) {
   const [isHovering, setIsHovering] = useState(false)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [showFullContent, setShowFullContent] = useState(false)
   const [isMobileDevice, setIsMobileDevice] = useState(false)
   const [computedPosition, setComputedPosition] = useState<'left' | 'right' | 'bottom'>('bottom')
   const tooltipRef = useRef<HTMLDivElement>(null)
 
   // Constantes selon la charte
-  const SHORT_TEXT_THRESHOLD = 100 // Seuil pour texte court
-  const MODAL_THRESHOLD = 200 // Si < 200, pas besoin de modal
+  const MAX_HOVER_LENGTH = 300 // Limite pour hover (textes juridiques complets)
   const MAX_CONTENT_LENGTH = 300 // Limite absolue
   
   // Configuration de largeur selon le type (adaptative: min/max)
@@ -50,9 +47,8 @@ export default function Tooltip({
     }
   }
   
-  // Détermine si le texte nécessite une modal
-  const needsModal = (fullContent && fullContent.length > MODAL_THRESHOLD) || 
-                     (!fullContent && shortContent.length > MODAL_THRESHOLD)
+  // Le contenu à afficher dans le hover (fullContent si disponible, sinon shortContent)
+  const displayContent = fullContent || shortContent
   
   // Détection responsive pour mobile/tablette
   useEffect(() => {
@@ -91,23 +87,12 @@ export default function Tooltip({
     }
   }, [position, type])
 
+  // Toggle hover sur mobile (clic)
   const handleClick = () => {
-    if (needsModal) {
-      setIsModalOpen(true)
-      setShowFullContent(false)
+    if (isMobileDevice) {
+      setIsHovering(!isHovering)
     }
   }
-
-  const handleClose = () => {
-    setIsModalOpen(false)
-    setShowFullContent(false)
-  }
-
-  const handleShowMore = () => {
-    setShowFullContent(true)
-  }
-
-  const contentToShow = showFullContent && fullContent ? fullContent : shortContent
 
   // Fonction pour générer le badge de classement mondial
   const getRankBadge = () => {
@@ -173,71 +158,22 @@ export default function Tooltip({
           </div>
         </button>
 
-        {/* Tooltip preview au survol - Desktop uniquement */}
-        {isHovering && !isModalOpen && !isMobileDevice && (
+        {/* Tooltip au hover/survol - Desktop et mobile */}
+        {isHovering && (
           <div className={`absolute ${getPositionClasses()} z-50`}>
             <div 
               className="bg-[#0080A3] text-white text-sm px-6 py-4 rounded-lg shadow-xl relative break-words"
               style={getWidthStyle()}
             >
               {rank && <div className="mb-2">{getRankBadge()}</div>}
-              <p>{shortContent}</p>
+              <p>{displayContent}</p>
               <div className={getArrowClasses()}></div>
             </div>
           </div>
         )}
       </div>
-
-      {/* Modal centrée - Uniquement si nécessaire */}
-      {needsModal && isModalOpen && (
-        <>
-          {/* Overlay */}
-          <div 
-            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-            onClick={handleClose}
-          >
-            {/* Modal */}
-            <div 
-              className="bg-[#0080A3] text-white rounded-xl shadow-2xl max-w-xs sm:max-w-lg w-full max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header avec bouton fermer */}
-              <div className="flex items-center justify-between p-4 border-b border-white/20">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{icon}</span>
-                  <h3 className="text-lg font-semibold">{title}</h3>
-                  {rank && <div className="ml-2">{getRankBadge()}</div>}
-                </div>
-                <button
-                  onClick={handleClose}
-                  className="hover:bg-white/10 p-1 rounded-lg transition-colors"
-                  aria-label="Fermer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Contenu */}
-              <div className="p-6">
-                <p className="text-sm leading-relaxed mb-4">
-                  {contentToShow}
-                </p>
-
-                {/* Bouton "En savoir plus" - Uniquement si fullContent existe et non affiché */}
-                {fullContent && !showFullContent && fullContent.length > shortContent.length && (
-                  <button
-                    onClick={handleShowMore}
-                    className="w-full px-4 py-2 border-2 border-white rounded-lg hover:bg-white/10 transition-colors text-sm font-medium"
-                  >
-                    En savoir plus
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </>
   )
 }
+
 
