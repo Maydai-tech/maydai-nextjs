@@ -22,55 +22,81 @@ const countryToFlagCode: { [key: string]: string } = {
   'États-Unis': 'us',
   'Etats-Unis': 'us',
   'Canada': 'ca',
+  'CA': 'ca',
   'Royaume-Uni': 'gb',
   'United Kingdom': 'gb',
   'UK': 'gb',
+  'GB': 'gb',
   'Allemagne': 'de',
   'Germany': 'de',
+  'DE': 'de',
   'Espagne': 'es',
   'Spain': 'es',
+  'ES': 'es',
   'Italie': 'it',
   'Italy': 'it',
+  'IT': 'it',
   'Australie': 'au',
   'Australia': 'au',
+  'AU': 'au',
   'Japon': 'jp',
   'Japan': 'jp',
+  'JP': 'jp',
   'Chine': 'cn',
   'China': 'cn',
+  'CN': 'cn',
   'Inde': 'in',
   'India': 'in',
+  'IN': 'in',
   'Brésil': 'br',
   'Brazil': 'br',
+  'BR': 'br',
   'Mexique': 'mx',
   'Mexico': 'mx',
+  'MX': 'mx',
   'Pays-Bas': 'nl',
   'Netherlands': 'nl',
+  'NL': 'nl',
   'Belgique': 'be',
   'Belgium': 'be',
+  'BE': 'be',
   'Suisse': 'ch',
   'Switzerland': 'ch',
+  'CH': 'ch',
   'Suède': 'se',
   'Sweden': 'se',
+  'SE': 'se',
   'Norvège': 'no',
   'Norway': 'no',
+  'NO': 'no',
   'Danemark': 'dk',
   'Denmark': 'dk',
+  'DK': 'dk',
   'Finlande': 'fi',
   'Finland': 'fi',
+  'FI': 'fi',
   'Portugal': 'pt',
+  'PT': 'pt',
   'Pologne': 'pl',
   'Poland': 'pl',
+  'PL': 'pl',
   'Russie': 'ru',
   'Russia': 'ru',
+  'RU': 'ru',
   'Corée du Sud': 'kr',
   'South Korea': 'kr',
+  'KR': 'kr',
   'Singapour': 'sg',
   'Singapore': 'sg',
+  'SG': 'sg',
   'Nouvelle-Zélande': 'nz',
   'New Zealand': 'nz',
+  'NZ': 'nz',
   'Argentine': 'ar',
+  'AR': 'ar',
   'Afrique du Sud': 'za',
   'South Africa': 'za',
+  'ZA': 'za',
   'Slovénie': 'si',
   'Slovenia': 'si',
   'SI': 'si'
@@ -113,14 +139,66 @@ const getDisplayName = (country: string): string => {
   return displayNames[country] || country
 }
 
+// Mapping inverse pour normaliser les codes ISO en noms français (sécurité)
+const codeToCountryName: { [key: string]: string } = {
+  'FR': 'France',
+  'US': 'États-Unis',
+  'CA': 'Canada',
+  'GB': 'Royaume-Uni',
+  'DE': 'Allemagne',
+  'ES': 'Espagne',
+  'IT': 'Italie',
+  'AU': 'Australie',
+  'JP': 'Japon',
+  'CN': 'Chine',
+  'IN': 'Inde',
+  'BR': 'Brésil',
+  'MX': 'Mexique',
+  'NL': 'Pays-Bas',
+  'BE': 'Belgique',
+  'CH': 'Suisse',
+  'SE': 'Suède',
+  'NO': 'Norvège',
+  'DK': 'Danemark',
+  'FI': 'Finlande',
+  'PT': 'Portugal',
+  'PL': 'Pologne',
+  'RU': 'Russie',
+  'KR': 'Corée du Sud',
+  'SG': 'Singapour',
+  'NZ': 'Nouvelle-Zélande',
+  'AR': 'Argentine',
+  'ZA': 'Afrique du Sud',
+  'SI': 'Slovénie'
+}
+
+// Fonction de normalisation pour convertir les codes ISO en noms français si nécessaire
+const normalizeCountries = (countries: string[]): string[] => {
+  if (!countries || !Array.isArray(countries)) {
+    return []
+  }
+  
+  return countries.map(country => {
+    const trimmed = country.trim()
+    // Si c'est un code ISO (2 lettres majuscules), le convertir en nom français
+    if (trimmed.length === 2 && trimmed === trimmed.toUpperCase() && codeToCountryName[trimmed]) {
+      return codeToCountryName[trimmed]
+    }
+    return trimmed
+  }).filter(Boolean)
+}
+
 export function CountryDeploymentDisplay({ deploymentCountries = [], className = '', onUpdateUseCase, updating = false }: CountryDeploymentDisplayProps) {
   const [isMapModalOpen, setIsMapModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
-  const hasCountries = deploymentCountries && deploymentCountries.length > 0
+  // Normaliser les pays au cas où des codes ISO arrivent
+  const normalizedCountries = normalizeCountries(deploymentCountries || [])
+  
+  const hasCountries = normalizedCountries && normalizedCountries.length > 0
   const maxDisplayCountries = 3
-  const displayCountries = hasCountries ? deploymentCountries.slice(0, maxDisplayCountries) : []
-  const remainingCount = hasCountries ? deploymentCountries.length - maxDisplayCountries : 0
+  const displayCountries = hasCountries ? normalizedCountries.slice(0, maxDisplayCountries) : []
+  const remainingCount = hasCountries ? normalizedCountries.length - maxDisplayCountries : 0
 
   const openMapModal = () => {
     setIsMapModalOpen(true)
@@ -268,7 +346,7 @@ export function CountryDeploymentDisplay({ deploymentCountries = [], className =
       <CountryMapModal
         isOpen={isMapModalOpen}
         onClose={closeMapModal}
-        deploymentCountries={deploymentCountries}
+        deploymentCountries={normalizedCountries}
         onUpdateUseCase={onUpdateUseCase}
         updating={updating}
       />
@@ -276,7 +354,7 @@ export function CountryDeploymentDisplay({ deploymentCountries = [], className =
       <CountryEditModal
         isOpen={isEditModalOpen}
         onClose={closeEditModal}
-        currentCountries={deploymentCountries}
+        currentCountries={normalizedCountries}
         onSave={handleCountryUpdate}
         saving={updating}
       />
