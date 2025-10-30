@@ -1,0 +1,189 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { useAuth } from '@/lib/auth'
+import { useApiCall } from '@/lib/api-client-legacy'
+import { FileText, ChevronRight } from 'lucide-react'
+
+interface UseCase {
+  id: string
+  name: string
+  description: string
+  company_id: string
+  created_at: string
+  updated_at: string
+  status: 'draft' | 'active' | 'archived'
+}
+
+interface CompletionData {
+  completed: number
+  total: number
+  percentage: number
+}
+
+export default function DossiersComplianceView() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+  const params = useParams()
+  const companyId = params.id as string
+  const api = useApiCall()
+  const [useCases, setUseCases] = useState<UseCase[]>([])
+  const [completions, setCompletions] = useState<Record<string, CompletionData>>({})
+  const [loadingData, setLoadingData] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [hasFetched, setHasFetched] = useState(false)
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login')
+    }
+  }, [user, loading, router])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user || hasFetched) return
+
+      try {
+        setLoadingData(true)
+
+        // Récupérer les use cases
+        const result = await api.get('/api/usecases')
+
+        if (result.data) {
+          // Filtrer uniquement les use cases du registre actuel
+          const filteredUseCases = result.data.filter((uc: UseCase) => uc.company_id === companyId)
+          setUseCases(filteredUseCases)
+
+          // Récupérer les taux de complétion pour chaque use case filtré
+          const completionPromises = filteredUseCases.map(async (uc: UseCase) => {
+            try {
+              const completionResult = await api.get(`/api/dossiers/${uc.id}/completion`)
+              return { id: uc.id, data: completionResult.data }
+            } catch (err) {
+              console.error(`Error fetching completion for ${uc.id}:`, err)
+              return { id: uc.id, data: { completed: 0, total: 7, percentage: 0 } }
+            }
+          })
+
+          const completionResults = await Promise.all(completionPromises)
+          const completionMap: Record<string, CompletionData> = {}
+          completionResults.forEach(result => {
+            completionMap[result.id] = result.data
+          })
+          setCompletions(completionMap)
+          setHasFetched(true)
+        }
+      } catch (err) {
+        console.error('Error fetching use cases:', err)
+        setError('Erreur lors du chargement des dossiers')
+      } finally {
+        setLoadingData(false)
+      }
+    }
+
+    fetchData()
+  }, [user, api, hasFetched])
+
+
+  if (loading || loadingData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0080A3]"></div>
+          <p className="mt-4 text-gray-600">Chargement des dossiers...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Erreur</h1>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Dossiers de Conformité</h1>
+            <p className="mt-2 text-gray-600">
+              Suivi de la conformité réglementaire pour tous vos cas d'usage IA
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Liste des dossiers */}
+        <div className="space-y-4">
+          {useCases.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun cas d'usage trouvé</h3>
+              <p className="text-gray-600">Commencez par créer votre premier cas d'usage.</p>
+            </div>
+          ) : (
+            useCases.map((useCase) => {
+              const completion = completions[useCase.id] || { completed: 0, total: 7, percentage: 0 }
+
+              return (
+                <div
+                  key={useCase.id}
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => router.push(`/dashboard/${companyId}/dossiers/${useCase.id}`)}
+                >
+                  <div className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <FileText className="w-6 h-6 text-[#0080A3]" />
+                          <h3 className="text-xl font-semibold text-gray-900">{useCase.name}</h3>
+                        </div>
+                        <p className="text-gray-600 mb-4 line-clamp-2">{useCase.description}</p>
+
+                        {/* Barre de progression */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Progression de la conformité</span>
+                            <span className="font-semibold text-[#0080A3]">
+                              {completion.completed}/{completion.total} documents ({completion.percentage}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <div
+                              className="h-3 rounded-full transition-all duration-300 bg-[#0080A3]"
+                              style={{ width: `${completion.percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="ml-6">
+                        <ChevronRight className="w-6 h-6 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
