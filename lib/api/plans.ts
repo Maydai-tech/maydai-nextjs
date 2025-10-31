@@ -21,6 +21,7 @@ export interface PlanFromDB {
   max_registries: number
   max_collaborators: number
   max_usecases_per_registry: number | null
+  max_storage_mb: number
   display_order: number
   created_at: string
   updated_at: string
@@ -46,26 +47,39 @@ export interface MaydAIPlan {
   maxRegistries?: number
   maxCollaborators?: number
   maxUseCasesPerRegistry?: number
+  maxStorageMb?: number
 }
 
 // Mapping des icônes et couleurs par défaut selon le plan_id
 const PLAN_STYLES: Record<string, { icon: string; color: string }> = {
-  starter: { icon: 'level-up.png', color: 'blue' },
-  pro: { icon: 'le-coucher-du-soleil.png', color: 'purple' },
-  enterprise: { icon: 'chapeau-de-pilote.png', color: 'gold' }
+  freemium: { icon: 'level-up.png', color: 'gray' },
+  starter: { icon: 'speedometer.png', color: 'blue' },
+  pro: { icon: 'business-and-trade.png', color: 'purple' },
+  enterprise: { icon: 'corporation.png', color: 'gold' }
+}
+
+/**
+ * Formate le stockage en Mo ou Go selon la taille
+ */
+function formatStorage(storageMb: number): string {
+  if (storageMb >= 1024) {
+    const storageGb = storageMb / 1024
+    return `${storageGb} Go de stockage`
+  }
+  return `${storageMb} Mo de stockage`
 }
 
 /**
  * Génère dynamiquement les features d'un plan en fonction des limites définies dans la DB
  */
-function generateDynamicFeatures(maxRegistries: number, maxCollaborators: number, maxUseCasesPerRegistry: number | null): string[] {
+function generateDynamicFeatures(maxRegistries: number, maxCollaborators: number, maxUseCasesPerRegistry: number | null, maxStorageMb: number): string[] {
   const registriesText = maxRegistries === 1
-    ? '1 registre IA Act'
-    : `${maxRegistries} registres IA Act`
+    ? '1 Registre IA Act'
+    : `${maxRegistries} Registres IA Act`
 
   const collaboratorsText = maxCollaborators === 1
-    ? '1 collaborateur'
-    : `${maxCollaborators} collaborateurs`
+    ? "Jusqu'à 1 collaborateur"
+    : `Jusqu'à ${maxCollaborators} collaborateurs`
 
   const useCasesText = maxUseCasesPerRegistry === null || maxUseCasesPerRegistry === -1
     ? 'Cas d\'usage illimités'
@@ -73,10 +87,13 @@ function generateDynamicFeatures(maxRegistries: number, maxCollaborators: number
     ? '1 cas d\'usage par registre'
     : `${maxUseCasesPerRegistry} cas d\'usage par registre`
 
+  const storageText = formatStorage(maxStorageMb)
+
   return [
     registriesText,
     collaboratorsText,
-    useCasesText
+    useCasesText,
+    storageText
   ]
 }
 
@@ -112,7 +129,7 @@ export async function fetchPlans(): Promise<MaydAIPlan[]> {
  */
 export function mapDBPlanToMaydAIPlan(planDB: PlanFromDB): MaydAIPlan {
   const styles = PLAN_STYLES[planDB.plan_id] || PLAN_STYLES.starter
-  const features = generateDynamicFeatures(planDB.max_registries, planDB.max_collaborators, planDB.max_usecases_per_registry)
+  const features = generateDynamicFeatures(planDB.max_registries, planDB.max_collaborators, planDB.max_usecases_per_registry, planDB.max_storage_mb)
 
   // Utiliser les price IDs de test en environnement de développement
   const isTestMode = process.env.NODE_ENV === 'development' ||
@@ -139,7 +156,8 @@ export function mapDBPlanToMaydAIPlan(planDB: PlanFromDB): MaydAIPlan {
     custom: planDB.plan_id === 'corporate',
     maxRegistries: planDB.max_registries,
     maxCollaborators: planDB.max_collaborators,
-    maxUseCasesPerRegistry: planDB.max_usecases_per_registry ?? undefined
+    maxUseCasesPerRegistry: planDB.max_usecases_per_registry ?? undefined,
+    maxStorageMb: planDB.max_storage_mb
   }
 }
 

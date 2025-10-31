@@ -322,7 +322,7 @@ export default function SubscriptionPage({
             {/* Notes additionnelles sous les cartes */}
             <div className="text-center mt-12 text-gray-500 text-sm max-w-2xl mx-auto">
               <p>Tout abonnement peut être arrêté à tout moment.</p>
-              <p>Les audits IA Act gratuits sont protégés et ne sont pas utilisés à des fins d'entraînement (ce qui est hélas le cas aujourd'hui de l'IA gratuite).</p>
+              <p>Les audits IA Act gratuits sont protégés et ne sont pas utilisés à des fins d'entraînement.</p>
             </div>
           </div>
        
