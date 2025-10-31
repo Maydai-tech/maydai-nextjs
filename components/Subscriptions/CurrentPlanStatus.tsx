@@ -11,7 +11,7 @@ interface CurrentPlanStatusProps {
   planName: string
   billingCycle: 'monthly' | 'yearly'
   nextBillingDate: string
-  nextBillingAmount: number
+  nextBillingAmount: string
   onCancelSuccess?: () => void // Callback pour rafraîchir les données parent après annulation
   isFreePlan?: boolean
   isCanceled?: boolean

@@ -3,6 +3,8 @@
  * Définit les interfaces pour les abonnements, plans et retours des hooks
  */
 
+import type { UpcomingInvoiceResponse } from '@/lib/stripe/types'
+
 // Interface pour un abonnement utilisateur depuis la table Supabase
 export interface Subscription {
   id: string
@@ -38,6 +40,7 @@ export interface UseSubscriptionReturn {
   subscription: Subscription | null
   loading: boolean
   error: string | null
+  upcomingInvoice: UpcomingInvoiceResponse | null
   refreshSubscription: () => Promise<void>
   cancelSubscription: () => Promise<any>
 }

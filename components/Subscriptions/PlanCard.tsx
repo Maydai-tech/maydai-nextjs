@@ -104,12 +104,15 @@ export default function PlanCard({ plan, billingCycle, isCurrentPlan, onPayment,
             </>
           ) : (
             <>
-              <span className="text-5xl font-extrabold" style={{ color: '#0080a3' }}>
-                {billingCycle === 'yearly' ? plan.price.yearly : plan.price.monthly}€
-              </span>
-              <span className="text-gray-500">
-                /{billingCycle === 'yearly' ? 'an' : 'mois'}
-              </span>
+              <div>
+                <span className="text-5xl font-extrabold" style={{ color: '#0080a3' }}>
+                  {billingCycle === 'yearly' ? plan.price.yearly : plan.price.monthly}€
+                </span>
+                <span className="text-gray-500">
+                  /{billingCycle === 'yearly' ? 'an' : 'mois'}
+                </span>
+              </div>
+              <div className="text-xs text-gray-400 mt-1">(hors taxes)</div>
             </>
           )}
         </div>

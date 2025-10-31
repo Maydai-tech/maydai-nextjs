@@ -40,11 +40,10 @@ export default function SubscriptionPage({
   const [currentPlan, setCurrentPlan] = useState('starter') // starter, pro, enterprise
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly') // monthly, yearly
   const { createCheckoutSession, error: stripeError } = useStripe()
-  const { subscription, loading: subscriptionLoading, error: subscriptionError, cancelSubscription, refreshSubscription } = useSubscription()
+  const { subscription, loading: subscriptionLoading, error: subscriptionError, cancelSubscription, refreshSubscription, upcomingInvoice } = useSubscription()
   const { plans, loading: plansLoading, error: plansError } = usePlans()
   const { plan: currentPlanInfo, loading: userPlanLoading, error: userPlanError, refresh: refreshUserPlan } = useUserPlan()
   const [localShowSuccessPopup, setLocalShowSuccessPopup] = useState(false)
-  const [nextBillingAmount, setNextBillingAmount] = useState<number>(0)
   const [showDowngradeModal, setShowDowngradeModal] = useState(false)
   const [showChangePlanModal, setShowChangePlanModal] = useState(false)
   const [pendingPlan, setPendingPlan] = useState<MaydAIPlan | null>(null)
@@ -58,22 +57,12 @@ export default function SubscriptionPage({
 
   const nextBillingDate = formatNextBillingDate(subscription?.current_period_end || null)
 
-  // Charger le montant de la prochaine facturation de manière asynchrone
-  useEffect(() => {
-    async function loadNextBillingAmount() {
-      const cycle = subscription
-        ? formatBillingCycle(subscription.plan_id)
-        : billingCycle
-
-      // Utiliser l'ID textuel du plan (ex: "starter", "pro") au lieu de l'UUID
-      const amount = await calculateNextBillingAmount(
-        currentPlanInfo.id,
-        cycle
-      )
-      setNextBillingAmount(amount)
-    }
-    loadNextBillingAmount()
-  }, [currentPlanInfo.id, subscription, billingCycle])
+  // Calculer le montant de la prochaine facturation
+  // Priorité 1: Utiliser le montant depuis Stripe (avec taxes)
+  // Priorité 2: Utiliser le montant depuis la table plans (fallback)
+  const nextBillingAmount = upcomingInvoice?.success && upcomingInvoice.total > 0
+    ? (upcomingInvoice.total / 100).toFixed(2) // Convertir centimes en euros et formater avec 2 décimales
+    : '0.00' // Si pas de facture, afficher 0 (plan gratuit ou erreur)
 
   // Utiliser le state externe si fourni, sinon le state local
   const showSuccessPopup = externalShowSuccessPopup ?? localShowSuccessPopup
