@@ -104,4 +104,8 @@ export interface MaydAIPlan {
   popular?: boolean
   free?: boolean
   custom?: boolean
+  maxRegistries?: number
+  maxCollaborators?: number
+  maxUseCasesPerRegistry?: number
+  maxStorageMb?: number
 }

@@ -67,102 +67,117 @@ const TarifsPage: NextPage = () => {
             <div className="flex flex-col items-center mb-6">
               <Image src="/icons/tag.png" alt="Étiquette de prix" width={64} height={64} className="w-16 h-16 mb-4" />
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight" style={{ color: '#0080a3' }}>
-                Tarifs MaydAI
+                Des plans adaptés à chaque étape de votre conformité AI Act
               </h1>
             </div>
-            <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
-              Trouvez le plan adapté à votre situation : audit IA gratuit pour démarrer ou tester une idée de cas d'usage IA, un abonnement mensuel pour les organisations plus complexes ou un devis sur mesure pour intégrer dès à présent l'IA Act dans votre entreprise.
-            </p>
+            <h2 className="mt-4 text-xl md:text-2xl font-semibold text-gray-700 max-w-3xl mx-auto">
+              Commencez gratuitement ou choisissez l&apos;offre pensée pour la croissance et la scalabilité de vos projets IA.
+            </h2>
           </div>
         </section>
 
         {/* Section des cartes de prix */}
         <section className="pb-20 px-4">
           <div className="container mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
               
-              {/* Carte 1: Starter */}
+              {/* Carte 1: Freemium */}
               <div className="border border-gray-200 rounded-2xl p-8 flex flex-col hover:shadow-xl transition-shadow duration-300">
                 <div className="flex flex-col items-center mb-2">
                   <Image src="/icons/level-up.png" alt="Level Up" width={48} height={48} className="w-12 h-12 mb-3" />
-                  <h2 className="text-2xl font-bold text-center" style={{ color: '#0080a3' }}>La Mise en Bouche</h2>
+                  <h2 className="text-2xl font-bold text-center" style={{ color: '#0080a3' }}>Freemium</h2>
                 </div>
                 <div className="mb-4 text-center">
                   <span className="text-5xl font-extrabold" style={{ color: '#0080a3' }}>0€</span>
                   <span className="text-gray-500"> (Gratuit)</span>
                 </div>
-                <p className="text-gray-600 mb-6 h-20">Vous souhaitez agir tout de suite, vous mettre en conformité ou tester des projets IA.</p>
+                <p className="text-gray-600 mb-6 h-20">Idéal pour découvrir la plateforme et initier votre démarche de conformité sur un projet test.</p>
                 <a href="/contact" className="w-full text-center bg-white text-[#0080a3] border border-[#0080a3] hover:bg-[#0080a3] hover:bg-opacity-10 font-bold py-3 px-6 rounded-lg transition-colors duration-300">
                   Commencer
                 </a>
                 <hr className="my-6" />
                 <ul className="space-y-4 flex-grow">
-                  <li className="flex items-start"><CheckIcon /> 1 registre IA Act</li>
-                  <li className="flex items-start"><CheckIcon /> 1 Dashboard Entreprise</li>
-                  <li className="flex items-start"><CheckIcon /> 6 cas d&apos;usage IA disponibles</li>
-                  <li className="flex items-start"><CheckIcon /> 6 models de cas d&apos;usage disponibles</li>
-                  <li className="flex items-start"><CheckIcon /> 3 invitations pour collaborer</li>
-                  <li className="flex items-start"><CheckIcon /> Support Email</li>
+                  <li className="flex items-start"><CheckIcon /> 1 Registre IA Act</li>
+                  <li className="flex items-start"><CheckIcon /> Jusqu&apos;à 2 collaborateurs</li>
+                  <li className="flex items-start"><CheckIcon /> 2 cas d&apos;usage par registre</li>
+                  <li className="flex items-start"><CheckIcon /> 250 Mo de stockage</li>
                 </ul>
               </div>
 
-              {/* Carte 2: Adopter (mise en avant) */}
-              <div className="border-2 border-[#0080a3] rounded-2xl p-8 flex flex-col shadow-2xl relative">
-                 <span className="absolute top-0 -translate-y-1/2 bg-[#0080a3] text-white text-xs font-bold px-3 py-1 rounded-full uppercase">Recommandé</span>
-                <div className="flex flex-col items-center mb-2">
-                  <Image src="/icons/le-coucher-du-soleil.png" alt="Coucher du soleil" width={48} height={48} className="w-12 h-12 mb-3" />
-                  <h2 className="text-2xl font-bold text-center" style={{ color: '#0080a3' }}>Le Lève-tôt</h2>
-                </div>
-                <div className="mb-4 text-center">
-                  <span className="text-5xl font-extrabold" style={{ color: '#0080a3' }}>10€</span>
-                  <span className="text-gray-500"> / Par mois</span>
-                </div>
-                <p className="text-gray-600 mb-6 h-20">Vous avez la volonté de centraliser et d'évaluer tous les cas d&apos;usages de votre entreprise et/ou de ses filiales.</p>
-                <a href="/contact" className="w-full text-center bg-[#0080a3] text-white hover:bg-[#006d8a] font-bold py-3 px-6 rounded-lg transition-colors duration-300">
-                  C'est parti !
-                </a>
-                <hr className="my-6" />
-                <ul className="space-y-4 flex-grow">
-                    <li className="flex items-start"><CheckIcon /> 1 super registre IA Act</li>
-                    <li className="flex items-start"><CheckIcon /> 3 registres IA Act</li>
-                    <li className="flex items-start"><CheckIcon /> 4 Dashboards Entreprise</li>
-                    <li className="flex items-start"><CheckIcon /> 12 cas d&apos;usage IA disponibles</li>
-                    <li className="flex items-start"><CheckIcon /> 12 models de cas d&apos;usage disponibles</li>
-                    <li className="flex items-start"><CheckIcon /> 6 invitations pour collaborer</li>
-                    <li className="flex items-start"><CheckIcon /> Support prioritaire</li>
-                </ul>
-              </div>
-
-              {/* Carte 3: Sur mesure */}
+              {/* Carte 2: Starter */}
               <div className="border border-gray-200 rounded-2xl p-8 flex flex-col hover:shadow-xl transition-shadow duration-300">
                 <div className="flex flex-col items-center mb-2">
-                  <Image src="/icons/chapeau-de-pilote.png" alt="Chapeau de pilote" width={48} height={48} className="w-12 h-12 mb-3" />
-                  <h2 className="text-2xl font-bold text-center" style={{ color: '#0080a3' }}>Le Pilote</h2>
+                  <Image src="/icons/speedometer.png" alt="Speedometer" width={48} height={48} className="w-12 h-12 mb-3" />
+                  <h2 className="text-2xl font-bold text-center" style={{ color: '#0080a3' }}>Starter</h2>
                 </div>
                 <div className="mb-4 text-center">
-                  <span className="text-5xl font-extrabold" style={{ color: '#0080a3' }}>1K€</span>
-                  <span className="text-gray-500"> (Mission 1 mois)</span>
+                  <span className="text-5xl font-extrabold" style={{ color: '#0080a3' }}>9€</span>
+                  <span className="text-gray-500"> HT / mois</span>
                 </div>
-                <p className="text-gray-600 mb-6 h-20">Devis entreprise: Vous avez besoin d'être accompagné en matière de formation, de création d&apos;audit IA act et de registre entreprise.</p>
-                 <a href="/contact" className="w-full text-center bg-white text-[#0080a3] border border-[#0080a3] hover:bg-[#0080a3] hover:bg-opacity-10 font-bold py-3 px-6 rounded-lg transition-colors duration-300">
-                  Attachez vos ceintures !
+                <p className="text-gray-600 mb-6 h-20">Parfait pour les petites équipes et les startups qui structurent leur IA responsable.</p>
+                <a href="/contact" className="w-full text-center bg-white text-[#0080a3] border border-[#0080a3] hover:bg-[#0080a3] hover:bg-opacity-10 font-bold py-3 px-6 rounded-lg transition-colors duration-300">
+                  Commencer
                 </a>
                 <hr className="my-6" />
                 <ul className="space-y-4 flex-grow">
-                    <li className="flex items-start"><CheckIcon /> 1 formation sur site</li>
-                    <li className="flex items-start"><CheckIcon /> 1 atelier audit IA act</li>
-                    <li className="flex items-start"><CheckIcon /> Création du Dashboard Entreprise</li>
-                    <li className="flex items-start"><CheckIcon /> Cas d&apos;usage IA illimités</li>
-                    <li className="flex items-start"><CheckIcon /> Collaboration illimitée</li>
-                    <li className="flex items-start"><CheckIcon /> Support juridique relecture cas d&apos;usage</li>
-                    <li className="flex items-start"><CheckIcon /> Support prioritaire</li>
+                    <li className="flex items-start"><CheckIcon /> 2 Registres IA Act</li>
+                    <li className="flex items-start"><CheckIcon /> Jusqu&apos;à 5 collaborateurs</li>
+                    <li className="flex items-start"><CheckIcon /> 5 cas d&apos;usage par registre</li>
+                    <li className="flex items-start"><CheckIcon /> 1 Go de stockage</li>
+                </ul>
+              </div>
+
+              {/* Carte 3: Pro (mise en avant) */}
+              <div className="border-2 border-[#0080a3] rounded-2xl p-8 flex flex-col shadow-2xl relative">
+                <span className="absolute top-0 -translate-y-1/2 bg-[#0080a3] text-white text-xs font-bold px-3 py-1 rounded-full uppercase">Recommandé</span>
+                <div className="flex flex-col items-center mb-2">
+                  <Image src="/icons/business-and-trade.png" alt="Business and Trade" width={48} height={48} className="w-12 h-12 mb-3" />
+                  <h2 className="text-2xl font-bold text-center" style={{ color: '#0080a3' }}>Pro</h2>
+                </div>
+                <div className="mb-4 text-center">
+                  <span className="text-5xl font-extrabold" style={{ color: '#0080a3' }}>49€</span>
+                  <span className="text-gray-500"> HT / mois</span>
+                </div>
+                <p className="text-gray-600 mb-6 h-20">Pour les équipes en croissance qui pilotent activement leur conformité IA.</p>
+                <a href="/contact" className="w-full text-center bg-[#0080a3] text-white hover:bg-[#006d8a] font-bold py-3 px-6 rounded-lg transition-colors duration-300">
+                  C&apos;est parti !
+                </a>
+                <hr className="my-6" />
+                <ul className="space-y-4 flex-grow">
+                    <li className="flex items-start"><CheckIcon /> 6 Registres IA Act</li>
+                    <li className="flex items-start"><CheckIcon /> Jusqu&apos;à 10 collaborateurs</li>
+                    <li className="flex items-start"><CheckIcon /> 10 cas d&apos;usage par registre</li>
+                    <li className="flex items-start"><CheckIcon /> 5 Go de stockage</li>
+                </ul>
+              </div>
+
+              {/* Carte 4: Enterprise */}
+              <div className="border border-gray-200 rounded-2xl p-8 flex flex-col hover:shadow-xl transition-shadow duration-300">
+                <div className="flex flex-col items-center mb-2">
+                  <Image src="/icons/corporation.png" alt="Corporation" width={48} height={48} className="w-12 h-12 mb-3" />
+                  <h2 className="text-2xl font-bold text-center" style={{ color: '#0080a3' }}>Enterprise</h2>
+                </div>
+                <div className="mb-4 text-center">
+                  <span className="text-5xl font-extrabold" style={{ color: '#0080a3' }}>199€</span>
+                  <span className="text-gray-500"> HT / mois</span>
+                </div>
+                <p className="text-gray-600 mb-6 h-20">Conçu pour les grandes organisations qui déploient et auditent l&apos;IA à grande échelle.</p>
+                 <a href="/contact" className="w-full text-center bg-white text-[#0080a3] border border-[#0080a3] hover:bg-[#0080a3] hover:bg-opacity-10 font-bold py-3 px-6 rounded-lg transition-colors duration-300">
+                  Commencer
+                </a>
+                <hr className="my-6" />
+                <ul className="space-y-4 flex-grow">
+                    <li className="flex items-start"><CheckIcon /> 25 Registres IA Act</li>
+                    <li className="flex items-start"><CheckIcon /> Jusqu&apos;à 50 collaborateurs</li>
+                    <li className="flex items-start"><CheckIcon /> 20 cas d&apos;usage par registre</li>
+                    <li className="flex items-start"><CheckIcon /> 50 Go de stockage</li>
                 </ul>
               </div>
             </div>
              {/* Notes additionnelles sous les cartes */}
             <div className="text-center mt-12 text-gray-500 text-sm max-w-2xl mx-auto">
                 <p>Tout abonnement peut être arrêté à tout moment.</p>
-                <p>Les audits IA Act gratuits sont protégés et ne sont pas utilisés à des fins d'entraînement (ce qui est hélas le cas aujourd&apos;hui de l&apos;IA gratuite).</p>
+                <p>Les audits IA Act gratuits sont protégés et ne sont pas utilisés à des fins d&apos;entraînement.</p>
             </div>
           </div>
         </section>
