@@ -70,7 +70,7 @@ export async function GET(
       .select('status')
       .eq('dossier_id', dossier.id)
 
-    const completedCount = documents?.filter(doc => doc.status === 'complete' || doc.status === 'validated').length || 0
+    const completedCount = documents?.filter((doc: { status: string }) => doc.status === 'complete' || doc.status === 'validated').length || 0
     const total = 7 // Nombre total de documents requis
     const percentage = Math.round((completedCount / total) * 100)
 

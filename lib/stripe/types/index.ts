@@ -104,6 +104,10 @@ export interface MaydAIPlan {
   popular?: boolean
   free?: boolean
   custom?: boolean
+  maxRegistries?: number
+  maxCollaborators?: number
+  maxUseCasesPerRegistry?: number
+  maxStorageMb?: number
 }
 
 // Types pour la facture à venir (upcoming invoice)
