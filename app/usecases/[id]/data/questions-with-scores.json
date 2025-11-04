@@ -9,12 +9,22 @@
       {
         "code": "E4.N7.Q1.A",
         "label": "Mon entreprise travaille dans le domaine de l'informatique et de l'IA",
-        "score_impact": 0
+        "score_impact": 0,
+        "tooltip": {
+          "title": "Fournisseur, importateur ou distributeur d'IA",
+          "shortContent": "Soit un Fournisseur qui développe l'IA et la met sur le marché, soit un importateur qui introduit l'IA d'un pays tiers dans l'UE, soit un distributeur qui la met à disposition, soit un mandataire qui représente le fournisseur non-UE pour la conformité.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q1.B",
         "label": "Mon entreprise utilise des systèmes d'IA tiers",
-        "score_impact": 0
+        "score_impact": 0,
+        "tooltip": {
+          "title": "Déployeur (utilisateur) d'IA",
+          "shortContent": "Un déployeur (utilisateur) est une personne physique ou morale, une autorité publique, une entreprise ou un autre organisme qui utilise un système d'IA sous sa propre autorité. Il doit s'assurer d'utiliser les systèmes d'IA conformément à l'AI Act et de garantir un contrôle humain approprié.",
+          "icon": "💡"
+        }
       }
     ]
   },
@@ -28,32 +38,62 @@
       {
         "code": "E4.N7.Q1.1.A",
         "label": "Je suis fabricant d'un produit intégrant un système d'IA",
-        "score_impact": 0
+        "score_impact": 0,
+        "tooltip": {
+          "title": "Fabricant d'un produit intégrant un système d'IA",
+          "shortContent": "Fabricant d'un produit intégrant un système d'IA Désigné Fournisseur du système d'IA si celui-ci est un composant de sécurité d'un produit listé ou si je le mets sur le marché sous ma marque.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q1.1.B",
         "label": "Je distribue et/ou déploie un système d'IA pour d'autres entreprises",
-        "score_impact": 0
+        "score_impact": 0,
+        "tooltip": {
+          "title": "Distribue et/ou déploie un système d'IA pour d'autres entreprises",
+          "shortContent": "Distribue et/ou déploie un système d'IA pour d'autres entreprises Je suis Distributeur si je le mets à disposition sur le marché. Je suis Déployeur si je l'utilise sous ma propre autorité pour mon activité.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q1.1.C",
         "label": "Je suis éditeur d'un logiciel intégrant un système d'IA",
-        "score_impact": 0
+        "score_impact": 0,
+        "tooltip": {
+          "title": "Éditeur d'un logiciel intégrant un système d'IA",
+          "shortContent": "Éditeur d'un logiciel intégrant un système d'IA Je suis le Fournisseur. Je développe et mets sur le marché ce système sous mon nom/marque, ou je peux être un Fournisseur en aval.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q1.1.D",
         "label": "Je suis importateur d'un système d'IA",
-        "score_impact": 0
+        "score_impact": 0,
+        "tooltip": {
+          "title": "Importateur d'un système d'IA",
+          "shortContent": "Je suis l'Importateur si, étant établi dans l'UE, je mets sur le marché un système d'IA portant le nom d'une entité d'un pays tiers.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q1.1.E",
         "label": "Je suis un fournisseur d'un système d'IA",
-        "score_impact": 0
+        "score_impact": 0,
+        "tooltip": {
+          "title": "Fournisseur d'un système d'IA",
+          "shortContent": "Fournisseur d'un système d'IA Je suis le Fournisseur. Je développe ou fais développer un système d'IA ou un modèle à usage général et le mets sur le marché ou en service sous mon nom.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q1.1.F",
         "label": "Je suis représentant autorisé d'un fournisseur de système d'IA",
-        "score_impact": 0
+        "score_impact": 0,
+        "tooltip": {
+          "title": "Représentant autorisé d'un fournisseur de système d'IA",
+          "shortContent": "Représentant autorisé d'un fournisseur de système d'IA Je suis le Mandataire. J'ai un mandat écrit d'un fournisseur non-UE pour s'acquitter en son nom des obligations de conformité dans l'Union.",
+          "icon": "💡"
+        }
       }
     ]
   },
@@ -63,6 +103,11 @@
     "type": "radio",
     "required": true,
     "risk": "minimal",
+    "tooltip": {
+      "title": "Comprendre vos attentes",
+      "shortContent": "Cette question permet de mieux comprendre vos attentes en termes de rédaction d'audit et de rapport.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N7.Q1.2.A",
@@ -110,6 +155,11 @@
         "risk": "high",
         "category_impacts": {
           "risk_level": -45
+        },
+        "tooltip": {
+          "title": "Emploi, gestion des travailleurs",
+          "shortContent": "Ce domaine inclut les systèmes d'IA pour cibler des offres d'emploi, analyser et filtrer les candidatures, prendre des décisions affectant les conditions de travail, la promotion ou le licenciement, ou surveiller et évaluer les performances des employés. Exemple : logiciel de tri de CV.",
+          "icon": "💡"
         }
       },
       {
@@ -119,6 +169,11 @@
         "risk": "high",
         "category_impacts": {
           "risk_level": -45
+        },
+        "tooltip": {
+          "title": "Administration de la justice",
+          "shortContent": "Systèmes d'IA destinés à être utilisés dans l'administration de la justice et les processus démocratiques. Cela comprend les solutions d'IA qui aident, par exemple, à préparer les décisions de justice.",
+          "icon": "💡"
         }
       },
       {
@@ -128,6 +183,11 @@
         "risk": "high",
         "category_impacts": {
           "risk_level": -45
+        },
+        "tooltip": {
+          "title": "Migration, asile",
+          "shortContent": "Systèmes utilisés par les autorités pour évaluer un risque (sécurité, migration irrégulière ou santé) posé par une personne entrant sur le territoire d'un État membre, incluant l'examen des demandes d'asile, de visas et de titres de séjour.",
+          "icon": "💡"
         }
       },
       {
@@ -137,6 +197,11 @@
         "risk": "high",
         "category_impacts": {
           "risk_level": -45
+        },
+        "tooltip": {
+          "title": "Infrastructures critiques",
+          "shortContent": "Systèmes d'IA composants de sécurité d'infrastructures critiques (trafic routier, approvisionnement en eau, gaz, électricité). Leur défaillance pourrait mettre en danger la vie et la santé des citoyens.",
+          "icon": "💡"
         }
       },
       {
@@ -146,6 +211,11 @@
         "risk": "high",
         "category_impacts": {
           "risk_level": -45
+        },
+        "tooltip": {
+          "title": "Éducation et formation",
+          "shortContent": "Systèmes destinés à déterminer l'accès à l'éducation ou à la formation professionnelle. Cela englobe les outils pour évaluer les acquis d'apprentissage, orienter le processus d'apprentissage ou surveiller les comportements malhonnêtes.",
+          "icon": "💡"
         }
       },
       {
@@ -155,6 +225,11 @@
         "risk": "high",
         "category_impacts": {
           "risk_level": -45
+        },
+        "tooltip": {
+          "title": "Activités répressives",
+          "shortContent": "Systèmes utilisés dans la mesure où leur utilisation est autorisée par la loi : polygraphes ou outils similaires, systèmes évaluant la fiabilité des preuves lors d'enquêtes pénales, ou évaluation du risque de récidive (sans profilage uniquement).",
+          "icon": "💡"
         }
       },
       {
@@ -179,6 +254,11 @@
         "risk": "unacceptable",
         "category_impacts": {
           "risk_level": -80
+        },
+        "tooltip": {
+          "title": "Identification Biométrique à Distance",
+          "shortContent": "Identification Biométrique à Distance L'IBAD en temps réel dans les espaces publics à des fins répressives est interdite, sauf exceptions très strictes et préalablement autorisées (ex: recherche de victimes spécifiques d'enlèvement ou prévention d'attaque terroriste imminente).",
+          "icon": "💡"
         }
       },
       {
@@ -188,6 +268,11 @@
         "risk": "unacceptable",
         "category_impacts": {
           "risk_level": -80
+        },
+        "tooltip": {
+          "title": "Composant de sécurité secteurs critiques",
+          "shortContent": "Composant de sécurité secteurs critiques Ces systèmes ne sont pas interdits, mais classés à Haut Risque. Ex: Composants de sécurité d'IA dans les transports ou la fourniture d'eau/gaz. Ils sont soumis à des obligations strictes (gestion des risques, robustesse).",
+          "icon": "💡"
         }
       },
       {
@@ -197,6 +282,11 @@
         "risk": "unacceptable",
         "category_impacts": {
           "risk_level": -80
+        },
+        "tooltip": {
+          "title": "Évaluations dans système d'éducation",
+          "shortContent": "Évaluations dans système d'éducation Ces systèmes sont à Haut Risque. Ex: Outils déterminant l'accès ou l'admission aux établissements, ou la notation des examens. Leur utilisation est soumise à des obligations visant la qualité des données et la non-discrimination.",
+          "icon": "💡"
         }
       },
       {
@@ -206,6 +296,11 @@
         "risk": "unacceptable",
         "category_impacts": {
           "risk_level": -80
+        },
+        "tooltip": {
+          "title": "Accès services essentiels",
+          "shortContent": "Accès services essentiels Ces systèmes sont à Haut Risque. Ex: Évaluation de l'éligibilité aux prestations sociales ou évaluation de la solvabilité pour un prêt/assurance. Ils doivent respecter des normes strictes de transparence et de robustesse.",
+          "icon": "💡"
         }
       },
       {
@@ -227,25 +322,45 @@
         "code": "E4.N7.Q3.A",
         "label": "Identification biométrique et catégorisation des personnes physiques",
         "is_eliminatory": true,
-        "risk": "unacceptable"
+        "risk": "unacceptable",
+        "tooltip": {
+          "title": "Identification biométrique et catégorisation",
+          "shortContent": "Identification Biométrique à Distance (IBAD) L'IBAD en temps réel dans les espaces publics à des fins répressives est interdite, sauf exceptions strictes (ex: recherche de victimes, menace terroriste) et autorisation préalable de l'autorité judiciaire.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q3.B",
         "label": "Catégorisation biométrique basée sur des caractéristiques sensibles",
         "is_eliminatory": true,
-        "risk": "unacceptable"
+        "risk": "unacceptable",
+        "tooltip": {
+          "title": "Catégorisation biométrique basée sur caractéristiques sensibles",
+          "shortContent": "Catégorisation biométrique basée sur caractéristiques sensibles Interdiction de classer des personnes via leurs données biométriques pour en déduire des caractéristiques sensibles (ex: race, opinions politiques, religion, orientation sexuelle). Cela exclut l'étiquetage légal d'ensembles de données.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q3.C",
         "label": "Création de bases de données de reconnaissance faciale par moissonnage non ciblé",
         "is_eliminatory": true,
-        "risk": "unacceptable"
+        "risk": "unacceptable",
+        "tooltip": {
+          "title": "Création de bases de données reconnaissance faciale",
+          "shortContent": "Création de bases de données reconnaissance faciale Interdiction de créer/développer des bases de reconnaissance faciale par le moissonnage non ciblé (scraping) d'images provenant de l'internet ou de la vidéosurveillance (CCTV).",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q3.D",
         "label": "Déduction des émotions sur le lieu de travail et d'enseignement",
         "is_eliminatory": true,
-        "risk": "unacceptable"
+        "risk": "unacceptable",
+        "tooltip": {
+          "title": "Déduction des émotions",
+          "shortContent": "Déduction des émotions Interdiction d'utiliser des systèmes pour déduire les émotions des individus sur le lieu de travail et dans les établissements d'enseignement, (ex: colère, tristesse, joie). Exceptions: usages strictement définis pour des raisons médicales ou de sécurité.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q3.E",
@@ -266,25 +381,45 @@
         "code": "E4.N7.Q3.1.A",
         "label": "Exploitation des vulnérabilités",
         "is_eliminatory": true,
-        "risk": "unacceptable"
+        "risk": "unacceptable",
+        "tooltip": {
+          "title": "Exploitation des vulnérabilités",
+          "shortContent": "Exploitation des vulnérabilités Interdit d'exploiter les vulnérabilités (âge, handicap, situation socio-économique) pour altérer significativement le comportement et causer un préjudice important. Ex : Cibler les personnes en situation d'extrême pauvreté.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q3.1.B",
         "label": "Manipulation et tromperie",
         "is_eliminatory": true,
-        "risk": "unacceptable"
+        "risk": "unacceptable",
+        "tooltip": {
+          "title": "Manipulation et tromperie",
+          "shortContent": "Manipulation et tromperie Interdit les systèmes utilisant des techniques subliminales ou manipulatrices délibérées pour altérer le comportement, causant un préjudice important. Ex : Utiliser des stimuli sonores que l'individu ne peut percevoir.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q3.1.C",
         "label": "Notation sociale",
         "is_eliminatory": true,
-        "risk": "unacceptable"
+        "risk": "unacceptable",
+        "tooltip": {
+          "title": "Notation sociale",
+          "shortContent": "Notation sociale Interdiction d'évaluer ou de classer des personnes sur leur comportement social, si cela mène à un traitement préjudiciable ou défavorable dans des contextes dissociés ou disproportionné.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q3.1.D",
         "label": "Profilage pour évaluation du risque criminel",
         "is_eliminatory": true,
-        "risk": "unacceptable"
+        "risk": "unacceptable",
+        "tooltip": {
+          "title": "Profilage pour évaluation du risque criminel",
+          "shortContent": "Profilage pour évaluation du risque criminel Interdiction d'évaluer ou prédire le risque qu'une personne commette une infraction pénale basé uniquement sur son profilage ou ses traits de personnalité. Ex: Ne s'applique pas si le système étaye une évaluation humaine sur des faits objectifs.",
+          "icon": "💡"
+        }
       },
       {
         "code": "E4.N7.Q3.1.E",
@@ -300,6 +435,11 @@
     "type": "radio",
     "required": true,
     "risk": "minimal",
+    "tooltip": {
+      "title": "Données personnelles et RGPD",
+      "shortContent": "Les données personnelles sont toute information relative à une personne physique identifiée ou identifiable (Règlement (UE) 2016/679). Si votre système d'IA les traite, il doit respecter les exigences de l'AI Act et le droit de l'Union sur la protection des données (RGPD).",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N8.Q2.A",
@@ -319,6 +459,11 @@
     "type": "radio",
     "required": true,
     "risk": "minimal",
+    "tooltip": {
+      "title": "Décisions automatisées",
+      "shortContent": "L'IA peut générer des décisions qui influencent la vie des individus. Si ces décisions affectent les droits fondamentaux (emploi, crédit, justice), le système est considéré à Haut Risque et doit permettre une supervision humaine pour contester la décision.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N8.Q3.A",
@@ -338,6 +483,11 @@
     "type": "radio",
     "required": true,
     "risk": "minimal",
+    "tooltip": {
+      "title": "Apprentissage automatique",
+      "shortContent": "L'AA est une technique permettant l'inférence. Le système d'IA apprend des données pour atteindre des objectifs, générant des sorties (prédictions, décisions). La qualité des données d'entraînement est essentielle pour garantir l'absence de biais et la conformité, surtout pour le Haut Risque.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N8.Q4.A",
@@ -357,6 +507,11 @@
     "type": "radio",
     "required": true,
     "risk": "minimal",
+    "tooltip": {
+      "title": "Contact utilisateurs",
+      "shortContent": "Si le système interagit directement avec des personnes physiques (ex: chatbot), le fournisseur doit garantir la transparence. Les utilisateurs doivent être informés qu'ils sont en contact avec une machine, sauf si cela est évident, pour qu'ils puissent prendre une décision éclairée.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N8.Q5.A",
@@ -376,6 +531,11 @@
     "type": "radio",
     "required": true,
     "risk": "minimal",
+    "tooltip": {
+      "title": "Prédictions/recommandations",
+      "shortContent": "L'IA est définie comme un système capable de faire des prédictions, du contenu ou des recommandations par un processus d'inférence. Si ces sorties influencent des domaines critiques (ex: santé, évaluation de risque criminel ou d'emploi), cela peut classer le système comme Haut Risque.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N8.Q6.A",
@@ -395,6 +555,11 @@
     "type": "radio",
     "required": true,
     "risk": "minimal",
+    "tooltip": {
+      "title": "Environnement critique",
+      "shortContent": "Un environnement critique est une infrastructure essentielle (transports, eau, électricité, infrastructures numériques). Si l'IA est utilisée comme composant de sécurité dans ces infrastructures (dont la défaillance menace la vie/santé), le système est classé à Haut Risque.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N8.Q7.A",
@@ -414,6 +579,11 @@
     "type": "radio",
     "required": true,
     "risk": "minimal",
+    "tooltip": {
+      "title": "Surveillance continue",
+      "shortContent": "La surveillance est un processus continu. Les fournisseurs de SIA à haut risque doivent mettre en place un système de gestion des risques continu et de surveillance après commercialisation (post-market) pour repérer les dysfonctionnements et garantir la conformité tout au long du cycle de vie.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N8.Q8.A",
@@ -433,6 +603,11 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "tooltip": {
+      "title": "Interaction personnes physiques",
+      "shortContent": "L'interaction désigne le fait que l'IA touche directement ou indirectement des individus. Les systèmes interagit avec des personnes doivent les informer de cette interaction. S'il s'agit d'un système à Haut Risque, les déployeurs doivent informer les personnes concernées qu'elles y sont soumises.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N8.Q9.A",
@@ -586,6 +761,11 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "tooltip": {
+      "title": "Système de gestion des risques",
+      "shortContent": "Le SGR est un processus itératif continu obligatoire pour les SIA à haut risque. Il doit être mis en œuvre et tenu à jour sur l'ensemble du cycle de vie. Il vise à identifier et atténuer les risques connus et l'utilisation abusive raisonnablement prévisible.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E5.N9.Q1.A",
@@ -609,6 +789,11 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "tooltip": {
+      "title": "Identification et analyse des risques",
+      "shortContent": "Le SGR comprend l'identification et l'analyse des risques connus et raisonnablement prévisibles que le SIA peut poser pour la santé, la sécurité ou les droits fondamentaux, y compris les risques liés à une mauvaise utilisation raisonnablement prévisible.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E5.N9.Q2.A",
@@ -632,6 +817,11 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "tooltip": {
+      "title": "Mesures d'atténuation",
+      "shortContent": "Des mesures doivent être adoptées pour éliminer ou réduire les risques identifiés. Leur efficacité doit être testée (par ex. essais en conditions réelles) avant la mise sur le marché. Les mesures de gestion des risques doivent s'assurer que le risque résiduel est jugé acceptable.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E5.N9.Q3.A",
@@ -655,6 +845,11 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "tooltip": {
+      "title": "Documentation technique",
+      "shortContent": "Elle est obligatoire pour les fournisseurs de SIA à Haut Risque. Elle doit être établie avant la mise sur le marché et mise à jour. Elle prouve la conformité aux exigences et contient les informations sur la conception, l'entraînement et les tests (Annexe IV).",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E5.N9.Q4.A",
@@ -719,6 +914,11 @@
     "type": "conditional",
     "required": true,
     "risk": "limited",
+    "tooltip": {
+      "title": "Procédures qualité données",
+      "shortContent": "Des pratiques de gouvernance et de gestion des données appropriées sont exigées pour les SIA à Haut Risque utilisant l'entraînement. Les jeux de données (entraînement, validation, test) doivent être pertinents et représentatifs pour détecter, prévenir et atténuer les biais.",
+      "icon": "💡"
+    },
     "conditionalFields": [
       {
         "key": "procedures_details",
@@ -754,6 +954,11 @@
     "type": "conditional",
     "required": true,
     "risk": "minimal",
+    "tooltip": {
+      "title": "Registre centralisé",
+      "shortContent": "Les fournisseurs de SIA à Haut Risque (sauf exceptions, ex: certains critiques) doivent s'enregistrer dans la Base de données de l'UE (Article 71) avant la mise sur le marché. Les autorités publiques/déployeurs doivent aussi enregistrer leur utilisation.",
+      "icon": "💡"
+    },
     "conditionalFields": [
       {
         "key": "registry_type",
@@ -794,6 +999,11 @@
     "type": "conditional",
     "required": true,
     "risk": "limited",
+    "tooltip": {
+      "title": "Surveillance humaine",
+      "shortContent": "Le SIA à Haut Risque doit permettre un contrôle humain effectif pour prévenir les risques. L'opérateur doit pouvoir détecter les anomalies, intervenir, ignorer ou arrêter le système en cas de dysfonctionnement ou de résultats inattendus (Article 14).",
+      "icon": "💡"
+    },
     "conditionalFields": [
       {
         "key": "supervisor_name",
@@ -834,6 +1044,11 @@
     "type": "conditional",
     "required": true,
     "risk": "limited",
+    "tooltip": {
+      "title": "Exactitude et cybersécurité",
+      "shortContent": "Les SIA à Haut Risque doivent atteindre un niveau approprié d'exactitude, de robustesse et de cybersécurité tout au long de leur cycle de vie. Ils doivent être résilients face aux erreurs et aux cyberattaques (ex: empoisonnement des données) (Article 15).",
+      "icon": "💡"
+    },
     "conditionalFields": [
       {
         "key": "security_details",
@@ -869,6 +1084,11 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "tooltip": {
+      "title": "Information utilisateurs",
+      "shortContent": "Oui, sauf si c'est évident. Le fournisseur veille à ce que les personnes interagissant directement avec un SIA (ex: chatbot) soient informées qu'elles sont en contact avec une machine, afin de garantir la transparence (Article 50(1)).",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E6.N10.Q1.A",
@@ -892,6 +1112,11 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "tooltip": {
+      "title": "Marquage contenu",
+      "shortContent": "Oui. Les fournisseurs d'IA générative doivent marquer le contenu généré/manipulé (texte, image, vidéo) dans un format lisible par machine (Article 50(2)). Les déployeurs doivent étiqueter visiblement les hypertrucages et les textes sur l'intérêt public (Article 50(4)).",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E6.N10.Q2.A",
