@@ -117,7 +117,7 @@ function getOptionLabel(questionCode: string, optionCode: string): string {
   const question = QUESTIONS_DATA[questionCode as keyof typeof QUESTIONS_DATA]
   if (!question) return optionCode
 
-  const option = question.options.find(opt => opt.code === optionCode)
+  const option = question.options.find((opt: any) => opt.code === optionCode)
   return option?.label || optionCode
 }
 
