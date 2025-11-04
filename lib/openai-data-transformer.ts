@@ -1,7 +1,4 @@
-import { loadQuestions } from '@/app/usecases/[id]/utils/questions-loader';
-
-// Charger les questions depuis le JSON
-const QUESTIONS_DATA = loadQuestions();
+import { QUESTIONS_DATA } from './questions-data'
 
 interface UseCaseResponse {
   question_code: string
