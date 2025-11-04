@@ -179,7 +179,7 @@ export async function getUpcomingInvoice(customerId: string, subscriptionId?: st
       success: true,
       amount_due: upcomingInvoice.amount_due,
       subtotal: upcomingInvoice.subtotal,
-      tax: upcomingInvoice.tax || 0,
+      tax: upcomingInvoice.total_taxes?.reduce((sum, t) => sum + t.amount, 0) || 0,
       total: upcomingInvoice.total,
       currency: upcomingInvoice.currency,
       period_start: upcomingInvoice.period_start,
