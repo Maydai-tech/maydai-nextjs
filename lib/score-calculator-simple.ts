@@ -162,7 +162,7 @@ export function findQuestionOption(questionCode: string, answerCode: string): Qu
     return null;
   }
   
-  const option = question.options.find(opt => opt.code === answerCode);
+  const option = question.options.find((opt: any) => opt.code === answerCode);
   if (!option) {
     console.warn(`Option ${answerCode} non trouvée dans la question ${questionCode}`);
     return null;
