@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
         ...(userId && { user_id: userId }),
       },
       automatic_tax: { enabled: true },
+      customer_update: { address: 'auto' },
     }
 
     // Ajouter le customer si disponible

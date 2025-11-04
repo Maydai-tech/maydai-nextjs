@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { ArrowLeft, FileText, Check, AlertCircle, Loader2, Info } from 'lucide-react'
+import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
+import { ArrowLeft, FileText, Check, Loader2, Info, ChevronDown, X } from 'lucide-react'
 import ComplianceFileUpload from '@/components/ComplianceFileUpload'
+import UploadedFileDisplay from '@/components/UploadedFileDisplay'
 
 const DOC_TYPES = [
   {
@@ -66,17 +68,15 @@ const DOC_TYPES = [
 ]
 
 interface DocumentData {
-  textContent: string | null
+  formData: Record<string, any> | null
   fileUrl: string | null
   status: 'incomplete' | 'complete' | 'validated'
   updatedAt: string | null
-  supervisorName?: string | null
-  supervisorRole?: string | null
-  supervisorEmail?: string | null
 }
 
 export default function DossierDetailPage() {
   const { user, loading: authLoading, getAccessToken } = useAuth()
+  const { plan } = useUserPlan()
   const router = useRouter()
   const params = useParams()
   const companyId = params.id as string
@@ -99,7 +99,9 @@ export default function DossierDetailPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<Record<string, boolean>>({})
   const [uploading, setUploading] = useState<Record<string, boolean>>({})
+  const [deleting, setDeleting] = useState<Record<string, boolean>>({})
   const [showInfoTooltip, setShowInfoTooltip] = useState<string | null>(null)
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -140,17 +142,22 @@ export default function DossierDetailPage() {
             if (res.ok) {
               const data = await res.json()
               docsData[docType.key] = data
-              textData[docType.key] = data.textContent || ''
 
-              // Load supervisor data if it's the human oversight section
-              if (docType.key === 'human_oversight' && data.supervisorName) {
-                const supervisor = {
-                  name: data.supervisorName || '',
-                  role: data.supervisorRole || '',
-                  email: data.supervisorEmail || ''
+              // Extract text content from formData
+              if (data.formData) {
+                if (docType.key === 'system_prompt') {
+                  textData[docType.key] = data.formData.system_instructions || ''
+                } else if (docType.key === 'transparency_marking') {
+                  textData[docType.key] = data.formData.marking_description || ''
+                } else if (docType.key === 'human_oversight') {
+                  const supervisor = {
+                    name: data.formData.supervisorName || '',
+                    role: data.formData.supervisorRole || '',
+                    email: data.formData.supervisorEmail || ''
+                  }
+                  setSupervisorData(supervisor)
+                  setInitialSupervisorData(supervisor)
                 }
-                setSupervisorData(supervisor)
-                setInitialSupervisorData(supervisor)
               }
             }
           })
@@ -180,18 +187,26 @@ export default function DossierDetailPage() {
         return
       }
 
-      const payload: any = {
-        textContent: textContents[docType],
-        status: textContents[docType] ? 'complete' : 'incomplete'
+      let formData: Record<string, any> = {}
+      let status: 'incomplete' | 'complete' = 'incomplete'
+
+      // Build formData based on docType
+      if (docType === 'system_prompt') {
+        formData = { system_instructions: textContents[docType] }
+        status = textContents[docType] ? 'complete' : 'incomplete'
+      } else if (docType === 'transparency_marking') {
+        formData = { marking_description: textContents[docType] }
+        status = textContents[docType] ? 'complete' : 'incomplete'
+      } else if (docType === 'human_oversight') {
+        formData = {
+          supervisorName: supervisorData.name,
+          supervisorRole: supervisorData.role,
+          supervisorEmail: supervisorData.email
+        }
+        status = (supervisorData.name && supervisorData.role && supervisorData.email) ? 'complete' : 'incomplete'
       }
 
-      // Add supervisor data for human oversight section
-      if (docType === 'human_oversight') {
-        payload.supervisorName = supervisorData.name
-        payload.supervisorRole = supervisorData.role
-        payload.supervisorEmail = supervisorData.email
-        payload.status = (supervisorData.name && supervisorData.role && supervisorData.email) ? 'complete' : 'incomplete'
-      }
+      const payload = { formData, status }
 
       const res = await fetch(`/api/dossiers/${usecaseId}/${docType}`, {
         method: 'POST',
@@ -236,6 +251,32 @@ export default function DossierDetailPage() {
         return
       }
 
+      // Check storage limit BEFORE uploading
+      const fileSizeMb = file.size / (1024 * 1024)
+      const maxStorageMb = plan.maxStorageMb || 250
+
+      // Fetch current storage usage
+      const storageRes = await fetch(`/api/storage/usage`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (storageRes.ok) {
+        const storageData = await storageRes.json()
+        const usedStorageMb = storageData.usedStorageMb
+
+        if (usedStorageMb + fileSizeMb > maxStorageMb) {
+          alert(
+            `❌ Limite de stockage dépassée\n\n` +
+            `Stockage actuel : ${usedStorageMb.toFixed(2)} Mo\n` +
+            `Fichier : ${fileSizeMb.toFixed(2)} Mo\n` +
+            `Limite du plan : ${maxStorageMb} Mo\n\n` +
+            `Pour augmenter votre limite de stockage, veuillez passer à un plan supérieur.`
+          )
+          setUploading({ ...uploading, [docType]: false })
+          return
+        }
+      }
+
       const formData = new FormData()
       formData.append('file', file)
 
@@ -254,11 +295,52 @@ export default function DossierDetailPage() {
           const data = await getRes.json()
           setDocuments({ ...documents, [docType]: data })
         }
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('Upload error:', errorData)
+        alert(`Erreur lors de l'upload du fichier: ${errorData.error || 'Erreur inconnue'}`)
       }
     } catch (error) {
       console.error('Error uploading file:', error)
+      alert('Erreur lors de l\'upload du fichier')
     } finally {
       setUploading({ ...uploading, [docType]: false })
+    }
+  }
+
+  const handleFileDelete = async (docType: string) => {
+    if (!user) return
+
+    try {
+      setDeleting({ ...deleting, [docType]: true })
+      const token = getAccessToken()
+      if (!token) {
+        console.error('No access token available')
+        return
+      }
+
+      const res = await fetch(`/api/dossiers/${usecaseId}/${docType}/upload`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (res.ok) {
+        // Refresh document data
+        const getRes = await fetch(`/api/dossiers/${usecaseId}/${docType}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (getRes.ok) {
+          const data = await getRes.json()
+          setDocuments({ ...documents, [docType]: data })
+        }
+      } else {
+        alert('Erreur lors de la suppression du fichier')
+      }
+    } catch (error) {
+      console.error('Error deleting file:', error)
+      alert('Erreur lors de la suppression du fichier')
+    } finally {
+      setDeleting({ ...deleting, [docType]: false })
     }
   }
 
@@ -266,14 +348,14 @@ export default function DossierDetailPage() {
     if (status === 'complete' || status === 'validated') {
       return <Check className="w-5 h-5 text-green-600" />
     }
-    return <AlertCircle className="w-5 h-5 text-gray-400" />
+    return <X className="w-5 h-5 text-red-500" />
   }
 
   const getStatusColor = (status: string) => {
     if (status === 'complete' || status === 'validated') {
-      return 'bg-green-50 border-green-200'
+      return 'bg-green-50 border-green-300'
     }
-    return 'bg-gray-50 border-gray-200'
+    return 'bg-red-50 border-red-200'
   }
 
   const canSave = (docType: typeof DOC_TYPES[0]) => {
@@ -300,6 +382,13 @@ export default function DossierDetailPage() {
     }
 
     return false
+  }
+
+  const toggleSection = (docTypeKey: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [docTypeKey]: !prev[docTypeKey]
+    }))
   }
 
   if (authLoading || loading) {
@@ -339,16 +428,19 @@ export default function DossierDetailPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           {DOC_TYPES.map((docType) => {
-            const doc = documents[docType.key] || { status: 'incomplete', textContent: null, fileUrl: null, updatedAt: null }
+            const doc = documents[docType.key] || { status: 'incomplete', formData: null, fileUrl: null, updatedAt: null }
             const isSaving = saving[docType.key]
             const isUploading = uploading[docType.key]
 
             return (
               <div
                 key={docType.key}
-                className={`bg-white rounded-xl shadow-sm border p-6 ${getStatusColor(doc.status)}`}
+                className={`bg-white rounded-xl shadow-sm border ${getStatusColor(doc.status)}`}
               >
-                <div className="flex items-start justify-between mb-4">
+                <div 
+                  className="flex items-start justify-between p-6 cursor-pointer"
+                  onClick={() => toggleSection(docType.key)}
+                >
                   <div className="flex items-start gap-3 flex-1">
                     {getStatusIcon(doc.status)}
                     <div className="flex-1">
@@ -358,6 +450,7 @@ export default function DossierDetailPage() {
                           <button
                             onMouseEnter={() => setShowInfoTooltip(docType.key)}
                             onMouseLeave={() => setShowInfoTooltip(null)}
+                            onClick={(e) => e.stopPropagation()}
                             className="text-gray-400 hover:text-[#0080A3] transition-colors"
                           >
                             <Info className="w-4 h-4" />
@@ -372,29 +465,138 @@ export default function DossierDetailPage() {
                       <p className="text-sm text-gray-600 mt-1">{docType.description}</p>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                    doc.status === 'complete' || doc.status === 'validated'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {doc.status === 'complete' ? 'Complété' : doc.status === 'validated' ? 'Validé' : 'Incomplet'}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <ChevronDown 
+                      className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${
+                        expandedSections[docType.key] ? 'rotate-180' : ''
+                      }`}
+                    />
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                      doc.status === 'complete' || doc.status === 'validated'
+                        ? 'bg-green-100 text-green-800 border border-green-300'
+                        : 'bg-red-100 text-red-800 border border-red-300'
+                    }`}>
+                      {doc.status === 'complete' ? '✓ Complété' : doc.status === 'validated' ? '✓ Validé' : '✗ Incomplet'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Section for Prompt System (textarea) */}
                 {docType.type === 'textarea' && (
-                  <div className="space-y-3">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Instructions système
-                    </label>
-                    <textarea
-                      value={textContents[docType.key] || ''}
-                      onChange={(e) => setTextContents({ ...textContents, [docType.key]: e.target.value })}
-                      placeholder="Collez ici l'intégralité du prompt système..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent font-mono text-sm"
-                      rows={8}
-                    />
-                    <div className="flex gap-3">
+                  <div 
+                    className="overflow-hidden transition-all duration-300 ease-in-out"
+                    style={{ 
+                      maxHeight: expandedSections[docType.key] ? '2000px' : '0',
+                      opacity: expandedSections[docType.key] ? 1 : 0
+                    }}
+                  >
+                    <div className="space-y-3 px-6 pb-6">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Instructions système
+                      </label>
+                      <textarea
+                        value={textContents[docType.key] || ''}
+                        onChange={(e) => setTextContents({ ...textContents, [docType.key]: e.target.value })}
+                        placeholder="Collez ici l'intégralité du prompt système..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent font-mono text-sm"
+                        rows={8}
+                      />
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => handleTextSave(docType.key)}
+                          disabled={isSaving || !canSave(docType)}
+                          className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isSaving ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Enregistrement...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4 mr-2" />
+                              Enregistrer
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {docType.acceptedFormats && (
+                        <div className="mt-6 pt-6 border-t border-gray-200">
+                          {doc.fileUrl ? (
+                            <UploadedFileDisplay
+                              fileUrl={doc.fileUrl}
+                              onDelete={() => handleFileDelete(docType.key)}
+                              isDeleting={deleting[docType.key] || false}
+                            />
+                          ) : (
+                            <>
+                              <ComplianceFileUpload
+                                label="Ou importer un fichier"
+                                helpText={`Formats acceptés: ${docType.acceptedFormats}`}
+                                acceptedFormats={docType.acceptedFormats}
+                                onFileSelected={(file) => handleFileUpload(docType.key, file)}
+                              />
+                              {isUploading && (
+                                <div className="mt-3 flex items-center text-sm text-gray-600">
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Upload en cours...
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Section for Human Oversight (form) */}
+                {docType.type === 'form' && (
+                  <div 
+                    className="overflow-hidden transition-all duration-300 ease-in-out"
+                    style={{ 
+                      maxHeight: expandedSections[docType.key] ? '2000px' : '0',
+                      opacity: expandedSections[docType.key] ? 1 : 0
+                    }}
+                  >
+                    <div className="space-y-4 px-6 pb-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Nom complet <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={supervisorData.name}
+                          onChange={(e) => setSupervisorData({ ...supervisorData, name: e.target.value })}
+                          placeholder="ex: Marie Dupont"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Poste / Rôle <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={supervisorData.role}
+                          onChange={(e) => setSupervisorData({ ...supervisorData, role: e.target.value })}
+                          placeholder="ex: Responsable Conformité IA"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Email de contact <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={supervisorData.email}
+                          onChange={(e) => setSupervisorData({ ...supervisorData, email: e.target.value })}
+                          placeholder="ex: marie.dupont@entreprise.com"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
+                        />
+                      </div>
                       <button
                         onClick={() => handleTextSave(docType.key)}
                         disabled={isSaving || !canSave(docType)}
@@ -413,189 +615,110 @@ export default function DossierDetailPage() {
                         )}
                       </button>
                     </div>
-
-                    {docType.acceptedFormats && (
-                      <div className="mt-6 pt-6 border-t border-gray-200">
-                        <ComplianceFileUpload
-                          label="Ou importer un fichier"
-                          helpText={`Formats acceptés: ${docType.acceptedFormats}`}
-                          acceptedFormats={docType.acceptedFormats}
-                          onFileSelected={(file) => handleFileUpload(docType.key, file)}
-                        />
-                        {isUploading && (
-                          <div className="mt-3 flex items-center text-sm text-gray-600">
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Upload en cours...
-                          </div>
-                        )}
-                        {doc.fileUrl && (
-                          <div className="mt-3 flex items-center gap-2">
-                            <Check className="w-4 h-4 text-green-600" />
-                            <a
-                              href={doc.fileUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-[#0080A3] hover:underline"
-                            >
-                              Voir le fichier importé
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Section for Human Oversight (form) */}
-                {docType.type === 'form' && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nom complet <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={supervisorData.name}
-                        onChange={(e) => setSupervisorData({ ...supervisorData, name: e.target.value })}
-                        placeholder="ex: Marie Dupont"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Poste / Rôle <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={supervisorData.role}
-                        onChange={(e) => setSupervisorData({ ...supervisorData, role: e.target.value })}
-                        placeholder="ex: Responsable Conformité IA"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email de contact <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        value={supervisorData.email}
-                        onChange={(e) => setSupervisorData({ ...supervisorData, email: e.target.value })}
-                        placeholder="ex: marie.dupont@entreprise.com"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
-                      />
-                    </div>
-                    <button
-                      onClick={() => handleTextSave(docType.key)}
-                      disabled={isSaving || !canSave(docType)}
-                      className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Enregistrement...
-                        </>
-                      ) : (
-                        <>
-                          <Check className="w-4 h-4 mr-2" />
-                          Enregistrer
-                        </>
-                      )}
-                    </button>
                   </div>
                 )}
 
                 {/* Section for Transparency Marking (mixed: text + image) */}
                 {docType.type === 'mixed' && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Description du marquage
-                      </label>
-                      <textarea
-                        value={textContents[docType.key] || ''}
-                        onChange={(e) => setTextContents({ ...textContents, [docType.key]: e.target.value })}
-                        placeholder="Décrivez comment le contenu généré par l'IA est marqué..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
-                        rows={4}
-                      />
-                    </div>
-                    <button
-                      onClick={() => handleTextSave(docType.key)}
-                      disabled={isSaving || !canSave(docType)}
-                      className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Enregistrement...
-                        </>
-                      ) : (
-                        <>
-                          <Check className="w-4 h-4 mr-2" />
-                          Enregistrer la description
-                        </>
-                      )}
-                    </button>
+                  <div 
+                    className="overflow-hidden transition-all duration-300 ease-in-out"
+                    style={{ 
+                      maxHeight: expandedSections[docType.key] ? '2000px' : '0',
+                      opacity: expandedSections[docType.key] ? 1 : 0
+                    }}
+                  >
+                    <div className="space-y-4 px-6 pb-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Description du marquage
+                        </label>
+                        <textarea
+                          value={textContents[docType.key] || ''}
+                          onChange={(e) => setTextContents({ ...textContents, [docType.key]: e.target.value })}
+                          placeholder="Décrivez comment le contenu généré par l'IA est marqué..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
+                          rows={4}
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleTextSave(docType.key)}
+                        disabled={isSaving || !canSave(docType)}
+                        className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Enregistrement...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4 mr-2" />
+                            Enregistrer la description
+                          </>
+                        )}
+                      </button>
 
-                    <div className="pt-4 border-t border-gray-200">
-                      <ComplianceFileUpload
-                        label="Exemple visuel (optionnel)"
-                        helpText={`Capture d'écran montrant le marquage. Formats acceptés: ${docType.acceptedFormats}`}
-                        acceptedFormats={docType.acceptedFormats}
-                        onFileSelected={(file) => handleFileUpload(docType.key, file)}
-                      />
-                      {isUploading && (
-                        <div className="mt-3 flex items-center text-sm text-gray-600">
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Upload en cours...
-                        </div>
-                      )}
-                      {doc.fileUrl && (
-                        <div className="mt-3 flex items-center gap-2">
-                          <Check className="w-4 h-4 text-green-600" />
-                          <a
-                            href={doc.fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-[#0080A3] hover:underline"
-                          >
-                            Voir l'exemple visuel
-                          </a>
-                        </div>
-                      )}
+                      <div className="pt-4 border-t border-gray-200">
+                        {doc.fileUrl ? (
+                          <UploadedFileDisplay
+                            fileUrl={doc.fileUrl}
+                            onDelete={() => handleFileDelete(docType.key)}
+                            isDeleting={deleting[docType.key] || false}
+                          />
+                        ) : (
+                          <>
+                            <ComplianceFileUpload
+                              label="Exemple visuel (optionnel)"
+                              helpText={`Capture d'écran montrant le marquage. Formats acceptés: ${docType.acceptedFormats}`}
+                              acceptedFormats={docType.acceptedFormats}
+                              onFileSelected={(file) => handleFileUpload(docType.key, file)}
+                            />
+                            {isUploading && (
+                              <div className="mt-3 flex items-center text-sm text-gray-600">
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Upload en cours...
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {/* Section for File Upload Only */}
                 {docType.type === 'file' && (
-                  <div className="space-y-3">
-                    <ComplianceFileUpload
-                      label="Importer un document"
-                      helpText={`Formats acceptés: ${docType.acceptedFormats} (max 10MB)`}
-                      acceptedFormats={docType.acceptedFormats}
-                      onFileSelected={(file) => handleFileUpload(docType.key, file)}
-                    />
-                    {isUploading && (
-                      <div className="mt-3 flex items-center text-sm text-gray-600">
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Upload en cours...
-                      </div>
-                    )}
-                    {doc.fileUrl && (
-                      <div className="mt-3 flex items-center gap-2">
-                        <Check className="w-4 h-4 text-green-600" />
-                        <a
-                          href={doc.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-[#0080A3] hover:underline"
-                        >
-                          Voir le document importé
-                        </a>
-                      </div>
-                    )}
+                  <div 
+                    className="overflow-hidden transition-all duration-300 ease-in-out"
+                    style={{ 
+                      maxHeight: expandedSections[docType.key] ? '2000px' : '0',
+                      opacity: expandedSections[docType.key] ? 1 : 0
+                    }}
+                  >
+                    <div className="space-y-3 px-6 pb-6">
+                      {doc.fileUrl ? (
+                        <UploadedFileDisplay
+                          fileUrl={doc.fileUrl}
+                          onDelete={() => handleFileDelete(docType.key)}
+                          isDeleting={deleting[docType.key] || false}
+                        />
+                      ) : (
+                        <>
+                          <ComplianceFileUpload
+                            label="Importer un document"
+                            helpText={`Formats acceptés: ${docType.acceptedFormats} (max 10MB)`}
+                            acceptedFormats={docType.acceptedFormats}
+                            onFileSelected={(file) => handleFileUpload(docType.key, file)}
+                          />
+                          {isUploading && (
+                            <div className="mt-3 flex items-center text-sm text-gray-600">
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Upload en cours...
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

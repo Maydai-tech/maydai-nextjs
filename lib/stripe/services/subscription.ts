@@ -153,3 +153,56 @@ export async function reactivateStripeSubscription(subscriptionId: string) {
     throw new Error('Erreur lors de la réactivation de l\'abonnement: ' + error.message)
   }
 }
+
+/**
+ * Récupère la prochaine facture à venir pour un client Stripe
+ * Inclut les taxes automatiques calculées par Stripe
+ *
+ * @param customerId - ID du client Stripe
+ * @param subscriptionId - ID de l'abonnement Stripe
+ * @returns Promise avec les détails de la facture à venir
+ */
+export async function getUpcomingInvoice(customerId: string, subscriptionId?: string) {
+  try {
+    const stripe = getStripeClient()
+
+    // Récupérer la facture à venir avec calcul automatique des taxes
+    const upcomingInvoice = await stripe.invoices.createPreview({
+      customer: customerId,
+      subscription: subscriptionId, // Fournir le subscription ID si disponible
+      automatic_tax: {
+        enabled: true
+      }
+    })
+
+    return {
+      success: true,
+      amount_due: upcomingInvoice.amount_due,
+      subtotal: upcomingInvoice.subtotal,
+      tax: upcomingInvoice.tax || 0,
+      total: upcomingInvoice.total,
+      currency: upcomingInvoice.currency,
+      period_start: upcomingInvoice.period_start,
+      period_end: upcomingInvoice.period_end
+    }
+  } catch (error: any) {
+    console.error('❌ Erreur lors de la récupération de la facture à venir:', error)
+
+    // Si aucun abonnement actif, retourner des valeurs par défaut
+    if (error.code === 'invoice_upcoming_none') {
+      return {
+        success: false,
+        amount_due: 0,
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+        currency: 'eur',
+        period_start: 0,
+        period_end: 0,
+        error: 'Aucun abonnement actif'
+      }
+    }
+
+    throw new Error('Erreur lors de la récupération de la facture à venir: ' + error.message)
+  }
+}

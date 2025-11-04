@@ -109,3 +109,16 @@ export interface MaydAIPlan {
   maxUseCasesPerRegistry?: number
   maxStorageMb?: number
 }
+
+// Types pour la facture à venir (upcoming invoice)
+export interface UpcomingInvoiceResponse {
+  success: boolean
+  amount_due: number // Montant total TTC en centimes
+  subtotal: number // Montant HT en centimes
+  tax: number // Montant des taxes en centimes
+  total: number // Montant total TTC en centimes (même que amount_due)
+  currency: string
+  period_start: number // Timestamp de début de période
+  period_end: number // Timestamp de fin de période
+  error?: string
+}

@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { Subscription, UseSubscriptionReturn } from '@/lib/subscription/types'
-import { CancelSubscriptionResponse } from '@/lib/stripe/types'
+import { CancelSubscriptionResponse, UpcomingInvoiceResponse } from '@/lib/stripe/types'
 import { useApiClient } from '@/lib/api-client'
 
 export function useSubscription(): UseSubscriptionReturn {
@@ -17,6 +17,7 @@ export function useSubscription(): UseSubscriptionReturn {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [upcomingInvoice, setUpcomingInvoice] = useState<UpcomingInvoiceResponse | null>(null)
   const apiClient = useApiClient()
 
   /**
@@ -101,12 +102,41 @@ export function useSubscription(): UseSubscriptionReturn {
   }, [user?.id, subscription, fetchSubscription])
 
   /**
+   * Récupère la prochaine facture à venir depuis Stripe
+   */
+  const fetchUpcomingInvoice = useCallback(async () => {
+    // Si pas d'utilisateur ou pas d'abonnement, on n'appelle pas l'API
+    if (!user?.id || !subscription) {
+      setUpcomingInvoice(null)
+      return
+    }
+
+    try {
+      const response = await apiClient.get('/api/stripe/upcoming-invoice')
+
+      if (!response.ok) {
+        console.warn('Impossible de récupérer la facture à venir')
+        setUpcomingInvoice(null)
+        return
+      }
+
+      const data: UpcomingInvoiceResponse = await response.json()
+      setUpcomingInvoice(data)
+    } catch (err) {
+      console.error('Erreur lors de la récupération de la facture à venir:', err)
+      setUpcomingInvoice(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, apiClient])
+
+  /**
    * Fonction pour forcer le rafraîchissement des données
    */
   const refreshSubscription = useCallback(async () => {
     setLoading(true)
     await fetchSubscription()
-  }, [fetchSubscription])
+    await fetchUpcomingInvoice()
+  }, [fetchSubscription, fetchUpcomingInvoice])
 
   // Effet pour charger les données quand l'utilisateur change
   useEffect(() => {
@@ -118,10 +148,20 @@ export function useSubscription(): UseSubscriptionReturn {
     fetchSubscription()
   }, [authLoading, fetchSubscription])
 
+  // Effet pour charger la facture à venir quand l'abonnement est chargé
+  // On utilise subscription?.id pour éviter de se déclencher à chaque référence de l'objet subscription
+  useEffect(() => {
+    if (subscription?.id && !authLoading) {
+      fetchUpcomingInvoice()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscription?.id, authLoading])
+
   return {
     subscription,
     loading: authLoading || loading,
     error,
+    upcomingInvoice,
     refreshSubscription,
     cancelSubscription
   }
