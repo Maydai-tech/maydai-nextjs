@@ -30,6 +30,7 @@ export interface PlanInfo {
   maxRegistries?: number
   maxCollaborators?: number
   maxUseCasesPerRegistry?: number
+  maxStorageMb?: number
 }
 
 // Type pour les cycles de facturation

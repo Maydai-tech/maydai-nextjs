@@ -63,13 +63,13 @@ export async function GET(
 
     const { data: doc } = await supabase
       .from('dossier_documents')
-      .select('text_content, file_url, status, updated_at')
+      .select('form_data, file_url, status, updated_at')
       .eq('dossier_id', dossierRow.id)
       .eq('doc_type', docType)
       .maybeSingle()
 
     return NextResponse.json({
-      textContent: doc?.text_content ?? null,
+      formData: doc?.form_data ?? null,
       fileUrl: doc?.file_url ?? null,
       status: doc?.status ?? 'incomplete',
       updatedAt: doc?.updated_at ?? null,
@@ -93,7 +93,7 @@ export async function POST(
     }
 
     const body = await request.json()
-    const textContent: string | undefined = body?.textContent
+    const formData: Record<string, any> | undefined = body?.formData
     const status: 'incomplete' | 'complete' | 'validated' | undefined = body?.status
 
     // Find or create dossier
@@ -159,7 +159,7 @@ export async function POST(
       updated_by: user.id,
       updated_at: new Date().toISOString(),
     }
-    if (typeof textContent === 'string') payload.text_content = textContent
+    if (formData !== undefined) payload.form_data = formData
     if (status) payload.status = status
 
     // Try update first

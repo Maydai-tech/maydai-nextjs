@@ -83,7 +83,7 @@ export default function DossiersComplianceView() {
     }
 
     fetchData()
-  }, [user, api, hasFetched])
+  }, [user, api, hasFetched, companyId])
 
 
   if (loading || loadingData) {
@@ -161,7 +161,7 @@ export default function DossiersComplianceView() {
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-gray-600">Progression de la conformité</span>
                             <span className="font-semibold text-[#0080A3]">
-                              {completion.completed}/{completion.total} documents ({completion.percentage}%)
+                              {completion.completed}/{completion.total} documents complétés
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3">
