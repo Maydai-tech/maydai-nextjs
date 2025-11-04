@@ -12,7 +12,11 @@
  * 5. Score final = (score_base + bonus_model) avec pondération
  */
 
-import { QUESTIONS_DATA, type QuestionOption } from './questions-data';
+import { loadQuestions } from '@/app/usecases/[id]/utils/questions-loader';
+import type { QuestionOption } from '@/types/questions';
+
+// Charger les questions depuis le JSON
+const QUESTIONS_DATA = loadQuestions();
 
 // ===== CONSTANTES DE CALCUL =====
 /**

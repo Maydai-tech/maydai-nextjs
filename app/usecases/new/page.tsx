@@ -21,6 +21,7 @@ import {
 import Image from 'next/image'
 import { getProviderIcon } from '@/lib/provider-icons'
 import Tooltip from '@/components/Tooltip'
+import { loadCreationQuestions } from './questions-loader'
 
 // Force dynamic rendering to prevent prerender errors
 export const dynamic = 'force-dynamic'
@@ -238,207 +239,24 @@ function NewUseCasePageContent() {
     }
   }
 
+  // Charger les questions depuis le JSON
+  const baseQuestions = loadCreationQuestions()
+  
+  // Construire le tableau de questions dans l'ordre avec les options dynamiques pour technology_partner
   const questions: Question[] = [
+    baseQuestions.name,
+    baseQuestions.deployment_date,
+    baseQuestions.responsible_service,
     {
-      id: 'name',
-      question: 'Nom du cas d\'usage IA ?',
-      type: 'text',
-      placeholder: 'ex: Système IA Anti-Fraude',
-      maxLength: 50
+      ...baseQuestions.technology_partner,
+      options: partners.map(partner => ({ label: partner.name, examples: [] })) // Liste dynamique des partenaires
     },
-    {
-      id: 'deployment_date',
-      question: 'Date de déploiement passée ou prévue ?',
-      type: 'text',
-      placeholder: 'DD/MM/YYYY (ex: 15/06/2025)',
-      maxLength: 10,
-      tooltip: {
-        title: 'Pourquoi documenter la date de déploiement ?',
-        shortContent: 'Cette question permet d\'améliorer les recommandations de l\'audit du cas d\'usage IA.',
-        fullContent: 'Cette question permet d\'améliorer les recommandations de l\'audit du cas d\'usage IA.',
-        icon: '💡'
-      }
-    },
-    {
-      id: 'responsible_service',
-      question: 'Service en charge du cas d\'usage IA ?',
-      type: 'select',
-      options: [
-        'Ressources Humaines (RH)',
-        'Communication / Marketing',
-        'Commercial / Ventes',
-        'Finance / Comptabilité',
-        'Production / Opérations',
-        'Recherche et Développement (R&D)',
-        'Systèmes d\'Information (SI) / IT',
-        'Juridique',
-        'Achats / Approvisionnement',
-        'Service Client',
-        'Qualité',
-        'Autre'
-      ],
-      tooltip: {
-        title: 'Pourquoi documenter le service responsable ?',
-        shortContent: 'Renseignez le service de l\'entreprise responsable du suivi opérationnel du cas d\'usage IA.',
-        fullContent: 'Renseignez le service de l\'entreprise responsable du suivi opérationnel du cas d\'usage IA.',
-        icon: '💡'
-      }
-    },
-    {
-      id: 'technology_partner',
-      question: 'Partenaire technologique ?',
-      type: 'radio',
-      options: partners.map(partner => ({ label: partner.name, examples: [] })), // Liste dynamique convertie en format radio
-      hasOtherOption: true,
-      tooltip: {
-        title: 'Pourquoi suivre le partenaire technologique ?',
-        shortContent: 'Documentez le fournisseur de votre modèle IA selon les exigences de l\'IA Act.',
-        fullContent: `L'IA Act européen impose des obligations différentes selon votre rôle dans la chaîne de valeur de l'IA.
-
-Traçabilité & Risque : Pour chaque cas d'usage, vous devez documenter l'ensemble du système, y compris le modèle de fondation (GPAI - General Purpose AI) sur lequel il s'appuie.
-
-Obligations Partagées : Les fournisseurs de GPAI (comme Google, OpenAI, Mistral...) ont leurs propres obligations de transparence (documentation technique, instructions d'usage).
-
-Identifier votre partenaire permet à MaydAI de vous aider à centraliser la bonne documentation et à évaluer précisément les risques transférés de leur modèle vers votre cas d'usage.`,
-        icon: '💡'
-      }
-    },
-    {
-      id: 'llm_model_version',
-      question: 'Modèle et version du LLM ?',
-      type: 'radio',
-      options: [], // Will be populated dynamically based on selected partner
-      hasOtherOption: true
-    },
-    {
-      id: 'ai_category',
-      question: 'Dans quelle catégorie d\'IA votre cas d\'usage s\'inscrit-il ?',
-      type: 'radio',
-      options: [
-        { 
-          label: 'Large Language Model (LLM)', 
-          examples: ['ChatGPT', 'Claude', 'Mistral', 'Gemini'],
-          tooltip: {
-            title: 'Large Language Model (LLM)',
-            shortContent: 'Modèles de langage génératifs capables de comprendre et générer du texte.',
-            fullContent: 'Les LLM sont entraînés sur d\'immenses corpus de texte. Ils peuvent générer, traduire, résumer du contenu. L\'IA Act classe ces modèles comme GPAI à usage général.',
-            icon: '💬'
-          }
-        },
-        { 
-          label: 'Vision par ordinateur', 
-          examples: ['DALL-E', 'Midjourney'],
-          tooltip: {
-            title: 'Vision par ordinateur',
-            shortContent: 'IA capable d\'analyser, comprendre et générer des images.',
-            fullContent: 'La vision par ordinateur permet l\'analyse d\'images, la détection d\'objets, la reconnaissance faciale ou la génération d\'images. Risques spécifiques selon l\'usage.',
-            icon: '👁️'
-          }
-        },
-        { 
-          label: 'Machine Learning', 
-          examples: ['TensorFlow', 'scikit-learn'],
-          tooltip: {
-            title: 'Machine Learning',
-            shortContent: 'Apprentissage automatique pour prédictions et classifications basées sur des données.',
-            fullContent: 'Le ML utilise des algorithmes pour apprendre des patterns dans les données et faire des prédictions. Applications variées : scoring, détection d\'anomalies, etc.',
-            icon: '📊'
-          }
-        },
-        { 
-          label: 'Robotique', 
-          examples: ['Boston Dynamics Atlas', 'ASIMO'],
-          tooltip: {
-            title: 'Robotique',
-            shortContent: 'Systèmes physiques intelligents capables d\'interagir avec leur environnement.',
-            fullContent: 'La robotique IA combine capteurs, actionneurs et IA pour l\'autonomie. L\'IA Act impose des règles strictes pour les robots en contact avec le public.',
-            icon: '🦾'
-          }
-        },
-        { 
-          label: 'Systèmes experts', 
-          examples: ['MYCIN', 'DENDRAL'],
-          tooltip: {
-            title: 'Systèmes experts',
-            shortContent: 'Systèmes basés sur des règles métier et l\'expertise humaine formalisée.',
-            fullContent: 'Les systèmes experts utilisent une base de connaissances et des règles logiques pour simuler le raisonnement d\'un expert. Moins courants aujourd\'hui.',
-            icon: '🎓'
-          }
-        },
-        { 
-          label: 'Logiciels métiers', 
-          examples: ['Salesforce Einstein', 'Adobe Firefly'],
-          tooltip: {
-            title: 'Logiciels métiers',
-            shortContent: 'Applications professionnelles intégrant des fonctionnalités IA.',
-            fullContent: 'Logiciels d\'entreprise enrichis par l\'IA (CRM, ERP, outils créatifs). L\'IA est un composant parmi d\'autres fonctionnalités métier.',
-            icon: '💼'
-          }
-        },
-        { 
-          label: 'Apprentissage / e-learning', 
-          examples: ['Didask'],
-          tooltip: {
-            title: 'Apprentissage / e-learning',
-            shortContent: 'Plateformes d\'apprentissage utilisant l\'IA pour personnaliser la formation.',
-            fullContent: 'L\'IA adapte les parcours pédagogiques selon les profils et progressions des apprenants. Enjeux de transparence sur les décisions d\'orientation.',
-            icon: '📚'
-          }
-        }
-      ]
-    },
-    {
-      id: 'system_type',
-      question: 'Système autonome ou produit ?',
-      type: 'radio',
-      options: [
-        { 
-          label: 'Système autonome', 
-          examples: ['Chatbot indépendant', 'Assistant virtuel', 'Système de recommandation autonome'],
-          tooltip: {
-            title: 'Système autonome',
-            shortContent: 'Système automatisé fonctionnant avec différents niveaux d\'autonomie.',
-            fullContent: 'Un système automatisé conçu pour fonctionner avec différents niveaux d\'autonomie, capable de déduire des sorties (prédictions, contenus) qui influencent les environnements physiques ou virtuels.',
-            icon: '🤖'
-          }
-        },
-        { 
-          label: 'Produit', 
-          examples: ['Fonctionnalité intégrée', 'Module IA dans une application', 'Composant d\'un service existant'],
-          tooltip: {
-            title: 'Produit',
-            shortContent: 'Système IA intégré comme composant dans un produit physique ou logiciel.',
-            fullContent: 'Le système d\'IA peut être intégré en tant que composant dans un produit (physique ou logiciel) soumis à la législation de l\'UE.',
-            icon: '📦'
-          }
-        }
-      ]
-    },
-    {
-      id: 'deployment_countries',
-      question: 'Dans quels pays le cas d\'usage est-il utilisé ?',
-      type: 'countries',
-      placeholder: 'Sélectionnez les pays de déploiement...',
-      tooltip: {
-        title: 'Application territoriale de l\'AI Act',
-        shortContent: 'L\'AI Act s\'applique dans tous les États membres de l\'UE.',
-        fullContent: 'L\'AI Act s\'applique dans tous les États membres de l\'UE. Il s\'applique également aux cas d\'usage IA utilisés par des acteurs établis dans un pays tiers si les résultats produits par le système sont destinées à être utilisés sur le territoire de l\'UE.',
-        icon: '🌍'
-      }
-    },
-    {
-      id: 'description',
-      question: 'Brève description du système IA ?',
-      type: 'textarea',
-      placeholder: 'Créez le résumé en cliquant sur le bouton AI, vous pourrez toujours le modifier…',
-      tooltip: {
-        title: 'Guide pour la description du système IA',
-        shortContent: 'Résumez votre système IA : objectif principal, fonction clé, utilisateurs cibles, contexte métier et technologie utilisée.',
-        fullContent: 'Résumez votre système IA : objectif principal, fonction clé, utilisateurs cibles, contexte métier et technologie utilisée (type d\'IA, modèle, fournisseur). Utilisez le bouton de génération automatique pour obtenir une première version, puis ajustez-la selon vos besoins.',
-        icon: '📝'
-      }
-    }
-  ]
+    baseQuestions.llm_model_version,
+    baseQuestions.ai_category,
+    baseQuestions.system_type,
+    baseQuestions.deployment_countries,
+    baseQuestions.description
+  ] as Question[]
 
   // Fonction pour récupérer les modèles disponibles pour un provider
   const fetchAvailableModels = async (providerId: number) => {
