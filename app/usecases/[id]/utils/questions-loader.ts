@@ -27,10 +27,12 @@ export function loadQuestions(): Record<string, Question> {
         score_impact: option.score_impact || 0,
         category_impacts: option.category_impacts || undefined,
         is_eliminatory: option.is_eliminatory || false,
-        unique_answer: option.unique_answer || false
+        unique_answer: option.unique_answer || false,
+        tooltip: option.tooltip || undefined
       })),
       required: data.required,
-      conditionalFields: data.conditionalFields || undefined
+      conditionalFields: data.conditionalFields || undefined,
+      tooltip: data.tooltip || undefined
     }
   }
 

@@ -45,6 +45,13 @@ export interface Progress {
   total_questions: number
 }
 
+export interface Tooltip {
+  title: string
+  shortContent: string
+  fullContent?: string
+  icon?: string
+}
+
 export interface QuestionOption {
   code: string
   label: string
@@ -52,6 +59,7 @@ export interface QuestionOption {
   category_impacts?: Record<string, number>
   is_eliminatory?: boolean
   unique_answer?: boolean
+  tooltip?: Tooltip
 }
 
 export interface Question {
@@ -61,6 +69,7 @@ export interface Question {
   options: QuestionOption[]
   required: boolean
   conditionalFields?: { key: string, label: string, placeholder?: string }[]
+  tooltip?: Tooltip
 }
 
 export interface QuestionnaireData {
