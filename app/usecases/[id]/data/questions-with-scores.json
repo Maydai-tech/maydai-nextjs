@@ -1086,7 +1086,7 @@
     "risk": "limited",
     "tooltip": {
       "title": "Information utilisateurs",
-      "shortContent": "Oui, sauf si c'est évident. Le fournisseur veille à ce que les personnes interagissant directement avec un SIA (ex: chatbot) soient informées qu'elles sont en contact avec une machine, afin de garantir la transparence (Article 50(1)).",
+      "shortContent": "L'entreprise doit veiller à ce que les personnes interagissant directement avec une IA (ex: chatbot) soient informées qu'elles sont en contact avec une machine, afin de garantir la transparence (Article 50(1)).",
       "icon": "💡"
     },
     "options": [
@@ -1114,7 +1114,7 @@
     "risk": "limited",
     "tooltip": {
       "title": "Marquage contenu",
-      "shortContent": "Oui. Les fournisseurs d'IA générative doivent marquer le contenu généré/manipulé (texte, image, vidéo) dans un format lisible par machine (Article 50(2)). Les déployeurs doivent étiqueter visiblement les hypertrucages et les textes sur l'intérêt public (Article 50(4)).",
+      "shortContent": "Les fournisseurs d'IA générative doivent marquer le contenu généré/manipulé (texte, image, vidéo) dans un format lisible par machine (Article 50(2)). Les déployeurs doivent étiqueter visiblement les hypertrucages, les contenus générés par l'IA et les textes sur l'intérêt public (Article 50(4)).",
       "icon": "💡"
     },
     "options": [

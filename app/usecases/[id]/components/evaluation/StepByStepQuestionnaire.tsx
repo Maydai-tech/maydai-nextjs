@@ -4,6 +4,7 @@ import { useEvaluation } from '../../hooks/useEvaluation'
 import { QuestionRenderer } from './QuestionRenderer'
 import { ProcessingAnimation } from '../ProcessingAnimation'
 import { ChevronLeft, ChevronRight, CheckCircle, AlertCircle } from 'lucide-react'
+import Tooltip from '@/components/Tooltip'
 
 /**
  * Interface définissant les props du composant StepByStepQuestionnaire
@@ -114,10 +115,21 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
 
         {/* Section question principale */}
         <div className="mb-8">
-          {/* Titre de la question */}
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            {currentQuestion.question}
-          </h2>
+          {/* Titre de la question avec infobulle */}
+          <div className="flex items-center gap-2 mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {currentQuestion.question}
+            </h2>
+            {currentQuestion.tooltip && (
+              <Tooltip 
+                title={currentQuestion.tooltip.title}
+                shortContent={currentQuestion.tooltip.shortContent}
+                fullContent={currentQuestion.tooltip.fullContent}
+                icon={currentQuestion.tooltip.icon}
+                type="question"
+              />
+            )}
+          </div>
           
           {/* Composant de rendu de la question (gère différents types de questions) */}
           <QuestionRenderer
