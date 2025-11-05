@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { UseCaseNextSteps } from '@/lib/supabase'
 import { createClient } from '@supabase/supabase-js'
 
@@ -18,12 +18,15 @@ interface UseNextStepsReturn {
   loading: boolean
   error: string | null
   refetch: () => Promise<void>
+  isGenerating: boolean
 }
 
 export function useNextSteps({ usecaseId, useCaseStatus, useCaseUpdatedAt }: UseNextStepsProps): UseNextStepsReturn {
   const [nextSteps, setNextSteps] = useState<UseCaseNextSteps | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const pollingStartTime = useRef<number | null>(null)
 
   // Récupérer les next steps existants
   const fetchNextSteps = useCallback(async () => {
@@ -52,19 +55,27 @@ export function useNextSteps({ usecaseId, useCaseStatus, useCaseUpdatedAt }: Use
 
       if (response.ok) {
         setNextSteps(data)
+        setIsGenerating(false) // Données reçues, génération terminée
+        pollingStartTime.current = null // Arrêter le polling intensif
       } else if (response.status === 404) {
-        // Pas de next steps existants, c'est normal
+        // Pas de next steps existants, probablement en cours de génération
         setNextSteps(null)
+        if (useCaseStatus === 'completed' && !pollingStartTime.current) {
+          setIsGenerating(true)
+          pollingStartTime.current = Date.now()
+        }
       } else {
         setError(data.error || 'Erreur lors de la récupération des prochaines étapes')
+        setIsGenerating(false)
       }
     } catch (err) {
       setError('Erreur de connexion')
       console.error('Erreur fetchNextSteps:', err)
+      setIsGenerating(false)
     } finally {
       setLoading(false)
     }
-  }, [usecaseId])
+  }, [usecaseId, useCaseStatus])
 
   // Charger les next steps au montage du composant
   useEffect(() => {
@@ -84,19 +95,54 @@ export function useNextSteps({ usecaseId, useCaseStatus, useCaseUpdatedAt }: Use
     }
   }, [useCaseStatus, useCaseUpdatedAt, fetchNextSteps])
 
-  // Recharger automatiquement toutes les 30 secondes (fallback)
+  // Polling adaptatif : intensif pendant 60 secondes, puis standard
   useEffect(() => {
-    const interval = setInterval(() => {
+    // Si on a déjà les données, pas besoin de polling intensif
+    if (nextSteps) {
+      // Polling standard toutes les 30 secondes
+      const standardInterval = setInterval(() => {
+        fetchNextSteps()
+      }, 30000)
+      
+      return () => clearInterval(standardInterval)
+    }
+    
+    // Si génération en cours et dans les 60 premières secondes
+    if (isGenerating && pollingStartTime.current) {
+      const elapsedTime = Date.now() - pollingStartTime.current
+      
+      if (elapsedTime < 60000) {
+        // Polling intensif toutes les 5 secondes pendant les 60 premières secondes
+        console.log('🚀 Polling intensif activé (5s)')
+        const intensiveInterval = setInterval(() => {
+          fetchNextSteps()
+        }, 5000)
+        
+        return () => clearInterval(intensiveInterval)
+      } else {
+        // Après 60 secondes, passer au polling standard
+        console.log('🔄 Passage au polling standard (30s)')
+        const standardInterval = setInterval(() => {
+          fetchNextSteps()
+        }, 30000)
+        
+        return () => clearInterval(standardInterval)
+      }
+    }
+    
+    // Fallback : polling standard si pas de génération en cours
+    const fallbackInterval = setInterval(() => {
       fetchNextSteps()
-    }, 30000) // 30 secondes
-
-    return () => clearInterval(interval)
-  }, [fetchNextSteps])
+    }, 30000)
+    
+    return () => clearInterval(fallbackInterval)
+  }, [fetchNextSteps, nextSteps, isGenerating])
 
   return {
     nextSteps,
     loading,
     error,
-    refetch: fetchNextSteps
+    refetch: fetchNextSteps,
+    isGenerating
   }
 }
