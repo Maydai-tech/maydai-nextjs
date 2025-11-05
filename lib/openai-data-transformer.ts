@@ -76,7 +76,7 @@ export function transformToOpenAIFormat(
       if (response.multiple_codes && response.multiple_codes.length > 0) {
         result.responses.E4_N7_Q2.selected_options = response.multiple_codes
         result.responses.E4_N7_Q2.selected_labels = response.multiple_labels || 
-          response.multiple_codes.map(code => getOptionLabel('E4.N7.Q2', code))
+          response.multiple_codes.map((code: string) => getOptionLabel('E4.N7.Q2', code))
       }
     } else if (response.question_code === 'E5.N9.Q7') {
       // Question conditionnelle
@@ -371,7 +371,7 @@ function buildQuestionnaireQuestions(responses: UseCaseResponseComplete[]): Reco
       question_text: questionData.question,
       type: questionData.type,
       status: determineQuestionStatus(questionData),
-      possible_answers: questionData.options.map(opt => opt.label),
+      possible_answers: questionData.options.map((opt: any) => opt.label),
       interpretation: generateInterpretation(questionData),
       quick_wins: generateQuickWins(questionData),
       priority: determinePriority(questionData),
@@ -404,7 +404,7 @@ function buildUserResponse(response: UseCaseResponseComplete, questionData: any)
   if (response.multiple_codes && response.multiple_codes.length > 0) {
     userResponse.multiple_codes = response.multiple_codes
     userResponse.multiple_labels = response.multiple_labels || 
-      response.multiple_codes.map(code => getOptionLabel(response.question_code, code))
+      response.multiple_codes.map((code: string) => getOptionLabel(response.question_code, code))
   }
   
   if (response.conditional_main) {
