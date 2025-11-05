@@ -108,7 +108,7 @@ export function ScoreCalculation({ useCase, onScoreUpdate, isRecalculating = fal
               {isRecalculating ? (
                 <span className="animate-pulse">...</span>
               ) : (
-                `${useCase.score_final?.toFixed(1)}%`
+                `${Math.round(useCase.score_final || 0)}%`
               )}
             </div>
             

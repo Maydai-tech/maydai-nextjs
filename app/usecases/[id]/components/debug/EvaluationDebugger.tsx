@@ -87,7 +87,7 @@ export const EvaluationDebugger = React.memo(function EvaluationDebugger({ useCa
               <h4 className="font-medium text-gray-900 mb-2">Score calculé</h4>
               <div className="space-y-2 text-sm">
                 <div>
-                  <span className="text-gray-600">Score:</span> {score.score}/{score.max_score}
+                  <span className="text-gray-600">Score:</span> {score.score}/100 (score déjà en pourcentage)
                 </div>
                 <div>
                   <span className="text-gray-600">Breakdown Count:</span> {score.score_breakdown?.length || 0}

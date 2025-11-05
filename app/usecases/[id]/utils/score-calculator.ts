@@ -5,7 +5,7 @@ import { getUseCaseComplAiBonus, getMaydAiScoresByPrinciple } from './compl-ai-s
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 const BASE_SCORE = 90
-const MAX_POSSIBLE_SCORE = 120 // 90 de base + 30 de bonus COMPL-AI max
+const MAX_POSSIBLE_SCORE = 120 // 90 de base + 20 de bonus COMPL-AI + 10 marge théorique
 
 // Fonction de mapping des catégories du JSON vers les IDs de risk-categories.ts
 function mapCategoryFromJson(jsonCategoryId: string): string {
