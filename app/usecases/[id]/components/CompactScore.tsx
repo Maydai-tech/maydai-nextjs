@@ -49,7 +49,7 @@ export function CompactScore({ usecaseId }: CompactScoreProps) {
         <span className="text-lg">{category.icon}</span>
       </div>
       <div className="text-2xl font-bold text-gray-900 mb-1">
-        {score.score}%
+        {Math.round(score.score)}%
       </div>
       <div className="text-xs text-gray-600">
         {category.category}

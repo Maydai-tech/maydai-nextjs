@@ -41,6 +41,11 @@ export const BASE_SCORE_WEIGHT = 100;
 export const MODEL_SCORE_WEIGHT = 20;
 
 /**
+ * Marge fixe pour le calcul final (actuellement 0)
+ */
+export const MARGIN_SCORE = 0;
+
+/**
  * Poids total pour le calcul final
  */
 export const TOTAL_WEIGHT = 120;
@@ -359,7 +364,7 @@ export function calculateBaseScore(responses: UserResponse[]): BaseScoreResult {
 /**
  * Calcule le score final complet incluant le bonus COMPL-AI
  * 
- * Formule Excel : ((Score_base + (Score_model_% * 20)) / 120) * 100
+ * Formule : ((Score_base + Score_model + Marge) / 120) * 100
  * 
  * @param baseScoreResult - Résultat du calcul de score de base
  * @param modelScore - Score du modèle COMPL-AI (0-20) ou null
@@ -383,29 +388,21 @@ export function calculateFinalScore(
     finalScore = 0;
     console.log(`💀 Score final : 0 (cas éliminé)`);
   } else {
-    // ÉTAPE 1 : Calculer la contribution du modèle
-    let modelContribution = 0;
-    
-    if (hasValidModelScore && modelScore !== null) {
-      // Convertir le score modèle (0-20) en pourcentage (0-1)
-      const modelPercentage = modelScore / COMPL_AI_MULTIPLIER;
-      console.log(`🔢 Pourcentage modèle: ${roundToTwoDecimals(modelPercentage * 100)}%`);
-      
-      // Contribution du modèle : pourcentage * poids du modèle
-      modelContribution = modelPercentage * MODEL_SCORE_WEIGHT;
-      console.log(`➕ Contribution modèle: ${roundToTwoDecimals(modelContribution)}`);
-    }
+    // ÉTAPE 1 : Calculer le score brut (score_base + model_score + marge)
+    const scoreBrut = baseScoreResult.score_base + (modelScore || 0) + MARGIN_SCORE;
+    console.log(`📊 Score brut: ${baseScoreResult.score_base} + ${modelScore || 0} + ${MARGIN_SCORE} = ${roundToTwoDecimals(scoreBrut)}`);
     
     // ÉTAPE 2 : Appliquer la formule finale
-    // Formule : ((score_base + model_contribution) / total_weight) * 100
-    finalScore = ((baseScoreResult.score_base + modelContribution) / TOTAL_WEIGHT) * 100;
+    // Formule : (score_brut / 120) * 100
+    finalScore = (scoreBrut / TOTAL_WEIGHT) * 100;
     console.log(`✨ Score final calculé: ${roundToTwoDecimals(finalScore)}%`);
   }
   
   // ÉTAPE 3 : Construire la formule utilisée pour debug
+  const scoreBrutDebug = baseScoreResult.score_base + (modelScore || 0) + MARGIN_SCORE;
   const formulaUsed = hasValidModelScore && modelScore !== null 
-    ? `((${baseScoreResult.score_base} + (${roundToTwoDecimals(modelScore / COMPL_AI_MULTIPLIER * 100)}% * ${MODEL_SCORE_WEIGHT})) / ${TOTAL_WEIGHT}) * 100`
-    : `((${baseScoreResult.score_base} + 0) / ${TOTAL_WEIGHT}) * 100`;
+    ? `((${baseScoreResult.score_base} + ${roundToTwoDecimals(modelScore)} + ${MARGIN_SCORE}) / ${TOTAL_WEIGHT}) * 100`
+    : `((${baseScoreResult.score_base} + 0 + ${MARGIN_SCORE}) / ${TOTAL_WEIGHT}) * 100`;
   
   console.log(`📐 Formule utilisée: ${formulaUsed}`);
   

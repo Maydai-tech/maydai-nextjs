@@ -7,6 +7,7 @@ export const colors = {
   secondary: '#6B7280',
   success: '#10B981',
   warning: '#F59E0B',
+  orange: '#F97316',
   error: '#EF4444',
   gray: {
     50: '#F9FAFB',
@@ -409,8 +410,9 @@ export const styles = StyleSheet.create({
 
 // Fonctions utilitaires pour les couleurs de score
 export const getScoreColor = (score: number) => {
-  if (score >= 80) return colors.success
-  if (score >= 60) return colors.warning
+  if (score >= 75) return colors.success
+  if (score >= 55) return colors.warning
+  if (score >= 40) return colors.orange
   return colors.error
 }
 

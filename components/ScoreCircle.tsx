@@ -19,16 +19,16 @@ export default function ScoreCircle({
 }: ScoreCircleProps) {
   
   const getScoreColor = (score: number) => {
-    if (score >= 81) return '#22c55e' // Vert
-    if (score >= 61) return '#f59e0b' // Amber/Jaune
-    if (score >= 41) return '#f97316' // Orange
+    if (score >= 75) return '#22c55e' // Vert
+    if (score >= 55) return '#f59e0b' // Amber/Jaune
+    if (score >= 40) return '#f97316' // Orange
     return '#ef4444' // Rouge
   }
 
   const getScoreColorClass = (score: number) => {
-    if (score >= 81) return 'text-green-600'
-    if (score >= 61) return 'text-amber-600'
-    if (score >= 41) return 'text-orange-600'
+    if (score >= 75) return 'text-green-600'
+    if (score >= 55) return 'text-amber-600'
+    if (score >= 40) return 'text-orange-600'
     return 'text-red-600'
   }
 

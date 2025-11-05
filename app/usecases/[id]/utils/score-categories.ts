@@ -1,21 +1,14 @@
 import { ScoreCategory } from '../types/usecase'
 
 export const getScoreCategory = (score: number): ScoreCategory => {
-  if (score >= 90) {
-    return {
-      category: 'Excellent',
-      color: 'text-green-700 bg-green-50 border border-green-200',
-      description: 'Conformité excellente, risques minimaux',
-      icon: '🟢'
-    }
-  } else if (score >= 75) {
+  if (score >= 75) {
     return {
       category: 'Bon',
-      color: 'text-blue-700 bg-blue-50 border border-blue-200',
+      color: 'text-green-700 bg-green-50 border border-green-200',
       description: 'Bonne conformité, quelques points d\'amélioration',
-      icon: '🔵'
+      icon: '🟢'
     }
-  } else if (score >= 60) {
+  } else if (score >= 55) {
     return {
       category: 'Moyen',
       color: 'text-yellow-700 bg-yellow-50 border border-yellow-200',
@@ -51,11 +44,11 @@ export const getScorePercentage = (score: number, maxScore: number = 100): numbe
 export const getScoreRecommendations = (score: number, breakdown: any[]): string[] => {
   const recommendations: string[] = []
   
-  if (score < 60) {
+  if (score < 55) {
     recommendations.push('Révision urgente du système requise')
   }
   
-  if (score < 80) {
+  if (score < 75) {
     recommendations.push('Améliorer les processus de conformité')
   }
   

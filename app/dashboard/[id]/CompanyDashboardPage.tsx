@@ -947,12 +947,12 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                                     {useCase.score_final !== null && useCase.score_final !== undefined ? (
                                       <>
                                         <div className="flex items-center space-x-1 mb-2">
-                                          <div className={`w-2 h-2 rounded-full ${getCompactScoreStyle(useCase.score_final).indicator}`}></div>
+                                          <div className={`w-2 h-2 rounded-full ${getCompactScoreStyle(useCase.score_final || 0).indicator}`}></div>
                                           <span className="text-xs font-medium text-gray-600">Score de conformité</span>
                                         </div>
-                                        <div className={`${getCompactScoreStyle(useCase.score_final).bg} rounded-lg p-3 text-center`}>
-                                          <div className={`text-2xl font-bold ${getCompactScoreStyle(useCase.score_final).accent}`}>
-                                            {Math.round(useCase.score_final)}
+                                        <div className={`${getCompactScoreStyle(useCase.score_final || 0).bg} rounded-lg p-3 text-center`}>
+                                          <div className={`text-2xl font-bold ${getCompactScoreStyle(useCase.score_final || 0).accent}`}>
+                                            {Math.round(useCase.score_final || 0)}
                                           </div>
                                           {useCase.is_eliminated && (
                                             <div className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold border border-red-200 mt-2">

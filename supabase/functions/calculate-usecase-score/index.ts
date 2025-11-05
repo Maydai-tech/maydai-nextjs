@@ -11,6 +11,8 @@ const COMPL_AI_MULTIPLIER = 20;
 const BASE_SCORE_WEIGHT = 100;
 // Poids du score modèle dans le calcul final
 const MODEL_SCORE_WEIGHT = 20;
+// Marge fixe pour le calcul final (actuellement 0)
+const MARGIN_SCORE = 0;
 // Poids total pour le calcul final
 const TOTAL_WEIGHT = 120;
 
@@ -129,27 +131,19 @@ Deno.serve(async (req) => {
       }
     }
     // ===== ÉTAPE 7: CALCUL DU SCORE FINAL =====
-    // Formule Excel : ((Score_base + (Score_model_% * 20)) / 120) * 100
-    // Si pas de modèle : ((Score_base + 0) / 120) * 100
-    // Exemple: base 90, modèle 17.41/20 (87.05%) → ((90 + (0.8705 * 20)) / 120) * 100 = 89.51%
+    // Formule : ((Score_base + Score_model + Marge) / 120) * 100
+    // Exemple: base 60, modèle 16.1, marge 0 → ((60 + 16.1 + 0) / 120) * 100 = 63.42%
     let finalScore = 0;
     
     if (baseScoreResult.is_eliminated) {
       // Si éliminé, le score final est toujours 0
       finalScore = 0;
     } else {
-      // Calculer selon la formule Excel de moyenne pondérée
-      let modelContribution = 0;
+      // Calculer le score brut (score_base + model_score + marge)
+      const scoreBrut = baseScoreResult.score_base + (modelScore || 0) + MARGIN_SCORE;
       
-      if (hasValidModelScore && modelScore !== null) {
-        // Convertir le score modèle (0-20) en pourcentage (0-1)
-        const modelPercentage = modelScore / COMPL_AI_MULTIPLIER;
-        // Contribution du modèle : pourcentage * poids du modèle
-        modelContribution = modelPercentage * MODEL_SCORE_WEIGHT;
-      }
-      
-      // Formule finale : ((score_base + model_contribution) / total_weight) * 100
-      finalScore = ((baseScoreResult.score_base + modelContribution) / TOTAL_WEIGHT) * 100;
+      // Formule finale : (score_brut / 120) * 100
+      finalScore = (scoreBrut / TOTAL_WEIGHT) * 100;
     }
     
     // ===== ÉTAPE 7.5: CALCULER LE NIVEAU DE RISQUE =====

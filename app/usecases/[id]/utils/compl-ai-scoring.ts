@@ -136,7 +136,7 @@ export function calculateComplAiBonus(complAiScore: number): number {
   const bonusPoints = complAiScore * 20
   
   // Appliquer la formule : Score final = (Score de base + Bonus) / Score maximum possible
-  // Score maximum possible = 120 (90 de base + 20 de bonus max)
+  // Score maximum possible = 120 (90 de base + 20 de bonus max + 10 marge théorique)
   // Mais on retourne juste le bonus pour l'ajouter au score de base
   return bonusPoints
 }

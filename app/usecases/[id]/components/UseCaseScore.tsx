@@ -5,6 +5,7 @@ import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { getScoreCategory, getScoreStyle } from '@/lib/score-styles'
 import { getScoreRecommendations } from '../utils/score-categories'
 import { RISK_CATEGORIES } from '../utils/risk-categories'
+import { getDisplayMaxScore } from '../utils/score-conversion'
 import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, Info } from 'lucide-react'
 import ComplAiScoreDisplay from './ComplAiScoreDisplay'
 
@@ -72,7 +73,7 @@ export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseC
           <div className="flex items-center space-x-3">
             <span className="text-2xl">{category.icon}</span>
             <div>
-              <div className="text-2xl font-bold">{score.score}/{score.max_score}</div>
+              <div className="text-2xl font-bold">{Math.round(score.score)}/{getDisplayMaxScore()}</div>
               <div className="text-sm font-medium">{category.category}</div>
             </div>
           </div>

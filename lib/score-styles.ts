@@ -16,7 +16,7 @@ export interface ScoreStyle {
  * Règles unifiées pour toutes les cartes de score dans l'application
  */
 export const getScoreStyle = (score: number): ScoreStyle => {
-  if (score >= 80) {
+  if (score >= 75) {
     return {
       bg: 'bg-gradient-to-br from-green-50 via-emerald-50 to-green-100',
       text: 'text-green-800',
@@ -25,7 +25,7 @@ export const getScoreStyle = (score: number): ScoreStyle => {
       indicator: 'bg-green-500',
       shadow: 'shadow-green-100'
     }
-  } else if (score >= 60) {
+  } else if (score >= 55) {
     return {
       bg: 'bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100',
       text: 'text-yellow-800',
@@ -59,13 +59,43 @@ export const getScoreStyle = (score: number): ScoreStyle => {
  * Styles pour les cartes compactes (dashboard)
  */
 export const getCompactScoreStyle = (score: number): ScoreStyle => {
-  const baseStyle = getScoreStyle(score)
-  
-  // Version simplifiée pour les cartes compactes
-  return {
-    ...baseStyle,
-    bg: baseStyle.bg.replace('gradient-to-br', 'gradient-to-r').replace('via-', '').replace(' to-', ''),
-    shadow: '' // Pas d'ombre pour les cartes compactes
+  // Retourne des gradients simplifiés valides pour les cartes compactes
+  if (score >= 75) {
+    return {
+      bg: 'bg-gradient-to-r from-green-50 to-green-100',
+      text: 'text-green-800',
+      border: 'border-green-200',
+      accent: 'text-green-600',
+      indicator: 'bg-green-500',
+      shadow: ''
+    }
+  } else if (score >= 55) {
+    return {
+      bg: 'bg-gradient-to-r from-yellow-50 to-yellow-100',
+      text: 'text-yellow-800',
+      border: 'border-yellow-200',
+      accent: 'text-yellow-600',
+      indicator: 'bg-yellow-500',
+      shadow: ''
+    }
+  } else if (score >= 40) {
+    return {
+      bg: 'bg-gradient-to-r from-orange-50 to-orange-100',
+      text: 'text-orange-800',
+      border: 'border-orange-200',
+      accent: 'text-orange-600',
+      indicator: 'bg-orange-500',
+      shadow: ''
+    }
+  } else {
+    return {
+      bg: 'bg-gradient-to-r from-red-50 to-red-100',
+      text: 'text-red-800',
+      border: 'border-red-200',
+      accent: 'text-red-600',
+      indicator: 'bg-red-500',
+      shadow: ''
+    }
   }
 }
 
@@ -109,13 +139,13 @@ export interface ScoreCategory {
 }
 
 export const getScoreCategory = (score: number): ScoreCategory => {
-  if (score >= 80) {
+  if (score >= 75) {
     return {
-      category: 'Excellent',
-      description: 'Conformité excellente, risques minimaux',
+      category: 'Bon',
+      description: 'Bonne conformité, quelques points d\'amélioration',
       icon: '🟢'
     }
-  } else if (score >= 60) {
+  } else if (score >= 55) {
     return {
       category: 'Moyen',
       description: 'Conformité moyenne, améliorations nécessaires',

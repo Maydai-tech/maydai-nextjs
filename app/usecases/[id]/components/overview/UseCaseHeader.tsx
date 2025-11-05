@@ -18,6 +18,7 @@ import WorldMap from '@/components/WorldMap'
 import { getProviderIcon } from '@/lib/provider-icons'
 import { getScoreStyle } from '@/lib/score-styles'
 import { usePDFExport } from '../../hooks/usePDFExport'
+import { useUseCaseScore } from '../../hooks/useUseCaseScore'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
 
@@ -40,21 +41,13 @@ const getStatusIcon = (status: string) => {
 
 
 // Composant d'affichage du score dans le header
-// Utilise directement les données du useCase pour garantir la synchronisation
-function HeaderScore({ useCase, refreshing = false }: { useCase: UseCase, refreshing?: boolean }) {
-  // Vérification de la présence d'un score calculé
-  const hasScore = useCase.score_final !== null && useCase.score_final !== undefined
-  
-  // Préparation des données du score pour l'affichage
-  const score = hasScore ? {
-    score: Math.round(useCase.score_final!),
-    score_base: useCase.score_base,
-    score_model: useCase.score_model,
-    is_eliminated: useCase.is_eliminated,
-    elimination_reason: useCase.elimination_reason
-  } : null
+// Utilise le hook useUseCaseScore pour garantir la synchronisation avec l'API (source de vérité unique)
+function HeaderScore({ useCaseId }: { useCaseId: string }) {
+  // Récupération du score via l'API (même source que le rapport)
+  const { score, loading, error } = useUseCaseScore(useCaseId)
 
-  if (refreshing) {
+  // État de chargement
+  if (loading) {
     return (
       <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
         <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
@@ -69,14 +62,15 @@ function HeaderScore({ useCase, refreshing = false }: { useCase: UseCase, refres
           </div>
           <div className="text-xs text-blue-600 mt-2 flex items-center justify-center">
             <RefreshCcw className="h-3 w-3 mr-1 animate-spin" />
-            Recalcul en cours...
+            Chargement...
           </div>
         </div>
       </div>
     )
   }
 
-  if (!score) {
+  // État d'erreur ou score non disponible
+  if (error || !score) {
     return (
       <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
         <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
@@ -91,8 +85,11 @@ function HeaderScore({ useCase, refreshing = false }: { useCase: UseCase, refres
     )
   }
 
+  // Le score est déjà en pourcentage (0-100) depuis la base de données
+  const displayScore = Math.round(score.score)
+  
   // Utilise les styles unifiés de l'application
-  const scoreStyle = getScoreStyle(score.score)
+  const scoreStyle = getScoreStyle(displayScore)
 
   return (
     <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
@@ -104,7 +101,7 @@ function HeaderScore({ useCase, refreshing = false }: { useCase: UseCase, refres
       <div className={`${scoreStyle.bg} rounded-xl p-4 border ${scoreStyle.border} ${scoreStyle.shadow} shadow-sm hover:shadow-md transition-all duration-200`}>
         <div className="text-center relative">
           <div className={`text-3xl font-bold ${scoreStyle.text} mb-2`}>
-            {score.score}
+            {displayScore}
           </div>
           
           {score.is_eliminated && (
@@ -368,7 +365,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
 
             {/* Ligne 3: Score de conformité */}
             <div className="bg-white border border-gray-200 rounded-lg p-4 w-full">
-              <HeaderScore useCase={useCase} refreshing={false} />
+              <HeaderScore useCaseId={useCase.id} />
             </div>
 
             {/* Ligne 4: Bouton réévaluer */}
