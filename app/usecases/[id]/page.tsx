@@ -30,7 +30,7 @@ export default function UseCaseDetailPage() {
   const { goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
 
   // Hooks pour les sections extraites - seulement si useCase est chargé
-  const { nextSteps, loading: nextStepsLoading, error: nextStepsError } = useNextSteps({
+  const { nextSteps, loading: nextStepsLoading, error: nextStepsError, isGenerating: nextStepsGenerating } = useNextSteps({
     usecaseId: useCase?.id || '',
     useCaseStatus: useCase?.status,
     useCaseUpdatedAt: useCase?.updated_at
@@ -230,11 +230,57 @@ export default function UseCaseDetailPage() {
             <h2 className="text-2xl font-semibold text-gray-900 mb-6">
               Recommandations et plan d'action
             </h2>
+
+            {/* Métadonnées de génération */}
+            {nextSteps?.generated_at && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm text-gray-600">
+                        Rapport généré le {new Date(nextSteps.generated_at).toLocaleDateString('fr-FR', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm font-medium text-gray-700">Généré par IA</span>
+                  </div>
+                </div>
+              </div>
+            )}
             
-            {nextStepsLoading && (
-              <div className="text-center py-8">
-                <div className="animate-spin h-8 w-8 border-4 border-[#0080a3] border-t-transparent rounded-full mx-auto mb-4"></div>
-                <p className="text-gray-600">Chargement des recommandations...</p>
+            {(nextStepsLoading || nextStepsGenerating) && !nextSteps && (
+              <div className="text-center py-12">
+                <div className="relative mb-6">
+                  <div className="animate-spin h-12 w-12 border-4 border-[#0080a3] border-t-transparent rounded-full mx-auto"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="h-8 w-8 bg-white rounded-full"></div>
+                  </div>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Génération du rapport d'analyse en cours...
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Notre IA analyse vos réponses et prépare des recommandations personnalisées
+                </p>
+                <div className="inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <svg className="w-4 h-4 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm text-blue-700">
+                    Temps estimé : 30 à 60 secondes
+                  </span>
+                </div>
               </div>
             )}
 
