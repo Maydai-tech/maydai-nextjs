@@ -362,7 +362,7 @@ export default function ComplAIScoresPage() {
       return []
     }
 
-    rows[0].forEach(header => headers.push(header.replace(/^"|"$/g, '').trim()))
+    rows[0].forEach((header: string) => headers.push(header.replace(/^"|"$/g, '').trim()))
 
     return rows.slice(1).map(row => {
       const entry: Record<string, string | null> = {}
