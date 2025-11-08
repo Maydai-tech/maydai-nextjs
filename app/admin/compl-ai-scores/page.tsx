@@ -430,6 +430,34 @@ export default function ComplAIScoresPage() {
       const csvText = await importFile.text()
       const csvData = parseCSV(csvText)
 
+      const headerMapping: Record<string, string> = {
+        'Modèle ID': 'model_id',
+        'Nom du Modèle': 'model_name',
+        'Fournisseur': 'model_provider',
+        'Type': 'model_type',
+        'Version': 'version',
+        'Principe Code': 'principle_code',
+        'Principe Nom': 'principle_name',
+        'Catégorie Principe': 'principle_category',
+        'Benchmark Code': 'benchmark_code',
+        'Benchmark Nom': 'benchmark_name',
+        'Score Original': 'score',
+        'Score Text': 'score_text',
+        "Date d'Évaluation": 'evaluation_date',
+        'Statut': 'status'
+      }
+
+      const normalizedCsvData = csvData.map(row => {
+        const normalizedRow: Record<string, any> = {}
+
+        Object.entries(row).forEach(([key, value]) => {
+          const normalizedKey = headerMapping[key] || key
+          normalizedRow[normalizedKey] = value
+        })
+
+        return normalizedRow
+      })
+
       // Récupérer le token de session
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) {
@@ -445,7 +473,7 @@ export default function ComplAIScoresPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          csvData,
+          csvData: normalizedCsvData,
           updateMode: importMode
         })
       })
