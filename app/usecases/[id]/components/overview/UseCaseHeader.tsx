@@ -128,6 +128,42 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const router = useRouter()
   const { session } = useAuth()
 
+  // Fonction pour déterminer le statut de déploiement (Actif/Inactif)
+  const getDeploymentStatus = (deploymentDate?: string): 'Actif' | 'Inactif' => {
+    if (!deploymentDate) return 'Inactif'
+    
+    try {
+      const deployment = new Date(deploymentDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      deployment.setHours(0, 0, 0, 0)
+      
+      // Vérifier si la date est valide
+      if (isNaN(deployment.getTime())) return 'Inactif'
+      
+      return deployment <= today ? 'Actif' : 'Inactif'
+    } catch (error) {
+      return 'Inactif'
+    }
+  }
+
+  // Fonction pour obtenir les styles de la pastille de statut de déploiement
+  const getDeploymentStatusColor = (status: 'Actif' | 'Inactif') => {
+    if (status === 'Actif') {
+      return {
+        backgroundColor: '#f1fdfa',
+        color: '#0080a3',
+        border: 'border border-[#0080a3]'
+      }
+    } else {
+      return {
+        backgroundColor: '#f3f4f6',
+        color: '#6b7280',
+        border: 'border border-gray-300'
+      }
+    }
+  }
+
   const handleModelEdit = () => {
     setIsModalOpen(true)
   }
@@ -269,18 +305,35 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           {/* Colonne gauche - Blocs empilés */}
           <div className="xl:col-span-3 space-y-4">
             {/* Ligne 2: Badge statut */}
-            <div 
-              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
-              style={frenchStatus === 'Complété' ? { 
-                backgroundColor: '#f1fdfa', 
-                color: '#0080a3' 
-              } : frenchStatus === 'À compléter' ? {
-                backgroundColor: '#fefce8',
-                color: '#713f12'
-              } : {}}
-            >
-              <CheckCircle className="h-4 w-4 mr-1" />
-              {frenchStatus}
+            <div className="flex flex-wrap gap-2">
+              <div 
+                className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                style={frenchStatus === 'Complété' ? { 
+                  backgroundColor: '#f1fdfa', 
+                  color: '#0080a3' 
+                } : frenchStatus === 'À compléter' ? {
+                  backgroundColor: '#fefce8',
+                  color: '#713f12'
+                } : {}}
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                {frenchStatus}
+              </div>
+              {(() => {
+                const deploymentStatus = getDeploymentStatus(useCase.deployment_date)
+                const statusStyle = getDeploymentStatusColor(deploymentStatus)
+                return (
+                  <div
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusStyle.border}`}
+                    style={{
+                      color: statusStyle.color,
+                      backgroundColor: statusStyle.backgroundColor
+                    }}
+                  >
+                    {deploymentStatus}
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Ligne 3: Modèle utilisé */}
