@@ -40,16 +40,21 @@ export async function apiCall<T = any>(
 
     // Préparer les headers avec le token
     const requestHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
       ...headers
+    }
+
+    // Ne pas ajouter Content-Type pour FormData (le navigateur le fait automatiquement)
+    const isFormData = body instanceof FormData
+    if (!isFormData) {
+      requestHeaders['Content-Type'] = 'application/json'
     }
 
     // Première tentative
     let response = await fetch(url, {
       method,
       headers: requestHeaders,
-      body: body ? JSON.stringify(body) : undefined
+      body: body ? (isFormData ? body : JSON.stringify(body)) : undefined
     })
 
     // Si erreur 401, tenter de rafraîchir le token
@@ -75,7 +80,7 @@ export async function apiCall<T = any>(
       response = await fetch(url, {
         method,
         headers: requestHeaders,
-        body: body ? JSON.stringify(body) : undefined
+        body: body ? (isFormData ? body : JSON.stringify(body)) : undefined
       })
     }
 
