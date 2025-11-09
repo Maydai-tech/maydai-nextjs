@@ -12,6 +12,7 @@ const allowedDocTypes = new Set([
   'risk_management',
   'data_quality',
   'continuous_monitoring',
+  'stopping_proof',
 ])
 
 // Formats acceptés par type de document
@@ -39,6 +40,10 @@ const allowedFormats: Record<string, { extensions: string[], description: string
   'continuous_monitoring': {
     extensions: ['.pdf', '.docx'],
     description: 'Documents (.pdf, .docx)'
+  },
+  'stopping_proof': {
+    extensions: ['.pdf', '.png', '.jpg', '.jpeg'],
+    description: 'Documents et images (.pdf, .png, .jpg, .jpeg)'
   }
 }
 
@@ -59,11 +64,20 @@ export async function PUT(
   { params }: { params: Promise<{ usecaseId: string, docType: string }> }
 ) {
   try {
+    console.log('[PUT /upload] Starting upload request')
+
     const { supabase, user, error } = await getClientFromAuth(request) as any
-    if (error) return NextResponse.json({ error }, { status: 401 })
+    if (error) {
+      console.error('[PUT /upload] Auth error:', error)
+      return NextResponse.json({ error }, { status: 401 })
+    }
+    console.log('[PUT /upload] Auth successful, user:', user.id)
 
     const { usecaseId, docType } = await params
+    console.log('[PUT /upload] Params:', { usecaseId, docType })
+
     if (!allowedDocTypes.has(docType)) {
+      console.error('[PUT /upload] Invalid docType:', docType)
       return NextResponse.json({ error: 'Invalid docType' }, { status: 400 })
     }
 
@@ -71,8 +85,10 @@ export async function PUT(
     const file = formData.get('file') as unknown as File | null
 
     if (!file) {
+      console.error('[PUT /upload] No file in formData')
       return NextResponse.json({ error: 'No file provided in upload request' }, { status: 400 })
     }
+    console.log('[PUT /upload] File received:', file.name, 'size:', file.size)
 
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
@@ -100,77 +116,135 @@ export async function PUT(
     }
 
     // Ensure dossier exists and get company
-    const { data: dossier } = await supabase
+    console.log('[PUT /upload] Fetching dossier for usecaseId:', usecaseId)
+    const { data: dossier, error: dossierError } = await supabase
       .from('dossiers')
       .select('id, company_id')
       .eq('usecase_id', usecaseId)
       .maybeSingle()
 
+    if (dossierError) {
+      console.error('[PUT /upload] Error fetching dossier:', dossierError)
+    }
+    console.log('[PUT /upload] Dossier found:', dossier)
+
     let dossierId = dossier?.id
     let companyId = dossier?.company_id
 
     if (!dossierId || !companyId) {
-      const { data: usecase } = await supabase
+      console.log('[PUT /upload] Dossier not found, fetching usecase')
+      const { data: usecase, error: usecaseError } = await supabase
         .from('usecases')
         .select('company_id')
         .eq('id', usecaseId)
         .maybeSingle()
+
+      if (usecaseError) {
+        console.error('[PUT /upload] Error fetching usecase:', usecaseError)
+      }
+      console.log('[PUT /upload] Usecase found:', usecase)
+
       if (!usecase?.company_id) {
+        console.error('[PUT /upload] Usecase not found or no company_id')
         return NextResponse.json({ error: 'Usecase not found' }, { status: 404 })
       }
       companyId = usecase.company_id
+
+      console.log('[PUT /upload] Creating new dossier for company:', companyId)
       const { data: ins, error: insErr } = await supabase
         .from('dossiers')
         .insert({ usecase_id: usecaseId, company_id: companyId })
         .select('id')
         .single()
-      if (insErr) return NextResponse.json({ error: 'Failed to create dossier' }, { status: 500 })
+
+      if (insErr) {
+        console.error('[PUT /upload] Error creating dossier:', insErr)
+        return NextResponse.json({ error: 'Failed to create dossier' }, { status: 500 })
+      }
       dossierId = ins.id
+      console.log('[PUT /upload] Dossier created with id:', dossierId)
     }
 
     // Verify access
-    const { data: access } = await supabase
+    console.log('[PUT /upload] Verifying access for user:', user.id, 'company:', companyId)
+    const { data: access, error: accessError } = await supabase
       .from('user_companies')
       .select('user_id')
       .eq('user_id', user.id)
       .eq('company_id', companyId)
       .maybeSingle()
-    if (!access) return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+
+    if (accessError) {
+      console.error('[PUT /upload] Error checking access:', accessError)
+    }
+    console.log('[PUT /upload] Access check result:', access)
+
+    if (!access) {
+      console.error('[PUT /upload] Access denied for user:', user.id, 'to company:', companyId)
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     // Upload to storage bucket 'dossiers'
     const path = `${companyId}/${usecaseId}/${docType}/${filename}`
+    console.log('[PUT /upload] Uploading to storage path:', path)
+
     const { error: upErr } = await (supabase as any).storage
       .from('dossiers')
       .upload(path, buffer, { upsert: true, contentType: file.type || 'application/octet-stream' })
-    if (upErr) return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
+
+    if (upErr) {
+      console.error('[PUT /upload] Storage upload error:', upErr)
+      return NextResponse.json({ error: 'Upload failed', details: upErr.message }, { status: 500 })
+    }
+    console.log('[PUT /upload] Storage upload successful')
 
     const { data: publicUrlData } = (supabase as any).storage
       .from('dossiers')
       .getPublicUrl(path)
 
     const fileUrl = publicUrlData?.publicUrl || null
+    console.log('[PUT /upload] Public URL generated:', fileUrl)
 
     // Upsert dossier_documents with file_url
-    const { data: existingDoc } = await supabase
+    console.log('[PUT /upload] Upserting dossier_document for dossier:', dossierId, 'docType:', docType)
+    const { data: existingDoc, error: existingDocError } = await supabase
       .from('dossier_documents')
       .select('id')
       .eq('dossier_id', dossierId)
       .eq('doc_type', docType)
       .maybeSingle()
 
+    if (existingDocError) {
+      console.error('[PUT /upload] Error fetching existing document:', existingDocError)
+    }
+    console.log('[PUT /upload] Existing document:', existingDoc)
+
     if (existingDoc?.id) {
+      console.log('[PUT /upload] Updating existing document:', existingDoc.id)
       const { error: updErr } = await supabase
         .from('dossier_documents')
-        .update({ file_url: fileUrl, updated_by: user.id, updated_at: new Date().toISOString() })
+        .update({ file_url: fileUrl, status: 'complete', updated_by: user.id, updated_at: new Date().toISOString() })
         .eq('id', existingDoc.id)
-      if (updErr) return NextResponse.json({ error: 'Failed to update document' }, { status: 500 })
+
+      if (updErr) {
+        console.error('[PUT /upload] Error updating document:', updErr)
+        return NextResponse.json({ error: 'Failed to update document', details: updErr.message }, { status: 500 })
+      }
+      console.log('[PUT /upload] Document updated successfully')
     } else {
+      console.log('[PUT /upload] Inserting new document')
       const { error: insDocErr } = await supabase
         .from('dossier_documents')
-        .insert({ dossier_id: dossierId, doc_type: docType, file_url: fileUrl, updated_by: user.id })
-      if (insDocErr) return NextResponse.json({ error: 'Failed to insert document' }, { status: 500 })
+        .insert({ dossier_id: dossierId, doc_type: docType, file_url: fileUrl, status: 'complete', updated_by: user.id })
+
+      if (insDocErr) {
+        console.error('[PUT /upload] Error inserting document:', insDocErr)
+        return NextResponse.json({ error: 'Failed to insert document', details: insDocErr.message }, { status: 500 })
+      }
+      console.log('[PUT /upload] Document inserted successfully')
     }
 
+    console.log('[PUT /upload] Upload completed successfully')
     return NextResponse.json({ ok: true, fileUrl })
   } catch (e) {
     console.error('[PUT /upload] Internal server error:', e)
@@ -242,13 +316,14 @@ export async function DELETE(
       }
     }
 
-    // Update document to remove file_url
+    // Update document to remove file_url and set status to incomplete
     const { error: updateError } = await supabase
       .from('dossier_documents')
-      .update({ 
-        file_url: null, 
-        updated_by: user.id, 
-        updated_at: new Date().toISOString() 
+      .update({
+        file_url: null,
+        status: 'incomplete',
+        updated_by: user.id,
+        updated_at: new Date().toISOString()
       })
       .eq('id', doc.id)
 

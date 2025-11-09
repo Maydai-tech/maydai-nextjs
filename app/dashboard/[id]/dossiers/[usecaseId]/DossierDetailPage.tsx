@@ -4,9 +4,21 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
-import { ArrowLeft, FileText, Check, Loader2, Info, ChevronDown, X } from 'lucide-react'
+import { useApiCall } from '@/lib/api-client-legacy'
+import { ArrowLeft, FileText, Check, Loader2, Info, ChevronDown, X, AlertTriangle } from 'lucide-react'
 import ComplianceFileUpload from '@/components/ComplianceFileUpload'
 import UploadedFileDisplay from '@/components/UploadedFileDisplay'
+import { useUnacceptableCaseWorkflow } from '@/hooks/useUnacceptableCaseWorkflow'
+import UnacceptableCaseWorkflowSteps from '@/components/UnacceptableCase/UnacceptableCaseWorkflowSteps'
+
+const STOPPING_PROOF_DOC = {
+  key: 'stopping_proof',
+  label: 'Preuve d\'Arrêt du Système',
+  description: 'Document prouvant que le système à risque inacceptable a été arrêté ou n\'a jamais été déployé.',
+  helpInfo: 'Document officiel attestant de l\'arrêt du système d\'IA identifié comme présentant un risque inacceptable selon l\'AI Act. Peut inclure : procès-verbal d\'arrêt, capture d\'écran de désactivation, attestation du responsable technique, ou tout autre élément prouvant la cessation d\'activité.',
+  acceptedFormats: '.pdf,.png,.jpg,.jpeg',
+  type: 'file' as const
+}
 
 const DOC_TYPES = [
   {
@@ -74,15 +86,25 @@ interface DocumentData {
   updatedAt: string | null
 }
 
+interface UseCase {
+  id: string
+  name: string
+  risk_level: string
+  score_final?: number | null
+  deployment_date?: string | null
+}
+
 export default function DossierDetailPage() {
   const { user, loading: authLoading, getAccessToken } = useAuth()
   const { plan } = useUserPlan()
+  const api = useApiCall()
   const router = useRouter()
   const params = useParams()
   const companyId = params.id as string
   const usecaseId = params.usecaseId as string
 
   const [usecaseName, setUsecaseName] = useState<string>('')
+  const [useCase, setUseCase] = useState<UseCase | null>(null)
   const [documents, setDocuments] = useState<Record<string, DocumentData>>({})
   const [textContents, setTextContents] = useState<Record<string, string>>({})
   const [supervisorData, setSupervisorData] = useState({
@@ -103,11 +125,57 @@ export default function DossierDetailPage() {
   const [showInfoTooltip, setShowInfoTooltip] = useState<string | null>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
 
+  // Hook pour le workflow "cas inacceptable"
+  const isUnacceptableCase = useCase?.risk_level?.toLowerCase() === 'unacceptable'
+
+  const updateDeploymentDate = async (date: string) => {
+    if (!useCase) return
+    const result = await api.put(`/api/usecases/${useCase.id}`, {
+      deployment_date: date
+    })
+    if (result.data) {
+      setUseCase({ ...useCase, deployment_date: date })
+    }
+  }
+
+  const workflow = useUnacceptableCaseWorkflow({
+    useCase,
+    isOpen: isUnacceptableCase,
+    onUpdateDeploymentDate: updateDeploymentDate,
+    initialProofUploaded: documents['stopping_proof']?.status === 'complete' || documents['stopping_proof']?.status === 'validated'
+  })
+
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login')
     }
   }, [user, authLoading, router])
+
+  // Recharger le document stopping_proof quand il est uploadé et auto-expand la section
+  useEffect(() => {
+    const refetchStoppingProof = async () => {
+      if (!workflow.proofUploaded || !user) return
+
+      const token = getAccessToken()
+      if (!token) return
+
+      try {
+        const res = await fetch(`/api/dossiers/${usecaseId}/stopping_proof`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setDocuments(prev => ({ ...prev, stopping_proof: data }))
+          // Auto-expand la section du document
+          setExpandedSections(prev => ({ ...prev, stopping_proof: true }))
+        }
+      } catch (error) {
+        console.error('Error fetching stopping_proof:', error)
+      }
+    }
+
+    refetchStoppingProof()
+  }, [workflow.proofUploaded, user, usecaseId, getAccessToken])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -125,17 +193,26 @@ export default function DossierDetailPage() {
         const usecaseRes = await fetch(`/api/usecases/${usecaseId}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
+        let usecaseData: any = null
         if (usecaseRes.ok) {
-          const usecaseData = await usecaseRes.json()
+          usecaseData = await usecaseRes.json()
           setUsecaseName(usecaseData.name || 'Cas d\'usage')
+          setUseCase(usecaseData)
         }
 
-        // Fetch all documents
+        // Fetch all documents (including stopping_proof for unacceptable cases)
         const docsData: Record<string, DocumentData> = {}
         const textData: Record<string, string> = {}
 
+        // List of doc types to fetch
+        const docTypesToFetch = [...DOC_TYPES]
+        // Add stopping_proof if it's an unacceptable case
+        if (usecaseData?.risk_level?.toLowerCase() === 'unacceptable') {
+          docTypesToFetch.push(STOPPING_PROOF_DOC)
+        }
+
         await Promise.all(
-          DOC_TYPES.map(async (docType) => {
+          docTypesToFetch.map(async (docType) => {
             const res = await fetch(`/api/dossiers/${usecaseId}/${docType.key}`, {
               headers: { Authorization: `Bearer ${token}` }
             })
@@ -175,6 +252,10 @@ export default function DossierDetailPage() {
 
     fetchData()
   }, [user, usecaseId, getAccessToken])
+
+  const onUploadSuccess = () => {
+    router.push(`/dashboard/${companyId}/dossiers`)
+  }
 
   const handleTextSave = async (docType: string) => {
     if (!user) return
@@ -402,6 +483,183 @@ export default function DossierDetailPage() {
     )
   }
 
+  // Si c'est un cas inacceptable ET que la preuve n'a pas encore été uploadée, afficher le workflow dédié
+  if (isUnacceptableCase && useCase && !workflow.proofUploaded) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <button
+              onClick={() => router.push(`/dashboard/${companyId}/dossiers`)}
+              className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Retour aux dossiers
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{usecaseName}</h1>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+          {/* Warning Message */}
+          <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+            <div className="flex items-start space-x-2">
+              <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-red-800">
+                Ce cas d'usage présente un niveau de risque inacceptable selon l'AI Act.
+                Vous devez procéder à une analyse approfondie de la conformité de ce cas d'usage.
+              </div>
+            </div>
+          </div>
+
+          {/* Workflow Steps */}
+          <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6 mt-6">
+            <UnacceptableCaseWorkflowSteps
+              workflow={workflow}
+              deploymentDate={useCase.deployment_date}
+              usecaseId={usecaseId}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Si c'est un cas inacceptable avec preuve uploadée, afficher uniquement le document stopping_proof
+  if (isUnacceptableCase && useCase && workflow.proofUploaded) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <button
+              onClick={() => router.push(`/dashboard/${companyId}/dossiers`)}
+              className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Retour aux dossiers
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{usecaseName}</h1>
+                <p className="text-gray-600">Dossier de conformité - Cas inacceptable</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="space-y-6">
+            {[STOPPING_PROOF_DOC].map((docType) => {
+              const doc = documents[docType.key] || { status: 'incomplete', formData: null, fileUrl: null, updatedAt: null }
+              const isUploading = uploading[docType.key]
+
+              return (
+                <div
+                  key={docType.key}
+                  className={`bg-white rounded-xl shadow-sm border ${getStatusColor(doc.status)}`}
+                >
+                  <div
+                    className="flex items-start justify-between p-6 cursor-pointer"
+                    onClick={() => toggleSection(docType.key)}
+                  >
+                    <div className="flex items-start gap-3 flex-1">
+                      {getStatusIcon(doc.status)}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold text-gray-900">{docType.label}</h3>
+                          <div className="relative">
+                            <button
+                              onMouseEnter={() => setShowInfoTooltip(docType.key)}
+                              onMouseLeave={() => setShowInfoTooltip(null)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-gray-400 hover:text-[#0080A3] transition-colors"
+                            >
+                              <Info className="w-4 h-4" />
+                            </button>
+                            {showInfoTooltip === docType.key && (
+                              <div className="absolute left-0 top-6 z-10 w-80 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
+                                {docType.helpInfo}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">{docType.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <ChevronDown
+                        className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${
+                          expandedSections[docType.key] ? 'rotate-180' : ''
+                        }`}
+                      />
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                        doc.status === 'complete' || doc.status === 'validated'
+                          ? 'bg-green-100 text-green-800 border border-green-300'
+                          : 'bg-red-100 text-red-800 border border-red-300'
+                      }`}>
+                        {doc.status === 'complete' ? '✓ Complété' : doc.status === 'validated' ? '✓ Validé' : '✗ Incomplet'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Section for File Upload */}
+                  <div
+                    className="overflow-hidden transition-all duration-300 ease-in-out"
+                    style={{
+                      maxHeight: expandedSections[docType.key] ? '2000px' : '0',
+                      opacity: expandedSections[docType.key] ? 1 : 0
+                    }}
+                  >
+                    <div className="space-y-3 px-6 pb-6">
+                      {doc.fileUrl ? (
+                        <UploadedFileDisplay
+                          fileUrl={doc.fileUrl}
+                          onDelete={() => handleFileDelete(docType.key)}
+                          isDeleting={deleting[docType.key] || false}
+                        />
+                      ) : (
+                        <>
+                          <ComplianceFileUpload
+                            label="Importer un document"
+                            helpText={`Formats acceptés: ${docType.acceptedFormats} (max 10MB)`}
+                            acceptedFormats={docType.acceptedFormats}
+                            onFileSelected={(file) => handleFileUpload(docType.key, file)}
+                          />
+                          {isUploading && (
+                            <div className="mt-3 flex items-center text-sm text-gray-600">
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Upload en cours...
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Sinon, afficher la liste normale des documents de conformité
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
