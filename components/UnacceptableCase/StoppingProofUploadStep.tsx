@@ -1,5 +1,7 @@
-import { AlertTriangle, Upload } from 'lucide-react'
+import { AlertTriangle, Upload, Edit } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import ComplianceFileUpload from '@/components/ComplianceFileUpload'
+import MarkdownText from '@/components/Shared/MarkdownText'
 
 interface UseCaseNextSteps {
   evaluation?: string
@@ -9,6 +11,7 @@ interface UseCaseNextSteps {
 }
 
 interface StoppingProofUploadStepProps {
+  usecaseId: string
   nextSteps: UseCaseNextSteps | null
   loadingNextSteps: boolean
   selectedFile: File | null
@@ -20,6 +23,7 @@ interface StoppingProofUploadStepProps {
 }
 
 export default function StoppingProofUploadStep({
+  usecaseId,
   nextSteps,
   loadingNextSteps,
   selectedFile,
@@ -29,6 +33,12 @@ export default function StoppingProofUploadStep({
   onUpload,
   onBack
 }: StoppingProofUploadStepProps) {
+  const router = useRouter()
+
+  const handleEditEvaluation = () => {
+    router.push(`/usecases/${usecaseId}/evaluation`)
+  }
+
   return (
     <div className="space-y-4">
       {/* Loading indicator */}
@@ -46,8 +56,21 @@ export default function StoppingProofUploadStep({
             <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
             <h4 className="font-semibold text-red-900">Justification du niveau de risque</h4>
           </div>
-          <div className="text-sm text-red-800 whitespace-pre-wrap pl-7">
-            {nextSteps.evaluation}
+          <MarkdownText
+            text={nextSteps.evaluation}
+            className="text-sm text-red-800 pl-7 mb-4"
+          />
+          <div className="pl-7 pt-3 border-t border-red-200">
+            <p className="text-sm text-red-800 mb-3">
+              Si vous pensez que cette évaluation ne décrit pas correctement votre cas d'usage, vous pouvez modifier vos réponses au questionnaire pour obtenir une nouvelle analyse.
+            </p>
+            <button
+              onClick={handleEditEvaluation}
+              className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <Edit className="w-4 h-4" />
+              <span>Modifier l'évaluation</span>
+            </button>
           </div>
         </div>
       )}

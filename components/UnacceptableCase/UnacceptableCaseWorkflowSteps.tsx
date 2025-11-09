@@ -52,6 +52,7 @@ export default function UnacceptableCaseWorkflowSteps({
 
       {workflow.step === 'upload-proof' && (
         <StoppingProofUploadStep
+          usecaseId={usecaseId}
           nextSteps={workflow.nextSteps}
           loadingNextSteps={workflow.loadingNextSteps}
           selectedFile={workflow.selectedFile}
