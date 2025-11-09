@@ -311,22 +311,68 @@ export default function ComplAIScoresPage() {
 
   // Fonction pour parser le CSV
   const parseCSV = (csvText: string): any[] => {
-    const lines = csvText.split('\n')
-    const headers = lines[0].split(',').map(h => h.trim())
-    const rows = []
+    const rows: any[] = []
+    const headers: string[] = []
+    let currentField = ''
+    let currentRow: string[] = []
+    let insideQuotes = false
 
-    for (let i = 1; i < lines.length; i++) {
-      if (lines[i].trim()) {
-        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''))
-        const row: any = {}
-        headers.forEach((header, index) => {
-          row[header] = values[index] || null
-        })
-        rows.push(row)
+    const pushField = () => {
+      currentRow.push(currentField.trim())
+      currentField = ''
+    }
+
+    const pushRow = () => {
+      if (currentRow.length > 0 && currentRow.some(field => field !== '')) {
+        rows.push(currentRow)
+      }
+      currentRow = []
+    }
+
+    for (let i = 0; i < csvText.length; i++) {
+      const char = csvText[i]
+      const nextChar = csvText[i + 1]
+
+      if (char === '"' && nextChar === '"') {
+        currentField += '"'
+        i++
+      } else if (char === '"') {
+        insideQuotes = !insideQuotes
+      } else if (char === ',' && !insideQuotes) {
+        pushField()
+      } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+        if (char === '\r' && nextChar === '\n') {
+          i++
+        }
+        pushField()
+        pushRow()
+      } else {
+        currentField += char
       }
     }
 
-    return rows
+    if (currentField !== '' || insideQuotes) {
+      pushField()
+    }
+    if (currentRow.length > 0) {
+      pushRow()
+    }
+
+    if (rows.length === 0) {
+      return []
+    }
+
+    rows[0].forEach((header: string) => headers.push(header.replace(/^"|"$/g, '').trim()))
+
+    return rows.slice(1).map(row => {
+      const entry: Record<string, string | null> = {}
+      headers.forEach((header, index) => {
+        const rawValue = row[index] ?? ''
+        const cleanedValue = rawValue.replace(/^"|"$/g, '')
+        entry[header] = cleanedValue === '' ? null : cleanedValue
+      })
+      return entry
+    })
   }
 
   // Fonction pour l'export CSV
@@ -430,6 +476,34 @@ export default function ComplAIScoresPage() {
       const csvText = await importFile.text()
       const csvData = parseCSV(csvText)
 
+      const headerMapping: Record<string, string> = {
+        'Modèle ID': 'model_id',
+        'Nom du Modèle': 'model_name',
+        'Fournisseur': 'model_provider',
+        'Type': 'model_type',
+        'Version': 'version',
+        'Principe Code': 'principle_code',
+        'Principe Nom': 'principle_name',
+        'Catégorie Principe': 'principle_category',
+        'Benchmark Code': 'benchmark_code',
+        'Benchmark Nom': 'benchmark_name',
+        'Score Original': 'score',
+        'Score Text': 'score_text',
+        "Date d'Évaluation": 'evaluation_date',
+        'Statut': 'status'
+      }
+
+      const normalizedCsvData = csvData.map(row => {
+        const normalizedRow: Record<string, any> = {}
+
+        Object.entries(row).forEach(([key, value]) => {
+          const normalizedKey = headerMapping[key] || key
+          normalizedRow[normalizedKey] = value
+        })
+
+        return normalizedRow
+      })
+
       // Récupérer le token de session
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) {
@@ -445,7 +519,7 @@ export default function ComplAIScoresPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          csvData,
+          csvData: normalizedCsvData,
           updateMode: importMode
         })
       })
