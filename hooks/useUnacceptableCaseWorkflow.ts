@@ -10,7 +10,7 @@ interface UseCaseNextSteps {
   conclusion?: string
 }
 
-type WorkflowStep = 'confirm-date' | 'edit-date' | 'upload-proof'
+type WorkflowStep = 'confirm-date' | 'edit-date' | 'upload-proof' | 'future-deployment-warning'
 
 interface UseUnacceptableCaseWorkflowProps {
   useCase: {
@@ -40,6 +40,8 @@ export function useUnacceptableCaseWorkflow({
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [updatingDate, setUpdatingDate] = useState(false)
   const [proofUploaded, setProofUploaded] = useState(initialProofUploaded)
+  const [textContent, setTextContent] = useState('')
+  const [savingText, setSavingText] = useState(false)
 
   // Charger les next steps quand la modal s'ouvre
   useEffect(() => {
@@ -111,8 +113,8 @@ export function useUnacceptableCaseWorkflow({
       console.log('Date dans le passé, passage à upload-proof')
       setStep('upload-proof')
     } else {
-      console.log('Date dans le futur, passage à la question suivante')
-      // TODO: Implémenter la suite du workflow
+      console.log('Date dans le futur, passage à future-deployment-warning')
+      setStep('future-deployment-warning')
     }
   }
 
@@ -159,12 +161,98 @@ export function useUnacceptableCaseWorkflow({
     }
   }
 
+  const handleUploadSystemPrompt = async (usecaseId: string, onSuccess?: () => void) => {
+    if (!selectedFile || !useCase) return
+
+    try {
+      setUpdatingDate(true)
+      setUploadError(null)
+
+      // Get token directly from supabase
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        setUploadError('Session expirée')
+        return
+      }
+
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+
+      const res = await fetch(`/api/dossiers/${usecaseId}/system_prompt/upload`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: formData
+      })
+
+      if (res.ok) {
+        setProofUploaded(true)
+        onSuccess?.()
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Erreur inconnue' }))
+        setUploadError(errorData.error || 'Erreur lors de l\'upload')
+      }
+    } catch (error: any) {
+      console.error('Error uploading system prompt:', error)
+      setUploadError(error?.message || 'Erreur lors de l\'upload du document')
+    } finally {
+      setUpdatingDate(false)
+    }
+  }
+
+  const handleTextChange = (text: string) => {
+    setTextContent(text)
+    setUploadError(null)
+  }
+
+  const handleSaveText = async (usecaseId: string, onSuccess?: () => void) => {
+    if (!textContent.trim() || !useCase) return
+
+    try {
+      setSavingText(true)
+      setUploadError(null)
+
+      // Get token directly from supabase
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        setUploadError('Session expirée')
+        return
+      }
+
+      const res = await fetch(`/api/dossiers/${usecaseId}/system_prompt`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          formData: { system_instructions: textContent },
+          status: 'complete'
+        })
+      })
+
+      if (res.ok) {
+        setProofUploaded(true)
+        onSuccess?.()
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Erreur inconnue' }))
+        setUploadError(errorData.error || 'Erreur lors de l\'enregistrement')
+      }
+    } catch (error: any) {
+      console.error('Error saving text:', error)
+      setUploadError(error?.message || 'Erreur lors de l\'enregistrement du texte')
+    } finally {
+      setSavingText(false)
+    }
+  }
+
   const reset = () => {
     setStep('confirm-date')
     setNewDate('')
     setSelectedFile(null)
     setUploadError(null)
     setNextSteps(null)
+    setProofUploaded(false)
+    setTextContent('')
   }
 
   return {
@@ -176,14 +264,20 @@ export function useUnacceptableCaseWorkflow({
     uploadError,
     updatingDate,
     proofUploaded,
+    textContent,
+    savingText,
     setNewDate,
     setStep,
+    setProofUploaded,
     handleModifyDate,
     handleCancelEdit,
     handleSaveDate,
     handleConfirmDate,
     handleFileSelected,
     handleUploadProof,
+    handleUploadSystemPrompt,
+    handleTextChange,
+    handleSaveText,
     reset
   }
 }

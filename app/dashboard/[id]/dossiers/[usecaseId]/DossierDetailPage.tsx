@@ -11,6 +11,15 @@ import UploadedFileDisplay from '@/components/UploadedFileDisplay'
 import { useUnacceptableCaseWorkflow } from '@/hooks/useUnacceptableCaseWorkflow'
 import UnacceptableCaseWorkflowSteps from '@/components/UnacceptableCase/UnacceptableCaseWorkflowSteps'
 
+const SYSTEM_PROMPT_DOC = {
+  key: 'system_prompt',
+  label: 'Instructions Système et Prompts Principaux',
+  description: 'Veuillez coller ici l\'intégralité du prompt système (instructions de base) donné à l\'IA pour ce cas d\'usage.',
+  helpInfo: 'Tracer les instructions exactes données à l\'IA (le "system prompt" ou les instructions de base) pour garantir la reproductibilité et l\'auditabilité du comportement de l\'IA. Si le prompt est dynamique, fournissez le modèle (template) et expliquez les variables.',
+  acceptedFormats: '.txt,.md',
+  type: 'textarea' as const
+}
+
 const STOPPING_PROOF_DOC = {
   key: 'stopping_proof',
   label: 'Preuve d\'Arrêt du Système',
@@ -21,14 +30,7 @@ const STOPPING_PROOF_DOC = {
 }
 
 const DOC_TYPES = [
-  {
-    key: 'system_prompt',
-    label: 'Instructions Système et Prompts Principaux',
-    description: 'Veuillez coller ici l\'intégralité du prompt système (instructions de base) donné à l\'IA pour ce cas d\'usage.',
-    helpInfo: 'Tracer les instructions exactes données à l\'IA (le "system prompt" ou les instructions de base) pour garantir la reproductibilité et l\'auditabilité du comportement de l\'IA. Si le prompt est dynamique, fournissez le modèle (template) et expliquez les variables.',
-    acceptedFormats: '.txt,.md',
-    type: 'textarea'
-  },
+  SYSTEM_PROMPT_DOC,
   {
     key: 'technical_documentation',
     label: 'Documentation Technique du Système',
@@ -138,12 +140,90 @@ export default function DossierDetailPage() {
     }
   }
 
+  const getInitialProofUploaded = () => {
+    if (!useCase?.deployment_date) return false
+
+    const deploymentDate = new Date(useCase.deployment_date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Date dans le passé → vérifier stopping_proof
+    if (deploymentDate < today) {
+      return documents['stopping_proof']?.status === 'complete' ||
+             documents['stopping_proof']?.status === 'validated'
+    }
+
+    // Date dans le futur → vérifier system_prompt (texte OU fichier)
+    return (documents['system_prompt']?.status === 'complete' ||
+            documents['system_prompt']?.status === 'validated') ||
+           !!documents['system_prompt']?.fileUrl
+  }
+
   const workflow = useUnacceptableCaseWorkflow({
     useCase,
     isOpen: isUnacceptableCase,
     onUpdateDeploymentDate: updateDeploymentDate,
-    initialProofUploaded: documents['stopping_proof']?.status === 'complete' || documents['stopping_proof']?.status === 'validated'
+    initialProofUploaded: getInitialProofUploaded()
   })
+
+  // Synchroniser proofUploaded avec les documents chargés
+  useEffect(() => {
+    console.log('[SYNC] useEffect triggered', {
+      hasUseCase: !!useCase,
+      hasDeploymentDate: !!useCase?.deployment_date,
+      documents: documents
+    })
+
+    if (!useCase?.deployment_date) return
+
+    const deploymentDate = new Date(useCase.deployment_date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    console.log('[SYNC] Dates comparison', {
+      deploymentDate: deploymentDate.toISOString(),
+      today: today.toISOString(),
+      isInPast: deploymentDate < today
+    })
+
+    let shouldBeUploaded = false
+
+    if (deploymentDate < today) {
+      shouldBeUploaded = documents['stopping_proof']?.status === 'complete' ||
+                        documents['stopping_proof']?.status === 'validated'
+      console.log('[SYNC] Past deployment - checking stopping_proof', {
+        status: documents['stopping_proof']?.status,
+        shouldBeUploaded
+      })
+    } else {
+      shouldBeUploaded = (documents['system_prompt']?.status === 'complete' ||
+                         documents['system_prompt']?.status === 'validated') ||
+                        !!documents['system_prompt']?.fileUrl
+      console.log('[SYNC] Future deployment - checking system_prompt', {
+        status: documents['system_prompt']?.status,
+        fileUrl: documents['system_prompt']?.fileUrl,
+        shouldBeUploaded
+      })
+    }
+
+    console.log('[SYNC] Final decision', {
+      shouldBeUploaded,
+      currentProofUploaded: workflow.proofUploaded,
+      willUpdate: shouldBeUploaded !== workflow.proofUploaded
+    })
+
+    if (shouldBeUploaded !== workflow.proofUploaded) {
+      console.log('[SYNC] Setting proofUploaded to:', shouldBeUploaded)
+      workflow.setProofUploaded(shouldBeUploaded)
+
+      // Also set the correct workflow step based on deployment date
+      if (shouldBeUploaded) {
+        const correctStep = deploymentDate < today ? 'upload-proof' : 'future-deployment-warning'
+        console.log('[SYNC] Setting workflow step to:', correctStep)
+        workflow.setStep(correctStep)
+      }
+    }
+  }, [useCase, documents, workflow])
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -151,31 +231,41 @@ export default function DossierDetailPage() {
     }
   }, [user, authLoading, router])
 
-  // Recharger le document stopping_proof quand il est uploadé et auto-expand la section
+  // Recharger le document stopping_proof OU system_prompt quand uploadé et auto-expand la section
   useEffect(() => {
-    const refetchStoppingProof = async () => {
+    const refetchDocument = async () => {
       if (!workflow.proofUploaded || !user) return
 
       const token = getAccessToken()
       if (!token) return
 
       try {
-        const res = await fetch(`/api/dossiers/${usecaseId}/stopping_proof`, {
+        // Déterminer quel document recharger selon le step du workflow
+        const docKey = workflow.step === 'future-deployment-warning' ? 'system_prompt' : 'stopping_proof'
+
+        const res = await fetch(`/api/dossiers/${usecaseId}/${docKey}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
         if (res.ok) {
           const data = await res.json()
-          setDocuments(prev => ({ ...prev, stopping_proof: data }))
+          setDocuments(prev => ({ ...prev, [docKey]: data }))
+
+          // Extraire le contenu textuel si c'est system_prompt avec formData
+          if (docKey === 'system_prompt' && data.formData?.system_instructions) {
+            setTextContents(prev => ({ ...prev, [docKey]: data.formData.system_instructions }))
+            setInitialTextContents(prev => ({ ...prev, [docKey]: data.formData.system_instructions }))
+          }
+
           // Auto-expand la section du document
-          setExpandedSections(prev => ({ ...prev, stopping_proof: true }))
+          setExpandedSections(prev => ({ ...prev, [docKey]: true }))
         }
       } catch (error) {
-        console.error('Error fetching stopping_proof:', error)
+        console.error('Error fetching document:', error)
       }
     }
 
-    refetchStoppingProof()
-  }, [workflow.proofUploaded, user, usecaseId, getAccessToken])
+    refetchDocument()
+  }, [workflow.proofUploaded, workflow.step, user, usecaseId, getAccessToken])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -211,13 +301,18 @@ export default function DossierDetailPage() {
           docTypesToFetch.push(STOPPING_PROOF_DOC)
         }
 
+        console.log('[FETCH] Documents to fetch:', docTypesToFetch.map(d => d.key))
+        console.log('[FETCH] Usecase ID:', usecaseId)
+
         await Promise.all(
           docTypesToFetch.map(async (docType) => {
+            console.log('[FETCH] Fetching document:', docType.key)
             const res = await fetch(`/api/dossiers/${usecaseId}/${docType.key}`, {
               headers: { Authorization: `Bearer ${token}` }
             })
             if (res.ok) {
               const data = await res.json()
+              console.log('[FETCH] Document loaded:', docType.key, data)
               docsData[docType.key] = data
 
               // Extract text content from formData
@@ -236,6 +331,8 @@ export default function DossierDetailPage() {
                   setInitialSupervisorData(supervisor)
                 }
               }
+            } else {
+              console.error('[FETCH] Failed to load:', docType.key, res.status)
             }
           })
         )
@@ -413,6 +510,12 @@ export default function DossierDetailPage() {
         if (getRes.ok) {
           const data = await getRes.json()
           setDocuments({ ...documents, [docType]: data })
+
+          // Si c'est un cas inacceptable et qu'on supprime system_prompt/stopping_proof,
+          // revenir au workflow en réinitialisant proofUploaded
+          if (isUnacceptableCase && (docType === 'system_prompt' || docType === 'stopping_proof')) {
+            workflow.reset()
+          }
         }
       } else {
         alert('Erreur lors de la suppression du fichier')
@@ -535,8 +638,15 @@ export default function DossierDetailPage() {
     )
   }
 
-  // Si c'est un cas inacceptable avec preuve uploadée, afficher uniquement le document stopping_proof
+  // Si c'est un cas inacceptable avec preuve uploadée, afficher le document approprié
   if (isUnacceptableCase && useCase && workflow.proofUploaded) {
+    // Déterminer quel document afficher selon le workflow step
+    console.log('[RENDER] Displaying document - step:', workflow.step, 'proofUploaded:', workflow.proofUploaded)
+    const docToDisplay = workflow.step === 'future-deployment-warning'
+      ? SYSTEM_PROMPT_DOC
+      : STOPPING_PROOF_DOC
+    console.log('[RENDER] Document to display:', docToDisplay.key, docToDisplay.label)
+
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
@@ -564,7 +674,7 @@ export default function DossierDetailPage() {
         {/* Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="space-y-6">
-            {[STOPPING_PROOF_DOC].map((docType) => {
+            {[docToDisplay].map((docType) => {
               const doc = documents[docType.key] || { status: 'incomplete', formData: null, fileUrl: null, updatedAt: null }
               const isUploading = uploading[docType.key]
 
@@ -617,39 +727,116 @@ export default function DossierDetailPage() {
                     </div>
                   </div>
 
-                  {/* Section for File Upload */}
-                  <div
-                    className="overflow-hidden transition-all duration-300 ease-in-out"
-                    style={{
-                      maxHeight: expandedSections[docType.key] ? '2000px' : '0',
-                      opacity: expandedSections[docType.key] ? 1 : 0
-                    }}
-                  >
-                    <div className="space-y-3 px-6 pb-6">
-                      {doc.fileUrl ? (
-                        <UploadedFileDisplay
-                          fileUrl={doc.fileUrl}
-                          onDelete={() => handleFileDelete(docType.key)}
-                          isDeleting={deleting[docType.key] || false}
-                        />
-                      ) : (
-                        <>
-                          <ComplianceFileUpload
-                            label="Importer un document"
-                            helpText={`Formats acceptés: ${docType.acceptedFormats} (max 10MB)`}
-                            acceptedFormats={docType.acceptedFormats}
-                            onFileSelected={(file) => handleFileUpload(docType.key, file)}
+                  {/* Section for Textarea (system_prompt) */}
+                  {docType.type === 'textarea' && (
+                    <div
+                      className="overflow-hidden transition-all duration-300 ease-in-out"
+                      style={{
+                        maxHeight: expandedSections[docType.key] ? '2000px' : '0',
+                        opacity: expandedSections[docType.key] ? 1 : 0
+                      }}
+                    >
+                      <div className="space-y-3 px-6 pb-6">
+                        {doc.fileUrl ? (
+                          <UploadedFileDisplay
+                            fileUrl={doc.fileUrl}
+                            onDelete={() => handleFileDelete(docType.key)}
+                            isDeleting={deleting[docType.key] || false}
                           />
-                          {isUploading && (
-                            <div className="mt-3 flex items-center text-sm text-gray-600">
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Upload en cours...
+                        ) : (
+                          <>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Instructions système
+                            </label>
+                            <textarea
+                              value={textContents[docType.key] || ''}
+                              onChange={(e) => setTextContents({ ...textContents, [docType.key]: e.target.value })}
+                              placeholder="Collez ici l'intégralité du prompt système..."
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent font-mono text-sm"
+                              rows={8}
+                            />
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => handleTextSave(docType.key)}
+                                disabled={saving[docType.key] || !canSave(docType)}
+                                className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              >
+                                {saving[docType.key] ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Enregistrement...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check className="w-4 h-4 mr-2" />
+                                    Enregistrer
+                                  </>
+                                )}
+                              </button>
                             </div>
-                          )}
-                        </>
-                      )}
+
+                            {/* Séparateur OU */}
+                            <div className="mt-6 pt-6 border-t border-gray-200">
+                              <div className="flex items-center gap-3 mb-4">
+                                <div className="flex-1 border-t border-gray-300"></div>
+                                <span className="text-sm text-gray-500 font-medium">OU</span>
+                                <div className="flex-1 border-t border-gray-300"></div>
+                              </div>
+
+                              <ComplianceFileUpload
+                                label="Importer un fichier"
+                                helpText={`Formats acceptés: ${docType.acceptedFormats}`}
+                                acceptedFormats={docType.acceptedFormats}
+                                onFileSelected={(file) => handleFileUpload(docType.key, file)}
+                              />
+                              {uploading[docType.key] && (
+                                <div className="mt-3 flex items-center text-sm text-gray-600">
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Upload en cours...
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Section for File Upload (stopping_proof) */}
+                  {docType.type === 'file' && (
+                    <div
+                      className="overflow-hidden transition-all duration-300 ease-in-out"
+                      style={{
+                        maxHeight: expandedSections[docType.key] ? '2000px' : '0',
+                        opacity: expandedSections[docType.key] ? 1 : 0
+                      }}
+                    >
+                      <div className="space-y-3 px-6 pb-6">
+                        {doc.fileUrl ? (
+                          <UploadedFileDisplay
+                            fileUrl={doc.fileUrl}
+                            onDelete={() => handleFileDelete(docType.key)}
+                            isDeleting={deleting[docType.key] || false}
+                          />
+                        ) : (
+                          <>
+                            <ComplianceFileUpload
+                              label="Importer un document"
+                              helpText={`Formats acceptés: ${docType.acceptedFormats} (max 10MB)`}
+                              acceptedFormats={docType.acceptedFormats}
+                              onFileSelected={(file) => handleFileUpload(docType.key, file)}
+                            />
+                            {isUploading && (
+                              <div className="mt-3 flex items-center text-sm text-gray-600">
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Upload en cours...
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
