@@ -16,6 +16,7 @@ export default function Sidebar() {
   const { user } = useAuth();
   const { plan, loading: planLoading } = useUserPlan();
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [useCaseRegistryId, setUseCaseRegistryId] = useState<string | null>(null);
   const api = useApiCall();
 
   // Fetch company ID when user is available
@@ -24,7 +25,7 @@ export default function Sidebar() {
       if (user) {
         try {
           const result = await api.get('/api/companies');
-          
+
           if (result.data && result.data.length > 0) {
             // Since users currently have only one company, take the first one
             setCompanyId(result.data[0].id);
@@ -38,8 +39,39 @@ export default function Sidebar() {
     fetchCompanyId();
   }, [user, api]);
 
+  // Fetch use case registry ID when on a use case page
+  useEffect(() => {
+    const fetchUseCaseRegistryId = async () => {
+      // Extract use case ID from pathname if we're on a use case page
+      const useCaseMatch = pathname.match(/^\/usecases\/([^\/]+)/);
+      if (useCaseMatch && user) {
+        const useCaseId = useCaseMatch[1];
+        try {
+          const result = await api.get(`/api/usecases/${useCaseId}`);
+          if (result.data?.company_id) {
+            setUseCaseRegistryId(result.data.company_id);
+          }
+        } catch (error) {
+          console.error('Error fetching use case registry ID:', error);
+          // Reset on error
+          setUseCaseRegistryId(null);
+        }
+      } else {
+        // Reset when not on a use case page
+        setUseCaseRegistryId(null);
+      }
+    };
+
+    fetchUseCaseRegistryId();
+  }, [pathname, user, api]);
+
   // Determine dashboard URL based on current context
   const getDashboardUrl = () => {
+    // If we're on a use case page and have the registry ID, use it
+    if (useCaseRegistryId) {
+      return `/dashboard/${useCaseRegistryId}`;
+    }
+
     // If we're currently on a company dashboard page, extract the company ID from the URL
     const dashboardMatch = pathname.match(/^\/dashboard\/([^\/]+)/);
     if (dashboardMatch && dashboardMatch[1] !== 'companies') {
@@ -57,6 +89,11 @@ export default function Sidebar() {
 
   // Determine collaboration URL based on current context
   const getCollaborationUrl = () => {
+    // If we're on a use case page and have the registry ID, use it
+    if (useCaseRegistryId) {
+      return `/dashboard/${useCaseRegistryId}/collaboration`;
+    }
+
     // If we're currently on a company dashboard page, extract the company ID from the URL
     const dashboardMatch = pathname.match(/^\/dashboard\/([^\/]+)/);
     if (dashboardMatch && dashboardMatch[1] !== 'companies' && dashboardMatch[1] !== 'registries') {
@@ -74,6 +111,11 @@ export default function Sidebar() {
 
   // Determine dossiers URL based on current context
   const getDossiersUrl = () => {
+    // If we're on a use case page and have the registry ID, use it
+    if (useCaseRegistryId) {
+      return `/dashboard/${useCaseRegistryId}/dossiers`;
+    }
+
     // If we're currently on a company dashboard page, extract the company ID from the URL
     const dashboardMatch = pathname.match(/^\/dashboard\/([^\/]+)/);
     if (dashboardMatch && dashboardMatch[1] !== 'companies' && dashboardMatch[1] !== 'registries') {
