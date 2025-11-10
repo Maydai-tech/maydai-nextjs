@@ -23,6 +23,52 @@ interface ImportStats {
   warnings: string[]
 }
 
+interface NormalizeScoreResult {
+  score: number | null
+  isNA: boolean
+  error: string | null
+}
+
+/**
+ * Normalise une valeur de score depuis le CSV
+ * Gère les valeurs "N/A", "n/a", "NA", "na" (insensible à la casse) en les convertissant en null
+ * @param value - Valeur à normaliser (string, number, null, undefined)
+ * @returns Résultat avec score normalisé, flag isNA, et éventuelle erreur
+ */
+function normalizeScore(value: string | number | null | undefined): NormalizeScoreResult {
+  // Cas null ou undefined
+  if (value === null || value === undefined) {
+    return { score: null, isNA: false, error: null }
+  }
+
+  // Cas chaîne vide
+  if (typeof value === 'string' && value.trim() === '') {
+    return { score: null, isNA: false, error: null }
+  }
+
+  // Cas "N/A" (insensible à la casse)
+  if (typeof value === 'string') {
+    const trimmedValue = value.trim().toLowerCase()
+    if (trimmedValue === 'n/a' || trimmedValue === 'na') {
+      return { score: null, isNA: true, error: null }
+    }
+  }
+
+  // Cas nombre valide
+  const numValue = typeof value === 'number' ? value : parseFloat(String(value))
+  
+  if (!isNaN(numValue)) {
+    if (numValue >= 0 && numValue <= 1) {
+      return { score: numValue, isNA: false, error: null }
+    } else {
+      return { score: null, isNA: false, error: 'Score doit être un nombre entre 0 et 1' }
+    }
+  }
+
+  // Cas valeur non numérique invalide (autre que N/A)
+  return { score: null, isNA: false, error: 'Score doit être un nombre entre 0 et 1' }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Vérifier l'authentification
@@ -116,15 +162,13 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        // Validation du score si fourni
-        let score: number | null = null
-        if (row.score !== null && row.score !== undefined && row.score !== '') {
-          score = parseFloat(row.score)
-          if (isNaN(score) || score < 0 || score > 1) {
-            stats.errors.push(`Ligne ${rowNumber}: Score doit être un nombre entre 0 et 1`)
-            continue
-          }
+        // Validation et normalisation du score
+        const scoreResult = normalizeScore(row.score)
+        if (scoreResult.error) {
+          stats.errors.push(`Ligne ${rowNumber}: ${scoreResult.error}`)
+          continue
         }
+        const score: number | null = scoreResult.score
 
         // Gestion du modèle (upsert)
         let modelId: string
@@ -178,21 +222,35 @@ export async function POST(request: NextRequest) {
         }
 
         // Gestion de l'évaluation
-        if (score !== null) {
-          // Chercher l'évaluation existante
-          const { data: existingEvaluation } = await supabase
-            .from('compl_ai_evaluations')
-            .select('id')
-            .eq('model_id', modelId)
-            .eq('benchmark_id', benchmark.id)
-            .single()
+        // Chercher l'évaluation existante (récupérer aussi le score existant)
+        const { data: existingEvaluation, error: evaluationError } = await supabase
+          .from('compl_ai_evaluations')
+          .select('id, score')
+          .eq('model_id', modelId)
+          .eq('benchmark_id', benchmark.id)
+          .maybeSingle()
+
+        // Vérifier s'il y a une erreur (avec .maybeSingle(), une erreur signifie un problème réel)
+        if (evaluationError) {
+          stats.errors.push(`Ligne ${rowNumber}: Erreur lors de la recherche d'évaluation - ${evaluationError.message}`)
+          continue
+        }
+
+        // Si évaluation existe avec un score non-null et qu'on importe N/A, préserver l'évaluation existante
+        if (existingEvaluation && existingEvaluation.score !== null && score === null) {
+          stats.warnings.push(`Ligne ${rowNumber}: Évaluation existante avec score, ignorée (import N/A)`)
+        } else {
+          // Préparer les données de l'évaluation
+          const scoreText = score !== null 
+            ? (row.score_text || `${Math.round(score * 100)}%`)
+            : (row.score_text || 'N/A')
 
           const evaluationData = {
             model_id: modelId,
             principle_id: principle.id,
             benchmark_id: benchmark.id,
             score: score,
-            score_text: row.score_text || `${Math.round(score * 100)}%`,
+            score_text: scoreText,
             evaluation_date: row.evaluation_date || new Date().toISOString().split('T')[0],
             data_source: 'csv-import',
             raw_data: {
@@ -233,8 +291,6 @@ export async function POST(request: NextRequest) {
 
             stats.evaluationsCreated++
           }
-        } else {
-          stats.warnings.push(`Ligne ${rowNumber}: Aucun score fourni, évaluation ignorée`)
         }
 
       } catch (error) {
