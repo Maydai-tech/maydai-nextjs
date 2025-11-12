@@ -128,7 +128,7 @@ export async function PUT(
 
     // Parse request body
     const body = await request.json()
-    const { primary_model_id, deployment_countries } = body
+    const { primary_model_id, deployment_countries, deployment_date } = body
 
     // Validate model_id if provided
     if (primary_model_id !== null && primary_model_id !== undefined) {
@@ -169,9 +169,10 @@ export async function PUT(
     // Update the use case
     const { data: updatedUseCase, error: updateError } = await supabase
       .from('usecases')
-      .update({ 
+      .update({
         primary_model_id,
         deployment_countries,
+        deployment_date,
         updated_at: new Date().toISOString()
       })
       .eq('id', useCaseId)

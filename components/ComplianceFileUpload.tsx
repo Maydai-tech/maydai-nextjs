@@ -1,20 +1,31 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
+import { X } from 'lucide-react'
 
 interface Props {
   label: string
   helpText?: string
   acceptedFormats: string
   onFileSelected: (file: File) => void
+  onFileRemoved?: () => void
 }
 
-export default function ComplianceFileUpload({ label, helpText, acceptedFormats, onFileSelected }: Props) {
+export default function ComplianceFileUpload({ label, helpText, acceptedFormats, onFileSelected, onFileRemoved }: Props) {
   const [dragActive, setDragActive] = useState(false)
   const [selectedName, setSelectedName] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const onPick = () => inputRef.current?.click()
+
+  const onRemove = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSelectedName(null)
+    if (inputRef.current) {
+      inputRef.current.value = ''
+    }
+    onFileRemoved?.()
+  }
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -62,7 +73,16 @@ export default function ComplianceFileUpload({ label, helpText, acceptedFormats,
         <p className="text-gray-700">Glissez-déposez un fichier ici</p>
         <p className="text-gray-500 text-sm">ou cliquez pour sélectionner</p>
         {selectedName && (
-          <p className="mt-2 text-sm text-gray-600">Sélectionné: {selectedName}</p>
+          <div className="mt-3 inline-flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-900 font-medium">Sélectionné: {selectedName}</p>
+            <button
+              onClick={onRemove}
+              className="text-blue-600 hover:text-blue-800 transition-colors"
+              title="Retirer le fichier"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         )}
       </div>
 
