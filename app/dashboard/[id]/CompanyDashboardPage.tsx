@@ -303,6 +303,7 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
 
   const getRiskLevelColor = (riskLevel: string) => {
     switch (riskLevel?.toLowerCase()) {
+      case 'unacceptable': return 'text-red-700 bg-red-50 border border-red-200'
       case 'high': return 'text-red-700 bg-red-50 border border-red-200'
       case 'limited': return 'text-yellow-700 bg-yellow-50 border border-yellow-200'
       case 'minimal': return 'text-green-700 bg-green-50 border border-green-200'
@@ -892,7 +893,7 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                                   })()}
                                   {useCase.risk_level && (
                                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRiskLevelColor(useCase.risk_level)}`}>
-                                      {useCase.risk_level} risk
+                                      {getRiskLevelInFrench(useCase.risk_level)}
                                     </span>
                                   )}
                                 </div>
