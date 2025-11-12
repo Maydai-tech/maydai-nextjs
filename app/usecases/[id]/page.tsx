@@ -113,9 +113,9 @@ export default function UseCaseDetailPage() {
     useCase: useCase ? {
       id: useCase.id,
       name: useCase.name,
-      risk_level: riskLevel,
-      score_final: score?.score,
-      deployment_date: useCase.deployment_date
+      risk_level: riskLevel ?? undefined,
+      score_final: score?.score ?? null,
+      deployment_date: useCase.deployment_date ?? null
     } : null,
     isOpen: isUnacceptableCase && showUnacceptableModal,
     onUpdateDeploymentDate: updateDeploymentDate,
@@ -636,9 +636,9 @@ export default function UseCaseDetailPage() {
         useCase={useCase ? {
           id: useCase.id,
           name: useCase.name,
-          risk_level: riskLevel,
-          score_final: score?.score,
-          deployment_date: useCase.deployment_date
+          risk_level: riskLevel ?? undefined,
+          score_final: score?.score ?? null,
+          deployment_date: useCase.deployment_date ?? null
         } : null}
         onUpdateDeploymentDate={updateDeploymentDate}
         updating={updating}
