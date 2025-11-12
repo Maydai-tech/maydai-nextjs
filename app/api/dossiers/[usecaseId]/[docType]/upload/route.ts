@@ -92,7 +92,24 @@ export async function PUT(
 
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    const filename = file.name
+    // Normalize filename: remove accents, spaces, and special chars
+    const sanitizeFilename = (name: string) => {
+      // Remove extension
+      const lastDotIndex = name.lastIndexOf('.')
+      const nameWithoutExt = lastDotIndex > 0 ? name.substring(0, lastDotIndex) : name
+      const extension = lastDotIndex > 0 ? name.substring(lastDotIndex) : ''
+
+      // Normalize: remove accents and special characters
+      const normalized = nameWithoutExt
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .replace(/[^a-zA-Z0-9-_]/g, '_')  // Replace special chars with underscore
+        .replace(/_+/g, '_')               // Replace multiple underscores with single
+        .replace(/^_|_$/g, '')             // Remove leading/trailing underscores
+
+      return normalized + extension.toLowerCase()
+    }
+    const filename = sanitizeFilename(file.name)
     const size = buffer.byteLength
 
     // Validate file size

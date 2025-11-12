@@ -16,6 +16,10 @@ interface UnacceptableCaseModalProps {
   } | null
   onUpdateDeploymentDate?: (date: string) => Promise<void>
   updating?: boolean
+  blockClosing?: boolean
+  onReloadDocument?: (docKey: string) => Promise<void>
+  onDeleteDocument?: () => Promise<void>
+  uploadedDocument?: { fileUrl: string | null; formData: Record<string, any> | null } | null
 }
 
 export default function UnacceptableCaseModal({
@@ -23,7 +27,11 @@ export default function UnacceptableCaseModal({
   onClose,
   useCase,
   onUpdateDeploymentDate,
-  updating = false
+  updating = false,
+  blockClosing = false,
+  onReloadDocument,
+  onDeleteDocument,
+  uploadedDocument
 }: UnacceptableCaseModalProps) {
   const workflow = useUnacceptableCaseWorkflow({
     useCase,
@@ -40,13 +48,19 @@ export default function UnacceptableCaseModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onClick={handleClose}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto"
+      onClick={blockClosing ? undefined : handleClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-200"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8 transform transition-all duration-200 max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="overflow-y-auto p-8 flex-1"
+          style={{
+            scrollbarGutter: 'stable',
+            scrollbarWidth: 'thin'
+          }}
+        >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
@@ -55,13 +69,15 @@ export default function UnacceptableCaseModal({
             </div>
             <h3 className="text-xl font-bold text-gray-900">Cas Inacceptable</h3>
           </div>
-          <button
-            onClick={handleClose}
-            disabled={updating || workflow.updatingDate}
-            className="p-2 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+          {!blockClosing && (
+            <button
+              onClick={handleClose}
+              disabled={updating || workflow.updatingDate}
+              className="p-2 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          )}
         </div>
 
         {/* Content */}
@@ -90,11 +106,14 @@ export default function UnacceptableCaseModal({
             workflow={workflow}
             deploymentDate={useCase.deployment_date}
             usecaseId={useCase.id}
+            uploadedDocument={uploadedDocument}
+            onReloadDocument={onReloadDocument}
+            onDeleteDocument={onDeleteDocument}
           />
         </div>
 
-        {/* Actions - Fermer uniquement en mode confirmation */}
-        {workflow.step === 'confirm-date' && (
+        {/* Actions - Fermer uniquement en mode confirmation et si non bloquant */}
+        {workflow.step === 'confirm-date' && !blockClosing && (
           <div className="mt-8">
             <button
               onClick={handleClose}
@@ -105,6 +124,7 @@ export default function UnacceptableCaseModal({
             </button>
           </div>
         )}
+        </div>
       </div>
     </div>
   )

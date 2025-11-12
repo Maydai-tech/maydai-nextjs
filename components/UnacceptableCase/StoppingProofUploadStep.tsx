@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { AlertTriangle, Upload, Edit, Check, FileText, Eye } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { AlertTriangle, Upload, Edit, Check, FileText, Eye, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import ComplianceFileUpload from '@/components/ComplianceFileUpload'
 import MarkdownText from '@/components/Shared/MarkdownText'
@@ -40,9 +40,26 @@ export default function StoppingProofUploadStep({
 }: StoppingProofUploadStepProps) {
   const router = useRouter()
   const [isEditingDocument, setIsEditingDocument] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Check if document is uploaded
   const hasUploadedDocument = uploadedDocument && uploadedDocument.fileUrl
+
+  // Reset confirmation after 3 seconds
+  useEffect(() => {
+    if (confirmDelete) {
+      timeoutRef.current = setTimeout(() => {
+        setConfirmDelete(false)
+      }, 3000)
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [confirmDelete])
 
   const handleEditEvaluation = () => {
     router.push(`/usecases/${usecaseId}/evaluation`)
@@ -59,6 +76,20 @@ export default function StoppingProofUploadStep({
   const handleUpload = async () => {
     await onUpload()
     setIsEditingDocument(false)
+  }
+
+  const handleDeleteClick = () => {
+    if (confirmDelete) {
+      onDeleteDocument()
+      setConfirmDelete(false)
+    } else {
+      setConfirmDelete(true)
+    }
+  }
+
+  const handleBlur = () => {
+    // Reset on blur
+    setTimeout(() => setConfirmDelete(false), 200)
   }
 
   return (
@@ -131,9 +162,6 @@ export default function StoppingProofUploadStep({
               <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
               <div>
                 <h4 className="font-semibold text-green-900 mb-1">Preuve d'arrêt enregistrée</h4>
-                <p className="text-sm text-green-800">
-                  Le document a été enregistré avec succès.
-                </p>
               </div>
             </div>
             <button
@@ -153,11 +181,11 @@ export default function StoppingProofUploadStep({
             </label>
             <div className="flex items-center gap-3 bg-blue-50 px-4 py-3 rounded-lg border border-blue-200">
               <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
-              <span className="text-sm text-blue-900 font-medium flex-1">
-                {uploadedDocument.fileUrl.split('/').pop()?.split('?')[0] || 'Document'}
+              <span className="text-sm text-blue-900 font-medium">
+                {uploadedDocument.fileUrl?.split('/').pop()?.split('?')[0] || 'Document'}
               </span>
               <a
-                href={uploadedDocument.fileUrl}
+                href={uploadedDocument.fileUrl || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:text-blue-800 transition-colors"
@@ -165,6 +193,25 @@ export default function StoppingProofUploadStep({
               >
                 <Eye className="w-5 h-5" />
               </a>
+              <button
+                onClick={handleDeleteClick}
+                onBlur={handleBlur}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm transition-all ml-auto ${
+                  confirmDelete
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+                title={confirmDelete ? "Confirmer la suppression" : "Supprimer le document"}
+              >
+                {confirmDelete ? (
+                  <>
+                    <AlertTriangle className="w-4 h-4" />
+                    Supprimer ?
+                  </>
+                ) : (
+                  <Trash2 className="w-5 h-5" />
+                )}
+              </button>
             </div>
           </div>
         </div>
