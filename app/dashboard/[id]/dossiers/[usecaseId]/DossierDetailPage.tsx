@@ -140,6 +140,30 @@ export default function DossierDetailPage() {
     }
   }
 
+  const reloadDocument = async (docKey: string) => {
+    if (!user) return
+    const token = getAccessToken()
+    if (!token) return
+
+    try {
+      const res = await fetch(`/api/dossiers/${usecaseId}/${docKey}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setDocuments(prev => ({ ...prev, [docKey]: data }))
+
+        // Extraire le contenu textuel si c'est system_prompt avec formData
+        if (docKey === 'system_prompt' && data.formData?.system_instructions) {
+          setTextContents(prev => ({ ...prev, [docKey]: data.formData.system_instructions }))
+          setInitialTextContents(prev => ({ ...prev, [docKey]: data.formData.system_instructions }))
+        }
+      }
+    } catch (error) {
+      console.error('Error reloading document:', error)
+    }
+  }
+
   const getInitialProofUploaded = () => {
     if (!useCase?.deployment_date) return false
 
@@ -586,8 +610,8 @@ export default function DossierDetailPage() {
     )
   }
 
-  // Si c'est un cas inacceptable ET que la preuve n'a pas encore été uploadée, afficher le workflow dédié
-  if (isUnacceptableCase && useCase && !workflow.proofUploaded) {
+  // Si c'est un cas inacceptable, afficher toujours le workflow dédié (avant ET après upload)
+  if (isUnacceptableCase && useCase) {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
@@ -631,6 +655,16 @@ export default function DossierDetailPage() {
               workflow={workflow}
               deploymentDate={useCase.deployment_date}
               usecaseId={usecaseId}
+              uploadedDocument={
+                workflow.step === 'future-deployment-warning'
+                  ? documents['system_prompt']
+                  : documents['stopping_proof']
+              }
+              onDeleteDocument={() => {
+                const docKey = workflow.step === 'future-deployment-warning' ? 'system_prompt' : 'stopping_proof'
+                handleFileDelete(docKey)
+              }}
+              onReloadDocument={reloadDocument}
             />
           </div>
         </div>
@@ -638,8 +672,9 @@ export default function DossierDetailPage() {
     )
   }
 
-  // Si c'est un cas inacceptable avec preuve uploadée, afficher le document approprié
-  if (isUnacceptableCase && useCase && workflow.proofUploaded) {
+  // Désactivé : ne plus afficher la vue simplifiée quand proofUploaded = true
+  // Maintenant le document s'affiche dans le workflow lui-même
+  if (false && isUnacceptableCase && useCase && workflow.proofUploaded) {
     // Déterminer quel document afficher selon le workflow step
     console.log('[RENDER] Displaying document - step:', workflow.step, 'proofUploaded:', workflow.proofUploaded)
     const docToDisplay = workflow.step === 'future-deployment-warning'

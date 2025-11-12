@@ -28,12 +28,18 @@ interface UnacceptableCaseWorkflowStepsProps {
   }
   deploymentDate?: string | null
   usecaseId: string
+  uploadedDocument?: { fileUrl: string | null; formData: Record<string, any> | null } | null
+  onDeleteDocument?: () => void
+  onReloadDocument?: (docKey: string) => Promise<void>
 }
 
 export default function UnacceptableCaseWorkflowSteps({
   workflow,
   deploymentDate,
-  usecaseId
+  usecaseId,
+  uploadedDocument,
+  onDeleteDocument,
+  onReloadDocument
 }: UnacceptableCaseWorkflowStepsProps) {
   return (
     <>
@@ -64,8 +70,12 @@ export default function UnacceptableCaseWorkflowSteps({
           selectedFile={workflow.selectedFile}
           uploadError={workflow.uploadError}
           uploading={workflow.updatingDate}
+          uploadedDocument={uploadedDocument || null}
           onFileSelected={workflow.handleFileSelected}
-          onUpload={() => workflow.handleUploadProof(usecaseId)}
+          onUpload={() => workflow.handleUploadProof(usecaseId, async () => {
+            await onReloadDocument?.('stopping_proof')
+          })}
+          onDeleteDocument={onDeleteDocument || (() => {})}
           onBack={() => workflow.setStep('confirm-date')}
         />
       )}
@@ -73,6 +83,7 @@ export default function UnacceptableCaseWorkflowSteps({
       {workflow.step === 'future-deployment-warning' && (
         <FutureDeploymentWarningStep
           usecaseId={usecaseId}
+          deploymentDate={deploymentDate}
           nextSteps={workflow.nextSteps}
           loadingNextSteps={workflow.loadingNextSteps}
           selectedFile={workflow.selectedFile}
@@ -80,11 +91,18 @@ export default function UnacceptableCaseWorkflowSteps({
           uploading={workflow.updatingDate}
           textContent={workflow.textContent}
           savingText={workflow.savingText}
+          uploadedDocument={uploadedDocument || null}
           onFileSelected={workflow.handleFileSelected}
-          onUpload={() => workflow.handleUploadSystemPrompt(usecaseId)}
+          onUpload={() => workflow.handleUploadSystemPrompt(usecaseId, async () => {
+            await onReloadDocument?.('system_prompt')
+          })}
           onTextChange={workflow.handleTextChange}
-          onSaveText={() => workflow.handleSaveText(usecaseId)}
+          onSaveText={() => workflow.handleSaveText(usecaseId, async () => {
+            await onReloadDocument?.('system_prompt')
+          })}
+          onDeleteDocument={onDeleteDocument || (() => {})}
           onBack={() => workflow.setStep('confirm-date')}
+          onModifyDate={() => workflow.setStep('confirm-date')}
         />
       )}
     </>
