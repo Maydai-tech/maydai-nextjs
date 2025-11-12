@@ -1,12 +1,12 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: "Contact - Rejoignez les Bêta-Testeurs MaydAI et l'Expertise IA Act",
-  description: "Contactez MaydAI pour rejoindre notre communauté de bêta-testeurs. Contribuez à l'évolution de notre plateforme IA et à son analyse de l'IA Act.",
-  keywords: "MaydAI, IA Act, bêta-testeurs, contact, intelligence artificielle, conformité IA",
+  title: "Contact MaydAI - Test Gratuit Audit IA Act & Conformité IA",
+  description: "Contactez l'équipe MaydAI pour vos besoins en conformité IA. Profitez d'un test gratuit de notre outil d'audit IA Act. Support, presse et partenariats.",
+  keywords: "test gratuit audit IA Act, contact MaydAI, conformité IA, registre IA gratuit, règlement européen IA",
   openGraph: {
-    title: "Contact - Rejoignez les Bêta-Testeurs MaydAI et l'Expertise IA Act",
-    description: "Contactez MaydAI pour rejoindre notre communauté de bêta-testeurs. Contribuez à l'évolution de notre plateforme IA et à son analyse de l'IA Act.",
+    title: "Contact MaydAI - Test Gratuit Audit IA Act & Conformité IA",
+    description: "Contactez l'équipe MaydAI pour vos besoins en conformité IA. Profitez d'un test gratuit de notre outil d'audit IA Act. Support, presse et partenariats.",
     type: 'website',
   },
 };
