@@ -4,15 +4,15 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
-import { FileText, CheckSquare, Square, ChevronRight, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { FileText, CheckSquare, Square, ChevronRight, AlertTriangle, CheckCircle2, ChevronDown } from 'lucide-react'
 import { getCompactScoreStyle } from '@/lib/score-styles'
 import {
   isUnacceptableCase,
   getRequiredDocumentType,
-  getDocumentLabel,
   getDocumentTodoText,
   isTodoCompleted,
-  getRiskLevelConfig
+  getRiskLevelConfig,
+  getDocumentExplanation
 } from './utils/todo-helpers'
 
 interface UseCase {
@@ -31,6 +31,8 @@ interface UseCase {
 interface DocumentStatus {
   hasDocument: boolean
   status: 'incomplete' | 'complete' | 'validated'
+  fileUrl?: string
+  fileName?: string
 }
 
 interface TodoItem {
@@ -56,6 +58,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hasFetched, setHasFetched] = useState(false)
+  const [expandedTodos, setExpandedTodos] = useState<Record<string, boolean>>({})
 
   // Unwrap params
   useEffect(() => {
@@ -101,7 +104,9 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                   id: uc.id,
                   data: {
                     hasDocument: !!(docResult.data?.fileUrl || docResult.data?.formData?.system_instructions),
-                    status: docResult.data?.status || 'incomplete'
+                    status: docResult.data?.status || 'incomplete',
+                    fileUrl: docResult.data?.fileUrl,
+                    fileName: docResult.data?.fileName
                   }
                 }
               } catch (err) {
@@ -155,7 +160,15 @@ export default function TodoListPage({ params }: TodoListPageProps) {
     return todos
   }
 
-  // Handle todo item click
+  // Toggle todo expansion
+  const toggleTodo = (todoId: string) => {
+    setExpandedTodos(prev => ({
+      ...prev,
+      [todoId]: !prev[todoId]
+    }))
+  }
+
+  // Navigate to dossier page
   const handleTodoClick = (useCaseId: string) => {
     router.push(`/dashboard/${companyId}/dossiers/${useCaseId}`)
   }
@@ -206,7 +219,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">To-do List</h1>
               <p className="mt-2 text-gray-600">
-                Actions à mener pour vos cas d'usage IA
+                Actions à mener pour vos cas d&apos;usage IA
               </p>
             </div>
             {totalTodos > 0 && (
@@ -229,8 +242,8 @@ export default function TodoListPage({ params }: TodoListPageProps) {
           {useCases.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun cas d'usage trouvé</h3>
-              <p className="text-gray-600">Commencez par créer votre premier cas d'usage.</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun cas d&apos;usage trouvé</h3>
+              <p className="text-gray-600">Commencez par créer votre premier cas d&apos;usage.</p>
             </div>
           ) : (
             useCases.map((useCase) => {
@@ -292,27 +305,61 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                     {hasUnacceptableTodos && todos.length > 0 ? (
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         <h4 className="text-sm font-semibold text-gray-700 mb-3">Actions à mener :</h4>
-                        <div className="space-y-2">
-                          {todos.map((todo) => (
-                            <div
-                              key={todo.id}
-                              onClick={() => handleTodoClick(todo.useCaseId)}
-                              className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group"
-                            >
-                              {todo.completed ? (
-                                <CheckSquare className="w-5 h-5 text-green-600 flex-shrink-0" />
-                              ) : (
-                                <Square className="w-5 h-5 text-gray-400 flex-shrink-0 group-hover:text-[#0080A3]" />
-                              )}
-                              <span className={`flex-1 text-sm ${todo.completed ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
-                                {todo.text}
-                              </span>
-                              {!todo.completed && (
-                                <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
-                              )}
-                              <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0 group-hover:text-[#0080A3]" />
-                            </div>
-                          ))}
+                        <div className="space-y-3">
+                          {todos.map((todo) => {
+                            const isExpanded = expandedTodos[todo.id]
+
+                            return (
+                              <div key={todo.id} className="space-y-2">
+                                {/* Todo header - clickable to expand */}
+                                <div
+                                  onClick={() => toggleTodo(todo.id)}
+                                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group"
+                                >
+                                  {todo.completed ? (
+                                    <CheckSquare className="w-5 h-5 text-green-600 flex-shrink-0" />
+                                  ) : (
+                                    <Square className="w-5 h-5 text-gray-400 flex-shrink-0 group-hover:text-[#0080A3]" />
+                                  )}
+                                  <span className={`flex-1 text-sm ${todo.completed ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                                    {todo.text}
+                                  </span>
+                                  <ChevronDown
+                                    className={`w-5 h-5 text-gray-400 flex-shrink-0 group-hover:text-[#0080A3] transition-transform duration-300 ${
+                                      isExpanded ? 'rotate-180' : ''
+                                    }`}
+                                  />
+                                </div>
+
+                                {/* Expandable content */}
+                                <div
+                                  className="overflow-hidden transition-all duration-300 ease-in-out"
+                                  style={{
+                                    maxHeight: isExpanded ? '400px' : '0',
+                                    opacity: isExpanded ? 1 : 0
+                                  }}
+                                >
+                                  <div className="pl-8 pr-3 pb-3 space-y-4">
+                                    {/* Explanation text */}
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                      <p className="text-sm text-blue-900">
+                                        {getDocumentExplanation(todo.docType)}
+                                      </p>
+                                    </div>
+
+                                    {/* CTA Button */}
+                                    <button
+                                      onClick={() => handleTodoClick(todo.useCaseId)}
+                                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors"
+                                    >
+                                      {todo.completed ? 'Voir le document' : 'Compléter cette action'}
+                                      <ChevronRight className="w-5 h-5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
                         </div>
                       </div>
                     ) : (
@@ -336,7 +383,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
             <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-3" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Tout est en ordre !</h3>
             <p className="text-gray-600">
-              Aucune action n'est requise pour vos cas d'usage actuellement.
+              Aucune action n&apos;est requise pour vos cas d&apos;usage actuellement.
             </p>
           </div>
         )}

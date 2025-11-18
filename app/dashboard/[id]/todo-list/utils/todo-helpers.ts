@@ -84,6 +84,20 @@ export const isTodoCompleted = (documentStatus: DocumentStatus | null | undefine
 }
 
 /**
+ * Returns the explanatory text for a document type
+ */
+export const getDocumentExplanation = (docType: 'stopping_proof' | 'system_prompt'): string => {
+  switch (docType) {
+    case 'stopping_proof':
+      return "Ce cas d'usage IA a été identifié comme inacceptable selon l'AI Act. Vous devez fournir une preuve que le système a bien été arrêté (email, capture d'écran, attestation, etc.)."
+    case 'system_prompt':
+      return "Ce cas d'usage IA sera déployé prochainement et a été identifié comme inacceptable. Vous devez documenter les instructions système qui seront utilisées."
+    default:
+      return "Veuillez fournir le document requis pour ce cas d'usage."
+  }
+}
+
+/**
  * Returns CSS classes for risk level badge styling
  */
 export const getRiskLevelConfig = (riskLevel: string) => {
