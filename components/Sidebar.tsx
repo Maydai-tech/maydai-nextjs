@@ -153,6 +153,28 @@ export default function Sidebar() {
     return '/dashboard/registries';
   };
 
+  // Determine settings URL based on current context
+  const getSettingsUrl = () => {
+    // If we're on a use case page and have the registry ID, use it
+    if (useCaseRegistryId) {
+      return `/dashboard/${useCaseRegistryId}/settings`;
+    }
+
+    // If we're currently on a company dashboard page, extract the company ID from the URL
+    const dashboardMatch = pathname.match(/^\/dashboard\/([^\/]+)/);
+    if (dashboardMatch && dashboardMatch[1] !== 'companies' && dashboardMatch[1] !== 'registries') {
+      return `/dashboard/${dashboardMatch[1]}/settings`;
+    }
+
+    // If we have a company ID from the API, use it
+    if (companyId) {
+      return `/dashboard/${companyId}/settings`;
+    }
+
+    // Fallback to company selection page
+    return '/dashboard/registries';
+  };
+
   const mainMenuItems = [
     {
       name: 'Dashboard',
@@ -173,6 +195,11 @@ export default function Sidebar() {
       name: 'Collaboration',
       href: getCollaborationUrl(),
       icon: Users
+    },
+    {
+      name: 'Paramètres',
+      href: getSettingsUrl(),
+      icon: Settings
     }
   ];
 
@@ -228,6 +255,7 @@ export default function Sidebar() {
             // Dashboard should be highlighted when on dashboard pages or usecase pages (including usecase collaboration)
             // Dossiers should be highlighted when on dossiers pages
             // Collaboration should be highlighted when on company collaboration pages only
+            // Paramètres should be highlighted when on settings pages
             const isActive = item.name === 'Dashboard'
               ? (pathname === item.href || pathname.startsWith('/usecases/'))
               : item.name === 'Dossiers'
@@ -236,6 +264,8 @@ export default function Sidebar() {
               ? pathname.includes('/todo-list')
               : item.name === 'Collaboration'
               ? pathname.includes('/collaboration') && pathname.startsWith('/dashboard/')
+              : item.name === 'Paramètres'
+              ? pathname.includes('/settings') && pathname.startsWith('/dashboard/')
               : pathname === item.href;
 
             return (

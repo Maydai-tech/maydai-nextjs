@@ -17,14 +17,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  X,
-  Trash2
+  X
 } from 'lucide-react'
 import WorldMap from '@/components/WorldMap'
 import ScoreCircle from '@/components/ScoreCircle'
 import RiskPyramid from '@/components/RiskPyramid'
 import DeleteConfirmationModal from '@/app/usecases/[id]/components/DeleteConfirmationModal'
-import DeleteRegistryModal from './components/DeleteRegistryModal'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import Image from 'next/image'
 import { getCompactScoreStyle, getSpecialScoreStyles } from '@/lib/score-styles'
@@ -85,8 +83,6 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
   const [useCaseToDelete, setUseCaseToDelete] = useState<UseCase | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showUseCaseLimitModal, setShowUseCaseLimitModal] = useState(false)
-  const [deleteRegistryModalOpen, setDeleteRegistryModalOpen] = useState(false)
-  const [isDeletingRegistry, setIsDeletingRegistry] = useState(false)
   const { plan } = useUserPlan()
 
   // Average score state
@@ -272,33 +268,6 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
   const handleDeleteCancel = () => {
     setDeleteModalOpen(false)
     setUseCaseToDelete(null)
-  }
-
-  const handleDeleteRegistry = async () => {
-    if (!company || !session?.access_token) return
-
-    setIsDeletingRegistry(true)
-    try {
-      const response = await fetch(`/api/companies/${companyId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Erreur lors de la suppression')
-      }
-
-      // Rediriger vers la page registries avec message de succès
-      router.push(`/dashboard/registries?deleted=true&registryName=${encodeURIComponent(company.name)}`)
-    } catch (error) {
-      console.error('Erreur lors de la suppression du registre:', error)
-      alert('Une erreur est survenue lors de la suppression du registre')
-      setIsDeletingRegistry(false)
-      setDeleteRegistryModalOpen(false)
-    }
   }
 
   const getRiskLevelColor = (riskLevel: string) => {
@@ -621,18 +590,6 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
               </div>
             </div>
 
-            {/* Delete Registry Button - Only for owners */}
-            {company.role === 'owner' && (
-              <button
-                onClick={() => setDeleteRegistryModalOpen(true)}
-                className="inline-flex items-center px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-300 rounded-lg transition-colors font-medium"
-                title="Supprimer le registre"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Supprimer le registre</span>
-                <span className="sm:hidden">Supprimer</span>
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -1133,15 +1090,6 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
         onConfirm={handleDeleteConfirm}
         useCaseName={useCaseToDelete?.name || ''}
         deleting={isDeleting}
-      />
-
-      {/* Delete Registry Modal */}
-      <DeleteRegistryModal
-        isOpen={deleteRegistryModalOpen}
-        onClose={() => setDeleteRegistryModalOpen(false)}
-        onConfirm={handleDeleteRegistry}
-        registryName={company?.name || ''}
-        deleting={isDeletingRegistry}
       />
 
       {/* Use Case Limit Modal */}

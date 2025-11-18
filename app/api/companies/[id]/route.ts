@@ -104,6 +104,91 @@ export async function GET(
   }
 }
 
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: companyId } = await params
+
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+
+    // Create Supabase client with the user's token
+    const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    })
+
+    // Verify the token and get user
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    // Verify user is owner of this company
+    const userIsOwner = await isOwner(user.id, 'company', companyId, supabase)
+    if (!userIsOwner) {
+      return NextResponse.json({ error: 'Only company owners can update company information' }, { status: 403 })
+    }
+
+    // Parse request body
+    const body = await request.json()
+    const { name, industry, city, country } = body
+
+    // Validate at least one field is provided
+    if (!name && !industry && !city && !country) {
+      return NextResponse.json({ error: 'At least one field must be provided' }, { status: 400 })
+    }
+
+    // Build update object with only provided fields
+    const updateData: Record<string, string> = {}
+    if (name !== undefined) updateData.name = name
+    if (industry !== undefined) updateData.industry = industry
+    if (city !== undefined) updateData.city = city
+    if (country !== undefined) updateData.country = country
+
+    // Update the company
+    const { data: updatedCompany, error: updateError } = await supabase
+      .from('companies')
+      .update(updateData)
+      .eq('id', companyId)
+      .select()
+      .single()
+
+    if (updateError) {
+      const context = createRequestContext(request)
+      logger.error('Failed to update company', updateError, {
+        ...context,
+        companyId
+      })
+      return NextResponse.json({ error: 'Error updating company' }, { status: 500 })
+    }
+
+    const context = createRequestContext(request)
+    logger.info('Company updated successfully', {
+      ...context,
+      companyId,
+      updatedFields: Object.keys(updateData),
+      updatedBy: user.email
+    })
+
+    return NextResponse.json(updatedCompany)
+
+  } catch (error) {
+    const context = createRequestContext(request)
+    logger.error('Company PUT API error', error, context)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
