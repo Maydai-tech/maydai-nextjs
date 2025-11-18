@@ -27,8 +27,8 @@ interface CompletionData {
   percentage: number
 }
 
-interface StoppingProofStatus {
-  hasProof: boolean
+interface DocumentStatus {
+  hasDocument: boolean
   status: 'incomplete' | 'complete' | 'validated'
 }
 
@@ -40,7 +40,7 @@ export default function DossiersComplianceView() {
   const api = useApiCall()
   const [useCases, setUseCases] = useState<UseCase[]>([])
   const [completions, setCompletions] = useState<Record<string, CompletionData>>({})
-  const [stoppingProofs, setStoppingProofs] = useState<Record<string, StoppingProofStatus>>({})
+  const [documentStatuses, setDocumentStatuses] = useState<Record<string, DocumentStatus>>({})
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hasFetched, setHasFetched] = useState(false)
@@ -48,21 +48,26 @@ export default function DossiersComplianceView() {
   const [selectedUseCase, setSelectedUseCase] = useState<UseCase | null>(null)
   const [updatingDate, setUpdatingDate] = useState(false)
 
-  // Fonction pour vérifier si un cas nécessite une preuve d'arrêt
-  const needsStoppingProof = (useCase: UseCase): boolean => {
+  // Fonction pour déterminer le type de document requis pour un cas inacceptable
+  const getRequiredDocumentType = (useCase: UseCase): 'stopping_proof' | 'system_prompt' | null => {
     if (!useCase.risk_level || useCase.risk_level.toLowerCase() !== 'unacceptable') {
-      return false
+      return null
     }
-    
+
     if (!useCase.deployment_date) {
-      return false
+      return null
     }
-    
+
     const deploymentDate = new Date(useCase.deployment_date)
     const today = new Date()
     today.setHours(0, 0, 0, 0) // Normaliser à minuit
-    
-    return deploymentDate < today
+
+    return deploymentDate < today ? 'stopping_proof' : 'system_prompt'
+  }
+
+  // Fonction pour vérifier si un cas est inacceptable (pour affichage du badge au lieu de la progression)
+  const isUnacceptableCase = (useCase: UseCase): boolean => {
+    return useCase.risk_level?.toLowerCase() === 'unacceptable' && !!useCase.deployment_date
   }
 
   // Fonction pour obtenir les configurations de style selon le niveau de risque
@@ -145,34 +150,37 @@ export default function DossiersComplianceView() {
           })
           setCompletions(completionMap)
 
-          // Récupérer les preuves d'arrêt pour les cas inacceptables avec date dans le passé
-          const stoppingProofPromises = filteredUseCases
-            .filter((uc: UseCase) => needsStoppingProof(uc))
+          // Récupérer les statuts de documents pour les cas inacceptables
+          const documentStatusPromises = filteredUseCases
+            .filter((uc: UseCase) => isUnacceptableCase(uc))
             .map(async (uc: UseCase) => {
+              const docType = getRequiredDocumentType(uc)
+              if (!docType) return null
+
               try {
-                const proofResult = await api.get(`/api/dossiers/${uc.id}/stopping_proof`)
+                const docResult = await api.get(`/api/dossiers/${uc.id}/${docType}`)
                 return {
                   id: uc.id,
                   data: {
-                    hasProof: !!proofResult.data?.fileUrl,
-                    status: proofResult.data?.status || 'incomplete'
+                    hasDocument: !!(docResult.data?.fileUrl || docResult.data?.formData?.system_instructions),
+                    status: docResult.data?.status || 'incomplete'
                   }
                 }
               } catch (err) {
-                console.error(`Error fetching stopping proof for ${uc.id}:`, err)
+                console.error(`Error fetching ${docType} for ${uc.id}:`, err)
                 return {
                   id: uc.id,
-                  data: { hasProof: false, status: 'incomplete' as const }
+                  data: { hasDocument: false, status: 'incomplete' as const }
                 }
               }
             })
 
-          const proofResults = await Promise.all(stoppingProofPromises)
-          const proofMap: Record<string, StoppingProofStatus> = {}
-          proofResults.forEach(result => {
-            proofMap[result.id] = result.data
+          const docResults = await Promise.all(documentStatusPromises)
+          const docMap: Record<string, DocumentStatus> = {}
+          docResults.forEach(result => {
+            if (result) docMap[result.id] = result.data
           })
-          setStoppingProofs(proofMap)
+          setDocumentStatuses(docMap)
 
           setHasFetched(true)
         }
@@ -338,27 +346,52 @@ export default function DossiersComplianceView() {
                         </div>
                         <p className="text-gray-600 mb-4 line-clamp-2">{useCase.description}</p>
 
-                        {/* Badge pour la preuve d'arrêt si nécessaire, sinon barre de progression */}
-                        {needsStoppingProof(useCase) ? (
+                        {/* Badge de statut pour les cas inacceptables, sinon barre de progression */}
+                        {isUnacceptableCase(useCase) ? (
                           <div className="space-y-2">
                             <div className="flex items-center justify-between text-sm mb-2">
                               <span className="text-gray-600">Statut de conformité</span>
                             </div>
-                            {stoppingProofs[useCase.id]?.status === 'complete' || stoppingProofs[useCase.id]?.status === 'validated' ? (
-                              <div className="inline-flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-300 rounded-lg">
-                                <Check className="w-5 h-5 text-green-600" />
-                                <span className="text-sm font-semibold text-green-800">
-                                  Preuve d'arrêt complétée
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="inline-flex items-center gap-2 px-4 py-3 bg-orange-50 border border-orange-300 rounded-lg">
-                                <AlertTriangle className="w-5 h-5 text-orange-600" />
-                                <span className="text-sm font-semibold text-orange-800">
-                                  Preuve d'arrêt à compléter
-                                </span>
-                              </div>
-                            )}
+                            {(() => {
+                              const docType = getRequiredDocumentType(useCase)
+                              const docStatus = documentStatuses[useCase.id]
+                              const isComplete = docStatus?.status === 'complete' || docStatus?.status === 'validated'
+
+                              if (docType === 'stopping_proof') {
+                                return isComplete ? (
+                                  <div className="inline-flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-300 rounded-lg">
+                                    <Check className="w-5 h-5 text-green-600" />
+                                    <span className="text-sm font-semibold text-green-800">
+                                      Preuve d'arrêt complétée
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="inline-flex items-center gap-2 px-4 py-3 bg-orange-50 border border-orange-300 rounded-lg">
+                                    <AlertTriangle className="w-5 h-5 text-orange-600" />
+                                    <span className="text-sm font-semibold text-orange-800">
+                                      Preuve d'arrêt à compléter
+                                    </span>
+                                  </div>
+                                )
+                              } else if (docType === 'system_prompt') {
+                                return isComplete ? (
+                                  <div className="inline-flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-300 rounded-lg">
+                                    <Check className="w-5 h-5 text-green-600" />
+                                    <span className="text-sm font-semibold text-green-800">
+                                      Instructions système enregistrées
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="inline-flex items-center gap-2 px-4 py-3 bg-orange-50 border border-orange-300 rounded-lg">
+                                    <AlertTriangle className="w-5 h-5 text-orange-600" />
+                                    <span className="text-sm font-semibold text-orange-800">
+                                      Instructions système à compléter
+                                    </span>
+                                  </div>
+                                )
+                              }
+                              return null
+                            })()}
                           </div>
                         ) : (
                           <div className="space-y-2">
