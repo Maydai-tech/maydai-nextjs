@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { AlertTriangle, Save, Edit, X } from 'lucide-react'
+import { AlertTriangle, Save, Edit, X, CheckCircle } from 'lucide-react'
 import DeleteRegistryModal from '../components/DeleteRegistryModal'
+import ConfirmCentralizedRegistryModal from '../components/ConfirmCentralizedRegistryModal'
+import EditCentralizedRegistryModal from '../components/EditCentralizedRegistryModal'
 
 interface Company {
   id: string
@@ -13,6 +15,7 @@ interface Company {
   city: string
   country: string
   role: string
+  maydai_as_registry?: boolean
 }
 
 export default function RegistrySettingsPage() {
@@ -39,6 +42,11 @@ export default function RegistrySettingsPage() {
   // Danger zone state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  // Centralized registry state
+  const [showCentralizedRegistryModal, setShowCentralizedRegistryModal] = useState(false)
+  const [showEditRegistryModal, setShowEditRegistryModal] = useState(false)
+  const [confirmingRegistry, setConfirmingRegistry] = useState(false)
 
   const companyId = resolvedParams.id as string
 
@@ -153,6 +161,68 @@ export default function RegistrySettingsPage() {
     }
   }
 
+  const handleDeclareCentralizedRegistry = async () => {
+    if (!company) return
+
+    try {
+      setConfirmingRegistry(true)
+      setError(null)
+      const token = getAccessToken()
+
+      const response = await fetch(`/api/companies/${companyId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ maydai_as_registry: true })
+      })
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la déclaration du registre centralisé')
+      }
+
+      const updatedCompany = await response.json()
+      setCompany(updatedCompany)
+      setShowCentralizedRegistryModal(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue')
+    } finally {
+      setConfirmingRegistry(false)
+    }
+  }
+
+  const handleUndeclareCentralizedRegistry = async () => {
+    if (!company) return
+
+    try {
+      setConfirmingRegistry(true)
+      setError(null)
+      const token = getAccessToken()
+
+      const response = await fetch(`/api/companies/${companyId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ maydai_as_registry: false })
+      })
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la modification')
+      }
+
+      const updatedCompany = await response.json()
+      setCompany(updatedCompany)
+      setShowEditRegistryModal(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue')
+    } finally {
+      setConfirmingRegistry(false)
+    }
+  }
+
   const handleDeleteRegistry = async () => {
     if (!company) return
 
@@ -200,7 +270,6 @@ export default function RegistrySettingsPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Paramètres du registre</h1>
-          <p className="text-gray-600 mt-2">{company.name}</p>
         </div>
 
         {/* Error message */}
@@ -341,6 +410,49 @@ export default function RegistrySettingsPage() {
             </div>
           </div>
 
+          {/* Centralized Registry Definition */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              Définition du registre centralisé
+            </h2>
+            <p className="text-gray-700 mb-4">
+              Le registre centralisé est un registre qui contient toutes les informations liées à la conformité des cas d'usage IA.
+            </p>
+
+            {company.maydai_as_registry ? (
+              // Already declared - show success message with edit button
+              <div className="space-y-3">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-green-900">
+                        MaydAI est votre registre centralisé
+                      </p>
+                      <p className="text-sm text-green-700 mt-1">
+                        Toutes vos informations de conformité IA sont centralisées dans cet outil.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowEditRegistryModal(true)}
+                  className="text-sm text-gray-600 hover:text-gray-900 underline"
+                >
+                  Modifier
+                </button>
+              </div>
+            ) : (
+              // Not declared yet - show button
+              <button
+                onClick={() => setShowCentralizedRegistryModal(true)}
+                className="inline-flex items-center px-6 py-3 bg-[#0080A3] text-white rounded-lg hover:bg-[#006280] transition-colors font-medium"
+              >
+                Déclarer MaydAI comme mon registre centralisé
+              </button>
+            )}
+          </div>
+
           {/* Danger Zone Section */}
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">
@@ -379,6 +491,25 @@ export default function RegistrySettingsPage() {
         onConfirm={handleDeleteRegistry}
         registryName={company.name}
         deleting={deleting}
+      />
+
+      {/* Centralized Registry Confirmation Modal */}
+      <ConfirmCentralizedRegistryModal
+        isOpen={showCentralizedRegistryModal}
+        onClose={() => setShowCentralizedRegistryModal(false)}
+        onConfirm={handleDeclareCentralizedRegistry}
+        registryName={company.name}
+        confirming={confirmingRegistry}
+      />
+
+      {/* Edit Centralized Registry Modal */}
+      <EditCentralizedRegistryModal
+        isOpen={showEditRegistryModal}
+        onClose={() => setShowEditRegistryModal(false)}
+        onKeep={() => {}} // Just close the modal, no action needed
+        onRemove={handleUndeclareCentralizedRegistry}
+        registryName={company.name}
+        updating={confirmingRegistry}
       />
     </div>
   )

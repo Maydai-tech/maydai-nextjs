@@ -991,13 +991,6 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                             </div>
                           </div>
                         </Link>
-                        <button
-                          onClick={(e) => handleDeleteClick(e, useCase)}
-                          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200"
-                          title="Supprimer le use case"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
                       </div>
                     )
                   })}

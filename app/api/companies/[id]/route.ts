@@ -141,19 +141,20 @@ export async function PUT(
 
     // Parse request body
     const body = await request.json()
-    const { name, industry, city, country } = body
+    const { name, industry, city, country, maydai_as_registry } = body
 
     // Validate at least one field is provided
-    if (!name && !industry && !city && !country) {
+    if (!name && !industry && !city && !country && maydai_as_registry === undefined) {
       return NextResponse.json({ error: 'At least one field must be provided' }, { status: 400 })
     }
 
     // Build update object with only provided fields
-    const updateData: Record<string, string> = {}
+    const updateData: Record<string, string | boolean> = {}
     if (name !== undefined) updateData.name = name
     if (industry !== undefined) updateData.industry = industry
     if (city !== undefined) updateData.city = city
     if (country !== undefined) updateData.country = country
+    if (maydai_as_registry !== undefined) updateData.maydai_as_registry = maydai_as_registry
 
     // Update the company
     const { data: updatedCompany, error: updateError } = await supabase
