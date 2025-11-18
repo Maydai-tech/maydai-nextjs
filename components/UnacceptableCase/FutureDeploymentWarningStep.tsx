@@ -1,35 +1,47 @@
-import { useState } from 'react'
-import { AlertTriangle, Upload, Edit, Check, X, FileText, Eye, Calendar } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import ComplianceFileUpload from '@/components/ComplianceFileUpload'
-import MarkdownText from '@/components/Shared/MarkdownText'
-import { formatDate } from '@/lib/utils/dateFormatters'
+import { useState, useEffect, useRef } from "react";
+import {
+  AlertTriangle,
+  Upload,
+  Edit,
+  Check,
+  FileText,
+  Eye,
+  Calendar,
+  Trash2,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import ComplianceFileUpload from "@/components/ComplianceFileUpload";
+import MarkdownText from "@/components/Shared/MarkdownText";
+import { formatDate } from "@/lib/utils/dateFormatters";
 
 interface UseCaseNextSteps {
-  evaluation?: string
-  introduction?: string
-  impact?: string
-  conclusion?: string
+  evaluation?: string;
+  introduction?: string;
+  impact?: string;
+  conclusion?: string;
 }
 
 interface FutureDeploymentWarningStepProps {
-  usecaseId: string
-  deploymentDate: string | null | undefined
-  nextSteps: UseCaseNextSteps | null
-  loadingNextSteps: boolean
-  selectedFile: File | null
-  uploadError: string | null
-  uploading: boolean
-  textContent: string
-  savingText: boolean
-  uploadedDocument: { fileUrl: string | null; formData: Record<string, any> | null } | null
-  onFileSelected: (file: File) => void
-  onUpload: () => void
-  onTextChange: (text: string) => void
-  onSaveText: () => void
-  onDeleteDocument: () => void
-  onBack: () => void
-  onModifyDate: () => void
+  usecaseId: string;
+  deploymentDate: string | null | undefined;
+  nextSteps: UseCaseNextSteps | null;
+  loadingNextSteps: boolean;
+  selectedFile: File | null;
+  uploadError: string | null;
+  uploading: boolean;
+  textContent: string;
+  savingText: boolean;
+  uploadedDocument: {
+    fileUrl: string | null;
+    formData: Record<string, any> | null;
+  } | null;
+  onFileSelected: (file: File) => void;
+  onUpload: () => void;
+  onTextChange: (text: string) => void;
+  onSaveText: () => void;
+  onDeleteDocument: () => void;
+  onBack: () => void;
+  onModifyDate: () => void;
 }
 
 export default function FutureDeploymentWarningStep({
@@ -49,43 +61,75 @@ export default function FutureDeploymentWarningStep({
   onSaveText,
   onDeleteDocument,
   onBack,
-  onModifyDate
+  onModifyDate,
 }: FutureDeploymentWarningStepProps) {
-  const router = useRouter()
-  const [isEditingDocument, setIsEditingDocument] = useState(false)
+  const router = useRouter();
+  const [isEditingDocument, setIsEditingDocument] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check if document is uploaded (either file or text)
-  const hasUploadedDocument = uploadedDocument && (uploadedDocument.fileUrl || uploadedDocument.formData)
+  const hasUploadedDocument =
+    uploadedDocument && (uploadedDocument.fileUrl || uploadedDocument.formData);
+
+  // Reset confirmation after 3 seconds
+  useEffect(() => {
+    if (confirmDelete) {
+      timeoutRef.current = setTimeout(() => {
+        setConfirmDelete(false);
+      }, 3000);
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [confirmDelete]);
 
   const handleEditEvaluation = () => {
-    router.push(`/usecases/${usecaseId}/evaluation`)
-  }
+    router.push(`/usecases/${usecaseId}/evaluation`);
+  };
 
   const handleEditDocument = () => {
     // Pré-remplir le textarea avec le contenu existant
     if (uploadedDocument?.formData?.system_instructions) {
-      onTextChange(uploadedDocument.formData.system_instructions)
+      onTextChange(uploadedDocument.formData.system_instructions);
     }
-    setIsEditingDocument(true)
-  }
+    setIsEditingDocument(true);
+  };
 
   const handleCancelEdit = () => {
-    setIsEditingDocument(false)
+    setIsEditingDocument(false);
     // Optionnel : vider le textarea à l'annulation
-    onTextChange('')
-  }
+    onTextChange("");
+  };
 
   const handleSaveText = async () => {
-    await onSaveText()
+    await onSaveText();
     // Désactiver le mode édition après la sauvegarde
-    setIsEditingDocument(false)
-  }
+    setIsEditingDocument(false);
+  };
 
   const handleUpload = async () => {
-    await onUpload()
+    await onUpload();
     // Désactiver le mode édition après l'upload
-    setIsEditingDocument(false)
-  }
+    setIsEditingDocument(false);
+  };
+
+  const handleDeleteClick = () => {
+    if (confirmDelete) {
+      onDeleteDocument();
+      setConfirmDelete(false);
+    } else {
+      setConfirmDelete(true);
+    }
+  };
+
+  const handleBlur = () => {
+    // Reset on blur
+    setTimeout(() => setConfirmDelete(false), 200);
+  };
 
   return (
     <div className="space-y-4">
@@ -127,7 +171,9 @@ export default function FutureDeploymentWarningStep({
         <div className="bg-red-50 p-4 rounded-lg border border-red-200">
           <div className="flex items-start space-x-2 mb-3">
             <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-            <h4 className="font-semibold text-red-900">Justification du niveau de risque</h4>
+            <h4 className="font-semibold text-red-900">
+              Justification du niveau de risque
+            </h4>
           </div>
           <MarkdownText
             text={nextSteps.evaluation}
@@ -135,7 +181,9 @@ export default function FutureDeploymentWarningStep({
           />
           <div className="pl-7 pt-3 border-t border-red-200">
             <p className="text-sm text-red-800 mb-3">
-              Si vous pensez que cette évaluation ne décrit pas correctement votre cas d'usage, vous pouvez modifier vos réponses au questionnaire pour obtenir une nouvelle analyse.
+              Si vous pensez que cette évaluation ne décrit pas correctement
+              votre cas d'usage, vous pouvez modifier vos réponses au
+              questionnaire pour obtenir une nouvelle analyse.
             </p>
             <button
               onClick={handleEditEvaluation}
@@ -165,10 +213,14 @@ export default function FutureDeploymentWarningStep({
         <div className="flex items-start space-x-2">
           <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
           <div className="text-sm text-orange-900">
-            <p className="font-semibold mb-2">⚠️ Ce système ne doit PAS être déployé en l'état</p>
+            <p className="font-semibold mb-2">
+              ⚠️ Ce système ne doit PAS être déployé en l'état
+            </p>
             <p className="mb-2">
-              Ce cas d'usage présente un <strong>niveau de risque inacceptable</strong> selon l'AI Act.
-              La date de déploiement prévue étant dans le futur, vous devez impérativement :
+              Ce cas d'usage présente un{" "}
+              <strong>niveau de risque inacceptable</strong> selon l'AI Act. La
+              date de déploiement prévue étant dans le futur, vous devez
+              impérativement :
             </p>
             <ul className="list-disc list-inside space-y-1 mb-2">
               <li>Revoir votre évaluation des risques</li>
@@ -176,7 +228,8 @@ export default function FutureDeploymentWarningStep({
               <li>Ou abandonner ce cas d'usage</li>
             </ul>
             <p className="font-semibold">
-              Le déploiement d'un système à risque inacceptable est interdit par l'AI Act.
+              Le déploiement d'un système à risque inacceptable est interdit par
+              l'AI Act.
             </p>
           </div>
         </div>
@@ -190,8 +243,9 @@ export default function FutureDeploymentWarningStep({
             <div className="text-sm text-blue-900">
               <p className="font-semibold mb-2">Documentation requise</p>
               <p>
-                Pour tracer votre démarche de conformité, veuillez fournir les instructions système (prompts)
-                actuellement utilisées ou prévues pour ce cas d'usage. Cela permettra de documenter l'état actuel
+                Pour tracer votre démarche de conformité, veuillez fournir les
+                instructions système (prompts) actuellement utilisées ou prévues
+                pour ce cas d'usage. Cela permettra de documenter l'état actuel
                 avant toute modification nécessaire pour réduire le risque.
               </p>
             </div>
@@ -206,20 +260,47 @@ export default function FutureDeploymentWarningStep({
             <div className="flex items-start space-x-2">
               <Check className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
               <div>
-                <h4 className="font-semibold text-green-900 mb-1">Document enregistré</h4>
+                <h4 className="font-semibold text-green-900 mb-1">
+                  Document enregistré
+                </h4>
                 <p className="text-sm text-green-800">
                   Les instructions système ont été enregistrées avec succès.
                 </p>
               </div>
             </div>
-            <button
-              onClick={handleEditDocument}
-              className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-              title="Modifier le document"
-            >
-              <Edit className="w-4 h-4 mr-1" />
-              Modifier
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleEditDocument}
+                className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                title="Modifier le document"
+              >
+                <Edit className="w-4 h-4 mr-1" />
+                Modifier
+              </button>
+              <button
+                onClick={handleDeleteClick}
+                onBlur={handleBlur}
+                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-sm transition-all ${
+                  confirmDelete
+                    ? "bg-red-500 text-white hover:bg-red-600"
+                    : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+                }`}
+                title={
+                  confirmDelete
+                    ? "Confirmer la suppression"
+                    : "Supprimer le document"
+                }
+              >
+                {confirmDelete ? (
+                  <>
+                    <AlertTriangle className="w-4 h-4" />
+                    Supprimer ?
+                  </>
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Display uploaded content */}
@@ -232,7 +313,8 @@ export default function FutureDeploymentWarningStep({
                 <div className="flex items-center gap-3 bg-blue-50 px-4 py-3 rounded-lg border border-blue-200">
                   <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
                   <span className="text-sm text-blue-900 font-medium flex-1">
-                    {uploadedDocument.fileUrl.split('/').pop()?.split('?')[0] || 'Document'}
+                    {uploadedDocument.fileUrl.split("/").pop()?.split("?")[0] ||
+                      "Document"}
                   </span>
                   <a
                     href={uploadedDocument.fileUrl}
@@ -312,7 +394,8 @@ export default function FutureDeploymentWarningStep({
           {textContent.trim() && selectedFile && (
             <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
               <p className="text-sm text-yellow-800">
-                ⚠️ Vous devez choisir entre le texte ou le fichier. Veuillez vider le champ de texte ou retirer le fichier sélectionné.
+                ⚠️ Vous devez choisir entre le texte ou le fichier. Veuillez
+                vider le champ de texte ou retirer le fichier sélectionné.
               </p>
             </div>
           )}
@@ -327,14 +410,30 @@ export default function FutureDeploymentWarningStep({
               >
                 {savingText ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Enregistrement...
                   </>
                 ) : (
-                  'Enregistrer'
+                  "Enregistrer"
                 )}
               </button>
             )}
@@ -348,9 +447,25 @@ export default function FutureDeploymentWarningStep({
               >
                 {uploading ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Upload en cours...
                   </>
@@ -375,7 +490,6 @@ export default function FutureDeploymentWarningStep({
           </div>
         </div>
       )}
-
     </div>
-  )
+  );
 }

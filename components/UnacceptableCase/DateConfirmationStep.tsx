@@ -1,18 +1,18 @@
-import { Calendar } from 'lucide-react'
-import { formatDate } from '@/lib/utils/dateFormatters'
+import { Calendar } from "lucide-react";
+import { formatDate } from "@/lib/utils/dateFormatters";
 
 interface DateConfirmationStepProps {
-  deploymentDate: string | null | undefined
-  onConfirm: () => void
-  onModify: () => void
-  disabled?: boolean
+  deploymentDate: string | null | undefined;
+  onConfirm: () => void;
+  onModify: () => void;
+  disabled?: boolean;
 }
 
 export default function DateConfirmationStep({
   deploymentDate,
   onConfirm,
   onModify,
-  disabled = false
+  disabled = false,
 }: DateConfirmationStepProps) {
   return (
     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
@@ -50,5 +50,5 @@ export default function DateConfirmationStep({
         </button>
       </div>
     </div>
-  )
+  );
 }

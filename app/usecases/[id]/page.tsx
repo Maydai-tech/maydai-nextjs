@@ -644,7 +644,6 @@ export default function UseCaseDetailPage() {
         updating={updating}
         blockClosing={false}
         onReloadDocument={reloadDocument}
-        onDeleteDocument={deleteDocument}
         uploadedDocument={documents['stopping_proof'] || documents['system_prompt']}
       />
     </UseCaseLayout>
