@@ -1,14 +1,14 @@
 'use client'
 
 import { CheckSquare, Square, ChevronRight, ChevronDown, AlertTriangle, CheckCircle2 } from 'lucide-react'
-import { getDocumentExplanation } from '../utils/todo-helpers'
+import { getDocumentExplanation, type DocumentType } from '../utils/todo-helpers'
 
 interface TodoItem {
   id: string
   text: string
   completed: boolean
   useCaseId: string
-  docType: 'stopping_proof' | 'system_prompt'
+  docType: DocumentType
 }
 
 interface ToDoActionProps {

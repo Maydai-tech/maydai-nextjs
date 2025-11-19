@@ -13,7 +13,9 @@ import {
   getRequiredDocumentType,
   getDocumentTodoText,
   isTodoCompleted,
-  getRiskLevelConfig
+  getRiskLevelConfig,
+  COMPLIANCE_DOCUMENT_TYPES,
+  type DocumentType
 } from './utils/todo-helpers'
 
 interface UseCase {
@@ -41,7 +43,7 @@ interface TodoItem {
   text: string
   completed: boolean
   useCaseId: string
-  docType: 'stopping_proof' | 'system_prompt' | 'registry_action'
+  docType: DocumentType | 'registry_action'
   registryCase?: 'A' | 'B' | 'C' // For registry-related todos
 }
 
@@ -59,6 +61,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
   const [company, setCompany] = useState<any>(null) // Company data with maydai_as_registry
   const [useCaseResponses, setUseCaseResponses] = useState<Record<string, any[]>>({}) // E5.N9.Q7 responses by usecase ID
   const [documentStatuses, setDocumentStatuses] = useState<Record<string, DocumentStatus>>({})
+  const [complianceDocStatuses, setComplianceDocStatuses] = useState<Record<string, Record<string, DocumentStatus>>>({}) // Compliance documents by usecase ID and docType
   const [registryProofStatuses, setRegistryProofStatuses] = useState<Record<string, DocumentStatus>>({}) // Registry proof documents by usecase ID
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -154,6 +157,33 @@ export default function TodoListPage({ params }: TodoListPageProps) {
             }
           }
           setUseCaseResponses(responsesMap)
+
+          // Fetch compliance document statuses for completed, non-unacceptable cases
+          const complianceMap: Record<string, Record<string, DocumentStatus>> = {}
+          for (const uc of completedNonUnacceptable) {
+            const useCaseDocMap: Record<string, DocumentStatus> = {}
+
+            for (const docType of COMPLIANCE_DOCUMENT_TYPES) {
+              try {
+                const docResult = await api.get(`/api/dossiers/${uc.id}/${docType}`)
+                if (docResult.data) {
+                  useCaseDocMap[docType] = {
+                    hasDocument: !!(docResult.data?.fileUrl || docResult.data?.formData),
+                    status: docResult.data?.status || 'incomplete',
+                    fileUrl: docResult.data?.fileUrl
+                  }
+                } else {
+                  useCaseDocMap[docType] = { hasDocument: false, status: 'incomplete' }
+                }
+              } catch (err) {
+                console.error(`Error fetching ${docType} for ${uc.id}:`, err)
+                useCaseDocMap[docType] = { hasDocument: false, status: 'incomplete' }
+              }
+            }
+
+            complianceMap[uc.id] = useCaseDocMap
+          }
+          setComplianceDocStatuses(complianceMap)
 
           // Fetch registry_proof document statuses for cases A and C
           const registryProofMap: Record<string, DocumentStatus> = {}
@@ -302,8 +332,23 @@ export default function TodoListPage({ params }: TodoListPageProps) {
       }
     }
 
-    // Check for registry-related todos (completed, non-unacceptable cases)
+    // Add compliance document todos for completed, non-unacceptable cases
     if (useCase.status === 'completed' && !isUnacceptableCase(useCase)) {
+      const useCaseDocs = complianceDocStatuses[useCase.id] || {}
+
+      // Add todos for each of the 7 compliance documents
+      for (const docType of COMPLIANCE_DOCUMENT_TYPES) {
+        const docStatus = useCaseDocs[docType]
+        todos.push({
+          id: `${useCase.id}-${docType}`,
+          text: getDocumentTodoText(docType),
+          completed: isTodoCompleted(docStatus),
+          useCaseId: useCase.id,
+          docType: docType as DocumentType
+        })
+      }
+
+      // Check for registry-related todos
       const registryCase = determineRegistryCase(useCase.id)
       if (registryCase) {
         todos.push({
@@ -328,9 +373,11 @@ export default function TodoListPage({ params }: TodoListPageProps) {
     }))
   }
 
-  // Navigate to dossier page
-  const handleTodoClick = (useCaseId: string) => {
-    router.push(`/dashboard/${companyId}/dossiers/${useCaseId}`)
+  // Navigate to dossier page with optional document query parameter
+  const handleTodoClick = (useCaseId: string, docType?: string) => {
+    const baseUrl = `/dashboard/${companyId}/dossiers/${useCaseId}`
+    const url = docType ? `${baseUrl}?doc=${docType}` : baseUrl
+    router.push(url)
   }
 
   // Calculate stats
@@ -463,7 +510,9 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                     {/* Todos section */}
                     {todos.length > 0 ? (
                       <div className="mt-4 pt-4 border-t border-gray-200">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Actions à mener :</h4>
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-semibold text-gray-700">Actions à mener :</h4>
+                        </div>
                         <div className="space-y-3">
                           {todos.map((todo) => (
                             todo.docType === 'registry_action' ? (
@@ -530,7 +579,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                                 todo={todo as any}
                                 isExpanded={expandedTodos[todo.id] || false}
                                 onToggle={toggleTodo}
-                                onActionClick={handleTodoClick}
+                                onActionClick={(useCaseId) => handleTodoClick(useCaseId, todo.docType)}
                               />
                             )
                           ))}
@@ -539,8 +588,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                     ) : (
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <CheckCircle2 className="w-5 h-5 text-green-600" />
-                          <span>Aucune action requise pour le moment</span>
+                          <span>Vous devez d'abord compléter le cas d'usage pour voir les actions à mener.</span>
                         </div>
                       </div>
                     )}

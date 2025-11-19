@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { useApiCall } from '@/lib/api-client-legacy'
@@ -112,6 +112,7 @@ export default function DossierDetailPage() {
   const api = useApiCall()
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const companyId = params.id as string
   const usecaseId = params.usecaseId as string
 
@@ -398,6 +399,29 @@ export default function DossierDetailPage() {
 
     fetchData()
   }, [user, usecaseId, getAccessToken])
+
+  // Auto-expand document section based on URL query parameter
+  useEffect(() => {
+    // Only run after data is loaded
+    if (loading) return
+
+    const docToExpand = searchParams.get('doc')
+    if (docToExpand) {
+      // Auto-expand the section
+      setExpandedSections(prev => ({
+        ...prev,
+        [docToExpand]: true
+      }))
+
+      // Scroll to section after a short delay to allow expansion animation
+      setTimeout(() => {
+        const element = document.getElementById(`section-${docToExpand}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 300)
+    }
+  }, [loading, searchParams])
 
   const onUploadSuccess = () => {
     router.push(`/dashboard/${companyId}/dossiers`)
@@ -737,6 +761,7 @@ export default function DossierDetailPage() {
               return (
                 <div
                   key={docType.key}
+                  id={`section-${docType.key}`}
                   className={`bg-white rounded-xl shadow-sm border ${getStatusColor(doc.status)}`}
                 >
                   <div
@@ -938,6 +963,7 @@ export default function DossierDetailPage() {
               return (
                 <div
                   key={docType.key}
+                  id={`section-${docType.key}`}
                   className="bg-white rounded-xl shadow-sm border bg-green-50 border-green-300"
                 >
                   <div className="flex items-start justify-between p-6">
@@ -966,6 +992,7 @@ export default function DossierDetailPage() {
             return (
               <div
                 key={docType.key}
+                id={`section-${docType.key}`}
                 className={`bg-white rounded-xl shadow-sm border ${getStatusColor(doc.status)}`}
               >
                 <div 

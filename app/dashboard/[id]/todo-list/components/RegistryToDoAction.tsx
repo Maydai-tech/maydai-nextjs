@@ -50,9 +50,9 @@ export default function RegistryToDoAction({
     router.push(`/dashboard/${companyId}/settings#registry`)
   }
 
-  // Navigate to dossier detail page
+  // Navigate to dossier detail page with registry_proof section expanded
   const handleViewDocument = () => {
-    router.push(`/dashboard/${companyId}/dossiers/${todo.useCaseId}`)
+    router.push(`/dashboard/${companyId}/dossiers/${todo.useCaseId}?doc=registry_proof`)
   }
 
   // Handle proof upload
