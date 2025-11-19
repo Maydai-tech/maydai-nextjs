@@ -7,6 +7,7 @@ import { useApiCall } from '@/lib/api-client-legacy'
 import { FileText, CheckCircle2 } from 'lucide-react'
 import { getCompactScoreStyle } from '@/lib/score-styles'
 import ToDoAction from './components/ToDoAction'
+import RegistryToDoAction from './components/RegistryToDoAction'
 import {
   isUnacceptableCase,
   getRequiredDocumentType,
@@ -22,7 +23,7 @@ interface UseCase {
   company_id: string
   created_at: string
   updated_at: string
-  status: 'draft' | 'active' | 'archived'
+  status: 'draft' | 'active' | 'archived' | 'completed'
   risk_level?: string
   score_final?: number | null
   deployment_date?: string | null
@@ -40,7 +41,8 @@ interface TodoItem {
   text: string
   completed: boolean
   useCaseId: string
-  docType: 'stopping_proof' | 'system_prompt'
+  docType: 'stopping_proof' | 'system_prompt' | 'registry_action'
+  registryCase?: 'A' | 'B' | 'C' // For registry-related todos
 }
 
 interface TodoListPageProps {
@@ -54,7 +56,10 @@ export default function TodoListPage({ params }: TodoListPageProps) {
   const [mounted, setMounted] = useState(false)
   const [companyId, setCompanyId] = useState<string>('')
   const [useCases, setUseCases] = useState<UseCase[]>([])
+  const [company, setCompany] = useState<any>(null) // Company data with maydai_as_registry
+  const [useCaseResponses, setUseCaseResponses] = useState<Record<string, any[]>>({}) // E5.N9.Q7 responses by usecase ID
   const [documentStatuses, setDocumentStatuses] = useState<Record<string, DocumentStatus>>({})
+  const [registryProofStatuses, setRegistryProofStatuses] = useState<Record<string, DocumentStatus>>({}) // Registry proof documents by usecase ID
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hasFetched, setHasFetched] = useState(false)
@@ -82,6 +87,12 @@ export default function TodoListPage({ params }: TodoListPageProps) {
 
       try {
         setLoadingData(true)
+
+        // Fetch company data
+        const companyResult = await api.get(`/api/companies/${companyId}`)
+        if (companyResult.data) {
+          setCompany(companyResult.data)
+        }
 
         // Fetch use cases for this company
         const result = await api.get('/api/usecases')
@@ -125,6 +136,73 @@ export default function TodoListPage({ params }: TodoListPageProps) {
           })
           setDocumentStatuses(docMap)
 
+          // Fetch E5.N9.Q7 responses for completed, non-unacceptable use cases
+          const responsesMap: Record<string, any[]> = {}
+          const completedNonUnacceptable = filteredUseCases.filter(
+            (uc: UseCase) => uc.status === 'completed' && !isUnacceptableCase(uc)
+          )
+
+          for (const uc of completedNonUnacceptable) {
+            try {
+              const responsesResult = await api.get(`/api/usecases/${uc.id}/responses`)
+              if (responsesResult.data) {
+                responsesMap[uc.id] = responsesResult.data
+              }
+            } catch (err) {
+              console.error(`Error fetching responses for ${uc.id}:`, err)
+              responsesMap[uc.id] = []
+            }
+          }
+          setUseCaseResponses(responsesMap)
+
+          // Fetch registry_proof document statuses for cases A and C
+          const registryProofMap: Record<string, DocumentStatus> = {}
+          const useCasesNeedingRegistryProof = completedNonUnacceptable.filter((uc: UseCase) => {
+            const responses = responsesMap[uc.id] || []
+            const registryResponse = responses.find((r: any) => r.question_code === 'E5.N9.Q7')
+            if (!registryResponse) return false
+
+            // Cas A: "Non"
+            if (registryResponse.single_value === 'E5.N9.Q7.A') {
+              console.log(`[FETCH] UseCase ${uc.id} (${uc.name}) - Case A detected`)
+              return true
+            }
+
+            // Cas C: "Oui - autre registre"
+            if (registryResponse.conditional_main === 'E5.N9.Q7.B') {
+              const systemName = registryResponse.conditional_values?.[0]?.toLowerCase() || ''
+              const isCaseC = systemName !== 'maydai'
+              console.log(`[FETCH] UseCase ${uc.id} (${uc.name}) - Registry: ${systemName}, Case C: ${isCaseC}`)
+              return isCaseC
+            }
+            return false
+          })
+
+          console.log(`[FETCH] Found ${useCasesNeedingRegistryProof.length} use cases needing registry_proof`)
+
+          for (const uc of useCasesNeedingRegistryProof) {
+            try {
+              const docResult = await api.get(`/api/dossiers/${uc.id}/registry_proof`)
+              if (docResult.data) {
+                const status = {
+                  hasDocument: !!docResult.data?.fileUrl,
+                  status: docResult.data?.status || 'incomplete',
+                  fileUrl: docResult.data?.fileUrl
+                }
+                registryProofMap[uc.id] = status
+                console.log(`[FETCH] registry_proof for ${uc.id}:`, status)
+              } else {
+                console.log(`[FETCH] No document data for ${uc.id}`)
+                registryProofMap[uc.id] = { hasDocument: false, status: 'incomplete' }
+              }
+            } catch (err) {
+              console.error(`[FETCH] Error fetching registry_proof for ${uc.id}:`, err)
+              registryProofMap[uc.id] = { hasDocument: false, status: 'incomplete' }
+            }
+          }
+          console.log('[FETCH] Final registryProofStatuses:', registryProofMap)
+          setRegistryProofStatuses(registryProofMap)
+
           setHasFetched(true)
         }
       } catch (err) {
@@ -137,6 +215,73 @@ export default function TodoListPage({ params }: TodoListPageProps) {
 
     fetchData()
   }, [user, api, hasFetched, companyId])
+
+  // Get E5.N9.Q7 response for a use case
+  const getE5N9Q7Response = (useCaseId: string) => {
+    const responses = useCaseResponses[useCaseId] || []
+    return responses.find((r: any) => r.question_code === 'E5.N9.Q7')
+  }
+
+  // Determine registry case (A, B, or C) for a use case
+  const determineRegistryCase = (useCaseId: string): 'A' | 'B' | 'C' | null => {
+    const response = getE5N9Q7Response(useCaseId)
+
+    if (!response) return null
+
+    // Case A: "Non" answer
+    if (response.single_value === 'E5.N9.Q7.A') {
+      return 'A'
+    }
+
+    // Case B or C: "Oui" answer with system name
+    if (response.conditional_main === 'E5.N9.Q7.B') {
+      const systemName = response.conditional_values?.[0]?.toLowerCase() || ''
+      return systemName === 'maydai' ? 'B' : 'C'
+    }
+
+    return null
+  }
+
+  // Get registry todo text based on case
+  const getRegistryTodoText = (registryCase: 'A' | 'B' | 'C'): string => {
+    switch (registryCase) {
+      case 'A':
+        return 'Déclarer un registre centralisé pour votre système IA'
+      case 'B':
+        return 'Confirmer MaydAI comme registre centralisé'
+      case 'C':
+        return 'Prouver l\'usage de votre registre centralisé'
+      default:
+        return 'Action requise pour le registre centralisé'
+    }
+  }
+
+  // Check if registry todo is completed
+  const isRegistryTodoCompleted = (useCaseId: string, registryCase: 'A' | 'B' | 'C'): boolean => {
+    console.log('[COMPLETION CHECK] Checking:', { useCaseId, registryCase })
+
+    if (registryCase === 'B') {
+      const completed = company?.maydai_as_registry === true
+      console.log('[COMPLETION CHECK] Case B:', { maydaiAsRegistry: company?.maydai_as_registry, completed })
+      return completed
+    }
+
+    // For cases A and C, check if registry_proof document exists
+    if (registryCase === 'A' || registryCase === 'C') {
+      const docStatus = registryProofStatuses[useCaseId]
+      const completed = docStatus?.hasDocument && docStatus.status !== 'incomplete'
+      console.log('[COMPLETION CHECK] Case A/C:', {
+        docStatus,
+        hasDocument: docStatus?.hasDocument,
+        status: docStatus?.status,
+        completed
+      })
+      return completed
+    }
+
+    console.log('[COMPLETION CHECK] No matching case, returning false')
+    return false
+  }
 
   // Get todos for a use case
   const getTodosForUseCase = (useCase: UseCase): TodoItem[] => {
@@ -153,6 +298,21 @@ export default function TodoListPage({ params }: TodoListPageProps) {
           completed: isTodoCompleted(docStatus),
           useCaseId: useCase.id,
           docType
+        })
+      }
+    }
+
+    // Check for registry-related todos (completed, non-unacceptable cases)
+    if (useCase.status === 'completed' && !isUnacceptableCase(useCase)) {
+      const registryCase = determineRegistryCase(useCase.id)
+      if (registryCase) {
+        todos.push({
+          id: `${useCase.id}-registry`,
+          text: getRegistryTodoText(registryCase),
+          completed: isRegistryTodoCompleted(useCase.id, registryCase),
+          useCaseId: useCase.id,
+          docType: 'registry_action',
+          registryCase
         })
       }
     }
@@ -248,7 +408,6 @@ export default function TodoListPage({ params }: TodoListPageProps) {
           ) : (
             useCases.map((useCase) => {
               const todos = getTodosForUseCase(useCase)
-              const hasUnacceptableTodos = isUnacceptableCase(useCase)
 
               return (
                 <div
@@ -302,18 +461,78 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                     </div>
 
                     {/* Todos section */}
-                    {hasUnacceptableTodos && todos.length > 0 ? (
+                    {todos.length > 0 ? (
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         <h4 className="text-sm font-semibold text-gray-700 mb-3">Actions à mener :</h4>
                         <div className="space-y-3">
                           {todos.map((todo) => (
-                            <ToDoAction
-                              key={todo.id}
-                              todo={todo}
-                              isExpanded={expandedTodos[todo.id] || false}
-                              onToggle={toggleTodo}
-                              onActionClick={handleTodoClick}
-                            />
+                            todo.docType === 'registry_action' ? (
+                              <RegistryToDoAction
+                                key={todo.id}
+                                todo={todo as any}
+                                isExpanded={expandedTodos[todo.id] || false}
+                                onToggle={toggleTodo}
+                                companyId={companyId}
+                                maydaiAsRegistry={company?.maydai_as_registry === true}
+                                hasRegistryProofDocument={registryProofStatuses[todo.useCaseId]?.hasDocument || false}
+                                onDocumentUploaded={async () => {
+                                  console.log('[TODO] Document uploaded for useCase:', todo.useCaseId)
+
+                                  // Refetch registry_proof status after upload
+                                  try {
+                                    const docResult = await api.get(`/api/dossiers/${todo.useCaseId}/registry_proof`)
+                                    console.log('[TODO] Refetched document:', docResult.data)
+
+                                    if (docResult.data) {
+                                      const newStatus = {
+                                        hasDocument: !!docResult.data?.fileUrl,
+                                        status: docResult.data?.status || 'incomplete',
+                                        fileUrl: docResult.data?.fileUrl
+                                      }
+                                      console.log('[TODO] Updating status to:', newStatus)
+
+                                      setRegistryProofStatuses(prev => ({
+                                        ...prev,
+                                        [todo.useCaseId]: newStatus
+                                      }))
+                                    } else {
+                                      console.warn('[TODO] No document data returned')
+                                    }
+                                  } catch (err) {
+                                    console.error('[TODO] Error refetching registry proof:', err)
+                                    // Even if refetch fails, try to mark as complete optimistically
+                                    setRegistryProofStatuses(prev => ({
+                                      ...prev,
+                                      [todo.useCaseId]: {
+                                        hasDocument: true,
+                                        status: 'complete',
+                                        fileUrl: prev[todo.useCaseId]?.fileUrl
+                                      }
+                                    }))
+                                    console.log('[TODO] Set optimistic completion status')
+                                  }
+
+                                  // Also refresh company data in case maydai_as_registry was updated
+                                  try {
+                                    const companyResult = await api.get(`/api/companies/${companyId}`)
+                                    if (companyResult.data) {
+                                      setCompany(companyResult.data)
+                                      console.log('[TODO] Refreshed company data')
+                                    }
+                                  } catch (err) {
+                                    console.error('[TODO] Error refetching company:', err)
+                                  }
+                                }}
+                              />
+                            ) : (
+                              <ToDoAction
+                                key={todo.id}
+                                todo={todo as any}
+                                isExpanded={expandedTodos[todo.id] || false}
+                                onToggle={toggleTodo}
+                                onActionClick={handleTodoClick}
+                              />
+                            )
                           ))}
                         </div>
                       </div>

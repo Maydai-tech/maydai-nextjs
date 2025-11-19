@@ -55,11 +55,11 @@ export async function GET(
       .eq('usecase_id', usecaseId)
       .maybeSingle()
 
-    // Si pas de dossier, retourner 0/7
+    // Si pas de dossier, retourner 0/8
     if (!dossier) {
       return NextResponse.json({
         completed: 0,
-        total: 7,
+        total: 8,
         percentage: 0
       })
     }
@@ -71,7 +71,7 @@ export async function GET(
       .eq('dossier_id', dossier.id)
 
     const completedCount = documents?.filter((doc: { status: string }) => doc.status === 'complete' || doc.status === 'validated').length || 0
-    const total = 7 // Nombre total de documents requis
+    const total = 8 // Nombre total de documents requis (incluant registry_proof)
     const percentage = Math.round((completedCount / total) * 100)
 
     return NextResponse.json({

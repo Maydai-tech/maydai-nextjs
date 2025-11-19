@@ -5,7 +5,7 @@ interface UseCase {
   company_id: string
   created_at: string
   updated_at: string
-  status: 'draft' | 'active' | 'archived'
+  status: 'draft' | 'active' | 'archived' | 'completed'
   risk_level?: string
   score_final?: number | null
   deployment_date?: string | null

@@ -52,11 +52,6 @@ export default function ToDoAction({
           {todo.text}
         </span>
 
-        {/* Alert icon for incomplete todos */}
-        {!todo.completed && (
-          <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
-        )}
-
         {/* Chevron icon */}
         <ChevronDown
           className={`w-5 h-5 text-gray-400 flex-shrink-0 group-hover:text-[#0080A3] transition-transform duration-300 ${
@@ -90,14 +85,7 @@ export default function ToDoAction({
                   Document complété
                 </span>
               </>
-            ) : (
-              <>
-                <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0" />
-                <span className="text-sm font-medium text-orange-600">
-                  Action requise
-                </span>
-              </>
-            )}
+            ) : null}
           </div>
 
           {/* CTA Button */}

@@ -47,6 +47,7 @@ export default function RegistrySettingsPage() {
   const [showCentralizedRegistryModal, setShowCentralizedRegistryModal] = useState(false)
   const [showEditRegistryModal, setShowEditRegistryModal] = useState(false)
   const [confirmingRegistry, setConfirmingRegistry] = useState(false)
+  const [syncSuccessMessage, setSyncSuccessMessage] = useState<string | null>(null)
 
   const companyId = resolvedParams.id as string
 
@@ -185,6 +186,16 @@ export default function RegistrySettingsPage() {
       const updatedCompany = await response.json()
       setCompany(updatedCompany)
       setShowCentralizedRegistryModal(false)
+
+      // Display success message with number of updated use cases
+      const useCasesUpdated = updatedCompany.useCasesUpdated || 0
+      if (useCasesUpdated > 0) {
+        setSyncSuccessMessage(`${useCasesUpdated} cas d'usage ont été mis à jour automatiquement avec MaydAI comme registre centralisé`)
+        setTimeout(() => setSyncSuccessMessage(null), 5000)
+      } else {
+        setSyncSuccessMessage('MaydAI a été déclaré comme registre centralisé')
+        setTimeout(() => setSyncSuccessMessage(null), 3000)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue')
     } finally {
@@ -216,6 +227,16 @@ export default function RegistrySettingsPage() {
       const updatedCompany = await response.json()
       setCompany(updatedCompany)
       setShowEditRegistryModal(false)
+
+      // Display success message with number of updated use cases
+      const useCasesUpdated = updatedCompany.useCasesUpdated || 0
+      if (useCasesUpdated > 0) {
+        setSyncSuccessMessage(`${useCasesUpdated} cas d'usage ont été réinitialisés (registre centralisé retiré)`)
+        setTimeout(() => setSyncSuccessMessage(null), 5000)
+      } else {
+        setSyncSuccessMessage('MaydAI n\'est plus votre registre centralisé')
+        setTimeout(() => setSyncSuccessMessage(null), 3000)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue')
     } finally {
@@ -276,6 +297,13 @@ export default function RegistrySettingsPage() {
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
+        {/* Success message for registry sync */}
+        {syncSuccessMessage && (
+          <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-green-800">{syncSuccessMessage}</p>
           </div>
         )}
 

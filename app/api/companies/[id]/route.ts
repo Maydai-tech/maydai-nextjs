@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { isOwner } from '@/lib/collaborators'
 import { logger, createRequestContext } from '@/lib/secure-logger'
+import { updateUseCaseRegistryResponses } from '@/lib/registry-sync'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -181,7 +182,38 @@ export async function PUT(
       updatedBy: user.email
     })
 
-    return NextResponse.json(updatedCompany)
+    // If maydai_as_registry was updated, synchronize all use case responses for question E5.N9.Q7
+    let useCasesUpdated = 0
+    if (maydai_as_registry !== undefined) {
+      const syncResult = await updateUseCaseRegistryResponses(
+        companyId,
+        maydai_as_registry,
+        user.email || 'unknown',
+        supabase
+      )
+
+      if (syncResult.success) {
+        useCasesUpdated = syncResult.updatedCount
+        logger.info('Use case registry responses synchronized', {
+          ...context,
+          companyId,
+          useCasesUpdated,
+          maydaiAsRegistry: maydai_as_registry
+        })
+      } else {
+        logger.error('Failed to synchronize use case registry responses', syncResult.error, {
+          ...context,
+          companyId,
+          maydaiAsRegistry: maydai_as_registry
+        })
+        // Don't fail the entire request, but log the error
+      }
+    }
+
+    return NextResponse.json({
+      ...updatedCompany,
+      useCasesUpdated
+    })
 
   } catch (error) {
     const context = createRequestContext(request)

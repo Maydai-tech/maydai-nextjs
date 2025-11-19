@@ -139,7 +139,7 @@ export default function DossiersComplianceView() {
               return { id: uc.id, data: completionResult.data }
             } catch (err) {
               console.error(`Error fetching completion for ${uc.id}:`, err)
-              return { id: uc.id, data: { completed: 0, total: 7, percentage: 0 } }
+              return { id: uc.id, data: { completed: 0, total: 8, percentage: 0 } }
             }
           })
 
@@ -281,7 +281,7 @@ export default function DossiersComplianceView() {
             </div>
           ) : (
             useCases.map((useCase) => {
-              const completion = completions[useCase.id] || { completed: 0, total: 7, percentage: 0 }
+              const completion = completions[useCase.id] || { completed: 0, total: 8, percentage: 0 }
 
               return (
                 <div
