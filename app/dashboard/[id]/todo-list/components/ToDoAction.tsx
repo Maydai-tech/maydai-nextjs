@@ -93,7 +93,7 @@ export default function ToDoAction({
             onClick={() => onActionClick(todo.useCaseId)}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors"
           >
-            {todo.completed ? 'Voir le document' : 'Compléter cette action'}
+            {todo.completed ? 'Voir le document' : 'Compléter le document'}
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
