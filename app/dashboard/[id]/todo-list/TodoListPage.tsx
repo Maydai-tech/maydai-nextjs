@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
@@ -145,43 +145,62 @@ export default function TodoListPage({ params }: TodoListPageProps) {
             (uc: UseCase) => uc.status === 'completed' && !isUnacceptableCase(uc)
           )
 
-          for (const uc of completedNonUnacceptable) {
+          // Parallelize response fetching
+          const responsesPromises = completedNonUnacceptable.map(async (uc: UseCase) => {
             try {
               const responsesResult = await api.get(`/api/usecases/${uc.id}/responses`)
-              if (responsesResult.data) {
-                responsesMap[uc.id] = responsesResult.data
+              return {
+                id: uc.id,
+                data: responsesResult.data || []
               }
             } catch (err) {
               console.error(`Error fetching responses for ${uc.id}:`, err)
-              responsesMap[uc.id] = []
+              return {
+                id: uc.id,
+                data: []
+              }
             }
-          }
+          })
+
+          const responsesResults = await Promise.all(responsesPromises)
+          responsesResults.forEach(result => {
+            responsesMap[result.id] = result.data
+          })
           setUseCaseResponses(responsesMap)
 
           // Fetch compliance document statuses for completed, non-unacceptable cases
+          // Use batch endpoint to fetch all documents in a single request
           const complianceMap: Record<string, Record<string, DocumentStatus>> = {}
-          for (const uc of completedNonUnacceptable) {
-            const useCaseDocMap: Record<string, DocumentStatus> = {}
 
-            for (const docType of COMPLIANCE_DOCUMENT_TYPES) {
-              try {
-                const docResult = await api.get(`/api/dossiers/${uc.id}/${docType}`)
-                if (docResult.data) {
-                  useCaseDocMap[docType] = {
-                    hasDocument: !!(docResult.data?.fileUrl || docResult.data?.formData),
-                    status: docResult.data?.status || 'incomplete',
-                    fileUrl: docResult.data?.fileUrl
+          if (completedNonUnacceptable.length > 0) {
+            try {
+              const usecaseIds = completedNonUnacceptable.map((uc: UseCase) => uc.id).join(',')
+              const docTypes = COMPLIANCE_DOCUMENT_TYPES.join(',')
+
+              const batchResult = await api.get(`/api/dossiers/batch?usecaseIds=${usecaseIds}&docTypes=${docTypes}`)
+
+              if (batchResult.data?.documents) {
+                batchResult.data.documents.forEach((doc: any) => {
+                  if (!complianceMap[doc.usecaseId]) {
+                    complianceMap[doc.usecaseId] = {}
                   }
-                } else {
-                  useCaseDocMap[docType] = { hasDocument: false, status: 'incomplete' }
-                }
-              } catch (err) {
-                console.error(`Error fetching ${docType} for ${uc.id}:`, err)
-                useCaseDocMap[docType] = { hasDocument: false, status: 'incomplete' }
+                  complianceMap[doc.usecaseId][doc.docType] = {
+                    hasDocument: !!(doc.fileUrl || doc.formData),
+                    status: doc.status || 'incomplete',
+                    fileUrl: doc.fileUrl
+                  }
+                })
               }
+            } catch (err) {
+              console.error('Error fetching compliance documents in batch:', err)
+              // Fallback: initialize empty statuses for all use cases
+              completedNonUnacceptable.forEach((uc: UseCase) => {
+                complianceMap[uc.id] = {}
+                COMPLIANCE_DOCUMENT_TYPES.forEach(docType => {
+                  complianceMap[uc.id][docType] = { hasDocument: false, status: 'incomplete' }
+                })
+              })
             }
-
-            complianceMap[uc.id] = useCaseDocMap
           }
           setComplianceDocStatuses(complianceMap)
 
@@ -210,24 +229,30 @@ export default function TodoListPage({ params }: TodoListPageProps) {
 
           console.log(`[FETCH] Found ${useCasesNeedingRegistryProof.length} use cases needing registry_proof`)
 
-          for (const uc of useCasesNeedingRegistryProof) {
+          // Use batch endpoint to fetch all registry_proof documents in a single request
+          if (useCasesNeedingRegistryProof.length > 0) {
             try {
-              const docResult = await api.get(`/api/dossiers/${uc.id}/registry_proof`)
-              if (docResult.data) {
-                const status = {
-                  hasDocument: !!docResult.data?.fileUrl,
-                  status: docResult.data?.status || 'incomplete',
-                  fileUrl: docResult.data?.fileUrl
-                }
-                registryProofMap[uc.id] = status
-                console.log(`[FETCH] registry_proof for ${uc.id}:`, status)
-              } else {
-                console.log(`[FETCH] No document data for ${uc.id}`)
-                registryProofMap[uc.id] = { hasDocument: false, status: 'incomplete' }
+              const usecaseIds = useCasesNeedingRegistryProof.map((uc: UseCase) => uc.id).join(',')
+
+              const batchResult = await api.get(`/api/dossiers/batch?usecaseIds=${usecaseIds}&docTypes=registry_proof`)
+
+              if (batchResult.data?.documents) {
+                batchResult.data.documents.forEach((doc: any) => {
+                  const status = {
+                    hasDocument: !!doc.fileUrl,
+                    status: doc.status || 'incomplete',
+                    fileUrl: doc.fileUrl
+                  }
+                  registryProofMap[doc.usecaseId] = status
+                  console.log(`[FETCH] registry_proof for ${doc.usecaseId}:`, status)
+                })
               }
             } catch (err) {
-              console.error(`[FETCH] Error fetching registry_proof for ${uc.id}:`, err)
-              registryProofMap[uc.id] = { hasDocument: false, status: 'incomplete' }
+              console.error('[FETCH] Error fetching registry_proof documents in batch:', err)
+              // Fallback: initialize empty statuses
+              useCasesNeedingRegistryProof.forEach((uc: UseCase) => {
+                registryProofMap[uc.id] = { hasDocument: false, status: 'incomplete' }
+              })
             }
           }
           console.log('[FETCH] Final registryProofStatuses:', registryProofMap)
@@ -244,7 +269,8 @@ export default function TodoListPage({ params }: TodoListPageProps) {
     }
 
     fetchData()
-  }, [user, api, hasFetched, companyId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, hasFetched, companyId])
 
   // Get E5.N9.Q7 response for a use case
   const getE5N9Q7Response = (useCaseId: string) => {
@@ -366,19 +392,69 @@ export default function TodoListPage({ params }: TodoListPageProps) {
   }
 
   // Toggle todo expansion
-  const toggleTodo = (todoId: string) => {
+  const toggleTodo = useCallback((todoId: string) => {
     setExpandedTodos(prev => ({
       ...prev,
       [todoId]: !prev[todoId]
     }))
-  }
+  }, [])
 
   // Navigate to dossier page with optional document query parameter
-  const handleTodoClick = (useCaseId: string, docType?: string) => {
+  const handleTodoClick = useCallback((useCaseId: string, docType?: string) => {
     const baseUrl = `/dashboard/${companyId}/dossiers/${useCaseId}`
     const url = docType ? `${baseUrl}?doc=${docType}` : baseUrl
     router.push(url)
-  }
+  }, [companyId, router])
+
+  // Memoize document upload handler
+  const handleDocumentUploaded = useCallback(async (useCaseId: string) => {
+    console.log('[TODO] Document uploaded for useCase:', useCaseId)
+
+    // Refetch registry_proof status after upload
+    try {
+      const docResult = await api.get(`/api/dossiers/${useCaseId}/registry_proof`)
+      console.log('[TODO] Refetched document:', docResult.data)
+
+      if (docResult.data) {
+        const newStatus = {
+          hasDocument: !!docResult.data?.fileUrl,
+          status: docResult.data?.status || 'incomplete',
+          fileUrl: docResult.data?.fileUrl
+        }
+        console.log('[TODO] Updating status to:', newStatus)
+
+        setRegistryProofStatuses(prev => ({
+          ...prev,
+          [useCaseId]: newStatus
+        }))
+      } else {
+        console.warn('[TODO] No document data returned')
+      }
+    } catch (err) {
+      console.error('[TODO] Error refetching registry proof:', err)
+      // Even if refetch fails, try to mark as complete optimistically
+      setRegistryProofStatuses(prev => ({
+        ...prev,
+        [useCaseId]: {
+          hasDocument: true,
+          status: 'complete',
+          fileUrl: prev[useCaseId]?.fileUrl
+        }
+      }))
+      console.log('[TODO] Set optimistic completion status')
+    }
+
+    // Also refresh company data in case maydai_as_registry was updated
+    try {
+      const companyResult = await api.get(`/api/companies/${companyId}`)
+      if (companyResult.data) {
+        setCompany(companyResult.data)
+        console.log('[TODO] Refreshed company data')
+      }
+    } catch (err) {
+      console.error('[TODO] Error refetching company:', err)
+    }
+  }, [api, companyId])
 
   // Calculate stats
   const totalTodos = useCases.reduce((acc, uc) => acc + getTodosForUseCase(uc).length, 0)
@@ -524,54 +600,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                                 companyId={companyId}
                                 maydaiAsRegistry={company?.maydai_as_registry === true}
                                 hasRegistryProofDocument={registryProofStatuses[todo.useCaseId]?.hasDocument || false}
-                                onDocumentUploaded={async () => {
-                                  console.log('[TODO] Document uploaded for useCase:', todo.useCaseId)
-
-                                  // Refetch registry_proof status after upload
-                                  try {
-                                    const docResult = await api.get(`/api/dossiers/${todo.useCaseId}/registry_proof`)
-                                    console.log('[TODO] Refetched document:', docResult.data)
-
-                                    if (docResult.data) {
-                                      const newStatus = {
-                                        hasDocument: !!docResult.data?.fileUrl,
-                                        status: docResult.data?.status || 'incomplete',
-                                        fileUrl: docResult.data?.fileUrl
-                                      }
-                                      console.log('[TODO] Updating status to:', newStatus)
-
-                                      setRegistryProofStatuses(prev => ({
-                                        ...prev,
-                                        [todo.useCaseId]: newStatus
-                                      }))
-                                    } else {
-                                      console.warn('[TODO] No document data returned')
-                                    }
-                                  } catch (err) {
-                                    console.error('[TODO] Error refetching registry proof:', err)
-                                    // Even if refetch fails, try to mark as complete optimistically
-                                    setRegistryProofStatuses(prev => ({
-                                      ...prev,
-                                      [todo.useCaseId]: {
-                                        hasDocument: true,
-                                        status: 'complete',
-                                        fileUrl: prev[todo.useCaseId]?.fileUrl
-                                      }
-                                    }))
-                                    console.log('[TODO] Set optimistic completion status')
-                                  }
-
-                                  // Also refresh company data in case maydai_as_registry was updated
-                                  try {
-                                    const companyResult = await api.get(`/api/companies/${companyId}`)
-                                    if (companyResult.data) {
-                                      setCompany(companyResult.data)
-                                      console.log('[TODO] Refreshed company data')
-                                    }
-                                  } catch (err) {
-                                    console.error('[TODO] Error refetching company:', err)
-                                  }
-                                }}
+                                onDocumentUploaded={() => handleDocumentUploaded(todo.useCaseId)}
                               />
                             ) : (
                               <ToDoAction
