@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { useApiCall } from '@/lib/api-client-legacy'
@@ -25,6 +25,15 @@ const STOPPING_PROOF_DOC = {
   label: 'Preuve d\'Arrêt du Système',
   description: 'Document prouvant que le système à risque inacceptable a été arrêté ou n\'a jamais été déployé.',
   helpInfo: 'Document officiel attestant de l\'arrêt du système d\'IA identifié comme présentant un risque inacceptable selon l\'AI Act. Peut inclure : procès-verbal d\'arrêt, capture d\'écran de désactivation, attestation du responsable technique, ou tout autre élément prouvant la cessation d\'activité.',
+  acceptedFormats: '.pdf,.png,.jpg,.jpeg',
+  type: 'file' as const
+}
+
+const REGISTRY_PROOF_DOC = {
+  key: 'registry_proof',
+  label: 'Preuve d\'Usage du Registre Centralisé',
+  description: 'Document prouvant l\'utilisation d\'un registre centralisé pour vos systèmes d\'IA.',
+  helpInfo: 'Document attestant de l\'utilisation d\'un registre centralisé conforme à l\'AI Act pour le suivi de vos systèmes d\'IA. Peut inclure : capture d\'écran du registre, attestation du responsable, export de données du registre, ou tout autre élément prouvant son utilisation effective.',
   acceptedFormats: '.pdf,.png,.jpg,.jpeg',
   type: 'file' as const
 }
@@ -78,7 +87,8 @@ const DOC_TYPES = [
     helpInfo: 'Prouver que le système n\'est pas "lancé et oublié". Document détaillant : les métriques (KPIs) de performance suivies, la fréquence des audits, la procédure en cas de détection d\'anomalie ou de risque émergent.',
     acceptedFormats: '.pdf,.docx',
     type: 'file'
-  }
+  },
+  REGISTRY_PROOF_DOC
 ]
 
 interface DocumentData {
@@ -102,11 +112,13 @@ export default function DossierDetailPage() {
   const api = useApiCall()
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const companyId = params.id as string
   const usecaseId = params.usecaseId as string
 
   const [usecaseName, setUsecaseName] = useState<string>('')
   const [useCase, setUseCase] = useState<UseCase | null>(null)
+  const [company, setCompany] = useState<any>(null)
   const [documents, setDocuments] = useState<Record<string, DocumentData>>({})
   const [textContents, setTextContents] = useState<Record<string, string>>({})
   const [supervisorData, setSupervisorData] = useState({
@@ -315,6 +327,15 @@ export default function DossierDetailPage() {
           setUseCase(usecaseData)
         }
 
+        // Fetch company info for registry status
+        const companyRes = await fetch(`/api/companies/${companyId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (companyRes.ok) {
+          const companyData = await companyRes.json()
+          setCompany(companyData)
+        }
+
         // Fetch all documents (including stopping_proof for unacceptable cases)
         const docsData: Record<string, DocumentData> = {}
         const textData: Record<string, string> = {}
@@ -356,7 +377,11 @@ export default function DossierDetailPage() {
                   setInitialSupervisorData(supervisor)
                 }
               }
+            } else if (res.status === 400 || res.status === 404) {
+              // Document not found or not applicable - this is expected for some documents like registry_proof
+              console.log('[FETCH] Document not found:', docType.key, '(this is normal for optional documents)')
             } else {
+              // Real error (500, 403, etc.)
               console.error('[FETCH] Failed to load:', docType.key, res.status)
             }
           })
@@ -374,6 +399,29 @@ export default function DossierDetailPage() {
 
     fetchData()
   }, [user, usecaseId, getAccessToken])
+
+  // Auto-expand document section based on URL query parameter
+  useEffect(() => {
+    // Only run after data is loaded
+    if (loading) return
+
+    const docToExpand = searchParams.get('doc')
+    if (docToExpand) {
+      // Auto-expand the section
+      setExpandedSections(prev => ({
+        ...prev,
+        [docToExpand]: true
+      }))
+
+      // Scroll to section after a short delay to allow expansion animation
+      setTimeout(() => {
+        const element = document.getElementById(`section-${docToExpand}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 300)
+    }
+  }, [loading, searchParams])
 
   const onUploadSuccess = () => {
     router.push(`/dashboard/${companyId}/dossiers`)
@@ -713,6 +761,7 @@ export default function DossierDetailPage() {
               return (
                 <div
                   key={docType.key}
+                  id={`section-${docType.key}`}
                   className={`bg-white rounded-xl shadow-sm border ${getStatusColor(doc.status)}`}
                 >
                   <div
@@ -909,9 +958,41 @@ export default function DossierDetailPage() {
             const isSaving = saving[docType.key]
             const isUploading = uploading[docType.key]
 
+            // Special handling for registry_proof when MaydAI is declared as registry
+            if (docType.key === 'registry_proof' && company?.maydai_as_registry === true) {
+              return (
+                <div
+                  key={docType.key}
+                  id={`section-${docType.key}`}
+                  className="bg-white rounded-xl shadow-sm border bg-green-50 border-green-300"
+                >
+                  <div className="flex items-start justify-between p-6">
+                    <div className="flex items-start gap-3 flex-1">
+                      <Check className="w-5 h-5 text-green-600 flex-shrink-0" />
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900">{docType.label}</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Complété automatiquement - Vous avez déclaré MaydAI comme votre registre centralisé.
+                        </p>
+                        <div className="mt-3 p-3 bg-green-100 rounded-lg border border-green-300">
+                          <p className="text-sm text-green-800">
+                            ✓ MaydAI est déclaré comme votre registre centralisé. Cette exigence est automatiquement satisfaite.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-300 whitespace-nowrap">
+                      ✓ Complété
+                    </span>
+                  </div>
+                </div>
+              )
+            }
+
             return (
               <div
                 key={docType.key}
+                id={`section-${docType.key}`}
                 className={`bg-white rounded-xl shadow-sm border ${getStatusColor(doc.status)}`}
               >
                 <div 

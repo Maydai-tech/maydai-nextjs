@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { isOwner } from '@/lib/collaborators'
 import { logger, createRequestContext } from '@/lib/secure-logger'
+import { updateUseCaseRegistryResponses } from '@/lib/registry-sync'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -100,6 +101,123 @@ export async function GET(
 
   } catch (error) {
     console.error('Error in company API:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: companyId } = await params
+
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+
+    // Create Supabase client with the user's token
+    const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    })
+
+    // Verify the token and get user
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    // Verify user is owner of this company
+    const userIsOwner = await isOwner(user.id, 'company', companyId, supabase)
+    if (!userIsOwner) {
+      return NextResponse.json({ error: 'Only company owners can update company information' }, { status: 403 })
+    }
+
+    // Parse request body
+    const body = await request.json()
+    const { name, industry, city, country, maydai_as_registry } = body
+
+    // Validate at least one field is provided
+    if (!name && !industry && !city && !country && maydai_as_registry === undefined) {
+      return NextResponse.json({ error: 'At least one field must be provided' }, { status: 400 })
+    }
+
+    // Build update object with only provided fields
+    const updateData: Record<string, string | boolean> = {}
+    if (name !== undefined) updateData.name = name
+    if (industry !== undefined) updateData.industry = industry
+    if (city !== undefined) updateData.city = city
+    if (country !== undefined) updateData.country = country
+    if (maydai_as_registry !== undefined) updateData.maydai_as_registry = maydai_as_registry
+
+    // Update the company
+    const { data: updatedCompany, error: updateError } = await supabase
+      .from('companies')
+      .update(updateData)
+      .eq('id', companyId)
+      .select()
+      .single()
+
+    if (updateError) {
+      const context = createRequestContext(request)
+      logger.error('Failed to update company', updateError, {
+        ...context,
+        companyId
+      })
+      return NextResponse.json({ error: 'Error updating company' }, { status: 500 })
+    }
+
+    const context = createRequestContext(request)
+    logger.info('Company updated successfully', {
+      ...context,
+      companyId,
+      updatedFields: Object.keys(updateData),
+      updatedBy: user.email
+    })
+
+    // If maydai_as_registry was updated, synchronize all use case responses for question E5.N9.Q7
+    let useCasesUpdated = 0
+    if (maydai_as_registry !== undefined) {
+      const syncResult = await updateUseCaseRegistryResponses(
+        companyId,
+        maydai_as_registry,
+        user.email || 'unknown',
+        supabase
+      )
+
+      if (syncResult.success) {
+        useCasesUpdated = syncResult.updatedCount
+        logger.info('Use case registry responses synchronized', {
+          ...context,
+          companyId,
+          useCasesUpdated,
+          maydaiAsRegistry: maydai_as_registry
+        })
+      } else {
+        logger.error('Failed to synchronize use case registry responses', syncResult.error, {
+          ...context,
+          companyId,
+          maydaiAsRegistry: maydai_as_registry
+        })
+        // Don't fail the entire request, but log the error
+      }
+    }
+
+    return NextResponse.json({
+      ...updatedCompany,
+      useCasesUpdated
+    })
+
+  } catch (error) {
+    const context = createRequestContext(request)
+    logger.error('Company PUT API error', error, context)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

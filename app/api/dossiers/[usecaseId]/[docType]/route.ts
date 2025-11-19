@@ -13,6 +13,7 @@ const allowedDocTypes = new Set([
   'data_quality',
   'continuous_monitoring',
   'stopping_proof',
+  'registry_proof',
 ])
 
 async function getClientFromAuth(request: NextRequest) {

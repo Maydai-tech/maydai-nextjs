@@ -97,20 +97,6 @@ export async function GET(
       return NextResponse.json({ error: 'Error fetching use cases' }, { status: 500 })
     }
 
-    // Debug: Log all use cases to check data
-    if (usecases && usecases.length > 0) {
-      console.log('🔍 Debug all usecases data:')
-      usecases.forEach((uc, index) => {
-        console.log(`  ${index + 1}. ${uc.name}:`, {
-          id: uc.id,
-          status: uc.status,
-          risk_level: uc.risk_level,
-          score_final: uc.score_final,
-          has_compl_ai_models: !!uc.compl_ai_models
-        })
-      })
-    }
-
     return NextResponse.json(usecases || [])
 
   } catch (error) {

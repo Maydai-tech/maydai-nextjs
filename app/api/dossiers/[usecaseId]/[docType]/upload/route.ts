@@ -13,6 +13,7 @@ const allowedDocTypes = new Set([
   "data_quality",
   "continuous_monitoring",
   "stopping_proof",
+  "registry_proof",
 ]);
 
 // Formats acceptés par type de document
@@ -45,6 +46,10 @@ const allowedFormats: Record<
     description: "Documents (.pdf, .docx)",
   },
   stopping_proof: {
+    extensions: [".pdf", ".png", ".jpg", ".jpeg"],
+    description: "Documents et images (.pdf, .png, .jpg, .jpeg)",
+  },
+  registry_proof: {
     extensions: [".pdf", ".png", ".jpg", ".jpeg"],
     description: "Documents et images (.pdf, .png, .jpg, .jpeg)",
   },
