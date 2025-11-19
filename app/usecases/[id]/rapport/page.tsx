@@ -1089,7 +1089,6 @@ export default function UseCaseRapportPage() {
           onUpdateDeploymentDate={updateDeploymentDate}
           blockClosing={!workflow.proofUploaded}
           onReloadDocument={reloadDocument}
-          onDeleteDocument={handleDeleteDocument}
           uploadedDocument={
             workflow.step === 'future-deployment-warning'
               ? documents['system_prompt']

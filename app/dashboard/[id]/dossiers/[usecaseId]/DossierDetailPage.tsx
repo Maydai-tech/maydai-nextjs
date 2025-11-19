@@ -187,7 +187,8 @@ export default function DossierDetailPage() {
     useCase,
     isOpen: isUnacceptableCase,
     onUpdateDeploymentDate: updateDeploymentDate,
-    initialProofUploaded: getInitialProofUploaded()
+    initialProofUploaded: getInitialProofUploaded(),
+    onReloadDocument: reloadDocument
   })
 
   // Synchroniser proofUploaded avec les documents chargés
@@ -660,10 +661,6 @@ export default function DossierDetailPage() {
                   ? documents['system_prompt']
                   : documents['stopping_proof']
               }
-              onDeleteDocument={() => {
-                const docKey = workflow.step === 'future-deployment-warning' ? 'system_prompt' : 'stopping_proof'
-                handleFileDelete(docKey)
-              }}
               onReloadDocument={reloadDocument}
             />
           </div>

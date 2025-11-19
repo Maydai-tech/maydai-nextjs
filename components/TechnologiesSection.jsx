@@ -66,10 +66,6 @@ export default function TechnologiesSection() {
       alt: 'YouTube Channel',
       width: 120,
       height: 64
-    },
-    {
-      src: '/logos/logo-institut/esperance-et-algorithme.jpg',
-      alt: 'Espérance et algorithme'
     }
   ];
 

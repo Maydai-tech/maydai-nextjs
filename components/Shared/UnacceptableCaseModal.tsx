@@ -18,7 +18,6 @@ interface UnacceptableCaseModalProps {
   updating?: boolean
   blockClosing?: boolean
   onReloadDocument?: (docKey: string) => Promise<void>
-  onDeleteDocument?: () => Promise<void>
   uploadedDocument?: { fileUrl: string | null; formData: Record<string, any> | null } | null
 }
 
@@ -30,13 +29,13 @@ export default function UnacceptableCaseModal({
   updating = false,
   blockClosing = false,
   onReloadDocument,
-  onDeleteDocument,
   uploadedDocument
 }: UnacceptableCaseModalProps) {
   const workflow = useUnacceptableCaseWorkflow({
     useCase,
     isOpen,
-    onUpdateDeploymentDate
+    onUpdateDeploymentDate,
+    onReloadDocument
   })
 
   if (!isOpen || !useCase) return null
@@ -108,7 +107,6 @@ export default function UnacceptableCaseModal({
             usecaseId={useCase.id}
             uploadedDocument={uploadedDocument}
             onReloadDocument={onReloadDocument}
-            onDeleteDocument={onDeleteDocument}
           />
         </div>
 
