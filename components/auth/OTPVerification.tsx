@@ -60,8 +60,8 @@ export default function OTPVerification({
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', ''])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [resendDisabled, setResendDisabled] = useState(false)
-  const [resendCountdown, setResendCountdown] = useState(0)
+  const [resendDisabled, setResendDisabled] = useState(true)
+  const [resendCountdown, setResendCountdown] = useState(60)
   const otpInputs = useRef<(HTMLInputElement | null)[]>([])
 
   // Focus first input on mount
@@ -215,7 +215,7 @@ export default function OTPVerification({
               {otpCode.map((digit, index) => (
                 <input
                   key={index}
-                  ref={el => otpInputs.current[index] = el}
+                  ref={(el) => { otpInputs.current[index] = el }}
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]"
@@ -259,10 +259,7 @@ export default function OTPVerification({
                 disabled={resendDisabled || loading}
                 className="w-full text-[#0080A3] py-2 px-4 font-medium hover:text-[#006280] focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {resendDisabled
-                  ? `Renvoyer le code (${resendCountdown}s)`
-                  : 'Renvoyer le code'
-                }
+                {resendDisabled ? `Renvoyer le code (${resendCountdown}s)` : 'Renvoyer le code'}
               </button>
             )}
 
