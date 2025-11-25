@@ -11,7 +11,7 @@ export default function HeroSection() {
         <p className="text-lg md:text-xl mb-8 font-medium">
           Simplifiez et sécurisez la conformité de vos systèmes d&apos;IA avec MaydAI. Notre solution vous accompagne à chaque étape de l&apos;Audit AI Act, pour une conformité rapide, fiable et transparente.
         </p>
-        <Link href="/contact" className="inline-block bg-white text-primary font-bold px-8 py-3 rounded-lg shadow-lg hover:bg-gray-100 transition">
+        <Link href="/signup" className="inline-block bg-white text-primary font-bold px-8 py-3 rounded-lg shadow-lg hover:bg-gray-100 transition">
           Démarrer l&apos;Audit AI Act
         </Link>
       </div>

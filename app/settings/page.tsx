@@ -189,7 +189,7 @@ export default function ProfilPage() {
   const handleSignOut = async () => {
     try {
       await signOut()
-      router.push('/login')
+      router.push('/')
     } catch (error) {
       console.error('Error signing out:', error)
     }
@@ -292,26 +292,23 @@ export default function ProfilPage() {
                     <button
                       key={item.id}
                       onClick={() => handleMenuClick(item.id)}
-                      className={`w-full flex items-center space-x-3 px-4 py-3 text-left transition-all duration-200 rounded-lg group ${
-                        isActive
+                      className={`w-full flex items-center space-x-3 px-4 py-3 text-left transition-all duration-200 rounded-lg group ${isActive
                           ? 'bg-gradient-to-r from-[#0080A3]/10 to-blue-50 border border-[#0080A3]/20'
                           : 'hover:bg-gray-50 hover:scale-[1.02]'
-                      }`}
+                        }`}
                     >
-                      <Icon className={`w-5 h-5 transition-colors duration-200 ${
-                        isActive
+                      <Icon className={`w-5 h-5 transition-colors duration-200 ${isActive
                           ? 'text-[#0080A3]'
                           : item.id === 'logout'
-                          ? 'text-red-500 group-hover:text-red-600'
-                          : 'text-gray-400 group-hover:text-gray-600'
-                      }`} />
-                      <span className={`text-sm font-medium transition-colors duration-200 ${
-                        isActive
+                            ? 'text-red-500 group-hover:text-red-600'
+                            : 'text-gray-400 group-hover:text-gray-600'
+                        }`} />
+                      <span className={`text-sm font-medium transition-colors duration-200 ${isActive
                           ? 'text-[#0080A3]'
                           : item.id === 'logout'
-                          ? 'text-red-500 group-hover:text-red-600'
-                          : 'text-gray-600 group-hover:text-gray-900'
-                      }`}>{item.name}</span>
+                            ? 'text-red-500 group-hover:text-red-600'
+                            : 'text-gray-600 group-hover:text-gray-900'
+                        }`}>{item.name}</span>
                     </button>
                   )
                 })}
