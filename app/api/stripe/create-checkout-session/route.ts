@@ -56,6 +56,14 @@ export async function POST(request: NextRequest) {
       },
       automatic_tax: { enabled: true },
       customer_update: { address: 'auto' },
+      consent_collection: {
+        terms_of_service: 'required',
+      },
+      custom_text: {
+        terms_of_service_acceptance: {
+          message: 'J\'accepte les [conditions générales de vente](https://maydai.io/conditions-generales)',
+        },
+      },
     }
 
     // Ajouter le customer si disponible

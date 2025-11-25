@@ -31,18 +31,18 @@ export default function Header() {
     <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-30">
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3 md:py-4">
         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <Image 
-            src="/logos/logo-maydai/logo-maydai-complet.png" 
-            alt="MaydAI Logo" 
-            width={134} 
+          <Image
+            src="/logos/logo-maydai/logo-maydai-complet.png"
+            alt="MaydAI Logo"
+            width={134}
             height={32}
-            className="h-8 w-auto" 
-            priority 
+            className="h-8 w-auto"
+            priority
           />
         </Link>
         <ul className="hidden md:flex gap-8 items-center text-gray-700 font-medium">
           <li className="relative" ref={menuRef}>
-            <button 
+            <button
               onClick={() => setIsIaActMenuOpen(!isIaActMenuOpen)}
               className="flex items-center hover:text-primary transition"
             >
@@ -53,24 +53,24 @@ export default function Header() {
             </button>
             {isIaActMenuOpen && (
               <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <Link 
-                  href="/ia-act-ue" 
+                <Link
+                  href="/ia-act-ue"
                   className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition"
                   onClick={() => setIsIaActMenuOpen(false)}
                 >
                   <Image src="/icons/eye.png" alt="Œil" width={16} height={16} className="w-4 h-4" />
                   Vue d&apos;ensemble
                 </Link>
-                <Link 
-                  href="/ia-act-ue/calendrier" 
+                <Link
+                  href="/ia-act-ue/calendrier"
                   className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition"
                   onClick={() => setIsIaActMenuOpen(false)}
                 >
                   <Image src="/icons/calendar.png" alt="Calendrier" width={16} height={16} className="w-4 h-4" />
                   Calendrier IA Act
                 </Link>
-                <Link 
-                  href="/ia-act-ue/risques" 
+                <Link
+                  href="/ia-act-ue/risques"
                   className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition"
                   onClick={() => setIsIaActMenuOpen(false)}
                 >
@@ -85,12 +85,14 @@ export default function Header() {
           <li><Link href="/a-propos" className="hover:text-primary transition">À propos</Link></li>
           <li><Link href="/contact" className="hover:text-primary transition">Contact</Link></li>
         </ul>
-        <div className="hidden md:block">
-          <Link href="/contact" className="px-5 py-2 rounded-lg font-semibold shadow transition text-white" style={{ backgroundColor: '#ffab5a' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'} onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}>Commencer</Link>
+
+        <div className="flex gap-2 items-center">
+          <Link href="/login" className="px-5 py-2 rounded-lg font-normal text-sm transition text-primary">Connexion</Link>
+          <Link href="/signup" className="px-5 py-2 rounded-lg font-semibold shadow transition text-white" style={{ backgroundColor: '#ffab5a' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'} onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}>Commencer</Link>
         </div>
-        
+
         {/* Mobile menu button */}
-        <button 
+        <button
           className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 transition"
           onClick={(e) => {
             e.stopPropagation();
@@ -108,10 +110,10 @@ export default function Header() {
           </svg>
         </button>
       </nav>
-      
+
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           ref={mobileMenuRef}
           className="md:hidden bg-white border-t border-gray-100 shadow-lg"
         >
@@ -119,24 +121,24 @@ export default function Header() {
             {/* IA Act submenu for mobile */}
             <div className="space-y-2">
               <div className="font-medium text-gray-900 px-2 py-1">IA Act</div>
-              <Link 
-                href="/ia-act-ue" 
+              <Link
+                href="/ia-act-ue"
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition rounded-lg"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <Image src="/icons/eye.png" alt="Œil" width={16} height={16} className="w-4 h-4" />
                 Vue d&apos;ensemble
               </Link>
-              <Link 
-                href="/ia-act-ue/calendrier" 
+              <Link
+                href="/ia-act-ue/calendrier"
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition rounded-lg"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <Image src="/icons/calendar.png" alt="Calendrier" width={16} height={16} className="w-4 h-4" />
                 Calendrier IA Act
               </Link>
-              <Link 
-                href="/ia-act-ue/risques" 
+              <Link
+                href="/ia-act-ue/risques"
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition rounded-lg"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -144,47 +146,47 @@ export default function Header() {
                 Pyramide risques IA
               </Link>
             </div>
-            
+
             <hr className="border-gray-200" />
-            
+
             {/* Other menu items */}
             <div className="space-y-2">
-              <Link 
-                href="/fonctionnalites" 
+              <Link
+                href="/fonctionnalites"
                 className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Fonctionnalités
               </Link>
-              <Link 
-                href="/tarifs" 
+              <Link
+                href="/tarifs"
                 className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Tarifs
               </Link>
-              <Link 
-                href="/a-propos" 
+              <Link
+                href="/a-propos"
                 className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 À propos
               </Link>
-              <Link 
-                href="/contact" 
+              <Link
+                href="/contact"
                 className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Contact
               </Link>
             </div>
-            
+
             <hr className="border-gray-200" />
-            
+
             {/* CTA button for mobile */}
             <div className="pt-2">
-              <Link 
-                href="/contact" 
+              <Link
+                href="/signup"
                 className="block w-full px-5 py-3 rounded-lg font-semibold shadow transition text-center text-white"
                 style={{ backgroundColor: '#ffab5a' }}
                 onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'}

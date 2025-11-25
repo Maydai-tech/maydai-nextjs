@@ -30,7 +30,7 @@ export default function ProfileDropdown() {
   const handleSignOut = async () => {
     try {
       await signOut()
-      router.push('/login')
+      router.push('/')
     } catch (error) {
       console.error('Error signing out:', error)
     }
@@ -94,11 +94,10 @@ export default function ProfileDropdown() {
                   item.action()
                   setIsOpen(false)
                 }}
-                className={`w-full flex items-center px-4 py-2 text-sm transition-colors ${
-                  item.isDestructive
+                className={`w-full flex items-center px-4 py-2 text-sm transition-colors ${item.isDestructive
                     ? 'text-red-600 hover:bg-red-50'
                     : 'text-gray-700 hover:bg-gray-50 hover:text-[#0080A3]'
-                }`}
+                  }`}
               >
                 <Icon className={`h-4 w-4 mr-3 ${item.isDestructive ? 'text-red-500' : 'text-gray-400'}`} />
                 {item.label}

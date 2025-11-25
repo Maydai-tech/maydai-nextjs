@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth } from '@/lib/auth'
+import { useRouter } from 'next/navigation'
 import AdminProtectedRoute from '@/components/AdminProtectedRoute'
 import { LogOut, User } from 'lucide-react'
 
@@ -10,9 +11,11 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const { user, signOut } = useAuth()
+  const router = useRouter()
 
   const handleSignOut = async () => {
     await signOut()
+    router.push('/')
   }
 
   return (

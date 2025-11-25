@@ -10,7 +10,7 @@ interface AuthContextType {
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
-  signInWithOtp: (email: string) => Promise<{ error: Error | null }>
+  signInWithOtp: (email: string, shouldCreateUser?: boolean) => Promise<{ error: Error | null }>
   verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
@@ -131,12 +131,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const signInWithOtp = useCallback(async (email: string) => {
+  const signInWithOtp = useCallback(async (email: string, shouldCreateUser = false) => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: false, // Ne pas créer automatiquement l'utilisateur
+          shouldCreateUser, // Paramétrable : false pour login, true pour signup
         }
       })
       return { error }
