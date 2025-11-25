@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, User, Menu, X, Users, FileText, CheckSquare, Settings } from 'lucide-react';
+import { Home, User, Menu, X, Users, FileText, CheckSquare, Settings, House } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useApiCall } from '@/lib/api-client-legacy';
@@ -215,7 +215,7 @@ export default function Sidebar() {
     } else {
       document.body.style.overflow = 'unset';
     }
-    
+
     return () => {
       document.body.style.overflow = 'unset';
     };
@@ -245,8 +245,9 @@ export default function Sidebar() {
         bg-[#0080A3] h-screen w-64 fixed left-0 top-0 z-40 flex flex-col shadow-xl transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="p-6 border-b border-[#006280]/30">
+        <div className="p-6 border-b border-[#006280]/30 flex items-center">
           <h1 className="text-white text-xl font-bold tracking-wide">MaydAI</h1>
+          <House className="w-6 h-6 ml-auto text-white cursor-pointer" onClick={() => router.push('/dashboard/registries')} />
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
@@ -259,14 +260,14 @@ export default function Sidebar() {
             const isActive = item.name === 'Dashboard'
               ? (pathname === item.href || pathname.startsWith('/usecases/'))
               : item.name === 'Dossiers'
-              ? pathname.includes('/dossiers')
-              : item.name === 'To-do List'
-              ? pathname.includes('/todo-list')
-              : item.name === 'Collaboration'
-              ? pathname.includes('/collaboration') && pathname.startsWith('/dashboard/')
-              : item.name === 'Paramètres'
-              ? pathname.includes('/settings') && pathname.startsWith('/dashboard/')
-              : pathname === item.href;
+                ? pathname.includes('/dossiers')
+                : item.name === 'To-do List'
+                  ? pathname.includes('/todo-list')
+                  : item.name === 'Collaboration'
+                    ? pathname.includes('/collaboration') && pathname.startsWith('/dashboard/')
+                    : item.name === 'Paramètres'
+                      ? pathname.includes('/settings') && pathname.startsWith('/dashboard/')
+                      : pathname === item.href;
 
             return (
               <Link
