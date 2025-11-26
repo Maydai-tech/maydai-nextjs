@@ -5,22 +5,38 @@ import { UseCaseNextStepsInput } from './supabase'
  * et extrait les données structurées
  */
 export function extractNextStepsFromReport(reportText: string): Partial<UseCaseNextStepsInput> {
-  // Détecter le format du rapport
+  // Détecter le format JSON en premier (vérifier si c'est un JSON valide)
+  const trimmedText = reportText.trim()
+  if (trimmedText.startsWith('{')) {
+    try {
+      JSON.parse(trimmedText)
+      // C'est un JSON valide, utiliser l'extraction JSON
+      return extractNextStepsFromJSON(trimmedText)
+    } catch {
+      // Pas un JSON valide, continuer avec la détection Markdown
+    }
+  }
+  
+  // Détecter le format Markdown structuré
   if (reportText.includes('## Introduction contextuelle') || reportText.includes('### Les 3 priorités')) {
-    // Format Markdown structuré
-    return extractNextStepsFromMarkdown(reportText)
-  } else if (reportText.includes('"introduction"') || reportText.includes('"priorite_1"')) {
-    // Format JSON
-    return extractNextStepsFromJSON(reportText)
-  } else {
-    // Format inconnu, essayer l'extraction Markdown par défaut
-    console.warn('⚠️ Format de rapport non reconnu, tentative d\'extraction Markdown')
     return extractNextStepsFromMarkdown(reportText)
   }
+  
+  // Détecter l'ancien format JSON avec les clés attendues
+  if (reportText.includes('"introduction"') || reportText.includes('"priorite_1"')) {
+    return extractNextStepsFromJSON(reportText)
+  }
+  
+  // Format inconnu, essayer l'extraction Markdown par défaut
+  console.warn('⚠️ Format de rapport non reconnu, tentative d\'extraction Markdown')
+  return extractNextStepsFromMarkdown(reportText)
 }
 
 /**
  * Extrait les données depuis un rapport au format JSON
+ * Gère deux formats JSON :
+ * 1. Format ancien avec clés : introduction, priorite_1, priorite_2, etc.
+ * 2. Format nouveau avec clés : introduction_contextuelle, priorites_actions_reglementaires (tableau), etc.
  */
 export function extractNextStepsFromJSON(reportText: string): Partial<UseCaseNextStepsInput> {
   try {
@@ -30,10 +46,19 @@ export function extractNextStepsFromJSON(reportText: string): Partial<UseCaseNex
     // Extraire les champs pertinents
     const result: Partial<UseCaseNextStepsInput> = {}
     
-    if (jsonData.introduction) result.introduction = jsonData.introduction
-    if (jsonData.evaluation) result.evaluation = jsonData.evaluation
-    if (jsonData.impact) result.impact = jsonData.impact
-    if (jsonData.conclusion) result.conclusion = jsonData.conclusion
+    // === FORMAT ANCIEN (clés directes) ===
+    if (jsonData.introduction) {
+      result.introduction = jsonData.introduction
+    }
+    if (jsonData.evaluation) {
+      result.evaluation = jsonData.evaluation
+    }
+    if (jsonData.impact) {
+      result.impact = jsonData.impact
+    }
+    if (jsonData.conclusion) {
+      result.conclusion = jsonData.conclusion
+    }
     
     if (jsonData.priorite_1) result.priorite_1 = jsonData.priorite_1
     if (jsonData.priorite_2) result.priorite_2 = jsonData.priorite_2
@@ -46,6 +71,66 @@ export function extractNextStepsFromJSON(reportText: string): Partial<UseCaseNex
     if (jsonData.action_1) result.action_1 = jsonData.action_1
     if (jsonData.action_2) result.action_2 = jsonData.action_2
     if (jsonData.action_3) result.action_3 = jsonData.action_3
+    
+    // === FORMAT NOUVEAU (clés avec underscores et tableaux) ===
+    // Introduction contextuelle
+    if (jsonData.introduction_contextuelle && !result.introduction) {
+      // Nettoyer le préfixe Markdown si présent
+      result.introduction = jsonData.introduction_contextuelle
+        .replace(/^## Introduction contextuelle\s*\n?/i, '')
+        .trim()
+    }
+    
+    // Évaluation du risque (peut être un objet ou une string)
+    if (jsonData.evaluation_risque && !result.evaluation) {
+      if (typeof jsonData.evaluation_risque === 'string') {
+        result.evaluation = jsonData.evaluation_risque
+      } else if (typeof jsonData.evaluation_risque === 'object') {
+        const niveau = jsonData.evaluation_risque.niveau || ''
+        const justification = jsonData.evaluation_risque.justification || ''
+        result.evaluation = `${niveau}${justification ? ': ' + justification : ''}`.trim()
+      }
+    }
+    
+    // Priorités d'actions réglementaires (tableau)
+    if (Array.isArray(jsonData.priorites_actions_reglementaires)) {
+      const priorities = jsonData.priorites_actions_reglementaires
+      if (priorities[0] && !result.priorite_1) result.priorite_1 = priorities[0]
+      if (priorities[1] && !result.priorite_2) result.priorite_2 = priorities[1]
+      if (priorities[2] && !result.priorite_3) result.priorite_3 = priorities[2]
+    }
+    
+    // Quick wins & actions immédiates (tableau)
+    if (Array.isArray(jsonData.quick_wins_actions_immediates)) {
+      const quickWins = jsonData.quick_wins_actions_immediates
+      if (quickWins[0] && !result.quick_win_1) result.quick_win_1 = quickWins[0]
+      if (quickWins[1] && !result.quick_win_2) result.quick_win_2 = quickWins[1]
+      if (quickWins[2] && !result.quick_win_3) result.quick_win_3 = quickWins[2]
+    }
+    
+    // Actions à moyen terme (tableau)
+    if (Array.isArray(jsonData.actions_moyen_terme)) {
+      const actions = jsonData.actions_moyen_terme
+      if (actions[0] && !result.action_1) result.action_1 = actions[0]
+      if (actions[1] && !result.action_2) result.action_2 = actions[1]
+      if (actions[2] && !result.action_3) result.action_3 = actions[2]
+    }
+    
+    // Impact attendu
+    if (jsonData.impact_attendu && !result.impact) {
+      // Nettoyer le préfixe Markdown si présent
+      result.impact = jsonData.impact_attendu
+        .replace(/^## Impact attendu\s*\n?/i, '')
+        .trim()
+    }
+    
+    // Conclusion
+    if (jsonData.conclusion && !result.conclusion) {
+      // Nettoyer le préfixe Markdown si présent
+      result.conclusion = jsonData.conclusion
+        .replace(/^## Conclusion\s*\n?/i, '')
+        .trim()
+    }
     
     return result
   } catch (error) {
