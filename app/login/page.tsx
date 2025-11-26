@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import OTPVerification from '@/components/auth/OTPVerification'
 import { Mail, ArrowRight } from 'lucide-react'
+import Image from 'next/image'
 
 type Step = 'email' | 'otp'
 
@@ -80,10 +81,15 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-[#0080A3] rounded-full flex items-center justify-center mb-6">
-            <Mail className="h-8 w-8 text-white" />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900">
+          <Image
+            src="/logos/logo-maydai/logo-maydai-complet.png"
+            alt="MaydAI Logo"
+            width={200}
+            height={50}
+            className="w-auto mb-6 mx-auto"
+            priority
+          />
+          <h2 className="text-3xl font-bold text-primary">
             Connexion
           </h2>
           <p className="mt-2 text-gray-600">
