@@ -1,52 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être définies'
-  )
-}
+import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
+import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
+import { isValidNAFSectorCode } from '@/lib/constants/naf-sectors'
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
+    const { supabase, user } = await getAuthenticatedSupabaseClient(request)
+
+    // Get profile data
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, company_name, industry, phone, siren')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError) {
+      console.error('Profile fetch error:', profileError)
+      return NextResponse.json({ error: 'Erreur lors de la récupération du profil' }, { status: 500 })
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    
-    // Create Supabase client with the user's token
-    const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    })
-    
-    // Verify the token and get user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
-
-    // Retourner directement l'email de l'utilisateur depuis l'authentification
-    console.log('User email:', user.email)
     return NextResponse.json({
-      first_name: null,
-      last_name: null,
-      email: user.email
+      email: user.email,
+      firstName: profile?.first_name || '',
+      lastName: profile?.last_name || '',
+      companyName: profile?.company_name || '',
+      industry: profile?.industry || '',
+      phone: profile?.phone || '',
+      siren: profile?.siren || ''
     })
 
   } catch (error) {
     console.error('Profile API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const { supabase, user } = await getAuthenticatedSupabaseClient(request)
+
+    const body = await request.json()
+    const { firstName, lastName, companyName, industry, phone, siren } = body
+
+    // Validate required fields
+    if (!firstName || !lastName || !companyName || !industry) {
+      return NextResponse.json(
+        { error: 'Les champs prénom, nom, entreprise et secteur sont obligatoires' },
+        { status: 400 }
+      )
+    }
+
+    // Validate industry if provided
+    if (industry && !isValidNAFSectorCode(industry)) {
+      return NextResponse.json(
+        { error: 'Secteur d\'activité invalide' },
+        { status: 400 }
+      )
+    }
+
+    // Validate SIREN if provided
+    if (siren) {
+      const cleanedSiren = cleanSIREN(siren)
+      if (cleanedSiren.length > 0 && !validateSIREN(cleanedSiren)) {
+        return NextResponse.json(
+          { error: 'Numéro SIREN invalide' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Update profile
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        company_name: companyName.trim(),
+        industry: industry,
+        phone: phone?.trim() || null,
+        siren: siren ? cleanSIREN(siren) : null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', user.id)
+
+    if (updateError) {
+      console.error('Profile update error:', updateError)
+      return NextResponse.json(
+        { error: 'Erreur lors de la mise à jour du profil' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+
+  } catch (error) {
+    console.error('Profile PATCH error:', error)
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
     )
   }
 }
