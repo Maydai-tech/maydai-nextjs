@@ -303,7 +303,7 @@ export default function SignupPage() {
             Créer un compte
           </h2>
           <p className="mt-2 text-gray-600">
-            Commencez votre parcours de conformité AI Act
+            Commencez votre parcours de conformité AI Act.
           </p>
         </div>
 
