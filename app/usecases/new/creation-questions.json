@@ -51,8 +51,8 @@
     "hasOtherOption": true,
     "tooltip": {
       "title": "Pourquoi suivre le partenaire technologique ?",
-      "shortContent": "Documentez le fournisseur de votre modèle IA selon les exigences de l'IA Act.",
-      "fullContent": "L'IA Act européen impose des obligations différentes selon votre rôle dans la chaîne de valeur de l'IA.\n\nTraçabilité & Risque : Pour chaque cas d'usage, vous devez documenter l'ensemble du système, y compris le modèle de fondation (GPAI - General Purpose AI) sur lequel il s'appuie.\n\nObligations Partagées : Les fournisseurs de GPAI (comme Google, OpenAI, Mistral...) ont leurs propres obligations de transparence (documentation technique, instructions d'usage).\n\nIdentifier votre partenaire permet à MaydAI de vous aider à centraliser la bonne documentation et à évaluer précisément les risques transférés de leur modèle vers votre cas d'usage.",
+      "shortContent": "L'IA Act européen impose des obligations différentes selon votre rôle dans la chaîne de valeur de l'IA. Traçabilité & Risque : Pour chaque cas d'usage, vous devez documenter l'ensemble du système, y compris le modèle de fondation sur lequel il s'appuie.",
+      "fullContent": "L'IA Act européen impose des obligations différentes selon votre rôle dans la chaîne de valeur de l'IA. Traçabilité & Risque : Pour chaque cas d'usage, vous devez documenter l'ensemble du système, y compris le modèle de fondation sur lequel il s'appuie.",
       "icon": "💡"
     }
   },
@@ -69,7 +69,12 @@
     "options": [
       {
         "label": "Large Language Model (LLM)",
-        "examples": ["ChatGPT", "Claude", "Mistral", "Gemini"],
+        "examples": [
+          "ChatGPT",
+          "Claude",
+          "Mistral",
+          "Gemini"
+        ],
         "tooltip": {
           "title": "Large Language Model (LLM)",
           "shortContent": "Modèles de langage génératifs capables de comprendre et générer du texte.",
@@ -79,7 +84,10 @@
       },
       {
         "label": "Vision par ordinateur",
-        "examples": ["DALL-E", "Midjourney"],
+        "examples": [
+          "DALL-E",
+          "Midjourney"
+        ],
         "tooltip": {
           "title": "Vision par ordinateur",
           "shortContent": "IA capable d'analyser, comprendre et générer des images.",
@@ -89,7 +97,10 @@
       },
       {
         "label": "Machine Learning",
-        "examples": ["TensorFlow", "scikit-learn"],
+        "examples": [
+          "TensorFlow",
+          "scikit-learn"
+        ],
         "tooltip": {
           "title": "Machine Learning",
           "shortContent": "Apprentissage automatique pour prédictions et classifications basées sur des données.",
@@ -99,27 +110,36 @@
       },
       {
         "label": "Robotique",
-        "examples": ["Boston Dynamics Atlas", "ASIMO"],
+        "examples": [
+          "Boston Dynamics Atlas",
+          "ASIMO"
+        ],
         "tooltip": {
           "title": "Robotique",
-          "shortContent": "Systèmes physiques intelligents capables d'interagir avec leur environnement.",
-          "fullContent": "La robotique IA combine capteurs, actionneurs et IA pour l'autonomie. L'IA Act impose des règles strictes pour les robots en contact avec le public.",
+          "shortContent": "La Robotique regroupe les systèmes physiques (robots, machines) qui utilisent l'IA pour fonctionner avec autonomie, interagir avec leur environnement et exécuter des tâches.",
+          "fullContent": "La Robotique regroupe les systèmes physiques (robots, machines) qui utilisent l'IA pour fonctionner avec autonomie, interagir avec leur environnement et exécuter des tâches.",
           "icon": "🦾"
         }
       },
       {
         "label": "Systèmes experts",
-        "examples": ["MYCIN", "DENDRAL"],
+        "examples": [
+          "MYCIN",
+          "DENDRAL"
+        ],
         "tooltip": {
           "title": "Systèmes experts",
-          "shortContent": "Systèmes basés sur des règles métier et l'expertise humaine formalisée.",
-          "fullContent": "Les systèmes experts utilisent une base de connaissances et des règles logiques pour simuler le raisonnement d'un expert. Moins courants aujourd'hui.",
+          "shortContent": "Les Systèmes experts sont des systèmes informatiques (souvent qualifiés d'approches fondées sur la logique et les connaissances) qui simulent le processus de prise de décision d'un expert humain.",
+          "fullContent": "Les Systèmes experts sont des systèmes informatiques (souvent qualifiés d'approches fondées sur la logique et les connaissances) qui simulent le processus de prise de décision d'un expert humain.",
           "icon": "🎓"
         }
       },
       {
         "label": "Logiciels métiers",
-        "examples": ["Salesforce Einstein", "Adobe Firefly"],
+        "examples": [
+          "Salesforce Einstein",
+          "Adobe Firefly"
+        ],
         "tooltip": {
           "title": "Logiciels métiers",
           "shortContent": "Applications professionnelles intégrant des fonctionnalités IA.",
@@ -129,7 +149,9 @@
       },
       {
         "label": "Apprentissage / e-learning",
-        "examples": ["Didask"],
+        "examples": [
+          "Didask"
+        ],
         "tooltip": {
           "title": "Apprentissage / e-learning",
           "shortContent": "Plateformes d'apprentissage utilisant l'IA pour personnaliser la formation.",
@@ -146,7 +168,11 @@
     "options": [
       {
         "label": "Système autonome",
-        "examples": ["Chatbot indépendant", "Assistant virtuel", "Système de recommandation autonome"],
+        "examples": [
+          "Chatbot indépendant",
+          "Assistant virtuel",
+          "Système de recommandation autonome"
+        ],
         "tooltip": {
           "title": "Système autonome",
           "shortContent": "Système automatisé fonctionnant avec différents niveaux d'autonomie.",
@@ -156,7 +182,11 @@
       },
       {
         "label": "Produit",
-        "examples": ["Fonctionnalité intégrée", "Module IA dans une application", "Composant d'un service existant"],
+        "examples": [
+          "Fonctionnalité intégrée",
+          "Module IA dans une application",
+          "Composant d'un service existant"
+        ],
         "tooltip": {
           "title": "Produit",
           "shortContent": "Système IA intégré comme composant dans un produit physique ou logiciel.",
@@ -173,7 +203,7 @@
     "placeholder": "Sélectionnez les pays de déploiement...",
     "tooltip": {
       "title": "Application territoriale de l'AI Act",
-      "shortContent": "L'AI Act s'applique dans tous les États membres de l'UE.",
+      "shortContent": "L'AI Act s'applique dans tous les États membres de l'UE. Il s'applique également aux cas d'usage IA utilisés par des acteurs établis dans un pays tiers si les résultats produits par le système sont destinées à être utilisés sur le territoire de l'UE.",
       "fullContent": "L'AI Act s'applique dans tous les États membres de l'UE. Il s'applique également aux cas d'usage IA utilisés par des acteurs établis dans un pays tiers si les résultats produits par le système sont destinées à être utilisés sur le territoire de l'UE.",
       "icon": "🌍"
     }
@@ -185,11 +215,9 @@
     "placeholder": "Créez le résumé en cliquant sur le bouton AI, vous pourrez toujours le modifier…",
     "tooltip": {
       "title": "Guide pour la description du système IA",
-      "shortContent": "Résumez votre système IA : objectif principal, fonction clé, utilisateurs cibles, contexte métier et technologie utilisée.",
+      "shortContent": "Résumez votre système IA : objectif principal, fonction clé, utilisateurs cibles, contexte métier et technologie utilisée (type d'IA, modèle, fournisseur). Utilisez le bouton de génération automatique pour obtenir une première version, puis ajustez-la selon vos besoins.",
       "fullContent": "Résumez votre système IA : objectif principal, fonction clé, utilisateurs cibles, contexte métier et technologie utilisée (type d'IA, modèle, fournisseur). Utilisez le bouton de génération automatique pour obtenir une première version, puis ajustez-la selon vos besoins.",
       "icon": "📝"
     }
   }
 }
-
-
