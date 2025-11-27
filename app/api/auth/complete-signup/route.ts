@@ -116,9 +116,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create/update profile with all signup data
+    // Note: email is stored in auth.users, not in profiles table
     const profileData = {
       id: user.id,
-      email: user.email,
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       company_name: companyName.trim(),
