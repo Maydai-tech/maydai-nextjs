@@ -16,6 +16,7 @@ const PROVIDER_ICON_MAP: Record<string, string> = {
   'NVIDIA': '/icons_providers/nvidia.svg',
   'xAI': '/icons_providers/xai.svg',
   'DeepSeek': '/icons_providers/deepseek.webp',
+  'Perplexity': '/icons_providers/Perplexity.png',
   'Qwen': '/icons_providers/qwen.webp',
   // Ajout des variantes de noms pour correspondre aux données COMPL-AI
   'Mistral AI': '/icons_providers/mistral.svg',

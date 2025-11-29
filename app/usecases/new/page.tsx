@@ -37,6 +37,12 @@ interface Company {
 interface ModelProvider {
   id: number
   name: string
+  tooltip_title?: string
+  tooltip_short_content?: string
+  tooltip_full_content?: string
+  tooltip_icon?: string
+  tooltip_rank?: number
+  tooltip_rank_text?: string
 }
 
 interface ModelData {
@@ -147,7 +153,7 @@ function NewUseCasePageContent() {
   const [otherRadioSelected, setOtherRadioSelected] = useState(false)
   const api = useApiCall()
 
-  // Données des infobulles pour chaque partenaire technologique
+  // Données des infobulles pour chaque partenaire technologique (fallback)
   const partnerInfo = {
     'Anthropic': {
       title: 'Anthropic',
@@ -191,6 +197,37 @@ function NewUseCasePageContent() {
       icon: '☁️',
       rank: 6
     }
+  }
+
+  // Helper function pour récupérer les infobulles d'un provider (API en priorité, fallback sur partnerInfo)
+  const getProviderTooltip = (providerName: string) => {
+    // Chercher d'abord dans les données de l'API
+    const providerFromApi = partners.find(p => p.name === providerName || p.name.toLowerCase() === providerName.toLowerCase())
+    if (providerFromApi && (providerFromApi.tooltip_title || providerFromApi.tooltip_short_content)) {
+      return {
+        title: providerFromApi.tooltip_title || providerName,
+        shortContent: providerFromApi.tooltip_short_content || '',
+        fullContent: providerFromApi.tooltip_full_content,
+        icon: providerFromApi.tooltip_icon || '💡',
+        rank: providerFromApi.tooltip_rank,
+        rankText: providerFromApi.tooltip_rank_text
+      }
+    }
+    
+    // Fallback sur partnerInfo si disponible
+    const providerFromFallback = partnerInfo[providerName as keyof typeof partnerInfo]
+    if (providerFromFallback) {
+      return {
+        title: providerFromFallback.title,
+        shortContent: providerFromFallback.shortContent,
+        fullContent: providerFromFallback.fullContent,
+        icon: providerFromFallback.icon,
+        rank: providerFromFallback.rank,
+        rankText: undefined
+      }
+    }
+    
+    return null
   }
 
   // États pour la génération automatique avec Mistral AI
@@ -1111,17 +1148,21 @@ function NewUseCasePageContent() {
                                 <div className="text-lg font-semibold text-gray-900">
                                   {option.label}
                                 </div>
-                                {partnerInfo[option.label as keyof typeof partnerInfo] && (
-                                  <Tooltip
-                                    title={partnerInfo[option.label as keyof typeof partnerInfo].title}
-                                    shortContent={partnerInfo[option.label as keyof typeof partnerInfo].shortContent}
-                                    fullContent={partnerInfo[option.label as keyof typeof partnerInfo].fullContent}
-                                    icon={partnerInfo[option.label as keyof typeof partnerInfo].icon}
-                                    rank={partnerInfo[option.label as keyof typeof partnerInfo].rank}
-                                    type="answer"
-                                    position="auto"
-                                  />
-                                )}
+                                {(() => {
+                                  const tooltipData = getProviderTooltip(option.label)
+                                  return tooltipData ? (
+                                    <Tooltip
+                                      title={tooltipData.title}
+                                      shortContent={tooltipData.shortContent}
+                                      fullContent={tooltipData.fullContent}
+                                      icon={tooltipData.icon}
+                                      rank={tooltipData.rank}
+                                      rankText={tooltipData.rankText}
+                                      type="answer"
+                                      position="auto"
+                                    />
+                                  ) : null
+                                })()}
                               </div>
                             </div>
                           ) : (

@@ -184,6 +184,20 @@ export interface ComplAISyncLog {
   created_at: string
 }
 
+// Type pour les fournisseurs de modèles IA avec infobulles
+export interface ModelProvider {
+  id: number
+  name: string
+  tooltip_title?: string
+  tooltip_short_content?: string
+  tooltip_full_content?: string
+  tooltip_icon?: string
+  tooltip_rank?: number
+  tooltip_rank_text?: string
+  created_at?: string
+  updated_at?: string
+}
+
 // Types pour l'API Edge Function
 export interface ComplAISyncResponse {
   success: boolean

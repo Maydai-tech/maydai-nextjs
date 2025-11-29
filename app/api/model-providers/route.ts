@@ -34,14 +34,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Get only model providers that have at least one model
+    // Get all model providers that have tooltips configured, including those without models yet
+    // This allows new providers to appear in the list even if they don't have models in compl_ai_models
     const { data: providers, error: providersError } = await supabase
       .from('model_providers')
       .select(`
         id, 
         name,
-        compl_ai_models!inner(id)
+        tooltip_title,
+        tooltip_short_content,
+        tooltip_full_content,
+        tooltip_icon,
+        tooltip_rank,
+        tooltip_rank_text
       `)
+      .not('tooltip_title', 'is', null)
       .order('name', { ascending: true })
 
     if (providersError) {
@@ -57,10 +64,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
-    // Clean the response to only return id and name (remove compl_ai_models data)
+    // Clean the response to return id, name and tooltip data (remove compl_ai_models data)
     const cleanProviders = providers.map(provider => ({
       id: provider.id,
-      name: provider.name
+      name: provider.name,
+      tooltip_title: provider.tooltip_title,
+      tooltip_short_content: provider.tooltip_short_content,
+      tooltip_full_content: provider.tooltip_full_content,
+      tooltip_icon: provider.tooltip_icon,
+      tooltip_rank: provider.tooltip_rank,
+      tooltip_rank_text: provider.tooltip_rank_text
     }))
 
     return NextResponse.json(cleanProviders)
