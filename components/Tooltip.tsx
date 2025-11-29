@@ -11,6 +11,7 @@ interface TooltipProps {
   type?: 'question' | 'answer'
   position?: 'left' | 'right' | 'bottom' | 'auto'
   rank?: number  // Pour afficher le classement mondial (partenaires)
+  rankText?: string  // Pour afficher un rang textuel spécial (ex: "Challenger", "Leader Européen")
 }
 
 export default function Tooltip({ 
@@ -20,7 +21,8 @@ export default function Tooltip({
   icon = '💡',
   type = 'question',
   position = 'auto',
-  rank
+  rank,
+  rankText
 }: TooltipProps) {
   const [isHovering, setIsHovering] = useState(false)
   const [isMobileDevice, setIsMobileDevice] = useState(false)
@@ -96,20 +98,32 @@ export default function Tooltip({
 
   // Fonction pour générer le badge de classement mondial
   const getRankBadge = () => {
-    if (!rank) return null
-    
-    const getRankEmoji = (rank: number) => {
-      if (rank === 1) return '🥇'
-      if (rank === 2) return '🥈'
-      if (rank === 3) return '🥉'
-      return '📊'
+    // Si on a un rang textuel spécial, l'utiliser en priorité
+    if (rankText) {
+      return (
+        <span className="inline-flex items-center gap-1 text-xs font-bold text-white/90">
+          {rankText}
+        </span>
+      )
     }
+    
+    // Sinon, utiliser le rang numérique si disponible
+    if (rank) {
+      const getRankEmoji = (rank: number) => {
+        if (rank === 1) return '🥇'
+        if (rank === 2) return '🥈'
+        if (rank === 3) return '🥉'
+        return '📊'
+      }
 
-    return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold text-white/90">
-        {getRankEmoji(rank)} #{rank} mondial
-      </span>
-    )
+      return (
+        <span className="inline-flex items-center gap-1 text-xs font-bold text-white/90">
+          {getRankEmoji(rank)} #{rank} mondial
+        </span>
+      )
+    }
+    
+    return null
   }
 
   // Classes de positionnement pour le tooltip hover
@@ -165,7 +179,7 @@ export default function Tooltip({
               className="bg-[#0080A3] text-white text-sm px-6 py-4 rounded-lg shadow-xl relative break-words"
               style={getWidthStyle()}
             >
-              {rank && <div className="mb-2">{getRankBadge()}</div>}
+              {(rank || rankText) && <div className="mb-2">{getRankBadge()}</div>}
               <p>{displayContent}</p>
               <div className={getArrowClasses()}></div>
             </div>
