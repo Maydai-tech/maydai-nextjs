@@ -7,11 +7,13 @@ import Image from 'next/image'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
+import { supabase } from '@/lib/supabase'
 import { Building2, Plus, ChevronRight, CheckCircle, X, MoreVertical, Trash2 } from 'lucide-react'
 import Footer from '@/components/Footer'
 import NavBar from '@/components/NavBar/NavBar'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import DeleteRegistryModal from '@/app/dashboard/[id]/components/DeleteRegistryModal'
+import CompleteProfileModal from '@/components/auth/CompleteProfileModal'
 
 interface Company {
   id: string
@@ -19,8 +21,17 @@ interface Company {
   role: string
 }
 
+interface ProfileData {
+  firstName?: string
+  lastName?: string
+  companyName?: string
+  industry?: string
+  phone?: string
+  siren?: string
+}
+
 export default function RegistriesPage() {
-  const { user, loading, session } = useAuth()
+  const { user, loading, session, getAccessToken } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
@@ -35,6 +46,10 @@ export default function RegistriesPage() {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const api = useApiCall()
   const { plan } = useUserPlan()
+
+  // Profile completion modal state
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [profileData, setProfileData] = useState<ProfileData>({})
 
   // Prevent hydration mismatch and check for success message
   useEffect(() => {
@@ -67,6 +82,45 @@ export default function RegistriesPage() {
     if (user && mounted) {
       fetchCompanies()
     }
+  }, [user, mounted])
+
+  // Check if profile is complete after login
+  useEffect(() => {
+    const checkProfileCompletion = async () => {
+      if (!user || !mounted) return
+
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, company_name, industry, phone, siren')
+          .eq('id', user.id)
+          .single()
+
+        // Check if profile is complete (has all required fields)
+        const isProfileComplete = profile &&
+          profile.first_name &&
+          profile.last_name &&
+          profile.company_name &&
+          profile.industry
+
+        if (!isProfileComplete) {
+          // Show modal to complete profile
+          setProfileData({
+            firstName: profile?.first_name || user.user_metadata?.first_name || '',
+            lastName: profile?.last_name || user.user_metadata?.last_name || '',
+            companyName: profile?.company_name || '',
+            industry: profile?.industry || '',
+            phone: profile?.phone || '',
+            siren: profile?.siren || ''
+          })
+          setShowProfileModal(true)
+        }
+      } catch (err) {
+        console.error('Error checking profile:', err)
+      }
+    }
+
+    checkProfileCompletion()
   }, [user, mounted])
 
   const fetchCompanies = async () => {
@@ -147,6 +201,38 @@ export default function RegistriesPage() {
     setDeleteModalOpen(true)
   }
 
+  const handleProfileComplete = async (data: {
+    firstName: string
+    lastName: string
+    companyName: string
+    industry: string
+    phone?: string
+    siren?: string
+  }) => {
+    const token = getAccessToken()
+    if (!token) {
+      throw new Error('Session expirée. Veuillez vous reconnecter.')
+    }
+
+    const response = await fetch('/api/auth/complete-signup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Erreur lors de la mise à jour du profil')
+    }
+
+    // Success - close modal and refresh
+    setShowProfileModal(false)
+    // Optionally refresh companies list
+    await fetchCompanies()
+  }
 
   // Show loading state during SSR and initial client load
   if (!mounted || loading) {
@@ -396,6 +482,13 @@ export default function RegistriesPage() {
         onConfirm={handleDeleteRegistry}
         registryName={registryToDelete?.name || ''}
         deleting={isDeletingRegistry}
+      />
+
+      {/* Complete Profile Modal */}
+      <CompleteProfileModal
+        isOpen={showProfileModal}
+        initialData={profileData}
+        onComplete={handleProfileComplete}
       />
     </div>
   )

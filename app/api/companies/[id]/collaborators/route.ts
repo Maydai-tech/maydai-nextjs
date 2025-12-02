@@ -103,13 +103,13 @@ export async function POST(
         }
       }
     } else {
-      // User doesn't exist, invite them via email
+      // User doesn't exist, create them (email will be sent via Mailjet)
       const { data: inviteData, error: inviteError } = await inviteUserByEmail(email, {
         firstName,
         lastName
       })
 
-      if (inviteError || !inviteData.user) {
+      if (inviteError || !inviteData?.user) {
         logger.error('Failed to invite user', inviteError, createRequestContext(request))
         return NextResponse.json({ error: 'Failed to invite user' }, { status: 500 })
       }
@@ -173,10 +173,11 @@ export async function POST(
       .eq('id', companyId)
       .single()
 
-    // Envoi email (non-bloquant, ne fait pas échouer la création)
+    // Envoi email via Mailjet (non-bloquant, ne fait pas échouer la création)
     sendRegistryCollaborationInvite({
       collaboratorEmail: email,
-      collaboratorName: `${firstName} ${lastName}`,
+      collaboratorFirstName: firstName,
+      collaboratorLastName: lastName,
       inviterName: user.user_metadata?.first_name || 'Équipe MaydAI',
       companyName: company?.name || 'votre entreprise'
     }).catch(err => {

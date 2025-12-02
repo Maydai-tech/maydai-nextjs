@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/lib/auth'
@@ -12,10 +12,14 @@ type LoginStep = 'email' | 'otp'
 
 export default function LoginPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const { signInWithOtp, verifyOtp, user, loading } = useAuth()
 
+    // Pre-fill email from URL params (e.g., /login?email=user@example.com)
+    const emailFromUrl = searchParams.get('email') || ''
+
     const [step, setStep] = useState<LoginStep>('email')
-    const [email, setEmail] = useState('')
+    const [email, setEmail] = useState(emailFromUrl)
     const [error, setError] = useState('')
     const [formLoading, setFormLoading] = useState(false)
     const [isCheckingAuth, setIsCheckingAuth] = useState(true)
@@ -62,6 +66,7 @@ export default function LoginPage() {
     }
 
     const handleOtpSuccess = () => {
+        // Redirect to dashboard - profile check is done there
         router.push('/dashboard/registries')
     }
 

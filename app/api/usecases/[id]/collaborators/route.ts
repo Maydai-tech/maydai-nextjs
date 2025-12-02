@@ -113,13 +113,13 @@ export async function POST(
         }
       }
     } else {
-      // User doesn't exist, invite them via email
+      // User doesn't exist, create them (email sent via Mailjet in parent routes)
       const { data: inviteData, error: inviteError } = await inviteUserByEmail(email, {
         firstName,
         lastName
       })
 
-      if (inviteError || !inviteData.user) {
+      if (inviteError || !inviteData?.user) {
         logger.error('Failed to invite user', inviteError, createRequestContext(request))
         return NextResponse.json({ error: 'Failed to invite user' }, { status: 500 })
       }
