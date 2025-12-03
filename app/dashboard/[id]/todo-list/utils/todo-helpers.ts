@@ -1,3 +1,5 @@
+import { getTodoActionMapping } from '@/lib/todo-action-sync'
+
 interface UseCase {
   id: string
   name: string
@@ -147,6 +149,38 @@ export const getDocumentExplanation = (docType: DocumentType): string => {
     default:
       return "Veuillez fournir le document requis pour ce cas d'usage."
   }
+}
+
+/**
+ * Gets the potential score points that can be gained by completing a document action.
+ * Returns the raw points (score_base impact) only if the current response is the "negative" answer.
+ * Returns 0 if no response exists or if response is already positive.
+ *
+ * Note: We display raw points (score_base) because the actual final score gain
+ * depends on the current score and rounding at different stages.
+ *
+ * Uses the mapping from questions-with-scores.json via getTodoActionMapping
+ * to maintain a single source of truth.
+ *
+ * @param docType - The document type (e.g., 'technical_documentation')
+ * @param responses - Array of questionnaire responses for the use case
+ * @returns The potential raw points to gain (0 if no points can be gained)
+ */
+export const getPotentialPoints = (docType: string, responses: any[]): number => {
+  // Get the mapping dynamically from questions-with-scores.json
+  const mapping = getTodoActionMapping(docType)
+  if (!mapping) return 0
+
+  // Find the current response for this question
+  const response = responses.find((r: any) => r.question_code === mapping.questionCode)
+
+  // Only return points if the current answer is the "negative" one
+  // (meaning completing the action will change it to positive and gain points)
+  if (response?.single_value === mapping.negativeAnswerCode) {
+    return mapping.expectedPointsGained
+  }
+
+  return 0
 }
 
 /**

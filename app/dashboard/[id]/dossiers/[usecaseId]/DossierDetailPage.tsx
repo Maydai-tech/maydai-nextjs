@@ -8,6 +8,7 @@ import { useApiCall } from '@/lib/api-client-legacy'
 import { ArrowLeft, FileText, Check, Loader2, Info, ChevronDown, X, AlertTriangle } from 'lucide-react'
 import ComplianceFileUpload from '@/components/ComplianceFileUpload'
 import UploadedFileDisplay from '@/components/UploadedFileDisplay'
+import ScoreEvolutionPopup from '@/components/ScoreEvolutionPopup'
 import { useUnacceptableCaseWorkflow } from '@/hooks/useUnacceptableCaseWorkflow'
 import UnacceptableCaseWorkflowSteps from '@/components/UnacceptableCase/UnacceptableCaseWorkflowSteps'
 
@@ -138,6 +139,12 @@ export default function DossierDetailPage() {
   const [deleting, setDeleting] = useState<Record<string, boolean>>({})
   const [showInfoTooltip, setShowInfoTooltip] = useState<string | null>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
+  const [scoreChangePopup, setScoreChangePopup] = useState<{
+    previousScore: number | null
+    newScore: number | null
+    pointsGained: number
+    reason: string
+  } | null>(null)
 
   // Hook pour le workflow "cas inacceptable"
   const isUnacceptableCase = useCase?.risk_level?.toLowerCase() === 'unacceptable'
@@ -469,6 +476,26 @@ export default function DossierDetailPage() {
       })
 
       if (res.ok) {
+        const saveResult = await res.json()
+
+        // Check if score changed from this action
+        if (saveResult.scoreChange) {
+          setScoreChangePopup({
+            previousScore: saveResult.scoreChange.previousScore,
+            newScore: saveResult.scoreChange.newScore,
+            pointsGained: saveResult.scoreChange.pointsGained,
+            reason: saveResult.scoreChange.reason || 'Document de conformite ajoute'
+          })
+
+          // Update the local useCase score
+          if (useCase && saveResult.scoreChange.newScore !== null) {
+            setUseCase({
+              ...useCase,
+              score_final: saveResult.scoreChange.newScore
+            })
+          }
+        }
+
         // Refresh document data
         const getRes = await fetch(`/api/dossiers/${usecaseId}/${docType}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -538,6 +565,26 @@ export default function DossierDetailPage() {
       })
 
       if (res.ok) {
+        const uploadResult = await res.json()
+
+        // Check if score changed and show popup
+        if (uploadResult.scoreChange) {
+          setScoreChangePopup({
+            previousScore: uploadResult.scoreChange.previousScore,
+            newScore: uploadResult.scoreChange.newScore,
+            pointsGained: uploadResult.scoreChange.pointsGained,
+            reason: uploadResult.scoreChange.reason || 'Document de conformite ajoute'
+          })
+
+          // Update the use case score in local state
+          if (useCase && uploadResult.scoreChange.newScore !== null) {
+            setUseCase({
+              ...useCase,
+              score_final: uploadResult.scoreChange.newScore
+            })
+          }
+        }
+
         // Refresh document data
         const getRes = await fetch(`/api/dossiers/${usecaseId}/${docType}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -1284,6 +1331,17 @@ export default function DossierDetailPage() {
           })}
         </div>
       </div>
+
+      {/* Score Evolution Popup */}
+      {scoreChangePopup && (
+        <ScoreEvolutionPopup
+          previousScore={scoreChangePopup.previousScore}
+          newScore={scoreChangePopup.newScore}
+          pointsGained={scoreChangePopup.pointsGained}
+          reason={scoreChangePopup.reason}
+          onClose={() => setScoreChangePopup(null)}
+        />
+      )}
     </div>
   )
 }

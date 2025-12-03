@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import {
+  getTodoActionMapping,
+  syncTodoActionToResponse,
+} from '@/lib/todo-action-sync'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -185,7 +189,77 @@ export async function POST(
       if (insDocErr) return NextResponse.json({ error: 'Failed to insert document' }, { status: 500 })
     }
 
-    return NextResponse.json({ ok: true })
+    // Check if this docType has a todo_action mapping and sync the response
+    // Only trigger when document is being marked as complete
+    let scoreChange = null
+    if (status === 'complete') {
+      const todoMapping = getTodoActionMapping(docType)
+      if (todoMapping) {
+        console.log('[POST /dossiers] Found todo_action mapping for docType:', docType)
+
+        // Sync the questionnaire response
+        const syncResult = await syncTodoActionToResponse(
+          supabase,
+          usecaseId,
+          docType,
+          user.email || user.id
+        )
+
+        // Only update score if the previous answer was the NEGATIVE one
+        if (syncResult.shouldRecalculate && syncResult.expectedPointsGained > 0) {
+          console.log('[POST /dossiers] Previous answer was negative, updating score')
+          console.log('[POST /dossiers] Expected points gained:', syncResult.expectedPointsGained)
+
+          // Get the current score from the database
+          const { data: currentUsecase } = await supabase
+            .from('usecases')
+            .select('score_final, score_base')
+            .eq('id', usecaseId)
+            .single()
+
+          const previousScore = currentUsecase?.score_final ?? null
+          const previousBaseScore = currentUsecase?.score_base ?? 0
+
+          if (previousScore !== null) {
+            // Calculate new scores by adding the expected points
+            const newBaseScore = previousBaseScore + syncResult.expectedPointsGained
+            const newFinalScore = Math.round((newBaseScore / 120) * 100 * 100) / 100
+
+            console.log(`[POST /dossiers] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`)
+
+            // Update the score in the database
+            const { error: updateError } = await supabase
+              .from('usecases')
+              .update({
+                score_base: newBaseScore,
+                score_final: newFinalScore,
+                last_calculation_date: new Date().toISOString(),
+              })
+              .eq('id', usecaseId)
+
+            if (!updateError) {
+              const pointsGainedFinal = Math.round((newFinalScore - previousScore) * 100) / 100
+
+              scoreChange = {
+                previousScore: previousScore,
+                newScore: newFinalScore,
+                pointsGained: pointsGainedFinal,
+                reason: todoMapping.reason,
+              }
+              console.log('[POST /dossiers] Score changed:', scoreChange)
+            } else {
+              console.error('[POST /dossiers] Error updating score:', updateError)
+            }
+          }
+        } else if (syncResult.changed) {
+          console.log('[POST /dossiers] Response was updated but previous was null, no score update needed')
+        } else {
+          console.log('[POST /dossiers] Response was already set to positive value, no score update needed')
+        }
+      }
+    }
+
+    return NextResponse.json({ ok: true, scoreChange })
   } catch (e) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

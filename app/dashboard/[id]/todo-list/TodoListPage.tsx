@@ -14,6 +14,7 @@ import {
   getDocumentTodoText,
   isTodoCompleted,
   getRiskLevelConfig,
+  getPotentialPoints,
   COMPLIANCE_DOCUMENT_TYPES,
   type DocumentType
 } from './utils/todo-helpers'
@@ -45,6 +46,7 @@ interface TodoItem {
   useCaseId: string
   docType: DocumentType | 'registry_action'
   registryCase?: 'A' | 'B' | 'C' // For registry-related todos
+  potentialPoints?: number // Points that can be gained by completing this action
 }
 
 interface TodoListPageProps {
@@ -361,16 +363,19 @@ export default function TodoListPage({ params }: TodoListPageProps) {
     // Add compliance document todos for completed, non-unacceptable cases
     if (useCase.status === 'completed' && !isUnacceptableCase(useCase)) {
       const useCaseDocs = complianceDocStatuses[useCase.id] || {}
+      const responses = useCaseResponses[useCase.id] || []
 
       // Add todos for each of the 7 compliance documents
       for (const docType of COMPLIANCE_DOCUMENT_TYPES) {
         const docStatus = useCaseDocs[docType]
+        const potentialPoints = getPotentialPoints(docType, responses)
         todos.push({
           id: `${useCase.id}-${docType}`,
           text: getDocumentTodoText(docType),
           completed: isTodoCompleted(docStatus),
           useCaseId: useCase.id,
-          docType: docType as DocumentType
+          docType: docType as DocumentType,
+          potentialPoints: potentialPoints > 0 ? potentialPoints : undefined
         })
       }
 
@@ -609,6 +614,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                                 isExpanded={expandedTodos[todo.id] || false}
                                 onToggle={toggleTodo}
                                 onActionClick={(useCaseId) => handleTodoClick(useCaseId, todo.docType)}
+                                potentialPoints={todo.potentialPoints}
                               />
                             )
                           ))}
