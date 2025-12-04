@@ -1,4 +1,18 @@
 import { getTodoActionMapping } from '@/lib/todo-action-sync'
+import { TOTAL_WEIGHT } from '@/lib/score-calculator-simple'
+
+/**
+ * Converts raw score impact points to normalized final score points.
+ *
+ * The final score is calculated as: ((score_base + score_model) / 120) * 100
+ * So raw points must be converted with the same ratio: (rawPoints / 120) * 100
+ *
+ * @param rawPoints - Raw score impact points (e.g., 10)
+ * @returns Normalized points as they appear in final score (e.g., 8)
+ */
+export const convertToNormalizedPoints = (rawPoints: number): number => {
+  return Math.round((rawPoints / TOTAL_WEIGHT) * 100)
+}
 
 interface UseCase {
   id: string
@@ -153,18 +167,23 @@ export const getDocumentExplanation = (docType: DocumentType): string => {
 
 /**
  * Gets the potential score points that can be gained by completing a document action.
- * Returns the raw points (score_base impact) only if the current response is the "negative" answer.
+ * Returns the NORMALIZED points (as they appear in final score) only if the current
+ * response is the "negative" answer.
  * Returns 0 if no response exists or if response is already positive.
  *
- * Note: We display raw points (score_base) because the actual final score gain
- * depends on the current score and rounding at different stages.
+ * The final score formula is: ((score_base + score_model) / 120) * 100
+ * So raw points are converted with: (rawPoints / 120) * 100
+ *
+ * For example, if technical_documentation has score_impact -10:
+ * - Raw points: 10
+ * - Normalized points: (10 / 120) * 100 ≈ 8 points
  *
  * Uses the mapping from questions-with-scores.json via getTodoActionMapping
  * to maintain a single source of truth.
  *
  * @param docType - The document type (e.g., 'technical_documentation')
  * @param responses - Array of questionnaire responses for the use case
- * @returns The potential raw points to gain (0 if no points can be gained)
+ * @returns The potential normalized points to gain (0 if no points can be gained)
  */
 export const getPotentialPoints = (docType: string, responses: any[]): number => {
   // Get the mapping dynamically from questions-with-scores.json
@@ -177,7 +196,8 @@ export const getPotentialPoints = (docType: string, responses: any[]): number =>
   // Only return points if the current answer is the "negative" one
   // (meaning completing the action will change it to positive and gain points)
   if (response?.single_value === mapping.negativeAnswerCode) {
-    return mapping.expectedPointsGained
+    // Convert raw points to normalized points (as they appear in final score)
+    return convertToNormalizedPoints(mapping.expectedPointsGained)
   }
 
   return 0
