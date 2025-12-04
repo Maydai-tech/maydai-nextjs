@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@/lib/auth';
 
 export default function Header() {
+  const { user, loading } = useAuth();
   const [isIaActMenuOpen, setIsIaActMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -86,9 +88,23 @@ export default function Header() {
           <li><Link href="/contact" className="hover:text-primary transition">Contact</Link></li>
         </ul>
 
-        <div className="flex gap-2 items-center">
-          <Link href="/login" className="px-5 py-2 rounded-lg font-normal text-sm transition text-primary">Connexion</Link>
-          <Link href="/signup" className="px-5 py-2 rounded-lg font-semibold shadow transition text-white" style={{ backgroundColor: '#ffab5a' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'} onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}>Commencer</Link>
+        <div className="hidden md:flex gap-2 items-center">
+          {!loading && user ? (
+            <Link
+              href="/dashboard/registries"
+              className="px-5 py-2 rounded-lg font-semibold shadow transition text-white"
+              style={{ backgroundColor: '#ffab5a' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="px-5 py-2 rounded-lg font-normal text-sm transition text-primary">Connexion</Link>
+              <Link href="/signup" className="px-5 py-2 rounded-lg font-semibold shadow transition text-white" style={{ backgroundColor: '#ffab5a' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'} onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}>Commencer</Link>
+            </>
+          )}
         </div>
 
         {/* Mobile menu button */}
@@ -185,16 +201,38 @@ export default function Header() {
 
             {/* CTA button for mobile */}
             <div className="pt-2">
-              <Link
-                href="/signup"
-                className="block w-full px-5 py-3 rounded-lg font-semibold shadow transition text-center text-white"
-                style={{ backgroundColor: '#ffab5a' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Commencer
-              </Link>
+              {!loading && user ? (
+                <Link
+                  href="/dashboard/registries"
+                  className="block w-full px-5 py-3 rounded-lg font-semibold shadow transition text-center text-white"
+                  style={{ backgroundColor: '#ffab5a' }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="block w-full px-5 py-3 rounded-lg font-normal text-center text-primary mb-2"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Connexion
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="block w-full px-5 py-3 rounded-lg font-semibold shadow transition text-center text-white"
+                    style={{ backgroundColor: '#ffab5a' }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Commencer
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
