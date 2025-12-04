@@ -1,6 +1,6 @@
 'use client'
 
-import { CheckSquare, Square, ChevronRight, ChevronDown, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { CheckSquare, Square, ChevronRight, ChevronDown, AlertTriangle, CheckCircle2, TrendingUp } from 'lucide-react'
 import { getDocumentExplanation, type DocumentType } from '../utils/todo-helpers'
 
 interface TodoItem {
@@ -16,13 +16,15 @@ interface ToDoActionProps {
   isExpanded: boolean
   onToggle: (todoId: string) => void
   onActionClick: (useCaseId: string) => void
+  potentialPoints?: number // Points that can be gained by completing this action
 }
 
 export default function ToDoAction({
   todo,
   isExpanded,
   onToggle,
-  onActionClick
+  onActionClick,
+  potentialPoints
 }: ToDoActionProps) {
   return (
     <div className="space-y-2">
@@ -51,6 +53,14 @@ export default function ToDoAction({
         <span className={`flex-1 text-sm ${todo.completed ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
           {todo.text}
         </span>
+
+        {/* Points badge - only shown when action can gain points */}
+        {potentialPoints && potentialPoints > 0 && !todo.completed && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full flex-shrink-0">
+            <TrendingUp className="w-3 h-3" />
+            +{potentialPoints} pts
+          </span>
+        )}
 
         {/* Chevron icon */}
         <ChevronDown

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import {
+  getTodoActionMapping,
+  syncTodoActionToResponse,
+} from "@/lib/todo-action-sync";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -67,7 +71,7 @@ async function getClientFromAuth(request: NextRequest) {
     error: authError,
   } = await supabase.auth.getUser(token);
   if (authError || !user) return { error: "Invalid token" };
-  return { supabase, user };
+  return { supabase, user, token };
 }
 
 export async function PUT(
@@ -77,7 +81,7 @@ export async function PUT(
   try {
     console.log("[PUT /upload] Starting upload request");
 
-    const { supabase, user, error } = (await getClientFromAuth(request)) as any;
+    const { supabase, user, token, error } = (await getClientFromAuth(request)) as any;
     if (error) {
       console.error("[PUT /upload] Auth error:", error);
       return NextResponse.json({ error }, { status: 401 });
@@ -331,8 +335,80 @@ export async function PUT(
       console.log("[PUT /upload] Document inserted successfully");
     }
 
+    // Check if this docType has a todo_action mapping and sync the response
+    let scoreChange = null;
+    const todoMapping = getTodoActionMapping(docType);
+    if (todoMapping) {
+      console.log("[PUT /upload] Found todo_action mapping for docType:", docType);
+
+      // Sync the questionnaire response
+      const syncResult = await syncTodoActionToResponse(
+        supabase,
+        usecaseId,
+        docType,
+        user.email || user.id
+      );
+
+      // Only update score if the previous answer was the NEGATIVE one
+      // (e.g., changing from "Non" to "Oui" gives +10 points)
+      // If previous was null or already positive, don't update score (delta = 0)
+      if (syncResult.shouldRecalculate && syncResult.expectedPointsGained > 0) {
+        console.log("[PUT /upload] Previous answer was negative, updating score");
+        console.log("[PUT /upload] Expected points gained:", syncResult.expectedPointsGained);
+
+        // Get the current score from the database
+        const { data: currentUsecase } = await supabase
+          .from("usecases")
+          .select("score_final, score_base")
+          .eq("id", usecaseId)
+          .single();
+
+        const previousScore = currentUsecase?.score_final ?? null;
+        const previousBaseScore = currentUsecase?.score_base ?? 0;
+
+        if (previousScore !== null) {
+          // Calculate new scores by adding the expected points
+          // The points gained affect the base score (which is on a /120 scale)
+          // score_final = (score_base / 120) * 100
+          const newBaseScore = previousBaseScore + syncResult.expectedPointsGained;
+          const newFinalScore = Math.round((newBaseScore / 120) * 100 * 100) / 100;
+
+          console.log(`[PUT /upload] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
+
+          // Update the score in the database
+          const { error: updateError } = await supabase
+            .from("usecases")
+            .update({
+              score_base: newBaseScore,
+              score_final: newFinalScore,
+              last_calculation_date: new Date().toISOString(),
+            })
+            .eq("id", usecaseId);
+
+          if (!updateError) {
+            // Calculate the actual points gained in final score terms
+            const pointsGainedFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
+
+            scoreChange = {
+              previousScore: previousScore,
+              newScore: newFinalScore,
+              pointsGained: pointsGainedFinal,
+              reason: todoMapping.reason,
+            };
+            console.log("[PUT /upload] Score changed:", scoreChange);
+          } else {
+            console.error("[PUT /upload] Error updating score:", updateError);
+          }
+        }
+      } else if (syncResult.changed) {
+        console.log("[PUT /upload] Response was updated but previous was null, no score update needed (delta = 0)");
+      } else {
+        console.log("[PUT /upload] Response was already set to positive value, no score update needed");
+      }
+    }
+
     console.log("[PUT /upload] Upload completed successfully");
-    return NextResponse.json({ ok: true, fileUrl });
+    return NextResponse.json({ ok: true, fileUrl, scoreChange });
   } catch (e) {
     console.error("[PUT /upload] Internal server error:", e);
     return NextResponse.json(

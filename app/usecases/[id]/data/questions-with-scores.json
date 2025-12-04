@@ -517,6 +517,7 @@
     "type": "radio",
     "required": true,
     "risk": "minimal",
+    "todo_action": "transparency_marking",
     "tooltip": {
       "title": "Contact utilisateurs",
       "shortContent": "Si le système interagit directement avec des personnes physiques (ex: chatbot), le fournisseur doit garantir la transparence. Les utilisateurs doivent être informés qu'ils sont en contact avec une machine, sauf si cela est évident, pour qu'ils puissent prendre une décision éclairée.",
@@ -589,6 +590,7 @@
     "type": "radio",
     "required": true,
     "risk": "minimal",
+    "todo_action": "continuous_monitoring",
     "tooltip": {
       "title": "Surveillance continue",
       "shortContent": "Les fournisseurs de Système d'IA doivent mettre en place un système de gestion des risques continu pour repérer les dysfonctionnements et garantir la conformité tout au long du cycle de vie.",
@@ -771,6 +773,7 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "todo_action": "risk_management",
     "tooltip": {
       "title": "Système de gestion des risques",
       "shortContent": "Un système de gestion des risques est un processus itératif continu pour les systèmes d'IA. Il doit être mis en œuvre et tenu à jour sur l'ensemble du cycle de vie. Il vise à identifier et atténuer les risques connus et l'utilisation abusive raisonnablement prévisible.",
@@ -855,6 +858,7 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "todo_action": "technical_documentation",
     "tooltip": {
       "title": "Documentation technique",
       "shortContent": "Elle est obligatoire pour les fournisseurs de système d'IA à Haut Risque. Elle doit être établie avant la mise sur le marché et mise à jour. Elle prouve la conformité aux exigences et contient les informations sur la conception, l'entraînement et les tests (Annexe IV).",
@@ -924,6 +928,7 @@
     "type": "conditional",
     "required": true,
     "risk": "limited",
+    "todo_action": "data_quality",
     "tooltip": {
       "title": "Procédures qualité données",
       "shortContent": "Des pratiques de gouvernance et de gestion des données appropriées sont demandées pour les systèmes d'IA utilisant l'entraînement. Les jeux de données (entraînement, validation, test) doivent être pertinents et représentatifs pour détecter, prévenir et atténuer les biais.",
@@ -964,6 +969,7 @@
     "type": "conditional",
     "required": true,
     "risk": "minimal",
+    "todo_action": "registry_proof",
     "tooltip": {
       "title": "Registre centralisé",
       "shortContent": "Les fournisseurs de système d'IA à Haut Risque doivent s'enregistrer dans la Base de données de l'UE (Article 71) avant la mise sur le marché. Les autorités publiques/déployeurs doivent aussi enregistrer leur utilisation.",
@@ -1009,6 +1015,7 @@
     "type": "conditional",
     "required": true,
     "risk": "limited",
+    "todo_action": "human_oversight",
     "tooltip": {
       "title": "Surveillance humaine",
       "shortContent": "Un système d'IA à Haut Risque doit permettre un contrôle humain effectif pour prévenir les risques. L'opérateur doit pouvoir détecter les anomalies, intervenir, ignorer ou arrêter le système en cas de dysfonctionnement ou de résultats inattendus (Article 14).",
