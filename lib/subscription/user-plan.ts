@@ -6,6 +6,7 @@
 import { supabase } from '@/lib/supabase'
 import { getPlanInfo, getDefaultPlan } from './plans'
 import type { Subscription, PlanInfo } from './types'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * Interface pour les données complètes du plan utilisateur
@@ -19,11 +20,13 @@ export interface UserPlanData {
 /**
  * Récupère la subscription d'un utilisateur depuis la table subscriptions
  * @param userId - L'ID de l'utilisateur
+ * @param client - Client Supabase optionnel (authentifié). Si non fourni, utilise le client par défaut.
  * @returns La subscription ou null si aucune n'existe
  */
-async function getUserSubscription(userId: string): Promise<Subscription | null> {
+async function getUserSubscription(userId: string, client?: SupabaseClient): Promise<Subscription | null> {
   try {
-    const { data, error } = await supabase
+    const supabaseClient = client || supabase
+    const { data, error } = await supabaseClient
       .from('subscriptions')
       .select('*')
       .eq('user_id', userId)
@@ -48,16 +51,19 @@ async function getUserSubscription(userId: string): Promise<Subscription | null>
  * Si l'utilisateur n'a pas de subscription, retourne automatiquement le plan freemium
  *
  * @param userId - L'ID de l'utilisateur
+ * @param supabaseClient - Client Supabase optionnel (authentifié). Requis côté serveur pour RLS.
  * @returns Les données complètes du plan utilisateur
  *
  * @example
  * ```typescript
+ * // Côté client (le client Supabase a déjà le contexte auth)
  * const userPlan = await getCurrentUserPlan(user.id)
- * console.log(userPlan.planInfo.displayName) // "Pro" ou "Freemium"
- * console.log(userPlan.hasActiveSubscription) // true ou false
+ *
+ * // Côté serveur (passer le client authentifié)
+ * const userPlan = await getCurrentUserPlan(user.id, supabase)
  * ```
  */
-export async function getCurrentUserPlan(userId: string): Promise<UserPlanData> {
+export async function getCurrentUserPlan(userId: string, supabaseClient?: SupabaseClient): Promise<UserPlanData> {
   if (!userId) {
     // Si pas d'userId, retourner le plan freemium par défaut
     const defaultPlan = await getDefaultPlan()
@@ -69,7 +75,7 @@ export async function getCurrentUserPlan(userId: string): Promise<UserPlanData> 
   }
 
   // Récupérer la subscription de l'utilisateur
-  const subscription = await getUserSubscription(userId)
+  const subscription = await getUserSubscription(userId, supabaseClient)
 
   // Si pas de subscription, utiliser le plan freemium par défaut
   if (!subscription) {
@@ -109,6 +115,7 @@ export async function getCurrentUserPlan(userId: string): Promise<UserPlanData> 
  * Utile quand on a juste besoin du PlanInfo sans les détails de subscription
  *
  * @param userId - L'ID de l'utilisateur
+ * @param supabaseClient - Client Supabase optionnel (authentifié). Requis côté serveur pour RLS.
  * @returns Les informations du plan (freemium par défaut si pas de subscription)
  *
  * @example
@@ -117,14 +124,15 @@ export async function getCurrentUserPlan(userId: string): Promise<UserPlanData> 
  * console.log(planInfo.displayName) // "Pro" ou "Freemium"
  * ```
  */
-export async function getUserPlanInfo(userId: string): Promise<PlanInfo> {
-  const userPlan = await getCurrentUserPlan(userId)
+export async function getUserPlanInfo(userId: string, supabaseClient?: SupabaseClient): Promise<PlanInfo> {
+  const userPlan = await getCurrentUserPlan(userId, supabaseClient)
   return userPlan.planInfo
 }
 
 /**
  * Vérifie si un utilisateur a une subscription active
  * @param userId - L'ID de l'utilisateur
+ * @param supabaseClient - Client Supabase optionnel (authentifié). Requis côté serveur pour RLS.
  * @returns true si l'utilisateur a une subscription active, false sinon
  *
  * @example
@@ -135,12 +143,12 @@ export async function getUserPlanInfo(userId: string): Promise<PlanInfo> {
  * }
  * ```
  */
-export async function hasActiveSubscription(userId: string): Promise<boolean> {
+export async function hasActiveSubscription(userId: string, supabaseClient?: SupabaseClient): Promise<boolean> {
   if (!userId) {
     return false
   }
 
-  const subscription = await getUserSubscription(userId)
+  const subscription = await getUserSubscription(userId, supabaseClient)
 
   if (!subscription) {
     return false
@@ -152,9 +160,10 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
 /**
  * Vérifie si un utilisateur est sur le plan freemium
  * @param userId - L'ID de l'utilisateur
+ * @param supabaseClient - Client Supabase optionnel (authentifié). Requis côté serveur pour RLS.
  * @returns true si l'utilisateur est sur le plan freemium
  */
-export async function isFreemiumUser(userId: string): Promise<boolean> {
-  const userPlan = await getCurrentUserPlan(userId)
+export async function isFreemiumUser(userId: string, supabaseClient?: SupabaseClient): Promise<boolean> {
+  const userPlan = await getCurrentUserPlan(userId, supabaseClient)
   return userPlan.planInfo.isFree
 }

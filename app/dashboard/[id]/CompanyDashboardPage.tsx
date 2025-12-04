@@ -590,6 +590,21 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
               </div>
             </div>
 
+            <button
+              onClick={() => {
+                const maxUseCases = plan.maxUseCasesPerRegistry || 3
+
+                if (useCases.length >= maxUseCases) {
+                  setShowUseCaseLimitModal(true)
+                } else {
+                  router.push(`/usecases/new?company=${companyId}`)
+                }
+              }}
+              className="inline-flex items-center justify-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Nouveau cas d'usage
+            </button>
           </div>
         </div>
       </div>

@@ -74,7 +74,47 @@ async function fetchPlanByUuid(uuid: string): Promise<PlanInfo | null> {
 }
 
 /**
- * Récupère tous les plans depuis l'API avec cache
+ * Détecte si on est côté serveur (Node.js) ou client (browser)
+ */
+function isServerSide(): boolean {
+  return typeof window === 'undefined'
+}
+
+/**
+ * Récupère tous les plans depuis Supabase directement (pour usage côté serveur)
+ */
+async function fetchPlansFromSupabase(): Promise<PlanInfo[]> {
+  try {
+    const { supabase } = await import('@/lib/supabase')
+
+    const { data: plans, error } = await supabase
+      .from('plans')
+      .select('*')
+      .order('display_order', { ascending: true })
+
+    if (error || !plans) {
+      console.error('Error fetching plans from Supabase:', error)
+      return []
+    }
+
+    return plans.map(plan => ({
+      id: plan.plan_id,
+      name: plan.plan_id,
+      displayName: plan.display_name,
+      description: plan.description || '',
+      isFree: plan.price_monthly === 0 && plan.price_yearly === 0,
+      maxRegistries: plan.max_registries,
+      maxCollaborators: plan.max_collaborators,
+      maxUseCasesPerRegistry: plan.max_usecases_per_registry ?? undefined
+    }))
+  } catch (error) {
+    console.error('Error fetching plans from Supabase:', error)
+    return []
+  }
+}
+
+/**
+ * Récupère tous les plans depuis l'API (client) ou Supabase (serveur) avec cache
  */
 async function fetchAllPlans(): Promise<PlanInfo[]> {
   const now = Date.now()
@@ -84,12 +124,25 @@ async function fetchAllPlans(): Promise<PlanInfo[]> {
     return plansCache
   }
 
-  // Récupérer depuis l'API
+  // Récupérer les plans
   try {
-    const maydaiPlans = await fetchPlans()
-    plansCache = maydaiPlans.map(mapMaydAIPlanToPlanInfo)
-    cacheTimestamp = now
-    return plansCache
+    let plans: PlanInfo[]
+
+    if (isServerSide()) {
+      // Côté serveur: requêter Supabase directement
+      plans = await fetchPlansFromSupabase()
+    } else {
+      // Côté client: utiliser l'API
+      const maydaiPlans = await fetchPlans()
+      plans = maydaiPlans.map(mapMaydAIPlanToPlanInfo)
+    }
+
+    if (plans.length > 0) {
+      plansCache = plans
+      cacheTimestamp = now
+    }
+
+    return plans.length > 0 ? plans : getDefaultPlanFallback()
   } catch (error) {
     console.error('Error fetching plans:', error)
     // Si le cache existe, l'utiliser même s'il est expiré
@@ -97,14 +150,21 @@ async function fetchAllPlans(): Promise<PlanInfo[]> {
       return plansCache
     }
     // Sinon, retourner un plan par défaut
-    return [{
-      id: 'freemium',
-      name: 'freemium',
-      displayName: 'Freemium',
-      description: 'Plan gratuit pour découvrir MaydAI',
-      isFree: true
-    }]
+    return getDefaultPlanFallback()
   }
+}
+
+/**
+ * Plan par défaut en cas d'erreur
+ */
+function getDefaultPlanFallback(): PlanInfo[] {
+  return [{
+    id: 'freemium',
+    name: 'freemium',
+    displayName: 'Freemium',
+    description: 'Plan gratuit pour découvrir MaydAI',
+    isFree: true
+  }]
 }
 
 /**

@@ -1,11 +1,11 @@
-import Header from '@/components/Header';
-import HeroSection from '@/components/HeroSection';
-import TechnologiesSection from '@/components/TechnologiesSection';
-import FeaturesSection from '@/components/FeaturesSection';
+import Header from '@/components/site-vitrine/Header';
+import HeroSection from '@/components/site-vitrine/HeroSection';
+import TechnologiesSection from '@/components/site-vitrine/TechnologiesSection';
+import FeaturesSection from '@/components/site-vitrine/FeaturesSection';
 import MistralDashboard from '@/components/MistralDashboard';
 import AuditAIActCompliance from '@/components/AuditAIActCompliance';
-import TestimonialsSection from '@/components/TestimonialsSection';
-import Footer from '@/components/Footer';
+import TestimonialsSection from '@/components/site-vitrine/TestimonialsSection';
+import Footer from '@/components/site-vitrine/Footer';
 
 export const metadata = {
   title: 'MaydAI - Plateforme de Conformité AI Act | Audit IA Automatisé & Gestion Centralisée',

@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import Header from '@/components/site-vitrine/Header';
+import Footer from '@/components/site-vitrine/Footer';
 
 export const metadata: Metadata = {
   title: "Agenda IA Act : Le Calendrier Complet des Échéances 2025-2030 | MaydAI",

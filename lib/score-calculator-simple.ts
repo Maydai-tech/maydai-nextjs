@@ -123,6 +123,21 @@ export function roundToTwoDecimals(value: number): number {
 }
 
 /**
+ * Converts raw score points to normalized points on a 100-basis scale.
+ *
+ * The final score formula is: ((score_base + score_model) / TOTAL_WEIGHT) * 100
+ * This function applies the same ratio to any raw point value.
+ *
+ * Example: If TOTAL_WEIGHT=120 and rawPoints=10, result = (10/120)*100 = 8.33 → 8
+ *
+ * @param rawPoints - Raw score impact points (e.g., 10)
+ * @returns Normalized points as they appear in final score (e.g., 8)
+ */
+export function normalizeScoreTo100(rawPoints: number): number {
+  return Math.round((rawPoints / TOTAL_WEIGHT) * 100);
+}
+
+/**
  * Récupère les codes de réponse sélectionnés par l'utilisateur
  * Gère les différents types de réponses (radio, checkbox, conditional)
  * 

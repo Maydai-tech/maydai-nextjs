@@ -51,8 +51,8 @@ export async function GET(
       )
     }
 
-    // Get current user plan
-    const userPlan = await getCurrentUserPlan(profileId)
+    // Get current user plan (pass authenticated supabase client for RLS)
+    const userPlan = await getCurrentUserPlan(profileId, supabase)
 
     return NextResponse.json({
       subscription: userPlan.subscription,

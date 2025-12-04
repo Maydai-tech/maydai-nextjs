@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import AdminProtectedRoute from '@/components/AdminProtectedRoute'
-import Header from '@/components/Header'
+import Header from '@/components/site-vitrine/Header'
 import { 
   AlertCircle, 
   TrendingUp, 

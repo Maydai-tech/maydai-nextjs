@@ -420,3 +420,5 @@ AIRTABLE_BASE_ID=
 5. **SSR Safety:** Always use `mounted` state for protected routes
 6. **Asset Naming:** kebab-case only, no spaces or special characters
 7. **Production Safety:** Run full build/test cycle before merging `thomas` branch
+- Ne lance jamais le serveur. Je le lance moi même. Si il y a des tests à faire je veux les faire moi même
+- Quand tu modifies le code d'une page dans un fichier qui s'appelle page.tsx, vérifie si il faut faire une refacto. Je veux que page.tsx exporte simplement le contenu d'un fichier qui doit avoir un nom plus explicite.

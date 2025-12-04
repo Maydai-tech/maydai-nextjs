@@ -3,8 +3,8 @@
 import { FiPhone, FiMail, FiMapPin, FiChevronDown } from 'react-icons/fi';
 import Image from 'next/image';
 import Script from 'next/script';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import Header from '@/components/site-vitrine/Header';
+import Footer from '@/components/site-vitrine/Footer';
 import { useState, useEffect, useRef } from 'react';
 
 export default function ContactPage() {

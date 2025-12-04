@@ -12,7 +12,7 @@ import { UseCaseSidebar } from './components/overview/UseCaseSidebar'
 import { useNextSteps } from './hooks/useNextSteps'
 import { useRiskLevel } from './hooks/useRiskLevel'
 import { useUseCaseScore } from './hooks/useUseCaseScore'
-import { AlertTriangle, RefreshCcw } from 'lucide-react'
+import { AlertTriangle, RefreshCcw, ArrowRight } from 'lucide-react'
 import { getScoreStyle } from '@/lib/score-styles'
 import { RiskLevelBadge } from './components/overview/RiskLevelBadge'
 import { getCompanyStatusLabel, getCompanyStatusDefinition } from './utils/company-status'
@@ -20,6 +20,18 @@ import UnacceptableCaseModal from '@/components/Shared/UnacceptableCaseModal'
 import { useUnacceptableCaseWorkflow } from '@/hooks/useUnacceptableCaseWorkflow'
 import { supabase } from '@/lib/supabase'
 
+// Mapping des actions du rapport vers les types de documents de la todo-list
+const ACTION_TO_DOCTYPE: Record<string, string> = {
+  quick_win_1: 'registry_action',
+  quick_win_2: 'human_oversight',
+  quick_win_3: 'system_prompt',
+  priorite_1: 'technical_documentation',
+  priorite_2: 'transparency_marking',
+  priorite_3: 'data_quality',
+  action_1: 'risk_management',
+  action_2: 'continuous_monitoring',
+  // action_3: à définir plus tard
+}
 
 export default function UseCaseDetailPage() {
   const { user, loading, session } = useAuth()
@@ -524,27 +536,44 @@ export default function UseCaseDetailPage() {
                 {nextSteps.priorite_1 && (
                   <div>
                     <div className="flex items-center gap-3 mb-4">
-                      <img 
-                        src="/icons/attention.png" 
-                        alt="Actions prioritaires" 
-                        width={24} 
-                        height={24} 
+                      <img
+                        src="/icons/attention.png"
+                        alt="Actions prioritaires"
+                        width={24}
+                        height={24}
                         className="flex-shrink-0"
                       />
                       <h3 className="text-xl font-semibold text-gray-900">Il est impératif de mettre en œuvre les mesures suivantes :</h3>
                     </div>
                     <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Les 3 priorités d'actions réglementaires</h4>
-                    <ul className="space-y-2 mb-4 ml-4">
-                      {[nextSteps.priorite_1, nextSteps.priorite_2, nextSteps.priorite_3]
-                        .filter(Boolean)
-                        .map((action, index) => (
-                          <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
-                            <span className="text-[#0080a3] mr-2 text-6xl">•</span>
-                            <span className="flex-1">
-                              {action}
-                            </span>
-                          </li>
-                        ))}
+                    <ul className="space-y-3 mb-4 ml-4">
+                      {[
+                        { key: 'priorite_1', value: nextSteps.priorite_1 },
+                        { key: 'priorite_2', value: nextSteps.priorite_2 },
+                        { key: 'priorite_3', value: nextSteps.priorite_3 }
+                      ]
+                        .filter(item => Boolean(item.value))
+                        .map((item, index) => {
+                          const docType = ACTION_TO_DOCTYPE[item.key]
+                          const todoUrl = docType && useCase?.company_id
+                            ? `/dashboard/${useCase.company_id}/todo-list?usecase=${useCaseId}&action=${docType}`
+                            : null
+                          return (
+                            <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start gap-2">
+                              <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
+                              <span className="flex-1">{item.value}</span>
+                              {todoUrl && (
+                                <button
+                                  onClick={() => router.push(todoUrl)}
+                                  className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors whitespace-nowrap"
+                                >
+                                  Voir l'action
+                                  <ArrowRight className="w-4 h-4" />
+                                </button>
+                              )}
+                            </li>
+                          )
+                        })}
                     </ul>
                   </div>
                 )}
@@ -553,27 +582,44 @@ export default function UseCaseDetailPage() {
                 {nextSteps.quick_win_1 && (
                   <div>
                     <div className="flex items-center gap-3 mb-4">
-                      <img 
-                        src="/icons/work-in-progress.png" 
-                        alt="Actions rapides" 
-                        width={24} 
-                        height={24} 
+                      <img
+                        src="/icons/work-in-progress.png"
+                        alt="Actions rapides"
+                        width={24}
+                        height={24}
                         className="flex-shrink-0"
                       />
                       <h3 className="text-xl font-semibold text-gray-900">Trois actions concrètes à mettre en œuvre rapidement :</h3>
                     </div>
                     <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Quick wins & actions immédiates recommandées</h4>
-                    <ul className="space-y-2 mb-4 ml-4">
-                      {[nextSteps.quick_win_1, nextSteps.quick_win_2, nextSteps.quick_win_3]
-                        .filter(Boolean)
-                        .map((action, index) => (
-                          <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
-                            <span className="text-[#0080a3] mr-2 text-6xl">•</span>
-                            <span className="flex-1">
-                              {action}
-                            </span>
-                          </li>
-                        ))}
+                    <ul className="space-y-3 mb-4 ml-4">
+                      {[
+                        { key: 'quick_win_1', value: nextSteps.quick_win_1 },
+                        { key: 'quick_win_2', value: nextSteps.quick_win_2 },
+                        { key: 'quick_win_3', value: nextSteps.quick_win_3 }
+                      ]
+                        .filter(item => Boolean(item.value))
+                        .map((item, index) => {
+                          const docType = ACTION_TO_DOCTYPE[item.key]
+                          const todoUrl = docType && useCase?.company_id
+                            ? `/dashboard/${useCase.company_id}/todo-list?usecase=${useCaseId}&action=${docType}`
+                            : null
+                          return (
+                            <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start gap-2">
+                              <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
+                              <span className="flex-1">{item.value}</span>
+                              {todoUrl && (
+                                <button
+                                  onClick={() => router.push(todoUrl)}
+                                  className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors whitespace-nowrap"
+                                >
+                                  Voir l'action
+                                  <ArrowRight className="w-4 h-4" />
+                                </button>
+                              )}
+                            </li>
+                          )
+                        })}
                     </ul>
                   </div>
                 )}
@@ -582,27 +628,44 @@ export default function UseCaseDetailPage() {
                 {nextSteps.action_1 && (
                   <div>
                     <div className="flex items-center gap-3 mb-4">
-                      <img 
-                        src="/icons/schedule.png" 
-                        alt="Actions à moyen terme" 
-                        width={24} 
-                        height={24} 
+                      <img
+                        src="/icons/schedule.png"
+                        alt="Actions à moyen terme"
+                        width={24}
+                        height={24}
                         className="flex-shrink-0"
                       />
                       <h3 className="text-xl font-semibold text-gray-900">Trois actions structurantes à mener dans les 3 à 6 mois :</h3>
                     </div>
                     <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Actions à moyen terme</h4>
-                    <ul className="space-y-2 mb-4 ml-4">
-                      {[nextSteps.action_1, nextSteps.action_2, nextSteps.action_3]
-                        .filter(Boolean)
-                        .map((action, index) => (
-                          <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
-                            <span className="text-[#0080a3] mr-2 text-6xl">•</span>
-                            <span className="flex-1">
-                              {action}
-                            </span>
-                          </li>
-                        ))}
+                    <ul className="space-y-3 mb-4 ml-4">
+                      {[
+                        { key: 'action_1', value: nextSteps.action_1 },
+                        { key: 'action_2', value: nextSteps.action_2 },
+                        { key: 'action_3', value: nextSteps.action_3 }
+                      ]
+                        .filter(item => Boolean(item.value))
+                        .map((item, index) => {
+                          const docType = ACTION_TO_DOCTYPE[item.key]
+                          const todoUrl = docType && useCase?.company_id
+                            ? `/dashboard/${useCase.company_id}/todo-list?usecase=${useCaseId}&action=${docType}`
+                            : null
+                          return (
+                            <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start gap-2">
+                              <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
+                              <span className="flex-1">{item.value}</span>
+                              {todoUrl && (
+                                <button
+                                  onClick={() => router.push(todoUrl)}
+                                  className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors whitespace-nowrap"
+                                >
+                                  Voir l'action
+                                  <ArrowRight className="w-4 h-4" />
+                                </button>
+                              )}
+                            </li>
+                          )
+                        })}
                     </ul>
                   </div>
                 )}

@@ -11,29 +11,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
+/**
+ * GET /api/plans
+ * Public endpoint - Plans are public pricing information, no auth required.
+ * RLS policy on plans table is USING (true) for SELECT.
+ */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-
-    // Create Supabase client with the user's token
-    const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    })
-
-    // Verify the token and get user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    // Create Supabase client with anon key (public access)
+    // Plans are public data - RLS allows SELECT for everyone
+    const supabase = createClient(supabaseUrl!, supabaseAnonKey!)
 
     // Fetch all plans ordered by display_order
     const { data: plans, error: plansError } = await supabase
