@@ -1,7 +1,8 @@
 import { isValidPriceId } from '../config/plans'
 import type { CreateCheckoutSessionRequest } from '../types'
 
-// Valide les paramètres pour créer une session checkout
+// Valide les paramètres pour créer une session checkout (version synchrone)
+// Note: Ne vérifie pas si le priceId est valide dans la DB, seulement le format
 export function validateCheckoutSessionRequest(data: any): { isValid: boolean; error?: string } {
   // Vérifier que priceId existe
   if (!data.priceId) {
@@ -13,9 +14,26 @@ export function validateCheckoutSessionRequest(data: any): { isValid: boolean; e
     return { isValid: false, error: 'mode doit être "subscription" ou "payment"' }
   }
 
-  // Vérifier que le priceId est valide selon notre configuration
-  if (!isValidPriceId(data.priceId)) {
-    return { isValid: false, error: 'priceId invalide' }
+  // Vérifier le format basique du priceId Stripe
+  if (typeof data.priceId !== 'string' || !data.priceId.startsWith('price_')) {
+    return { isValid: false, error: 'priceId invalide (doit commencer par price_)' }
+  }
+
+  return { isValid: true }
+}
+
+// Version async pour validation complète avec vérification DB
+export async function validateCheckoutSessionRequestAsync(data: any): Promise<{ isValid: boolean; error?: string }> {
+  // Validation synchrone basique
+  const syncValidation = validateCheckoutSessionRequest(data)
+  if (!syncValidation.isValid) {
+    return syncValidation
+  }
+
+  // Vérifier que le priceId est valide selon notre configuration DB
+  const isValid = await isValidPriceId(data.priceId)
+  if (!isValid) {
+    return { isValid: false, error: 'priceId invalide (non trouvé dans les plans)' }
   }
 
   return { isValid: true }

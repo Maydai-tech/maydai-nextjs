@@ -1,9 +1,8 @@
 /**
  * Service client pour l'API /api/plans
  * Récupère les plans depuis la base de données via l'API
+ * Note: L'API /api/plans est publique (les tarifs sont visibles par tous)
  */
-
-import { supabase } from '@/lib/supabase'
 
 // Type pour les plans depuis la DB
 export interface PlanFromDB {
@@ -99,20 +98,10 @@ function generateDynamicFeatures(maxRegistries: number, maxCollaborators: number
 
 /**
  * Récupère les plans depuis l'API
+ * Note: L'API /api/plans est publique (les tarifs sont visibles par tous)
  */
 export async function fetchPlans(): Promise<MaydAIPlan[]> {
-  // Récupérer le token d'authentification
-  const { data: { session } } = await supabase.auth.getSession()
-
-  if (!session?.access_token) {
-    throw new Error('No authentication token available')
-  }
-
-  const response = await fetch('/api/plans', {
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`
-    }
-  })
+  const response = await fetch('/api/plans')
 
   if (!response.ok) {
     throw new Error(`Failed to fetch plans: ${response.statusText}`)
