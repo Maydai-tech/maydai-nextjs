@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
 import { FileText, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react'
@@ -56,6 +56,7 @@ interface TodoListPageProps {
 export default function TodoListPage({ params }: TodoListPageProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const api = useApiCall()
   const [mounted, setMounted] = useState(false)
   const [companyId, setCompanyId] = useState<string>('')
@@ -274,6 +275,33 @@ export default function TodoListPage({ params }: TodoListPageProps) {
     fetchData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, hasFetched, companyId])
+
+  // Auto-expand use case and action from URL parameters
+  const highlightUseCase = searchParams.get('usecase')
+  const highlightAction = searchParams.get('action')
+
+  useEffect(() => {
+    if (highlightUseCase && highlightAction && !loadingData && useCases.length > 0) {
+      // Expand the use case
+      setExpandedUseCases(prev => ({
+        ...prev,
+        [highlightUseCase]: true
+      }))
+
+      // Expand the action
+      const todoId = `${highlightUseCase}-${highlightAction}`
+      setExpandedTodos(prev => ({
+        ...prev,
+        [todoId]: true
+      }))
+
+      // Scroll to the element after a delay
+      setTimeout(() => {
+        const element = document.getElementById(`todo-${todoId}`)
+        element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 300)
+    }
+  }, [highlightUseCase, highlightAction, loadingData, useCases.length])
 
   // Get E5.N9.Q7 response for a use case
   const getE5N9Q7Response = (useCaseId: string) => {
@@ -632,27 +660,31 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                         {expandedUseCases[useCase.id] && (
                           <div className="space-y-3 mt-3">
                             {todos.map((todo) => (
-                              todo.docType === 'registry_action' ? (
-                                <RegistryToDoAction
-                                  key={todo.id}
-                                  todo={todo as any}
-                                  isExpanded={expandedTodos[todo.id] || false}
-                                  onToggle={toggleTodo}
-                                  companyId={companyId}
-                                  maydaiAsRegistry={company?.maydai_as_registry === true}
-                                  hasRegistryProofDocument={registryProofStatuses[todo.useCaseId]?.hasDocument || false}
-                                  onDocumentUploaded={() => handleDocumentUploaded(todo.useCaseId)}
-                                />
-                              ) : (
-                                <ToDoAction
-                                  key={todo.id}
-                                  todo={todo as any}
-                                  isExpanded={expandedTodos[todo.id] || false}
-                                  onToggle={toggleTodo}
-                                  onActionClick={(useCaseId) => handleTodoClick(useCaseId, todo.docType)}
-                                  potentialPoints={todo.potentialPoints}
-                                />
-                              )
+                              <div
+                                key={todo.id}
+                                id={`todo-${todo.id}`}
+                                className={highlightUseCase === todo.useCaseId && highlightAction === todo.docType ? 'ring-2 ring-[#0080A3] ring-offset-2 rounded-lg' : ''}
+                              >
+                                {todo.docType === 'registry_action' ? (
+                                  <RegistryToDoAction
+                                    todo={todo as any}
+                                    isExpanded={expandedTodos[todo.id] || false}
+                                    onToggle={toggleTodo}
+                                    companyId={companyId}
+                                    maydaiAsRegistry={company?.maydai_as_registry === true}
+                                    hasRegistryProofDocument={registryProofStatuses[todo.useCaseId]?.hasDocument || false}
+                                    onDocumentUploaded={() => handleDocumentUploaded(todo.useCaseId)}
+                                  />
+                                ) : (
+                                  <ToDoAction
+                                    todo={todo as any}
+                                    isExpanded={expandedTodos[todo.id] || false}
+                                    onToggle={toggleTodo}
+                                    onActionClick={(useCaseId) => handleTodoClick(useCaseId, todo.docType)}
+                                    potentialPoints={todo.potentialPoints}
+                                  />
+                                )}
+                              </div>
                             ))}
                           </div>
                         )}
