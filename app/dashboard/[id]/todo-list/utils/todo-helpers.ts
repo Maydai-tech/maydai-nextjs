@@ -1,18 +1,5 @@
 import { getTodoActionMapping } from '@/lib/todo-action-sync'
-import { TOTAL_WEIGHT } from '@/lib/score-calculator-simple'
-
-/**
- * Converts raw score impact points to normalized final score points.
- *
- * The final score is calculated as: ((score_base + score_model) / 120) * 100
- * So raw points must be converted with the same ratio: (rawPoints / 120) * 100
- *
- * @param rawPoints - Raw score impact points (e.g., 10)
- * @returns Normalized points as they appear in final score (e.g., 8)
- */
-export const convertToNormalizedPoints = (rawPoints: number): number => {
-  return Math.round((rawPoints / TOTAL_WEIGHT) * 100)
-}
+import { normalizeScoreTo100 } from '@/lib/score-calculator-simple'
 
 interface UseCase {
   id: string
@@ -197,7 +184,7 @@ export const getPotentialPoints = (docType: string, responses: any[]): number =>
   // (meaning completing the action will change it to positive and gain points)
   if (response?.single_value === mapping.negativeAnswerCode) {
     // Convert raw points to normalized points (as they appear in final score)
-    return convertToNormalizedPoints(mapping.expectedPointsGained)
+    return normalizeScoreTo100(mapping.expectedPointsGained)
   }
 
   return 0
