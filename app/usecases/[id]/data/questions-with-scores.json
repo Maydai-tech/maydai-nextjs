@@ -517,7 +517,6 @@
     "type": "radio",
     "required": true,
     "risk": "minimal",
-    "todo_action": "transparency_marking",
     "tooltip": {
       "title": "Contact utilisateurs",
       "shortContent": "Si le système interagit directement avec des personnes physiques (ex: chatbot), le fournisseur doit garantir la transparence. Les utilisateurs doivent être informés qu'ils sont en contact avec une machine, sauf si cela est évident, pour qu'ils puissent prendre une décision éclairée.",
@@ -590,7 +589,6 @@
     "type": "radio",
     "required": true,
     "risk": "minimal",
-    "todo_action": "continuous_monitoring",
     "tooltip": {
       "title": "Surveillance continue",
       "shortContent": "Les fournisseurs de Système d'IA doivent mettre en place un système de gestion des risques continu pour repérer les dysfonctionnements et garantir la conformité tout au long du cycle de vie.",
@@ -802,6 +800,7 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "todo_action": "risk_management",
     "tooltip": {
       "title": "Identification et analyse des risques",
       "shortContent": "Un système de gestion des risques comprend l'identification et l'analyse des risques connus et raisonnablement prévisibles que le système d'IA peut poser pour la santé, la sécurité ou les droits fondamentaux.",
@@ -830,6 +829,7 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "todo_action": "risk_management",
     "tooltip": {
       "title": "Mesures d'atténuation",
       "shortContent": "Des mesures doivent être adoptées pour éliminer ou réduire les risques identifiés. Leur efficacité doit être testée (par ex. essais en conditions réelles) avant la mise sur le marché. Les mesures de gestion des risques doivent s'assurer que le risque résiduel est jugé acceptable.",
@@ -1061,6 +1061,7 @@
     "type": "conditional",
     "required": true,
     "risk": "limited",
+    "todo_action": "continuous_monitoring",
     "tooltip": {
       "title": "Exactitude et cybersécurité",
       "shortContent": "Les systèmes d'IA à Haut Risque doivent atteindre un niveau approprié d'exactitude, de robustesse et de cybersécurité tout au long de leur cycle de vie. Ils doivent être résilients face aux erreurs et aux cyberattaques (ex: empoisonnement des données) (Article 15).",
@@ -1101,6 +1102,7 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "todo_action": "transparency_marking",
     "tooltip": {
       "title": "Information utilisateurs",
       "shortContent": "L'entreprise doit veiller à ce que les personnes interagissant directement avec une IA (ex: chatbot) soient informées qu'elles sont en contact avec une machine, afin de garantir la transparence (Article 50(1)).",
@@ -1129,6 +1131,7 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
+    "todo_action": "transparency_marking",
     "tooltip": {
       "title": "Marquage contenu",
       "shortContent": "Les fournisseurs d'IA générative doivent marquer le contenu généré/manipulé (texte, image, vidéo) dans un format lisible par machine. Les utilisateurs doivent étiqueter visiblement les hypertrucages et les contenus générés par l'IA.",

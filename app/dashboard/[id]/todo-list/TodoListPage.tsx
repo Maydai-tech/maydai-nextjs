@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
-import { FileText, CheckCircle2 } from 'lucide-react'
+import { FileText, CheckCircle2, ChevronDown, ChevronRight } from 'lucide-react'
 import { getCompactScoreStyle } from '@/lib/score-styles'
 import ToDoAction from './components/ToDoAction'
 import RegistryToDoAction from './components/RegistryToDoAction'
@@ -69,6 +69,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [hasFetched, setHasFetched] = useState(false)
   const [expandedTodos, setExpandedTodos] = useState<Record<string, boolean>>({})
+  const [expandedUseCases, setExpandedUseCases] = useState<Record<string, boolean>>({})
 
   // Unwrap params
   useEffect(() => {
@@ -404,6 +405,14 @@ export default function TodoListPage({ params }: TodoListPageProps) {
     }))
   }, [])
 
+  // Toggle use case todos section expansion
+  const toggleUseCaseTodos = useCallback((useCaseId: string) => {
+    setExpandedUseCases(prev => ({
+      ...prev,
+      [useCaseId]: !prev[useCaseId]
+    }))
+  }, [])
+
   // Navigate to dossier page with optional document query parameter
   const handleTodoClick = useCallback((useCaseId: string, docType?: string) => {
     const baseUrl = `/dashboard/${companyId}/dossiers/${useCaseId}`
@@ -591,34 +600,62 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                     {/* Todos section */}
                     {todos.length > 0 ? (
                       <div className="mt-4 pt-4 border-t border-gray-200">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-semibold text-gray-700">Actions à mener :</h4>
-                        </div>
-                        <div className="space-y-3">
-                          {todos.map((todo) => (
-                            todo.docType === 'registry_action' ? (
-                              <RegistryToDoAction
-                                key={todo.id}
-                                todo={todo as any}
-                                isExpanded={expandedTodos[todo.id] || false}
-                                onToggle={toggleTodo}
-                                companyId={companyId}
-                                maydaiAsRegistry={company?.maydai_as_registry === true}
-                                hasRegistryProofDocument={registryProofStatuses[todo.useCaseId]?.hasDocument || false}
-                                onDocumentUploaded={() => handleDocumentUploaded(todo.useCaseId)}
-                              />
-                            ) : (
-                              <ToDoAction
-                                key={todo.id}
-                                todo={todo as any}
-                                isExpanded={expandedTodos[todo.id] || false}
-                                onToggle={toggleTodo}
-                                onActionClick={(useCaseId) => handleTodoClick(useCaseId, todo.docType)}
-                                potentialPoints={todo.potentialPoints}
-                              />
-                            )
-                          ))}
-                        </div>
+                        <button
+                          onClick={() => toggleUseCaseTodos(useCase.id)}
+                          className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-all cursor-pointer ${
+                            expandedUseCases[useCase.id]
+                              ? 'bg-[#0080A3]/5 border-[#0080A3]/20'
+                              : 'bg-gray-50 border-gray-200 hover:bg-[#0080A3]/5 hover:border-[#0080A3]/20'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-1 rounded ${expandedUseCases[useCase.id] ? 'bg-[#0080A3]/10' : 'bg-gray-200'}`}>
+                              {expandedUseCases[useCase.id] ? (
+                                <ChevronDown className="w-4 h-4 text-[#0080A3]" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-gray-600" />
+                              )}
+                            </div>
+                            <h4 className="text-sm font-semibold text-gray-800">Actions à mener</h4>
+                            <span className="text-xs text-gray-500">Cliquez pour {expandedUseCases[useCase.id] ? 'replier' : 'voir le détail'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                              todos.filter(t => t.completed).length === todos.length
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {todos.filter(t => t.completed).length} / {todos.length}
+                            </span>
+                          </div>
+                        </button>
+                        {expandedUseCases[useCase.id] && (
+                          <div className="space-y-3 mt-3">
+                            {todos.map((todo) => (
+                              todo.docType === 'registry_action' ? (
+                                <RegistryToDoAction
+                                  key={todo.id}
+                                  todo={todo as any}
+                                  isExpanded={expandedTodos[todo.id] || false}
+                                  onToggle={toggleTodo}
+                                  companyId={companyId}
+                                  maydaiAsRegistry={company?.maydai_as_registry === true}
+                                  hasRegistryProofDocument={registryProofStatuses[todo.useCaseId]?.hasDocument || false}
+                                  onDocumentUploaded={() => handleDocumentUploaded(todo.useCaseId)}
+                                />
+                              ) : (
+                                <ToDoAction
+                                  key={todo.id}
+                                  todo={todo as any}
+                                  isExpanded={expandedTodos[todo.id] || false}
+                                  onToggle={toggleTodo}
+                                  onActionClick={(useCaseId) => handleTodoClick(useCaseId, todo.docType)}
+                                  potentialPoints={todo.potentialPoints}
+                                />
+                              )
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="mt-4 pt-4 border-t border-gray-200">
