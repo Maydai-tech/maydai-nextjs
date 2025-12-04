@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import type { NextPage } from 'next';
 import Image from 'next/image';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import Header from '@/components/site-vitrine/Header';
+import Footer from '@/components/site-vitrine/Footer';
 
 
 // Icône "Check" pour les listes de fonctionnalités

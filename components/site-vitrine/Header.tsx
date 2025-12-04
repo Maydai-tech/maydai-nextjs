@@ -2,24 +2,24 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, MouseEvent } from 'react';
 import { useAuth } from '@/lib/auth';
 
 export default function Header() {
   const { user, loading } = useAuth();
   const [isIaActMenuOpen, setIsIaActMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const menuRef = useRef(null);
-  const mobileMenuRef = useRef(null);
+  const menuRef = useRef<HTMLLIElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+    const handleClickOutside = (event: globalThis.MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsIaActMenuOpen(false);
       }
-      // Vérifier que le clic n'est pas sur le bouton burger lui-même
-      const burgerButton = event.target.closest('[data-mobile-menu-button]');
-      if (!burgerButton && mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+      // Verifier que le clic n'est pas sur le bouton burger lui-meme
+      const burgerButton = (event.target as HTMLElement).closest('[data-mobile-menu-button]');
+      if (!burgerButton && mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
         setIsMobileMenuOpen(false);
       }
     };
@@ -29,6 +29,11 @@ export default function Header() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const handleButtonHover = (e: MouseEvent<HTMLAnchorElement>, color: string) => {
+    (e.target as HTMLAnchorElement).style.backgroundColor = color;
+  };
+
   return (
     <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-30">
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3 md:py-4">
@@ -60,7 +65,7 @@ export default function Header() {
                   className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition"
                   onClick={() => setIsIaActMenuOpen(false)}
                 >
-                  <Image src="/icons/eye.png" alt="Œil" width={16} height={16} className="w-4 h-4" />
+                  <Image src="/icons/eye.png" alt="Oeil" width={16} height={16} className="w-4 h-4" />
                   Vue d&apos;ensemble
                 </Link>
                 <Link
@@ -82,9 +87,9 @@ export default function Header() {
               </div>
             )}
           </li>
-          <li><Link href="/fonctionnalites" className="hover:text-primary transition">Fonctionnalités</Link></li>
+          <li><Link href="/fonctionnalites" className="hover:text-primary transition">Fonctionnalites</Link></li>
           <li><Link href="/tarifs" className="hover:text-primary transition">Tarifs</Link></li>
-          <li><Link href="/a-propos" className="hover:text-primary transition">À propos</Link></li>
+          <li><Link href="/a-propos" className="hover:text-primary transition">A propos</Link></li>
           <li><Link href="/contact" className="hover:text-primary transition">Contact</Link></li>
         </ul>
 
@@ -94,15 +99,23 @@ export default function Header() {
               href="/dashboard/registries"
               className="px-5 py-2 rounded-lg font-semibold shadow transition text-white"
               style={{ backgroundColor: '#ffab5a' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}
+              onMouseEnter={(e) => handleButtonHover(e, '#e6995a')}
+              onMouseLeave={(e) => handleButtonHover(e, '#ffab5a')}
             >
               Dashboard
             </Link>
           ) : (
             <>
               <Link href="/login" className="px-5 py-2 rounded-lg font-normal text-sm transition text-primary">Connexion</Link>
-              <Link href="/signup" className="px-5 py-2 rounded-lg font-semibold shadow transition text-white" style={{ backgroundColor: '#ffab5a' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'} onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}>Commencer</Link>
+              <Link
+                href="/signup"
+                className="px-5 py-2 rounded-lg font-semibold shadow transition text-white"
+                style={{ backgroundColor: '#ffab5a' }}
+                onMouseEnter={(e) => handleButtonHover(e, '#e6995a')}
+                onMouseLeave={(e) => handleButtonHover(e, '#ffab5a')}
+              >
+                Commencer
+              </Link>
             </>
           )}
         </div>
@@ -142,7 +155,7 @@ export default function Header() {
                 className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition rounded-lg"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                <Image src="/icons/eye.png" alt="Œil" width={16} height={16} className="w-4 h-4" />
+                <Image src="/icons/eye.png" alt="Oeil" width={16} height={16} className="w-4 h-4" />
                 Vue d&apos;ensemble
               </Link>
               <Link
@@ -172,7 +185,7 @@ export default function Header() {
                 className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Fonctionnalités
+                Fonctionnalites
               </Link>
               <Link
                 href="/tarifs"
@@ -186,7 +199,7 @@ export default function Header() {
                 className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                À propos
+                A propos
               </Link>
               <Link
                 href="/contact"
@@ -206,8 +219,8 @@ export default function Header() {
                   href="/dashboard/registries"
                   className="block w-full px-5 py-3 rounded-lg font-semibold shadow transition text-center text-white"
                   style={{ backgroundColor: '#ffab5a' }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}
+                  onMouseEnter={(e) => handleButtonHover(e, '#e6995a')}
+                  onMouseLeave={(e) => handleButtonHover(e, '#ffab5a')}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Dashboard
@@ -225,8 +238,8 @@ export default function Header() {
                     href="/signup"
                     className="block w-full px-5 py-3 rounded-lg font-semibold shadow transition text-center text-white"
                     style={{ backgroundColor: '#ffab5a' }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#e6995a'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#ffab5a'}
+                    onMouseEnter={(e) => handleButtonHover(e, '#e6995a')}
+                    onMouseLeave={(e) => handleButtonHover(e, '#ffab5a')}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Commencer
@@ -239,4 +252,4 @@ export default function Header() {
       )}
     </header>
   );
-} 
+}

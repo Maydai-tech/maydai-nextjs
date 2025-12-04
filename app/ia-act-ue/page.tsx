@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import Header from '@/components/site-vitrine/Header';
+import Footer from '@/components/site-vitrine/Footer';
 
 export const metadata: Metadata = {
   title: "Qu'est-ce que l'IA Act UE ? Guide Complet de la Réglementation Européenne | MaydAI.io",

@@ -1,6 +1,6 @@
 import Image from 'next/image';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import Header from '@/components/site-vitrine/Header';
+import Footer from '@/components/site-vitrine/Footer';
 
 // Données des membres de l'équipe
 const teamMembers = [
