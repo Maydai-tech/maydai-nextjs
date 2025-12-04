@@ -622,9 +622,9 @@ function CreateUseCasePageContent() {
       console.log('Status:', response.status)
       console.log('Data:', response.data)
 
-      if (response.data) {
-        console.log('Redirection vers:', `/dashboard/${companyId}`)
-        router.push(`/dashboard/${companyId}`)
+      if (response.data?.id) {
+        console.log('Redirection vers:', `/usecases/${response.data.id}/evaluation`)
+        router.push(`/usecases/${response.data.id}/evaluation`)
       }
     } catch (error: any) {
       console.error('=== ERREUR lors de la création du use case ===')
