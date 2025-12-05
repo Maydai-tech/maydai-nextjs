@@ -126,8 +126,8 @@ export function ProcessingAnimation({ isVisible, onComplete }: ProcessingAnimati
   const currentStep = PROCESSING_STEPS[currentStepIndex]
 
   return (
-    <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center">
-      <div className="max-w-2xl w-full mx-4">
+    <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center overflow-y-auto">
+      <div className="max-w-2xl w-full mx-4 my-8">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-[#0080A3]/10 rounded-full mb-4">

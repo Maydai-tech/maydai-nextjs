@@ -1,5 +1,7 @@
 import OpenAI from 'openai'
 import { buildStandardizedPrompt } from './formatting-template'
+import { writeFileSync } from 'fs'
+import { join } from 'path'
 
 /**
  * Structure des données d'entrée pour l'analyse OpenAI (ancien format)
@@ -351,7 +353,39 @@ export class OpenAIClient {
     // Vérifier que nous avons bien une réponse textuelle
     if (assistantMessage && assistantMessage.content[0] && assistantMessage.content[0].type === 'text') {
       console.log('✅ Réponse Assistant OpenAI reçue')
-      return assistantMessage.content[0].text.value
+      const responseText = assistantMessage.content[0].text.value
+
+      // DEBUG: Sauvegarder la réponse complète localement pour analyse
+      try {
+        const debugBasePath = join(process.cwd(), 'debug-openai-response')
+
+        // Sauvegarder le markdown
+        writeFileSync(`${debugBasePath}.md`, responseText, 'utf-8')
+
+        // Sauvegarder la réponse complète de l'assistant (métadonnées incluses)
+        const fullDebugData = {
+          timestamp: new Date().toISOString(),
+          assistant_message: assistantMessage,
+          all_messages: messages.data,
+          content_blocks: assistantMessage.content,
+          metadata: {
+            id: assistantMessage.id,
+            created_at: assistantMessage.created_at,
+            role: assistantMessage.role,
+            thread_id: assistantMessage.thread_id,
+            run_id: assistantMessage.run_id,
+            assistant_id: assistantMessage.assistant_id,
+          }
+        }
+        writeFileSync(`${debugBasePath}.json`, JSON.stringify(fullDebugData, null, 2), 'utf-8')
+
+        console.log(`📝 DEBUG: Rapport sauvegardé dans ${debugBasePath}.md`)
+        console.log(`📝 DEBUG: Données complètes sauvegardées dans ${debugBasePath}.json`)
+      } catch (err) {
+        console.warn('⚠️ DEBUG: Impossible de sauvegarder les fichiers debug:', err)
+      }
+
+      return responseText
     } else {
       throw new Error('Aucune réponse textuelle trouvée dans la réponse de l\'assistant')
     }

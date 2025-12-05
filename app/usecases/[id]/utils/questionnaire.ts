@@ -155,33 +155,41 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
   }
 }
 
-// Nouvelle fonction pour calculer la progression basée sur le maximum absolu de questions
-export const getAbsoluteQuestionProgress = (currentQuestionId: string): QuestionProgress => {
-  // Nombre maximum absolu de questions possibles dans le questionnaire
-  // 6 (base) + 9 (high-risk) + 1 (critical) + 3 (additional) + 2 (transparency) = 21
-  const MAX_QUESTIONS = Object.keys(questionsData).length
+// Cache pour le nombre maximum de questions depuis le début (calculé une seule fois)
+let cachedMaxTotalQuestions: number | null = null
 
-  const ALL_QUESTIONS = Object.keys(questionsData)
-  
-  // Trouver l'index de la question courante
-  const currentIndex = ALL_QUESTIONS.indexOf(currentQuestionId)
-  
-  // Si la question n'est pas trouvée, retourner 0
-  if (currentIndex === -1) {
-    return {
-      current: 0,
-      total: MAX_QUESTIONS,
-      percentage: 0
-    }
+/**
+ * Calcule la progression basée sur le pire scénario (maximum de questions restantes).
+ * Cette approche garantit que la barre de progression ne recule JAMAIS.
+ *
+ * Le pourcentage est calculé ainsi:
+ * - On détermine le nombre maximum total de questions possibles depuis le début
+ * - On calcule le nombre maximum de questions restantes depuis la position actuelle
+ * - Position actuelle = total max - restantes max + 1
+ * - Pourcentage = position actuelle / total max * 100
+ */
+export const getAbsoluteQuestionProgress = (currentQuestionId: string): QuestionProgress => {
+  // Calculer le nombre maximum total de questions une seule fois
+  if (cachedMaxTotalQuestions === null) {
+    cachedMaxTotalQuestions = getMaxRemainingQuestions('E4.N7.Q1')
   }
-  
-  // Calculer la progression basée sur la position dans l'ordre global
-  const current = currentIndex + 1
-  const percentage = Math.round((current / MAX_QUESTIONS) * 100)
-  
+
+  const maxTotalQuestions = cachedMaxTotalQuestions
+
+  // Calculer le nombre maximum de questions restantes depuis la position actuelle
+  const maxRemainingFromHere = getMaxRemainingQuestions(currentQuestionId)
+
+  // Position actuelle = total - restantes + 1
+  // Cela garantit que la progression ne peut que augmenter car maxRemainingFromHere
+  // diminue ou reste identique à mesure que l'utilisateur avance
+  const current = maxTotalQuestions - maxRemainingFromHere + 1
+
+  // Calculer le pourcentage
+  const percentage = Math.round((current / maxTotalQuestions) * 100)
+
   return {
     current,
-    total: MAX_QUESTIONS,
+    total: maxTotalQuestions,
     percentage
   }
 }
@@ -294,31 +302,62 @@ export const formatDate = (dateString: string): string => {
   })
 }
 
-// Helper function to calculate maximum remaining questions from a given position
+// Cache pour les calculs de getMaxRemainingQuestions (évite les calculs redondants)
+const maxRemainingCache = new Map<string, number>()
+
+/**
+ * Calcule le nombre maximum de questions restantes depuis une position donnée.
+ * Utilise la memoization pour éviter les calculs redondants.
+ * Cette fonction explore toutes les branches possibles et retourne le chemin le plus long.
+ */
 const getMaxRemainingQuestions = (questionId: string, visited: Set<string> = new Set()): number => {
-  // Avoid infinite loops by tracking visited questions
+  // Vérifier le cache d'abord (seulement si pas de questions visitées, sinon c'est un sous-appel)
+  if (visited.size === 0 && maxRemainingCache.has(questionId)) {
+    return maxRemainingCache.get(questionId)!
+  }
+
+  // Éviter les boucles infinies en suivant les questions visitées
   if (visited.has(questionId)) {
     return 0
   }
 
   visited.add(questionId)
 
-  // Get all possible next questions for this question ID
+  // Obtenir toutes les questions suivantes possibles pour cette question
   const possibleNextQuestions = getAllPossibleNextQuestions(questionId)
 
   if (possibleNextQuestions.length === 0) {
-    // End of questionnaire
-    return 1
+    // Fin du questionnaire - cette question compte comme 1
+    const result = 1
+    if (visited.size === 1) {
+      maxRemainingCache.set(questionId, result)
+    }
+    return result
   }
 
-  // Find the maximum path length among all possible branches
+  // Trouver la longueur de chemin maximale parmi toutes les branches possibles
   let maxRemainingFromBranches = 0
   for (const nextQuestionId of possibleNextQuestions) {
     const remainingFromThisBranch = getMaxRemainingQuestions(nextQuestionId, new Set(visited))
     maxRemainingFromBranches = Math.max(maxRemainingFromBranches, remainingFromThisBranch)
   }
 
-  return 1 + maxRemainingFromBranches
+  const result = 1 + maxRemainingFromBranches
+
+  // Mettre en cache le résultat (seulement pour les appels de premier niveau)
+  if (visited.size === 1) {
+    maxRemainingCache.set(questionId, result)
+  }
+
+  return result
+}
+
+/**
+ * Réinitialise les caches de progression (utile pour les tests)
+ */
+export const resetProgressCache = (): void => {
+  cachedMaxTotalQuestions = null
+  maxRemainingCache.clear()
 }
 
 // Helper function to generate answer contexts for a given question to explore all possible paths
@@ -377,11 +416,18 @@ const getAllPossibleNextQuestions = (questionId: string): string[] => {
   return Array.from(possibleNext)
 }
 
-// Function to get the minimum position of a question based on the maximum possible questions after it
+/**
+ * Retourne la position courante d'une question basée sur le nombre maximum de questions possibles.
+ * Utilise le même calcul que getAbsoluteQuestionProgress pour la cohérence.
+ */
 export const getCurrentQuestionPosition = (currentQuestionId: string): number => {
-  const totalQuestions = Object.keys(questionsData).length // 29 questions total
+  // Utiliser le cache ou calculer le total maximum
+  if (cachedMaxTotalQuestions === null) {
+    cachedMaxTotalQuestions = getMaxRemainingQuestions('E4.N7.Q1')
+  }
+
   const maxQuestionsRemaining = getMaxRemainingQuestions(currentQuestionId)
 
-  // Position = Total questions - Maximum remaining questions + 1
-  return totalQuestions - maxQuestionsRemaining + 1
+  // Position = Total max - Questions restantes max + 1
+  return cachedMaxTotalQuestions - maxQuestionsRemaining + 1
 } 
