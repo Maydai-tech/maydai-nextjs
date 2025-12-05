@@ -217,11 +217,16 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
         setIsGeneratingReport(true)
         
         try {
+          const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+          }
+          if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`
+          }
+
           const reportResponse = await fetch('/api/generate-report', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers,
             body: JSON.stringify({ usecase_id: usecaseId })
           })
           

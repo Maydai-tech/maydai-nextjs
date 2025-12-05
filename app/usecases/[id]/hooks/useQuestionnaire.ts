@@ -4,6 +4,7 @@ import { loadQuestions } from '../utils/questions-loader'
 import { getNextQuestion, getQuestionProgress, getAbsoluteQuestionProgress, checkCanProceed, getPreviousQuestion, buildQuestionPath } from '../utils/questionnaire'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth'
 
 interface UseQuestionnaireReturn {
   questionnaireData: QuestionnaireData
@@ -28,6 +29,8 @@ interface UseQuestionnaireProps {
 }
 
 export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProps): UseQuestionnaireReturn {
+  const { session } = useAuth()
+
   // État local du questionnaire (les réponses temporaires avant sauvegarde)
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData>({
     currentQuestionId: 'E4.N7.Q1',
@@ -188,11 +191,16 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
       // 3. Générer le rapport OpenAI automatiquement
       console.log('🤖 Generating OpenAI report automatically...')
       try {
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        }
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`
+        }
+
         const reportResponse = await fetch('/api/generate-report', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
           body: JSON.stringify({ usecase_id: usecaseId })
         })
         
