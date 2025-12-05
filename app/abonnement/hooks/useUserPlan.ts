@@ -7,7 +7,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth'
-import { useApiClient } from '@/lib/api-client'
 import type { Subscription, PlanInfo } from '@/lib/subscription/types'
 
 export interface UserPlanData {
@@ -30,8 +29,7 @@ interface UseUserPlanReturn {
  * Utilise la route API /api/profiles/[profileId]/plans
  */
 export function useUserPlan(): UseUserPlanReturn {
-  const { user, loading: authLoading } = useAuth()
-  const apiClient = useApiClient()
+  const { user, loading: authLoading, getAccessToken } = useAuth()
 
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [plan, setPlan] = useState<PlanInfo>({
@@ -72,11 +70,25 @@ export function useUserPlan(): UseUserPlanReturn {
       return
     }
 
+    // Vérifier que le token est disponible avant de faire l'appel API
+    const token = getAccessToken()
+    if (!token) {
+      // Token pas encore disponible, on ne fait pas l'appel
+      // Le useEffect se déclenchera à nouveau quand la session sera mise à jour
+      return
+    }
+
     try {
       setError(null)
 
-      // Appel à l'API pour récupérer le plan
-      const response = await apiClient.get(`/api/profiles/${user.id}/plans`)
+      // Appel à l'API pour récupérer le plan avec le token Bearer
+      const response = await fetch(`/api/profiles/${user.id}/plans`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      })
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -109,8 +121,7 @@ export function useUserPlan(): UseUserPlanReturn {
       setLoading(false)
       setHasFetched(true)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id])
+  }, [user?.id, getAccessToken])
 
   /**
    * Fonction pour forcer le rafraîchissement des données
@@ -128,11 +139,14 @@ export function useUserPlan(): UseUserPlanReturn {
       return
     }
 
-    // Ne charger qu'une seule fois
-    if (!hasFetched) {
+    // Vérifier si le token est disponible
+    const token = getAccessToken()
+
+    // Ne charger qu'une seule fois (quand le token est disponible)
+    if (!hasFetched && (token || !user?.id)) {
       fetchUserPlan()
     }
-  }, [authLoading, hasFetched, user?.id])
+  }, [authLoading, hasFetched, user?.id, getAccessToken, fetchUserPlan])
 
   return {
     subscription,
