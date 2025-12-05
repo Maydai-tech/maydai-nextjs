@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { transformToOpenAIFormatComplete, validateOpenAIInput } from '@/lib/openai-data-transformer'
 import { openAIClient } from '@/lib/openai-client'
 import { extractNextStepsFromReport, validateNextStepsData, logExtractionResults } from '@/lib/nextsteps-parser'
@@ -73,13 +73,35 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const usecase_id = searchParams.get('usecase_id')
-    
+
     if (!usecase_id) {
       return NextResponse.json({ error: 'usecase_id is required' }, { status: 400 })
     }
 
-    // Utiliser le client Supabase configuré
-    
+    // ===== AUTHENTIFICATION =====
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json({ error: 'Configuration serveur manquante' }, { status: 500 })
+    }
+
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Token d\'authentification manquant' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    })
+
+    // Vérifier la validité du token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Token invalide' }, { status: 401 })
+    }
+
     // Récupérer le use case avec le rapport
     const { data: usecase, error: usecaseError } = await supabase
       .from('usecases')
@@ -92,9 +114,9 @@ export async function GET(req: NextRequest) {
     }
 
     if (!usecase.report_summary) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'No report found for this use case',
-        has_report: false 
+        has_report: false
       }, { status: 404 })
     }
 
@@ -109,7 +131,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Erreur récupération rapport:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Erreur lors de la récupération du rapport',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       },
@@ -120,15 +142,44 @@ export async function GET(req: NextRequest) {
 
 // POST: Générer un rapport d'analyse IA pour un use case
 export async function POST(req: NextRequest) {
+  let body: any
   try {
-    const { usecase_id } = await req.json()
-    
+    body = await req.json()
+  } catch (parseError) {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  try {
+    const { usecase_id } = body
+
     if (!usecase_id) {
       return NextResponse.json({ error: 'usecase_id is required' }, { status: 400 })
     }
 
-    // Utiliser le client Supabase configuré
-    
+    // ===== AUTHENTIFICATION =====
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json({ error: 'Configuration serveur manquante' }, { status: 500 })
+    }
+
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Token d\'authentification manquant' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    })
+
+    // Vérifier la validité du token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Token invalide' }, { status: 401 })
+    }
+
     // Récupérer les informations complètes du use case avec l'entreprise et le modèle
     const { data: usecase, error: usecaseError } = await supabase
     .from('usecases')
@@ -376,7 +427,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Erreur génération rapport IA:', error)
     return NextResponse.json(
-      { 
+      {
         error: 'Erreur lors de la génération du rapport IA',
         details: error instanceof Error ? error.message : 'Erreur inconnue'
       },
