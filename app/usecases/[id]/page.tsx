@@ -12,7 +12,7 @@ import { UseCaseSidebar } from './components/overview/UseCaseSidebar'
 import { useNextSteps } from './hooks/useNextSteps'
 import { useRiskLevel } from './hooks/useRiskLevel'
 import { useUseCaseScore } from './hooks/useUseCaseScore'
-import { AlertTriangle, RefreshCcw, ArrowRight, FileText, Loader2 } from 'lucide-react'
+import { AlertTriangle, RefreshCcw, ArrowRight } from 'lucide-react'
 import { getScoreStyle } from '@/lib/score-styles'
 import { RiskLevelBadge } from './components/overview/RiskLevelBadge'
 import { getCompanyStatusLabel, getCompanyStatusDefinition } from './utils/company-status'
@@ -58,11 +58,6 @@ export default function UseCaseDetailPage() {
   const [loadingDocuments, setLoadingDocuments] = useState(false)
   const [showUnacceptableModal, setShowUnacceptableModal] = useState(false)
 
-  // État pour la génération du rapport
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
-  const [reportError, setReportError] = useState<string | null>(null)
-  const [reportSuccess, setReportSuccess] = useState(false)
-
   const isUnacceptableCase = riskLevel === 'unacceptable'
 
   // Fonction pour mettre à jour la date de déploiement
@@ -93,48 +88,6 @@ export default function UseCaseDetailPage() {
   const deleteDocument = async () => {
     // Reload after deletion
     await reloadDocument('stopping_proof')
-  }
-
-  // Fonction pour générer le rapport OpenAI
-  const generateReport = async () => {
-    if (!useCase?.id || !session?.access_token) {
-      setReportError('Session invalide. Veuillez vous reconnecter.')
-      return
-    }
-
-    setIsGeneratingReport(true)
-    setReportError(null)
-    setReportSuccess(false)
-
-    try {
-      console.log('🚀 Génération du rapport pour:', useCase.id)
-
-      const response = await fetch('/api/generate-report', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ usecase_id: useCase.id })
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        console.log('✅ Rapport généré avec succès')
-        setReportSuccess(true)
-        // Optionnel: recharger les données du use case
-        window.location.reload()
-      } else {
-        console.error('❌ Erreur génération rapport:', data)
-        setReportError(data.error || 'Erreur lors de la génération du rapport')
-      }
-    } catch (error) {
-      console.error('❌ Erreur réseau:', error)
-      setReportError('Erreur de connexion au serveur')
-    } finally {
-      setIsGeneratingReport(false)
-    }
   }
 
   // Calculer initialProofUploaded basé sur le state documents
@@ -366,42 +319,9 @@ export default function UseCaseDetailPage() {
         <div className="space-y-6 sm:space-y-8">
           {/* Rapport d'Audit Préliminaire */}
           <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Rapport d'Audit Préliminaire
-              </h2>
-              <button
-                onClick={generateReport}
-                disabled={isGeneratingReport}
-                className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isGeneratingReport ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Génération en cours...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4 mr-2" />
-                    Générer le rapport
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Message d'erreur */}
-            {reportError && (
-              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                {reportError}
-              </div>
-            )}
-
-            {/* Message de succès */}
-            {reportSuccess && (
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
-                Rapport généré avec succès !
-              </div>
-            )}
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              Rapport d'Audit Préliminaire
+            </h2>
 
             <div className="prose prose-gray max-w-none">
               <p className="text-base leading-relaxed text-gray-800 mb-4">
