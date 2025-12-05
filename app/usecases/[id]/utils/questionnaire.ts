@@ -36,33 +36,30 @@ export const getNextQuestion = (currentQuestionId: string, answers: Record<strin
       return 'E5.N9.Q4'
     
     case 'E5.N9.Q4':
-      const q4Answer = answers['E5.N9.Q4']
-      if (q4Answer === 'E5.N9.Q4.A') {
-        return 'E5.N9.Q5'
-      } else if (q4Answer === 'E5.N9.Q4.B') {
-        // Vérifier si toutes les réponses précédentes sont "aucun/aucune"
-        const q2Answers = answers['E4.N7.Q2'] || []
-        const q21Answers = answers['E4.N7.Q2.1'] || []
-        const q3Answers = answers['E4.N7.Q3'] || []
-        const q31Answers = answers['E4.N7.Q3.1'] || []
-        
-        const allNoneAnswers = (q2Answers.includes('E4.N7.Q2.G') && q2Answers.length === 1) &&
-                              (q21Answers.includes('E4.N7.Q2.1.E') && q21Answers.length === 1) &&
-                              (q3Answers.includes('E4.N7.Q3.E') && q3Answers.length === 1) &&
-                              (q31Answers.includes('E4.N7.Q3.1.E') && q31Answers.length === 1)
-        
-        return allNoneAnswers ? 'E5.N9.Q5' : 'E5.N9.Q1'
-      }
-      return null
+      // Toujours rediriger vers E5.N9.Q1 après E5.N9.Q4
+      return 'E5.N9.Q1'
     
     case 'E5.N9.Q1':
-      return 'E5.N9.Q2'
+      // Toujours rediriger vers E5.N9.Q9 après E5.N9.Q1
+      return 'E5.N9.Q9'
     
     case 'E5.N9.Q2':
       return 'E5.N9.Q3'
     
     case 'E5.N9.Q3':
       return 'E5.N9.Q5'
+    
+    case 'E5.N9.Q9':
+      // Après E5.N9.Q9, rediriger vers E5.N9.Q5 si pas de risques, sinon vers E5.N9.Q2 pour la séquence conditionnelle
+      const q2Answers = answers['E4.N7.Q2'] || []
+      const q21Answers = answers['E4.N7.Q2.1'] || []
+      const q3Answers = answers['E4.N7.Q3'] || []
+      const q31Answers = answers['E4.N7.Q3.1'] || []
+      const hasRiskAnswers = (q2Answers.length > 0 && !q2Answers.includes('E4.N7.Q2.G')) ||
+                            (q21Answers.length > 0 && !q21Answers.includes('E4.N7.Q2.1.E')) ||
+                            (q3Answers.length > 0 && !q3Answers.includes('E4.N7.Q3.E')) ||
+                            (q31Answers.length > 0 && !q31Answers.includes('E4.N7.Q3.1.E'))
+      return hasRiskAnswers ? 'E5.N9.Q2' : 'E5.N9.Q5'
     
     case 'E5.N9.Q5':
       return 'E5.N9.Q6'
@@ -102,6 +99,9 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
   // Calculate estimated total questions based on current path
   let totalQuestions = 6 // Always Q1, Q1.1/Q1.2, Q2, Q2.1, Q3, Q3.1
   
+  // Toujours compter E5.N9.Q4, E5.N9.Q1, E5.N9.Q9, E5.N9.Q5, Q6, Q7, Q8
+  totalQuestions += 7 // E5.N9.Q4, E5.N9.Q1, E5.N9.Q9, E5.N9.Q5, Q6, Q7, Q8
+  
   const q2Answers = answers['E4.N7.Q2'] || []
   const q21Answers = answers['E4.N7.Q2.1'] || []
   const q3Answers = answers['E4.N7.Q3'] || []
@@ -112,7 +112,7 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
                         (q31Answers.length > 0 && !q31Answers.includes('E4.N7.Q3.1.E'))
   
   if (hasRiskAnswers) {
-    totalQuestions += 9 // High-risk sequence
+    totalQuestions += 2 // High-risk sequence Q2, Q3 (Q1, Q9, Q5-Q8 déjà comptées)
   }
   
   totalQuestions += 1 // E4.N8.Q12
@@ -134,9 +134,17 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
   }
   questionOrder.push('E4.N7.Q2', 'E4.N7.Q2.1', 'E4.N7.Q3', 'E4.N7.Q3.1')
   
+  // Toujours inclure E5.N9.Q4, E5.N9.Q1, E5.N9.Q9, puis Q5, Q6, Q7, Q8
+  questionOrder.push('E5.N9.Q4', 'E5.N9.Q1', 'E5.N9.Q9')
+  
+  // Si hasRiskAnswers, ajouter la séquence conditionnelle Q2, Q3 avant Q5
   if (hasRiskAnswers) {
-    questionOrder.push('E5.N8.Q1', 'E5.N8.Q2', 'E5.N9.Q3', 'E5.N9.Q4', 'E5.N9.Q5', 'E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8', 'E5.N9.Q9')
+    questionOrder.push('E5.N8.Q1', 'E5.N8.Q2', 'E5.N9.Q3', 'E5.N9.Q2')
   }
+  
+  // Toujours inclure Q5, Q6, Q7, Q8 après Q9 (ou après Q2 si hasRiskAnswers)
+  questionOrder.push('E5.N9.Q5', 'E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8')
+  
   questionOrder.push('E4.N8.Q12')
   if (answers['E4.N8.Q12'] === 'E4.N8.Q12.B') {
     questionOrder.push('E4.N8.Q9')
@@ -371,26 +379,10 @@ const generateAnswerContexts = (questionId: string): Record<string, any>[] => {
       ]
 
     case 'E5.N9.Q4':
-      // Test both answers and different previous answer combinations
+      // E5.N9.Q4 redirige toujours vers E5.N9.Q1 maintenant
       return [
-        // Answer A - goes to Q5
         { 'E5.N9.Q4': 'E5.N9.Q4.A' },
-        // Answer B with "all none" answers - goes to Q5
-        {
-          'E5.N9.Q4': 'E5.N9.Q4.B',
-          'E4.N7.Q2': ['E4.N7.Q2.G'],
-          'E4.N7.Q2.1': ['E4.N7.Q2.1.E'],
-          'E4.N7.Q3': ['E4.N7.Q3.E'],
-          'E4.N7.Q3.1': ['E4.N7.Q3.1.E']
-        },
-        // Answer B with any non-"none" answer - goes to Q1
-        {
-          'E5.N9.Q4': 'E5.N9.Q4.B',
-          'E4.N7.Q2': ['E4.N7.Q2.A'], // Any non-G answer
-          'E4.N7.Q2.1': ['E4.N7.Q2.1.E'],
-          'E4.N7.Q3': ['E4.N7.Q3.E'],
-          'E4.N7.Q3.1': ['E4.N7.Q3.1.E']
-        }
+        { 'E5.N9.Q4': 'E5.N9.Q4.B' }
       ]
 
     default:
