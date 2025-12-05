@@ -326,6 +326,7 @@ export async function hasProfileLevelAccess(userId: string, supabaseClient?: Sup
 /**
  * Vérifie si un utilisateur peut créer des registres
  * Un utilisateur peut créer des registres s'il :
+ * - N'a aucun registre (nouvel utilisateur), OU
  * - A au moins un rôle 'owner' dans user_companies, OU
  * - A un accès au niveau profile (est collaborateur de compte de quelqu'un)
  *
@@ -340,16 +341,20 @@ export async function canCreateCompany(userId: string, supabaseClient?: Supabase
   const hasProfileAccess = await hasProfileLevelAccess(userId, supabase);
   if (hasProfileAccess) return true;
 
-  // 2. Vérifier s'il a au moins un rôle owner
-  const { data: ownerCompanies } = await supabase
+  // 2. Vérifier s'il a des entrées dans user_companies
+  const { data: userCompanies, error } = await supabase
     .from('user_companies')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('role', 'owner')
-    .limit(1)
-    .single();
+    .select('id, role')
+    .eq('user_id', userId);
 
-  return !!ownerCompanies;
+  // Si erreur ou pas de résultat, permettre la création (nouvel utilisateur)
+  if (error || !userCompanies || userCompanies.length === 0) {
+    return true;
+  }
+
+  // 3. Vérifier s'il a au moins un rôle owner parmi ses companies
+  const hasOwnerRole = userCompanies.some(uc => uc.role === 'owner');
+  return hasOwnerRole;
 }
 
 /**
