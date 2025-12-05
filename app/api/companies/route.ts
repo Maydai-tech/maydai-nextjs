@@ -5,11 +5,20 @@ import { canCreateCompany } from '@/lib/collaborators'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     'Les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être définies'
   )
+}
+
+// Service role client for admin operations (bypasses RLS)
+const getServiceRoleClient = () => {
+  if (!supabaseServiceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not defined')
+  }
+  return createClient(supabaseUrl!, supabaseServiceRoleKey)
 }
 
 export async function GET(request: NextRequest) {
@@ -164,11 +173,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user can create companies
-    // Users can create companies if they:
-    // 1. Have profile-level access (are collaborators at account level), OR
-    // 2. Have at least one 'owner' role in user_companies
-    const canCreate = await canCreateCompany(user.id)
-
+    const canCreate = await canCreateCompany(user.id, supabase)
     if (!canCreate) {
       return NextResponse.json({
         error: 'You do not have permission to create new companies.'
@@ -176,13 +181,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name} = body
-    if (!name ) {
+    const { name } = body
+    if (!name) {
       return NextResponse.json({ error: 'Champ name manquant' }, { status: 400 })
     }
 
+    // Use service role client for write operations (bypasses RLS)
+    // Authentication is already verified above, so this is safe
+    const serviceClient = getServiceRoleClient()
+
     // Créer la compagnie
-    const { data, error } = await supabase
+    const { data, error } = await serviceClient
       .from('companies')
       .insert([{ name }])
       .select('id')
@@ -193,7 +202,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Créer une relation user_companies avec le rôle owner
-    const { error: userCompanyError } = await supabase
+    const { error: userCompanyError } = await serviceClient
       .from('user_companies')
       .insert([{
         user_id: user.id,
@@ -206,8 +215,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Erreur lors de la création de la relation utilisateur-entreprise" }, { status: 500 })
     }
 
-    // Optionnel : mettre à jour le current_company_id dans le profil
-    await supabase
+    // Mettre à jour le current_company_id dans le profil
+    await serviceClient
       .from('profiles')
       .update({ current_company_id: data.id })
       .eq('id', user.id)
