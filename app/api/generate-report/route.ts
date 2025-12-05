@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
     const { data: usecase, error: usecaseError } = await supabase
     .from('usecases')
     .select(`
-      id, name, description, deployment_date, status, risk_level, ai_category, 
+      id, name, description, deployment_date, status, risk_level, ai_category,
       system_type, responsible_service, deployment_countries, company_status,
       technology_partner, llm_model_version, primary_model_id,
       score_base, score_model, score_final, is_eliminated, elimination_reason,
@@ -425,7 +425,10 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erreur génération rapport IA:', error)
+    console.error('========== ERREUR CATCH generate-report ==========')
+    console.error('Type:', error instanceof Error ? error.constructor.name : typeof error)
+    console.error('Message:', error instanceof Error ? error.message : String(error))
+    console.error('Stack:', error instanceof Error ? error.stack : 'N/A')
     return NextResponse.json(
       {
         error: 'Erreur lors de la génération du rapport IA',

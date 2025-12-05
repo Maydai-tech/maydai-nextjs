@@ -322,7 +322,7 @@ export default function UseCaseDetailPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-6">
               Rapport d'Audit Préliminaire
             </h2>
-            
+
             <div className="prose prose-gray max-w-none">
               <p className="text-base leading-relaxed text-gray-800 mb-4">
                 Ce rapport réalisé par l'entreprise <strong className="text-[#0080a3]">{useCase.companies?.name || '[Nom de l\'entreprise]'}</strong> présente les conclusions d'un audit préliminaire du système d'IA <strong className="text-[#0080a3]">{useCase.name || '[Nom du système]'}</strong> au regard des exigences du règlement (UE) 2024/1689 du Parlement européen et du Conseil du 13 juin 2024 établissant des règles harmonisées concernant l'intelligence artificielle « AI Act ».
