@@ -16,6 +16,7 @@ const allowedDocTypes = new Set([
   'risk_management',
   'data_quality',
   'continuous_monitoring',
+  'training_census',
   'stopping_proof',
   'registry_proof',
 ])

@@ -19,19 +19,10 @@ import { getCompanyStatusLabel, getCompanyStatusDefinition } from './utils/compa
 import UnacceptableCaseModal from '@/components/Shared/UnacceptableCaseModal'
 import { useUnacceptableCaseWorkflow } from '@/hooks/useUnacceptableCaseWorkflow'
 import { supabase } from '@/lib/supabase'
-
-// Mapping des actions du rapport vers les types de documents de la todo-list
-const ACTION_TO_DOCTYPE: Record<string, string> = {
-  quick_win_1: 'registry_action',
-  quick_win_2: 'human_oversight',
-  quick_win_3: 'system_prompt',
-  priorite_1: 'technical_documentation',
-  priorite_2: 'transparency_marking',
-  priorite_3: 'data_quality',
-  action_1: 'risk_management',
-  action_2: 'continuous_monitoring',
-  // action_3: à définir plus tard
-}
+import { ACTION_TO_DOCTYPE, getActionMetadata, isActionCompleted } from './config/actions-config'
+import { useDocumentStatuses } from './hooks/useDocumentStatuses'
+import { useCompanyInfo } from './hooks/useCompanyInfo'
+import { CompletedAction } from './components/report/CompletedAction'
 
 export default function UseCaseDetailPage() {
   const { user, loading, session } = useAuth()
@@ -52,6 +43,8 @@ export default function UseCaseDetailPage() {
   })
   const { riskLevel, loading: riskLoading, error: riskError } = useRiskLevel(useCase?.id || '')
   const { score, loading: scoreLoading, error: scoreError } = useUseCaseScore(useCase?.id || '')
+  const { statuses: documentStatuses, loading: documentStatusesLoading } = useDocumentStatuses(useCase?.id || null)
+  const { maydaiAsRegistry } = useCompanyInfo(useCase?.company_id || null)
 
   // État pour la modal cas inacceptable
   const [documents, setDocuments] = useState<Record<string, any>>({})
@@ -554,22 +547,46 @@ export default function UseCaseDetailPage() {
                       ]
                         .filter(item => Boolean(item.value))
                         .map((item, index) => {
-                          const docType = ACTION_TO_DOCTYPE[item.key]
-                          const todoUrl = docType && useCase?.company_id
-                            ? `/dashboard/${useCase.company_id}/todo-list?usecase=${useCaseId}&action=${docType}`
+                          const metadata = getActionMetadata(item.key)
+                          const isCompleted = isActionCompleted(metadata.docType, documentStatuses, maydaiAsRegistry)
+                          const dossierUrl = useCase?.company_id
+                            ? `/dashboard/${useCase.company_id}/dossiers/${useCaseId}?highlight=${metadata.docType}`
                             : null
+                          const todoUrl = metadata.docType && useCase?.company_id
+                            ? `/dashboard/${useCase.company_id}/todo-list?usecase=${useCaseId}&action=${metadata.docType}`
+                            : null
+                          
                           return (
-                            <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start gap-2">
-                              <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
-                              <span className="flex-1">{item.value}</span>
-                              {todoUrl && (
-                                <button
-                                  onClick={() => router.push(todoUrl)}
-                                  className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors whitespace-nowrap"
-                                >
-                                  Voir l'action
-                                  <ArrowRight className="w-4 h-4" />
-                                </button>
+                            <li key={index} className="text-base leading-relaxed text-gray-800">
+                              <div className="flex items-start gap-2">
+                                <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
+                                <span className="flex-1">{item.value}</span>
+                              </div>
+                              {isCompleted ? (
+                                dossierUrl && (
+                                  <CompletedAction
+                                    title={metadata.title}
+                                    points={metadata.points}
+                                    onClick={() => router.push(dossierUrl)}
+                                  />
+                                )
+                              ) : (
+                                todoUrl && (
+                                  <button
+                                    onClick={() => router.push(todoUrl)}
+                                    className="mt-2 ml-8 inline-flex items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors"
+                                  >
+                                    <span>{metadata.title}</span>
+                                    <div className="flex items-center gap-2">
+                                      {metadata.points > 0 && (
+                                        <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-semibold">
+                                          +{metadata.points} pts
+                                        </span>
+                                      )}
+                                      <ArrowRight className="w-4 h-4" />
+                                    </div>
+                                  </button>
+                                )
                               )}
                             </li>
                           )
@@ -600,22 +617,46 @@ export default function UseCaseDetailPage() {
                       ]
                         .filter(item => Boolean(item.value))
                         .map((item, index) => {
-                          const docType = ACTION_TO_DOCTYPE[item.key]
-                          const todoUrl = docType && useCase?.company_id
-                            ? `/dashboard/${useCase.company_id}/todo-list?usecase=${useCaseId}&action=${docType}`
+                          const metadata = getActionMetadata(item.key)
+                          const isCompleted = isActionCompleted(metadata.docType, documentStatuses, maydaiAsRegistry)
+                          const dossierUrl = useCase?.company_id
+                            ? `/dashboard/${useCase.company_id}/dossiers/${useCaseId}?highlight=${metadata.docType}`
                             : null
+                          const todoUrl = metadata.docType && useCase?.company_id
+                            ? `/dashboard/${useCase.company_id}/todo-list?usecase=${useCaseId}&action=${metadata.docType}`
+                            : null
+                          
                           return (
-                            <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start gap-2">
-                              <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
-                              <span className="flex-1">{item.value}</span>
-                              {todoUrl && (
-                                <button
-                                  onClick={() => router.push(todoUrl)}
-                                  className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors whitespace-nowrap"
-                                >
-                                  Voir l'action
-                                  <ArrowRight className="w-4 h-4" />
-                                </button>
+                            <li key={index} className="text-base leading-relaxed text-gray-800">
+                              <div className="flex items-start gap-2">
+                                <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
+                                <span className="flex-1">{item.value}</span>
+                              </div>
+                              {isCompleted ? (
+                                dossierUrl && (
+                                  <CompletedAction
+                                    title={metadata.title}
+                                    points={metadata.points}
+                                    onClick={() => router.push(dossierUrl)}
+                                  />
+                                )
+                              ) : (
+                                todoUrl && (
+                                  <button
+                                    onClick={() => router.push(todoUrl)}
+                                    className="mt-2 ml-8 inline-flex items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors"
+                                  >
+                                    <span>{metadata.title}</span>
+                                    <div className="flex items-center gap-2">
+                                      {metadata.points > 0 && (
+                                        <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-semibold">
+                                          +{metadata.points} pts
+                                        </span>
+                                      )}
+                                      <ArrowRight className="w-4 h-4" />
+                                    </div>
+                                  </button>
+                                )
                               )}
                             </li>
                           )
@@ -646,22 +687,46 @@ export default function UseCaseDetailPage() {
                       ]
                         .filter(item => Boolean(item.value))
                         .map((item, index) => {
-                          const docType = ACTION_TO_DOCTYPE[item.key]
-                          const todoUrl = docType && useCase?.company_id
-                            ? `/dashboard/${useCase.company_id}/todo-list?usecase=${useCaseId}&action=${docType}`
+                          const metadata = getActionMetadata(item.key)
+                          const isCompleted = isActionCompleted(metadata.docType, documentStatuses, maydaiAsRegistry)
+                          const dossierUrl = useCase?.company_id
+                            ? `/dashboard/${useCase.company_id}/dossiers/${useCaseId}?highlight=${metadata.docType}`
                             : null
+                          const todoUrl = metadata.docType && useCase?.company_id
+                            ? `/dashboard/${useCase.company_id}/todo-list?usecase=${useCaseId}&action=${metadata.docType}`
+                            : null
+                          
                           return (
-                            <li key={index} className="text-base leading-relaxed text-gray-800 flex items-start gap-2">
-                              <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
-                              <span className="flex-1">{item.value}</span>
-                              {todoUrl && (
-                                <button
-                                  onClick={() => router.push(todoUrl)}
-                                  className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors whitespace-nowrap"
-                                >
-                                  Voir l'action
-                                  <ArrowRight className="w-4 h-4" />
-                                </button>
+                            <li key={index} className="text-base leading-relaxed text-gray-800">
+                              <div className="flex items-start gap-2">
+                                <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
+                                <span className="flex-1">{item.value}</span>
+                              </div>
+                              {isCompleted ? (
+                                dossierUrl && (
+                                  <CompletedAction
+                                    title={metadata.title}
+                                    points={metadata.points}
+                                    onClick={() => router.push(dossierUrl)}
+                                  />
+                                )
+                              ) : (
+                                todoUrl && (
+                                  <button
+                                    onClick={() => router.push(todoUrl)}
+                                    className="mt-2 ml-8 inline-flex items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors"
+                                  >
+                                    <span>{metadata.title}</span>
+                                    <div className="flex items-center gap-2">
+                                      {metadata.points > 0 && (
+                                        <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-semibold">
+                                          +{metadata.points} pts
+                                        </span>
+                                      )}
+                                      <ArrowRight className="w-4 h-4" />
+                                    </div>
+                                  </button>
+                                )
                               )}
                             </li>
                           )

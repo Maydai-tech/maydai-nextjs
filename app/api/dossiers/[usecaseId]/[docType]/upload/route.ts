@@ -16,6 +16,7 @@ const allowedDocTypes = new Set([
   "risk_management",
   "data_quality",
   "continuous_monitoring",
+  "training_census",
   "stopping_proof",
   "registry_proof",
 ]);
@@ -48,6 +49,10 @@ const allowedFormats: Record<
   continuous_monitoring: {
     extensions: [".pdf", ".docx"],
     description: "Documents (.pdf, .docx)",
+  },
+  training_census: {
+    extensions: [".pdf", ".docx", ".xlsx"],
+    description: "Documents (.pdf, .docx, .xlsx)",
   },
   stopping_proof: {
     extensions: [".pdf", ".png", ".jpg", ".jpeg"],
