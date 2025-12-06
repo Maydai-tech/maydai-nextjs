@@ -44,7 +44,7 @@ export const PDFSynthese: React.FC<PDFSyntheseProps> = ({ data }) => {
           </Text>
           
           <Text style={[styles.text, { lineHeight: 1.6, marginBottom: 20 }]}>
-            Une partie des conclusions de cette évaluation est basée sur les tests effectués par l'équipe MayDAI sur les principaux LLM dont <Text style={[styles.bold, { color: colors.primary }]}>{data.useCase.compl_ai_models?.model_name || data.useCase.llm_model_version || '[Nom du modèle utilisé]'}</Text>. Si certaines lacunes en matière de robustesse, de sécurité, de diversité et d'équité peuvent être relevées, d'autres informations demandées par l'AI Act ne sont pas encore disponibles (ou transmises par les technologies concernées).
+            Une partie des conclusions de cette évaluation est basée sur les tests effectués par l'équipe MaydAI sur les principaux LLM dont <Text style={[styles.bold, { color: colors.primary }]}>{data.useCase.compl_ai_models?.model_name || data.useCase.llm_model_version || '[Nom du modèle utilisé]'}</Text>. Si certaines lacunes en matière de robustesse, de sécurité, de diversité et d'équité peuvent être relevées, d'autres informations demandées par l'AI Act ne sont pas encore disponibles (ou transmises par les technologies concernées).
           </Text>
           
           <Text style={[styles.text, { lineHeight: 1.6 }]}>
