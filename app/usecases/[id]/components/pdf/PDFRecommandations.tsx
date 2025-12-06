@@ -45,37 +45,37 @@ export const PDFRecommandations: React.FC<PDFRecommandationsProps> = ({ data }) 
             </Text>
           </View>
 
-          {/* Priorités d'actions réglementaires */}
+          {/* Quick wins */}
           <View style={[styles.cardWhite, { marginBottom: 20 }]}>
+            <View style={[styles.row, { marginBottom: 8 }]}>
+              <Text style={[styles.icon, { fontSize: 10, color: colors.primary }]}>•</Text>
+              <Text style={[styles.subsectionTitle, { marginBottom: 0 }]}>
+                Actions rapides et concrètes à mettre en œuvre :
+              </Text>
+            </View>
+            <Text style={[styles.text, styles.italic, { marginBottom: 12 }]}>
+              Actions immédiates recommandées
+            </Text>
+            
+            <View style={styles.list}>
+              <Text style={styles.listItem}>• Évaluer la conformité actuelle de l'application d'automatisation LinkedIn aux exigences de l'AI Act pour identifier les lacunes et prioriser les actions nécessaires.</Text>
+              <Text style={styles.listItem}>• Mettre à jour la documentation juridique pour refléter le rôle d'Addeus en tant que distributeur et les obligations qui en découlent, conformément à l'Article 3.</Text>
+            </View>
+          </View>
+
+          {/* Priorités d'actions réglementaires */}
+          <View style={[styles.cardWhite]}>
             <Text style={[styles.subsectionTitle, { marginBottom: 12 }]}>
-              Il est impératif de mettre en œuvre les mesures suivantes :
+              Mesures importantes de conformité à renseigner :
             </Text>
             <Text style={[styles.text, styles.italic, { marginBottom: 12 }]}>
-              Les 3 priorités d'actions réglementaires
+              Actions réglementaires et documents techniques
             </Text>
             
             <View style={styles.list}>
               <Text style={styles.listItem}>• Établir un système de gestion des risques pour l'application d'automatisation LinkedIn (Article 9 de l'AI Act).</Text>
               <Text style={styles.listItem}>• Implémenter des procédures de vérification de la qualité des données (Article 10).</Text>
               <Text style={styles.listItem}>• Documenter techniquement le système d'IA, en s'assurant de sa complétude et de sa conformité (Article 11 et Annexe IV).</Text>
-            </View>
-          </View>
-
-          {/* Quick wins */}
-          <View style={[styles.cardWhite]}>
-            <View style={[styles.row, { marginBottom: 8 }]}>
-              <Text style={[styles.icon, { fontSize: 10, color: colors.primary }]}>•</Text>
-              <Text style={[styles.subsectionTitle, { marginBottom: 0 }]}>
-                Trois actions concrètes à mettre en œuvre rapidement :
-              </Text>
-            </View>
-            <Text style={[styles.text, styles.italic, { marginBottom: 12 }]}>
-              Quick wins & actions immédiates recommandées
-            </Text>
-            
-            <View style={styles.list}>
-              <Text style={styles.listItem}>• Évaluer la conformité actuelle de l'application d'automatisation LinkedIn aux exigences de l'AI Act pour identifier les lacunes et prioriser les actions nécessaires.</Text>
-              <Text style={styles.listItem}>• Mettre à jour la documentation juridique pour refléter le rôle d'Addeus en tant que distributeur et les obligations qui en découlent, conformément à l'Article 3.</Text>
             </View>
           </View>
         </View>

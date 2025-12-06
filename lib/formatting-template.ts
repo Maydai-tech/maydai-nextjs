@@ -12,15 +12,15 @@ export const COMPLIANCE_REPORT_TEMPLATE = `
 ## Évaluation du niveau de risque AI Act
 [Texte narratif]
 
-## Il est impératif de mettre en œuvre les mesures suivantes :
-### Les 3 priorités d'actions réglementaires
+## Mesures importantes de conformité à renseigner :
+### Actions réglementaires et documents techniques
 
 **Phrase 1.** Suite du texte.
 **Phrase 2.** Suite du texte.
 **Phrase 3.** Suite du texte.
 
-## Trois actions concrètes à mettre en œuvre rapidement :
-### Quick wins & actions immédiates recommandées
+## Actions rapides et concrètes à mettre en œuvre :
+### Actions immédiates recommandées
 
 **Phrase 1.** Suite du texte.
 **Phrase 2.** Suite du texte.
@@ -58,14 +58,14 @@ Tu dois suivre EXACTEMENT cette structure Markdown, sans modification :
 3. **Évaluation du niveau de risque AI Act** : "## Évaluation du niveau de risque AI Act"
    - Texte narratif évaluant le niveau de risque spécifique
 
-4. **Il est impératif de mettre en œuvre les mesures suivantes :** : "## Il est impératif de mettre en œuvre les mesures suivantes :"
-   - **Les 3 priorités d'actions réglementaires** : "### Les 3 priorités d'actions réglementaires"
+4. **Mesures importantes de conformité à renseigner :** : "## Mesures importantes de conformité à renseigner :"
+   - **Actions réglementaires et documents techniques** : "### Actions réglementaires et documents techniques"
    - **Phrase 1.** Suite du texte.
    - **Phrase 2.** Suite du texte.
    - **Phrase 3.** Suite du texte.
 
-5. **Trois actions concrètes à mettre en œuvre rapidement :** : "## Trois actions concrètes à mettre en œuvre rapidement :"
-   - **Quick wins & actions immédiates recommandées** : "### Quick wins & actions immédiates recommandées"
+5. **Actions rapides et concrètes à mettre en œuvre :** : "## Actions rapides et concrètes à mettre en œuvre :"
+   - **Actions immédiates recommandées** : "### Actions immédiates recommandées"
    - **Phrase 1.** Suite du texte.
    - **Phrase 2.** Suite du texte.
    - **Phrase 3.** Suite du texte.

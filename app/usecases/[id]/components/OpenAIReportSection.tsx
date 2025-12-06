@@ -121,8 +121,8 @@ export function OpenAIReportSection({ usecaseId }: OpenAIReportSectionProps) {
   const addBulletPointsToActionPhrases = (text: string) => {
     // Détecter les sections avec des phrases d'action
     const actionSections = [
-      '### Les 3 priorités d\'actions réglementaires',
-      '### Quick wins & actions immédiates recommandées',
+      '### Actions réglementaires et documents techniques',
+      '### Actions immédiates recommandées',
       '### Actions à moyen terme'
     ]
 

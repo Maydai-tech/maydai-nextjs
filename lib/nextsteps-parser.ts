@@ -171,7 +171,7 @@ export function extractNextStepsFromMarkdown(reportText: string): Partial<UseCas
   }
   
   // Extraire les 3 priorités d'actions réglementaires
-  const prioritiesMatch = reportText.match(/### Les 3 priorités d'actions réglementaires\s*\n([\s\S]*?)(?=###|##|$)/)
+  const prioritiesMatch = reportText.match(/### Actions réglementaires et documents techniques\s*\n([\s\S]*?)(?=###|##|$)/)
   if (prioritiesMatch) {
     const prioritiesSection = prioritiesMatch[1]
     // Chercher le contenu des priorités au format **Titre** description complète...
@@ -185,7 +185,7 @@ export function extractNextStepsFromMarkdown(reportText: string): Partial<UseCas
   }
   
   // Extraire les quick wins & actions immédiates
-  const quickWinsMatch = reportText.match(/### Quick wins & actions immédiates recommandées\s*\n([\s\S]*?)(?=###|##|$)/)
+  const quickWinsMatch = reportText.match(/### Actions immédiates recommandées\s*\n([\s\S]*?)(?=###|##|$)/)
   if (quickWinsMatch) {
     const quickWinsSection = quickWinsMatch[1]
     // Chercher les patterns avec ou sans numérotation : **1. texte.** ou **texte.**
