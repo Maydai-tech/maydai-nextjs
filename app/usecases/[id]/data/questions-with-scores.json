@@ -1064,7 +1064,7 @@
     "todo_action": "continuous_monitoring",
     "tooltip": {
       "title": "Exactitude et cybersécurité",
-      "shortContent": "Les systèmes d'IA à Haut Risque doivent atteindre un niveau approprié d'exactitude, de robustesse et de cybersécurité tout au long de leur cycle de vie. Ils doivent être résilients face aux erreurs et aux cyberattaques (ex: empoisonnement des données) (Article 15).",
+      "shortContent": "Les systèmes d'IA à doivent atteindre un niveau approprié d'exactitude, de robustesse et de cybersécurité tout au long de leur cycle de vie. Ils doivent être résilients face aux erreurs et aux cyberattaques (ex: empoisonnement des données) (Article 15).",
       "icon": "💡"
     },
     "conditionalFields": [
