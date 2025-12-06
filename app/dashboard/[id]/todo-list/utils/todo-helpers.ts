@@ -51,15 +51,17 @@ export const getRequiredDocumentType = (useCase: UseCase): 'stopping_proof' | 's
 
 /**
  * List of compliance document types for non-unacceptable use cases
+ * Ordered by priority (1 to 8)
  */
 export const COMPLIANCE_DOCUMENT_TYPES = [
-  'system_prompt',
-  'technical_documentation',
-  'human_oversight',
-  'transparency_marking',
-  'risk_management',
-  'data_quality',
-  'continuous_monitoring'
+  'system_prompt',          // 1. Définir les instructions système & prompts
+  'human_oversight',        // 2. Désigner le(s) responsable(s) de surveillance
+  'technical_documentation',// 3. Importer la documentation technique
+  'transparency_marking',   // 4. Renseigner le marquage de transparence
+  'data_quality',           // 5. Justifier la qualité des données (Procédure)
+  'risk_management',        // 6. Joindre le plan de gestion des risques
+  'continuous_monitoring',  // 7. Établir le plan de surveillance continue
+  'training_census'         // 8. Recenser les formations AI Act
 ] as const
 
 export type ComplianceDocumentType = typeof COMPLIANCE_DOCUMENT_TYPES[number]
@@ -86,6 +88,8 @@ export const getDocumentLabel = (docType: DocumentType): string => {
       return 'Procédure de qualité des données'
     case 'continuous_monitoring':
       return 'Plan de surveillance continue'
+    case 'training_census':
+      return 'Recensement des formations AI Act'
     default:
       return 'Document requis'
   }
@@ -99,19 +103,21 @@ export const getDocumentTodoText = (docType: DocumentType): string => {
     case 'stopping_proof':
       return 'Compléter la preuve d\'arrêt du système'
     case 'system_prompt':
-      return 'Compléter les instructions système'
+      return 'Définir les instructions système & prompts'
     case 'technical_documentation':
-      return 'Compléter la documentation technique'
+      return 'Importer la documentation technique'
     case 'human_oversight':
-      return 'Désigner le responsable de surveillance'
+      return 'Désigner le(s) responsable(s) de surveillance'
     case 'transparency_marking':
-      return 'Compléter le marquage de transparence'
+      return 'Renseigner le marquage de transparence'
     case 'risk_management':
-      return 'Compléter le plan de gestion des risques'
+      return 'Joindre le plan de gestion des risques'
     case 'data_quality':
-      return 'Compléter la procédure de qualité des données'
+      return 'Justifier la qualité des données (Procédure)'
     case 'continuous_monitoring':
-      return 'Compléter le plan de surveillance continue'
+      return 'Établir le plan de surveillance continue'
+    case 'training_census':
+      return 'Recenser les formations AI Act'
     default:
       return 'Compléter le document requis'
   }
@@ -147,6 +153,8 @@ export const getDocumentExplanation = (docType: DocumentType): string => {
       return "Démontrez que les données utilisées (pour l'entraînement, le fine-tuning, ou le RAG) sont de bonne qualité, non biaisées et gérées correctement."
     case 'continuous_monitoring':
       return "Détaillez les métriques (KPIs) de performance suivies, la fréquence des audits, et la procédure en cas de détection d'anomalie ou de risque émergent."
+    case 'training_census':
+      return "Recensez les formations AI Act suivies par vos équipes. Documentez les participants, dates, contenus et certificats obtenus pour démontrer la compétence de votre organisation en matière de conformité."
     default:
       return "Veuillez fournir le document requis pour ce cas d'usage."
   }
@@ -188,6 +196,44 @@ export const getPotentialPoints = (docType: string, responses: any[]): number =>
   }
 
   return 0
+}
+
+/**
+ * Gets fixed action points for display purposes.
+ * Returns a fixed number of points associated with an action.
+ * Used to show consistent point values in both completed and pending states.
+ *
+ * @param docType - The document type
+ * @returns The fixed points for this action (0 if no points defined)
+ */
+export const getFixedActionPoints = (docType: string): number => {
+  switch (docType) {
+    case 'human_oversight':
+      return 8
+    case 'technical_documentation':
+      return 8
+    case 'transparency_marking':
+      return 8
+    case 'risk_management':
+      return 4
+    case 'continuous_monitoring':
+      return 4
+    // Actions without fixed points display
+    case 'system_prompt':
+    case 'data_quality':
+    case 'training_census':
+    case 'stopping_proof':
+    default:
+      return 0
+  }
+}
+
+/**
+ * Gets fixed points for registry action (always 8 points)
+ * @returns 8 points
+ */
+export const getRegistryActionPoints = (): number => {
+  return 8
 }
 
 /**

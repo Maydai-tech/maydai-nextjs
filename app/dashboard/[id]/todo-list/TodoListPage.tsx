@@ -14,7 +14,8 @@ import {
   getDocumentTodoText,
   isTodoCompleted,
   getRiskLevelConfig,
-  getPotentialPoints,
+  getFixedActionPoints,
+  getRegistryActionPoints,
   COMPLIANCE_DOCUMENT_TYPES,
   type DocumentType
 } from './utils/todo-helpers'
@@ -47,6 +48,7 @@ interface TodoItem {
   docType: DocumentType | 'registry_action'
   registryCase?: 'A' | 'B' | 'C' // For registry-related todos
   potentialPoints?: number // Points that can be gained by completing this action
+  actionNumber?: number // Optional numbering for ordered actions (1-8)
 }
 
 interface TodoListPageProps {
@@ -333,9 +335,9 @@ export default function TodoListPage({ params }: TodoListPageProps) {
   const getRegistryTodoText = (registryCase: 'A' | 'B' | 'C'): string => {
     switch (registryCase) {
       case 'A':
-        return 'Déclarer un registre centralisé pour votre système IA'
+        return 'Initialiser le registre centralisé pour vos systèmes d\'IA'
       case 'B':
-        return 'Confirmer MaydAI comme registre centralisé'
+        return 'Initialiser le registre centralisé pour vos systèmes d\'IA'
       case 'C':
         return 'Prouver l\'usage de votre registre centralisé'
       default:
@@ -394,32 +396,40 @@ export default function TodoListPage({ params }: TodoListPageProps) {
       const useCaseDocs = complianceDocStatuses[useCase.id] || {}
       const responses = useCaseResponses[useCase.id] || []
 
-      // Add todos for each of the 7 compliance documents
-      for (const docType of COMPLIANCE_DOCUMENT_TYPES) {
-        const docStatus = useCaseDocs[docType]
-        const potentialPoints = getPotentialPoints(docType, responses)
-        todos.push({
-          id: `${useCase.id}-${docType}`,
-          text: getDocumentTodoText(docType),
-          completed: isTodoCompleted(docStatus),
-          useCaseId: useCase.id,
-          docType: docType as DocumentType,
-          potentialPoints: potentialPoints > 0 ? potentialPoints : undefined
-        })
-      }
-
-      // Check for registry-related todos
+      // Check for registry-related todos - Add FIRST with number 1
       const registryCase = determineRegistryCase(useCase.id)
+      let startNumber = 1
+      
       if (registryCase) {
+        const registryCompleted = isRegistryTodoCompleted(useCase.id, registryCase)
         todos.push({
           id: `${useCase.id}-registry`,
           text: getRegistryTodoText(registryCase),
-          completed: isRegistryTodoCompleted(useCase.id, registryCase),
+          completed: registryCompleted,
           useCaseId: useCase.id,
           docType: 'registry_action',
-          registryCase
+          registryCase,
+          actionNumber: 1, // Registry action is always number 1
+          potentialPoints: getRegistryActionPoints()
         })
+        startNumber = 2 // Next actions start at 2
       }
+
+      // Add todos for each of the 8 compliance documents with hierarchical numbering
+      COMPLIANCE_DOCUMENT_TYPES.forEach((docType, index) => {
+        const docStatus = useCaseDocs[docType]
+        const completed = isTodoCompleted(docStatus)
+        const fixedPoints = getFixedActionPoints(docType)
+        todos.push({
+          id: `${useCase.id}-${docType}`,
+          text: getDocumentTodoText(docType),
+          completed,
+          useCaseId: useCase.id,
+          docType: docType as DocumentType,
+          potentialPoints: fixedPoints > 0 ? fixedPoints : undefined,
+          actionNumber: startNumber + index // Numbering continues from startNumber
+        })
+      })
     }
 
     return todos

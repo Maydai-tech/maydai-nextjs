@@ -10,7 +10,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Settings,
-  Upload
+  Upload,
+  TrendingUp,
+  Check
 } from 'lucide-react'
 import RegistryProofUpload from '@/components/RegistryProofUpload'
 
@@ -21,6 +23,8 @@ interface TodoItem {
   useCaseId: string
   docType: 'registry_action'
   registryCase?: 'A' | 'B' | 'C'
+  actionNumber?: number // Optional numbering for ordered actions
+  potentialPoints?: number // Points that can be gained by completing this action
 }
 
 interface RegistryToDoActionProps {
@@ -217,8 +221,27 @@ export default function RegistryToDoAction({
 
         {/* Todo text */}
         <span className={`flex-1 text-sm ${todo.completed ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
-          {todo.text}
+          {todo.actionNumber ? `${todo.actionNumber}. ${todo.text}` : todo.text}
         </span>
+
+        {/* Points badges - different styles for completed vs pending */}
+        {todo.potentialPoints && todo.potentialPoints > 0 && (
+          <>
+            {todo.completed ? (
+              // Pastille "Fait" - Vert foncé avec icône Check
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-600 text-white text-xs font-semibold rounded-full flex-shrink-0">
+                <Check className="w-3 h-3" />
+                +{todo.potentialPoints} pts
+              </span>
+            ) : (
+              // Pastille "Potentiel" - Vert clair avec icône TrendingUp
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full flex-shrink-0">
+                <TrendingUp className="w-3 h-3" />
+                +{todo.potentialPoints} pts
+              </span>
+            )}
+          </>
+        )}
 
         {/* Chevron icon */}
         <ChevronDown
