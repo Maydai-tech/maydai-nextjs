@@ -525,25 +525,25 @@ export default function UseCaseDetailPage() {
                   </div>
                 )}
 
-                {/* Priorités d'actions réglementaires */}
-                {nextSteps.priorite_1 && (
+                {/* Quick wins */}
+                {nextSteps.quick_win_1 && (
                   <div>
                     <div className="flex items-center gap-3 mb-4">
                       <img
-                        src="/icons/attention.png"
-                        alt="Actions prioritaires"
+                        src="/icons/work-in-progress.png"
+                        alt="Actions rapides"
                         width={24}
                         height={24}
                         className="flex-shrink-0"
                       />
-                      <h3 className="text-xl font-semibold text-gray-900">Il est impératif de mettre en œuvre les mesures suivantes :</h3>
+                      <h3 className="text-xl font-semibold text-gray-900">Actions rapides et concrètes à mettre en œuvre :</h3>
                     </div>
-                    <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Les 3 priorités d'actions réglementaires</h4>
+                    <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Actions immédiates recommandées</h4>
                     <ul className="space-y-3 mb-4 ml-4">
                       {[
-                        { key: 'priorite_1', value: nextSteps.priorite_1 },
-                        { key: 'priorite_2', value: nextSteps.priorite_2 },
-                        { key: 'priorite_3', value: nextSteps.priorite_3 }
+                        { key: 'quick_win_1', value: nextSteps.quick_win_1 },
+                        { key: 'quick_win_2', value: nextSteps.quick_win_2 },
+                        { key: 'quick_win_3', value: nextSteps.quick_win_3 }
                       ]
                         .filter(item => Boolean(item.value))
                         .map((item, index) => {
@@ -595,25 +595,25 @@ export default function UseCaseDetailPage() {
                   </div>
                 )}
 
-                {/* Quick wins */}
-                {nextSteps.quick_win_1 && (
+                {/* Priorités d'actions réglementaires */}
+                {nextSteps.priorite_1 && (
                   <div>
                     <div className="flex items-center gap-3 mb-4">
                       <img
-                        src="/icons/work-in-progress.png"
-                        alt="Actions rapides"
+                        src="/icons/attention.png"
+                        alt="Actions prioritaires"
                         width={24}
                         height={24}
                         className="flex-shrink-0"
                       />
-                      <h3 className="text-xl font-semibold text-gray-900">Trois actions concrètes à mettre en œuvre rapidement :</h3>
+                      <h3 className="text-xl font-semibold text-gray-900">Mesures importantes de conformité à renseigner :</h3>
                     </div>
-                    <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Quick wins & actions immédiates recommandées</h4>
+                    <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Actions réglementaires et documents techniques</h4>
                     <ul className="space-y-3 mb-4 ml-4">
                       {[
-                        { key: 'quick_win_1', value: nextSteps.quick_win_1 },
-                        { key: 'quick_win_2', value: nextSteps.quick_win_2 },
-                        { key: 'quick_win_3', value: nextSteps.quick_win_3 }
+                        { key: 'priorite_1', value: nextSteps.priorite_1 },
+                        { key: 'priorite_2', value: nextSteps.priorite_2 },
+                        { key: 'priorite_3', value: nextSteps.priorite_3 }
                       ]
                         .filter(item => Boolean(item.value))
                         .map((item, index) => {

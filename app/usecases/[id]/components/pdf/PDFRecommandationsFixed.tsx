@@ -42,24 +42,23 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
             </Text>
           </View>
 
-          {/* Priorités d'actions réglementaires */}
+          {/* Quick wins */}
           <View style={[styles.cardWhite]}>
-            <Text style={[styles.subsectionTitle, { marginBottom: 10, fontSize: 12 }]}>
-              Il est impératif de mettre en œuvre les mesures suivantes :
+            <Text style={[styles.subsectionTitle, { marginBottom: 8, fontSize: 12 }]}>
+              Actions rapides et concrètes à mettre en œuvre :
             </Text>
             <Text style={[styles.text, styles.italic, { marginBottom: 10, fontSize: 9 }]}>
-              Les 3 priorités d'actions réglementaires
+              Actions immédiates recommandées
             </Text>
             
             <View style={styles.list}>
-              {data.nextSteps?.priorite_1 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.priorite_1}</Text>}
-              {data.nextSteps?.priorite_2 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.priorite_2}</Text>}
-              {data.nextSteps?.priorite_3 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.priorite_3}</Text>}
-              {!data.nextSteps?.priorite_1 && !data.nextSteps?.priorite_2 && !data.nextSteps?.priorite_3 && (
+              {data.nextSteps?.quick_win_1 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.quick_win_1}</Text>}
+              {data.nextSteps?.quick_win_2 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.quick_win_2}</Text>}
+              {data.nextSteps?.quick_win_3 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.quick_win_3}</Text>}
+              {!data.nextSteps?.quick_win_1 && !data.nextSteps?.quick_win_2 && !data.nextSteps?.quick_win_3 && (
                 <>
-                  <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Établir un système de gestion des risques pour {data.useCase.name} (Article 9 de l'AI Act).</Text>
-                  <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Implémenter des procédures de vérification de la qualité des données (Article 10).</Text>
-                  <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Documenter techniquement le système d'IA, en s'assurant de sa complétude et de sa conformité (Article 11 et Annexe IV).</Text>
+                  <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Évaluer la conformité actuelle de {data.useCase.name} aux exigences de l'AI Act pour identifier les lacunes et prioriser les actions nécessaires.</Text>
+                  <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Mettre à jour la documentation juridique pour refléter le rôle de {data.useCase.companies?.name || 'l\'entreprise'} en tant que {data.useCase.company_status} et les obligations qui en découlent, conformément à l'Article 3.</Text>
                 </>
               )}
             </View>
@@ -76,23 +75,24 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
         </Text>
         
         <View style={[styles.card, { marginBottom: 20 }]}>
-          {/* Quick wins */}
+          {/* Priorités d'actions réglementaires */}
           <View style={[styles.cardWhite, { marginBottom: 15 }]}>
-            <Text style={[styles.subsectionTitle, { marginBottom: 8, fontSize: 12 }]}>
-              Trois actions concrètes à mettre en œuvre rapidement :
+            <Text style={[styles.subsectionTitle, { marginBottom: 10, fontSize: 12 }]}>
+              Mesures importantes de conformité à renseigner :
             </Text>
             <Text style={[styles.text, styles.italic, { marginBottom: 10, fontSize: 9 }]}>
-              Quick wins & actions immédiates recommandées
+              Actions réglementaires et documents techniques
             </Text>
             
             <View style={styles.list}>
-              {data.nextSteps?.quick_win_1 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.quick_win_1}</Text>}
-              {data.nextSteps?.quick_win_2 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.quick_win_2}</Text>}
-              {data.nextSteps?.quick_win_3 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.quick_win_3}</Text>}
-              {!data.nextSteps?.quick_win_1 && !data.nextSteps?.quick_win_2 && !data.nextSteps?.quick_win_3 && (
+              {data.nextSteps?.priorite_1 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.priorite_1}</Text>}
+              {data.nextSteps?.priorite_2 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.priorite_2}</Text>}
+              {data.nextSteps?.priorite_3 && <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• {data.nextSteps.priorite_3}</Text>}
+              {!data.nextSteps?.priorite_1 && !data.nextSteps?.priorite_2 && !data.nextSteps?.priorite_3 && (
                 <>
-                  <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Évaluer la conformité actuelle de {data.useCase.name} aux exigences de l'AI Act pour identifier les lacunes et prioriser les actions nécessaires.</Text>
-                  <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Mettre à jour la documentation juridique pour refléter le rôle de {data.useCase.companies?.name || 'l\'entreprise'} en tant que {data.useCase.company_status} et les obligations qui en découlent, conformément à l'Article 3.</Text>
+                  <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Établir un système de gestion des risques pour {data.useCase.name} (Article 9 de l'AI Act).</Text>
+                  <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Implémenter des procédures de vérification de la qualité des données (Article 10).</Text>
+                  <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.3 }]}>• Documenter techniquement le système d'IA, en s'assurant de sa complétude et de sa conformité (Article 11 et Annexe IV).</Text>
                 </>
               )}
             </View>

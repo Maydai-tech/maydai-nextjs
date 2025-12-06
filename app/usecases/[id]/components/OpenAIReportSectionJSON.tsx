@@ -52,9 +52,9 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
                 height={24} 
                 className="flex-shrink-0"
               />
-              <h2 className="text-xl font-semibold text-gray-900">Il est impératif de mettre en œuvre les mesures suivantes :</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Mesures importantes de conformité à renseigner :</h2>
             </div>
-            <h3 className="text-lg font-medium text-gray-700 mb-3 italic">Les 3 priorités d'actions réglementaires</h3>
+            <h3 className="text-lg font-medium text-gray-700 mb-3 italic">Actions réglementaires et documents techniques</h3>
             <ul className="space-y-2 mb-4 ml-4">
               {reportData.priorites_actions.map((action: string, index: number) => (
                 <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
@@ -77,9 +77,9 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
                 height={24} 
                 className="flex-shrink-0"
               />
-              <h2 className="text-xl font-semibold text-gray-900">Trois actions concrètes à mettre en œuvre rapidement :</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Actions rapides et concrètes à mettre en œuvre :</h2>
             </div>
-            <h3 className="text-lg font-medium text-gray-700 mb-3 italic">Quick wins & actions immédiates recommandées</h3>
+            <h3 className="text-lg font-medium text-gray-700 mb-3 italic">Actions immédiates recommandées</h3>
             <ul className="space-y-2 mb-4 ml-4">
               {reportData.quick_wins.map((action: string, index: number) => (
                 <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
@@ -148,8 +148,8 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
       
       // Détecter et transformer les sections d'actions
       const sections = [
-        '### Les 3 priorités d\'actions réglementaires',
-        '### Quick wins & actions immédiates recommandées', 
+        '### Actions réglementaires et documents techniques',
+        '### Actions immédiates recommandées', 
         '### Actions à moyen terme'
       ]
       

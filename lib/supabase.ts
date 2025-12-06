@@ -239,7 +239,7 @@ export interface UseCaseNextSteps {
   impact?: string
   conclusion?: string
   
-  // Les 3 priorités d'actions réglementaires
+  // Actions réglementaires et documents techniques
   priorite_1?: string
   priorite_2?: string
   priorite_3?: string
