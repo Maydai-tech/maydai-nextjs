@@ -142,7 +142,7 @@ export default function ScoreCircle({
       </div>
       
       <div className="mt-4 text-center">
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">Score IA Act de l'entreprise</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Score IA Act du registre</h3>
         <p className="text-sm text-gray-600">
           {evaluatedCount > 0 ? (
             <>
