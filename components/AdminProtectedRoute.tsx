@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '@/lib/supabase'
 import { hasAdminRole, type UserRole } from '@/lib/admin-auth'
 
 interface AdminProtectedRouteProps {
@@ -12,63 +12,70 @@ interface AdminProtectedRouteProps {
   fallbackUrl?: string
 }
 
-export default function AdminProtectedRoute({ 
-  children, 
+export default function AdminProtectedRoute({
+  children,
   requiredRole = 'admin',
-  fallbackUrl = '/dashboard' 
+  fallbackUrl = '/dashboard'
 }: AdminProtectedRouteProps) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const [isAdmin, setIsAdmin] = useState(false)
   const [checkingRole, setCheckingRole] = useState(true)
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   useEffect(() => {
     const checkAdminRole = async () => {
-      if (!loading && user) {
-        try {
-          // Récupérer le profil avec le rôle
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single()
+      // Attendre que l'auth soit chargée
+      if (loading) {
+        return
+      }
 
-          if (error || !profile) {
-            console.error('Erreur lors de la vérification du rôle:', error)
-            setIsAdmin(false)
-            router.push(fallbackUrl)
-          } else {
-            const userRole = profile.role as UserRole
-            
-            // Vérifier si l'utilisateur a le rôle requis
-            if (requiredRole === 'super_admin') {
-              setIsAdmin(userRole === 'super_admin')
-            } else {
-              setIsAdmin(hasAdminRole(userRole))
-            }
-            
-            if (!isAdmin && userRole !== requiredRole && !hasAdminRole(userRole)) {
-              router.push(fallbackUrl)
-            }
-          }
-        } catch (error) {
+      if (!user) {
+        // Pas connecté
+        router.push('/login')
+        setCheckingRole(false)
+        return
+      }
+
+      try {
+        // Récupérer le profil avec le rôle
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (error || !profile) {
           console.error('Erreur lors de la vérification du rôle:', error)
           setIsAdmin(false)
           router.push(fallbackUrl)
+        } else {
+          const userRole = profile.role as UserRole
+
+          // Vérifier si l'utilisateur a le rôle requis
+          let hasRequiredRole = false
+          if (requiredRole === 'super_admin') {
+            hasRequiredRole = userRole === 'super_admin'
+          } else {
+            hasRequiredRole = hasAdminRole(userRole)
+          }
+
+          setIsAdmin(hasRequiredRole)
+
+          if (!hasRequiredRole) {
+            router.push(fallbackUrl)
+          }
         }
-      } else if (!loading && !user) {
-        // Pas connecté
-        router.push('/login')
+      } catch (error) {
+        console.error('Erreur lors de la vérification du rôle:', error)
+        setIsAdmin(false)
+        router.push(fallbackUrl)
       }
+
       setCheckingRole(false)
     }
 
     checkAdminRole()
-  }, [user, loading, router, supabase, requiredRole, fallbackUrl])
+  }, [user, loading, router, requiredRole, fallbackUrl])
 
   if (loading || checkingRole) {
     return (
