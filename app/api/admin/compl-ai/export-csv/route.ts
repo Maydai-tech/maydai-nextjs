@@ -1,23 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 
 export async function GET(request: NextRequest) {
   try {
     console.log('Debug: Début de l\'export CSV - VERSION SIMPLIFIÉE')
-    
-    // Vérifier l'authentification via l'en-tête Authorization
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Token d\'authentification manquant' }, { status: 401 })
-    }
 
-    // Obtenir l'utilisateur connecté avec le token
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Token invalide' }, { status: 401 })
-    }
+    // Authentification avec le client Supabase authentifié
+    const { supabase, user } = await getAuthenticatedSupabaseClient(request)
 
     // Vérifier les droits admin
     const { data: profile } = await supabase
@@ -198,6 +187,12 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Erreur export CSV COMPL-AI:', error)
+
+    // Gérer les erreurs d'authentification
+    if (error instanceof Error && (error.message === 'No authorization header' || error.message === 'Invalid token')) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
     return NextResponse.json({
       error: error instanceof Error ? error.message : 'Erreur interne du serveur'
     }, { status: 500 })
