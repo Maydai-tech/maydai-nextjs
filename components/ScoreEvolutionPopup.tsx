@@ -1,7 +1,8 @@
 'use client'
 
-import { TrendingUp, X } from 'lucide-react'
+import { TrendingUp, X, ArrowLeft, FileText } from 'lucide-react'
 import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 interface ScoreEvolutionPopupProps {
   previousScore: number | null
@@ -9,7 +10,9 @@ interface ScoreEvolutionPopupProps {
   pointsGained: number
   reason?: string
   onClose: () => void
-  autoCloseDelay?: number // in milliseconds, default 5000
+  autoCloseDelay?: number // in milliseconds, default 0 (no auto-close)
+  todoListUrl?: string // URL to go back to the todo list
+  usecaseDossierUrl?: string // URL to view the use case dossier
 }
 
 export default function ScoreEvolutionPopup({
@@ -18,9 +21,13 @@ export default function ScoreEvolutionPopup({
   pointsGained,
   reason,
   onClose,
-  autoCloseDelay = 5000
+  autoCloseDelay = 0,
+  todoListUrl,
+  usecaseDossierUrl
 }: ScoreEvolutionPopupProps) {
-  // Auto-close after delay
+  const router = useRouter()
+
+  // Auto-close after delay (disabled by default)
   useEffect(() => {
     if (autoCloseDelay > 0) {
       const timer = setTimeout(() => {
@@ -92,13 +99,41 @@ export default function ScoreEvolutionPopup({
             </p>
           )}
 
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="w-full px-6 py-3 bg-[#0080A3] text-white hover:bg-[#006d8a] rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
-          >
-            OK
-          </button>
+          {/* Action buttons */}
+          <div className="space-y-3">
+            {todoListUrl && (
+              <button
+                onClick={() => {
+                  onClose()
+                  router.push(todoListUrl)
+                }}
+                className="w-full px-6 py-3 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Retour a la todo list
+              </button>
+            )}
+            {usecaseDossierUrl && (
+              <button
+                onClick={() => {
+                  onClose()
+                  router.push(usecaseDossierUrl)
+                }}
+                className="w-full px-6 py-3 bg-[#0080A3] text-white hover:bg-[#006d8a] rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
+              >
+                <FileText className="w-4 h-4" />
+                Voir le dossier du cas d&apos;usage
+              </button>
+            )}
+            {!todoListUrl && !usecaseDossierUrl && (
+              <button
+                onClick={onClose}
+                className="w-full px-6 py-3 bg-[#0080A3] text-white hover:bg-[#006d8a] rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
+              >
+                OK
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1340,6 +1340,8 @@ export default function DossierDetailPage() {
           pointsGained={scoreChangePopup.pointsGained}
           reason={scoreChangePopup.reason}
           onClose={() => setScoreChangePopup(null)}
+          todoListUrl={`/dashboard/${companyId}/dossiers`}
+          usecaseDossierUrl={`/dashboard/${companyId}/dossiers/${usecaseId}`}
         />
       )}
     </div>
