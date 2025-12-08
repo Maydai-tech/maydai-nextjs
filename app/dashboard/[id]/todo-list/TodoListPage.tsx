@@ -15,6 +15,7 @@ import {
   isTodoCompleted,
   getRiskLevelConfig,
   getPotentialPoints,
+  getEarnedPoints,
   COMPLIANCE_DOCUMENT_TYPES,
   type DocumentType
 } from './utils/todo-helpers'
@@ -47,6 +48,7 @@ interface TodoItem {
   docType: DocumentType | 'registry_action'
   registryCase?: 'A' | 'B' | 'C' // For registry-related todos
   potentialPoints?: number // Points that can be gained by completing this action
+  earnedPoints?: number // Points that were earned by completing this action
   actionNumber?: number // Optional numbering for ordered actions (1-8)
 }
 
@@ -401,8 +403,9 @@ export default function TodoListPage({ params }: TodoListPageProps) {
 
       if (registryCase) {
         const registryCompleted = isRegistryTodoCompleted(useCase.id, registryCase)
-        // Only show points if they can actually be gained
-        const registryPoints = getPotentialPoints('registry_proof', responses)
+        // Calculate potential points (if action not done) or earned points (if action done)
+        const registryPotentialPoints = getPotentialPoints('registry_proof', responses)
+        const registryEarnedPoints = getEarnedPoints('registry_proof', responses, registryCompleted)
         todos.push({
           id: `${useCase.id}-registry`,
           text: getRegistryTodoText(registryCase),
@@ -411,7 +414,8 @@ export default function TodoListPage({ params }: TodoListPageProps) {
           docType: 'registry_action',
           registryCase,
           actionNumber: 1, // Registry action is always number 1
-          potentialPoints: registryPoints > 0 ? registryPoints : undefined
+          potentialPoints: registryPotentialPoints > 0 ? registryPotentialPoints : undefined,
+          earnedPoints: registryEarnedPoints > 0 ? registryEarnedPoints : undefined
         })
         startNumber = 2 // Next actions start at 2
       }
@@ -420,8 +424,9 @@ export default function TodoListPage({ params }: TodoListPageProps) {
       COMPLIANCE_DOCUMENT_TYPES.forEach((docType, index) => {
         const docStatus = useCaseDocs[docType]
         const completed = isTodoCompleted(docStatus)
-        // Only show points if they can actually be gained (response is currently negative)
+        // Calculate potential points (if action not done) or earned points (if action done)
         const potentialPoints = getPotentialPoints(docType, responses)
+        const earnedPoints = getEarnedPoints(docType, responses, completed)
         todos.push({
           id: `${useCase.id}-${docType}`,
           text: getDocumentTodoText(docType),
@@ -429,6 +434,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
           useCaseId: useCase.id,
           docType: docType as DocumentType,
           potentialPoints: potentialPoints > 0 ? potentialPoints : undefined,
+          earnedPoints: earnedPoints > 0 ? earnedPoints : undefined,
           actionNumber: startNumber + index // Numbering continues from startNumber
         })
       })
@@ -694,6 +700,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                                     onToggle={toggleTodo}
                                     onActionClick={(useCaseId) => handleTodoClick(useCaseId, todo.docType)}
                                     potentialPoints={todo.potentialPoints}
+                                    earnedPoints={todo.earnedPoints}
                                   />
                                 )}
                               </div>

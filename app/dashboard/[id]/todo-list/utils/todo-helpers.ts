@@ -199,6 +199,40 @@ export const getPotentialPoints = (docType: string, responses: any[]): number =>
 }
 
 /**
+ * Gets the points that were EARNED by completing a document action.
+ * Returns points only if:
+ * - The document is completed (status = 'complete' or 'validated')
+ * - The current response is the POSITIVE answer (meaning points were gained)
+ * - There was a potential negative answer (meaning this action gives points)
+ *
+ * This is used to show a "points earned" badge on completed actions.
+ *
+ * @param docType - The document type (e.g., 'technical_documentation')
+ * @param responses - Array of questionnaire responses for the use case
+ * @param isCompleted - Whether the document is completed
+ * @returns The normalized points that were earned (0 if no points were earned)
+ */
+export const getEarnedPoints = (docType: string, responses: any[], isCompleted: boolean): number => {
+  if (!isCompleted) return 0
+
+  // Get the mapping dynamically from questions-with-scores.json
+  const mapping = getTodoActionMapping(docType)
+  if (!mapping) return 0
+  if (!mapping.negativeAnswerCode) return 0 // No negative answer = no points to earn
+
+  // Find the current response for this question
+  const response = responses.find((r: any) => r.question_code === mapping.questionCode)
+
+  // Return points if the current answer is the positive one
+  // (meaning points were earned by completing this action)
+  if (response?.single_value === mapping.positiveAnswerCode) {
+    return normalizeScoreTo100(mapping.expectedPointsGained)
+  }
+
+  return 0
+}
+
+/**
  * Gets fixed action points for display purposes.
  * Returns a fixed number of points associated with an action.
  * Used to show consistent point values in both completed and pending states.
