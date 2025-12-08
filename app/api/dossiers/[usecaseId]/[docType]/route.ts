@@ -214,17 +214,19 @@ export async function POST(
           // Get the current score from the database
           const { data: currentUsecase } = await supabase
             .from('usecases')
-            .select('score_final, score_base')
+            .select('score_final, score_base, score_model')
             .eq('id', usecaseId)
             .single()
 
           const previousScore = currentUsecase?.score_final ?? null
           const previousBaseScore = currentUsecase?.score_base ?? 0
+          const scoreModel = currentUsecase?.score_model ?? 0
 
           if (previousScore !== null) {
             // Calculate new scores by adding the expected points
+            // IMPORTANT: Include score_model in the final score calculation
             const newBaseScore = previousBaseScore + syncResult.expectedPointsGained
-            const newFinalScore = Math.round((newBaseScore / 120) * 100 * 100) / 100
+            const newFinalScore = Math.round(((newBaseScore + scoreModel) / 120) * 100 * 100) / 100
 
             console.log(`[POST /dossiers] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`)
 
