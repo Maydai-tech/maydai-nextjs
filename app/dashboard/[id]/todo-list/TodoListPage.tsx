@@ -14,8 +14,7 @@ import {
   getDocumentTodoText,
   isTodoCompleted,
   getRiskLevelConfig,
-  getFixedActionPoints,
-  getRegistryActionPoints,
+  getPotentialPoints,
   COMPLIANCE_DOCUMENT_TYPES,
   type DocumentType
 } from './utils/todo-helpers'
@@ -399,9 +398,11 @@ export default function TodoListPage({ params }: TodoListPageProps) {
       // Check for registry-related todos - Add FIRST with number 1
       const registryCase = determineRegistryCase(useCase.id)
       let startNumber = 1
-      
+
       if (registryCase) {
         const registryCompleted = isRegistryTodoCompleted(useCase.id, registryCase)
+        // Only show points if they can actually be gained
+        const registryPoints = getPotentialPoints('registry_proof', responses)
         todos.push({
           id: `${useCase.id}-registry`,
           text: getRegistryTodoText(registryCase),
@@ -410,7 +411,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
           docType: 'registry_action',
           registryCase,
           actionNumber: 1, // Registry action is always number 1
-          potentialPoints: getRegistryActionPoints()
+          potentialPoints: registryPoints > 0 ? registryPoints : undefined
         })
         startNumber = 2 // Next actions start at 2
       }
@@ -419,14 +420,15 @@ export default function TodoListPage({ params }: TodoListPageProps) {
       COMPLIANCE_DOCUMENT_TYPES.forEach((docType, index) => {
         const docStatus = useCaseDocs[docType]
         const completed = isTodoCompleted(docStatus)
-        const fixedPoints = getFixedActionPoints(docType)
+        // Only show points if they can actually be gained (response is currently negative)
+        const potentialPoints = getPotentialPoints(docType, responses)
         todos.push({
           id: `${useCase.id}-${docType}`,
           text: getDocumentTodoText(docType),
           completed,
           useCaseId: useCase.id,
           docType: docType as DocumentType,
-          potentialPoints: fixedPoints > 0 ? fixedPoints : undefined,
+          potentialPoints: potentialPoints > 0 ? potentialPoints : undefined,
           actionNumber: startNumber + index // Numbering continues from startNumber
         })
       })
