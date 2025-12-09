@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { BarChart3, TrendingUp, Database, RefreshCw, Trash2, Plus, Save, X, Check, Edit, Calculator, Download, Upload, FileText } from 'lucide-react'
+import ModelTooltip from '@/components/ModelTooltip'
 
 
 interface BenchmarkInfo {
@@ -33,6 +34,7 @@ interface BenchmarkScore {
   evaluation_date: string
   evaluation_id?: string
   maydai_score?: number
+  rang_compar_ia?: number
 }
 
 interface ModelPrincipleMatrix {
@@ -41,6 +43,12 @@ interface ModelPrincipleMatrix {
   model_provider: string
   model_type: string
   version: string
+  short_name?: string
+  long_name?: string
+  launch_date?: string
+  notes_short?: string
+  notes_long?: string
+  variants?: string[]
   principle_scores: Record<string, {
     principle_name: string
     principle_category: string
@@ -48,6 +56,7 @@ interface ModelPrincipleMatrix {
     avg_score: number
     benchmark_count: number
     avg_maydai_score?: number
+    avg_rang_compar_ia?: number
   }>
   avg_score: number
   evaluation_count: number
@@ -59,6 +68,13 @@ interface ModelFormData {
   model_provider: string
   model_type: string
   version: string
+  short_name?: string
+  long_name?: string
+  launch_date?: string
+  model_provider_id?: number
+  notes_short?: string
+  notes_long?: string
+  variants?: string
 }
 
 interface ScoreEditData {
@@ -66,6 +82,13 @@ interface ScoreEditData {
   benchmarkCode: string
   score: number
   evaluation_id?: string
+}
+
+interface RangComparIaEditData {
+  evaluationId: string
+  modelId: string
+  principleCode: string
+  score: number | null
 }
 
 interface ScoreDeleteData {
@@ -97,6 +120,7 @@ export default function ComplAIScoresPage() {
   })
   const [editingScore, setEditingScore] = useState<ScoreEditData | null>(null)
   const [deletingScore, setDeletingScore] = useState<ScoreDeleteData | null>(null)
+  const [editingRangComparIa, setEditingRangComparIa] = useState<RangComparIaEditData | null>(null)
   const [saving, setSaving] = useState(false)
   
   // États pour l'import/export CSV
@@ -547,9 +571,9 @@ export default function ComplAIScoresPage() {
   const fetchScores = async () => {
     try {
       // Récupérer tous les modèles
-      const { data: allModels, error: modelsError } = await supabase
+      const { data: allModels, error: modelsError} = await supabase
         .from('compl_ai_models')
-        .select('id, model_name, model_provider, model_type, version')
+        .select('id, model_name, model_provider, model_type, version, short_name, long_name, launch_date, notes_short, notes_long, variants')
         .order('model_name')
 
       if (modelsError) throw modelsError
@@ -576,12 +600,16 @@ export default function ComplAIScoresPage() {
           evaluation_date,
           raw_data,
           maydai_score,
+          rang_compar_ia,
           compl_ai_models!inner (
             id,
             model_name,
             model_provider,
             model_type,
-            version
+            version,
+            short_name,
+            long_name,
+            launch_date
           ),
           compl_ai_principles!inner (
             name,
@@ -706,6 +734,12 @@ export default function ComplAIScoresPage() {
         model_provider: string
         model_type: string
         version: string
+        short_name?: string
+        long_name?: string
+        launch_date?: string
+        notes_short?: string
+        notes_long?: string
+        variants?: string[]
         principle_scores: Record<string, {
           principle_name: string
           principle_category: string
@@ -713,6 +747,7 @@ export default function ComplAIScoresPage() {
           avg_score: number
           benchmark_count: number
           avg_maydai_score?: number
+          avg_rang_compar_ia?: number
         }>
         all_scores: number[]
         all_dates: string[]
@@ -727,6 +762,12 @@ export default function ComplAIScoresPage() {
           model_provider: model.model_provider,
           model_type: model.model_type || 'N/A',
           version: model.version || 'N/A',
+          short_name: model.short_name,
+          long_name: model.long_name,
+          launch_date: model.launch_date,
+          notes_short: model.notes_short,
+          notes_long: model.notes_long,
+          variants: model.variants,
           principle_scores: {},
           all_scores: [],
           all_dates: []
@@ -773,7 +814,8 @@ export default function ComplAIScoresPage() {
             score_text: evaluation.score_text || `${Math.round(evaluation.score * 100)}%`,
             evaluation_date: evaluation.evaluation_date,
             evaluation_id: evaluation.id,
-            maydai_score: evaluation.maydai_score
+            maydai_score: evaluation.maydai_score,
+            rang_compar_ia: evaluation.rang_compar_ia
           }
 
           modelData.all_scores.push(evaluation.score)
@@ -849,6 +891,15 @@ export default function ComplAIScoresPage() {
               score: maydaiScoreMatch.average_maydai_score
             })
           }
+          
+          // Calculer le score moyen Rang Compar:IA pour ce principe
+          const rangComparIaScores = Object.values(principleData.benchmark_scores)
+            .map(b => b.rang_compar_ia)
+            .filter((score): score is number => score !== null && score !== undefined)
+          
+          if (rangComparIaScores.length > 0) {
+            principleData.avg_rang_compar_ia = rangComparIaScores.reduce((sum, score) => sum + score, 0) / rangComparIaScores.length
+          }
         })
 
         return {
@@ -857,6 +908,12 @@ export default function ComplAIScoresPage() {
           model_provider: group.model_provider,
           model_type: group.model_type,
           version: group.version,
+          short_name: group.short_name,
+          long_name: group.long_name,
+          launch_date: group.launch_date,
+          notes_short: group.notes_short,
+          notes_long: group.notes_long,
+          variants: group.variants,
           principle_scores: group.principle_scores,
           avg_score: group.all_scores.length > 0 
             ? group.all_scores.reduce((sum, score) => sum + score, 0) / group.all_scores.length 
@@ -1071,6 +1128,42 @@ export default function ComplAIScoresPage() {
     }
   }
 
+  const handleSaveRangComparIa = async () => {
+    if (!editingRangComparIa) return
+
+    setSaving(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Session non trouvée. Veuillez vous reconnecter.')
+      }
+
+      const response = await fetch(`/api/admin/compl-ai/evaluations/${editingRangComparIa.evaluationId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          rang_compar_ia: editingRangComparIa.score
+        })
+      })
+
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de la sauvegarde du score Rang Compar:IA')
+      }
+
+      setSyncMessage(`Score Rang Compar:IA mis à jour avec succès`)
+      setEditingRangComparIa(null)
+      await fetchScores()
+    } catch (error) {
+      setSyncMessage('Erreur lors de la sauvegarde : ' + (error instanceof Error ? error.message : 'Erreur inconnue'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const openModelForm = (model?: ModelPrincipleMatrix) => {
     if (model) {
       setEditingModel(model)
@@ -1078,11 +1171,28 @@ export default function ComplAIScoresPage() {
         model_name: model.model_name,
         model_provider: model.model_provider,
         model_type: model.model_type,
-        version: model.version
+        version: model.version,
+        short_name: model.short_name,
+        long_name: model.long_name,
+        launch_date: model.launch_date,
+        notes_short: model.notes_short,
+        notes_long: model.notes_long,
+        variants: model.variants?.join(', ') || ''
       })
     } else {
       setEditingModel(null)
-      setModelFormData({ model_name: '', model_provider: '', model_type: 'large-language-model', version: '' })
+      setModelFormData({ 
+        model_name: '', 
+        model_provider: '', 
+        model_type: 'large-language-model', 
+        version: '',
+        short_name: '',
+        long_name: '',
+        launch_date: '',
+        notes_short: '',
+        notes_long: '',
+        variants: ''
+      })
     }
     setShowModelForm(true)
   }
@@ -1339,12 +1449,28 @@ export default function ComplAIScoresPage() {
                   <td className="sticky left-0 px-3 py-3 whitespace-nowrap bg-white z-10 border-r border-gray-200 min-w-[200px]">
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-900 truncate" title={model.model_name}>
-                          {model.model_name}
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-medium text-gray-900 truncate" title={model.long_name || model.model_name}>
+                            {model.short_name || model.model_name}
+                          </span>
+                          <ModelTooltip 
+                            notesShort={model.notes_short} 
+                            notesLong={model.notes_long}
+                          />
                         </div>
                         <div className="text-xs text-gray-600" title={model.model_provider}>
                           {model.model_provider}
                         </div>
+                        {model.launch_date && (
+                          <div className="text-[10px] text-blue-600 mt-0.5">
+                            🚀 {new Date(model.launch_date).toLocaleDateString('fr-FR')}
+                          </div>
+                        )}
+                        {model.variants && model.variants.length > 0 && (
+                          <div className="text-[10px] text-gray-500 italic mt-1 leading-tight">
+                            Variantes : {model.variants.join(', ')}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center space-x-1 ml-2">
                         <button
@@ -1375,14 +1501,75 @@ export default function ComplAIScoresPage() {
                     <td key={principle.code} className="px-3 py-3 text-center min-w-[280px] border-l border-gray-300">
                       <div className="space-y-2">
                         
-                        {/* Score moyen MaydAI du principe */}
-                        <div className="flex justify-center mt-1">
+                        {/* Scores moyens MaydAI et Rang Compar:IA du principe */}
+                        <div className="flex justify-center gap-2 mt-1 flex-wrap">
                           {model.principle_scores[principle.code]?.avg_maydai_score !== undefined ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
                               MaydAI: {model.principle_scores[principle.code].avg_maydai_score!.toFixed(2)}
                             </span>
                           ) : (
                             <span className="text-gray-400 text-xs italic">MaydAI: N/A</span>
+                          )}
+                          
+                          {/* Édition du score Rang Compar:IA */}
+                          {model.principle_scores[principle.code] && (
+                            editingRangComparIa?.modelId === model.model_id && editingRangComparIa?.principleCode === principle.code ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="20"
+                                  step="0.1"
+                                  value={editingRangComparIa.score ?? ''}
+                                  onChange={(e) => setEditingRangComparIa({
+                                    ...editingRangComparIa,
+                                    score: e.target.value ? parseFloat(e.target.value) : null
+                                  })}
+                                  className="w-16 px-1 py-0.5 text-xs border rounded text-center"
+                                  placeholder="0-20"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={handleSaveRangComparIa}
+                                  disabled={saving}
+                                  className="p-0.5 text-green-600 hover:text-green-800"
+                                  title="Sauvegarder"
+                                >
+                                  <Save className="h-3 w-3" />
+                                </button>
+                                <button
+                                  onClick={() => setEditingRangComparIa(null)}
+                                  className="p-0.5 text-gray-600 hover:text-gray-800"
+                                  title="Annuler"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  // Trouver une évaluation de ce principe pour ce modèle
+                                  const benchmarkScores = Object.values(model.principle_scores[principle.code]?.benchmark_scores || {})
+                                  const firstEvaluation = benchmarkScores.find(bs => bs.evaluation_id)
+                                  
+                                  if (firstEvaluation?.evaluation_id) {
+                                    setEditingRangComparIa({
+                                      evaluationId: firstEvaluation.evaluation_id,
+                                      modelId: model.model_id!,
+                                      principleCode: principle.code,
+                                      score: model.principle_scores[principle.code]?.avg_rang_compar_ia ?? null
+                                    })
+                                  }
+                                }}
+                                disabled={!model.model_id || saving}
+                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200 transition-colors cursor-pointer disabled:opacity-50"
+                                title="Cliquer pour éditer le score Rang Compar:IA"
+                              >
+                                {model.principle_scores[principle.code]?.avg_rang_compar_ia !== undefined 
+                                  ? `Compar:IA: ${model.principle_scores[principle.code].avg_rang_compar_ia!.toFixed(2)}`
+                                  : 'Compar:IA: --'}
+                              </button>
+                            )
                           )}
                         </div>
                         
@@ -1641,6 +1828,106 @@ export default function ComplAIScoresPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
                       placeholder="Ex: 1.0, 1106-preview, 3.0"
                     />
+                  </div>
+
+                  <div>
+                    <label htmlFor="short_name" className="block text-sm font-medium text-gray-700 mb-2">
+                      Nom court
+                    </label>
+                    <input
+                      type="text"
+                      id="short_name"
+                      value={modelFormData.short_name || ''}
+                      onChange={(e) => setModelFormData({...modelFormData, short_name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="Ex: Sonar, GPT-4"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="long_name" className="block text-sm font-medium text-gray-700 mb-2">
+                      Nom long
+                    </label>
+                    <input
+                      type="text"
+                      id="long_name"
+                      value={modelFormData.long_name || ''}
+                      onChange={(e) => setModelFormData({...modelFormData, long_name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="Ex: Sonar (Standard), GPT-4 Turbo"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="launch_date" className="block text-sm font-medium text-gray-700 mb-2">
+                      Date de lancement
+                    </label>
+                    <input
+                      type="date"
+                      id="launch_date"
+                      value={modelFormData.launch_date || ''}
+                      onChange={(e) => setModelFormData({...modelFormData, launch_date: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="notes_short" className="block text-sm font-medium text-gray-700 mb-2">
+                      Description courte
+                      <span className="text-xs text-gray-500 ml-2">
+                        ({modelFormData.notes_short?.length || 0}/150)
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      id="notes_short"
+                      value={modelFormData.notes_short || ''}
+                      onChange={(e) => setModelFormData({...modelFormData, notes_short: e.target.value})}
+                      maxLength={150}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="Ex: Modèle multimodal état de l'art..."
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      S'affiche en gras dans l'infobulle
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="notes_long" className="block text-sm font-medium text-gray-700 mb-2">
+                      Description complète
+                      <span className="text-xs text-gray-500 ml-2">
+                        ({modelFormData.notes_long?.length || 0}/1000)
+                      </span>
+                    </label>
+                    <textarea
+                      id="notes_long"
+                      value={modelFormData.notes_long || ''}
+                      onChange={(e) => setModelFormData({...modelFormData, notes_long: e.target.value})}
+                      maxLength={1000}
+                      rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors resize-none"
+                      placeholder="Description complète affichée dans l'infobulle..."
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      S'affiche dans l'infobulle au survol de l'icône ℹ️
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="variants" className="block text-sm font-medium text-gray-700 mb-2">
+                      Variantes
+                    </label>
+                    <input
+                      type="text"
+                      id="variants"
+                      value={modelFormData.variants || ''}
+                      onChange={(e) => setModelFormData({...modelFormData, variants: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
+                      placeholder="Séparez par des virgules : variant1, variant2, variant3"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Ces variantes s'afficheront sous le nom du modèle
+                    </p>
                   </div>
                 </div>
               </div>

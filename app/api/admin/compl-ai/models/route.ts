@@ -29,10 +29,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Récupérer les données du modèle
-    const { model_name, model_provider, model_type, version } = await request.json()
+    const { 
+      model_name, 
+      model_provider, 
+      model_type, 
+      version,
+      short_name,
+      long_name,
+      launch_date,
+      model_provider_id,
+      notes_short,
+      notes_long,
+      variants
+    } = await request.json()
 
     if (!model_name || !model_provider) {
       return NextResponse.json({ error: 'Nom du modèle et fournisseur sont requis' }, { status: 400 })
+    }
+
+    // Validation des notes
+    if (notes_short && notes_short.length > 150) {
+      return NextResponse.json({ error: 'La description courte ne peut pas dépasser 150 caractères' }, { status: 400 })
+    }
+
+    if (notes_long && notes_long.length > 1000) {
+      return NextResponse.json({ error: 'La description longue ne peut pas dépasser 1000 caractères' }, { status: 400 })
+    }
+
+    // Conversion des variantes (string → array)
+    let variantsArray: string[] = []
+    if (variants && typeof variants === 'string' && variants.trim().length > 0) {
+      variantsArray = variants
+        .split(',')
+        .map((v: string) => v.trim())
+        .filter((v: string) => v.length > 0)
+    } else if (Array.isArray(variants)) {
+      variantsArray = variants
     }
 
     // Vérifier si le modèle existe déjà
@@ -55,7 +87,14 @@ export async function POST(request: NextRequest) {
         model_name,
         model_provider,
         model_type: model_type || 'large-language-model',
-        version: version || ''
+        version: version || '',
+        short_name: short_name || null,
+        long_name: long_name || null,
+        launch_date: launch_date || null,
+        model_provider_id: model_provider_id || null,
+        notes_short: notes_short || null,
+        notes_long: notes_long || null,
+        variants: variantsArray.length > 0 ? variantsArray : []
       })
       .select()
       .single()

@@ -142,6 +142,13 @@ export interface ComplAIModel {
   model_provider?: string
   model_type?: string
   version?: string
+  short_name?: string
+  long_name?: string
+  launch_date?: string
+  model_provider_id?: number
+  notes_short?: string
+  notes_long?: string
+  variants?: string[]
   created_at: string
   updated_at: string
 }
@@ -166,9 +173,11 @@ export interface ComplAIEvaluation {
   benchmark_id?: string
   score?: number
   score_text?: string
+  rang_compar_ia?: number
   evaluation_date: string
   data_source: string
   raw_data?: any
+  maydai_score?: number
   created_at: string
   updated_at: string
 }
