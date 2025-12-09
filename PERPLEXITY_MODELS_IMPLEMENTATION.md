@@ -176,3 +176,4 @@ La structure est en place pour ajouter un filtre par `launch_date`:
 - Les migrations utilisent `ON CONFLICT DO NOTHING` pour idempotence
 - L'UI admin calcule dynamiquement les moyennes côté client
 
+
