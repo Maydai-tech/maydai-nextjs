@@ -129,6 +129,8 @@ export default function ComplAIScoresPage() {
   const [importMode, setImportMode] = useState<'create' | 'update'>('create')
   const [importing, setImporting] = useState(false)
   const [importResults, setImportResults] = useState<any>(null)
+  const [importValidationErrors, setImportValidationErrors] = useState<string[]>([])
+  const [csvPreview, setCsvPreview] = useState<{ headers: string[], rowCount: number } | null>(null)
 
   useEffect(() => {
     fetchScores()
@@ -489,51 +491,138 @@ export default function ComplAIScoresPage() {
     }
   }
 
+  // Fonction pour normaliser les clés d'en-têtes (insensible à la casse, sans accents)
+  const normalizeHeaderKey = (key: string): string => {
+    return key
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Supprimer les accents
+      .trim()
+  }
+
+  // Fonction pour mapper les en-têtes CSV vers les noms de champs normalisés
+  const getHeaderMapping = (): Record<string, string> => {
+    // Mapping flexible supportant plusieurs formats
+    const mapping: Record<string, string> = {}
+    
+    // Formats français (avec et sans accents, majuscules/minuscules)
+    const frenchMappings = [
+      { from: ['modèle id', 'modele id', 'model id'], to: 'model_id' },
+      { from: ['nom du modèle', 'nom du modele', 'model name', 'nom modele'], to: 'model_name' },
+      { from: ['fournisseur', 'provider', 'model provider'], to: 'model_provider' },
+      { from: ['type', 'model type'], to: 'model_type' },
+      { from: ['version'], to: 'version' },
+      { from: ['principe code', 'principle code'], to: 'principle_code' },
+      { from: ['principe nom', 'principe name', 'principle name'], to: 'principle_name' },
+      { from: ['catégorie principe', 'categorie principe', 'principle category'], to: 'principle_category' },
+      { from: ['benchmark code'], to: 'benchmark_code' },
+      { from: ['benchmark nom', 'benchmark name'], to: 'benchmark_name' },
+      { from: ['score original', 'score', 'original score'], to: 'score' },
+      { from: ['score text'], to: 'score_text' },
+      { from: ["date d'évaluation", "date d'evaluation", "evaluation date", 'date evaluation'], to: 'evaluation_date' },
+      { from: ['statut', 'status'], to: 'status' }
+    ]
+
+    frenchMappings.forEach(({ from, to }) => {
+      from.forEach(key => {
+        mapping[key] = to
+      })
+    })
+
+    return mapping
+  }
+
   // Fonction pour gérer l'import CSV
   const handleImportCSV = async () => {
-    if (!importFile) return
+    if (!importFile) {
+      setSyncMessage('Erreur: Aucun fichier sélectionné')
+      return
+    }
 
     setImporting(true)
     setImportResults(null)
+    setSyncMessage('')
 
     try {
+      console.log('📄 Début import CSV:', { fileName: importFile.name, fileSize: importFile.size })
+      
       const csvText = await importFile.text()
+      console.log('📝 CSV texte lu:', { length: csvText.length, preview: csvText.substring(0, 200) })
+      
       const csvData = parseCSV(csvText)
+      console.log('✅ CSV parsé:', { rowCount: csvData.length, firstRow: csvData[0] })
 
-      const headerMapping: Record<string, string> = {
-        'Modèle ID': 'model_id',
-        'Nom du Modèle': 'model_name',
-        'Fournisseur': 'model_provider',
-        'Type': 'model_type',
-        'Version': 'version',
-        'Principe Code': 'principle_code',
-        'Principe Nom': 'principle_name',
-        'Catégorie Principe': 'principle_category',
-        'Benchmark Code': 'benchmark_code',
-        'Benchmark Nom': 'benchmark_name',
-        'Score Original': 'score',
-        'Score Text': 'score_text',
-        "Date d'Évaluation": 'evaluation_date',
-        'Statut': 'status'
+      // Validation : vérifier que le CSV n'est pas vide
+      if (!csvData || csvData.length === 0) {
+        throw new Error('Le fichier CSV est vide ou ne contient aucune donnée. Vérifiez que le fichier contient au moins une ligne de données après l\'en-tête.')
       }
 
-      const normalizedCsvData = csvData.map(row => {
+      // Récupérer les en-têtes du CSV
+      const csvHeaders = Object.keys(csvData[0] || {})
+      console.log('📋 En-têtes détectés:', csvHeaders)
+
+      if (csvHeaders.length === 0) {
+        throw new Error('Aucun en-tête détecté dans le fichier CSV. Vérifiez le format du fichier.')
+      }
+
+      // En-têtes requis pour l'import
+      const requiredHeaders = ['model_name', 'principle_code', 'benchmark_code']
+      const headerMapping = getHeaderMapping()
+      const normalizedHeaders = new Set<string>()
+
+      // Normaliser et mapper les en-têtes
+      csvHeaders.forEach(header => {
+        const normalizedKey = normalizeHeaderKey(header)
+        const mappedKey = headerMapping[normalizedKey] || normalizedKey
+        normalizedHeaders.add(mappedKey)
+      })
+
+      console.log('🔀 En-têtes normalisés:', Array.from(normalizedHeaders))
+
+      // Vérifier que les en-têtes requis sont présents
+      const missingHeaders = requiredHeaders.filter(req => !normalizedHeaders.has(req))
+      if (missingHeaders.length > 0) {
+        throw new Error(
+          `En-têtes requis manquants: ${missingHeaders.join(', ')}. ` +
+          `En-têtes détectés: ${csvHeaders.join(', ')}. ` +
+          `Vérifiez que votre CSV contient les colonnes nécessaires.`
+        )
+      }
+
+      // Normaliser les données CSV
+      const normalizedCsvData = csvData.map((row, index) => {
         const normalizedRow: Record<string, any> = {}
 
         Object.entries(row).forEach(([key, value]) => {
-          const normalizedKey = headerMapping[key] || key
-          normalizedRow[normalizedKey] = value
+          const normalizedKey = normalizeHeaderKey(key)
+          const mappedKey = headerMapping[normalizedKey] || normalizedKey
+          normalizedRow[mappedKey] = value
         })
 
+        // Validation des champs obligatoires pour chaque ligne
+        if (!normalizedRow.model_name || !normalizedRow.principle_code || !normalizedRow.benchmark_code) {
+          console.warn(`⚠️ Ligne ${index + 2}: Champs obligatoires manquants`, normalizedRow)
+        }
+
         return normalizedRow
+      })
+
+      console.log('✅ Données normalisées:', { 
+        count: normalizedCsvData.length, 
+        sample: normalizedCsvData[0],
+        requiredFields: normalizedCsvData.every(row => row.model_name && row.principle_code && row.benchmark_code)
       })
 
       // Récupérer le token de session
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) {
-        setSyncMessage('Erreur: Session non trouvée')
-        return
+        throw new Error('Session non trouvée. Veuillez vous reconnecter.')
       }
+
+      console.log('🚀 Envoi des données à l\'API...', { 
+        rowCount: normalizedCsvData.length, 
+        updateMode: importMode 
+      })
 
       // Appeler l'API d'import
       const response = await fetch('/api/admin/compl-ai/import-csv', {
@@ -549,20 +638,35 @@ export default function ComplAIScoresPage() {
       })
 
       const result = await response.json()
+      console.log('📥 Réponse API:', { ok: response.ok, result })
 
       if (!response.ok) {
-        throw new Error(result.error || 'Erreur lors de l\'import')
+        throw new Error(result.error || `Erreur lors de l'import (${response.status})`)
       }
 
       setImportResults(result.stats)
-      setSyncMessage(`Import terminé: ${result.stats.modelsCreated} modèles créés, ${result.stats.evaluationsCreated} évaluations créées`)
+      
+      // Message de succès détaillé
+      const successMessage = `Import terminé avec succès ! ` +
+        `${result.stats.modelsCreated} modèle(s) créé(s), ` +
+        `${result.stats.modelsUpdated} modèle(s) mis à jour, ` +
+        `${result.stats.evaluationsCreated} évaluation(s) créée(s), ` +
+        `${result.stats.evaluationsUpdated} évaluation(s) mise(s) à jour. ` +
+        (result.stats.errors.length > 0 ? `${result.stats.errors.length} erreur(s) détectée(s).` : '') +
+        (result.stats.warnings.length > 0 ? `${result.stats.warnings.length} avertissement(s).` : '')
+      
+      setSyncMessage(successMessage)
       
       // Recharger les données
       await fetchScores()
 
     } catch (error) {
-      console.error('Erreur import CSV:', error)
-      setSyncMessage(`Erreur import: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
+      console.error('❌ Erreur import CSV:', error)
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Erreur inconnue lors de l\'import CSV'
+      setSyncMessage(`Erreur import: ${errorMessage}`)
+      setImportResults(null)
     } finally {
       setImporting(false)
     }
@@ -1340,12 +1444,21 @@ export default function ComplAIScoresPage() {
         </div>
         
         {syncMessage && (
-          <div className={`mt-4 p-4 rounded-md ${
-            syncMessage.includes('réussie') 
+          <div className={`mt-4 p-4 rounded-md border ${
+            (syncMessage.includes('réussie') || syncMessage.includes('terminé avec succès') || (syncMessage.includes('créé') && !syncMessage.includes('Erreur')))
               ? 'bg-green-50 border-green-200 text-green-800' 
-              : 'bg-red-50 border-red-200 text-red-800'
-          } border`}>
-            {syncMessage}
+              : (syncMessage.includes('Erreur') || syncMessage.includes('erreur'))
+              ? 'bg-red-50 border-red-200 text-red-800'
+              : 'bg-blue-50 border-blue-200 text-blue-800'
+          }`}>
+            <div className="flex items-start">
+              {(syncMessage.includes('réussie') || syncMessage.includes('terminé avec succès')) ? (
+                <Check className="h-5 w-5 mr-2 text-green-600 flex-shrink-0 mt-0.5" />
+              ) : (syncMessage.includes('Erreur') || syncMessage.includes('erreur')) ? (
+                <X className="h-5 w-5 mr-2 text-red-600 flex-shrink-0 mt-0.5" />
+              ) : null}
+              <p className="text-sm">{syncMessage}</p>
+            </div>
           </div>
         )}
       </div>
@@ -1976,6 +2089,8 @@ export default function ComplAIScoresPage() {
                     setShowImportModal(false)
                     setImportFile(null)
                     setImportResults(null)
+                    setImportValidationErrors([])
+                    setCsvPreview(null)
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -2021,13 +2136,90 @@ export default function ComplAIScoresPage() {
                   <input
                     type="file"
                     accept=".csv"
-                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0] || null
+                      setImportFile(file)
+                      setImportValidationErrors([])
+                      setCsvPreview(null)
+                      setImportResults(null)
+                      
+                      if (file) {
+                        try {
+                          const csvText = await file.text()
+                          const csvData = parseCSV(csvText)
+                          
+                          if (csvData && csvData.length > 0) {
+                            const headers = Object.keys(csvData[0])
+                            setCsvPreview({
+                              headers,
+                              rowCount: csvData.length
+                            })
+                            
+                            // Validation préalable
+                            const errors: string[] = []
+                            if (headers.length === 0) {
+                              errors.push('Aucun en-tête détecté dans le fichier CSV')
+                            }
+                            
+                            const headerMapping = getHeaderMapping()
+                            const normalizedHeaders = new Set<string>()
+                            headers.forEach(header => {
+                              const normalizedKey = normalizeHeaderKey(header)
+                              const mappedKey = headerMapping[normalizedKey] || normalizedKey
+                              normalizedHeaders.add(mappedKey)
+                            })
+                            
+                            const requiredHeaders = ['model_name', 'principle_code', 'benchmark_code']
+                            const missingHeaders = requiredHeaders.filter(req => !normalizedHeaders.has(req))
+                            if (missingHeaders.length > 0) {
+                              errors.push(`En-têtes requis manquants: ${missingHeaders.join(', ')}`)
+                            }
+                            
+                            setImportValidationErrors(errors)
+                          } else {
+                            setImportValidationErrors(['Le fichier CSV est vide ou ne contient aucune donnée'])
+                          }
+                        } catch (error) {
+                          setImportValidationErrors([`Erreur lors de la lecture du fichier: ${error instanceof Error ? error.message : 'Erreur inconnue'}`])
+                        }
+                      }
+                    }}
                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
                   {importFile && (
-                    <p className="mt-1 text-sm text-gray-600">
-                      Fichier sélectionné: {importFile.name}
-                    </p>
+                    <div className="mt-2 space-y-1">
+                      <p className="text-sm text-gray-600">
+                        Fichier sélectionné: <span className="font-medium">{importFile.name}</span>
+                      </p>
+                      {csvPreview && (
+                        <p className="text-xs text-gray-500">
+                          {csvPreview.rowCount} ligne(s) détectée(s) • {csvPreview.headers.length} colonne(s)
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Erreurs de validation */}
+                  {importValidationErrors.length > 0 && (
+                    <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                      <p className="text-sm font-medium text-red-800 mb-1">Erreurs de validation:</p>
+                      <ul className="text-xs text-red-700 list-disc list-inside space-y-1">
+                        {importValidationErrors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Aperçu des en-têtes */}
+                  {csvPreview && importValidationErrors.length === 0 && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+                      <p className="text-xs font-medium text-green-800 mb-1">✓ Fichier valide</p>
+                      <p className="text-xs text-green-700">
+                        En-têtes détectés: {csvPreview.headers.slice(0, 5).join(', ')}
+                        {csvPreview.headers.length > 5 && ` ... (+${csvPreview.headers.length - 5})`}
+                      </p>
+                    </div>
                   )}
                 </div>
 
@@ -2038,6 +2230,8 @@ export default function ComplAIScoresPage() {
                       setShowImportModal(false)
                       setImportFile(null)
                       setImportResults(null)
+                      setImportValidationErrors([])
+                      setCsvPreview(null)
                     }}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
                   >
@@ -2045,51 +2239,92 @@ export default function ComplAIScoresPage() {
                   </button>
                   <button
                     onClick={handleImportCSV}
-                    disabled={!importFile || importing}
+                    disabled={!importFile || importing || importValidationErrors.length > 0}
                     className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
-                      !importFile || importing
+                      !importFile || importing || importValidationErrors.length > 0
                         ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-green-600 hover:bg-green-700'
                     }`}
                   >
-                    {importing ? 'Import en cours...' : 'Importer'}
+                    {importing ? (
+                      <span className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Import en cours...
+                      </span>
+                    ) : (
+                      'Importer'
+                    )}
                   </button>
                 </div>
 
                 {/* Résultats de l'import */}
                 {importResults && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Résultats de l'import</h4>
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <p>Lignes traitées: {importResults.totalRows}</p>
-                      <p>Modèles créés: {importResults.modelsCreated}</p>
-                      <p>Modèles mis à jour: {importResults.modelsUpdated}</p>
-                      <p>Évaluations créées: {importResults.evaluationsCreated}</p>
-                      <p>Évaluations mises à jour: {importResults.evaluationsUpdated}</p>
+                  <div className={`mt-4 p-4 rounded-md border ${
+                    importResults.errors.length > 0 
+                      ? 'bg-red-50 border-red-200' 
+                      : importResults.warnings.length > 0
+                      ? 'bg-yellow-50 border-yellow-200'
+                      : 'bg-green-50 border-green-200'
+                  }`}>
+                    <h4 className={`text-sm font-medium mb-3 ${
+                      importResults.errors.length > 0 
+                        ? 'text-red-900' 
+                        : importResults.warnings.length > 0
+                        ? 'text-yellow-900'
+                        : 'text-green-900'
+                    }`}>
+                      {importResults.errors.length > 0 ? '⚠️ Import terminé avec erreurs' : 
+                       importResults.warnings.length > 0 ? '✓ Import terminé avec avertissements' :
+                       '✓ Import réussi'}
+                    </h4>
+                    <div className="text-sm space-y-2">
+                      <div className="grid grid-cols-2 gap-2 text-gray-700">
+                        <div>
+                          <span className="font-medium">Lignes traitées:</span> {importResults.totalRows}
+                        </div>
+                        <div>
+                          <span className="font-medium">Modèles créés:</span> <span className="text-green-700 font-semibold">{importResults.modelsCreated}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Modèles mis à jour:</span> <span className="text-blue-700 font-semibold">{importResults.modelsUpdated}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Évaluations créées:</span> <span className="text-green-700 font-semibold">{importResults.evaluationsCreated}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="font-medium">Évaluations mises à jour:</span> <span className="text-blue-700 font-semibold">{importResults.evaluationsUpdated}</span>
+                        </div>
+                      </div>
+                      
                       {importResults.errors.length > 0 && (
-                        <div className="mt-2">
-                          <p className="text-red-600 font-medium">Erreurs ({importResults.errors.length}):</p>
-                          <ul className="text-red-600 text-xs list-disc list-inside">
-                            {importResults.errors.slice(0, 5).map((error: string, index: number) => (
-                              <li key={index}>{error}</li>
-                            ))}
-                            {importResults.errors.length > 5 && (
-                              <li>... et {importResults.errors.length - 5} autres erreurs</li>
-                            )}
-                          </ul>
+                        <div className="mt-3 pt-3 border-t border-red-200">
+                          <p className="text-red-800 font-medium mb-2">Erreurs ({importResults.errors.length}):</p>
+                          <div className="max-h-32 overflow-y-auto">
+                            <ul className="text-red-700 text-xs list-disc list-inside space-y-1">
+                              {importResults.errors.slice(0, 10).map((error: string, index: number) => (
+                                <li key={index} className="break-words">{error}</li>
+                              ))}
+                              {importResults.errors.length > 10 && (
+                                <li className="text-red-600 italic">... et {importResults.errors.length - 10} autre(s) erreur(s)</li>
+                              )}
+                            </ul>
+                          </div>
                         </div>
                       )}
+                      
                       {importResults.warnings.length > 0 && (
-                        <div className="mt-2">
-                          <p className="text-yellow-600 font-medium">Avertissements ({importResults.warnings.length}):</p>
-                          <ul className="text-yellow-600 text-xs list-disc list-inside">
-                            {importResults.warnings.slice(0, 3).map((warning: string, index: number) => (
-                              <li key={index}>{warning}</li>
-                            ))}
-                            {importResults.warnings.length > 3 && (
-                              <li>... et {importResults.warnings.length - 3} autres avertissements</li>
-                            )}
-                          </ul>
+                        <div className="mt-3 pt-3 border-t border-yellow-200">
+                          <p className="text-yellow-800 font-medium mb-2">Avertissements ({importResults.warnings.length}):</p>
+                          <div className="max-h-24 overflow-y-auto">
+                            <ul className="text-yellow-700 text-xs list-disc list-inside space-y-1">
+                              {importResults.warnings.slice(0, 5).map((warning: string, index: number) => (
+                                <li key={index} className="break-words">{warning}</li>
+                              ))}
+                              {importResults.warnings.length > 5 && (
+                                <li className="text-yellow-600 italic">... et {importResults.warnings.length - 5} autre(s) avertissement(s)</li>
+                              )}
+                            </ul>
+                          </div>
                         </div>
                       )}
                     </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+import { verifyAdminAuth } from '@/lib/admin-auth'
 
 interface CSVRow {
   model_name: string
@@ -71,29 +72,18 @@ function normalizeScore(value: string | number | null | undefined): NormalizeSco
 
 export async function POST(request: NextRequest) {
   try {
-    // Vérifier l'authentification
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Token d\'authentification manquant' }, { status: 401 })
+    // Vérifier l'authentification admin
+    const authResult = await verifyAdminAuth(request)
+    if (authResult.error) {
+      return authResult.error
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    const currentUser = authResult.user!
     
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Token invalide' }, { status: 401 })
-    }
-
-    // Vérifier les droits admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
-      return NextResponse.json({ error: 'Droits insuffisants' }, { status: 403 })
-    }
+    // Créer le client Supabase avec la clé de service pour contourner RLS
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Récupérer les données CSV
     const { csvData, updateMode } = await request.json()
@@ -255,7 +245,7 @@ export async function POST(request: NextRequest) {
             data_source: 'csv-import',
             raw_data: {
               csv_import: true,
-              imported_by: user.id,
+              imported_by: currentUser.id,
               import_timestamp: new Date().toISOString(),
               row_number: rowNumber
             }
@@ -315,29 +305,16 @@ export async function POST(request: NextRequest) {
 // Route pour télécharger le template CSV
 export async function GET(request: NextRequest) {
   try {
-    // Vérifier l'authentification
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Token d\'authentification manquant' }, { status: 401 })
+    // Vérifier l'authentification admin
+    const authResult = await verifyAdminAuth(request)
+    if (authResult.error) {
+      return authResult.error
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Token invalide' }, { status: 401 })
-    }
-
-    // Vérifier les droits admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
-      return NextResponse.json({ error: 'Droits insuffisants' }, { status: 403 })
-    }
+    // Créer le client Supabase avec la clé de service pour contourner RLS
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Récupérer tous les principes et benchmarks pour créer le template
     const { data: principlesData } = await supabase
