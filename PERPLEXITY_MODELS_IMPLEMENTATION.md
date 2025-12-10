@@ -177,3 +177,4 @@ La structure est en place pour ajouter un filtre par `launch_date`:
 - L'UI admin calcule dynamiquement les moyennes côté client
 
 
+
