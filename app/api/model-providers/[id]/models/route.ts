@@ -46,8 +46,9 @@ export async function GET(
     // Get models for the specific provider
     const { data: models, error: modelsError } = await supabase
       .from('compl_ai_models')
-      .select('id, model_name, model_type, version')
+      .select('id, model_name, model_type, version, notes_short, notes_long, variants, launch_date')
       .eq('model_provider_id', providerId)
+      .order('launch_date', { ascending: false, nullsFirst: false })
       .order('model_name', { ascending: true })
 
     if (modelsError) {

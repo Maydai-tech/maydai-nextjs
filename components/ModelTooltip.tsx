@@ -6,11 +6,36 @@ import { Info } from 'lucide-react'
 interface ModelTooltipProps {
   notesShort?: string
   notesLong?: string
+  launchDate?: string
   className?: string
 }
 
-export default function ModelTooltip({ notesShort, notesLong, className = '' }: ModelTooltipProps) {
+// Fonction pour formater la date au format "Mois Année" en français
+function formatLaunchDate(dateString: string | undefined): string | null {
+  if (!dateString) return null
+  
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return null
+    
+    const months = [
+      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ]
+    
+    const month = months[date.getMonth()]
+    const year = date.getFullYear()
+    
+    return `${month} ${year}`
+  } catch {
+    return null
+  }
+}
+
+export default function ModelTooltip({ notesShort, notesLong, launchDate, className = '' }: ModelTooltipProps) {
   const [isVisible, setIsVisible] = useState(false)
+  
+  const formattedLaunchDate = formatLaunchDate(launchDate)
 
   // Ne rien afficher si pas de notes
   if (!notesShort && !notesLong) {
@@ -50,6 +75,12 @@ export default function ModelTooltip({ notesShort, notesLong, className = '' }: 
             
             {/* Contenu */}
             <div className="relative z-10 bg-white">
+              {formattedLaunchDate && (
+                <div className="font-bold text-gray-900 text-sm mb-2">
+                  {formattedLaunchDate}
+                </div>
+              )}
+              
               {notesShort && (
                 <div className="font-semibold text-gray-900 text-sm mb-2">
                   {notesShort}

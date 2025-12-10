@@ -21,6 +21,7 @@ import {
 import Image from 'next/image'
 import { getProviderIcon } from '@/lib/provider-icons'
 import Tooltip from '@/components/Tooltip'
+import ModelTooltip from '@/components/ModelTooltip'
 import { loadCreationQuestions } from './questions-loader'
 
 interface Company {
@@ -47,6 +48,10 @@ interface ModelData {
   model_name: string
   model_type?: string
   version?: string
+  notes_short?: string
+  notes_long?: string
+  variants?: string[]
+  launch_date?: string
 }
 
 interface FormData {
@@ -66,7 +71,7 @@ interface Question {
   id: keyof FormData
   question: string
   type: 'text' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date' | 'countries'
-  options?: string[] | { label: string; examples: string[]; tooltip?: { title: string; shortContent: string; fullContent?: string; icon?: string } }[]
+  options?: string[] | { label: string; examples: string[]; tooltip?: { title: string; shortContent: string; fullContent?: string; icon?: string }; modelData?: ModelData }[]
   placeholder?: string
   maxLength?: number
   hasOtherOption?: boolean
@@ -319,8 +324,26 @@ function CreateUseCasePageContent() {
       return []
     }
 
-    // Retourner les noms des modèles depuis le state availableModels
-    return availableModels.map(model => model.model_name).sort()
+    // Trier les modèles par date de lancement (plus récent au plus ancien)
+    // Les modèles sans date en dernier, triés par nom
+    const sortedModels = [...availableModels].sort((a, b) => {
+      // Si les deux ont une date de lancement, trier par date DESC
+      if (a.launch_date && b.launch_date) {
+        const dateA = new Date(a.launch_date).getTime()
+        const dateB = new Date(b.launch_date).getTime()
+        if (dateB !== dateA) {
+          return dateB - dateA // Plus récent en premier
+        }
+      }
+      // Si seulement a a une date, a vient avant
+      if (a.launch_date && !b.launch_date) return -1
+      // Si seulement b a une date, b vient avant
+      if (!a.launch_date && b.launch_date) return 1
+      // Si aucun n'a de date, trier par nom
+      return a.model_name.localeCompare(b.model_name)
+    })
+
+    return sortedModels
   }
 
   // Fonction pour récupérer l'ID du modèle sélectionné
@@ -346,7 +369,11 @@ function CreateUseCasePageContent() {
     ...(questions[currentQuestionIndex].id === 'llm_model_version' && {
       // Si partenaire personnalisé, utiliser un champ texte, sinon afficher les modèles radio
       type: isCustomTechnologyPartner() ? 'text' : 'radio',
-      options: isCustomTechnologyPartner() ? [] : getAvailableModels().map(model => ({ label: model, examples: [] })),
+      options: isCustomTechnologyPartner() ? [] : getAvailableModels().map(model => ({ 
+        label: model.model_name, 
+        examples: [],
+        modelData: model // Inclure les données complètes du modèle
+      })),
       placeholder: isCustomTechnologyPartner() ? 'Spécifiez le modèle utilisé...' : undefined
     })
   }
@@ -1162,6 +1189,26 @@ function CreateUseCasePageContent() {
                                 })()}
                               </div>
                             </div>
+                          ) : currentQuestion.id === 'llm_model_version' && option.modelData ? (
+                            <>
+                              <div className="flex items-center justify-between w-full mb-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="text-lg font-semibold text-gray-900">
+                                    {option.label}
+                                  </div>
+                                  <ModelTooltip
+                                    notesShort={option.modelData.notes_short}
+                                    notesLong={option.modelData.notes_long}
+                                    launchDate={option.modelData.launch_date}
+                                  />
+                                </div>
+                              </div>
+                              {option.modelData.variants && option.modelData.variants.length > 0 && (
+                                <div className="text-sm text-gray-500 italic mt-1">
+                                  {option.modelData.variants.join(', ')}
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <>
                               <div className="flex items-center justify-between w-full mb-2">
