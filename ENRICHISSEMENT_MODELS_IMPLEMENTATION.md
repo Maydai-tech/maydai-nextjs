@@ -255,3 +255,4 @@ Pour chaque nouveau modèle dans votre tableau :
 Tous les tests sont passés, aucune erreur de linting détectée.
 
 
+

@@ -31,3 +31,4 @@ ADD CONSTRAINT IF NOT EXISTS check_rang_compar_ia_range
 CHECK (rang_compar_ia IS NULL OR (rang_compar_ia >= 0 AND rang_compar_ia <= 20));
 
 
+
