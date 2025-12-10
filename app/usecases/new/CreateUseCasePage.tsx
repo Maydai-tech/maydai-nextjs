@@ -1132,7 +1132,7 @@ function CreateUseCasePageContent() {
 
               {Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 && !loadingPartners && !loadingModels && (
                 <div className={currentQuestion.id === 'technology_partner' || currentQuestion.id === 'ai_category' ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : 'space-y-3'}>
-                  {(currentQuestion.options as { label: string; examples: string[]; tooltip?: { title: string; shortContent: string; fullContent?: string; icon?: string } }[]).map((option, index) => (
+                  {(currentQuestion.options as { label: string; examples: string[]; tooltip?: { title: string; shortContent: string; fullContent?: string; icon?: string }; modelData?: ModelData }[]).map((option, index) => (
                     <label
                       key={index}
                       className={`group flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
