@@ -51,7 +51,7 @@ export async function POST(
     }
 
     // Verify user is owner of this company
-    const userIsOwner = await isOwner(user.id, 'company', companyId)
+    const userIsOwner = await isOwner(user.id, 'company', companyId, supabase)
     if (!userIsOwner) {
       return NextResponse.json({ error: 'Only company owners can invite collaborators' }, { status: 403 })
     }

@@ -6,7 +6,7 @@ import { ComplAIModel } from '@/lib/supabase'
 import { getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
 import { useCaseRoutes } from '../../utils/routes'
 import { useUseCaseNavigation } from '../../utils/navigation'
-import { ArrowLeft, Building, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle, Trash2, Download } from 'lucide-react'
+import { ArrowLeft, Building, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle, Trash2, Download, UserPlus } from 'lucide-react'
 import Image from 'next/image'
 import ModelSelectorModal from '../ModelSelectorModal'
 import DeleteConfirmationModal from '../DeleteConfirmationModal'
@@ -19,6 +19,9 @@ import { getProviderIcon } from '@/lib/provider-icons'
 import { getScoreStyle } from '@/lib/score-styles'
 import { usePDFExport } from '../../hooks/usePDFExport'
 import { useUseCaseScore } from '../../hooks/useUseCaseScore'
+import { useCompanyInfo } from '../../hooks/useCompanyInfo'
+import InviteScopeChoiceModal from '@/components/Collaboration/InviteScopeChoiceModal'
+import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
 
@@ -87,7 +90,7 @@ function HeaderScore({ useCaseId }: { useCaseId: string }) {
 
   // Le score est déjà en pourcentage (0-100) depuis la base de données
   const displayScore = Math.round(score.score)
-  
+
   // Utilise les styles unifiés de l'application
   const scoreStyle = getScoreStyle(displayScore)
 
@@ -97,13 +100,13 @@ function HeaderScore({ useCaseId }: { useCaseId: string }) {
         <div className={`w-2 h-2 rounded-full mr-2 ${scoreStyle.indicator}`}></div>
         Score de conformité
       </h3>
-      
+
       <div className={`${scoreStyle.bg} rounded-xl p-4 border ${scoreStyle.border} ${scoreStyle.shadow} shadow-sm hover:shadow-md transition-all duration-200`}>
         <div className="text-center relative">
           <div className={`text-3xl font-bold ${scoreStyle.text} mb-2`}>
             {displayScore}
           </div>
-          
+
           {score.is_eliminated && (
             <div className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold border border-red-200">
               <AlertTriangle className="h-3 w-3 mr-1" />
@@ -122,9 +125,13 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isRecalculatingScore, setIsRecalculatingScore] = useState(false) // État local pour l'animation du score pendant le recalcul
+  const [isScopeChoiceModalOpen, setIsScopeChoiceModalOpen] = useState(false)
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
+  const [inviteScope, setInviteScope] = useState<'company' | 'registry'>('registry')
   const { goToEvaluation } = useUseCaseNavigation(useCase.id, useCase.company_id)
   const { riskLevel, loading: riskLoading, error: riskError } = useRiskLevel(useCase.id)
   const { isGenerating, error: pdfError, generatePDF } = usePDFExport(useCase.id)
+  const { isOwner } = useCompanyInfo(useCase.company_id)
   const router = useRouter()
   const { session } = useAuth()
 
@@ -137,16 +144,16 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   // Fonction pour déterminer le statut de déploiement (Actif/Inactif)
   const getDeploymentStatus = (deploymentDate?: string): 'Actif' | 'Inactif' => {
     if (!deploymentDate) return 'Inactif'
-    
+
     try {
       const deployment = new Date(deploymentDate)
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       deployment.setHours(0, 0, 0, 0)
-      
+
       // Vérifier si la date est valide
       if (isNaN(deployment.getTime())) return 'Inactif'
-      
+
       return deployment <= today ? 'Actif' : 'Inactif'
     } catch (error) {
       return 'Inactif'
@@ -177,16 +184,16 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   // Gestionnaire de sauvegarde du modèle IA sélectionné
   const handleModelSave = async (selectedModel: PartialComplAIModel | null) => {
     if (!onUpdateUseCase) return
-    
+
     try {
       // Active l'animation de recalcul du score
       setIsRecalculatingScore(true)
-      
+
       // Mise à jour du modèle (déclenche automatiquement le recalcul du score côté serveur)
-      await onUpdateUseCase({ 
-        primary_model_id: selectedModel?.id || undefined 
+      await onUpdateUseCase({
+        primary_model_id: selectedModel?.id || undefined
       })
-      
+
       // Animation visuelle pendant 1 seconde pour feedback utilisateur
       setTimeout(() => {
         setIsRecalculatingScore(false)
@@ -233,7 +240,41 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const handleDeleteCancel = () => {
     setIsDeleteModalOpen(false)
   }
-  
+
+  const handleInviteClick = () => {
+    setIsScopeChoiceModalOpen(true)
+  }
+
+  const handleScopeSelect = (scope: 'company' | 'registry') => {
+    setInviteScope(scope)
+    setIsScopeChoiceModalOpen(false)
+    setIsInviteModalOpen(true)
+  }
+
+  const handleInvite = async (data: { email: string; firstName: string; lastName: string }) => {
+    if (!session?.access_token) {
+      throw new Error('Non authentifié')
+    }
+
+    const endpoint = inviteScope === 'company'
+      ? '/api/collaboration/profile'
+      : `/api/companies/${useCase.company_id}/collaborators`
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify(data)
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Erreur lors de l\'invitation')
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
       <div className="flex items-center justify-between mb-6">
@@ -244,8 +285,20 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-0.5 transition-transform duration-200" />
           <span className="text-sm font-medium">Retour au dashboard</span>
         </Link>
-        
+
         <div className="flex items-center space-x-3">
+          {/* Bouton Inviter un collaborateur - visible uniquement pour les owners */}
+          {isOwner && (
+            <button
+              onClick={handleInviteClick}
+              className="group inline-flex items-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-blue-50 rounded-lg px-3 py-2"
+              title="Inviter un collaborateur"
+            >
+              <UserPlus className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+              <span className="text-sm font-medium">Inviter un collaborateur</span>
+            </button>
+          )}
+
           {/* Bouton Télécharger PDF */}
           <button
             onClick={generatePDF}
@@ -262,7 +315,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
               {isGenerating ? 'Génération...' : 'Télécharger PDF'}
             </span>
           </button>
-          
+
           <button
             onClick={handleDeleteClick}
             className="group inline-flex items-center text-gray-500 hover:text-red-600 transition-all duration-200 hover:bg-red-50 rounded-lg px-3 py-2"
@@ -273,7 +326,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           </button>
         </div>
       </div>
-      
+
       {/* Message d'erreur PDF */}
       {pdfError && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -286,17 +339,17 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           </div>
         </div>
       )}
-      
+
       <div className="space-y-6">
         {/* Ligne 1: Titre du cas d'usage (pleine largeur) */}
         <div className="flex items-start space-x-3">
           <div className="flex-shrink-0">
-            <Image 
-              src="/icons_dash/technology.png" 
-              alt="Icône technologie" 
-              width={48} 
-              height={48} 
-              className="w-12 h-12" 
+            <Image
+              src="/icons_dash/technology.png"
+              alt="Icône technologie"
+              width={48}
+              height={48}
+              className="w-12 h-12"
             />
           </div>
           <div className="flex-1 min-w-0">
@@ -312,11 +365,11 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           <div className="xl:col-span-3 space-y-4">
             {/* Ligne 2: Badge statut */}
             <div className="flex flex-wrap gap-2">
-              <div 
+              <div
                 className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
-                style={frenchStatus === 'Complété' ? { 
-                  backgroundColor: '#f1fdfa', 
-                  color: '#0080a3' 
+                style={frenchStatus === 'Complété' ? {
+                  backgroundColor: '#f1fdfa',
+                  color: '#0080a3'
                 } : frenchStatus === 'À compléter' ? {
                   backgroundColor: '#fefce8',
                   color: '#713f12'
@@ -379,7 +432,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
 
             {/* Ligne 4: Pays de déploiement */}
             <div className="w-full">
-              <CountryDeploymentDisplay 
+              <CountryDeploymentDisplay
                 deploymentCountries={useCase.deployment_countries}
                 onUpdateUseCase={onUpdateUseCase ? async (updates) => {
                   await onUpdateUseCase(updates)
@@ -413,9 +466,9 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                   </span>
                 </div>
               ) : (
-                <RiskLevelBadge 
-                  riskLevel={riskLevel} 
-                  loading={riskLoading} 
+                <RiskLevelBadge
+                  riskLevel={riskLevel}
+                  loading={riskLoading}
                   error={riskError}
                   className="w-full"
                 />
@@ -450,7 +503,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         onSave={handleModelSave}
         saving={updating}
       />
-      
+
       {/* Modal de confirmation de suppression */}
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
@@ -458,6 +511,21 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         onConfirm={handleDeleteConfirm}
         useCaseName={useCase.name}
         deleting={isDeleting}
+      />
+
+      {/* Modal de choix du scope d'invitation */}
+      <InviteScopeChoiceModal
+        isOpen={isScopeChoiceModalOpen}
+        onClose={() => setIsScopeChoiceModalOpen(false)}
+        onSelectScope={handleScopeSelect}
+      />
+
+      {/* Modal d'invitation de collaborateur */}
+      <InviteCollaboratorModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        onInvite={handleInvite}
+        scope={inviteScope}
       />
     </div>
   )
