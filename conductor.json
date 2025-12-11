@@ -1,0 +1,7 @@
+{
+    "scripts": {
+        "setup": "npm install; cp $CONDUCTOR_ROOT_PATH/.env.local .env.local",
+        "run": "npm run dev",
+        "archive": "pkill -f 'next dev' || true; rm -rf \"$HOME/Library/Application Support/com.conductor.app.dev.$CONDUCTOR_WORKSPACE_NAME\""
+    }
+}

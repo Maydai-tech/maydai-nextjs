@@ -1,10 +1,14 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { UseCase } from '../../types/usecase'
 import { useEvaluation } from '../../hooks/useEvaluation'
 import { QuestionRenderer } from './QuestionRenderer'
 import { ProcessingAnimation } from '../ProcessingAnimation'
-import { ChevronLeft, ChevronRight, CheckCircle, AlertCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CheckCircle, AlertCircle, UserPlus } from 'lucide-react'
 import Tooltip from '@/components/Tooltip'
+import { useAuth } from '@/lib/auth'
+import { useCompanyInfo } from '../../hooks/useCompanyInfo'
+import InviteScopeChoiceModal from '@/components/Collaboration/InviteScopeChoiceModal'
+import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
 
 /**
  * Interface définissant les props du composant StepByStepQuestionnaire
@@ -24,6 +28,15 @@ interface StepByStepQuestionnaireProps {
  * @param onComplete - Callback appelé à la fin du questionnaire
  */
 export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuestionnaireProps) {
+  // Auth et informations de la company pour la collaboration
+  const { session } = useAuth()
+  const { isOwner } = useCompanyInfo(useCase.company_id)
+
+  // États pour les modals de collaboration
+  const [isScopeChoiceModalOpen, setIsScopeChoiceModalOpen] = useState(false)
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
+  const [inviteScope, setInviteScope] = useState<'company' | 'registry'>('registry')
+
   // Hook personnalisé qui gère toute la logique d'évaluation
   const {
     questionnaireData,     // Données du questionnaire et réponses actuelles
@@ -48,6 +61,41 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
     usecaseId: useCase.id,
     onComplete
   })
+
+  // Handlers pour la collaboration
+  const handleInviteClick = () => {
+    setIsScopeChoiceModalOpen(true)
+  }
+
+  const handleScopeSelect = (scope: 'company' | 'registry') => {
+    setInviteScope(scope)
+    setIsScopeChoiceModalOpen(false)
+    setIsInviteModalOpen(true)
+  }
+
+  const handleInvite = async (data: { email: string; firstName: string; lastName: string }) => {
+    if (!session?.access_token) {
+      throw new Error('Non authentifié')
+    }
+
+    const endpoint = inviteScope === 'company'
+      ? '/api/collaboration/profile'
+      : `/api/companies/${useCase.company_id}/collaborators`
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify(data)
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Erreur lors de l\'invitation')
+    }
+  }
 
   // État de fin : questionnaire terminé avec succès
   if (isCompleted) {
@@ -88,6 +136,20 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+        {/* Bouton Inviter un collaborateur - visible uniquement pour les owners */}
+        {isOwner && (
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={handleInviteClick}
+              className="group inline-flex items-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-blue-50 rounded-lg px-3 py-2"
+              title="Inviter un collaborateur"
+            >
+              <UserPlus className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+              <span className="text-sm font-medium">Inviter un collaborateur</span>
+            </button>
+          </div>
+        )}
+
         {/* Barre de progression */}
         <div className="mb-8">
           <div className="flex justify-between text-sm text-gray-600 mb-2">
@@ -213,9 +275,24 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
       </div>
 
       {/* Animation de traitement (calcul du score et génération du rapport) */}
-      <ProcessingAnimation 
+      <ProcessingAnimation
         isVisible={showProcessingAnimation}
         onComplete={handleProcessingComplete}
+      />
+
+      {/* Modal de choix du scope d'invitation */}
+      <InviteScopeChoiceModal
+        isOpen={isScopeChoiceModalOpen}
+        onClose={() => setIsScopeChoiceModalOpen(false)}
+        onSelectScope={handleScopeSelect}
+      />
+
+      {/* Modal d'invitation de collaborateur */}
+      <InviteCollaboratorModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        onInvite={handleInvite}
+        scope={inviteScope}
       />
     </>
   )

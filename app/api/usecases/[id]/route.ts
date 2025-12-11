@@ -128,7 +128,7 @@ export async function PUT(
 
     // Parse request body
     const body = await request.json()
-    const { primary_model_id, deployment_countries, deployment_date } = body
+    const { primary_model_id, deployment_countries, deployment_date, description } = body
 
     // Validate model_id if provided
     if (primary_model_id !== null && primary_model_id !== undefined) {
@@ -166,15 +166,19 @@ export async function PUT(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
+    // Build update data object with only provided fields
+    const updateData: Record<string, unknown> = {
+      updated_at: new Date().toISOString()
+    }
+    if (primary_model_id !== undefined) updateData.primary_model_id = primary_model_id
+    if (deployment_countries !== undefined) updateData.deployment_countries = deployment_countries
+    if (deployment_date !== undefined) updateData.deployment_date = deployment_date
+    if (description !== undefined) updateData.description = description
+
     // Update the use case
     const { data: updatedUseCase, error: updateError } = await supabase
       .from('usecases')
-      .update({
-        primary_model_id,
-        deployment_countries,
-        deployment_date,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', useCaseId)
       .select(`
         *,

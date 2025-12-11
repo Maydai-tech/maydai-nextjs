@@ -48,6 +48,8 @@ export async function GET(request: NextRequest) {
     console.log('Fetching users with params:', { page, limit, search, roleFilter, companyFilter })
 
     // Construire la requête de base
+    // Note: user_companies a deux FK vers profiles (user_id et added_by)
+    // On spécifie explicitement user_companies_user_id_fkey pour la relation
     let profilesQuery = supabase
       .from('profiles')
       .select(`
@@ -58,10 +60,9 @@ export async function GET(request: NextRequest) {
         company_id,
         created_at,
         updated_at,
-        user_companies (
+        user_companies!user_companies_user_id_fkey (
           company_id,
           role,
-          is_active,
           companies (
             id,
             name
@@ -85,9 +86,9 @@ export async function GET(request: NextRequest) {
 
 
     if (profilesError) {
-      console.error('Error fetching profiles:', profilesError)
+      console.error('Error fetching profiles:', JSON.stringify(profilesError, null, 2))
       return NextResponse.json(
-        { error: 'Failed to fetch users', details: profilesError.message },
+        { error: 'Failed to fetch users', details: profilesError.message, code: profilesError.code, hint: profilesError.hint },
         { status: 500 }
       )
     }
@@ -121,7 +122,7 @@ export async function GET(request: NextRequest) {
 
           // Récupérer les entreprises depuis user_companies
           const userCompanies = profile.user_companies
-            ?.filter((uc: any) => uc.is_active && uc.companies)
+            ?.filter((uc: any) => uc.companies)
             ?.map((uc: any) => ({
               id: uc.companies.id,
               name: uc.companies.name,
@@ -163,7 +164,7 @@ export async function GET(request: NextRequest) {
           console.error(`Error processing profile ${profile.id}:`, error)
           // En cas d'erreur, récupérer quand même les entreprises
           const userCompanies = profile.user_companies
-            ?.filter((uc: any) => uc.is_active && uc.companies)
+            ?.filter((uc: any) => uc.companies)
             ?.map((uc: any) => ({
               id: uc.companies.id,
               name: uc.companies.name,

@@ -142,10 +142,10 @@ export async function PUT(
 
     // Parse request body
     const body = await request.json()
-    const { name, industry, city, country, maydai_as_registry } = body
+    const { name, industry, city, country, type, maydai_as_registry } = body
 
     // Validate at least one field is provided
-    if (!name && !industry && !city && !country && maydai_as_registry === undefined) {
+    if (!name && !industry && !city && !country && !type && maydai_as_registry === undefined) {
       return NextResponse.json({ error: 'At least one field must be provided' }, { status: 400 })
     }
 
@@ -155,6 +155,7 @@ export async function PUT(
     if (industry !== undefined) updateData.industry = industry
     if (city !== undefined) updateData.city = city
     if (country !== undefined) updateData.country = country
+    if (type !== undefined) updateData.type = type
     if (maydai_as_registry !== undefined) updateData.maydai_as_registry = maydai_as_registry
 
     // Update the company

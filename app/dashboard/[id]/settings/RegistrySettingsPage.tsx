@@ -7,6 +7,7 @@ import { AlertTriangle, Save, Edit, X, CheckCircle } from 'lucide-react'
 import DeleteRegistryModal from '../components/DeleteRegistryModal'
 import ConfirmCentralizedRegistryModal from '../components/ConfirmCentralizedRegistryModal'
 import EditCentralizedRegistryModal from '../components/EditCentralizedRegistryModal'
+import { REGISTRY_TYPES, isCustomType, getTypeLabel } from '@/lib/registry-types'
 
 interface Company {
   id: string
@@ -14,6 +15,7 @@ interface Company {
   industry: string
   city: string
   country: string
+  type?: string
   role: string
   maydai_as_registry?: boolean
 }
@@ -36,6 +38,8 @@ export default function RegistrySettingsPage() {
     city: '',
     country: ''
   })
+  const [selectedType, setSelectedType] = useState('')
+  const [customType, setCustomType] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
@@ -97,6 +101,19 @@ export default function RegistrySettingsPage() {
           city: data.city || '',
           country: data.country || ''
         })
+        // Initialize type state
+        if (data.type) {
+          if (isCustomType(data.type)) {
+            setSelectedType('autre')
+            setCustomType(data.type)
+          } else {
+            setSelectedType(data.type)
+            setCustomType('')
+          }
+        } else {
+          setSelectedType('')
+          setCustomType('')
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Une erreur est survenue')
       } finally {
@@ -122,6 +139,19 @@ export default function RegistrySettingsPage() {
         city: company.city || '',
         country: company.country || ''
       })
+      // Reset type state
+      if (company.type) {
+        if (isCustomType(company.type)) {
+          setSelectedType('autre')
+          setCustomType(company.type)
+        } else {
+          setSelectedType(company.type)
+          setCustomType('')
+        }
+      } else {
+        setSelectedType('')
+        setCustomType('')
+      }
     }
     setIsEditing(false)
     setError(null)
@@ -135,13 +165,19 @@ export default function RegistrySettingsPage() {
       setSaveSuccess(false)
       const token = getAccessToken()
 
+      // Determine the type value to send
+      const typeValue = selectedType === 'autre' ? customType : selectedType
+
       const response = await fetch(`/api/companies/${companyId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          type: typeValue || null
+        })
       })
 
       if (!response.ok) {
@@ -395,6 +431,46 @@ export default function RegistrySettingsPage() {
                   />
                 ) : (
                   <p className="text-gray-900 py-2">{company.country || '-'}</p>
+                )}
+              </div>
+
+              {/* Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type de registre
+                </label>
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <select
+                      value={selectedType}
+                      onChange={(e) => {
+                        setSelectedType(e.target.value)
+                        if (e.target.value !== 'autre') {
+                          setCustomType('')
+                        }
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent bg-white"
+                    >
+                      <option value="">Sélectionner un type</option>
+                      {REGISTRY_TYPES.map(type => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                      <option value="autre">Autre</option>
+                    </select>
+                    {selectedType === 'autre' && (
+                      <input
+                        type="text"
+                        value={customType}
+                        onChange={(e) => setCustomType(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
+                        placeholder="Précisez le type (ex: Direction RH, Département IT...)"
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-900 py-2">{getTypeLabel(company.type)}</p>
                 )}
               </div>
 
