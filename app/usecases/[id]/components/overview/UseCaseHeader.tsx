@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { UseCase, Progress } from '../../types/usecase'
@@ -134,6 +134,12 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const { isOwner } = useCompanyInfo(useCase.company_id)
   const router = useRouter()
   const { session } = useAuth()
+
+  // Memoize deployment countries to prevent WorldMap flickering
+  const deploymentCountries = useMemo(
+    () => useCase.deployment_countries || [],
+    [useCase.deployment_countries]
+  )
 
   // Fonction pour déterminer le statut de déploiement (Actif/Inactif)
   const getDeploymentStatus = (deploymentDate?: string): 'Actif' | 'Inactif' => {
@@ -441,7 +447,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           <div className="xl:col-span-6 flex justify-center">
             <div className="bg-gray-50 rounded-lg p-4 w-full">
               <WorldMap
-                deploymentCountries={useCase.deployment_countries || []}
+                deploymentCountries={deploymentCountries}
                 className="w-full h-80"
               />
             </div>

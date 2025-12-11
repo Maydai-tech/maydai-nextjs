@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useMemo } from 'react'
 import * as d3 from 'd3'
 import { geoNaturalEarth1, geoPath } from 'd3-geo'
 import { feature } from 'topojson-client'
@@ -146,7 +146,7 @@ const COUNTRY_TO_CONTINENT: { [key: string]: GeographicZone } = {
   'New Zealand': 'oceania'
 }
 
-const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCaseCount = {}, className = "", showUseCaseCount = true }) => {
+const WorldMapComponent: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCaseCount = {}, className = "", showUseCaseCount = true }) => {
   const svgRef = useRef<SVGSVGElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
   const countryUseCaseCountRef = useRef(countryUseCaseCount)
@@ -372,12 +372,26 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
     return ids
   }
 
-  // Normaliser les pays pour la détection de zone géographique également
-  const normalizedCountries = deploymentCountries.map(country => 
-    typeof country === 'string' ? normalizeCountryForMap(country) : country
+  // Memoize normalized countries to prevent re-renders
+  const normalizedCountries = useMemo(() =>
+    deploymentCountries.map(country =>
+      typeof country === 'string' ? normalizeCountryForMap(country) : country
+    ),
+    [deploymentCountries]
   )
 
-  const activeCountryIDs = getActiveCountryIDs(normalizedCountries)
+  // Memoize active country IDs to prevent re-renders
+  const activeCountryIDs = useMemo(() =>
+    getActiveCountryIDs(normalizedCountries),
+    [normalizedCountries]
+  )
+
+  // Create a stable string key for the useEffect dependency
+  // This prevents re-renders when array reference changes but content is the same
+  const countriesKey = useMemo(() =>
+    [...normalizedCountries].sort().join(','),
+    [normalizedCountries]
+  )
 
   // Update the ref when countryUseCaseCount changes
   useEffect(() => {
@@ -546,7 +560,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
         }
       }
     })
-  }, [normalizedCountries, activeCountryIDs])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countriesKey])
 
   // Fonction pour obtenir le nom de la zone en français
   const getZoneDisplayName = (zone: GeographicZone): string => {
@@ -602,5 +617,23 @@ const WorldMap: React.FC<WorldMapProps> = ({ deploymentCountries, countryUseCase
     </div>
   )
 }
+
+// Custom comparison function to prevent re-renders when countries haven't changed
+const arePropsEqual = (prevProps: WorldMapProps, nextProps: WorldMapProps): boolean => {
+  // Compare arrays by content, not reference
+  const prevCountries = prevProps.deploymentCountries || []
+  const nextCountries = nextProps.deploymentCountries || []
+
+  if (prevCountries.length !== nextCountries.length) return false
+
+  const prevSorted = [...prevCountries].sort().join(',')
+  const nextSorted = [...nextCountries].sort().join(',')
+
+  return prevSorted === nextSorted &&
+    prevProps.className === nextProps.className &&
+    prevProps.showUseCaseCount === nextProps.showUseCaseCount
+}
+
+const WorldMap = React.memo(WorldMapComponent, arePropsEqual)
 
 export default WorldMap
