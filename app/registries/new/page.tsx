@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useApiCall } from '@/lib/api-client-legacy'
 import { Building2, ArrowLeft } from "lucide-react"
+import { REGISTRY_TYPES } from '@/lib/registry-types'
 
 export default function NewCompanyPage() {
   const [name, setName] = useState("")
+  const [selectedType, setSelectedType] = useState("")
+  const [customType, setCustomType] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -18,8 +21,12 @@ export default function NewCompanyPage() {
     setLoading(true)
     setError(null)
     try {
+      // Determine the type value to send
+      const typeValue = selectedType === 'autre' ? customType : selectedType
+
       const result = await api.post('/api/companies', {
         name,
+        type: typeValue || undefined,
       })
       if (result.data && result.data.id) {
         router.push(`/dashboard/${result.data.id}`)
@@ -47,7 +54,7 @@ export default function NewCompanyPage() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nom du registre</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nom du registre *</label>
             <input
               type="text"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0080A3]"
@@ -57,6 +64,42 @@ export default function NewCompanyPage() {
               placeholder="Ex : Acme"
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Type de registre</label>
+            <select
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0080A3] bg-white"
+              value={selectedType}
+              onChange={e => {
+                setSelectedType(e.target.value)
+                if (e.target.value !== 'autre') {
+                  setCustomType("")
+                }
+              }}
+            >
+              <option value="">Sélectionner un type</option>
+              {REGISTRY_TYPES.map(type => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+
+          {selectedType === 'autre' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Précisez le type</label>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#0080A3]"
+                value={customType}
+                onChange={e => setCustomType(e.target.value)}
+                placeholder="Ex : Direction RH, Département IT..."
+              />
+            </div>
+          )}
+
           {error && <div className="text-red-600 text-sm">{error}</div>}
           <button
             type="submit"
@@ -69,4 +112,4 @@ export default function NewCompanyPage() {
       </div>
     </div>
   )
-} 
+}

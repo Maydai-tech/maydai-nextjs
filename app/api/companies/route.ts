@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name } = body
+    const { name, type } = body
     if (!name) {
       return NextResponse.json({ error: 'Champ name manquant' }, { status: 400 })
     }
@@ -190,10 +190,16 @@ export async function POST(request: NextRequest) {
     // Authentication is already verified above, so this is safe
     const serviceClient = getServiceRoleClient()
 
+    // Build insert data
+    const insertData: { name: string; type?: string } = { name }
+    if (type) {
+      insertData.type = type
+    }
+
     // Créer la compagnie
     const { data, error } = await serviceClient
       .from('companies')
-      .insert([{ name }])
+      .insert([insertData])
       .select('id')
       .single()
 
