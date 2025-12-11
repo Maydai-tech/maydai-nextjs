@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { UseCase } from '../../types/usecase'
 import { Calendar, Users, Clock, Edit3 } from 'lucide-react'
-import { CategoryScores } from '../CategoryScores'
+import { DatePickerModal } from '../shared/DatePickerModal'
 
 
 interface UseCaseDetailsProps {
@@ -14,6 +14,10 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(useCase.description || '')
   const [isSaving, setIsSaving] = useState(false)
+
+  // State for deployment date editing
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
+  const [isSavingDeploymentDate, setIsSavingDeploymentDate] = useState(false)
 
   // Sync editValue when useCase.description changes
   useEffect(() => {
@@ -46,6 +50,21 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
       handleSave()
     }
   }, [handleCancel, handleSave])
+
+  // Handler for deployment date saving
+  const handleSaveDeploymentDate = useCallback(async (newDate: string) => {
+    if (!onUpdateUseCase || isSavingDeploymentDate) return
+
+    setIsSavingDeploymentDate(true)
+    try {
+      await onUpdateUseCase({ deployment_date: newDate || undefined })
+      setIsDatePickerOpen(false)
+    } catch (error) {
+      console.error('Failed to save deployment date:', error)
+    } finally {
+      setIsSavingDeploymentDate(false)
+    }
+  }, [onUpdateUseCase, isSavingDeploymentDate])
 
   return (
     <div className="lg:col-span-2 space-y-6">
@@ -169,25 +188,42 @@ export function UseCaseDetails({ useCase, onUpdateUseCase, updating = false }: U
           </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="text-sm font-medium text-gray-500 mb-1">Date de déploiement</div>
-            <div className="text-gray-900 flex items-center">
-              <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-              {useCase.deployment_date ? (
-                // Check if it's a valid date format
-                /^\d{4}-\d{2}-\d{2}$/.test(useCase.deployment_date) ? 
-                  new Date(useCase.deployment_date).toLocaleDateString('fr-FR', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  }) :
-                  useCase.deployment_date
-              ) : 'Non spécifiée'}
+            <div className="text-gray-900 flex items-center justify-between group">
+              <div className="flex items-center">
+                <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                {useCase.deployment_date ? (
+                  /^\d{4}-\d{2}-\d{2}$/.test(useCase.deployment_date) ?
+                    new Date(useCase.deployment_date).toLocaleDateString('fr-FR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    }) :
+                    useCase.deployment_date
+                ) : 'Non spécifiée'}
+              </div>
+              {onUpdateUseCase && (
+                <button
+                  onClick={() => setIsDatePickerOpen(true)}
+                  className="p-1.5 text-gray-400 hover:text-[#0080A3] hover:bg-[#0080A3]/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                  title="Modifier la date"
+                >
+                  <Edit3 className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-
-
+      {/* Modal de sélection de date de déploiement */}
+      <DatePickerModal
+        isOpen={isDatePickerOpen}
+        onClose={() => setIsDatePickerOpen(false)}
+        onSave={handleSaveDeploymentDate}
+        currentDate={useCase.deployment_date}
+        title="Date de déploiement"
+        saving={isSavingDeploymentDate}
+      />
     </div>
   )
 }
