@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     if (modelsError) throw modelsError
     console.log('Debug: Modèles récupérés:', allModels?.length || 0)
 
-    // Récupérer tous les principes et benchmarks
+    // Récupérer tous les principes et benchmarks (inclure l'id des benchmarks)
     const { data: principlesData, error: principlesError } = await supabase
       .from('compl_ai_principles')
       .select(`
@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         name,
         category,
         compl_ai_benchmarks (
+          id,
           code,
           name
         )
@@ -47,51 +48,77 @@ export async function GET(request: NextRequest) {
     if (principlesError) throw principlesError
     console.log('Debug: Principes récupérés:', principlesData?.length || 0)
 
-    // Récupérer toutes les évaluations - VERSION SIMPLIFIÉE
-    const { data: evaluations, error: evaluationsError } = await supabase
-      .from('compl_ai_evaluations')
-      .select(`
-        id,
-        score,
-        score_text,
-        evaluation_date,
-        raw_data,
-        compl_ai_models (
-          id,
-          model_name,
-          model_provider,
-          model_type,
-          version
-        ),
-        compl_ai_principles (
-          name,
-          code,
-          category
-        ),
-        compl_ai_benchmarks (
-          code,
-          name
-        )
-      `)
-      .order('evaluation_date', { ascending: false })
+    // Récupérer TOUTES les évaluations avec pagination (limite Supabase: 1000 lignes par requête)
+    const PAGE_SIZE = 1000
+    let allEvaluations: any[] = []
+    let page = 0
+    let hasMore = true
 
-    if (evaluationsError) throw evaluationsError
-    console.log('Debug: Évaluations récupérées:', evaluations?.length || 0)
+    console.log('Debug: Début de la récupération paginée des évaluations...')
+
+    while (hasMore) {
+      const { data: evaluationsPage, error: evaluationsError } = await supabase
+        .from('compl_ai_evaluations')
+        .select(`
+          id,
+          score,
+          score_text,
+          evaluation_date,
+          raw_data,
+          benchmark_id,
+          compl_ai_models (
+            id,
+            model_name,
+            model_provider,
+            model_type,
+            version
+          ),
+          compl_ai_principles (
+            name,
+            code,
+            category
+          ),
+          compl_ai_benchmarks (
+            id,
+            code,
+            name
+          )
+        `)
+        .order('evaluation_date', { ascending: false })
+        .order('id', { ascending: false })  // Tri secondaire pour stabilité
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+
+      if (evaluationsError) throw evaluationsError
+
+      if (evaluationsPage && evaluationsPage.length > 0) {
+        allEvaluations = [...allEvaluations, ...evaluationsPage]
+        console.log(`Debug: Page ${page + 1} récupérée: ${evaluationsPage.length} évaluations (total: ${allEvaluations.length})`)
+        page++
+        hasMore = evaluationsPage.length === PAGE_SIZE
+      } else {
+        hasMore = false
+      }
+    }
+
+    console.log(`Debug: Total évaluations récupérées: ${allEvaluations.length}`)
 
     // Debug: Afficher la structure des premières évaluations
-    console.log('Debug: Structure des premières évaluations:', evaluations?.slice(0, 2)?.map(e => ({
+    console.log('Debug: Structure des premières évaluations:', allEvaluations.slice(0, 2)?.map(e => ({
       id: e.id,
       score: e.score,
+      benchmark_id: e.benchmark_id,
       model: e.compl_ai_models,
       principle: e.compl_ai_principles,
       benchmark: e.compl_ai_benchmarks,
       raw_data_keys: Object.keys(e.raw_data || {})
     })))
 
-    // Créer un mapping simple des évaluations
+    // Créer un mapping des évaluations - CONSERVER LA PLUS RÉCENTE en cas de doublon
+    // Les évaluations sont triées par date DESC, donc la première rencontrée est la plus récente
     const evaluationMap = new Map<string, any>()
+    let duplicatesSkipped = 0
     
-    evaluations?.forEach(evaluation => {
+    allEvaluations.forEach(evaluation => {
       // Vérifier que nous avons les données nécessaires
       const model = Array.isArray(evaluation.compl_ai_models) ? evaluation.compl_ai_models[0] : evaluation.compl_ai_models
       const principle = Array.isArray(evaluation.compl_ai_principles) ? evaluation.compl_ai_principles[0] : evaluation.compl_ai_principles
@@ -107,18 +134,23 @@ export async function GET(request: NextRequest) {
         return
       }
 
-      const key = `${model.id}-${benchmark.code}`
-      evaluationMap.set(key, {
-        ...evaluation,
-        model,
-        principle,
-        benchmark
-      })
+      // Utiliser benchmark.id pour la clé (plus fiable que benchmark.code)
+      const key = `${model.id}-${benchmark.id}`
       
-      console.log(`Debug: Évaluation mappée - ${model.model_name} - ${benchmark.code} - Score: ${evaluation.score}`)
+      // NE PAS écraser si une évaluation existe déjà (garder la plus récente)
+      if (!evaluationMap.has(key)) {
+        evaluationMap.set(key, {
+          ...evaluation,
+          model,
+          principle,
+          benchmark
+        })
+      } else {
+        duplicatesSkipped++
+      }
     })
 
-    console.log(`Debug: Total évaluations mappées: ${evaluationMap.size}`)
+    console.log(`Debug: Total évaluations mappées: ${evaluationMap.size}, doublons ignorés: ${duplicatesSkipped}`)
 
     // Créer la structure des données CSV
     const csvRows = []
@@ -146,7 +178,8 @@ export async function GET(request: NextRequest) {
     allModels?.forEach(model => {
       principlesData?.forEach(principle => {
         principle.compl_ai_benchmarks?.forEach(benchmark => {
-          const evaluationKey = `${model.id}-${benchmark.code}`
+          // Utiliser benchmark.id pour la cohérence avec la Map
+          const evaluationKey = `${model.id}-${benchmark.id}`
           const evaluation = evaluationMap.get(evaluationKey)
           
           const row = [

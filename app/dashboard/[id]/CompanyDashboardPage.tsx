@@ -674,9 +674,9 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
         </div>
 
         {/* Score and World Map Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
           {/* Colonne gauche - ScoreCircle et RiskPyramid */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-sm">
               <ScoreCircle
                 averageScore={averageScore}
@@ -691,7 +691,7 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
           </div>
 
           {/* Colonne droite - World Map */}
-          <div className="lg:col-span-2">
+          <div>
             <WorldMap
               deploymentCountries={getDeploymentCountries()}
               countryUseCaseCount={getCountryUseCaseCount()}

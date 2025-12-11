@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useEffect } from 'react'
+import { AlertTriangle, Flame, Settings, ShieldCheck, HelpCircle } from 'lucide-react'
 
 interface UseCase {
   id: string
@@ -14,14 +15,11 @@ interface RiskPyramidProps {
 }
 
 interface RiskCategory {
-  level: 'unacceptable' | 'high' | 'limited' | 'minimal'
+  level: 'unacceptable' | 'high' | 'limited' | 'minimal' | 'undefined'
   label: string
   color: string
-  bgColor: string
-  borderColor: string
-  textColor: string
+  icon: typeof AlertTriangle
   badgeColor: string
-  barWidth: string
 }
 
 export default function RiskPyramid({ 
@@ -64,83 +62,111 @@ export default function RiskPyramid({
     })
   }, [useCases, counts])
 
-  // Configuration des catégories de risque avec nouvelles largeurs pyramidales
-  const riskCategories: RiskCategory[] = [
+  // Configuration des catégories de risque
+  const riskCategories: RiskCategory[] = useMemo(() => [
     {
       level: 'unacceptable',
       label: 'Inacceptable',
       color: '#ef4444',
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-300',
-      textColor: 'text-red-900',
-      badgeColor: 'bg-red-600',
-      barWidth: 'w-[50%]'
+      icon: AlertTriangle,
+      badgeColor: 'bg-red-600'
     },
     {
       level: 'high',
       label: 'Élevé',
       color: '#f97316',
-      bgColor: 'bg-orange-50',
-      borderColor: 'border-orange-300',
-      textColor: 'text-orange-900',
-      badgeColor: 'bg-orange-500',
-      barWidth: 'w-[65%]'
+      icon: Flame,
+      badgeColor: 'bg-orange-500'
     },
     {
       level: 'limited',
       label: 'Limité',
       color: '#3b82f6',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-300',
-      textColor: 'text-blue-900',
-      badgeColor: 'bg-blue-600',
-      barWidth: 'w-[85%]'
+      icon: Settings,
+      badgeColor: 'bg-blue-600'
     },
     {
       level: 'minimal',
       label: 'Minimal',
       color: '#22c55e',
-      bgColor: 'bg-[#f1fdfa]',
-      borderColor: 'border-green-300',
-      textColor: 'text-green-900',
-      badgeColor: 'bg-green-600',
-      barWidth: 'w-full'
+      icon: ShieldCheck,
+      badgeColor: 'bg-green-600'
     }
-  ]
+  ], [])
+
+  // Catégorie pour les cas non évalués
+  const unevaluatedCategory: RiskCategory = useMemo(() => ({
+    level: 'undefined',
+    label: 'Non évalué',
+    color: '#9ca3af',
+    icon: HelpCircle,
+    badgeColor: 'bg-gray-400'
+  }), [])
 
   // Total incluant les cas non évalués
   const total = counts.unacceptable + counts.high + counts.limited + counts.minimal + counts.undefined
 
-  return (
-    <div className={`flex flex-col p-6 ${className}`}>
-      {/* Titre */}
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">Pyramide des risques</h3>
-      </div>
+  // Tous les niveaux à afficher (incluant non évalué si nécessaire)
+  const allLevels = useMemo(() => {
+    return [...riskCategories, ...(counts.undefined > 0 ? [unevaluatedCategory] : [])]
+  }, [riskCategories, unevaluatedCategory, counts.undefined])
 
-      {/* Liste des catégories de risque */}
-      <div className="space-y-2">
-        {riskCategories.map((category) => {
+  // Fonction helper pour convertir hex en rgba
+  const hexToRgba = (hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  }
+
+  // Mapping des largeurs pour l'effet pyramide en escalier
+  const widthMap: Record<string, string> = {
+    'unacceptable': '40%',
+    'high': '60%',
+    'limited': '80%',
+    'minimal': '100%',
+    'undefined': '100%' // Même largeur que minimal
+  }
+
+  return (
+    <div className={`bg-white rounded-lg shadow-sm p-4 md:p-6 max-w-4xl mx-auto ${className}`}>
+      {/* Titre */}
+      <h3 className="text-lg font-semibold text-gray-900 mb-6">Pyramide des risques</h3>
+
+      {/* Pyramide en escalier avec largeurs progressives */}
+      <div className="space-y-3 relative">
+        {allLevels.map((category) => {
+          const Icon = category.icon
           const count = counts[category.level]
+          const width = widthMap[category.level]
           
           return (
-            <div key={category.level} className="flex items-center gap-3">
-              {/* Zone des barres - 75% max du conteneur */}
-              <div className="flex-1 max-w-[75%]">
-                <div 
-                  className={`h-9 rounded ${category.bgColor} ${category.borderColor} border-2 
-                              flex items-center transition-all duration-300 ${category.barWidth}`}
-                >
-                  <span className={`pl-2 text-sm font-semibold ${category.textColor}`}>
-                    {category.label}
-                  </span>
-                </div>
+            <div key={category.level} className="relative h-12 flex items-center">
+              {/* Marche colorée avec largeur variable */}
+              <div 
+                className="h-full rounded-lg flex items-center gap-2 px-3 transition-all"
+                style={{ 
+                  backgroundColor: hexToRgba(category.color, 0.15),
+                  width: width
+                }}
+              >
+                {/* Icône */}
+                <Icon 
+                  className="w-5 h-5 flex-shrink-0" 
+                  style={{ color: category.color }}
+                />
+                {/* Label */}
+                <span className="text-sm font-medium text-gray-700 truncate">
+                  {category.label}
+                </span>
               </div>
               
-              {/* Zone des badges - largeur fixe, alignés verticalement, légèrement décalés à droite */}
-              <div className="w-12 flex justify-center flex-shrink-0">
-                <div className={`${category.badgeColor} rounded-full w-8 h-8 
-                                 flex items-center justify-center text-white text-sm font-bold`}>
+              {/* Badge à position fixe à droite */}
+              <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                <div 
+                  className={`${category.badgeColor} rounded-full w-10 h-10 
+                             flex items-center justify-center text-white text-sm font-bold shadow-sm`}
+                >
                   {count}
                 </div>
               </div>
@@ -149,36 +175,11 @@ export default function RiskPyramid({
         })}
       </div>
 
-      {/* Affichage des cas non évalués si nécessaire */}
-      {counts.undefined > 0 && (
-        <div className="flex items-center gap-3 mt-1 opacity-60">
-          <div className="flex-1 max-w-[75%]">
-            <div className="h-9 rounded bg-gray-50 border-2 border-gray-200 flex items-center">
-              <span className="pl-2 text-sm font-semibold text-gray-600">
-                Non évalué
-              </span>
-            </div>
-          </div>
-          <div className="w-12 flex justify-center flex-shrink-0">
-            <div className="bg-gray-400 rounded-full w-8 h-8 flex items-center justify-center text-white text-sm font-bold">
-              {counts.undefined}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Ligne de séparation en bas - Total aligné à droite sous les badges */}
-      <div className="border-t border-gray-200 mt-3 pt-3">
-        <div className="flex items-center gap-3">
-          {/* Zone gauche */}
-          <div className="flex-1 max-w-[75%]">
-            <span className="text-sm font-medium text-gray-600">Total</span>
-          </div>
-          
-          {/* Zone droite - alignée avec les badges */}
-          <div className="w-12 flex justify-center flex-shrink-0">
-            <span className="text-sm font-semibold text-gray-900">{total}</span>
-          </div>
+      {/* Total en bas */}
+      <div className="border-t border-gray-200 mt-6 pt-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-600">Total</span>
+          <span className="text-sm font-semibold text-gray-900">{total}</span>
         </div>
       </div>
     </div>
