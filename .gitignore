@@ -54,9 +54,6 @@ next-env.d.ts
 # cursor configuration with sensitive data
 .cursor/mcp.json
 
-# MCP configuration files
-.mcp.json
-
 # Claude config
 /.claude
 
