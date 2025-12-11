@@ -6,7 +6,7 @@ import { ComplAIModel } from '@/lib/supabase'
 import { getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
 import { useCaseRoutes } from '../../utils/routes'
 import { useUseCaseNavigation } from '../../utils/navigation'
-import { ArrowLeft, Building, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle, Trash2, Download, UserPlus } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle, Trash2, Download, UserPlus, Calendar } from 'lucide-react'
 import Image from 'next/image'
 import ModelSelectorModal from '../ModelSelectorModal'
 import DeleteConfirmationModal from '../DeleteConfirmationModal'
@@ -22,6 +22,7 @@ import { useUseCaseScore } from '../../hooks/useUseCaseScore'
 import { useCompanyInfo } from '../../hooks/useCompanyInfo'
 import InviteScopeChoiceModal from '@/components/Collaboration/InviteScopeChoiceModal'
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
+import { DatePickerModal } from '../shared/DatePickerModal'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
 
@@ -128,6 +129,10 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const [isScopeChoiceModalOpen, setIsScopeChoiceModalOpen] = useState(false)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [inviteScope, setInviteScope] = useState<'company' | 'registry'>('registry')
+
+  // État pour l'édition de la date de déploiement
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
+  const [isSavingDeploymentDate, setIsSavingDeploymentDate] = useState(false)
   const { goToEvaluation } = useUseCaseNavigation(useCase.id, useCase.company_id)
   const { riskLevel, loading: riskLoading, error: riskError } = useRiskLevel(useCase.id)
   const { isGenerating, error: pdfError, generatePDF } = usePDFExport(useCase.id)
@@ -267,6 +272,34 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
       const errorData = await response.json()
       throw new Error(errorData.error || 'Erreur lors de l\'invitation')
     }
+  }
+
+  // Handler pour la sauvegarde de la date de déploiement
+  const handleSaveDeploymentDate = async (newDate: string) => {
+    if (!onUpdateUseCase || isSavingDeploymentDate) return
+
+    setIsSavingDeploymentDate(true)
+    try {
+      await onUpdateUseCase({ deployment_date: newDate || undefined })
+      setIsDatePickerOpen(false)
+    } catch (error) {
+      console.error('Failed to save deployment date:', error)
+    } finally {
+      setIsSavingDeploymentDate(false)
+    }
+  }
+
+  // Formater la date pour l'affichage
+  const formatDeploymentDate = (date?: string) => {
+    if (!date) return 'Non spécifiée'
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return new Date(date).toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    }
+    return date
   }
 
   return (
@@ -424,7 +457,29 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
               </div>
             )}
 
-            {/* Ligne 4: Pays de déploiement */}
+            {/* Ligne 4: Date de déploiement */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 w-full">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-700">Date de déploiement</h3>
+                {onUpdateUseCase && (
+                  <button
+                    onClick={() => setIsDatePickerOpen(true)}
+                    className="text-gray-400 hover:text-blue-600 transition-colors duration-200"
+                    title="Modifier la date"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-600">
+                  {formatDeploymentDate(useCase.deployment_date)}
+                </span>
+              </div>
+            </div>
+
+            {/* Ligne 5: Pays de déploiement */}
             <div className="w-full">
               <CountryDeploymentDisplay
                 deploymentCountries={useCase.deployment_countries}
@@ -520,6 +575,16 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         onClose={() => setIsInviteModalOpen(false)}
         onInvite={handleInvite}
         scope={inviteScope}
+      />
+
+      {/* Modal de sélection de date de déploiement */}
+      <DatePickerModal
+        isOpen={isDatePickerOpen}
+        onClose={() => setIsDatePickerOpen(false)}
+        onSave={handleSaveDeploymentDate}
+        currentDate={useCase.deployment_date}
+        title="Date de déploiement"
+        saving={isSavingDeploymentDate}
       />
     </div>
   )
