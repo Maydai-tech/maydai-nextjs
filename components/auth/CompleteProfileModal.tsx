@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, User, Building2, Briefcase, Phone, FileText, CheckCircle } from 'lucide-react'
+import { X, User, Building2, Phone, FileText, CheckCircle } from 'lucide-react'
 import { validateSIREN, cleanSIREN, formatSIREN } from '@/lib/validation/siren'
-import { getNAFSectorOptions } from '@/lib/constants/naf-sectors'
+import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
 
 interface CompleteProfileModalProps {
   isOpen: boolean
@@ -11,7 +11,8 @@ interface CompleteProfileModalProps {
     firstName?: string
     lastName?: string
     companyName?: string
-    industry?: string
+    mainIndustryId?: string
+    subCategoryId?: string
     phone?: string
     siren?: string
   }
@@ -19,7 +20,8 @@ interface CompleteProfileModalProps {
     firstName: string
     lastName: string
     companyName: string
-    industry: string
+    mainIndustryId: string
+    subCategoryId: string
     phone?: string
     siren?: string
   }) => Promise<void>
@@ -34,13 +36,20 @@ export default function CompleteProfileModal({
     firstName: initialData?.firstName || '',
     lastName: initialData?.lastName || '',
     companyName: initialData?.companyName || '',
-    industry: initialData?.industry || '',
+    mainIndustryId: initialData?.mainIndustryId || '',
+    subCategoryId: initialData?.subCategoryId || '',
     phone: initialData?.phone || '',
     siren: initialData?.siren || ''
   })
 
+  const [industrySelection, setIndustrySelection] = useState<IndustrySelection>({
+    mainIndustryId: initialData?.mainIndustryId || '',
+    subCategoryId: initialData?.subCategoryId || ''
+  })
+
   const [error, setError] = useState('')
   const [sirenError, setSirenError] = useState('')
+  const [industryError, setIndustryError] = useState('')
   const [loading, setLoading] = useState(false)
 
   // Update form data when initialData changes (async loading)
@@ -50,14 +59,17 @@ export default function CompleteProfileModal({
         firstName: initialData.firstName || '',
         lastName: initialData.lastName || '',
         companyName: initialData.companyName || '',
-        industry: initialData.industry || '',
+        mainIndustryId: initialData.mainIndustryId || '',
+        subCategoryId: initialData.subCategoryId || '',
         phone: initialData.phone || '',
         siren: initialData.siren || ''
       })
+      setIndustrySelection({
+        mainIndustryId: initialData.mainIndustryId || '',
+        subCategoryId: initialData.subCategoryId || ''
+      })
     }
   }, [initialData])
-
-  const nafSectors = getNAFSectorOptions()
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -105,8 +117,11 @@ export default function CompleteProfileModal({
       return
     }
 
-    if (!formData.industry) {
-      setError('Le secteur d\'activité est obligatoire')
+    if (!formData.mainIndustryId || !formData.subCategoryId) {
+      setError('Le secteur d\'activité et la sous-catégorie sont obligatoires')
+      if (!formData.mainIndustryId || !formData.subCategoryId) {
+        setIndustryError('Veuillez sélectionner un secteur d\'activité et une sous-catégorie')
+      }
       setLoading(false)
       return
     }
@@ -123,7 +138,8 @@ export default function CompleteProfileModal({
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         companyName: formData.companyName.trim(),
-        industry: formData.industry,
+        mainIndustryId: formData.mainIndustryId,
+        subCategoryId: formData.subCategoryId,
         phone: formData.phone || undefined,
         siren: formData.siren || undefined
       })
@@ -225,29 +241,21 @@ export default function CompleteProfileModal({
 
           {/* Industry */}
           <div>
-            <label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-2">
-              Secteur d'activité <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Briefcase className="h-5 w-5 text-gray-400" />
-              </div>
-              <select
-                id="industry"
-                name="industry"
-                required
-                value={formData.industry}
-                onChange={(e) => handleInputChange('industry', e.target.value)}
-                className="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors appearance-none"
-              >
-                <option value="">Sélectionnez un secteur</option>
-                {nafSectors.map((sector) => (
-                  <option key={sector.value} value={sector.value}>
-                    {sector.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CompanySectorSelector
+              value={industrySelection}
+              onChange={(selection) => {
+                setIndustrySelection(selection)
+                setFormData(prev => ({
+                  ...prev,
+                  mainIndustryId: selection.mainIndustryId,
+                  subCategoryId: selection.subCategoryId
+                }))
+                setIndustryError('')
+                setError('')
+              }}
+              error={industryError}
+              required
+            />
           </div>
 
           {/* Phone (optional) */}
@@ -311,7 +319,7 @@ export default function CompleteProfileModal({
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading || !!sirenError}
+            disabled={loading || !!sirenError || !!industryError}
             className="w-full bg-[#0080A3] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#006280] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0080A3] flex items-center justify-center gap-2"
           >
             {loading ? (

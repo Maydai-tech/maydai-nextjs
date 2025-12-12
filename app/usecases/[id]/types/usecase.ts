@@ -16,6 +16,11 @@ export interface UseCase {
   company_status?: 'utilisateur' | 'fabriquant_produits' | 'distributeur' | 'importateur' | 'fournisseur' | 'mandataire' | 'unknown'  // NOUVEAU: Statut d'entreprise
   created_at: string
   updated_at: string
+  updated_by?: string
+  updated_by_profile?: {
+    first_name: string | null
+    last_name: string | null
+  }
   score_base?: number
   score_model?: number | null
   score_final?: number | null

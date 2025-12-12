@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
-import { isValidNAFSectorCode } from '@/lib/constants/naf-sectors'
+import { validateIndustrySelection } from '@/lib/validation/industries'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     // Get profile data
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('first_name, last_name, company_name, industry, phone, siren')
+      .select('first_name, last_name, company_name, industry, sub_category_id, phone, siren')
       .eq('id', user.id)
       .single()
 
@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
       firstName: profile?.first_name || '',
       lastName: profile?.last_name || '',
       companyName: profile?.company_name || '',
-      industry: profile?.industry || '',
+      mainIndustryId: profile?.industry || '',
+      subCategoryId: profile?.sub_category_id || '',
       phone: profile?.phone || '',
       siren: profile?.siren || ''
     })
@@ -43,20 +44,21 @@ export async function PATCH(request: NextRequest) {
     const { supabase, user } = await getAuthenticatedSupabaseClient(request)
 
     const body = await request.json()
-    const { firstName, lastName, companyName, industry, phone, siren } = body
+    const { firstName, lastName, companyName, mainIndustryId, subCategoryId, phone, siren } = body
 
     // Validate required fields
-    if (!firstName || !lastName || !companyName || !industry) {
+    if (!firstName || !lastName || !companyName || !mainIndustryId || !subCategoryId) {
       return NextResponse.json(
-        { error: 'Les champs prénom, nom, entreprise et secteur sont obligatoires' },
+        { error: 'Les champs prénom, nom, entreprise, secteur principal et sous-catégorie sont obligatoires' },
         { status: 400 }
       )
     }
 
-    // Validate industry if provided
-    if (industry && !isValidNAFSectorCode(industry)) {
+    // Validate industry selection
+    const industryValidation = validateIndustrySelection(mainIndustryId, subCategoryId)
+    if (!industryValidation.valid) {
       return NextResponse.json(
-        { error: 'Secteur d\'activité invalide' },
+        { error: industryValidation.error || 'Secteur d\'activité invalide' },
         { status: 400 }
       )
     }
@@ -73,13 +75,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update profile
+    // Store mainIndustryId in industry field and subCategoryId in sub_category_id field
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         company_name: companyName.trim(),
-        industry: industry,
+        industry: mainIndustryId.trim(),
+        sub_category_id: subCategoryId.trim(),
         phone: phone?.trim() || null,
         siren: siren ? cleanSIREN(siren) : null,
         updated_at: new Date().toISOString()

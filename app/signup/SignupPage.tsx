@@ -7,9 +7,9 @@ import Image from 'next/image';
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { validateSIREN, cleanSIREN, formatSIREN } from '@/lib/validation/siren'
-import { getNAFSectorOptions } from '@/lib/constants/naf-sectors'
 import OTPVerification from '@/components/auth/OTPVerification'
-import { User, Building2, Briefcase, Phone, FileText, ArrowRight, CheckCircle, Mail } from 'lucide-react'
+import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
+import { User, Building2, Phone, FileText, ArrowRight, CheckCircle, Mail } from 'lucide-react'
 
 type SignupStep = 'form' | 'otp' | 'processing'
 
@@ -18,7 +18,8 @@ interface SignupFormData {
   firstName: string
   lastName: string
   companyName: string
-  industry: string
+  mainIndustryId: string
+  subCategoryId: string
   phone: string
   siren: string
 }
@@ -37,10 +38,18 @@ export default function SignupPage() {
     firstName: '',
     lastName: '',
     companyName: '',
-    industry: '',
+    mainIndustryId: '',
+    subCategoryId: '',
     phone: '',
     siren: '',
   })
+
+  // Industry selection state
+  const [industrySelection, setIndustrySelection] = useState<IndustrySelection>({
+    mainIndustryId: '',
+    subCategoryId: ''
+  })
+  const [industryError, setIndustryError] = useState('')
 
   // UI state
   const [error, setError] = useState('')
@@ -50,9 +59,6 @@ export default function SignupPage() {
   const [checkingEmail, setCheckingEmail] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [acceptTerms, setAcceptTerms] = useState(false)
-
-  // NAF sectors for dropdown
-  const nafSectors = getNAFSectorOptions()
 
   // Redirect authenticated users
   useEffect(() => {
@@ -160,8 +166,11 @@ export default function SignupPage() {
 
     // Validate required fields
     if (!formData.email || !formData.firstName || !formData.lastName ||
-      !formData.companyName || !formData.industry) {
+      !formData.companyName || !formData.mainIndustryId || !formData.subCategoryId) {
       setError('Veuillez remplir tous les champs obligatoires')
+      if (!formData.mainIndustryId || !formData.subCategoryId) {
+        setIndustryError('Veuillez sélectionner un secteur d\'activité et une sous-catégorie')
+      }
       setFormLoading(false)
       return
     }
@@ -238,7 +247,8 @@ export default function SignupPage() {
           firstName: formData.firstName,
           lastName: formData.lastName,
           companyName: formData.companyName,
-          industry: formData.industry,
+          mainIndustryId: formData.mainIndustryId,
+          subCategoryId: formData.subCategoryId,
           phone: formData.phone || null,
           siren: formData.siren || null,
         }),
@@ -423,29 +433,21 @@ export default function SignupPage() {
 
             {/* Industry */}
             <div>
-              <label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-2">
-                Secteur d'activité<span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Briefcase className="h-5 w-5 text-gray-400" />
-                </div>
-                <select
-                  id="industry"
-                  name="industry"
-                  required
-                  value={formData.industry}
-                  onChange={(e) => handleInputChange('industry', e.target.value)}
-                  className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors appearance-none"
-                >
-                  <option value="">Sélectionnez un secteur</option>
-                  {nafSectors.map((sector) => (
-                    <option key={sector.value} value={sector.value}>
-                      {sector.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CompanySectorSelector
+                value={industrySelection}
+                onChange={(selection) => {
+                  setIndustrySelection(selection)
+                  setFormData(prev => ({
+                    ...prev,
+                    mainIndustryId: selection.mainIndustryId,
+                    subCategoryId: selection.subCategoryId
+                  }))
+                  setIndustryError('')
+                  setError('')
+                }}
+                error={industryError}
+                required
+              />
             </div>
 
             {/* Phone (optional) */}
@@ -535,7 +537,7 @@ export default function SignupPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={formLoading || !!sirenError || !!emailError || checkingEmail || !acceptTerms}
+              disabled={formLoading || !!sirenError || !!emailError || !!industryError || checkingEmail || !acceptTerms}
               className="w-full bg-[#0080A3] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#006280] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0080A3] flex items-center justify-center gap-2"
             >
               {formLoading ? (

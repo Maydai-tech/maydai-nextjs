@@ -73,6 +73,11 @@ export interface UseCase {
   report_generated_at?: string  // NOUVEAU: Date de génération du rapport
   created_at: string
   updated_at: string
+  updated_by?: string
+  updated_by_profile?: {
+    first_name: string | null
+    last_name: string | null
+  }
 }
 
 // Type enrichi pour les cas d'usage avec informations du modèle COMPL-AI

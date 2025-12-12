@@ -74,6 +74,22 @@ export async function GET(
       return NextResponse.json({ error: 'Error fetching use case' }, { status: 500 })
     }
 
+    // Récupérer le profil si updated_by existe
+    if (useCase?.updated_by) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .eq('id', useCase.updated_by)
+        .single()
+      
+      if (profile) {
+        useCase.updated_by_profile = {
+          first_name: profile.first_name,
+          last_name: profile.last_name
+        }
+      }
+    }
+
     // Check if user has access to this use case via user_companies
     const { data: userCompany, error: userCompanyError } = await supabase
       .from('user_companies')
@@ -168,7 +184,8 @@ export async function PUT(
 
     // Build update data object with only provided fields
     const updateData: Record<string, unknown> = {
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      updated_by: user.id
     }
     if (primary_model_id !== undefined) updateData.primary_model_id = primary_model_id
     if (deployment_countries !== undefined) updateData.deployment_countries = deployment_countries
@@ -203,6 +220,22 @@ export async function PUT(
       const context = createRequestContext(request)
       logger.error('Failed to update use case', updateError, { ...context, useCaseId })
       return NextResponse.json({ error: 'Error updating use case' }, { status: 500 })
+    }
+
+    // Récupérer le profil si updated_by existe
+    if (updatedUseCase?.updated_by) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .eq('id', updatedUseCase.updated_by)
+        .single()
+      
+      if (profile) {
+        updatedUseCase.updated_by_profile = {
+          first_name: profile.first_name,
+          last_name: profile.last_name
+        }
+      }
     }
 
     // Recalcul automatique du score lors d'un changement de modèle IA
@@ -273,6 +306,22 @@ export async function PUT(
           logger.error('Failed to fetch updated use case after score calculation', fetchError, { useCaseId })
           // En cas d'échec, on retourne quand même le use case avec le modèle mis à jour
           return NextResponse.json(updatedUseCase)
+        }
+        
+        // Récupérer le profil si updated_by existe
+        if (useCaseWithNewScore?.updated_by) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name')
+            .eq('id', useCaseWithNewScore.updated_by)
+            .single()
+          
+          if (profile) {
+            useCaseWithNewScore.updated_by_profile = {
+              first_name: profile.first_name,
+              last_name: profile.last_name
+            }
+          }
         }
         
         // Retour du use case avec les scores recalculés

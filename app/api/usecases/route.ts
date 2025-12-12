@@ -211,7 +211,8 @@ export async function POST(request: NextRequest) {
       risk_level,
       company_id,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      updated_by: user.id
     }
     
     console.log('Données à insérer dans usecases:', JSON.stringify(insertData, null, 2))

@@ -324,7 +324,8 @@ export async function POST(
       risk_level: riskLevel, // ← AJOUT DU RISK_LEVEL
       company_status: companyStatus,
       last_calculation_date: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      updated_by: user.id
     };
     
     console.log('✅ Mise à jour avec le statut d\'entreprise:', companyStatus);
