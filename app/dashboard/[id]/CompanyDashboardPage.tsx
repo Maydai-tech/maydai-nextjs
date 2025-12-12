@@ -45,6 +45,12 @@ interface UseCase {
   ai_category: string
   company_id: string
   created_at: string
+  updated_at: string
+  updated_by?: string
+  updated_by_profile?: {
+    first_name: string | null
+    last_name: string | null
+  }
   technology_partner: string
   llm_model_version?: string
   responsible_service: string
@@ -385,6 +391,28 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
         border: 'border border-gray-300'
       }
     }
+  }
+
+  // Fonction pour formater la date en français (DD/MM/YYYY)
+  const formatDate = (dateString: string | undefined): string => {
+    if (!dateString) return ''
+    try {
+      const date = new Date(dateString)
+      const day = date.getDate().toString().padStart(2, '0')
+      const month = (date.getMonth() + 1).toString().padStart(2, '0')
+      const year = date.getFullYear()
+      return `${day}/${month}/${year}`
+    } catch (error) {
+      return ''
+    }
+  }
+
+  // Fonction pour formater le nom complet de l'utilisateur
+  const formatUserName = (profile: { first_name: string | null; last_name: string | null } | undefined): string => {
+    if (!profile) return ''
+    const firstName = profile.first_name || ''
+    const lastName = profile.last_name || ''
+    return `${firstName} ${lastName}`.trim() || 'Utilisateur inconnu'
   }
 
   // Fonction pour obtenir les couleurs et icônes selon le niveau de risque
@@ -880,6 +908,24 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                                     {useCase.technology_partner && <span className="hidden sm:inline">• {useCase.technology_partner}</span>}
                                     {useCase.technology_partner && <span className="sm:hidden text-xs">{useCase.technology_partner}</span>}
                                   </div>
+                                  {/* Information de dernière modification */}
+                                  {(useCase.updated_at || useCase.created_at) && (
+                                    <div className="mt-2 text-xs italic text-gray-400">
+                                      {useCase.updated_by_profile ? (
+                                        <>
+                                          Dernière modification le {formatDate(useCase.updated_at)} par {formatUserName(useCase.updated_by_profile)}
+                                        </>
+                                      ) : useCase.updated_at ? (
+                                        <>
+                                          Dernière modification le {formatDate(useCase.updated_at)}
+                                        </>
+                                      ) : (
+                                        <>
+                                          Créé le {formatDate(useCase.created_at)}
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
 
                                 {/* Cartes d'information alignées horizontalement */}

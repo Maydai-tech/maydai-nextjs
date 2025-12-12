@@ -25,7 +25,8 @@ interface ProfileData {
   firstName?: string
   lastName?: string
   companyName?: string
-  industry?: string
+  mainIndustryId?: string
+  subCategoryId?: string
   phone?: string
   siren?: string
 }
@@ -92,7 +93,7 @@ export default function RegistriesPage() {
       try {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('first_name, last_name, company_name, industry, phone, siren')
+          .select('first_name, last_name, company_name, industry, sub_category_id, phone, siren')
           .eq('id', user.id)
           .single()
 
@@ -101,7 +102,8 @@ export default function RegistriesPage() {
           profile.first_name &&
           profile.last_name &&
           profile.company_name &&
-          profile.industry
+          profile.industry &&
+          profile.sub_category_id
 
         if (!isProfileComplete) {
           // Show modal to complete profile
@@ -109,7 +111,8 @@ export default function RegistriesPage() {
             firstName: profile?.first_name || user.user_metadata?.first_name || '',
             lastName: profile?.last_name || user.user_metadata?.last_name || '',
             companyName: profile?.company_name || '',
-            industry: profile?.industry || '',
+            mainIndustryId: profile?.industry || '',
+            subCategoryId: profile?.sub_category_id || '',
             phone: profile?.phone || '',
             siren: profile?.siren || ''
           })
@@ -205,7 +208,8 @@ export default function RegistriesPage() {
     firstName: string
     lastName: string
     companyName: string
-    industry: string
+    mainIndustryId: string
+    subCategoryId: string
     phone?: string
     siren?: string
   }) => {

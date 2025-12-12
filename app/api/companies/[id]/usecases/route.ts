@@ -94,7 +94,37 @@ export async function GET(
       .order('created_at', { ascending: false })
 
     if (usecasesError) {
+      console.error('Error fetching use cases:', usecasesError)
       return NextResponse.json({ error: 'Error fetching use cases' }, { status: 500 })
+    }
+
+    // Récupérer les profils séparément si des usecases ont un updated_by
+    if (usecases && usecases.length > 0) {
+      const updatedByIds = usecases
+        .map(uc => uc.updated_by)
+        .filter((id): id is string => id !== null && id !== undefined)
+      
+      if (updatedByIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', updatedByIds)
+        
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError)
+        } else {
+          const profilesMap = new Map(
+            (profiles || []).map(p => [p.id, { first_name: p.first_name, last_name: p.last_name }])
+          )
+          
+          // Enrichir les usecases avec les profils
+          usecases.forEach(uc => {
+            if (uc.updated_by && profilesMap.has(uc.updated_by)) {
+              uc.updated_by_profile = profilesMap.get(uc.updated_by)!
+            }
+          })
+        }
+      }
     }
 
     return NextResponse.json(usecases || [])

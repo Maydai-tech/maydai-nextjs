@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
-import { isValidNAFSectorCode } from '@/lib/constants/naf-sectors'
+import { validateIndustrySelection } from '@/lib/validation/industries'
 
 /**
  * Complete signup API endpoint
@@ -16,7 +16,8 @@ import { isValidNAFSectorCode } from '@/lib/constants/naf-sectors'
  *   firstName: string (required)
  *   lastName: string (required)
  *   companyName: string (required)
- *   industry: string (required, NAF sector code)
+ *   mainIndustryId: string (required, custom industry ID)
+ *   subCategoryId: string (required, custom sub-category ID)
  *   phone?: string (optional)
  *   siren?: string (optional, validated with Luhn algorithm)
  * }
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
-    const { firstName, lastName, companyName, industry, phone, siren } = body
+    const { firstName, lastName, companyName, mainIndustryId, subCategoryId, phone, siren } = body
 
     // Validate required fields
     if (!firstName || typeof firstName !== 'string' || firstName.trim() === '') {
@@ -58,17 +59,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!industry || typeof industry !== 'string' || industry.trim() === '') {
+    // Validate industry selection
+    if (!mainIndustryId || typeof mainIndustryId !== 'string' || mainIndustryId.trim() === '') {
       return NextResponse.json(
-        { error: 'Le secteur d\'activité est obligatoire' },
+        { error: 'Le secteur d\'activité principal est obligatoire' },
         { status: 400 }
       )
     }
 
-    // Validate industry code
-    if (!isValidNAFSectorCode(industry)) {
+    if (!subCategoryId || typeof subCategoryId !== 'string' || subCategoryId.trim() === '') {
       return NextResponse.json(
-        { error: 'Secteur d\'activité invalide' },
+        { error: 'La sous-catégorie est obligatoire' },
+        { status: 400 }
+      )
+    }
+
+    // Validate industry and sub-category combination
+    const industryValidation = validateIndustrySelection(mainIndustryId, subCategoryId)
+    if (!industryValidation.valid) {
+      return NextResponse.json(
+        { error: industryValidation.error || 'Secteur d\'activité invalide' },
         { status: 400 }
       )
     }
@@ -117,12 +127,14 @@ export async function POST(request: NextRequest) {
 
     // Create/update profile with all signup data
     // Note: email is stored in auth.users, not in profiles table
+    // Store mainIndustryId in industry field and subCategoryId in sub_category_id field
     const profileData = {
       id: user.id,
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       company_name: companyName.trim(),
-      industry: industry.trim(),
+      industry: mainIndustryId.trim(),
+      sub_category_id: subCategoryId.trim(),
       phone: cleanedPhone,
       siren: cleanedSiren,
       updated_at: new Date().toISOString(),

@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Mail, HardDrive, User, Building2, Briefcase, Phone, FileText, Pencil, X, Check, Loader2 } from 'lucide-react'
+import { Mail, HardDrive, User, Building2, Phone, FileText, Pencil, X, Check, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { validateSIREN, cleanSIREN, formatSIREN } from '@/lib/validation/siren'
-import { getNAFSectorOptions, getNAFSectorLabel } from '@/lib/constants/naf-sectors'
+import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
+import { getIndustryDisplayText, getIndustryLabel, getSubCategoryLabel } from '@/lib/constants/industries'
 
 interface GeneralSectionProps {
   userEmail: string | undefined
@@ -15,7 +16,8 @@ interface ProfileData {
   firstName: string
   lastName: string
   companyName: string
-  industry: string
+  mainIndustryId: string
+  subCategoryId: string
   phone: string
   siren: string
 }
@@ -23,7 +25,6 @@ interface ProfileData {
 export default function GeneralSection({ userEmail }: GeneralSectionProps) {
   const { getAccessToken } = useAuth()
   const { plan } = useUserPlan()
-  const nafSectors = getNAFSectorOptions()
 
   // Storage state
   const [storageUsage, setStorageUsage] = useState<{
@@ -38,7 +39,8 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
     firstName: '',
     lastName: '',
     companyName: '',
-    industry: '',
+    mainIndustryId: '',
+    subCategoryId: '',
     phone: '',
     siren: ''
   })
@@ -46,9 +48,14 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
     firstName: '',
     lastName: '',
     companyName: '',
-    industry: '',
+    mainIndustryId: '',
+    subCategoryId: '',
     phone: '',
     siren: ''
+  })
+  const [industrySelection, setIndustrySelection] = useState<IndustrySelection>({
+    mainIndustryId: '',
+    subCategoryId: ''
   })
   const [loadingProfile, setLoadingProfile] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
@@ -56,6 +63,7 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [sirenError, setSirenError] = useState('')
+  const [industryError, setIndustryError] = useState('')
 
   // Fetch profile data
   useEffect(() => {
@@ -74,12 +82,17 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
             firstName: data.firstName || '',
             lastName: data.lastName || '',
             companyName: data.companyName || '',
-            industry: data.industry || '',
+            mainIndustryId: data.mainIndustryId || '',
+            subCategoryId: data.subCategoryId || '',
             phone: data.phone || '',
             siren: data.siren || ''
           }
           setProfileData(profile)
           setEditedData(profile)
+          setIndustrySelection({
+            mainIndustryId: data.mainIndustryId || '',
+            subCategoryId: data.subCategoryId || ''
+          })
         }
       } catch (error) {
         console.error('Error fetching profile:', error)
@@ -147,17 +160,27 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
 
   const handleStartEdit = () => {
     setEditedData({ ...profileData })
+    setIndustrySelection({
+      mainIndustryId: profileData.mainIndustryId,
+      subCategoryId: profileData.subCategoryId
+    })
     setIsEditing(true)
     setError('')
     setSuccess('')
     setSirenError('')
+    setIndustryError('')
   }
 
   const handleCancelEdit = () => {
     setEditedData({ ...profileData })
+    setIndustrySelection({
+      mainIndustryId: profileData.mainIndustryId,
+      subCategoryId: profileData.subCategoryId
+    })
     setIsEditing(false)
     setError('')
     setSirenError('')
+    setIndustryError('')
   }
 
   const handleSave = async () => {
@@ -165,8 +188,11 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
     setSuccess('')
 
     // Validate required fields
-    if (!editedData.firstName || !editedData.lastName || !editedData.companyName || !editedData.industry) {
-      setError('Les champs prénom, nom, entreprise et secteur sont obligatoires')
+    if (!editedData.firstName || !editedData.lastName || !editedData.companyName || !editedData.mainIndustryId || !editedData.subCategoryId) {
+      setError('Les champs prénom, nom, entreprise, secteur principal et sous-catégorie sont obligatoires')
+      if (!editedData.mainIndustryId || !editedData.subCategoryId) {
+        setIndustryError('Veuillez sélectionner un secteur d\'activité et une sous-catégorie')
+      }
       return
     }
 
@@ -198,7 +224,8 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
           firstName: editedData.firstName,
           lastName: editedData.lastName,
           companyName: editedData.companyName,
-          industry: editedData.industry,
+          mainIndustryId: editedData.mainIndustryId,
+          subCategoryId: editedData.subCategoryId,
           phone: editedData.phone,
           siren: editedData.siren ? cleanSIREN(editedData.siren) : ''
         })
@@ -211,6 +238,10 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
 
       // Update local state
       setProfileData({ ...editedData, siren: editedData.siren ? cleanSIREN(editedData.siren) : '' })
+      setIndustrySelection({
+        mainIndustryId: editedData.mainIndustryId,
+        subCategoryId: editedData.subCategoryId
+      })
       setIsEditing(false)
       setSuccess('Profil mis à jour avec succès')
       setTimeout(() => setSuccess(''), 3000)
@@ -353,26 +384,21 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
 
             {/* Secteur d'activité */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Secteur d'activité <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Briefcase className="h-5 w-5 text-gray-400" />
-                </div>
-                <select
-                  value={editedData.industry}
-                  onChange={(e) => handleEditChange('industry', e.target.value)}
-                  className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors appearance-none"
-                >
-                  <option value="">Sélectionnez un secteur</option>
-                  {nafSectors.map((sector) => (
-                    <option key={sector.value} value={sector.value}>
-                      {sector.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CompanySectorSelector
+                value={industrySelection}
+                onChange={(selection) => {
+                  setIndustrySelection(selection)
+                  setEditedData(prev => ({
+                    ...prev,
+                    mainIndustryId: selection.mainIndustryId,
+                    subCategoryId: selection.subCategoryId
+                  }))
+                  setIndustryError('')
+                  setError('')
+                }}
+                error={industryError}
+                required
+              />
             </div>
 
             {/* Téléphone */}
@@ -434,7 +460,7 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
             <div className="flex items-center gap-3 pt-4">
               <button
                 onClick={handleSave}
-                disabled={saving || !!sirenError}
+                disabled={saving || !!sirenError || !!industryError}
                 className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? (
@@ -481,7 +507,12 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
             <div className="p-4 bg-gray-50/80 border border-gray-100 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Secteur d'activité</p>
               <p className="text-gray-900 font-medium">
-                {profileData.industry ? getNAFSectorLabel(profileData.industry) || profileData.industry : '-'}
+                {profileData.mainIndustryId && profileData.subCategoryId
+                  ? getIndustryDisplayText(profileData.mainIndustryId, profileData.subCategoryId) ||
+                    `${getIndustryLabel(profileData.mainIndustryId) || profileData.mainIndustryId} > ${getSubCategoryLabel(profileData.mainIndustryId, profileData.subCategoryId) || profileData.subCategoryId}`
+                  : profileData.mainIndustryId
+                    ? getIndustryLabel(profileData.mainIndustryId) || profileData.mainIndustryId
+                    : '-'}
               </p>
             </div>
 

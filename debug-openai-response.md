@@ -1,0 +1,24 @@
+{
+  "introduction_contextuelle": "## Introduction contextuelle\nAddeus, éditeur de logiciel basé à Paris, France, a développé un système d'IA intitulé 'anti fraude' dont le déploiement est prévu pour le 15 novembre 2025. Ce système, piloté par le service Recherche et Développement, a pour objectif de détecter et prévenir les tentatives de fraude en temps réel. En tant qu'utilisateur de systèmes d'IA tiers, Addeus est soumis aux exigences de l'AI Act, ce qui nécessite une évaluation rigoureuse de la conformité et des mesures appropriées pour garantir la protection des droits fondamentaux et la sécurité des données.",
+  "evaluation_risque": {
+    "niveau": "Risque limité",
+    "justification": "Votre système d’IA est utilisé dans un ou plusieurs des cas suivants ? → Aucun de ces cas. Cette réponse indique que le système ne relève pas de domaines à haut risque selon l'annexe III de l'AI Act. Cependant, certaines questions restent sans réponse, ce qui pourrait affecter la conformité générale. Les articles concernés incluent l'Article 9 sur la gestion des risques et l'Article 12 sur l'enregistrement des systèmes d'IA."
+  },
+  "priorites_actions_reglementaires": [
+    "Établir un système de gestion des risques est essentiel pour le système d'IA 'anti fraude'. Actuellement, aucune documentation technique n'est en place, ce qui constitue une non-conformité avec l'Article 9 de l'AI Act. Il est recommandé de créer un cadre de gestion des risques qui identifie, analyse et atténue les risques associés à l'utilisation de l'IA.",
+    "Compléter la documentation technique est crucial pour assurer la conformité avec l'Article 11 et l'Annexe IV de l'AI Act. Addeus doit s'assurer que la documentation décrit clairement le système, son architecture, ses performances et ses limites, afin de garantir une transparence et une traçabilité adéquates.",
+    "Mettre en place un registre centralisé des systèmes d'IA est une exigence recommandée pour tous les utilisateurs de systèmes d'IA. Ce registre doit inclure des informations sur le nom, l'objectif et les mises à jour des systèmes d'IA, conformément à l'Article 12 de l'AI Act."
+  ],
+  "quick_wins_actions_immediates": [
+    "Initialiser le registre centralisé pour vos systèmes d’IA est une action immédiate à entreprendre. Actuellement, l'absence de registre limite la visibilité sur les usages et les niveaux de risque associés, ce qui est contraire aux exigences de l'AI Act, notamment l'Article 12.",
+    "Désigner un responsable de surveillance pour le système 'anti fraude' est essentiel. La nomination d'un responsable clairement identifié permettra de garantir une supervision humaine efficace et de répondre aux exigences de l'Article 14 de l'AI Act.",
+    "Définir les instructions système et prompts est une étape cruciale pour assurer la transparence et la maîtrise du comportement du système. Cela doit inclure des consignes claires sur la finalité du système et des garde-fous pour éviter les abus, conformément aux Articles 10 et 13 de l'AI Act."
+  ],
+  "impact_attendu": "## Impact attendu\nLa mise en œuvre des recommandations permettra à Addeus de renforcer la conformité avec l'AI Act, de protéger les droits fondamentaux des utilisateurs et d'éviter des sanctions potentielles. Un système d'IA conforme contribuera également à la confiance des utilisateurs et à la réputation de l'entreprise sur le marché.",
+  "actions_moyen_terme": [
+    "Joindre le plan de gestion des risques est une action à mener pour assurer une identification et une analyse des risques associés au système 'anti fraude'. Cela doit inclure des mesures de réduction et un suivi régulier, conformément à l'Article 9 de l'AI Act.",
+    "Établir un plan de surveillance continue est essentiel pour garantir la robustesse et la cybersécurité du système. Ce plan doit inclure des indicateurs de performance, des journaux et des procédures d'escalade, en accord avec les Articles 14 et 15 de l'AI Act.",
+    "Recenser les formations sur l'AI Act pour les équipes d'Addeus est une priorité. Cela permettra de sensibiliser les employés aux exigences réglementaires et d'assurer une bonne gouvernance des systèmes d'IA, conformément à l'Article 29 de l'AI Act."
+  ],
+  "conclusion": "## Conclusion\nAddeus doit prendre des mesures immédiates pour garantir la conformité de son système 'anti fraude' avec l'AI Act. Les actions recommandées permettront de structurer la gestion des risques, d'améliorer la documentation technique et de renforcer la transparence. Il est impératif que l'entreprise s'engage à respecter ces exigences pour éviter des conséquences juridiques et garantir un usage éthique de l'IA."
+}
