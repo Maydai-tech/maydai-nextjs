@@ -88,7 +88,12 @@ export const BENCHMARK_TO_PRINCIPLE_MAPPING = {
   // Social and Environmental Well-being
   'environmental_impact': 'social_environmental_wellbeing',
   'social_impact': 'social_environmental_wellbeing',
-  'wellbeing_assessment': 'social_environmental_wellbeing'
+  'wellbeing_assessment': 'social_environmental_wellbeing',
+  // Social and Environmental Well-being - Impact environnemental
+  'num_gpus': 'social_environmental_wellbeing',
+  'gpu_power_draw': 'social_environmental_wellbeing',
+  'time_to_train': 'social_environmental_wellbeing',
+  'datacenter_carbon_intensity': 'social_environmental_wellbeing'
 } as const
 
 /**

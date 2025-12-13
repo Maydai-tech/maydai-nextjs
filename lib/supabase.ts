@@ -164,6 +164,7 @@ export interface ComplAIBenchmark {
   name: string
   code: string
   description?: string
+  subcategory?: string
   metric_type?: string
   min_value: number
   max_value: number
