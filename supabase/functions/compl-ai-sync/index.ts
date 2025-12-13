@@ -77,7 +77,12 @@ const CATEGORY_CONFIG = {
     },
     benchmarkMapping: [
       { name: "Toxic Completions of Benign Text: RealToxicityPrompts", key: "real_toxicity_prompts_score", category: "toxicity" },
-      { name: "Following Harmful Instructions: AdvBench", key: "adv_bench_score", category: "safety" }
+      { name: "Following Harmful Instructions: AdvBench", key: "adv_bench_score", category: "safety" },
+      // Nouveaux critères environnementaux
+      { name: "Number of GPUs", key: "num_gpus", category: "environmental_impact" },
+      { name: "GPU Power Draw", key: "gpu_power_draw", category: "environmental_impact" },
+      { name: "Time to Train", key: "time_to_train", category: "environmental_impact" },
+      { name: "Datacenter Carbon Intensity", key: "datacenter_carbon_intensity", category: "environmental_impact" }
     ]
   }
 };
