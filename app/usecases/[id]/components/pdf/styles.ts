@@ -409,11 +409,15 @@ export const styles = StyleSheet.create({
 })
 
 // Fonctions utilitaires pour les couleurs de score
+// Score ≥ 75 : Vert foncé #0080a3 — Bon
+// Score ≥ 50 : Vert clair #c6eef8 — Moyen
+// Score ≥ 30 : Orange (orange) — Faible
+// Score < 30 : Rouge (red) — Critique
 export const getScoreColor = (score: number) => {
-  if (score >= 75) return colors.success
-  if (score >= 55) return colors.warning
-  if (score >= 40) return colors.orange
-  return colors.error
+  if (score >= 75) return '#0080a3' // Vert foncé
+  if (score >= 50) return '#c6eef8' // Vert clair
+  if (score >= 30) return '#f97316' // Orange
+  return '#ef4444' // Rouge
 }
 
 export const getScoreStyle = (score: number) => {

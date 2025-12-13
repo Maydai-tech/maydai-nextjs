@@ -2,17 +2,17 @@
 
 import React from 'react'
 import Image from 'next/image'
-import { useUseCaseScore } from '../hooks/useUseCaseScore'
-import { RISK_CATEGORIES } from '../utils/risk-categories'
-import { AlertCircle, Info, AlertTriangle } from 'lucide-react'
+import { useRegistryCategoryScores } from '../hooks/useRegistryCategoryScores'
+import { RISK_CATEGORIES } from '@/app/usecases/[id]/utils/risk-categories'
+import { AlertCircle, Info } from 'lucide-react'
 import { getScoreStyle } from '@/lib/score-styles'
 
-interface CategoryScoresProps {
-  usecaseId: string
+interface CategoryScoresRegistryProps {
+  companyId: string
 }
 
-export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: CategoryScoresProps) {
-  const { score, loading, error } = useUseCaseScore(usecaseId)
+export const CategoryScoresRegistry = React.memo(function CategoryScoresRegistry({ companyId }: CategoryScoresRegistryProps) {
+  const { categoryScores, loading, error, evaluatedCount } = useRegistryCategoryScores(companyId)
 
   // Utilise les styles unifiés de l'application
   const getScoreColor = (percentage: number) => {
@@ -57,41 +57,7 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
     )
   }
 
-  if (!score) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par principes</h3>
-        <div className="text-center py-4">
-          <Info className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-          <p className="text-sm text-gray-600">
-            Les scores par catégorie seront disponibles après avoir complété le questionnaire.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  // Vérifier si le cas d'usage est en risque inacceptable (score global = 0)
-  const isUnacceptableRisk = score.score === 0
-
-  if (isUnacceptableRisk) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par principes</h3>
-        <div className="text-center py-6">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <p className="text-sm text-red-700 font-medium">
-            Votre cas d'usage présente un niveau de risque inacceptable. Les scores détaillés par principes ne sont pas disponibles dans cette situation.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  // Si pas de category_scores (ancien score), on les calcule à partir du breakdown
-  // Utiliser directement les scores calculés par score-calculator.ts
-  const categoryScores = score.category_scores || []
-
+  // Si aucun cas d'usage évalué acceptable
   if (categoryScores.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
@@ -99,14 +65,16 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
         <div className="text-center py-4">
           <Info className="h-8 w-8 text-gray-400 mx-auto mb-3" />
           <p className="text-sm text-gray-600">
-            Les scores par catégorie seront disponibles après avoir complété le questionnaire.
+            {evaluatedCount === 0
+              ? 'Aucun cas d\'usage évalué pour ce registre. Les scores par catégorie seront disponibles après avoir évalué au moins un cas d\'usage.'
+              : 'Tous les cas d\'usage évalués présentent un risque inacceptable. Les scores détaillés par principes ne sont pas disponibles dans cette situation.'}
           </p>
         </div>
       </div>
     )
   }
 
-  // Définir l'ordre spécifique des catégories
+  // Définir l'ordre spécifique des catégories (même ordre que CategoryScores)
   const categoryOrder = [
     'risk_level',
     'human_agency',
@@ -117,7 +85,7 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
     'social_environmental'
   ]
 
-  // Trier les catégories selon l'ordre spécifié et filtrer les catégories non désirées
+  // Les catégories sont déjà triées par l'API, mais on peut les re-trier pour être sûr
   const sortedCategoryScores = [...categoryScores]
     .filter(category => 
       category.category_id !== 'risk_level' && 
@@ -135,10 +103,16 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
     })
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+    <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 min-h-[420px] flex flex-col">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par principes</h3>
       
-      <div className="space-y-4">
+      {evaluatedCount > 0 && (
+        <p className="text-xs text-gray-500 mb-4">
+          Moyenne calculée sur {evaluatedCount} cas d'usage évalué{evaluatedCount > 1 ? 's' : ''}
+        </p>
+      )}
+      
+      <div className="space-y-4 flex-1">
         {sortedCategoryScores.map((category) => {
             const categoryInfo = RISK_CATEGORIES[category.category_id]
             const scoreColors = getScoreColor(category.percentage)
@@ -191,4 +165,5 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
       
     </div>
   )
-}) 
+})
+

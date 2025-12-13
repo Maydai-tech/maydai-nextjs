@@ -36,3 +36,4 @@ CHECK (rang_compar_ia IS NULL OR (rang_compar_ia >= 0 AND rang_compar_ia <= 20))
 
 
 
+

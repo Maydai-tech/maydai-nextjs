@@ -14,29 +14,42 @@ export interface ScoreStyle {
 /**
  * Détermine le style de score basé sur la valeur du score
  * Règles unifiées pour toutes les cartes de score dans l'application
+ * 
+ * Score ≥ 75 : Vert foncé #0080a3 — Bon
+ *   Fond : bg-[#c6eef8]
+ *   Texte : text-[#0080a3]
+ *   Indicateur : bg-[#0080a3]
+ * 
+ * Score ≥ 50 : Vert clair #c6eef8 — Moyen
+ *   Fond : bg-[#0080a3]/10 (10% d'opacité)
+ *   Texte : text-[#0080a3]
+ *   Indicateur : bg-[#c6eef8]
+ * 
+ * Score ≥ 30 : Orange (orange) — Faible
+ * Score < 30 : Rouge (red) — Critique
  */
 export const getScoreStyle = (score: number): ScoreStyle => {
   if (score >= 75) {
     return {
-      bg: 'bg-gradient-to-br from-green-50 via-emerald-50 to-green-100',
-      text: 'text-green-800',
-      border: 'border-green-200',
-      accent: 'text-green-600',
-      indicator: 'bg-green-500',
-      shadow: 'shadow-green-100'
+      bg: 'bg-[#c6eef8]',
+      text: 'text-[#0080a3]',
+      border: 'border-[#c6eef8]',
+      accent: 'text-[#0080a3]',
+      indicator: 'bg-[#0080a3]',
+      shadow: 'shadow-[#c6eef8]/20'
     }
-  } else if (score >= 55) {
+  } else if (score >= 50) {
     return {
-      bg: 'bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100',
-      text: 'text-yellow-800',
-      border: 'border-yellow-200',
-      accent: 'text-yellow-600',
-      indicator: 'bg-yellow-500',
-      shadow: 'shadow-yellow-100'
+      bg: 'bg-[#0080a3]/10',
+      text: 'text-[#0080a3]',
+      border: 'border-[#0080a3]/20',
+      accent: 'text-[#0080a3]',
+      indicator: 'bg-[#c6eef8]',
+      shadow: 'shadow-[#0080a3]/20'
     }
-  } else if (score >= 40) {
+  } else if (score >= 30) {
     return {
-      bg: 'bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100',
+      bg: 'bg-orange-50',
       text: 'text-orange-800',
       border: 'border-orange-200',
       accent: 'text-orange-600',
@@ -45,7 +58,7 @@ export const getScoreStyle = (score: number): ScoreStyle => {
     }
   } else {
     return {
-      bg: 'bg-gradient-to-br from-red-50 via-rose-50 to-red-100',
+      bg: 'bg-red-50',
       text: 'text-red-800',
       border: 'border-red-200',
       accent: 'text-red-600',
@@ -62,25 +75,25 @@ export const getCompactScoreStyle = (score: number): ScoreStyle => {
   // Retourne des gradients simplifiés valides pour les cartes compactes
   if (score >= 75) {
     return {
-      bg: 'bg-gradient-to-r from-green-50 to-green-100',
-      text: 'text-green-800',
-      border: 'border-green-200',
-      accent: 'text-green-600',
-      indicator: 'bg-green-500',
+      bg: 'bg-[#c6eef8]',
+      text: 'text-[#0080a3]',
+      border: 'border-[#c6eef8]',
+      accent: 'text-[#0080a3]',
+      indicator: 'bg-[#0080a3]',
       shadow: ''
     }
-  } else if (score >= 55) {
+  } else if (score >= 50) {
     return {
-      bg: 'bg-gradient-to-r from-yellow-50 to-yellow-100',
-      text: 'text-yellow-800',
-      border: 'border-yellow-200',
-      accent: 'text-yellow-600',
-      indicator: 'bg-yellow-500',
+      bg: 'bg-[#0080a3]/10',
+      text: 'text-[#0080a3]',
+      border: 'border-[#0080a3]/20',
+      accent: 'text-[#0080a3]',
+      indicator: 'bg-[#c6eef8]',
       shadow: ''
     }
-  } else if (score >= 40) {
+  } else if (score >= 30) {
     return {
-      bg: 'bg-gradient-to-r from-orange-50 to-orange-100',
+      bg: 'bg-orange-50',
       text: 'text-orange-800',
       border: 'border-orange-200',
       accent: 'text-orange-600',
@@ -89,7 +102,7 @@ export const getCompactScoreStyle = (score: number): ScoreStyle => {
     }
   } else {
     return {
-      bg: 'bg-gradient-to-r from-red-50 to-red-100',
+      bg: 'bg-red-50',
       text: 'text-red-800',
       border: 'border-red-200',
       accent: 'text-red-600',
@@ -145,13 +158,13 @@ export const getScoreCategory = (score: number): ScoreCategory => {
       description: 'Bonne conformité, quelques points d\'amélioration',
       icon: '🟢'
     }
-  } else if (score >= 55) {
+  } else if (score >= 50) {
     return {
       category: 'Moyen',
       description: 'Conformité moyenne, améliorations nécessaires',
       icon: '🟡'
     }
-  } else if (score >= 40) {
+  } else if (score >= 30) {
     return {
       category: 'Faible',
       description: 'Conformité faible, risques élevés',

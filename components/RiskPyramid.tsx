@@ -129,12 +129,12 @@ export default function RiskPyramid({
   }
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm p-4 md:p-6 max-w-4xl mx-auto ${className}`}>
+    <div className={`bg-white rounded-lg shadow-sm p-4 md:p-6 max-w-4xl mx-auto min-h-[420px] flex flex-col ${className}`}>
       {/* Titre */}
       <h3 className="text-lg font-semibold text-gray-900 mb-6">Pyramide des risques</h3>
 
       {/* Pyramide en escalier avec largeurs progressives */}
-      <div className="space-y-3 relative">
+      <div className="space-y-3 relative flex-1">
         {allLevels.map((category) => {
           const Icon = category.icon
           const count = counts[category.level]

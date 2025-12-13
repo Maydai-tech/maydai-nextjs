@@ -12,7 +12,7 @@ import {
   Shield,
   CheckCircle,
   AlertTriangle,
-  Clock,
+  TrendingUp,
   Plus,
   ChevronLeft,
   ChevronRight,
@@ -26,6 +26,7 @@ import DeleteConfirmationModal from '@/app/usecases/[id]/components/DeleteConfir
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import Image from 'next/image'
 import { getCompactScoreStyle, getSpecialScoreStyles } from '@/lib/score-styles'
+import { CategoryScoresRegistry } from './components/CategoryScoresRegistry'
 
 interface Company {
   id: string
@@ -96,6 +97,8 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
   const [loadingScore, setLoadingScore] = useState(true)
   const [evaluatedCount, setEvaluatedCount] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
+  const [activeAverageScore, setActiveAverageScore] = useState<number | null>(null)
+  const [activeEvaluatedCount, setActiveEvaluatedCount] = useState(0)
 
   // Search state
   const [searchTerm, setSearchTerm] = useState('')
@@ -190,6 +193,8 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
         setAverageScore(averageScoreResponse.data.average_score)
         setEvaluatedCount(averageScoreResponse.data.evaluated_count || 0)
         setTotalCount(averageScoreResponse.data.total_count || 0)
+        setActiveAverageScore(averageScoreResponse.data.active_average_score || null)
+        setActiveEvaluatedCount(averageScoreResponse.data.active_evaluated_count || 0)
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -488,9 +493,9 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
   }
 
 
-  const getInProgressCount = () => {
+  const getActiveCasesCount = () => {
     return useCases.filter(useCase =>
-      ['in_progress', 'under_review'].includes(useCase.status?.toLowerCase())
+      getDeploymentStatus(useCase.deployment_date) === 'Actif'
     ).length
   }
 
@@ -498,6 +503,19 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
     return useCases.filter(useCase =>
       ['draft', 'not_started'].includes(useCase.status?.toLowerCase()) || !useCase.status
     ).length
+  }
+
+  // Fonctions helper pour les labels adaptatifs selon le nombre de cas d'usage
+  const getCompletedLabel = () => {
+    return useCases.length <= 1 ? 'Complété' : 'Complétés'
+  }
+
+  const getNotTerminatedLabel = () => {
+    return useCases.length <= 1 ? 'Non terminé' : 'Non terminés'
+  }
+
+  const getActiveCasesLabel = () => {
+    return useCases.length <= 1 ? 'Cas actif' : 'Cas actifs'
   }
 
   // Get all unique deployment countries from use cases
@@ -664,7 +682,7 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                 <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6" style={{color: '#0080a3'}} />
               </div>
               <div className="sm:ml-4">
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Complétés</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">{getCompletedLabel()}</p>
                 <p className="text-lg sm:text-2xl font-bold text-gray-900">
                   {getCompletedCount()}
                 </p>
@@ -678,9 +696,9 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                 <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600" />
               </div>
               <div className="sm:ml-4">
-                <p className="text-xs sm:text-sm font-medium text-gray-600">En cours</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">{getNotTerminatedLabel()}</p>
                 <p className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {getInProgressCount()}
+                  {getNotStartedCount()}
                 </p>
               </div>
             </div>
@@ -688,13 +706,13 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
 
           <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
             <div className="flex flex-col sm:flex-row sm:items-center">
-              <div className="bg-red-50 p-2 sm:p-3 rounded-lg mb-2 sm:mb-0 w-fit">
-                <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+              <div className="p-2 sm:p-3 rounded-lg mb-2 sm:mb-0 w-fit" style={{backgroundColor: '#f3f4f6'}}>
+                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-gray-600" />
               </div>
               <div className="sm:ml-4">
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Non démarrés</p>
+                <p className="text-xs sm:text-sm font-medium text-gray-600">{getActiveCasesLabel()}</p>
                 <p className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {getNotStartedCount()}
+                  {getActiveCasesCount()}/{useCases.length}
                 </p>
               </div>
             </div>
@@ -711,6 +729,8 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                 loading={loadingScore}
                 evaluatedCount={evaluatedCount}
                 totalCount={totalCount}
+                activeAverageScore={activeAverageScore}
+                activeEvaluatedCount={activeEvaluatedCount}
               />
             </div>
             <div className="bg-white rounded-xl shadow-sm">
@@ -718,13 +738,16 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
             </div>
           </div>
 
-          {/* Colonne droite - World Map */}
-          <div>
+          {/* Colonne droite - World Map et CategoryScores */}
+          <div className="space-y-6">
             <WorldMap
               deploymentCountries={getDeploymentCountries()}
               countryUseCaseCount={getCountryUseCaseCount()}
               className=""
             />
+            <div className="bg-white rounded-xl shadow-sm">
+              <CategoryScoresRegistry companyId={companyId} />
+            </div>
           </div>
         </div>
 

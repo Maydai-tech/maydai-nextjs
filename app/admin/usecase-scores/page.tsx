@@ -50,15 +50,21 @@ interface UseCaseWithScore {
   responses: any[]
 }
 
+// Score ≥ 75 : Vert foncé #0080a3 — Bon
+// Score ≥ 50 : Vert clair #c6eef8 — Moyen
+// Score ≥ 30 : Orange (orange) — Faible
+// Score < 30 : Rouge (red) — Critique
 function getScoreColor(score: number): string {
-  if (score >= 80) return 'text-green-600'
-  if (score >= 60) return 'text-yellow-600'
+  if (score >= 75) return 'text-[#0080a3]'
+  if (score >= 50) return 'text-[#0080a3]'
+  if (score >= 30) return 'text-orange-600'
   return 'text-red-600'
 }
 
 function getScoreBgColor(score: number): string {
-  if (score >= 80) return 'bg-green-100'
-  if (score >= 60) return 'bg-yellow-100'
+  if (score >= 75) return 'bg-[#0080a3]'
+  if (score >= 50) return 'bg-[#c6eef8]'
+  if (score >= 30) return 'bg-orange-100'
   return 'bg-red-100'
 }
 
