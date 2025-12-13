@@ -1301,11 +1301,15 @@ export default function ComplAIScoresPage() {
     setShowModelForm(true)
   }
 
+  // Score ≥ 75 : Vert foncé #0080a3 — Bon
+  // Score ≥ 50 : Vert clair #c6eef8 — Moyen
+  // Score ≥ 30 : Orange (orange) — Faible
+  // Score < 30 : Rouge (red) — Critique
   const getScoreColor = (score?: number, hasEvaluations = true) => {
     if (!score || !hasEvaluations) return 'bg-gray-100 text-gray-500'
-    if (score >= 0.75) return 'bg-green-100 text-green-800'
-    if (score >= 0.55) return 'bg-yellow-100 text-yellow-800'
-    if (score >= 0.40) return 'bg-orange-100 text-orange-800'
+    if (score >= 0.75) return 'bg-[#0080a3] text-white'
+    if (score >= 0.50) return 'bg-[#c6eef8] text-[#0080a3]'
+    if (score >= 0.30) return 'bg-orange-100 text-orange-800'
     return 'bg-red-100 text-red-800'
   }
 

@@ -15,3 +15,4 @@ WHERE table_schema = 'public'
 -- Résultat attendu si la colonne existe : 
 -- column_name      | data_type | is_nullable | column_default
 -- sub_category_id  | text      | YES         | NULL
+

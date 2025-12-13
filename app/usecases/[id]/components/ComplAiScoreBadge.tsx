@@ -78,12 +78,16 @@ export const ComplAiScoreBadge: React.FC<ComplAiScoreBadgeProps> = ({
 
   const scorePercentage = Math.round(score * 100)
   
-  // Couleurs basées sur le score
+  // Score ≥ 75 : Vert foncé #0080a3 — Bon
+  // Score ≥ 50 : Vert clair #c6eef8 — Moyen
+  // Score ≥ 30 : Orange (orange) — Faible
+  // Score < 30 : Rouge (red) — Critique
+  // Note: score est en décimal (0.75 = 75%)
   const getScoreColor = (score: number) => {
-    if (score >= 0.8) return 'text-green-600 bg-green-100'
-    if (score >= 0.6) return 'text-blue-600 bg-blue-100'
-    if (score >= 0.4) return 'text-yellow-600 bg-yellow-100'
-    return 'text-red-600 bg-red-100'
+    if (score >= 0.75) return 'text-white bg-[#0080a3]'
+    if (score >= 0.50) return 'text-[#0080a3] bg-[#c6eef8]'
+    if (score >= 0.30) return 'text-orange-800 bg-orange-100'
+    return 'text-red-800 bg-red-100'
   }
 
   const colorClass = getScoreColor(score)

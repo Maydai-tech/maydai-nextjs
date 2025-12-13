@@ -105,3 +105,4 @@ Si la migration cause des problèmes, exécuter :
 - Les profils existants auront `sub_category_id = NULL` jusqu'à ce qu'ils soient mis à jour
 - La migration est compatible avec les données existantes (colonne nullable)
 - La migration utilise `IF NOT EXISTS` donc elle est sûre à exécuter plusieurs fois
+

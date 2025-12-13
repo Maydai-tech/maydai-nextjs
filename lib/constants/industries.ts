@@ -172,3 +172,4 @@ export function getIndustryDisplayText(mainIndustryId: string, subCategoryId: st
   if (!mainLabel || !subLabel) return undefined;
   return `${mainLabel} > ${subLabel}`;
 }
+

@@ -79,7 +79,7 @@ export async function GET(
     // Fetch use cases with evaluated scores (score_final not null)
     const { data: usecases, error: usecasesError } = await supabase
       .from('usecases')
-      .select('id, name, score_final')
+      .select('id, name, score_final, deployment_date')
       .eq('company_id', id)
       .not('score_final', 'is', null)
 
@@ -93,6 +93,8 @@ export async function GET(
         average_score: null,
         evaluated_count: 0,
         total_count: 0,
+        active_average_score: null,
+        active_evaluated_count: 0,
         message: 'Aucun cas d\'usage évalué'
       })
     }
@@ -111,10 +113,36 @@ export async function GET(
     const totalScore = usecases.reduce((sum, usecase) => sum + (usecase.score_final || 0), 0)
     const averageScore = Math.round((totalScore / usecases.length) * 100) / 100
 
+    // Calculate average score for active use cases (deployment_date <= today)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const activeUsecases = usecases.filter(uc => {
+      if (!uc.deployment_date) return false
+      try {
+        const deployment = new Date(uc.deployment_date)
+        deployment.setHours(0, 0, 0, 0)
+        return deployment <= today
+      } catch (error) {
+        return false
+      }
+    })
+
+    let activeAverageScore = null
+    let activeEvaluatedCount = 0
+
+    if (activeUsecases.length > 0) {
+      const activeTotalScore = activeUsecases.reduce((sum, usecase) => sum + (usecase.score_final || 0), 0)
+      activeAverageScore = Math.round((activeTotalScore / activeUsecases.length) * 100) / 100
+      activeEvaluatedCount = activeUsecases.length
+    }
+
     return NextResponse.json({
       average_score: averageScore,
       evaluated_count: usecases.length,
       total_count: totalCount || 0,
+      active_average_score: activeAverageScore,
+      active_evaluated_count: activeEvaluatedCount,
       message: `Moyenne calculée sur ${usecases.length} cas d'usage évalués`
     })
 

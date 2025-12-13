@@ -11,3 +11,4 @@ DO $$
 BEGIN
     RAISE NOTICE 'Rollback terminé : colonne sub_category_id supprimée de la table profiles';
 END $$;
+

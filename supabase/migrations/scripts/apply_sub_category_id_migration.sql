@@ -20,3 +20,4 @@ DO $$
 BEGIN
     RAISE NOTICE 'Migration terminée : colonne sub_category_id ajoutée à la table profiles';
 END $$;
+
