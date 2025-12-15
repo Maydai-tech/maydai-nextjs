@@ -19,6 +19,7 @@ const allowedDocTypes = new Set([
   "training_census",
   "stopping_proof",
   "registry_proof",
+  "training_plan",
 ]);
 
 // Formats acceptés par type de document
@@ -61,6 +62,10 @@ const allowedFormats: Record<
   registry_proof: {
     extensions: [".pdf", ".png", ".jpg", ".jpeg"],
     description: "Documents et images (.pdf, .png, .jpg, .jpeg)",
+  },
+  training_plan: {
+    extensions: [".pdf", ".docx", ".xlsx", ".pptx", ".md"],
+    description: "Documents (.pdf, .docx, .xlsx, .pptx, .md)",
   },
 };
 
