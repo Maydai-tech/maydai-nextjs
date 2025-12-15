@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import ComplianceFileUpload from "@/components/ComplianceFileUpload";
 import MarkdownText from "@/components/Shared/MarkdownText";
+import ContactHelpCard from "./ContactHelpCard";
 
 interface UseCaseNextSteps {
   evaluation?: string;
@@ -19,8 +20,16 @@ interface UseCaseNextSteps {
   conclusion?: string;
 }
 
+interface UserProfile {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+}
+
 interface StoppingProofUploadStepProps {
   usecaseId: string;
+  companyId: string;
   nextSteps: UseCaseNextSteps | null;
   loadingNextSteps: boolean;
   selectedFile: File | null;
@@ -30,6 +39,7 @@ interface StoppingProofUploadStepProps {
     fileUrl: string | null;
     formData: Record<string, any> | null;
   } | null;
+  userProfile?: UserProfile;
   onFileSelected: (file: File) => void;
   onUpload: () => void;
   onDeleteDocument: () => void;
@@ -38,12 +48,14 @@ interface StoppingProofUploadStepProps {
 
 export default function StoppingProofUploadStep({
   usecaseId,
+  companyId,
   nextSteps,
   loadingNextSteps,
   selectedFile,
   uploadError,
   uploading,
   uploadedDocument,
+  userProfile,
   onFileSelected,
   onUpload,
   onDeleteDocument,
@@ -313,6 +325,13 @@ export default function StoppingProofUploadStep({
           </button>
         </div>
       )}
+
+      {/* Carte d'aide - Contact MaydAI ou Avocat */}
+      <ContactHelpCard
+        usecaseId={usecaseId}
+        companyId={companyId}
+        userProfile={userProfile}
+      />
     </div>
   );
 }

@@ -3,6 +3,13 @@ import DateEditStep from "./DateEditStep";
 import StoppingProofUploadStep from "./StoppingProofUploadStep";
 import FutureDeploymentWarningStep from "./FutureDeploymentWarningStep";
 
+interface UserProfile {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+}
+
 interface UnacceptableCaseWorkflowStepsProps {
   workflow: {
     step:
@@ -52,10 +59,12 @@ interface UnacceptableCaseWorkflowStepsProps {
   };
   deploymentDate?: string | null;
   usecaseId: string;
+  companyId: string;
   uploadedDocument?: {
     fileUrl: string | null;
     formData: Record<string, any> | null;
   } | null;
+  userProfile?: UserProfile;
   onReloadDocument?: (docKey: string) => Promise<void>;
 }
 
@@ -63,7 +72,9 @@ export default function UnacceptableCaseWorkflowSteps({
   workflow,
   deploymentDate,
   usecaseId,
+  companyId,
   uploadedDocument,
+  userProfile,
   onReloadDocument,
 }: UnacceptableCaseWorkflowStepsProps) {
   return (
@@ -90,12 +101,14 @@ export default function UnacceptableCaseWorkflowSteps({
       {workflow.step === "upload-proof" && (
         <StoppingProofUploadStep
           usecaseId={usecaseId}
+          companyId={companyId}
           nextSteps={workflow.nextSteps}
           loadingNextSteps={workflow.loadingNextSteps}
           selectedFile={workflow.selectedFile}
           uploadError={workflow.uploadError}
           uploading={workflow.updatingDate || workflow.deleting}
           uploadedDocument={uploadedDocument || null}
+          userProfile={userProfile}
           onFileSelected={workflow.handleFileSelected}
           onUpload={() =>
             workflow.handleUploadProof(usecaseId, async () => {
@@ -112,6 +125,7 @@ export default function UnacceptableCaseWorkflowSteps({
       {workflow.step === "future-deployment-warning" && (
         <FutureDeploymentWarningStep
           usecaseId={usecaseId}
+          companyId={companyId}
           deploymentDate={deploymentDate}
           nextSteps={workflow.nextSteps}
           loadingNextSteps={workflow.loadingNextSteps}
@@ -121,6 +135,7 @@ export default function UnacceptableCaseWorkflowSteps({
           textContent={workflow.textContent}
           savingText={workflow.savingText}
           uploadedDocument={uploadedDocument || null}
+          userProfile={userProfile}
           onFileSelected={workflow.handleFileSelected}
           onUpload={() =>
             workflow.handleUploadSystemPrompt(usecaseId, async () => {

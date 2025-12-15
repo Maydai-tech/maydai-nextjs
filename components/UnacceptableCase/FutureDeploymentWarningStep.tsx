@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import ComplianceFileUpload from "@/components/ComplianceFileUpload";
 import MarkdownText from "@/components/Shared/MarkdownText";
 import { formatDate } from "@/lib/utils/dateFormatters";
+import ContactHelpCard from "./ContactHelpCard";
 
 interface UseCaseNextSteps {
   evaluation?: string;
@@ -21,8 +22,16 @@ interface UseCaseNextSteps {
   conclusion?: string;
 }
 
+interface UserProfile {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+}
+
 interface FutureDeploymentWarningStepProps {
   usecaseId: string;
+  companyId: string;
   deploymentDate: string | null | undefined;
   nextSteps: UseCaseNextSteps | null;
   loadingNextSteps: boolean;
@@ -35,6 +44,7 @@ interface FutureDeploymentWarningStepProps {
     fileUrl: string | null;
     formData: Record<string, any> | null;
   } | null;
+  userProfile?: UserProfile;
   onFileSelected: (file: File) => void;
   onUpload: () => void;
   onTextChange: (text: string) => void;
@@ -46,6 +56,7 @@ interface FutureDeploymentWarningStepProps {
 
 export default function FutureDeploymentWarningStep({
   usecaseId,
+  companyId,
   deploymentDate,
   nextSteps,
   loadingNextSteps,
@@ -55,6 +66,7 @@ export default function FutureDeploymentWarningStep({
   textContent,
   savingText,
   uploadedDocument,
+  userProfile,
   onFileSelected,
   onUpload,
   onTextChange,
@@ -490,6 +502,13 @@ export default function FutureDeploymentWarningStep({
           </div>
         </div>
       )}
+
+      {/* Carte d'aide - Contact MaydAI ou Avocat */}
+      <ContactHelpCard
+        usecaseId={usecaseId}
+        companyId={companyId}
+        userProfile={userProfile}
+      />
     </div>
   );
 }

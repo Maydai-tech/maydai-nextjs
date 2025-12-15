@@ -138,6 +138,12 @@ export default function DossierDetailPage() {
   const [usecaseName, setUsecaseName] = useState<string>('')
   const [useCase, setUseCase] = useState<UseCase | null>(null)
   const [company, setCompany] = useState<any>(null)
+  const [userProfile, setUserProfile] = useState<{
+    first_name?: string
+    last_name?: string
+    email?: string
+    phone?: string
+  } | undefined>(undefined)
   const [documents, setDocuments] = useState<Record<string, DocumentData>>({})
   const [textContents, setTextContents] = useState<Record<string, string>>({})
   const [supervisorData, setSupervisorData] = useState({
@@ -359,6 +365,20 @@ export default function DossierDetailPage() {
         if (companyRes.ok) {
           const companyData = await companyRes.json()
           setCompany(companyData)
+        }
+
+        // Fetch user profile for contact form pre-filling
+        const profileRes = await fetch(`/api/profiles/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (profileRes.ok) {
+          const profileData = await profileRes.json()
+          setUserProfile({
+            first_name: profileData.first_name,
+            last_name: profileData.last_name,
+            email: user?.email,
+            phone: profileData.phone
+          })
         }
 
         // Fetch all documents (including stopping_proof for unacceptable cases)
@@ -769,11 +789,13 @@ export default function DossierDetailPage() {
               workflow={workflow}
               deploymentDate={useCase.deployment_date}
               usecaseId={usecaseId}
+              companyId={companyId}
               uploadedDocument={
                 workflow.step === 'future-deployment-warning'
                   ? documents['system_prompt']
                   : documents['stopping_proof']
               }
+              userProfile={userProfile}
               onReloadDocument={reloadDocument}
             />
           </div>
