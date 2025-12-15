@@ -768,6 +768,7 @@ export default function UseCaseDetailPage() {
           score_final: score?.score ?? null,
           deployment_date: useCase.deployment_date ?? null
         } : null}
+        companyId={useCase?.company_id ?? ''}
         onUpdateDeploymentDate={updateDeploymentDate}
         updating={updating}
         blockClosing={false}

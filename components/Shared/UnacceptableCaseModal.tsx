@@ -14,6 +14,7 @@ interface UnacceptableCaseModalProps {
     score_final?: number | null
     deployment_date?: string | null
   } | null
+  companyId: string
   onUpdateDeploymentDate?: (date: string) => Promise<void>
   updating?: boolean
   blockClosing?: boolean
@@ -25,6 +26,7 @@ export default function UnacceptableCaseModal({
   isOpen,
   onClose,
   useCase,
+  companyId,
   onUpdateDeploymentDate,
   updating = false,
   blockClosing = false,
@@ -105,6 +107,7 @@ export default function UnacceptableCaseModal({
             workflow={workflow}
             deploymentDate={useCase.deployment_date}
             usecaseId={useCase.id}
+            companyId={companyId}
             uploadedDocument={uploadedDocument}
             onReloadDocument={onReloadDocument}
           />

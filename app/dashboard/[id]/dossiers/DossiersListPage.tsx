@@ -431,6 +431,7 @@ export default function DossiersComplianceView() {
           setSelectedUseCase(null)
         }}
         useCase={selectedUseCase}
+        companyId={companyId}
         onUpdateDeploymentDate={handleUpdateDeploymentDate}
         updating={updatingDate}
       />
