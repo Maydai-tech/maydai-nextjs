@@ -4,6 +4,7 @@ import {
   getTodoActionMapping,
   syncTodoActionToResponse,
 } from '@/lib/todo-action-sync'
+import { recordUseCaseHistory } from '@/lib/usecase-history'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -191,6 +192,13 @@ export async function POST(
       if (insDocErr) return NextResponse.json({ error: 'Failed to insert document' }, { status: 500 })
     }
 
+    // Enregistrer l'événement dans l'historique du use case quand le document est complété
+    // Note: L'événement sera enrichi avec les infos de score après le calcul du scoreChange
+    let historyMetadata: Record<string, unknown> = {
+      doc_type: docType,
+      document_name: docType.replace(/_/g, ' ')
+    }
+
     // Check if this docType has a todo_action mapping and sync the response
     // Only trigger when document is being marked as complete
     let scoreChange = null
@@ -261,6 +269,20 @@ export async function POST(
           console.log('[POST /dossiers] Response was already set to positive value, no score update needed')
         }
       }
+    }
+
+    // Enregistrer l'événement dans l'historique si le document est complété
+    if (status === 'complete') {
+      // Enrichir les métadonnées avec les infos de score si disponibles
+      if (scoreChange) {
+        historyMetadata.previous_score = scoreChange.previousScore
+        historyMetadata.new_score = scoreChange.newScore
+        historyMetadata.score_change = scoreChange.pointsGained
+      }
+
+      await recordUseCaseHistory(supabase, usecaseId, user.id, 'document_uploaded', {
+        metadata: historyMetadata
+      })
     }
 
     return NextResponse.json({ ok: true, scoreChange })

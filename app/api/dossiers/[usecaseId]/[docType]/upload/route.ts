@@ -4,6 +4,7 @@ import {
   getTodoActionMapping,
   syncTodoActionToResponse,
 } from "@/lib/todo-action-sync";
+import { recordUseCaseHistory } from "@/lib/usecase-history";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -418,6 +419,23 @@ export async function PUT(
         console.log("[PUT /upload] Response was already set to positive value, no score update needed");
       }
     }
+
+    // Enregistrer l'événement d'upload dans l'historique du use case avec les infos de score
+    const historyMetadata: Record<string, unknown> = {
+      document_name: filename,
+      doc_type: docType
+    };
+
+    // Enrichir avec les infos de score si disponibles
+    if (scoreChange) {
+      historyMetadata.previous_score = scoreChange.previousScore;
+      historyMetadata.new_score = scoreChange.newScore;
+      historyMetadata.score_change = scoreChange.pointsGained;
+    }
+
+    await recordUseCaseHistory(supabase, usecaseId, user.id, 'document_uploaded', {
+      metadata: historyMetadata
+    });
 
     console.log("[PUT /upload] Upload completed successfully");
     return NextResponse.json({ ok: true, fileUrl, scoreChange });

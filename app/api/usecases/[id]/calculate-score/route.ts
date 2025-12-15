@@ -18,14 +18,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { 
-  calculateBaseScore, 
-  calculateFinalScore, 
+import {
+  calculateBaseScore,
+  calculateFinalScore,
   determineCompanyStatus,
   getCompanyStatusDefinition,
   COMPL_AI_MULTIPLIER,
-  type UserResponse 
+  type UserResponse
 } from '@/lib/score-calculator-simple';
+import { recordUseCaseHistory } from '@/lib/usecase-history';
 
 import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json';
 
@@ -195,9 +196,23 @@ export async function POST(
     
     console.log(`✅ Autorisation confirmée pour l'entreprise: ${usecase.company_id}`);
     
-    // ===== ÉTAPE 4: RÉCUPÉRATION DES RÉPONSES =====
+    // ===== ÉTAPE 4: RÉCUPÉRATION DU SCORE ACTUEL (AVANT RECALCUL) =====
+    console.log('📊 Récupération du score actuel avant recalcul...');
+
+    const { data: currentScoreData } = await supabase
+      .from('usecases')
+      .select('score_final, risk_level')
+      .eq('id', finalUsecaseId)
+      .single();
+
+    const previousScore = currentScoreData?.score_final ?? null;
+    const previousRiskLevel = currentScoreData?.risk_level ?? null;
+
+    console.log(`📈 Score actuel: ${previousScore}, Risque: ${previousRiskLevel}`);
+
+    // ===== ÉTAPE 5: RÉCUPÉRATION DES RÉPONSES =====
     console.log('📝 Récupération des réponses utilisateur...');
-    
+
     const { data: responses, error: responsesError } = await supabase
       .from('usecase_responses')
       .select('*')
@@ -339,9 +354,20 @@ export async function POST(
       console.error('❌ Erreur lors de la mise à jour:', updateError);
       return createErrorResponse('Impossible de mettre à jour les scores', 500);
     }
-    
+
     console.log('✅ Scores mis à jour avec succès');
-    
+
+    // Enregistrer l'événement de réévaluation dans l'historique avec l'évolution du score
+    await recordUseCaseHistory(supabase, finalUsecaseId, user.id, 'reevaluated', {
+      metadata: {
+        previous_score: previousScore,
+        new_score: finalResult.scores.score_final,
+        score_change: previousScore !== null ? Math.round((finalResult.scores.score_final - previousScore) * 100) / 100 : null,
+        previous_risk_level: previousRiskLevel,
+        new_risk_level: riskLevel
+      }
+    });
+
     // ===== ÉTAPE 9: RETOURNER LE RÉSULTAT =====
     console.log('🎉 === CALCUL TERMINÉ AVEC SUCCÈS ===');
     
