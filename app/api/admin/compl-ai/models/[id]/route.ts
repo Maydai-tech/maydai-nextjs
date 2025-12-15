@@ -1,30 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Vérifier l'authentification via l'en-tête Authorization
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Token d\'authentification manquant' }, { status: 401 })
-    }
-
-    // Obtenir l'utilisateur connecté avec le token
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Token invalide' }, { status: 401 })
-    }
+    // Authentification via le client Supabase authentifié
+    const { supabase, user } = await getAuthenticatedSupabaseClient(request)
 
     // Vérifier les droits admin
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+    if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
       return NextResponse.json({ error: 'Droits insuffisants' }, { status: 403 })
     }
 
@@ -79,14 +68,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Erreur lors de la mise à jour du modèle: ' + updateError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Modèle mis à jour avec succès', 
-      model: updatedModel 
+    return NextResponse.json({
+      success: true,
+      message: 'Modèle mis à jour avec succès',
+      model: updatedModel
     })
 
   } catch (error) {
     console.error('Erreur modification modèle COMPL-AI:', error)
+
+    // Erreurs d'authentification
+    if (error instanceof Error && (error.message === 'No authorization header' || error.message === 'Invalid token')) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
     return NextResponse.json({
       error: error instanceof Error ? error.message : 'Erreur interne du serveur'
     }, { status: 500 })
@@ -95,28 +90,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    // Vérifier l'authentification via l'en-tête Authorization
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Token d\'authentification manquant' }, { status: 401 })
-    }
-
-    // Obtenir l'utilisateur connecté avec le token
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Token invalide' }, { status: 401 })
-    }
+    // Authentification via le client Supabase authentifié
+    const { supabase, user } = await getAuthenticatedSupabaseClient(request)
 
     // Vérifier les droits admin
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+    if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
       return NextResponse.json({ error: 'Droits insuffisants' }, { status: 403 })
     }
 
@@ -154,13 +138,19 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'Erreur lors de la suppression du modèle: ' + deleteModelError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: `Modèle "${existingModel.model_name}" et toutes ses évaluations supprimés avec succès`
     })
 
   } catch (error) {
     console.error('Erreur suppression modèle COMPL-AI:', error)
+
+    // Erreurs d'authentification
+    if (error instanceof Error && (error.message === 'No authorization header' || error.message === 'Invalid token')) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
     return NextResponse.json({
       error: error instanceof Error ? error.message : 'Erreur interne du serveur'
     }, { status: 500 })

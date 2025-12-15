@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
+import { recordFieldChanges, FIELD_LABELS } from '@/lib/usecase-history'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -159,10 +160,10 @@ export async function PUT(
       }
     }
 
-    // Verify user has access to this use case
+    // Verify user has access to this use case and get current values for history tracking
     const { data: existingUseCase, error: useCaseError } = await supabase
       .from('usecases')
-      .select('company_id')
+      .select('company_id, primary_model_id, deployment_countries, deployment_date, description')
       .eq('id', useCaseId)
       .single()
 
@@ -220,6 +221,55 @@ export async function PUT(
       const context = createRequestContext(request)
       logger.error('Failed to update use case', updateError, { ...context, useCaseId })
       return NextResponse.json({ error: 'Error updating use case' }, { status: 500 })
+    }
+
+    // Enregistrer les modifications dans l'historique
+    const changes: Array<{ fieldName: string; oldValue: string | null; newValue: string | null }> = []
+
+    // Helper pour convertir les valeurs en string pour l'historique
+    const valueToString = (val: unknown): string | null => {
+      if (val === null || val === undefined) return null
+      if (Array.isArray(val)) return val.join(', ')
+      return String(val)
+    }
+
+    // Comparer et enregistrer les changements
+    if (primary_model_id !== undefined && existingUseCase.primary_model_id !== primary_model_id) {
+      changes.push({
+        fieldName: 'primary_model_id',
+        oldValue: valueToString(existingUseCase.primary_model_id),
+        newValue: valueToString(primary_model_id)
+      })
+    }
+    if (deployment_countries !== undefined) {
+      const oldCountries = valueToString(existingUseCase.deployment_countries)
+      const newCountries = valueToString(deployment_countries)
+      if (oldCountries !== newCountries) {
+        changes.push({
+          fieldName: 'deployment_countries',
+          oldValue: oldCountries,
+          newValue: newCountries
+        })
+      }
+    }
+    if (deployment_date !== undefined && existingUseCase.deployment_date !== deployment_date) {
+      changes.push({
+        fieldName: 'deployment_date',
+        oldValue: existingUseCase.deployment_date,
+        newValue: deployment_date
+      })
+    }
+    if (description !== undefined && existingUseCase.description !== description) {
+      changes.push({
+        fieldName: 'description',
+        oldValue: existingUseCase.description,
+        newValue: description
+      })
+    }
+
+    // Enregistrer les changements si il y en a
+    if (changes.length > 0) {
+      await recordFieldChanges(supabase, useCaseId, user.id, changes)
     }
 
     // Récupérer le profil si updated_by existe

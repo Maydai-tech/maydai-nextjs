@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { recordUseCaseHistory } from '@/lib/usecase-history'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -232,12 +233,15 @@ export async function POST(request: NextRequest) {
       console.error('Error code:', createError.code)
       console.error('Error hint:', createError.hint)
       console.error('Error details:', createError.details)
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Error creating use case',
         details: createError.message,
-        code: createError.code 
+        code: createError.code
       }, { status: 500 })
     }
+
+    // Enregistrer l'événement de création dans l'historique
+    await recordUseCaseHistory(supabase, usecase.id, user.id, 'created')
 
     console.log('Use case créé avec succès:', usecase)
     return NextResponse.json(usecase, { status: 201 })

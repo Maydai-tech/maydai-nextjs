@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 
 interface ClearResult {
   success: boolean
@@ -14,30 +14,19 @@ interface ClearResult {
 
 export async function POST(request: NextRequest) {
   try {
-    // Vérifier l'authentification via l'en-tête Authorization
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Token d\'authentification manquant' }, { status: 401 })
-    }
-
-    // Obtenir l'utilisateur connecté avec le token
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Token invalide' }, { status: 401 })
-    }
+    // Authentification via le client Supabase authentifié
+    const { supabase, user } = await getAuthenticatedSupabaseClient(request)
 
     // Vérifier les droits admin (admin et super_admin peuvent effacer toutes les données)
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
-      return NextResponse.json({ 
-        error: 'Droits insuffisants. Seuls les administrateurs peuvent effacer toutes les données.' 
+    if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'super_admin')) {
+      return NextResponse.json({
+        error: 'Droits insuffisants. Seuls les administrateurs peuvent effacer toutes les données.'
       }, { status: 403 })
     }
 
@@ -151,11 +140,16 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Erreur lors de la suppression des données COMPL-AI:', error)
-    
+
+    // Erreurs d'authentification
+    if (error instanceof Error && (error.message === 'No authorization header' || error.message === 'Invalid token')) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
     // Log détaillé pour le debugging
     const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue'
     const errorStack = error instanceof Error ? error.stack : 'Pas de stack trace'
-    
+
     console.error('Détails de l\'erreur:', {
       message: errorMessage,
       stack: errorStack,

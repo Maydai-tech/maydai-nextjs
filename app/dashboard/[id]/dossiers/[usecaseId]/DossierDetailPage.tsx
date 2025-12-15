@@ -39,6 +39,19 @@ const REGISTRY_PROOF_DOC = {
   type: 'file' as const
 }
 
+const TRAINING_PLAN_DOC = {
+  key: 'training_plan',
+  label: 'Plan de formation',
+  description: 'Le plan de formation des équipes utilisant le système d\'IA.',
+  helpInfo: 'Document décrivant le programme de formation des utilisateurs du système d\'IA : objectifs de formation, contenus couverts, fréquence des sessions, et méthodes d\'évaluation des compétences acquises.',
+  acceptedFormats: '.pdf,.docx,.xlsx,.pptx,.md',
+  type: 'mixed' as const,
+  textLabel: 'Description du plan de formation',
+  textPlaceholder: 'Décrivez le programme de formation des utilisateurs...',
+  fileLabel: 'Document de formation (optionnel)',
+  fileHelpText: 'Plan de formation détaillé'
+}
+
 const DOC_TYPES = [
   SYSTEM_PROMPT_DOC,
   {
@@ -63,7 +76,11 @@ const DOC_TYPES = [
     description: 'Décrivez comment le contenu généré par l\'IA est marqué comme tel (ex: "Généré par IA", watermark, disclaimer).',
     helpInfo: 'Prouver que l\'utilisateur final est informé qu\'il interagit avec une IA (transparence), comme l\'exige l\'IA Act. Vous pouvez fournir une description textuelle et/ou un exemple visuel (capture d\'écran).',
     acceptedFormats: '.png,.jpg,.jpeg,.gif',
-    type: 'mixed'
+    type: 'mixed',
+    textLabel: 'Description du marquage',
+    textPlaceholder: 'Décrivez comment le contenu généré par l\'IA est marqué...',
+    fileLabel: 'Exemple visuel (optionnel)',
+    fileHelpText: 'Capture d\'écran montrant le marquage'
   },
   {
     key: 'risk_management',
@@ -89,7 +106,8 @@ const DOC_TYPES = [
     acceptedFormats: '.pdf,.docx',
     type: 'file'
   },
-  REGISTRY_PROOF_DOC
+  REGISTRY_PROOF_DOC,
+  TRAINING_PLAN_DOC
 ]
 
 interface DocumentData {
@@ -1235,12 +1253,12 @@ export default function DossierDetailPage() {
                     <div className="space-y-4 px-6 pb-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Description du marquage
+                          {docType.textLabel || 'Description'}
                         </label>
                         <textarea
                           value={textContents[docType.key] || ''}
                           onChange={(e) => setTextContents({ ...textContents, [docType.key]: e.target.value })}
-                          placeholder="Décrivez comment le contenu généré par l'IA est marqué..."
+                          placeholder={docType.textPlaceholder || 'Entrez une description...'}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
                           rows={4}
                         />
@@ -1273,8 +1291,8 @@ export default function DossierDetailPage() {
                         ) : (
                           <>
                             <ComplianceFileUpload
-                              label="Exemple visuel (optionnel)"
-                              helpText={`Capture d'écran montrant le marquage. Formats acceptés: ${docType.acceptedFormats}`}
+                              label={docType.fileLabel || 'Fichier (optionnel)'}
+                              helpText={`${docType.fileHelpText || 'Document associé'}. Formats acceptés: ${docType.acceptedFormats}`}
                               acceptedFormats={docType.acceptedFormats}
                               onFileSelected={(file) => handleFileUpload(docType.key, file)}
                             />

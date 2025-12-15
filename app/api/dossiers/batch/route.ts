@@ -15,6 +15,7 @@ const allowedDocTypes = new Set([
   'training_census',
   'stopping_proof',
   'registry_proof',
+  'training_plan',
 ])
 
 async function getClientFromAuth(request: NextRequest) {

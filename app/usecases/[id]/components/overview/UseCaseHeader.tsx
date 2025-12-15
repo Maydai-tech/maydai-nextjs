@@ -6,7 +6,7 @@ import { ComplAIModel } from '@/lib/supabase'
 import { getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
 import { useCaseRoutes } from '../../utils/routes'
 import { useUseCaseNavigation } from '../../utils/navigation'
-import { ArrowLeft, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle, Trash2, Download, UserPlus, Calendar } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle, Trash2, Download, UserPlus, Calendar, History } from 'lucide-react'
 import Image from 'next/image'
 import ModelSelectorModal from '../ModelSelectorModal'
 import DeleteConfirmationModal from '../DeleteConfirmationModal'
@@ -23,6 +23,7 @@ import { useCompanyInfo } from '../../hooks/useCompanyInfo'
 import InviteScopeChoiceModal from '@/components/Collaboration/InviteScopeChoiceModal'
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
 import { DatePickerModal } from '../shared/DatePickerModal'
+import UseCaseHistoryModal from './UseCaseHistoryModal'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
 
@@ -129,6 +130,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const [isScopeChoiceModalOpen, setIsScopeChoiceModalOpen] = useState(false)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [inviteScope, setInviteScope] = useState<'company' | 'registry'>('registry')
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
 
   // État pour l'édition de la date de déploiement
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
@@ -356,6 +358,15 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           >
             <Trash2 className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
             <span className="text-sm font-medium">Supprimer</span>
+          </button>
+
+          <button
+            onClick={() => setIsHistoryModalOpen(true)}
+            className="group inline-flex items-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-blue-50 rounded-lg px-3 py-2"
+            title="Voir l'historique des modifications"
+          >
+            <History className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+            <span className="text-sm font-medium">Historique</span>
           </button>
         </div>
       </div>
@@ -591,6 +602,14 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         currentDate={useCase.deployment_date}
         title="Date de déploiement"
         saving={isSavingDeploymentDate}
+      />
+
+      {/* Modal d'historique des modifications */}
+      <UseCaseHistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        usecaseId={useCase.id}
+        usecaseName={useCase.name}
       />
     </div>
   )
