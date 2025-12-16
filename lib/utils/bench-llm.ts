@@ -26,23 +26,23 @@ export function formatBenchmarkValue(
 
   switch (type) {
     case 'rank':
-      return typeof value === 'number' ? value.toString() : value
+      return typeof value === 'number' ? value.toString() : (value || '-')
     case 'cost':
       if (typeof value === 'number') {
         return `$${value.toFixed(2)}`
       }
-      return value
+      return typeof value === 'string' ? value : '-'
     case 'percentage':
       if (typeof value === 'number') {
         return `${value.toFixed(1)}%`
       }
-      return value
+      return typeof value === 'string' ? value : '-'
     case 'number':
       if (typeof value === 'number') {
         // Formater les grands nombres avec des espaces
         return value.toLocaleString('fr-FR')
       }
-      return value
+      return typeof value === 'string' ? value : '-'
     case 'date':
       if (typeof value === 'string') {
         try {
@@ -56,10 +56,10 @@ export function formatBenchmarkValue(
           return value
         }
       }
-      return value
+      return typeof value === 'number' ? value.toString() : '-'
     case 'text':
     default:
-      return value.toString()
+      return typeof value === 'string' ? value : (typeof value === 'number' ? value.toString() : '-')
   }
 }
 
