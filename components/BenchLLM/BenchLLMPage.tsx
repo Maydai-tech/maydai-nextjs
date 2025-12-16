@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useAuth } from '@/lib/auth'
 import { Search, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import type { BenchLLMModel, BenchLLMFilters, BenchLLMSort, BenchLLMPagination, SortableColumn } from '@/lib/types/bench-llm'
-import { formatBenchmarkValue, getCountryFlag, isMultimodal, isLongContext, isSmallModel, isOpenSource, formatContextLength, formatConsumption } from '@/lib/utils/bench-llm'
+import { formatBenchmarkValue, getCountryFlag, isLongContext, isSmallModel, isOpenSource, formatContextLength, formatConsumption } from '@/lib/utils/bench-llm'
 import { getProviderIcon } from '@/lib/provider-icons'
 
 const PROVIDERS = [
