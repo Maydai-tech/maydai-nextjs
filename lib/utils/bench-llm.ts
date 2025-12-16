@@ -90,11 +90,13 @@ export function getCountryFlag(country?: string | null): string {
 
 /**
  * Vérifie si un modèle est multimodal
- * Pour l'instant, on peut vérifier dans le model_type ou autres champs
+ * Note: Cette fonction retourne false par défaut car model_type n'est pas inclus dans BenchLLMModel
+ * Pour une implémentation complète, ajouter model_type au type BenchLLMModel
  */
 export function isMultimodal(model: BenchLLMModel): boolean {
-  // À adapter selon la structure réelle des données
-  return model.model_type?.toLowerCase().includes('multimodal') || false
+  // Pour l'instant, retourner false car model_type n'est pas disponible dans BenchLLMModel
+  // TODO: Ajouter model_type au type BenchLLMModel si nécessaire
+  return false
 }
 
 /**

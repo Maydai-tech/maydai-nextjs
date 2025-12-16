@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordUseCaseHistory } from '@/lib/usecase-history'
+import { getRegistryOwnerPlan } from '@/lib/subscription/user-plan'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -179,10 +180,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Company not found or access denied' }, { status: 403 })
     }
 
-    // Only owners can create use cases (collaborators cannot)
-    if (userCompany.role !== 'owner' && userCompany.role !== 'company_owner') {
-      console.error('User is not an owner, cannot create use case')
-      return NextResponse.json({ error: 'Only company owners can create use cases' }, { status: 403 })
+    // Vérifier les limites du plan du propriétaire du registre
+    const ownerPlan = await getRegistryOwnerPlan(company_id, supabase)
+    const maxUseCases = ownerPlan.planInfo.maxUseCasesPerRegistry || 3
+
+    // Compter les use cases existants pour ce registre
+    const { count: currentUseCaseCount, error: countError } = await supabase
+      .from('usecases')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', company_id)
+
+    if (countError) {
+      console.error('Erreur lors du comptage des use cases:', countError)
+      return NextResponse.json({ error: 'Error checking use case limit' }, { status: 500 })
+    }
+
+    if ((currentUseCaseCount || 0) >= maxUseCases) {
+      console.log('Limite de use cases atteinte:', currentUseCaseCount, '/', maxUseCases)
+      return NextResponse.json({
+        error: 'Limite du plan atteinte',
+        limit: maxUseCases,
+        current: currentUseCaseCount
+      }, { status: 403 })
     }
 
     // Parse deployment_countries from string to array if needed

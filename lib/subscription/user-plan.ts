@@ -167,3 +167,63 @@ export async function isFreemiumUser(userId: string, supabaseClient?: SupabaseCl
   const userPlan = await getCurrentUserPlan(userId, supabaseClient)
   return userPlan.planInfo.isFree
 }
+
+/**
+ * Récupère le plan du propriétaire d'un registre (company)
+ * Utile pour vérifier les limites du plan lors de la création de use cases par des collaborateurs
+ *
+ * @param companyId - L'ID du registre (company)
+ * @param supabaseClient - Client Supabase authentifié (requis pour les requêtes RLS)
+ * @returns Les données du plan du propriétaire du registre
+ *
+ * @example
+ * ```typescript
+ * const ownerPlan = await getRegistryOwnerPlan(companyId, supabase)
+ * const maxUseCases = ownerPlan.planInfo.maxUseCasesPerRegistry
+ * ```
+ */
+export async function getRegistryOwnerPlan(
+  companyId: string,
+  supabaseClient: SupabaseClient
+): Promise<UserPlanData> {
+  if (!companyId) {
+    const defaultPlan = await getDefaultPlan()
+    return {
+      subscription: null,
+      planInfo: defaultPlan,
+      hasActiveSubscription: false
+    }
+  }
+
+  try {
+    // Récupérer l'owner du registre via user_companies
+    const { data: ownerData, error: ownerError } = await supabaseClient
+      .from('user_companies')
+      .select('user_id')
+      .eq('company_id', companyId)
+      .in('role', ['owner', 'company_owner'])
+      .limit(1)
+      .single()
+
+    if (ownerError || !ownerData) {
+      console.error('Erreur lors de la récupération du propriétaire du registre:', ownerError)
+      const defaultPlan = await getDefaultPlan()
+      return {
+        subscription: null,
+        planInfo: defaultPlan,
+        hasActiveSubscription: false
+      }
+    }
+
+    // Récupérer le plan du propriétaire
+    return await getCurrentUserPlan(ownerData.user_id, supabaseClient)
+  } catch (error) {
+    console.error('Erreur inattendue lors de la récupération du plan du propriétaire:', error)
+    const defaultPlan = await getDefaultPlan()
+    return {
+      subscription: null,
+      planInfo: defaultPlan,
+      hasActiveSubscription: false
+    }
+  }
+}
