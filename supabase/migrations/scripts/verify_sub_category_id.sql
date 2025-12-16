@@ -16,3 +16,4 @@ WHERE table_schema = 'public'
 -- column_name      | data_type | is_nullable | column_default
 -- sub_category_id  | text      | YES         | NULL
 
+
