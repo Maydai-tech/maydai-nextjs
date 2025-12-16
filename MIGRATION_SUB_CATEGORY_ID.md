@@ -106,3 +106,4 @@ Si la migration cause des problèmes, exécuter :
 - La migration est compatible avec les données existantes (colonne nullable)
 - La migration utilise `IF NOT EXISTS` donc elle est sûre à exécuter plusieurs fois
 
+

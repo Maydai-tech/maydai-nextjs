@@ -29,3 +29,4 @@ SELECT
     COUNT(*) - COUNT(sub_category_id) as profiles_without_sub_category
 FROM profiles;
 
+

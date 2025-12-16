@@ -1,12 +1,15 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
 import { UseCase } from '../../types/usecase'
 import { useEvaluation } from '../../hooks/useEvaluation'
 import { QuestionRenderer } from './QuestionRenderer'
 import { ProcessingAnimation } from '../ProcessingAnimation'
-import { ChevronLeft, ChevronRight, CheckCircle, AlertCircle, UserPlus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CheckCircle, AlertCircle, UserPlus, ArrowLeft } from 'lucide-react'
 import Tooltip from '@/components/Tooltip'
 import { useAuth } from '@/lib/auth'
 import { useCompanyInfo } from '../../hooks/useCompanyInfo'
+import { useCaseRoutes } from '../../utils/routes'
 import InviteScopeChoiceModal from '@/components/Collaboration/InviteScopeChoiceModal'
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
 
@@ -32,10 +35,37 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
   const { session } = useAuth()
   const { isOwner } = useCompanyInfo(useCase.company_id)
 
+  // État pour le nom de la company
+  const [companyName, setCompanyName] = useState<string | null>(
+    useCase.companies?.name || null
+  )
+
   // États pour les modals de collaboration
   const [isScopeChoiceModalOpen, setIsScopeChoiceModalOpen] = useState(false)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [inviteScope, setInviteScope] = useState<'company' | 'registry'>('registry')
+
+  // Récupérer le nom de la company si non disponible dans useCase.companies
+  useEffect(() => {
+    if (!companyName && useCase.company_id && session?.access_token) {
+      const fetchCompanyName = async () => {
+        try {
+          const response = await fetch(`/api/companies/${useCase.company_id}`, {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          })
+          if (response.ok) {
+            const data = await response.json()
+            setCompanyName(data.name || null)
+          }
+        } catch (error) {
+          console.warn('Error fetching company name:', error)
+        }
+      }
+      fetchCompanyName()
+    }
+  }, [companyName, useCase.company_id, session?.access_token])
 
   // Hook personnalisé qui gère toute la logique d'évaluation
   const {
@@ -136,19 +166,35 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
-        {/* Bouton Inviter un collaborateur - visible uniquement pour les owners */}
-        {isOwner && (
-          <div className="flex justify-end mb-4">
-            <button
-              onClick={handleInviteClick}
-              className="group inline-flex items-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-blue-50 rounded-lg px-3 py-2"
-              title="Inviter un collaborateur"
-            >
-              <UserPlus className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-              <span className="text-sm font-medium">Inviter un collaborateur</span>
-            </button>
+        {/* Header avec navigation et informations du cas d'usage */}
+        <div className="text-center mb-8">
+          <Link
+            href={useCaseRoutes.dashboard(useCase.company_id)}
+            className="inline-flex items-center text-gray-600 hover:text-[#0080A3] transition-colors mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            <span className="text-sm font-medium">Retour au dashboard</span>
+          </Link>
+
+          <div className="flex items-center justify-center mb-4">
+            <div className="bg-[#0080A3]/10 p-3 rounded-lg">
+              <Image
+                src="/icons_dash/technology.png"
+                alt="Icône technologie"
+                width={32}
+                height={32}
+                className="h-8 w-8"
+              />
+            </div>
           </div>
-        )}
+
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">
+            {useCase.name || "Nouveau cas d'usage IA"}
+          </h1>
+          <p className="text-gray-600">
+            Registre : {companyName || 'Chargement...'}
+          </p>
+        </div>
 
         {/* Barre de progression */}
         <div className="mb-8">
@@ -202,13 +248,13 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
           />
         </div>
 
-        {/* Barre de navigation avec boutons Précédent/Suivant */}
-        <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+        {/* Barre de navigation avec boutons Précédent/Inviter/Suivant */}
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0 pt-6 border-t border-gray-200">
           {/* Bouton Précédent */}
           <button
             onClick={handlePrevious}
             disabled={!canGoBack}
-            className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            className={`inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
               canGoBack
                 ? 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
                 : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
@@ -217,6 +263,18 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
             <ChevronLeft className="h-4 w-4 mr-2" />
             Précédent
           </button>
+
+          {/* Bouton Inviter un collaborateur - visible uniquement pour les owners */}
+          {isOwner && (
+            <button
+              onClick={handleInviteClick}
+              className="group inline-flex items-center justify-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-blue-50 rounded-lg px-3 py-2"
+              title="Inviter un collaborateur"
+            >
+              <UserPlus className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+              <span className="text-sm font-medium">Inviter un collaborateur</span>
+            </button>
+          )}
 
           {/* Conteneur pour les boutons d'action (Suivant/Terminer) */}
           <div className="flex space-x-3">

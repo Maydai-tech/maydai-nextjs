@@ -77,3 +77,4 @@ export const useRegistryCategoryScores = (companyId: string, autoFetch: boolean 
   }
 }
 
+
