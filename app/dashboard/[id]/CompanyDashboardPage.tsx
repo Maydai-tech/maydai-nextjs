@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
-import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
+import { useRegistryOwnerPlan } from '@/app/abonnement/hooks/useRegistryOwnerPlan'
 import { getProviderIcon } from '@/lib/provider-icons'
 import {
   ArrowLeft,
@@ -90,7 +90,7 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
   const [useCaseToDelete, setUseCaseToDelete] = useState<UseCase | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showUseCaseLimitModal, setShowUseCaseLimitModal] = useState(false)
-  const { plan } = useUserPlan()
+  const { plan } = useRegistryOwnerPlan(companyId)
 
   // Average score state
   const [averageScore, setAverageScore] = useState<number | null>(null)
