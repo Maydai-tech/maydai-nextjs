@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, User, Menu, X, Users, FileText, CheckSquare, Settings, House } from 'lucide-react';
+import { Home, User, Menu, X, Users, FileText, CheckSquare, Settings, House, BarChart } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useApiCall } from '@/lib/api-client-legacy';
@@ -175,6 +175,11 @@ export default function Sidebar() {
     return '/dashboard/registries';
   };
 
+  // Determine Bench LLM URL (fixed route, not dependent on context)
+  const getBenchLLMUrl = () => {
+    return '/bench-llm';
+  };
+
   const mainMenuItems = [
     {
       name: 'Dashboard',
@@ -200,6 +205,11 @@ export default function Sidebar() {
       name: 'Paramètres',
       href: getSettingsUrl(),
       icon: Settings
+    },
+    {
+      name: 'Bench LLM',
+      href: getBenchLLMUrl(),
+      icon: BarChart
     }
   ];
 
@@ -257,6 +267,7 @@ export default function Sidebar() {
             // Dossiers should be highlighted when on dossiers pages
             // Collaboration should be highlighted when on company collaboration pages only
             // Paramètres should be highlighted when on settings pages
+            // Bench LLM should be highlighted when on /bench-llm
             const isActive = item.name === 'Dashboard'
               ? (pathname === item.href || pathname.startsWith('/usecases/'))
               : item.name === 'Dossiers'
@@ -267,7 +278,9 @@ export default function Sidebar() {
                     ? pathname.includes('/collaboration') && pathname.startsWith('/dashboard/')
                     : item.name === 'Paramètres'
                       ? pathname.includes('/settings') && pathname.startsWith('/dashboard/')
-                      : pathname === item.href;
+                      : item.name === 'Bench LLM'
+                        ? pathname === '/bench-llm'
+                        : pathname === item.href;
 
             return (
               <Link

@@ -154,6 +154,20 @@ export interface ComplAIModel {
   notes_short?: string
   notes_long?: string
   variants?: string[]
+  llm_leader_rank?: number | null
+  compl_ai_rank?: number | null
+  comparia_rank?: number | null
+  input_cost_per_million?: number | null
+  output_cost_per_million?: number | null
+  model_size?: string | null
+  gpqa_score?: number | null
+  aime_2025_score?: number | null
+  license?: string | null
+  context_length?: number | null
+  consumption_wh_per_1k_tokens?: number | null
+  release_date?: string | null
+  knowledge_cutoff?: string | null
+  country?: string | null
   created_at: string
   updated_at: string
 }
