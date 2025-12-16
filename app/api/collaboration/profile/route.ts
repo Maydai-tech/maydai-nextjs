@@ -149,12 +149,36 @@ export async function POST(request: NextRequest) {
       .eq('id', collaboratorProfileId)
       .single()
 
+    // Get inviter's profile for name and company name
+    const { data: inviterProfile, error: inviterProfileError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, company_name')
+      .eq('id', user.id)
+      .single()
+
+    console.log('📧 [Profile Route] Inviter profile query:', {
+      userId: user.id,
+      inviterProfile,
+      inviterProfileError
+    })
+
+    const inviterFullName = inviterProfile?.first_name && inviterProfile?.last_name
+      ? `${inviterProfile.first_name} ${inviterProfile.last_name}`
+      : 'Équipe MaydAI'
+
+    console.log('📧 [Profile Route] Email params:', {
+      collaboratorEmail: email,
+      collaboratorFirstName: firstName,
+      inviterName: inviterFullName,
+      orgName: inviterProfile?.company_name || 'votre organisation'
+    })
+
     // Envoi email via Mailjet (non-bloquant, ne fait pas échouer la création)
     sendAccountCollaborationInvite({
       collaboratorEmail: email,
       collaboratorFirstName: firstName,
-      collaboratorLastName: lastName,
-      inviterName: user.user_metadata?.first_name || 'Équipe MaydAI'
+      inviterName: inviterFullName,
+      orgName: inviterProfile?.company_name || 'votre organisation'
     }).catch(err => {
       console.error('Failed to send account invitation email:', err)
       // Continue silently, email failure doesn't block user creation
