@@ -31,6 +31,7 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
     '/collaboration',
     '/abonnement',
     '/usecases',
+    '/bench-llm',
   ];
 
   // Pages à exclure de la sidebar même si elles commencent par un préfixe autorisé
