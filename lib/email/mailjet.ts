@@ -3,11 +3,12 @@ import Mailjet from 'node-mailjet';
 // Configuration
 const TEMPLATES = {
   COLLABORATION_INVITE: 7438322, // Template pour invitation au niveau registre
-  ACCOUNT_COLLABORATION_INVITE: 7438326 // Template pour invitation au niveau compte
+  ACCOUNT_COLLABORATION_INVITE: 7576574 // Template pour invitation au niveau compte
 } as const;
 
 const FROM_EMAIL = 'tech@maydai.io';
 const FROM_NAME = 'MaydAI';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.maydai.io';
 
 // Client Mailjet
 const mailjet = Mailjet.apiConnect(
@@ -19,22 +20,20 @@ const mailjet = Mailjet.apiConnect(
 export async function sendRegistryCollaborationInvite({
   collaboratorEmail,
   collaboratorFirstName,
-  collaboratorLastName,
   inviterName,
   companyName
 }: {
   collaboratorEmail: string;
   collaboratorFirstName: string;
-  collaboratorLastName: string;
   inviterName: string;
   companyName: string;
 }) {
+  const ctaLink = `${APP_URL}/login?email=${encodeURIComponent(collaboratorEmail)}`;
   const variables = {
+    firstName: collaboratorFirstName,
+    inviterName: inviterName,
     registryName: companyName,
-    inviter_name: inviterName,
-    first_name: collaboratorFirstName,
-    last_name: collaboratorLastName,
-    email: collaboratorEmail
+    ctaLink: ctaLink
   };
 
   try {
@@ -50,7 +49,7 @@ export async function sendRegistryCollaborationInvite({
             To: [
               {
                 Email: collaboratorEmail,
-                Name: `${collaboratorFirstName} ${collaboratorLastName}`
+                Name: collaboratorFirstName
               }
             ],
             TemplateID: TEMPLATES.COLLABORATION_INVITE,
@@ -88,19 +87,20 @@ export async function sendRegistryCollaborationInvite({
 export async function sendAccountCollaborationInvite({
   collaboratorEmail,
   collaboratorFirstName,
-  collaboratorLastName,
-  inviterName
+  inviterName,
+  orgName
 }: {
   collaboratorEmail: string;
   collaboratorFirstName: string;
-  collaboratorLastName: string;
   inviterName: string;
+  orgName: string;
 }) {
+  const ctaLink = `${APP_URL}/login?email=${encodeURIComponent(collaboratorEmail)}`;
   const variables = {
-    inviter_name: inviterName,
-    first_name: collaboratorFirstName,
-    last_name: collaboratorLastName,
-    email: collaboratorEmail
+    firstName: collaboratorFirstName,
+    inviterName: inviterName,
+    orgName: orgName,
+    ctaLink: ctaLink
   };
 
   console.log('📧 [Mailjet] Sending account collaboration invite:', {
@@ -123,7 +123,7 @@ export async function sendAccountCollaborationInvite({
             To: [
               {
                 Email: collaboratorEmail,
-                Name: `${collaboratorFirstName} ${collaboratorLastName}`
+                Name: collaboratorFirstName
               }
             ],
             TemplateID: TEMPLATES.ACCOUNT_COLLABORATION_INVITE,

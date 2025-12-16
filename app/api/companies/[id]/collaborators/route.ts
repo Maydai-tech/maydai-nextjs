@@ -173,12 +173,22 @@ export async function POST(
       .eq('id', companyId)
       .single()
 
+    // Get inviter's profile for full name
+    const { data: inviterProfile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('id', user.id)
+      .single()
+
+    const inviterFullName = inviterProfile?.first_name && inviterProfile?.last_name
+      ? `${inviterProfile.first_name} ${inviterProfile.last_name}`
+      : 'Équipe MaydAI'
+
     // Envoi email via Mailjet (non-bloquant, ne fait pas échouer la création)
     sendRegistryCollaborationInvite({
       collaboratorEmail: email,
       collaboratorFirstName: firstName,
-      collaboratorLastName: lastName,
-      inviterName: user.user_metadata?.first_name || 'Équipe MaydAI',
+      inviterName: inviterFullName,
       companyName: company?.name || 'votre entreprise'
     }).catch(err => {
       console.error('Failed to send invitation email:', err)
