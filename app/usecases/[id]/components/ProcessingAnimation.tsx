@@ -137,7 +137,7 @@ export function ProcessingAnimation({ isVisible, onComplete }: ProcessingAnimati
             Analyse en cours...
           </h2>
           <p className="text-gray-600">
-            Votre cas d'usage est en cours d'évaluation par notre intelligence artificielle
+            Votre cas d'usage est en cours d'analyse pour une première évaluation
           </p>
         </div>
 
