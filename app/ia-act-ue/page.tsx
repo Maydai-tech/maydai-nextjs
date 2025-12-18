@@ -98,9 +98,9 @@ export default function IAActUEPage() {
 
                   {/* Section Introduction */}
                   <section id="introduction" className="mb-12">
-                    <h2 className="text-3xl font-bold text-[#0080a3] mb-6">L'AI Act : Le Gardien de l'Esprit Humain dans le Royaume de l&apos;IA</h2>
+                    <h2 className="text-3xl font-bold text-[#0080a3] mb-6">L'AI Act : Le Gardien des principes éthiques dans le royaume débridés des IA(s)</h2>
                     <p className="text-lg leading-relaxed mb-6">
-                      Ah, l'Intelligence Artificielle ! Cette étrange créature, fruit de nos calculs et de nos aspirations les plus folles, qui, tel un golem numérique, s'apprête à transformer nos vies. Mais comme tout pouvoir naissant, l'IA charrie avec elle son lot de mystères et de dangers. C'est ici qu'intervient l'AI Act, ce texte singulier né du cerveau collectif européen, unique au monde en son genre, pour veiller au grain. Il n'est pas question de brider l'ingéniosité, mais de s'assurer que notre âme, nos libertés, notre bonne vieille démocratie ne finissent pas en pâture algorithmique. C'est l'Europe qui, la première, ose regarder cette énigme en face, avec un mélange de sagesse et de cette pointe de mélancolie clairvoyante propre à ceux qui ont déjà vu quelques soleils se coucher.
+                      Ah, l'Intelligence Artificielle ! Cette étrange créature, fruit de nos calculs et de nos aspirations les plus folles, qui, tel un goliath numérique, s'apprête à transformer nos vies profodémment. Mais comme tout pouvoir naissant, l'IA charrie avec elle son lot de mystères et de dangers. C'est ici qu'intervient l'AI Act, ce texte singulier né du cerveau collectif européen, unique au monde en son genre, pour veiller au grain. Il n'est pas question de brider l'ingéniosité, mais de s'assurer que notre âme, nos libertés, notre bonne vieille démocratie ne finissent pas en pâture algorithmique. C'est l'Europe qui, la première, ose regarder cette énigme en face, avec un mélange de sagesse et de cette pointe de mélancolie clairvoyante propre à ceux qui ont déjà vu quelques soleils se coucher.
                     </p>
                   </section>
 
@@ -148,7 +148,7 @@ export default function IAActUEPage() {
                       </div>
 
                       <div>
-                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Robustesse Technique et Sécurité : Le Chevalier sans Peur (mais sans Tâche)</h3>
+                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Robustesse Technique et Sécurité : La Cybersécurité, nouveau Cheval de Bataille</h3>
                         <p className="leading-relaxed text-gray-800">
                           Les systèmes doivent être infaillibles, résilients, et se prémunir contre les mauvaises intentions. On ne veut pas d'une IA qui trébuche ou qui se laisse corrompre.
                         </p>
@@ -162,7 +162,7 @@ export default function IAActUEPage() {
                       </div>
 
                       <div>
-                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Transparence : Le Cœur à Nu</h3>
+                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Transparence : Le Besoin de Confiance Exacerbé</h3>
                         <p className="leading-relaxed text-gray-800">
                           Que l'IA nous dise ce qu'elle fait, comment elle le fait. Pas de zones d'ombre, pas de boîtes noires mystérieuses. On veut savoir à qui l'on parle.
                         </p>
@@ -176,7 +176,7 @@ export default function IAActUEPage() {
                       </div>
 
                       <div>
-                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Bien-être Sociétal et Environnemental : La Sentinelle de Demain</h3>
+                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Bien-être Sociétal et Environnemental : La Sentinelle d&apos;un Avenir plus Serein</h3>
                         <p className="leading-relaxed text-gray-800">
                           L'IA se doit d'être une amie de la planète, durable, respectueuse, et œuvrant pour le bien de tous. Une vision à long terme, pour que l'humanité ne se réveille pas un jour avec la gueule de bois.
                         </p>

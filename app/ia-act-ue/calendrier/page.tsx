@@ -46,14 +46,14 @@ export default function IaActAgendaPage() {
     },
     {
       date: "2 août 2026",
-      title: "Le Grand Jour de la Responsabilité",
+      title: "Le Grand Jour de la Responsabilité pour toutes les Entreprises",
       description: "La majorité des dispositions de l'AI Act deviennent la norme. Les systèmes d'IA « à haut risque » doivent se conformer à des exigences strictes et les « bacs à sable réglementaires » doivent être opérationnels.",
       details: "Application pleine et entière de l'AI Act. Conformité obligatoire pour tous les systèmes à haut risque : évaluation de conformité, gestion des risques, traçabilité, transparence, surveillance humaine. Mise en place des bacs à sable réglementaires pour tester l'IA dans un environnement contrôlé.",
       impact: "Toutes les entreprises développant ou utilisant des systèmes d'IA à haut risque doivent être conformes. Processus d'audit et de certification obligatoires. Nouveaux coûts de conformité à intégrer."
     },
     {
       date: "2027 & 2030",
-      title: "Le Temps des Règlements de Comptes",
+      title: "Le Temps des Règlements de Comptes et des Ajustements",
       description: "Dernières échéances pour le grand rattrapage. Les systèmes à haut risque déjà sur le marché et les grands systèmes informatiques publics devront, eux aussi, se plier à la règle commune.",
       details: "2027 : Conformité obligatoire pour les systèmes à haut risque déjà commercialisés avant août 2026. 2030 : Conformité pour les grands systèmes informatiques publics (systèmes de gestion des dossiers, systèmes de gestion des ressources humaines, systèmes de gestion des finances publiques).",
       impact: "Les systèmes legacy doivent être mis à niveau ou remplacés. Investissements importants en modernisation des infrastructures publiques et privées. Dernière chance pour les entreprises de se conformer sans sanctions."
@@ -226,7 +226,7 @@ export default function IaActAgendaPage() {
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">Délais courts et complexes</h3>
                   </div>
                   <p className="text-gray-600 dark:text-gray-300">
-                    Seulement 24 mois de transition. Les processus de conformité peuvent prendre 6-12 mois selon la complexité de vos systèmes d'IA.
+                    Seulement 6 mois de transition pour les entreprises. Les processus de conformité peuvent prendre 6-12 mois selon la complexité de vos systèmes d'IA.
                   </p>
                 </div>
                 

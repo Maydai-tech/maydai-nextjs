@@ -9,7 +9,7 @@ export default function FeaturesSection() {
           <div className="flex flex-col items-center text-center p-6 bg-gray-50 rounded-xl shadow hover:shadow-lg transition">
             <Image src="/icons/dashboard.png" alt="Registre IA Act" width={64} height={64} className="w-16 h-16 mb-4" />
             <h3 className="text-xl font-semibold mb-2">Le Registre IA Act : votre tableau de bord de conformité</h3>
-            <p className="text-gray-600">Visualisez l&apos;état de conformité de tous vos projets IA en temps réel et identifiez les axes d&apos;amélioration.</p>
+            <p className="text-gray-600">Visualisez l&apos;état de conformité de tous vos projets IA en temps réel, identifiez les axes d&apos;amélioration et luttez contre le shadow IA dans votre entreprise.</p>
           </div>
           <div className="flex flex-col items-center text-center p-6 bg-gray-50 rounded-xl shadow hover:shadow-lg transition">
             <Image src="/icons/case.png" alt="Audits IA Act" width={64} height={64} className="w-16 h-16 mb-4" />

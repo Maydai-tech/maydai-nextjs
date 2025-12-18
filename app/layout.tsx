@@ -19,8 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MaydAI - Plateforme de Conformité AI Act | Audit IA Automatisé",
-  description: "MaydAI est la plateforme SaaS qui simplifie la mise en conformité avec l'AI Act européen. Audit automatisé, gestion centralisée et accompagnement expert pour développer des systèmes d'IA en toute confiance.",
+  title: "MaydAI - Plateforme de Conformité AI Act | Audit IA Assisté",
+  description: "MaydAI est la plateforme SaaS qui simplifie la mise en conformité avec l'AI Act européen. Audit assisté, gestion centralisée et accompagnement expert pour développer des systèmes d'IA en toute confiance.",
   keywords: "Audit AI Act, conformité IA, AI Act compliance, plateforme AI Act, réglementation européenne IA, logiciel conformité AI Act, outil analyse risque IA",
   authors: [{ name: "MaydAI", url: "https://www.maydai.io" }],
   creator: "MaydAI",
@@ -35,8 +35,8 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     url: "https://www.maydai.io",
     siteName: "MaydAI",
-    title: "MaydAI - Plateforme de Conformité AI Act | Audit IA Automatisé",
-    description: "MaydAI est la plateforme SaaS qui simplifie la mise en conformité avec l'AI Act européen. Audit automatisé, gestion centralisée et accompagnement expert.",
+    title: "MaydAI - Plateforme de Conformité AI Act | Audit IA Assisté",
+    description: "MaydAI est la plateforme SaaS qui simplifie la mise en conformité avec l'AI Act européen. Audit assisté, gestion centralisée et accompagnement expert.",
     images: [
       {
         url: "/content/open_graph_maydai.png",
@@ -50,8 +50,8 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@maydai_io",
     creator: "@maydai_io",
-    title: "MaydAI - Plateforme de Conformité AI Act | Audit IA Automatisé",
-    description: "MaydAI est la plateforme SaaS qui simplifie la mise en conformité avec l'AI Act européen. Audit automatisé, gestion centralisée et accompagnement expert.",
+    title: "MaydAI - Plateforme de Conformité AI Act | Audit IA Assisté",
+    description: "MaydAI est la plateforme SaaS qui simplifie la mise en conformité avec l'AI Act européen. Audit assisté, gestion centralisée et accompagnement expert.",
     images: ["/content/open_graph_maydai.png"],
   },
   icons: {

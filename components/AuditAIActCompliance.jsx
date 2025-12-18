@@ -6,7 +6,7 @@ export default function AuditAIActCompliance() {
       <div className="max-w-4xl mx-auto px-4">
         <h2 className="text-3xl md:text-4xl font-bold text-primary-dark mb-8">Audit AI Act : Conformité et Sécurité pour vos Systèmes d&apos;IA</h2>
         <p className="text-lg mb-8 leading-relaxed text-gray-800">
-          L'Intelligence Artificielle... Cette promesse de l'aube numérique qui, tel un génie sorti de sa lampe, nous demande soudain ce que nous désirons. Et notre premier vœu ? Un règlement. Un manuel. Un Audit. Voilà qui en dit long sur notre incurable et touchante manie de vouloir mettre de l'ordre dans le chaos que nous créons nous-mêmes.
+          L'Intelligence Artificielle... Cette nouvelle accélération digitale qui, tel un génie sorti de sa lampe, nous demande soudain ce que nous désirons. Et notre premier vœu ? Un règlement. Un manuel. Un Audit. Voilà qui en dit long sur notre incurable et touchante manie de vouloir mettre de l'ordre dans le chaos que nous créons nous-mêmes.
         </p>
         
         {/* Image screen-mobile-ai-act après le texte d'introduction */}
