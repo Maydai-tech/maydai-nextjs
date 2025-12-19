@@ -5,7 +5,7 @@ export default function HeroSection() {
   return (
     <section className="relative bg-gradient-to-br from-primary-light to-primary-dark text-white py-20 px-4 flex flex-col items-center justify-center text-center min-h-[60vh]">
       <div className="max-w-2xl mx-auto z-10">
-        <h1 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
+        <h1 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight pl-[5px] pr-[5px]">
           MaydAI : <span className="text-[#ffab5a]">plateforme de conformité AI Act</span> qui vous accompagne dans vos Audits IA
         </h1>
         <p className="text-lg md:text-xl mb-8 font-medium">
