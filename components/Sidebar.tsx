@@ -187,14 +187,19 @@ export default function Sidebar() {
       icon: Home
     },
     {
-      name: 'Dossiers',
-      href: getDossiersUrl(),
-      icon: FileText
+      name: 'Bench LLM',
+      href: getBenchLLMUrl(),
+      icon: BarChart
     },
     {
       name: 'To-do List',
       href: getTodoListUrl(),
       icon: CheckSquare
+    },
+    {
+      name: 'Dossiers',
+      href: getDossiersUrl(),
+      icon: FileText
     },
     {
       name: 'Collaboration',
@@ -205,11 +210,6 @@ export default function Sidebar() {
       name: 'Paramètres',
       href: getSettingsUrl(),
       icon: Settings
-    },
-    {
-      name: 'Bench LLM',
-      href: getBenchLLMUrl(),
-      icon: BarChart
     }
   ];
 

@@ -7,6 +7,9 @@ import { Search, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } fr
 import type { BenchLLMModel, BenchLLMFilters, BenchLLMSort, BenchLLMPagination, SortableColumn } from '@/lib/types/bench-llm'
 import { formatBenchmarkValue, getCountryFlag, isLongContext, isSmallModel, isOpenSource, formatContextLength, formatConsumption } from '@/lib/utils/bench-llm'
 import { getProviderIcon } from '@/lib/provider-icons'
+import BenchGlossary from './BenchGlossary'
+import BenchmarkCards from './BenchmarkCards'
+import BenchmarkDetails from './BenchmarkDetails'
 
 const PROVIDERS = [
   { name: 'OpenAI', value: 'OpenAI' },
@@ -23,9 +26,9 @@ const COLUMN_HEADERS = [
   { key: 'model_name' as SortableColumn, label: 'Model', mobile: true },
   { key: 'model_provider' as SortableColumn, label: 'Provider', mobile: true },
   { key: 'country' as SortableColumn, label: 'Country', mobile: false },
-  { key: 'llm_leader_rank' as SortableColumn, label: 'LLM Leader Rank', mobile: false },
-  { key: 'compl_ai_rank' as SortableColumn, label: 'Compl AI Rank', mobile: true },
-  { key: 'comparia_rank' as SortableColumn, label: 'Comparia Rank', mobile: false },
+  { key: 'compl_ai_rank' as SortableColumn, label: 'Compl-AI Rank', mobile: true },
+  { key: 'llm_leader_rank' as SortableColumn, label: 'LLM Stats Rank', mobile: false },
+  { key: 'comparia_rank' as SortableColumn, label: 'Compar:ia Rank', mobile: false },
   { key: 'input_cost_per_million' as SortableColumn, label: 'Input $/M', mobile: false },
   { key: 'output_cost_per_million' as SortableColumn, label: 'Output $/M', mobile: false },
   { key: 'model_size' as SortableColumn, label: 'Size', mobile: false },
@@ -36,6 +39,12 @@ const COLUMN_HEADERS = [
   { key: 'consumption_wh_per_1k_tokens' as SortableColumn, label: 'Consumption Wh (1000 tokens)', mobile: false },
   { key: 'release_date' as SortableColumn, label: 'Release Date', mobile: false },
   { key: 'knowledge_cutoff' as SortableColumn, label: 'Knowledge Cutoff', mobile: false },
+]
+
+const BENCHMARK_SORTS = [
+  { key: 'compl_ai_rank' as SortableColumn, label: 'Compl-AI', flag: '🇪🇺' },
+  { key: 'llm_leader_rank' as SortableColumn, label: 'LLM Stats', flag: '🇺🇸' },
+  { key: 'comparia_rank' as SortableColumn, label: 'Compar:ia', flag: '🇫🇷' },
 ]
 
 export default function BenchLLMPage() {
@@ -161,6 +170,16 @@ export default function BenchLLMPage() {
     })
   }
 
+  const handleBenchmarkSort = (key: SortableColumn) => {
+    if (sort.sortBy === key) {
+      // Inverser l'ordre si déjà actif
+      setSort({ sortBy: key, sortOrder: sort.sortOrder === 'asc' ? 'desc' : 'asc' })
+    } else {
+      // Activer le tri croissant
+      setSort({ sortBy: key, sortOrder: 'asc' })
+    }
+  }
+
   const toggleFilter = (filterType: keyof BenchLLMFilters, value?: string) => {
     setFilters((prev) => {
       if (filterType === 'provider' || filterType === 'license' || filterType === 'size') {
@@ -208,9 +227,50 @@ export default function BenchLLMPage() {
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Bench LLM</h1>
 
+        {/* Introduction contextuelle */}
+        <p className="text-gray-600 text-base mb-6">
+          Les benchmarks LLM sont des outils d&apos;évaluation standardisés permettant de mesurer 
+          la performance, la conformité et la pertinence des modèles d&apos;intelligence artificielle 
+          selon des critères techniques, éthiques ou humains.
+        </p>
+
+        {/* Encarts des benchmarks */}
+        <BenchmarkCards />
+
+        {/* Trier par Benchmark */}
+        <div className="mb-4">
+          <div className="text-sm font-medium text-gray-700 mb-2">TRIER PAR BENCHMARK</div>
+          <div className="flex flex-wrap gap-2">
+            {BENCHMARK_SORTS.map((bench) => {
+              const isActive = sort.sortBy === bench.key
+              return (
+                <button
+                  key={bench.key}
+                  onClick={() => handleBenchmarkSort(bench.key)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-[#0080A3] text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <span>{bench.flag}</span>
+                  <span>{bench.label}</span>
+                  {isActive && (
+                    sort.sortOrder === 'asc' ? (
+                      <ArrowUp className="w-4 h-4" />
+                    ) : (
+                      <ArrowDown className="w-4 h-4" />
+                    )
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Filtres rapides */}
         <div className="mb-4">
-          <div className="text-sm font-medium text-gray-700 mb-2">QUICK FILTERS</div>
+          <div className="text-sm font-medium text-gray-700 mb-2">FILTRES SPE</div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => toggleFilter('multimodal')}
@@ -257,7 +317,7 @@ export default function BenchLLMPage() {
 
         {/* Filtres par provider */}
         <div className="mb-4">
-          <div className="text-sm font-medium text-gray-700 mb-2">Provider Filters</div>
+          <div className="text-sm font-medium text-gray-700 mb-2">FILTRES FOURNISSEURS IA</div>
           <div className="flex flex-wrap gap-2">
             {PROVIDERS.map((provider) => {
               const iconPath = getProviderIcon(provider.value)
@@ -473,15 +533,11 @@ export default function BenchLLMPage() {
           )}
         </div>
 
-        {/* Légende */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-900 mb-2">Légende</h3>
-          <div className="text-sm text-gray-600 space-y-1">
-            <p><strong>NR:</strong> Not Rated</p>
-            <p><strong>ND:</strong> Not Disclosed</p>
-            <p><strong>NA:</strong> Not Available</p>
-          </div>
-        </div>
+        {/* Glossaire des termes */}
+        <BenchGlossary />
+
+        {/* Détails des benchmarks */}
+        <BenchmarkDetails />
       </div>
     </div>
   )

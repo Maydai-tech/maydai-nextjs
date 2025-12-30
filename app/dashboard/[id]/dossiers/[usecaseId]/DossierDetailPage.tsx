@@ -14,7 +14,7 @@ import UnacceptableCaseWorkflowSteps from '@/components/UnacceptableCase/Unaccep
 
 const SYSTEM_PROMPT_DOC = {
   key: 'system_prompt',
-  label: 'Instructions Système et Prompts Principaux',
+  label: '2. Instructions Système et Prompts Principaux',
   description: 'Veuillez coller ici l\'intégralité du prompt système (instructions de base) donné à l\'IA pour ce cas d\'usage.',
   helpInfo: 'Tracer les instructions exactes données à l\'IA (le "system prompt" ou les instructions de base) pour garantir la reproductibilité et l\'auditabilité du comportement de l\'IA. Si le prompt est dynamique, fournissez le modèle (template) et expliquez les variables.',
   acceptedFormats: '.txt,.md',
@@ -32,7 +32,7 @@ const STOPPING_PROOF_DOC = {
 
 const REGISTRY_PROOF_DOC = {
   key: 'registry_proof',
-  label: 'Preuve d\'Usage du Registre Centralisé',
+  label: '1. Preuve d\'Usage du Registre Centralisé',
   description: 'Document prouvant l\'utilisation d\'un registre centralisé pour vos systèmes d\'IA.',
   helpInfo: 'Document attestant de l\'utilisation d\'un registre centralisé conforme à l\'AI Act pour le suivi de vos systèmes d\'IA. Peut inclure : capture d\'écran du registre, attestation du responsable, export de données du registre, ou tout autre élément prouvant son utilisation effective.',
   acceptedFormats: '.pdf,.png,.jpg,.jpeg',
@@ -41,7 +41,7 @@ const REGISTRY_PROOF_DOC = {
 
 const TRAINING_PLAN_DOC = {
   key: 'training_plan',
-  label: 'Plan de formation',
+  label: '9. Plan de formation',
   description: 'Le plan de formation des équipes utilisant le système d\'IA.',
   helpInfo: 'Document décrivant le programme de formation des utilisateurs du système d\'IA : objectifs de formation, contenus couverts, fréquence des sessions, et méthodes d\'évaluation des compétences acquises.',
   acceptedFormats: '.pdf,.docx,.xlsx,.pptx,.md',
@@ -53,26 +53,27 @@ const TRAINING_PLAN_DOC = {
 }
 
 const DOC_TYPES = [
+  REGISTRY_PROOF_DOC,
   SYSTEM_PROMPT_DOC,
   {
-    key: 'technical_documentation',
-    label: 'Documentation Technique du Système',
-    description: 'Uploadez la documentation décrivant le modèle, ses capacités et ses limitations (max 10MB).',
-    helpInfo: 'Document décrivant : le(s) modèle(s) d\'IA sous-jacents (ex: "GPT-4o", "Claude 3 Sonnet"), l\'architecture générale, les capacités prévues, et surtout les limitations connues (risques d\'hallucination, biais potentiels, etc.).',
-    acceptedFormats: '.pdf,.docx,.md',
-    type: 'file'
-  },
-  {
     key: 'human_oversight',
-    label: 'Responsable de la Surveillance Humaine',
+    label: '3. Responsable de la Surveillance Humaine',
     description: 'Désignez la personne physique responsable de la supervision du système d\'IA.',
     helpInfo: 'Assurer l\'accountability (responsabilité) en désignant une personne claire, responsable de la supervision "human-in-the-loop" ou de l\'audit a posteriori.',
     acceptedFormats: '',
     type: 'form'
   },
   {
+    key: 'technical_documentation',
+    label: '4. Documentation Technique du Système',
+    description: 'Uploadez la documentation décrivant le modèle, ses capacités et ses limitations (max 10MB).',
+    helpInfo: 'Document décrivant : le(s) modèle(s) d\'IA sous-jacents (ex: "GPT-4o", "Claude 3 Sonnet"), l\'architecture générale, les capacités prévues, et surtout les limitations connues (risques d\'hallucination, biais potentiels, etc.).',
+    acceptedFormats: '.pdf,.docx,.md',
+    type: 'file'
+  },
+  {
     key: 'transparency_marking',
-    label: 'Marquage de Transparence IA',
+    label: '5. Marquage de Transparence IA',
     description: 'Décrivez comment le contenu généré par l\'IA est marqué comme tel (ex: "Généré par IA", watermark, disclaimer).',
     helpInfo: 'Prouver que l\'utilisateur final est informé qu\'il interagit avec une IA (transparence), comme l\'exige l\'IA Act. Vous pouvez fournir une description textuelle et/ou un exemple visuel (capture d\'écran).',
     acceptedFormats: '.png,.jpg,.jpeg,.gif',
@@ -83,30 +84,29 @@ const DOC_TYPES = [
     fileHelpText: 'Capture d\'écran montrant le marquage'
   },
   {
-    key: 'risk_management',
-    label: 'Plan de Gestion des Risques',
-    description: 'Uploadez votre registre des risques et le plan de mitigation associé.',
-    helpInfo: 'Documenter que les risques potentiels (biais, sécurité, confidentialité, mauvais usage) ont été identifiés et que des mesures sont en place pour les atténuer. Typiquement un tableau listant : Risque identifié, Probabilité, Impact, et Mesure de mitigation.',
-    acceptedFormats: '.pdf,.docx,.xlsx',
-    type: 'file'
-  },
-  {
     key: 'data_quality',
-    label: 'Procédure de Qualité des Données',
+    label: '6. Procédure de Qualité des Données',
     description: 'Décrivez comment vous assurez la qualité, la pertinence et l\'absence de biais dans les données d\'entraînement ou de RAG.',
     helpInfo: 'Démontrer que les données utilisées (pour l\'entraînement, le fine-tuning, ou le RAG) sont de bonne qualité, non biaisées et gérées correctement. Incluez : source des données, méthodes de nettoyage et d\'anonymisation, processus de validation.',
     acceptedFormats: '.pdf,.docx',
     type: 'file'
   },
   {
+    key: 'risk_management',
+    label: '7. Plan de Gestion des Risques',
+    description: 'Uploadez votre registre des risques et le plan de mitigation associé.',
+    helpInfo: 'Documenter que les risques potentiels (biais, sécurité, confidentialité, mauvais usage) ont été identifiés et que des mesures sont en place pour les atténuer. Typiquement un tableau listant : Risque identifié, Probabilité, Impact, et Mesure de mitigation.',
+    acceptedFormats: '.pdf,.docx,.xlsx',
+    type: 'file'
+  },
+  {
     key: 'continuous_monitoring',
-    label: 'Plan de Surveillance Continue (Monitoring)',
+    label: '8. Plan de Surveillance Continue (Monitoring)',
     description: 'Comment suivez-vous les performances et la sécurité du système en production ?',
     helpInfo: 'Prouver que le système n\'est pas "lancé et oublié". Document détaillant : les métriques (KPIs) de performance suivies, la fréquence des audits, la procédure en cas de détection d\'anomalie ou de risque émergent.',
     acceptedFormats: '.pdf,.docx',
     type: 'file'
   },
-  REGISTRY_PROOF_DOC,
   TRAINING_PLAN_DOC
 ]
 
