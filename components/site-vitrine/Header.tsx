@@ -88,6 +88,7 @@ export default function Header() {
             )}
           </li>
           <li><Link href="/fonctionnalites" className="hover:text-primary transition">Fonctionnalites</Link></li>
+          <li><Link href="/securite" className="hover:text-primary transition">Sécurité</Link></li>
           <li><Link href="/tarifs" className="hover:text-primary transition">Tarifs</Link></li>
           <li><Link href="/a-propos" className="hover:text-primary transition">A propos</Link></li>
           <li><Link href="/contact" className="hover:text-primary transition">Contact</Link></li>
@@ -186,6 +187,13 @@ export default function Header() {
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Fonctionnalites
+              </Link>
+              <Link
+                href="/securite"
+                className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Sécurité
               </Link>
               <Link
                 href="/tarifs"
