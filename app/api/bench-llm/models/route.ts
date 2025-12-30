@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 
     // Application du tri
     const ascending = sortOrder === 'asc'
-    query = query.order(sortBy, { ascending, nullsFirst: true })
+    query = query.order(sortBy, { ascending, nullsFirst: false })
 
     // Application de la pagination
     query = query.range(offset, offset + limit - 1)
