@@ -98,54 +98,6 @@ export default function HomePage() {
     }
   };
 
-  // Données structurées JSON-LD pour les FAQ
-  const faqStructuredData = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "Qu'est-ce que l'AI Act et mon entreprise est-elle concernée ?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "L'AI Act est la première réglementation mondiale sur l'intelligence artificielle adoptée par l'Union Européenne. Elle s'applique à toutes les entreprises qui développent, déploient ou utilisent des systèmes d'IA dans l'UE, quel que soit leur taille. MaydAI vous aide à déterminer si votre entreprise est concernée et à quel niveau de risque."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Comment MaydAI simplifie-t-il le processus d'audit de conformité ?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "MaydAI automatise l'analyse de conformité grâce à notre intelligence artificielle spécialisée. Notre plateforme analyse vos systèmes d'IA, identifie les écarts par rapport à l'AI Act, génère automatiquement la documentation requise et vous fournit un plan d'action personnalisé pour corriger les non-conformités."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Combien de temps faut-il pour réaliser un premier audit avec votre plateforme ?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Un premier audit avec MaydAI peut être réalisé en quelques heures seulement. Notre processus automatisé analyse rapidement vos systèmes d'IA et génère un rapport détaillé avec des recommandations concrètes. L'audit complet dépend de la complexité de vos systèmes mais reste largement plus rapide qu'un audit manuel traditionnel."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Votre solution est-elle adaptée aux PME et aux startups ?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Absolument ! MaydAI a été conçue pour être accessible aux entreprises de toutes tailles. Nous proposons des tarifs adaptés aux PME et startups, avec un audit gratuit pour commencer. Notre interface intuitive et notre accompagnement personnalisé permettent même aux petites structures de se conformer facilement à l'AI Act."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Quels sont les différents niveaux de tarification de MaydAI ?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "MaydAI propose plusieurs formules adaptées à vos besoins : un audit gratuit pour commencer, des plans mensuels pour les entreprises régulières, et des solutions sur mesure pour les grandes organisations. Tous nos plans incluent l'audit automatisé, la génération de documentation et l'accès à notre support expert."
-        }
-      }
-    ]
-  };
-
   return (
     <>
       {/* Données structurées JSON-LD */}
@@ -159,12 +111,6 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(softwareApplicationStructuredData)
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(faqStructuredData)
         }}
       />
       
