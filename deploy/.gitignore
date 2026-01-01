@@ -1,0 +1,8 @@
+# Fichiers sensibles
+.env
+
+# Backups
+backups/
+
+# Logs
+*.log

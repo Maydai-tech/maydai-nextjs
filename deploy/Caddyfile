@@ -1,0 +1,73 @@
+# Caddyfile pour MaydAI - Supabase Self-Hosted + Next.js
+# SSL automatique via Let's Encrypt
+
+# API Supabase (Kong)
+api.maydai.io {
+    reverse_proxy kong:8000
+
+    # Headers CORS
+    header {
+        Access-Control-Allow-Origin *
+        Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Authorization, Content-Type, apikey, x-client-info"
+    }
+
+    # Logs
+    log {
+        output file /data/logs/api.log {
+            roll_size 10mb
+            roll_keep 5
+        }
+    }
+}
+
+# Studio Supabase (protege par Basic Auth)
+# Le hash bcrypt est genere avec: caddy hash-password --plaintext "votre_mot_de_passe"
+studio.maydai.io {
+    basicauth {
+        # admin:vaXIaw7ygM33a7V2 (genere avec caddy hash-password)
+        admin $2a$14$LxVNBgJH0EhC9TBo7nY6TuM3vOoNTJLCd.V3WVVxW6zR4Ry9AWYJ6
+    }
+
+    reverse_proxy studio:3000
+
+    log {
+        output file /data/logs/studio.log {
+            roll_size 10mb
+            roll_keep 5
+        }
+    }
+}
+
+# Application Next.js
+app.maydai.io {
+    reverse_proxy nextjs:3000
+
+    # Compression
+    encode gzip zstd
+
+    # Headers de securite
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy strict-origin-when-cross-origin
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    }
+
+    log {
+        output file /data/logs/app.log {
+            roll_size 10mb
+            roll_keep 5
+        }
+    }
+}
+
+# Redirection du domaine principal vers l'app
+maydai.io {
+    redir https://app.maydai.io{uri} permanent
+}
+
+www.maydai.io {
+    redir https://app.maydai.io{uri} permanent
+}
