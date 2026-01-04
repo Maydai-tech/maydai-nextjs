@@ -37,9 +37,10 @@ jobs:
         id: e2e-tests
         continue-on-error: true
         run: |
-          # Run tests once with both JSON and HTML reporters
-          npx playwright test --reporter=json --reporter=html 2>&1 | tee results.json
-          echo "Tests completed, results saved to results.json"
+          # Run tests - reporters configured in playwright.config.ts
+          # JSON output goes to test-results.json, HTML to playwright-report/
+          npx playwright test
+          echo "Tests completed"
         env:
           # Supabase config
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -55,37 +56,57 @@ jobs:
         if: always()
         id: parse-results
         run: |
-          # Parse the JSON from the previous step (no re-run)
-          if [ -f results.json ]; then
-            # Count passed/failed tests
-            PASSED=$(cat results.json | jq '[.suites[].specs[].tests[] | select(.status == "expected")] | length' 2>/dev/null || echo "0")
-            FAILED=$(cat results.json | jq '[.suites[].specs[].tests[] | select(.status == "unexpected")] | length' 2>/dev/null || echo "0")
-            SKIPPED=$(cat results.json | jq '[.suites[].specs[].tests[] | select(.status == "skipped")] | length' 2>/dev/null || echo "0")
+          # Parse the JSON results file
+          if [ -f test-results.json ]; then
+            echo "Found test-results.json, parsing..."
 
-            # Build test list
-            TEST_LIST=$(cat results.json | jq -r '
-              .suites[] |
-              .title as $suite |
-              .specs[] |
-              .title as $spec |
-              .tests[] |
-              if .status == "expected" then "✅ " + $suite + " > " + $spec
-              elif .status == "unexpected" then "❌ " + $suite + " > " + $spec
-              else "⏭️ " + $suite + " > " + $spec
-              end
+            # Count tests by status (handling nested structure)
+            PASSED=$(cat test-results.json | jq '[.suites[].suites[]?.specs[]?.tests[]? | select(.status == "expected")] | length' 2>/dev/null || echo "0")
+            FAILED=$(cat test-results.json | jq '[.suites[].suites[]?.specs[]?.tests[]? | select(.status == "unexpected")] | length' 2>/dev/null || echo "0")
+            SKIPPED=$(cat test-results.json | jq '[.suites[].suites[]?.specs[]?.tests[]? | select(.status == "skipped")] | length' 2>/dev/null || echo "0")
+            FLAKY=$(cat test-results.json | jq '[.suites[].suites[]?.specs[]?.tests[]? | select(.status == "flaky")] | length' 2>/dev/null || echo "0")
+
+            # If counts are still 0, try alternative structure (direct specs in suites)
+            if [ "$PASSED" = "0" ] && [ "$FAILED" = "0" ] && [ "$SKIPPED" = "0" ]; then
+              PASSED=$(cat test-results.json | jq '[.suites[].specs[]?.tests[]? | select(.status == "expected")] | length' 2>/dev/null || echo "0")
+              FAILED=$(cat test-results.json | jq '[.suites[].specs[]?.tests[]? | select(.status == "unexpected")] | length' 2>/dev/null || echo "0")
+              SKIPPED=$(cat test-results.json | jq '[.suites[].specs[]?.tests[]? | select(.status == "skipped")] | length' 2>/dev/null || echo "0")
+              FLAKY=$(cat test-results.json | jq '[.suites[].specs[]?.tests[]? | select(.status == "flaky")] | length' 2>/dev/null || echo "0")
+            fi
+
+            # Build test list from nested structure
+            TEST_LIST=$(cat test-results.json | jq -r '
+              def process_suite:
+                .title as $suite |
+                (.specs[]? |
+                  .title as $spec |
+                  .tests[]? |
+                  if .status == "expected" then "✅ " + $spec
+                  elif .status == "unexpected" then "❌ " + $spec
+                  elif .status == "flaky" then "⚠️ " + $spec
+                  else "⏭️ " + $spec
+                  end
+                ),
+                (.suites[]? | process_suite);
+              .suites[]? | process_suite
             ' 2>/dev/null | head -20 || echo "Could not parse test results")
 
             echo "PASSED=$PASSED" >> $GITHUB_OUTPUT
             echo "FAILED=$FAILED" >> $GITHUB_OUTPUT
             echo "SKIPPED=$SKIPPED" >> $GITHUB_OUTPUT
+            echo "FLAKY=$FLAKY" >> $GITHUB_OUTPUT
             echo "TEST_LIST<<EOF" >> $GITHUB_OUTPUT
             echo "$TEST_LIST" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
+
+            echo "Parsed: $PASSED passed, $FAILED failed, $SKIPPED skipped, $FLAKY flaky"
           else
+            echo "No test-results.json found"
             echo "PASSED=0" >> $GITHUB_OUTPUT
             echo "FAILED=0" >> $GITHUB_OUTPUT
             echo "SKIPPED=0" >> $GITHUB_OUTPUT
-            echo "TEST_LIST=No test results available" >> $GITHUB_OUTPUT
+            echo "FLAKY=0" >> $GITHUB_OUTPUT
+            echo "TEST_LIST=No test results file found" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload test results
@@ -96,6 +117,7 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            test-results.json
           retention-days: 7
 
       - name: Notify Slack on Success
@@ -145,7 +167,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Results:* ✅ ${{ steps.parse-results.outputs.PASSED }} passed | ⏭️ ${{ steps.parse-results.outputs.SKIPPED }} skipped"
+                    "text": "*Results:* ✅ ${{ steps.parse-results.outputs.PASSED }} passed | ⚠️ ${{ steps.parse-results.outputs.FLAKY }} flaky | ⏭️ ${{ steps.parse-results.outputs.SKIPPED }} skipped"
                   }
                 },
                 {
@@ -225,7 +247,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Results:* ✅ ${{ steps.parse-results.outputs.PASSED }} passed | ❌ ${{ steps.parse-results.outputs.FAILED }} failed | ⏭️ ${{ steps.parse-results.outputs.SKIPPED }} skipped"
+                    "text": "*Results:* ✅ ${{ steps.parse-results.outputs.PASSED }} passed | ❌ ${{ steps.parse-results.outputs.FAILED }} failed | ⚠️ ${{ steps.parse-results.outputs.FLAKY }} flaky | ⏭️ ${{ steps.parse-results.outputs.SKIPPED }} skipped"
                   }
                 },
                 {

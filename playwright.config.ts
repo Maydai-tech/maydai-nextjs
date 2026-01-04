@@ -13,7 +13,11 @@ export default defineConfig({
   // Use 2 workers in CI to parallelize test files while avoiding resource issues
   // Local: undefined = use all available CPUs
   workers: process.env.CI ? 2 : undefined,
-  reporter: 'html',
+  // In CI, use JSON (for parsing) and HTML reporters
+  // Locally, just use HTML
+  reporter: process.env.CI
+    ? [['json', { outputFile: 'test-results.json' }], ['html']]
+    : 'html',
 
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
