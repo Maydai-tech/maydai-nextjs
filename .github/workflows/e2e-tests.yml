@@ -204,7 +204,7 @@ jobs:
                         "type": "plain_text",
                         "text": "📊 View Report"
                       },
-                      "url": "http://57.130.47.254/e2e-reports/${{ github.run_id }}/"
+                      "url": "http://57.130.47.254:8080/${{ github.run_id }}/"
                     }
                   ]
                 }
@@ -300,7 +300,7 @@ jobs:
                         "text": "📊 View Report"
                       },
                       "style": "danger",
-                      "url": "http://57.130.47.254/e2e-reports/${{ github.run_id }}/"
+                      "url": "http://57.130.47.254:8080/${{ github.run_id }}/"
                     }
                   ]
                 }
