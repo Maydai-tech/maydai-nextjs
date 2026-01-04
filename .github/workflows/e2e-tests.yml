@@ -91,12 +91,46 @@ jobs:
               .suites[]? | process_suite
             ' 2>/dev/null | head -20 || echo "Could not parse test results")
 
+            # Extract detailed error info for failed tests (for AI analysis)
+            ERROR_DETAILS=$(cat test-results.json | jq -r '
+              def get_errors:
+                .title as $suite |
+                (.specs[]? |
+                  .title as $spec |
+                  .file as $file |
+                  .tests[]? |
+                  select(.status == "unexpected") |
+                  .results[]? |
+                  select(.error) |
+                  "## " + $spec + "\nFile: " + $file + "\nError: " + (.error.message // "Unknown error") + "\n"
+                ),
+                (.suites[]? | get_errors);
+              .suites[]? | get_errors
+            ' 2>/dev/null | head -100 || echo "")
+
+            # If no errors found with nested structure, try flat structure
+            if [ -z "$ERROR_DETAILS" ]; then
+              ERROR_DETAILS=$(cat test-results.json | jq -r '
+                .suites[]?.specs[]? |
+                .title as $spec |
+                .file as $file |
+                .tests[]? |
+                select(.status == "unexpected") |
+                .results[]? |
+                select(.error) |
+                "## " + $spec + "\nFile: " + $file + "\nError: " + (.error.message // "Unknown error") + "\n"
+              ' 2>/dev/null | head -100 || echo "No error details available")
+            fi
+
             echo "PASSED=$PASSED" >> $GITHUB_OUTPUT
             echo "FAILED=$FAILED" >> $GITHUB_OUTPUT
             echo "SKIPPED=$SKIPPED" >> $GITHUB_OUTPUT
             echo "FLAKY=$FLAKY" >> $GITHUB_OUTPUT
             echo "TEST_LIST<<EOF" >> $GITHUB_OUTPUT
             echo "$TEST_LIST" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "ERROR_DETAILS<<EOF" >> $GITHUB_OUTPUT
+            echo "$ERROR_DETAILS" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
 
             echo "Parsed: $PASSED passed, $FAILED failed, $SKIPPED skipped, $FLAKY flaky"
@@ -107,6 +141,7 @@ jobs:
             echo "SKIPPED=0" >> $GITHUB_OUTPUT
             echo "FLAKY=0" >> $GITHUB_OUTPUT
             echo "TEST_LIST=No test results file found" >> $GITHUB_OUTPUT
+            echo "ERROR_DETAILS=No test results file found" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload test results
@@ -276,10 +311,20 @@ jobs:
                   }
                 },
                 {
+                  "type": "divider"
+                },
+                {
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "⚠️ *Check the report for details*"
+                    "text": "🤖 *Erreurs (copier/coller pour analyse IA):*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "```${{ steps.parse-results.outputs.ERROR_DETAILS }}```"
                   }
                 },
                 {
