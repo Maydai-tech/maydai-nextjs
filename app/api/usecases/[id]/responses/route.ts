@@ -176,13 +176,37 @@ export async function POST(
 
     console.log('Attempting to save updateData:', updateData)
 
-    const { data, error } = await supabase
+    // Manual upsert: first check if record exists, then insert or update
+    // This avoids PostgREST schema cache issues with onConflict
+    const { data: existingResponse } = await supabase
       .from('usecase_responses')
-      .upsert(updateData, {
-        onConflict: 'usecase_id,question_code'
-      })
-      .select()
+      .select('id')
+      .eq('usecase_id', usecaseId)
+      .eq('question_code', question_code)
       .single()
+
+    let data, error
+    if (existingResponse) {
+      // Update existing record
+      const result = await supabase
+        .from('usecase_responses')
+        .update(updateData)
+        .eq('usecase_id', usecaseId)
+        .eq('question_code', question_code)
+        .select()
+        .single()
+      data = result.data
+      error = result.error
+    } else {
+      // Insert new record
+      const result = await supabase
+        .from('usecase_responses')
+        .insert(updateData)
+        .select()
+        .single()
+      data = result.data
+      error = result.error
+    }
 
     if (error) {
       console.error('Supabase error details:', {
@@ -192,9 +216,9 @@ export async function POST(
         response_value,
         response_data
       })
-      return NextResponse.json({ 
-        error: 'Error saving response', 
-        details: error.message 
+      return NextResponse.json({
+        error: 'Error saving response',
+        details: error.message
       }, { status: 500 })
     }
 
@@ -310,13 +334,36 @@ export async function PUT(
         continue
       }
 
-      const { data, error } = await supabase
+      // Manual upsert: first check if record exists, then insert or update
+      const { data: existingResponse } = await supabase
         .from('usecase_responses')
-        .upsert(updateData, {
-          onConflict: 'usecase_id,question_code'
-        })
-        .select()
+        .select('id')
+        .eq('usecase_id', usecaseId)
+        .eq('question_code', question_code)
         .single()
+
+      let data, error
+      if (existingResponse) {
+        // Update existing record
+        const result = await supabase
+          .from('usecase_responses')
+          .update(updateData)
+          .eq('usecase_id', usecaseId)
+          .eq('question_code', question_code)
+          .select()
+          .single()
+        data = result.data
+        error = result.error
+      } else {
+        // Insert new record
+        const result = await supabase
+          .from('usecase_responses')
+          .insert(updateData)
+          .select()
+          .single()
+        data = result.data
+        error = result.error
+      }
 
       if (error) {
         console.error('Supabase error in batch save:', {
