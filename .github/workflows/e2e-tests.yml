@@ -120,13 +120,15 @@ jobs:
             test-results.json
           retention-days: 7
 
-      - name: Deploy report to GitHub Pages
+      - name: Deploy report to OVH server
         if: always()
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./playwright-report
-          destination_dir: e2e-report/${{ github.run_id }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OVH_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H 57.130.47.254 >> ~/.ssh/known_hosts
+          ssh ubuntu@57.130.47.254 "mkdir -p /var/www/e2e-reports/${{ github.run_id }}"
+          rsync -avz --delete ./playwright-report/ ubuntu@57.130.47.254:/var/www/e2e-reports/${{ github.run_id }}/
 
       - name: Notify Slack on Success
         if: steps.e2e-tests.outcome == 'success'
@@ -202,7 +204,7 @@ jobs:
                         "type": "plain_text",
                         "text": "📊 View Report"
                       },
-                      "url": "https://maydai-tech.github.io/maydai-nextjs/e2e-report/${{ github.run_id }}/"
+                      "url": "http://57.130.47.254/e2e-reports/${{ github.run_id }}/"
                     }
                   ]
                 }
@@ -298,7 +300,7 @@ jobs:
                         "text": "📊 View Report"
                       },
                       "style": "danger",
-                      "url": "https://maydai-tech.github.io/maydai-nextjs/e2e-report/${{ github.run_id }}/"
+                      "url": "http://57.130.47.254/e2e-reports/${{ github.run_id }}/"
                     }
                   ]
                 }
