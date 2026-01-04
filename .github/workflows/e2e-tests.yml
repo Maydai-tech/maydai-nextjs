@@ -35,14 +35,11 @@ jobs:
 
       - name: Run E2E tests
         id: e2e-tests
+        continue-on-error: true
         run: |
-          npm run e2e -- --reporter=json --reporter=html 2>&1 | tee test-output.json || true
-          # Extract test results from JSON output
-          if [ -f test-output.json ]; then
-            echo "TEST_OUTPUT<<EOF" >> $GITHUB_ENV
-            cat test-output.json | grep -A 1000 '"suites"' | head -100 >> $GITHUB_ENV || echo "No JSON output" >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-          fi
+          # Run tests once with both JSON and HTML reporters
+          npx playwright test --reporter=json --reporter=html 2>&1 | tee results.json
+          echo "Tests completed, results saved to results.json"
         env:
           # Supabase config
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -58,10 +55,7 @@ jobs:
         if: always()
         id: parse-results
         run: |
-          # Run tests again with JSON reporter to get structured output
-          npx playwright test --reporter=json > results.json 2>&1 || true
-
-          # Parse the JSON and create a summary
+          # Parse the JSON from the previous step (no re-run)
           if [ -f results.json ]; then
             # Count passed/failed tests
             PASSED=$(cat results.json | jq '[.suites[].specs[].tests[] | select(.status == "expected")] | length' 2>/dev/null || echo "0")
@@ -93,11 +87,6 @@ jobs:
             echo "SKIPPED=0" >> $GITHUB_OUTPUT
             echo "TEST_LIST=No test results available" >> $GITHUB_OUTPUT
           fi
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          PLAYWRIGHT_BASE_URL: http://localhost:3000
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -110,7 +99,7 @@ jobs:
           retention-days: 7
 
       - name: Notify Slack on Success
-        if: success()
+        if: steps.e2e-tests.outcome == 'success'
         uses: slackapi/slack-github-action@v2.0.0
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -183,7 +172,7 @@ jobs:
             }
 
       - name: Notify Slack on Failure
-        if: failure()
+        if: steps.e2e-tests.outcome == 'failure'
         uses: slackapi/slack-github-action@v2.0.0
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
