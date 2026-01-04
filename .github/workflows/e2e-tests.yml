@@ -34,7 +34,15 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
-        run: npm run e2e
+        id: e2e-tests
+        run: |
+          npm run e2e -- --reporter=json --reporter=html 2>&1 | tee test-output.json || true
+          # Extract test results from JSON output
+          if [ -f test-output.json ]; then
+            echo "TEST_OUTPUT<<EOF" >> $GITHUB_ENV
+            cat test-output.json | grep -A 1000 '"suites"' | head -100 >> $GITHUB_ENV || echo "No JSON output" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          fi
         env:
           # Supabase config
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -45,6 +53,51 @@ jobs:
           # Optional - for features that need these
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+
+      - name: Parse test results
+        if: always()
+        id: parse-results
+        run: |
+          # Run tests again with JSON reporter to get structured output
+          npx playwright test --reporter=json > results.json 2>&1 || true
+
+          # Parse the JSON and create a summary
+          if [ -f results.json ]; then
+            # Count passed/failed tests
+            PASSED=$(cat results.json | jq '[.suites[].specs[].tests[] | select(.status == "expected")] | length' 2>/dev/null || echo "0")
+            FAILED=$(cat results.json | jq '[.suites[].specs[].tests[] | select(.status == "unexpected")] | length' 2>/dev/null || echo "0")
+            SKIPPED=$(cat results.json | jq '[.suites[].specs[].tests[] | select(.status == "skipped")] | length' 2>/dev/null || echo "0")
+
+            # Build test list
+            TEST_LIST=$(cat results.json | jq -r '
+              .suites[] |
+              .title as $suite |
+              .specs[] |
+              .title as $spec |
+              .tests[] |
+              if .status == "expected" then "✅ " + $suite + " > " + $spec
+              elif .status == "unexpected" then "❌ " + $suite + " > " + $spec
+              else "⏭️ " + $suite + " > " + $spec
+              end
+            ' 2>/dev/null | head -20 || echo "Could not parse test results")
+
+            echo "PASSED=$PASSED" >> $GITHUB_OUTPUT
+            echo "FAILED=$FAILED" >> $GITHUB_OUTPUT
+            echo "SKIPPED=$SKIPPED" >> $GITHUB_OUTPUT
+            echo "TEST_LIST<<EOF" >> $GITHUB_OUTPUT
+            echo "$TEST_LIST" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "PASSED=0" >> $GITHUB_OUTPUT
+            echo "FAILED=0" >> $GITHUB_OUTPUT
+            echo "SKIPPED=0" >> $GITHUB_OUTPUT
+            echo "TEST_LIST=No test results available" >> $GITHUB_OUTPUT
+          fi
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -100,6 +153,20 @@ jobs:
                   ]
                 },
                 {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Results:* ✅ ${{ steps.parse-results.outputs.PASSED }} passed | ⏭️ ${{ steps.parse-results.outputs.SKIPPED }} skipped"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Tests:*\n```${{ steps.parse-results.outputs.TEST_LIST }}```"
+                  }
+                },
+                {
                   "type": "actions",
                   "elements": [
                     {
@@ -124,6 +191,13 @@ jobs:
           payload: |
             {
               "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "<!here>"
+                  }
+                },
                 {
                   "type": "header",
                   "text": {
@@ -157,6 +231,20 @@ jobs:
                       "text": "*Author:*\n${{ github.actor }}"
                     }
                   ]
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Results:* ✅ ${{ steps.parse-results.outputs.PASSED }} passed | ❌ ${{ steps.parse-results.outputs.FAILED }} failed | ⏭️ ${{ steps.parse-results.outputs.SKIPPED }} skipped"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Tests:*\n```${{ steps.parse-results.outputs.TEST_LIST }}```"
+                  }
                 },
                 {
                   "type": "section",
