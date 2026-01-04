@@ -120,18 +120,15 @@ jobs:
             test-results.json
           retention-days: 7
 
-      - name: Setup SSH for OVH
-        if: always()
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.OVH_SSH_KEY }}
-
       - name: Deploy report to OVH server
         if: always()
         run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OVH_SSH_KEY }}" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H 57.130.47.254 >> ~/.ssh/known_hosts
-          ssh ubuntu@57.130.47.254 "mkdir -p /var/www/e2e-reports/${{ github.run_id }}"
-          rsync -avz --delete ./playwright-report/ ubuntu@57.130.47.254:/var/www/e2e-reports/${{ github.run_id }}/
+          ssh -i ~/.ssh/id_ed25519 ubuntu@57.130.47.254 "mkdir -p /var/www/e2e-reports/${{ github.run_id }}"
+          rsync -avz -e "ssh -i ~/.ssh/id_ed25519" --delete ./playwright-report/ ubuntu@57.130.47.254:/var/www/e2e-reports/${{ github.run_id }}/
 
       - name: Notify Slack on Success
         if: steps.e2e-tests.outcome == 'success'
