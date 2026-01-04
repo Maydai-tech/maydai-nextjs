@@ -214,15 +214,18 @@ test.describe('Registry Settings', () => {
 
     // Click "Modifier" to enter edit mode
     await page.click('button:has-text("Modifier")')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
+
+    // Wait for the form to be in edit mode (inputs should appear)
+    await page.waitForSelector('input[placeholder="Nom du registre"]', { timeout: 10000 })
 
     // Modify registry name
-    const nameInput = page.locator('input[name="name"]')
+    const nameInput = page.locator('input[placeholder="Nom du registre"]')
     await nameInput.clear()
     await nameInput.fill(TEST_REGISTRY.updatedName)
 
     // Modify city
-    const cityInput = page.locator('input[name="city"]')
+    const cityInput = page.locator('input[placeholder="Ville"]')
     await cityInput.clear()
     await cityInput.fill('Paris')
 
@@ -269,7 +272,7 @@ test.describe('Registry Settings', () => {
 
     // Type the registry name to confirm deletion
     // The registry name was updated in the previous test
-    const confirmInput = page.locator('input[placeholder*="Tapez le nom"]')
+    const confirmInput = page.locator('input[placeholder="Saisissez le nom du registre"]')
     await confirmInput.fill(TEST_REGISTRY.updatedName)
 
     // Click confirm delete button
