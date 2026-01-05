@@ -35,11 +35,12 @@ jobs:
         run: |
           echo "Waiting for preprod.maydai.io to be ready..."
           MAX_RETRIES=30
-          RETRY_INTERVAL=10
+          RETRY_INTERVAL=5
 
           for i in $(seq 1 $MAX_RETRIES); do
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://preprod.maydai.io)
-            if [ "$HTTP_STATUS" = "200" ]; then
+            # Accept 200, 401 (Vercel auth), 301/302 (redirects) as "site is up"
+            if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "401" ] || [ "$HTTP_STATUS" = "301" ] || [ "$HTTP_STATUS" = "302" ]; then
               echo "✅ preprod.maydai.io is ready (HTTP $HTTP_STATUS)"
               exit 0
             fi
