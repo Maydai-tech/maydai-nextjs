@@ -143,6 +143,29 @@ jobs:
               ' 2>/dev/null | sort -u | head -15 || echo "Aucun détail disponible")
             fi
 
+            # Extract failed test files for local run command
+            FAILED_FILES=$(cat test-results.json | jq -r '
+              def get_failed_files:
+                (.specs[]? |
+                  .file as $file |
+                  .tests[]? |
+                  select(.status == "unexpected") |
+                  $file
+                ),
+                (.suites[]? | get_failed_files);
+              .suites[]? | get_failed_files
+            ' 2>/dev/null | sort -u | tr '\n' ' ' || echo "")
+
+            if [ -z "$FAILED_FILES" ]; then
+              FAILED_FILES=$(cat test-results.json | jq -r '
+                .suites[]?.specs[]? |
+                .file as $file |
+                .tests[]? |
+                select(.status == "unexpected") |
+                $file
+              ' 2>/dev/null | sort -u | tr '\n' ' ' || echo "")
+            fi
+
             echo "PASSED=$PASSED" >> $GITHUB_OUTPUT
             echo "FAILED=$FAILED" >> $GITHUB_OUTPUT
             echo "SKIPPED=$SKIPPED" >> $GITHUB_OUTPUT
@@ -156,6 +179,7 @@ jobs:
             echo "FAILED_TESTS_SUMMARY<<EOF" >> $GITHUB_OUTPUT
             echo "$FAILED_TESTS_SUMMARY" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
+            echo "FAILED_FILES=$FAILED_FILES" >> $GITHUB_OUTPUT
 
             echo "Parsed: $PASSED passed, $FAILED failed, $SKIPPED skipped, $FLAKY flaky"
           else
@@ -167,6 +191,7 @@ jobs:
             echo "TEST_LIST=No test results file found" >> $GITHUB_OUTPUT
             echo "ERROR_DETAILS=No test results file found" >> $GITHUB_OUTPUT
             echo "FAILED_TESTS_SUMMARY=No test results file found" >> $GITHUB_OUTPUT
+            echo "FAILED_FILES=" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload test results
@@ -277,6 +302,7 @@ jobs:
         env:
           FAILED_SUMMARY: ${{ steps.parse-results.outputs.FAILED_TESTS_SUMMARY }}
           ERROR_DETAILS: ${{ steps.parse-results.outputs.ERROR_DETAILS }}
+          FAILED_FILES: ${{ steps.parse-results.outputs.FAILED_FILES }}
           PASSED: ${{ steps.parse-results.outputs.PASSED }}
           FAILED: ${{ steps.parse-results.outputs.FAILED }}
           FLAKY: ${{ steps.parse-results.outputs.FLAKY }}
@@ -286,13 +312,23 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           REPORT_URL: http://57.130.47.254:8080/${{ github.run_id }}/
         run: |
-          # Use jq to build proper JSON with escaped strings
+          # Build local run command with UI mode
+          LOCAL_CMD="npx playwright test --ui ${FAILED_FILES}"
+
+          # Clean ANSI codes from error details
+          CLEAN_ERRORS=$(echo "$ERROR_DETAILS" | sed 's/\x1b\[[0-9;]*m//g')
+
+          # Use jq to build proper JSON with proper newlines
           jq -n \
-            --arg failed_summary "📋 *Tests échoués:*\n$FAILED_SUMMARY" \
-            --arg error_details "🤖 *Erreurs (copier/coller):*\n\`\`\`$ERROR_DETAILS\`\`\`" \
-            --arg results "*Résultats:* ✅ $PASSED | ❌ $FAILED | ⚠️ $FLAKY | ⏭️ $SKIPPED" \
-            --arg branch "*Branch:*\n$BRANCH" \
-            --arg author "*Author:*\n$AUTHOR" \
+            --arg branch "$BRANCH" \
+            --arg author "$AUTHOR" \
+            --arg passed "$PASSED" \
+            --arg failed "$FAILED" \
+            --arg flaky "$FLAKY" \
+            --arg skipped "$SKIPPED" \
+            --arg failed_summary "$FAILED_SUMMARY" \
+            --arg error_details "$CLEAN_ERRORS" \
+            --arg local_cmd "$LOCAL_CMD" \
             --arg run_url "$RUN_URL" \
             --arg report_url "$REPORT_URL" \
             '{
@@ -300,14 +336,15 @@ jobs:
                 {"type": "section", "text": {"type": "mrkdwn", "text": "<!here>"}},
                 {"type": "header", "text": {"type": "plain_text", "text": "❌ E2E Tests Failed", "emoji": true}},
                 {"type": "section", "fields": [
-                  {"type": "mrkdwn", "text": $branch},
-                  {"type": "mrkdwn", "text": $author}
+                  {"type": "mrkdwn", "text": ("*Branch:* " + $branch)},
+                  {"type": "mrkdwn", "text": ("*Author:* " + $author)}
                 ]},
-                {"type": "section", "text": {"type": "mrkdwn", "text": $results}},
+                {"type": "section", "text": {"type": "mrkdwn", "text": ("*Résultats:* ✅ " + $passed + " | ❌ " + $failed + " | ⚠️ " + $flaky + " | ⏭️ " + $skipped)}},
                 {"type": "divider"},
-                {"type": "section", "text": {"type": "mrkdwn", "text": $failed_summary}},
+                {"type": "section", "text": {"type": "mrkdwn", "text": ("📋 *Tests échoués:*\n" + $failed_summary)}},
+                {"type": "section", "text": {"type": "mrkdwn", "text": ("💻 *Lancer en local:*\n```" + $local_cmd + "```")}},
                 {"type": "divider"},
-                {"type": "section", "text": {"type": "mrkdwn", "text": $error_details}},
+                {"type": "section", "text": {"type": "mrkdwn", "text": ("🔍 *Erreurs:*\n```" + $error_details + "```")}},
                 {"type": "actions", "elements": [
                   {"type": "button", "text": {"type": "plain_text", "text": "🔍 GitHub Actions"}, "url": $run_url},
                   {"type": "button", "text": {"type": "plain_text", "text": "📊 Rapport HTML"}, "style": "danger", "url": $report_url}
