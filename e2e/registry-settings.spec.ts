@@ -268,15 +268,21 @@ test.describe('Registry Settings', () => {
     await page.waitForTimeout(500)
 
     // The modal should be visible
-    await expect(page.locator('text=Supprimer définitivement')).toBeVisible()
+    await expect(page.locator('[data-testid="delete-registry-button"]')).toBeVisible()
 
-    // Type the registry name to confirm deletion
-    // The registry name was updated in the previous test
+    // Get the expected registry name from the modal to ensure we type the correct one
+    // (This handles cases where the previous test was skipped and the name wasn't updated)
+    const registryName = await page.getByTestId('registry-name-to-confirm').textContent()
+    if (!registryName) throw new Error('Registry name not found in modal')
+
     const confirmInput = page.locator('input[placeholder="Saisissez le nom du registre"]')
-    await confirmInput.fill(TEST_REGISTRY.updatedName)
+    await confirmInput.fill(registryName)
+
+    // Wait for the button to be enabled (state update might take a tick)
+    await expect(page.locator('[data-testid="delete-registry-button"]')).toBeEnabled()
 
     // Click confirm delete button
-    await page.click('button:has-text("Supprimer définitivement")')
+    await page.click('[data-testid="delete-registry-button"]')
 
     // Wait for redirect to registries list
     await page.waitForURL(/\/dashboard\/registries/, { timeout: 10000 })

@@ -97,7 +97,7 @@ export default function DeleteRegistryModal({
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Pour confirmer, saisissez le nom du registre :{' '}
-              <span className="font-semibold text-gray-900">{registryName}</span>
+              <span className="font-semibold text-gray-900" data-testid="registry-name-to-confirm">{registryName}</span>
             </label>
             <input
               type="text"
@@ -125,6 +125,7 @@ export default function DeleteRegistryModal({
               Annuler
             </button>
             <button
+              data-testid="delete-registry-button"
               onClick={handleConfirm}
               disabled={!isConfirmationValid || deleting}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
