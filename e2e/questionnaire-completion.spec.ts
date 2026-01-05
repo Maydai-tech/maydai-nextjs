@@ -475,25 +475,41 @@ test.describe('Questionnaire Completion', () => {
       // Wait for redirect
       await page.waitForURL(/\/usecases\/[a-f0-9-]+(?!\/evaluation)/, { timeout: 60000 })
 
-      // Verify score via database
-      const { data: usecaseData, error: usecaseError } = await supabase
-        .from('usecases')
-        .select('score_final, status')
-        .eq('id', testData.usecaseId)
-        .single()
+      // Wait for status to be updated to 'completed' (poll database)
+      let usecaseData: { score_final: number | null; status: string } | null = null
+      const maxRetries = 10
+      const retryInterval = 2000
 
-      if (usecaseError) {
-        throw new Error(`Failed to fetch usecase: ${usecaseError.message}`)
+      for (let i = 0; i < maxRetries; i++) {
+        const { data, error } = await supabase
+          .from('usecases')
+          .select('score_final, status')
+          .eq('id', testData.usecaseId)
+          .single()
+
+        if (error) {
+          throw new Error(`Failed to fetch usecase: ${error.message}`)
+        }
+
+        usecaseData = data
+
+        if (data.status === 'completed') {
+          console.log(`✅ Status updated to completed after ${i + 1} attempts`)
+          break
+        }
+
+        console.log(`⏳ Status is still '${data.status}', waiting... (attempt ${i + 1}/${maxRetries})`)
+        await page.waitForTimeout(retryInterval)
       }
 
       // Verify status is completed
-      expect(usecaseData.status).toBe('completed')
+      expect(usecaseData?.status).toBe('completed')
 
       // Verify score is calculated (expected ~75 for happy path)
-      expect(usecaseData.score_final).toBeDefined()
-      expect(usecaseData.score_final).toBeGreaterThanOrEqual(70)
+      expect(usecaseData?.score_final).toBeDefined()
+      expect(usecaseData?.score_final).toBeGreaterThanOrEqual(70)
 
-      console.log(`✅ Score verified in database: ${usecaseData.score_final}`)
+      console.log(`✅ Score verified in database: ${usecaseData?.score_final}`)
     } finally {
       await cleanupTestData(testData)
     }
