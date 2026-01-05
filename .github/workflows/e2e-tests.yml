@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - preprod
-  pull_request:
-    branches:
-      - preprod
   workflow_dispatch:
 
 jobs:
@@ -31,26 +28,6 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Wait for preprod deployment
-        run: |
-          echo "Waiting for preprod.maydai.io to be ready..."
-          MAX_RETRIES=30
-          RETRY_INTERVAL=5
-
-          for i in $(seq 1 $MAX_RETRIES); do
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://preprod.maydai.io)
-            # Accept 200, 401 (Vercel auth), 301/302 (redirects) as "site is up"
-            if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "401" ] || [ "$HTTP_STATUS" = "301" ] || [ "$HTTP_STATUS" = "302" ]; then
-              echo "✅ preprod.maydai.io is ready (HTTP $HTTP_STATUS)"
-              exit 0
-            fi
-            echo "⏳ Attempt $i/$MAX_RETRIES - HTTP status: $HTTP_STATUS"
-            sleep $RETRY_INTERVAL
-          done
-
-          echo "❌ Timeout waiting for preprod.maydai.io"
-          exit 1
-
       - name: Run E2E tests
         id: e2e-tests
         continue-on-error: true
@@ -64,8 +41,8 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          # Playwright config - tests run against preprod
-          PLAYWRIGHT_BASE_URL: https://preprod.maydai.io
+          # Playwright config
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
           # Optional - for features that need these
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
