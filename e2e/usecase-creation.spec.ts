@@ -228,9 +228,13 @@ test.describe('UseCase Creation', () => {
     const supabase = getAdminClient()
 
     // Generate magic link for authentication
+    const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: TEST_USER.email,
+      options: {
+        redirectTo: baseUrl,
+      },
     })
 
     if (linkError) {
