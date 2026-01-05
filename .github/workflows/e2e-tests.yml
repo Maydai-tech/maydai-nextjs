@@ -92,6 +92,7 @@ jobs:
             ' 2>/dev/null | head -20 || echo "Could not parse test results")
 
             # Extract detailed error info for failed tests (for AI analysis)
+            # Format: clean summary that can be copy/pasted to AI for analysis
             ERROR_DETAILS=$(cat test-results.json | jq -r '
               def get_errors:
                 .title as $suite |
@@ -102,11 +103,11 @@ jobs:
                   select(.status == "unexpected") |
                   .results[]? |
                   select(.error) |
-                  "## " + $spec + "\nFile: " + $file + "\nError: " + (.error.message // "Unknown error") + "\n"
+                  "---\nTest: " + $spec + "\nFichier: " + $file + "\nErreur: " + ((.error.message // "Unknown error") | gsub("\n"; " ") | .[0:500])
                 ),
                 (.suites[]? | get_errors);
               .suites[]? | get_errors
-            ' 2>/dev/null | head -100 || echo "")
+            ' 2>/dev/null | head -80 || echo "")
 
             # If no errors found with nested structure, try flat structure
             if [ -z "$ERROR_DETAILS" ]; then
@@ -118,8 +119,33 @@ jobs:
                 select(.status == "unexpected") |
                 .results[]? |
                 select(.error) |
-                "## " + $spec + "\nFile: " + $file + "\nError: " + (.error.message // "Unknown error") + "\n"
-              ' 2>/dev/null | head -100 || echo "No error details available")
+                "---\nTest: " + $spec + "\nFichier: " + $file + "\nErreur: " + ((.error.message // "Unknown error") | gsub("\n"; " ") | .[0:500])
+              ' 2>/dev/null | head -80 || echo "No error details available")
+            fi
+
+            # Build a simple summary for copy/paste
+            FAILED_TESTS_SUMMARY=$(cat test-results.json | jq -r '
+              def get_failed:
+                (.specs[]? |
+                  .title as $spec |
+                  .file as $file |
+                  .tests[]? |
+                  select(.status == "unexpected") |
+                  "• " + $spec + " (" + ($file | split("/") | last) + ")"
+                ),
+                (.suites[]? | get_failed);
+              .suites[]? | get_failed
+            ' 2>/dev/null | sort -u | head -15 || echo "")
+
+            if [ -z "$FAILED_TESTS_SUMMARY" ]; then
+              FAILED_TESTS_SUMMARY=$(cat test-results.json | jq -r '
+                .suites[]?.specs[]? |
+                .title as $spec |
+                .file as $file |
+                .tests[]? |
+                select(.status == "unexpected") |
+                "• " + $spec + " (" + ($file | split("/") | last) + ")"
+              ' 2>/dev/null | sort -u | head -15 || echo "Aucun détail disponible")
             fi
 
             echo "PASSED=$PASSED" >> $GITHUB_OUTPUT
@@ -132,6 +158,9 @@ jobs:
             echo "ERROR_DETAILS<<EOF" >> $GITHUB_OUTPUT
             echo "$ERROR_DETAILS" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
+            echo "FAILED_TESTS_SUMMARY<<EOF" >> $GITHUB_OUTPUT
+            echo "$FAILED_TESTS_SUMMARY" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
 
             echo "Parsed: $PASSED passed, $FAILED failed, $SKIPPED skipped, $FLAKY flaky"
           else
@@ -142,6 +171,7 @@ jobs:
             echo "FLAKY=0" >> $GITHUB_OUTPUT
             echo "TEST_LIST=No test results file found" >> $GITHUB_OUTPUT
             echo "ERROR_DETAILS=No test results file found" >> $GITHUB_OUTPUT
+            echo "FAILED_TESTS_SUMMARY=No test results file found" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload test results
@@ -275,20 +305,7 @@ jobs:
                   "fields": [
                     {
                       "type": "mrkdwn",
-                      "text": "*Repository:*\n${{ github.repository }}"
-                    },
-                    {
-                      "type": "mrkdwn",
                       "text": "*Branch:*\n${{ github.ref_name }}"
-                    }
-                  ]
-                },
-                {
-                  "type": "section",
-                  "fields": [
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Commit:*\n`${{ github.sha }}`"
                     },
                     {
                       "type": "mrkdwn",
@@ -300,14 +317,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Results:* ✅ ${{ steps.parse-results.outputs.PASSED }} passed | ❌ ${{ steps.parse-results.outputs.FAILED }} failed | ⚠️ ${{ steps.parse-results.outputs.FLAKY }} flaky | ⏭️ ${{ steps.parse-results.outputs.SKIPPED }} skipped"
-                  }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Tests:*\n```${{ steps.parse-results.outputs.TEST_LIST }}```"
+                    "text": "*Résultats:* ✅ ${{ steps.parse-results.outputs.PASSED }} | ❌ ${{ steps.parse-results.outputs.FAILED }} | ⚠️ ${{ steps.parse-results.outputs.FLAKY }} | ⏭️ ${{ steps.parse-results.outputs.SKIPPED }}"
                   }
                 },
                 {
@@ -317,7 +327,17 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "🤖 *Erreurs (copier/coller pour analyse IA):*"
+                    "text": "📋 *Tests échoués:*\n${{ steps.parse-results.outputs.FAILED_TESTS_SUMMARY }}"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "🤖 *Détails des erreurs (copier/coller):*"
                   }
                 },
                 {
@@ -334,7 +354,7 @@ jobs:
                       "type": "button",
                       "text": {
                         "type": "plain_text",
-                        "text": "View Run"
+                        "text": "🔍 GitHub Actions"
                       },
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     },
@@ -342,7 +362,7 @@ jobs:
                       "type": "button",
                       "text": {
                         "type": "plain_text",
-                        "text": "📊 View Report"
+                        "text": "📊 Rapport HTML"
                       },
                       "style": "danger",
                       "url": "http://57.130.47.254:8080/${{ github.run_id }}/"
