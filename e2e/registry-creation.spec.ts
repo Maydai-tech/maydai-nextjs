@@ -180,9 +180,13 @@ test.describe('Registry Creation', () => {
     const supabase = getAdminClient()
 
     // Generate a magic link and extract tokens
+    const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: TEST_USER.email,
+      options: {
+        redirectTo: baseUrl,
+      },
     })
 
     if (linkError) {

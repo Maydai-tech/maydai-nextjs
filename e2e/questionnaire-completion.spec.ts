@@ -409,9 +409,13 @@ async function authenticateAndNavigate(page: Page, testData: TestData): Promise<
   const supabase = getAdminClient()
 
   // Generate magic link
+  const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
   const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
     type: 'magiclink',
     email: testData.email,
+    options: {
+      redirectTo: baseUrl,
+    },
   })
 
   if (linkError) {
