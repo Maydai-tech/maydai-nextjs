@@ -92,7 +92,7 @@ jobs:
             ' 2>/dev/null | head -20 || echo "Could not parse test results")
 
             # Extract detailed error info for failed tests (for AI analysis)
-            # Format: clean summary that can be copy/pasted to AI for analysis
+            # Format: single line per error to avoid JSON issues in Slack payload
             ERROR_DETAILS=$(cat test-results.json | jq -r '
               def get_errors:
                 .title as $suite |
@@ -103,11 +103,11 @@ jobs:
                   select(.status == "unexpected") |
                   .results[]? |
                   select(.error) |
-                  "---\nTest: " + $spec + "\nFichier: " + $file + "\nErreur: " + ((.error.message // "Unknown error") | gsub("\n"; " ") | .[0:500])
+                  "• " + $spec + " | " + ($file | split("/") | last) + " | " + ((.error.message // "Unknown error") | gsub("\n"; " ") | gsub("\""; "") | .[0:200])
                 ),
                 (.suites[]? | get_errors);
               .suites[]? | get_errors
-            ' 2>/dev/null | head -80 || echo "")
+            ' 2>/dev/null | sort -u | head -10 || echo "")
 
             # If no errors found with nested structure, try flat structure
             if [ -z "$ERROR_DETAILS" ]; then
@@ -119,8 +119,8 @@ jobs:
                 select(.status == "unexpected") |
                 .results[]? |
                 select(.error) |
-                "---\nTest: " + $spec + "\nFichier: " + $file + "\nErreur: " + ((.error.message // "Unknown error") | gsub("\n"; " ") | .[0:500])
-              ' 2>/dev/null | head -80 || echo "No error details available")
+                "• " + $spec + " | " + ($file | split("/") | last) + " | " + ((.error.message // "Unknown error") | gsub("\n"; " ") | gsub("\""; "") | .[0:200])
+              ' 2>/dev/null | sort -u | head -10 || echo "No error details available")
             fi
 
             # Build a simple summary for copy/paste
@@ -276,98 +276,54 @@ jobs:
               ]
             }
 
+      - name: Build Slack failure payload
+        if: steps.e2e-tests.outcome == 'failure'
+        id: slack-payload
+        env:
+          FAILED_SUMMARY: ${{ steps.parse-results.outputs.FAILED_TESTS_SUMMARY }}
+          ERROR_DETAILS: ${{ steps.parse-results.outputs.ERROR_DETAILS }}
+          PASSED: ${{ steps.parse-results.outputs.PASSED }}
+          FAILED: ${{ steps.parse-results.outputs.FAILED }}
+          FLAKY: ${{ steps.parse-results.outputs.FLAKY }}
+          SKIPPED: ${{ steps.parse-results.outputs.SKIPPED }}
+          BRANCH: ${{ github.ref_name }}
+          AUTHOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPORT_URL: http://57.130.47.254:8080/${{ github.run_id }}/
+        run: |
+          # Use jq to build proper JSON with escaped strings
+          jq -n \
+            --arg failed_summary "📋 *Tests échoués:*\n$FAILED_SUMMARY" \
+            --arg error_details "🤖 *Erreurs (copier/coller):*\n\`\`\`$ERROR_DETAILS\`\`\`" \
+            --arg results "*Résultats:* ✅ $PASSED | ❌ $FAILED | ⚠️ $FLAKY | ⏭️ $SKIPPED" \
+            --arg branch "*Branch:*\n$BRANCH" \
+            --arg author "*Author:*\n$AUTHOR" \
+            --arg run_url "$RUN_URL" \
+            --arg report_url "$REPORT_URL" \
+            '{
+              "blocks": [
+                {"type": "section", "text": {"type": "mrkdwn", "text": "<!here>"}},
+                {"type": "header", "text": {"type": "plain_text", "text": "❌ E2E Tests Failed", "emoji": true}},
+                {"type": "section", "fields": [
+                  {"type": "mrkdwn", "text": $branch},
+                  {"type": "mrkdwn", "text": $author}
+                ]},
+                {"type": "section", "text": {"type": "mrkdwn", "text": $results}},
+                {"type": "divider"},
+                {"type": "section", "text": {"type": "mrkdwn", "text": $failed_summary}},
+                {"type": "divider"},
+                {"type": "section", "text": {"type": "mrkdwn", "text": $error_details}},
+                {"type": "actions", "elements": [
+                  {"type": "button", "text": {"type": "plain_text", "text": "🔍 GitHub Actions"}, "url": $run_url},
+                  {"type": "button", "text": {"type": "plain_text", "text": "📊 Rapport HTML"}, "style": "danger", "url": $report_url}
+                ]}
+              ]
+            }' > slack-payload.json
+
       - name: Notify Slack on Failure
         if: steps.e2e-tests.outcome == 'failure'
         uses: slackapi/slack-github-action@v2.0.0
         with:
           webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
-          payload: |
-            {
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "<!here>"
-                  }
-                },
-                {
-                  "type": "header",
-                  "text": {
-                    "type": "plain_text",
-                    "text": "❌ E2E Tests Failed",
-                    "emoji": true
-                  }
-                },
-                {
-                  "type": "section",
-                  "fields": [
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Branch:*\n${{ github.ref_name }}"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Author:*\n${{ github.actor }}"
-                    }
-                  ]
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Résultats:* ✅ ${{ steps.parse-results.outputs.PASSED }} | ❌ ${{ steps.parse-results.outputs.FAILED }} | ⚠️ ${{ steps.parse-results.outputs.FLAKY }} | ⏭️ ${{ steps.parse-results.outputs.SKIPPED }}"
-                  }
-                },
-                {
-                  "type": "divider"
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "📋 *Tests échoués:*\n${{ steps.parse-results.outputs.FAILED_TESTS_SUMMARY }}"
-                  }
-                },
-                {
-                  "type": "divider"
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "🤖 *Détails des erreurs (copier/coller):*"
-                  }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "```${{ steps.parse-results.outputs.ERROR_DETAILS }}```"
-                  }
-                },
-                {
-                  "type": "actions",
-                  "elements": [
-                    {
-                      "type": "button",
-                      "text": {
-                        "type": "plain_text",
-                        "text": "🔍 GitHub Actions"
-                      },
-                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                    },
-                    {
-                      "type": "button",
-                      "text": {
-                        "type": "plain_text",
-                        "text": "📊 Rapport HTML"
-                      },
-                      "style": "danger",
-                      "url": "http://57.130.47.254:8080/${{ github.run_id }}/"
-                    }
-                  ]
-                }
-              ]
-            }
+          payload-file-path: slack-payload.json
