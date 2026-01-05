@@ -312,8 +312,8 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           REPORT_URL: http://57.130.47.254:8080/${{ github.run_id }}/
         run: |
-          # Build local run command
-          LOCAL_CMD="npx playwright test ${FAILED_FILES}"
+          # Build local run command with UI mode
+          LOCAL_CMD="npx playwright test --ui ${FAILED_FILES}"
 
           # Clean ANSI codes from error details
           CLEAN_ERRORS=$(echo "$ERROR_DETAILS" | sed 's/\x1b\[[0-9;]*m//g')
