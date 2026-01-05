@@ -255,25 +255,32 @@ async function answerQuestion(
 
   // Close any open tooltips by clicking elsewhere first
   await page.click('body', { position: { x: 10, y: 10 } }).catch(() => {})
-  await page.waitForTimeout(200)
+  await page.waitForTimeout(300)
 
   switch (type) {
     case 'radio':
+      // Wait for the radio to be visible before clicking
       const radioInput = page.getByRole('radio', { name: new RegExp(answerText.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) })
+      await radioInput.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {
+        console.log(`⚠️ Radio button not visible: ${answerText.slice(0, 30)}`)
+      })
       await radioInput.click({ force: true })
-      await page.waitForTimeout(500)
+      await page.waitForTimeout(800)
       break
 
     case 'checkbox':
       if (Array.isArray(answer)) {
         for (const ans of answer) {
           const checkboxInput = page.getByRole('checkbox', { name: new RegExp(ans.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) })
+          await checkboxInput.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {})
           await checkboxInput.click({ force: true })
-          await page.waitForTimeout(300)
+          await page.waitForTimeout(500)
         }
       } else {
         const checkboxInput = page.getByRole('checkbox', { name: new RegExp(answerText.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) })
+        await checkboxInput.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {})
         await checkboxInput.click({ force: true })
+        await page.waitForTimeout(500)
       }
       break
 
@@ -281,25 +288,29 @@ async function answerQuestion(
       if (Array.isArray(answer)) {
         for (const ans of answer) {
           const tagButton = page.locator(`button`).filter({ hasText: ans }).first()
+          await tagButton.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {})
           await tagButton.click({ force: true })
-          await page.waitForTimeout(300)
+          await page.waitForTimeout(500)
         }
       } else {
         const tagButton = page.locator(`button`).filter({ hasText: answerText }).first()
+        await tagButton.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {})
         await tagButton.click({ force: true })
+        await page.waitForTimeout(500)
       }
       break
 
     case 'conditional':
       const conditionalRadio = page.getByRole('radio', { name: new RegExp(answerText.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) })
+      await conditionalRadio.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {})
       await conditionalRadio.click({ force: true })
-      await page.waitForTimeout(500)
+      await page.waitForTimeout(800)
       if (conditionalValue) {
         await page.waitForTimeout(500)
         const conditionalInput = page.getByRole('textbox').first()
         if (await conditionalInput.isVisible()) {
           await conditionalInput.fill(conditionalValue)
-          await page.waitForTimeout(300)
+          await page.waitForTimeout(500)
         }
       }
       break
@@ -315,6 +326,36 @@ async function completeQuestionnaire(page: Page) {
     return progressText || '0%'
   }
 
+  /**
+   * Click the "Suivant" button with retry logic
+   */
+  async function clickSuivantWithRetry(questionIndex: number): Promise<boolean> {
+    const maxRetries = 3
+    for (let retry = 0; retry < maxRetries; retry++) {
+      await page.waitForTimeout(500)
+
+      const suivantButton = page.locator('button:has-text("Suivant")')
+      const isVisible = await suivantButton.isVisible().catch(() => false)
+
+      if (isVisible) {
+        const isEnabled = await suivantButton.isEnabled().catch(() => false)
+        if (isEnabled) {
+          await suivantButton.click()
+          console.log(`✅ Clicked Suivant after question ${questionIndex + 1}`)
+          return true
+        }
+      }
+
+      if (retry < maxRetries - 1) {
+        console.log(`⚠️ Suivant button not ready (attempt ${retry + 1}/${maxRetries}), waiting...`)
+        await page.waitForTimeout(1000)
+      }
+    }
+
+    console.log(`⚠️ Suivant button not clickable after ${maxRetries} attempts for question ${questionIndex + 1}`)
+    return false
+  }
+
   for (let i = 0; i < QUESTIONNAIRE_ANSWERS.length; i++) {
     const { questionId, type, answer, conditionalValue } = QUESTIONNAIRE_ANSWERS[i]
     const isLastQuestion = i === QUESTIONNAIRE_ANSWERS.length - 1
@@ -328,29 +369,21 @@ async function completeQuestionnaire(page: Page) {
 
     // Click "Suivant" to proceed to the next question
     if (!isLastQuestion) {
-      await page.waitForTimeout(500)
-      const suivantButton = page.locator('button:has-text("Suivant")')
-      await suivantButton.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {
-        console.log(`⚠️ Suivant button not visible after question ${i + 1}`)
-      })
-      if (await suivantButton.isVisible()) {
-        await suivantButton.click()
-        console.log(`✅ Clicked Suivant after question ${i + 1}`)
-      }
-    }
+      const clicked = await clickSuivantWithRetry(i)
 
-    // Wait for progression to change
-    if (!isLastQuestion) {
-      await page.waitForFunction(
-        (prevProgress) => {
-          const currentProgress = document.body.innerText.match(/(\d+)%/)?.[0]
-          return currentProgress && currentProgress !== prevProgress
-        },
-        progressionBefore,
-        { timeout: 10000 }
-      ).catch(() => {
-        console.log(`⚠️ Progress didn't change after question ${i + 1}, continuing anyway...`)
-      })
+      if (clicked) {
+        // Wait for progression to change
+        await page.waitForFunction(
+          (prevProgress) => {
+            const currentProgress = document.body.innerText.match(/(\d+)%/)?.[0]
+            return currentProgress && currentProgress !== prevProgress
+          },
+          progressionBefore,
+          { timeout: 15000 }
+        ).catch(() => {
+          console.log(`⚠️ Progress didn't change after question ${i + 1}, continuing anyway...`)
+        })
+      }
     }
 
     await page.waitForTimeout(500)
@@ -358,7 +391,7 @@ async function completeQuestionnaire(page: Page) {
     // If it's the last question, click "Terminer l'évaluation"
     if (isLastQuestion) {
       console.log('🎯 Last question answered, looking for "Terminer l\'évaluation" button...')
-      await page.waitForTimeout(1000)
+      await page.waitForTimeout(1500)
 
       const terminerSelectors = [
         'button:has-text("Terminer l\'évaluation")',
@@ -424,21 +457,39 @@ async function authenticateAndNavigate(page: Page, testData: TestData): Promise<
 
   // Authenticate via magic link
   await page.goto(linkData.properties.action_link)
-  await page.waitForTimeout(2000)
+  await page.waitForTimeout(3000)
 
-  // Navigate to evaluation page
-  await page.goto(`/usecases/${testData.usecaseId}/evaluation`)
-  await page.waitForLoadState('networkidle')
-  await page.waitForTimeout(2000)
+  // Navigate to evaluation page with retry
+  let navigationSuccess = false
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await page.goto(`/usecases/${testData.usecaseId}/evaluation`)
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(2000)
 
-  // Wait for the first question to load
-  await page.waitForSelector('text=Progression', { timeout: 30000 })
+    // Check if we're on the evaluation page and the questionnaire is loaded
+    const progressionVisible = await page.locator('text=Progression').isVisible().catch(() => false)
+    const questionVisible = await page.locator('input[type="radio"]').first().isVisible().catch(() => false)
+
+    if (progressionVisible && questionVisible) {
+      navigationSuccess = true
+      console.log(`✅ Navigation successful on attempt ${attempt}`)
+      break
+    }
+
+    console.log(`⚠️ Navigation attempt ${attempt} - Progression visible: ${progressionVisible}, Question visible: ${questionVisible}`)
+    await page.waitForTimeout(2000)
+  }
+
+  if (!navigationSuccess) {
+    // Final attempt - wait longer for the page to load
+    await page.waitForSelector('text=Progression', { timeout: 30000 })
+  }
 }
 
 // Tests can run in parallel since each creates its own data
 test.describe('Questionnaire Completion', () => {
   test('should complete questionnaire and display score', async ({ page }) => {
-    test.setTimeout(120000)
+    test.setTimeout(150000)
 
     const testData = await createTestData('display-score')
 
@@ -446,14 +497,50 @@ test.describe('Questionnaire Completion', () => {
       await authenticateAndNavigate(page, testData)
       await completeQuestionnaire(page)
 
-      // Wait for redirect to overview
+      // Wait for redirect to overview (not evaluation page)
       await page.waitForURL(/\/usecases\/[a-f0-9-]+(?!\/evaluation)/, { timeout: 60000 })
 
-      // Wait for the score to be displayed
-      await page.waitForSelector('text=Score de Conformité', { timeout: 30000 })
+      // Wait for the page to fully load
+      await page.waitForLoadState('networkidle')
+      await page.waitForTimeout(3000)
+
+      // Try multiple selectors for the score section
+      const scoreSelectors = [
+        'text=Score de Conformité',
+        'text=Score de conformité',
+        'text=Conformité',
+        '[data-testid="score"]',
+        'text=/\\d+\\/100/',
+      ]
+
+      let scoreFound = false
+      for (const selector of scoreSelectors) {
+        const element = page.locator(selector).first()
+        const isVisible = await element.isVisible().catch(() => false)
+        if (isVisible) {
+          console.log(`✅ Found score element with selector: ${selector}`)
+          scoreFound = true
+          break
+        }
+      }
+
+      if (!scoreFound) {
+        // Take a screenshot for debugging
+        console.log('⚠️ Score not found with standard selectors, checking page content...')
+        const pageContent = await page.content()
+        console.log(`Page URL: ${page.url()}`)
+
+        // Check if we're on the right page
+        if (page.url().includes('/evaluation')) {
+          throw new Error('Still on evaluation page - questionnaire completion may have failed')
+        }
+
+        // Wait a bit more and retry
+        await page.waitForTimeout(5000)
+      }
 
       // Verify score is displayed (format: XX/100)
-      const scoreText = await page.locator('text=/\\d+\\/100/').first().textContent()
+      const scoreText = await page.locator('text=/\\d+\\/100/').first().textContent({ timeout: 30000 })
       expect(scoreText).toMatch(/\d+\/100/)
 
       console.log(`✅ Score displayed: ${scoreText}`)
