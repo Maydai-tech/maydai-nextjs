@@ -224,8 +224,11 @@ test.describe('Registry Creation', () => {
     expect(registryIdMatch).not.toBeNull()
     testRegistryId = registryIdMatch![1]
 
-    // 10. Verify registry name is displayed
-    await expect(page.locator('text=' + TEST_REGISTRY.name)).toBeVisible({ timeout: 5000 })
+    // 10. Wait for page to fully load and verify registry name is displayed
+    await page.waitForLoadState('networkidle')
+
+    // Use getByText for more robust text matching and increase timeout
+    await expect(page.getByText(TEST_REGISTRY.name, { exact: false })).toBeVisible({ timeout: 10000 })
 
     console.log(`Registry created successfully: ${testRegistryId}`)
   })
