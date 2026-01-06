@@ -42,6 +42,7 @@ export function useUnacceptableCaseWorkflow({
   const [newDate, setNewDate] = useState("");
   const [nextSteps, setNextSteps] = useState<UseCaseNextSteps | null>(null);
   const [loadingNextSteps, setLoadingNextSteps] = useState(false);
+  const [nextStepsError, setNextStepsError] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [updatingDate, setUpdatingDate] = useState(false);
@@ -52,7 +53,7 @@ export function useUnacceptableCaseWorkflow({
 
   // Charger les next steps quand la modal s'ouvre
   useEffect(() => {
-    if (isOpen && useCase && !nextSteps && !loadingNextSteps) {
+    if (isOpen && useCase && !nextSteps && !loadingNextSteps && !nextStepsError) {
       console.log("Loading nextsteps for useCase:", useCase.id);
       setLoadingNextSteps(true);
       api
@@ -65,12 +66,13 @@ export function useUnacceptableCaseWorkflow({
         })
         .catch((error) => {
           console.error("Error loading next steps:", error);
+          setNextStepsError(true);
         })
         .finally(() => {
           setLoadingNextSteps(false);
         });
     }
-  }, [isOpen, useCase, api, nextSteps, loadingNextSteps]);
+  }, [isOpen, useCase, api, nextSteps, loadingNextSteps, nextStepsError]);
 
   // Synchroniser proofUploaded avec initialProofUploaded (gère upload ET suppression)
   useEffect(() => {
@@ -335,6 +337,7 @@ export function useUnacceptableCaseWorkflow({
     setSelectedFile(null);
     setUploadError(null);
     setNextSteps(null);
+    setNextStepsError(false);
     setProofUploaded(false);
     setTextContent("");
     setDeleting(false);
