@@ -16,7 +16,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    
+
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
       return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
@@ -81,17 +81,33 @@ export async function GET(
       .from('usecases')
       .select(`
         *,
-        companies(name),
-        compl_ai_models(
-          id,
-          model_name,
-          model_provider,
-          model_type,
-          version
-        )
+        companies(name)
       `)
       .eq('company_id', id)
       .order('created_at', { ascending: false })
+
+    // Fetch model information separately if usecases have primary_model_id
+    if (usecases && usecases.length > 0) {
+      const modelIds = usecases
+        .map(uc => uc.primary_model_id)
+        .filter((id): id is string => id !== null && id !== undefined)
+
+      if (modelIds.length > 0) {
+        const { data: models } = await supabase
+          .from('compl_ai_models')
+          .select('id, model_name, model_provider, model_type, version')
+          .in('id', modelIds)
+
+        if (models) {
+          const modelsMap = new Map(models.map(m => [m.id, m]))
+          usecases.forEach(uc => {
+            if (uc.primary_model_id && modelsMap.has(uc.primary_model_id)) {
+              uc.compl_ai_models = modelsMap.get(uc.primary_model_id)
+            }
+          })
+        }
+      }
+    }
 
     if (usecasesError) {
       console.error('Error fetching use cases:', usecasesError)

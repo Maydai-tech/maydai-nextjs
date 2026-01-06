@@ -88,19 +88,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('=== DEBUG API: POST /api/usecases ===')
-  
   try {
     const authHeader = request.headers.get('authorization')
-    console.log('Auth header présent:', !!authHeader)
-    
     if (!authHeader) {
       return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
     }
 
     const token = authHeader.replace('Bearer ', '')
-    console.log('Token extrait (premiers caractères):', token.substring(0, 20) + '...')
-    
+
     // Create Supabase client with the user's token
     const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
       global: {
@@ -112,17 +107,14 @@ export async function POST(request: NextRequest) {
     
     // Verify the token and get user
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    console.log('User auth result:', { userId: user?.id, error: authError })
-    
+
     if (authError || !user) {
-      console.error('Auth error:', authError)
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
     // Parse request body
     const body = await request.json()
-    console.log('Body reçu:', JSON.stringify(body, null, 2))
-    
+
     const {
       name,
       deployment_date,
@@ -140,14 +132,6 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validate required fields
-    console.log('Validation des champs requis:', {
-      name: !!name,
-      description: !!description,
-      ai_category: !!ai_category,
-      responsible_service: !!responsible_service,
-      company_id: !!company_id
-    })
-    
     if (!name || !description || !ai_category || !responsible_service || !company_id) {
       const missingFields = []
       if (!name) missingFields.push('name')
@@ -155,9 +139,7 @@ export async function POST(request: NextRequest) {
       if (!ai_category) missingFields.push('ai_category')
       if (!responsible_service) missingFields.push('responsible_service')
       if (!company_id) missingFields.push('company_id')
-      
-      console.error('Champs manquants:', missingFields)
-      
+
       return NextResponse.json({ 
         error: 'Missing required fields: name, description, ai_category, responsible_service, company_id',
         missing: missingFields 
@@ -165,19 +147,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user has access to this company via user_companies
-    console.log('Vérification accès company via user_companies pour user:', user.id, 'company:', company_id)
     const { data: userCompany, error: userCompanyError } = await supabase
       .from('user_companies')
       .select('company_id, role')
       .eq('user_id', user.id)
       .eq('company_id', company_id)
-      .single()
+      .maybeSingle()
 
-    console.log('User company check result:', { userCompany, error: userCompanyError })
+    if (userCompanyError) {
+      return NextResponse.json({
+        error: 'Error checking access permissions',
+        code: 'DB_ERROR',
+        details: userCompanyError.message
+      }, { status: 500 })
+    }
 
-    if (userCompanyError || !userCompany) {
-      console.error('Company not found or access denied')
-      return NextResponse.json({ error: 'Company not found or access denied' }, { status: 403 })
+    if (!userCompany) {
+      return NextResponse.json({
+        error: 'Company not found or access denied',
+        code: 'ACCESS_DENIED',
+        details: 'User not associated with this company'
+      }, { status: 403 })
     }
 
     // Vérifier les limites du plan du propriétaire du registre
@@ -196,9 +186,9 @@ export async function POST(request: NextRequest) {
     }
 
     if ((currentUseCaseCount || 0) >= maxUseCases) {
-      console.log('Limite de use cases atteinte:', currentUseCaseCount, '/', maxUseCases)
       return NextResponse.json({
         error: 'Limite du plan atteinte',
+        code: 'PLAN_LIMIT_REACHED',
         limit: maxUseCases,
         current: currentUseCaseCount
       }, { status: 403 })
@@ -234,24 +224,14 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
       updated_by: user.id
     }
-    
-    console.log('Données à insérer dans usecases:', JSON.stringify(insertData, null, 2))
-    
+
     const { data: usecase, error: createError } = await supabase
       .from('usecases')
       .insert([insertData])
       .select()
       .single()
 
-    console.log('Insert result:', { usecase, error: createError })
-
     if (createError) {
-      console.error('=== ERREUR lors de l\'insertion ===')
-      console.error('Error details:', JSON.stringify(createError, null, 2))
-      console.error('Error message:', createError.message)
-      console.error('Error code:', createError.code)
-      console.error('Error hint:', createError.hint)
-      console.error('Error details:', createError.details)
       return NextResponse.json({
         error: 'Error creating use case',
         details: createError.message,
@@ -262,17 +242,13 @@ export async function POST(request: NextRequest) {
     // Enregistrer l'événement de création dans l'historique
     await recordUseCaseHistory(supabase, usecase.id, user.id, 'created')
 
-    console.log('Use case créé avec succès:', usecase)
     return NextResponse.json(usecase, { status: 201 })
 
   } catch (error: any) {
-    console.error('=== ERREUR GÉNÉRALE dans POST API ===')
-    console.error('Error type:', error?.constructor?.name)
-    console.error('Error message:', error?.message)
-    console.error('Error stack:', error?.stack)
-    return NextResponse.json({ 
+    console.error('Error in usecases POST API:', error?.message)
+    return NextResponse.json({
       error: 'Internal server error',
-      message: error?.message 
+      message: error?.message
     }, { status: 500 })
   }
 }

@@ -649,6 +649,31 @@ function CreateUseCasePageContent() {
       console.log('Status:', response.status)
       console.log('Data:', response.data)
 
+      // Gérer les erreurs HTTP (useApiCall ne lance pas d'exception)
+      if (response.status >= 400) {
+        console.error('=== ERREUR HTTP lors de la création du use case ===')
+        console.error('Status:', response.status)
+        console.error('Data:', response.data)
+
+        let errorMessage = 'Erreur lors de la création du cas d\'usage'
+        const errorCode = response.data?.code
+
+        if (errorCode === 'PLAN_LIMIT_REACHED') {
+          const limit = response.data?.limit || 3
+          const current = response.data?.current || 0
+          errorMessage = `Vous avez atteint la limite de ${limit} cas d'usage pour ce registre (${current}/${limit}). Mettez à niveau votre plan pour en créer davantage.`
+        } else if (errorCode === 'ACCESS_DENIED') {
+          errorMessage = 'Vous n\'avez pas les droits pour créer un cas d\'usage dans ce registre.'
+        } else if (response.status === 401) {
+          errorMessage = 'Votre session a expiré. Veuillez vous reconnecter.'
+        } else {
+          errorMessage = response.data?.error || response.error || errorMessage
+        }
+
+        setError(errorMessage)
+        return
+      }
+
       if (response.data?.id) {
         console.log('Redirection vers:', `/usecases/${response.data.id}/evaluation`)
         router.push(`/usecases/${response.data.id}/evaluation`)
@@ -657,14 +682,9 @@ function CreateUseCasePageContent() {
       console.error('=== ERREUR lors de la création du use case ===')
       console.error('Type d\'erreur:', error?.name)
       console.error('Message:', error?.message)
-      console.error('Response:', error?.response)
-      console.error('Response status:', error?.response?.status)
-      console.error('Response data:', error?.response?.data)
       console.error('Stack trace:', error?.stack)
 
-      // Message d'erreur plus détaillé
-      const errorMessage = error?.response?.data?.error || error?.message || 'Erreur lors de la création du cas d\'usage'
-      setError(errorMessage)
+      setError(error?.message || 'Erreur lors de la création du cas d\'usage')
     } finally {
       setSubmitting(false)
     }
