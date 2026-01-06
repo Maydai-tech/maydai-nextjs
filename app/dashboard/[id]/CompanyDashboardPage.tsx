@@ -17,12 +17,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  X
+  X,
+  MoreVertical,
+  Trash2
 } from 'lucide-react'
 import WorldMap from '@/components/WorldMap'
 import ScoreCircle from '@/components/ScoreCircle'
 import RiskPyramid from '@/components/RiskPyramid'
 import DeleteConfirmationModal from '@/app/usecases/[id]/components/DeleteConfirmationModal'
+import Toast from '@/components/Toast'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import Image from 'next/image'
 import { getCompactScoreStyle, getSpecialScoreStyles } from '@/lib/score-styles'
@@ -85,10 +88,12 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
   const [company, setCompany] = useState<Company | null>(null)
   const [useCases, setUseCases] = useState<UseCase[]>([])
   const [loadingData, setLoadingData] = useState(true)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [showToast, setShowToast] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [useCaseToDelete, setUseCaseToDelete] = useState<UseCase | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [showUseCaseLimitModal, setShowUseCaseLimitModal] = useState(false)
   const { plan } = useRegistryOwnerPlan(companyId)
 
@@ -122,20 +127,17 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
   useEffect(() => {
     setMounted(true)
 
-    // Check for deletion success message
+    // Check for deletion success message from URL
     if (searchParams.get('deleted') === 'true') {
       const useCaseName = searchParams.get('useCaseName')
-      setSuccessMessage(`Le use case "${useCaseName || 'Use case'}" a été supprimé avec succès`)
+      setToastMessage(`Le use case "${useCaseName || 'Use case'}" a été supprimé avec succès`)
+      setShowToast(true)
 
-      // Clear the message after 5 seconds
-      setTimeout(() => {
-        setSuccessMessage(null)
-        // Clean up the URL
-        const url = new URL(window.location.href)
-        url.searchParams.delete('deleted')
-        url.searchParams.delete('useCaseName')
-        router.replace(url.pathname)
-      }, 5000)
+      // Clean up the URL
+      const url = new URL(window.location.href)
+      url.searchParams.delete('deleted')
+      url.searchParams.delete('useCaseName')
+      router.replace(url.pathname)
     }
   }, [searchParams, router])
 
@@ -150,6 +152,17 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
       fetchDashboardData()
     }
   }, [user, mounted, companyId])
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (openMenuId) {
+        setOpenMenuId(null)
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [openMenuId])
 
   const fetchDashboardData = async () => {
     try {
@@ -175,14 +188,6 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
       }
 
       if (useCasesResponse.data) {
-        console.log('🔍 Debug dashboard usecases data:', useCasesResponse.data.map((uc: any) => ({
-          id: uc.id,
-          name: uc.name,
-          status: uc.status,
-          risk_level: uc.risk_level,
-          score_final: uc.score_final,
-          has_compl_ai_models: !!uc.compl_ai_models
-        })))
         setUseCases(useCasesResponse.data)
         // Reset to first page when data changes
         setCurrentPage(1)
@@ -258,16 +263,12 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
         throw new Error(error.error || 'Erreur lors de la suppression')
       }
 
-      // Rafraîchir la liste
-      setSuccessMessage(`Le use case "${useCaseToDelete.name}" a été supprimé avec succès`)
+      // Rafraîchir la liste et afficher le toast
       setUseCases(useCases.filter(uc => uc.id !== useCaseToDelete.id))
       setDeleteModalOpen(false)
+      setToastMessage(`Le use case "${useCaseToDelete.name}" a été supprimé avec succès`)
+      setShowToast(true)
       setUseCaseToDelete(null)
-
-      // Clear message after 5 seconds
-      setTimeout(() => {
-        setSuccessMessage(null)
-      }, 5000)
     } catch (error) {
       console.error('Erreur lors de la suppression:', error)
       alert('Une erreur est survenue lors de la suppression du use case')
@@ -597,22 +598,6 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
 
   return (
     <div className="space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-8">
-      {/* Success Message */}
-      {successMessage && (
-        <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center">
-            <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
-            <p className="text-green-800 font-medium">{successMessage}</p>
-          </div>
-          <button
-            onClick={() => setSuccessMessage(null)}
-            className="text-green-600 hover:text-green-800 transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <div className="flex flex-col space-y-4">
@@ -875,6 +860,36 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                         key={useCase.id}
                         className="relative group"
                       >
+                        {/* Menu 3 points */}
+                        <div className="absolute top-3 right-3 z-10">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              setOpenMenuId(openMenuId === useCase.id ? null : useCase.id)
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+                          >
+                            <MoreVertical className="h-5 w-5 text-gray-500" />
+                          </button>
+                          {openMenuId === useCase.id && (
+                            <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  setOpenMenuId(null)
+                                  setUseCaseToDelete(useCase)
+                                  setDeleteModalOpen(true)
+                                }}
+                                className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Supprimer
+                              </button>
+                            </div>
+                          )}
+                        </div>
                         <Link
                           href={getUseCaseUrl(useCase)}
                           className="block p-4 bg-gray-50 rounded-lg hover:bg-gray-100 hover:shadow-md transition-all"
@@ -1177,6 +1192,14 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
         maxLimit={plan.maxUseCasesPerRegistry || 3}
         planName={plan.displayName}
         resourceType="usecase"
+      />
+
+      {/* Toast notification */}
+      <Toast
+        message={toastMessage || ''}
+        type="success"
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
       />
     </div>
   )
