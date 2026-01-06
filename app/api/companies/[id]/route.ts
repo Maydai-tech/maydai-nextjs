@@ -237,7 +237,7 @@ export async function DELETE(
 
     const token = authHeader.replace('Bearer ', '')
 
-    // Create Supabase client with the user's token
+    // Create Supabase client with the user's token for auth check
     const supabase = createClient(supabaseUrl!, supabaseAnonKey!, {
       global: {
         headers: {
@@ -336,7 +336,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Error updating profiles' }, { status: 500 })
     }
 
-    // Delete all user_companies relations
+    // Delete all user_companies relations (RLS allows owner to delete all)
     const { error: deleteUserCompaniesError } = await supabase
       .from('user_companies')
       .delete()
@@ -350,7 +350,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Error deleting user_companies relations' }, { status: 500 })
     }
 
-    // Finally, delete the company itself
+    // Finally, delete the company itself (RLS allows owner to delete)
     const { error: deleteCompanyError } = await supabase
       .from('companies')
       .delete()

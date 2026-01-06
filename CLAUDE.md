@@ -29,10 +29,11 @@ npm run test:coverage        # Coverage report
 npm test -- "scoring"        # Run specific test suite
 npm test -- --verbose        # Verbose output
 
-# E2E tests
-npm run cypress:open         # Interactive Cypress
-npm run cypress:run          # Headless Cypress
-npm run e2e                  # Alias for cypress:run
+# E2E tests (Playwright)
+npm run e2e                  # Run all E2E tests
+npm run e2e:ui               # Interactive UI mode
+npm run e2e:headed           # Run with visible browser
+npm run e2e:debug            # Debug mode
 ```
 
 ### Linting
@@ -422,3 +423,4 @@ AIRTABLE_BASE_ID=
 7. **Production Safety:** Run full build/test cycle before merging `thomas` branch
 - Ne lance jamais le serveur. Je le lance moi même. Si il y a des tests à faire je veux les faire moi même
 - Quand tu modifies le code d'une page dans un fichier qui s'appelle page.tsx, vérifie si il faut faire une refacto. Je veux que page.tsx exporte simplement le contenu d'un fichier qui doit avoir un nom plus explicite.
+- A chaque création, modifiaction, suppression d'un test playwrigt la doc notion sur les tests doit être mise à jour

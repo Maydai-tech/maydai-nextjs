@@ -43,7 +43,8 @@ export async function GET(
     const resolvedParams = await params
     const useCaseId = resolvedParams.id
 
-    // Fetch the use case with company and model information
+    // Fetch the use case with company information
+    // Note: We fetch the model separately to avoid schema cache issues with PostgREST
     const { data: useCase, error: useCaseError } = await supabase
       .from('usecases')
       .select(`
@@ -54,13 +55,6 @@ export async function GET(
           industry,
           city,
           country
-        ),
-        compl_ai_models(
-          id,
-          model_name,
-          model_provider,
-          model_type,
-          version
         )
       `)
       .eq('id', useCaseId)
@@ -72,7 +66,11 @@ export async function GET(
       }
       const context = createRequestContext(request)
       logger.error('Failed to fetch use case', useCaseError, { ...context, useCaseId })
-      return NextResponse.json({ error: 'Error fetching use case' }, { status: 500 })
+      // Include error details in dev for debugging
+      const errorDetails = process.env.NODE_ENV === 'development'
+        ? { supabaseError: useCaseError.message, code: useCaseError.code, hint: useCaseError.hint }
+        : {}
+      return NextResponse.json({ error: 'Error fetching use case', ...errorDetails }, { status: 500 })
     }
 
     // Récupérer le profil si updated_by existe
@@ -101,6 +99,20 @@ export async function GET(
 
     if (userCompanyError || !userCompany) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Fetch the model separately if primary_model_id exists
+    // This avoids schema cache issues with PostgREST embedded relations
+    if (useCase.primary_model_id) {
+      const { data: model } = await supabase
+        .from('compl_ai_models')
+        .select('id, model_name, model_provider, model_type, version')
+        .eq('id', useCase.primary_model_id)
+        .single()
+
+      if (model) {
+        useCase.compl_ai_models = model
+      }
     }
 
     return NextResponse.json(useCase)
@@ -194,6 +206,7 @@ export async function PUT(
     if (description !== undefined) updateData.description = description
 
     // Update the use case
+    // Note: We fetch the model separately to avoid schema cache issues with PostgREST
     const { data: updatedUseCase, error: updateError } = await supabase
       .from('usecases')
       .update(updateData)
@@ -206,13 +219,6 @@ export async function PUT(
           industry,
           city,
           country
-        ),
-        compl_ai_models(
-          id,
-          model_name,
-          model_provider,
-          model_type,
-          version
         )
       `)
       .single()
@@ -221,6 +227,19 @@ export async function PUT(
       const context = createRequestContext(request)
       logger.error('Failed to update use case', updateError, { ...context, useCaseId })
       return NextResponse.json({ error: 'Error updating use case' }, { status: 500 })
+    }
+
+    // Fetch the model separately if primary_model_id exists
+    if (updatedUseCase.primary_model_id) {
+      const { data: model } = await supabase
+        .from('compl_ai_models')
+        .select('id, model_name, model_provider, model_type, version')
+        .eq('id', updatedUseCase.primary_model_id)
+        .single()
+
+      if (model) {
+        updatedUseCase.compl_ai_models = model
+      }
     }
 
     // Enregistrer les modifications dans l'historique
@@ -330,6 +349,7 @@ export async function PUT(
         
         // Récupération du use case avec les scores fraîchement calculés
         // Cette requête garantit que l'API retourne les données à jour
+        // Note: We fetch the model separately to avoid schema cache issues with PostgREST
         const { data: useCaseWithNewScore, error: fetchError } = await supabase
           .from('usecases')
           .select(`
@@ -340,24 +360,30 @@ export async function PUT(
               industry,
               city,
               country
-            ),
-            compl_ai_models(
-              id,
-              model_name,
-              model_provider,
-              model_type,
-              version
             )
           `)
           .eq('id', useCaseId)
           .single()
-        
+
         if (fetchError) {
           logger.error('Failed to fetch updated use case after score calculation', fetchError, { useCaseId })
           // En cas d'échec, on retourne quand même le use case avec le modèle mis à jour
           return NextResponse.json(updatedUseCase)
         }
-        
+
+        // Fetch the model separately (we know primary_model_id exists in this block)
+        if (useCaseWithNewScore.primary_model_id) {
+          const { data: model } = await supabase
+            .from('compl_ai_models')
+            .select('id, model_name, model_provider, model_type, version')
+            .eq('id', useCaseWithNewScore.primary_model_id)
+            .single()
+
+          if (model) {
+            useCaseWithNewScore.compl_ai_models = model
+          }
+        }
+
         // Récupérer le profil si updated_by existe
         if (useCaseWithNewScore?.updated_by) {
           const { data: profile } = await supabase
@@ -365,7 +391,7 @@ export async function PUT(
             .select('id, first_name, last_name')
             .eq('id', useCaseWithNewScore.updated_by)
             .single()
-          
+
           if (profile) {
             useCaseWithNewScore.updated_by_profile = {
               first_name: profile.first_name,
@@ -373,7 +399,7 @@ export async function PUT(
             }
           }
         }
-        
+
         // Retour du use case avec les scores recalculés
         return NextResponse.json(useCaseWithNewScore)
       } catch (scoreError) {
