@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Token invalide' }, { status: 401 })
     }
 
-    // Récupérer les informations complètes du use case avec l'entreprise et le modèle
+    // Récupérer les informations complètes du use case avec l'entreprise
     const { data: usecase, error: usecaseError } = await supabase
     .from('usecases')
     .select(`
@@ -174,8 +174,7 @@ export async function POST(req: NextRequest) {
       system_type, responsible_service, deployment_countries, company_status,
       technology_partner, llm_model_version, primary_model_id,
       score_base, score_model, score_final, is_eliminated, elimination_reason,
-      companies(name, industry, city, country),
-      compl_ai_models(id, model_name, model_provider, model_type, version)
+      companies(name, industry, city, country)
     `)
     .eq('id', usecase_id)
     .single()
@@ -201,8 +200,16 @@ export async function POST(req: NextRequest) {
     const companyCity = company?.city
     const companyCountry = company?.country
 
-    // Extraire les informations du modèle
-    const model = Array.isArray(usecase.compl_ai_models) ? usecase.compl_ai_models[0] : usecase.compl_ai_models
+    // Récupérer les informations du modèle séparément si primary_model_id est défini
+    let model: { id: string; model_name: string; model_provider: string; model_type: string; version: string } | null = null
+    if (usecase.primary_model_id) {
+      const { data: modelData } = await supabase
+        .from('compl_ai_models')
+        .select('id, model_name, model_provider, model_type, version')
+        .eq('id', usecase.primary_model_id)
+        .single()
+      model = modelData
+    }
 
     // Extraire le profil du répondant
     const respondentEmail = responses?.[0]?.answered_by || 'Non disponible'

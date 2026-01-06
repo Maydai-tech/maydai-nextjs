@@ -602,15 +602,40 @@ test.describe('Questionnaire Completion', () => {
     }
   })
 
-  test.skip('should generate OpenAI report after completion', async ({ page }) => {
-    // This test is skipped by default because OpenAI report generation
-    // can be slow and unreliable in E2E tests. Test manually if needed.
-    // To enable: remove .skip from the test declaration
+  test('should generate OpenAI report after completion', async ({ page }) => {
+    // This test verifies that OpenAI report is generated after questionnaire completion
 
     test.setTimeout(180000)
 
     const testData = await createTestData('openai-report')
     const supabase = getAdminClient()
+
+    // Collect console logs from the browser
+    const consoleLogs: string[] = []
+    page.on('console', (msg) => {
+      const text = msg.text()
+      consoleLogs.push(`[${msg.type()}] ${text}`)
+      if (text.includes('OpenAI') || text.includes('report') || text.includes('generate')) {
+        console.log(`🖥️ Browser console: ${text}`)
+      }
+    })
+
+    // Track network requests to generate-report endpoint
+    let reportRequestMade = false
+    let reportRequestResponse: { status: number; body?: Record<string, unknown> } | null = null
+    page.on('response', async (response) => {
+      if (response.url().includes('/api/generate-report')) {
+        reportRequestMade = true
+        try {
+          const body = await response.json()
+          reportRequestResponse = { status: response.status(), body }
+          console.log(`📡 generate-report response: ${response.status()}`, JSON.stringify(body).slice(0, 500))
+        } catch {
+          reportRequestResponse = { status: response.status() }
+          console.log(`📡 generate-report response: ${response.status()} (no JSON body)`)
+        }
+      }
+    })
 
     try {
       await authenticateAndNavigate(page, testData)
@@ -651,8 +676,16 @@ test.describe('Questionnaire Completion', () => {
 
       if (!reportGenerated) {
         console.log('⚠️ OpenAI report was not generated within timeout.')
-        expect(usecaseData?.status).toBe('completed')
-        test.skip()
+        console.log(`📊 Report request made: ${reportRequestMade}`)
+        console.log(`📊 Report request response:`, JSON.stringify(reportRequestResponse, null, 2))
+        console.log(`📊 Relevant console logs:`, consoleLogs.filter(l =>
+          l.includes('OpenAI') || l.includes('report') || l.includes('generate') || l.includes('Error') || l.includes('error')
+        ))
+
+        // Fail with useful info instead of skipping
+        expect(reportRequestMade, 'Report API should have been called').toBe(true)
+        expect((reportRequestResponse as { status: number } | null)?.status, 'Report API should return 200').toBe(200)
+        expect(usecaseData?.report_summary, 'Report summary should be generated').not.toBeNull()
         return
       }
 
