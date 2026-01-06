@@ -238,7 +238,7 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
     } finally {
       setIsSubmitting(false)
     }
-  }, [questionnaireData.answers, saveMultiple, updateUsecaseStatus, onComplete])
+  }, [questionnaireData.answers, saveMultiple, updateUsecaseStatus, onComplete, session, usecaseId])
 
   // Gestionnaire du bouton "Suivant"
   const handleNext = useCallback(async () => {
