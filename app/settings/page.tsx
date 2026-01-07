@@ -138,12 +138,12 @@ export default function ProfilPage() {
         setActiveSection(section as MenuSection)
 
         // Load collaborators if section is collaboration
-        if (section === 'collaboration') {
+        if (section === 'collaboration' && user && !loading) {
           fetchCollaborators()
         }
       }
     }
-  }, [mounted, searchParams])
+  }, [mounted, searchParams, user, loading])
 
   // Vérifier le succès du paiement
   useEffect(() => {
