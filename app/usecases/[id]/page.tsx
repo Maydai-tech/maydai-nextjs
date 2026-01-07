@@ -23,6 +23,7 @@ import { ACTION_TO_DOCTYPE, getActionMetadata, isActionCompleted } from './confi
 import { useDocumentStatuses } from './hooks/useDocumentStatuses'
 import { useCompanyInfo } from './hooks/useCompanyInfo'
 import { CompletedAction } from './components/report/CompletedAction'
+import { hasAdminRole, type UserRole } from '@/lib/admin-auth'
 
 export default function UseCaseDetailPage() {
   const { user, loading, session } = useAuth()
@@ -50,6 +51,10 @@ export default function UseCaseDetailPage() {
   const [documents, setDocuments] = useState<Record<string, any>>({})
   const [loadingDocuments, setLoadingDocuments] = useState(false)
   const [showUnacceptableModal, setShowUnacceptableModal] = useState(false)
+
+  // État pour la vérification admin et génération de rapport
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [generatingReport, setGeneratingReport] = useState(false)
 
   const isUnacceptableCase = riskLevel === 'unacceptable'
 
@@ -149,6 +154,57 @@ export default function UseCaseDetailPage() {
       router.push('/login')
     }
   }, [user, loading, router, mounted])
+
+  // Vérifier si l'utilisateur est admin
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (!user) return
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profile?.role) {
+        setIsAdmin(hasAdminRole(profile.role as UserRole))
+      }
+    }
+
+    if (mounted && user) {
+      checkAdminRole()
+    }
+  }, [user, mounted])
+
+  // Fonction pour générer le rapport (admin uniquement)
+  const handleGenerateReport = async () => {
+    if (!isAdmin || !useCase || !session?.access_token) return
+
+    setGeneratingReport(true)
+    try {
+      const response = await fetch('/api/generate-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ usecase_id: useCase.id })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la génération du rapport')
+      }
+
+      // Recharger la page pour afficher le nouveau rapport
+      window.location.reload()
+    } catch (error) {
+      console.error('Erreur génération rapport:', error)
+      alert(error instanceof Error ? error.message : 'Erreur lors de la génération du rapport')
+    } finally {
+      setGeneratingReport(false)
+    }
+  }
 
   // Charger les documents pour les cas inacceptables
   useEffect(() => {
@@ -431,9 +487,30 @@ export default function UseCaseDetailPage() {
 
           {/* Recommandations et plan d'action */}
           <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-              Recommandations et plan d'action
-            </h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold text-gray-900">
+                Recommandations et plan d'action
+              </h2>
+              {isAdmin && (
+                <button
+                  onClick={handleGenerateReport}
+                  disabled={generatingReport || nextStepsGenerating}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {generatingReport ? (
+                    <>
+                      <RefreshCcw className="w-4 h-4 animate-spin" />
+                      Génération...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCcw className="w-4 h-4" />
+                      Générer rapport
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
 
             {/* Métadonnées de génération */}
             {nextSteps?.generated_at && (

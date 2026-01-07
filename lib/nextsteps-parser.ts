@@ -20,7 +20,6 @@ function extractBoldItemsWithDescription(text: string): string[] {
 
   for (let i = 0; i < matches.length; i++) {
     const match = matches[i]
-    const boldText = match[1].trim()
     const matchIndex = match.index!
 
     // Trouver le début de la phrase (après un point ou début du texte)
