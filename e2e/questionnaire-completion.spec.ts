@@ -629,7 +629,11 @@ test.describe('Questionnaire Completion', () => {
         try {
           const body = await response.json()
           reportRequestResponse = { status: response.status(), body }
-          console.log(`📡 generate-report response: ${response.status()}`, JSON.stringify(body).slice(0, 500))
+          console.log(`📡 generate-report response: ${response.status()}`)
+          console.log(`   - next_steps_extracted: ${body.next_steps_extracted}`)
+          console.log(`   - next_steps_saved: ${body.next_steps_saved}`)
+          console.log(`   - next_steps_error: ${body.next_steps_error}`)
+          console.log(`   - validation:`, JSON.stringify(body.next_steps_validation))
         } catch {
           reportRequestResponse = { status: response.status() }
           console.log(`📡 generate-report response: ${response.status()} (no JSON body)`)
@@ -692,14 +696,61 @@ test.describe('Questionnaire Completion', () => {
       expect(usecaseData?.report_summary).not.toBeNull()
       console.log('✅ OpenAI report generated successfully')
 
-      // Navigate to rapport page to verify display
+      // Verify nextsteps were saved to database
+      const { data: nextstepsData, error: nextstepsError } = await supabase
+        .from('usecase_nextsteps')
+        .select('*')
+        .eq('usecase_id', testData.usecaseId)
+        .single()
+
+      if (nextstepsError) {
+        console.log('⚠️ No nextsteps found in database:', nextstepsError.message)
+      } else {
+        console.log('✅ Nextsteps saved to database')
+        console.log(`   - priorite_1: ${nextstepsData.priorite_1 ? '✅' : '❌'}`)
+        console.log(`   - quick_win_1: ${nextstepsData.quick_win_1 ? '✅' : '❌'}`)
+        console.log(`   - action_1: ${nextstepsData.action_1 ? '✅' : '❌'}`)
+      }
+
+      // Navigate to use case detail page to verify recommendations are displayed
+      await page.goto(`/usecases/${testData.usecaseId}`)
+      await page.waitForLoadState('networkidle')
+
+      // Wait for the "Recommandations et plan d'action" section to be visible
+      const recommendationsSection = page.locator('h2:has-text("Recommandations et plan d\'action")')
+      await expect(recommendationsSection).toBeVisible({ timeout: 30000 })
+      console.log('✅ Recommendations section visible on detail page')
+
+      // Verify that at least one priority/quick win/action is displayed (not loading state)
+      // The section should contain actual content, not just the loading spinner
+      const actionButtons = page.locator('button:has-text("pts")')
+      const hasActions = await actionButtons.count() > 0
+
+      // Check for evaluation section content
+      const evaluationSection = page.locator('h3:has-text("Évaluation du niveau de risque")')
+      const hasEvaluation = await evaluationSection.isVisible().catch(() => false)
+
+      // Check for quick wins section
+      const quickWinsSection = page.locator('h3:has-text("Actions immédiates recommandées")')
+      const hasQuickWins = await quickWinsSection.isVisible().catch(() => false)
+
+      console.log(`📊 Content verification:`)
+      console.log(`   - Has action buttons: ${hasActions}`)
+      console.log(`   - Has evaluation section: ${hasEvaluation}`)
+      console.log(`   - Has quick wins section: ${hasQuickWins}`)
+
+      // At least one of the content sections should be visible
+      expect(hasEvaluation || hasQuickWins || hasActions, 'Report content should be displayed').toBe(true)
+      console.log('✅ Report content displayed on use case detail page')
+
+      // Also verify rapport page displays the full report
       await page.goto(`/usecases/${testData.usecaseId}/rapport`)
       await page.waitForLoadState('networkidle')
 
       const reportContent = page.locator('[class*="prose"]').first()
       await expect(reportContent).toBeVisible({ timeout: 10000 })
 
-      console.log('✅ Report displayed on rapport page')
+      console.log('✅ Full report displayed on rapport page')
     } finally {
       await cleanupTestData(testData)
     }
