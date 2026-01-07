@@ -84,7 +84,7 @@ export function extractNextStepsFromReport(reportText: string): Partial<UseCaseN
   }
   
   // Détecter le format Markdown structuré
-  if (reportText.includes('## Introduction contextuelle') || reportText.includes('### Les 3 priorités')) {
+  if (reportText.includes('## Introduction contextuelle') || reportText.includes('### Actions réglementaires et documents techniques')) {
     return extractNextStepsFromMarkdown(reportText)
   }
   
