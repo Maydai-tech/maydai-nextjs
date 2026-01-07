@@ -42,21 +42,21 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
             <p className="text-base leading-relaxed text-gray-800">{reportData.evaluation_risque.justification}</p>
           </div>
 
-          {/* Priorités d'actions */}
+          {/* Quick wins */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <img 
-                src="/icons/attention.png" 
-                alt="Actions prioritaires" 
-                width={24} 
-                height={24} 
+              <img
+                src="/icons/work-in-progress.png"
+                alt="Actions rapides"
+                width={24}
+                height={24}
                 className="flex-shrink-0"
               />
-              <h2 className="text-xl font-semibold text-gray-900">Mesures importantes de conformité à renseigner :</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Actions rapides et concrètes à mettre en œuvre :</h2>
             </div>
-            <h3 className="text-lg font-medium text-gray-700 mb-3 italic">Actions réglementaires et documents techniques</h3>
+            <h3 className="text-lg font-medium text-gray-700 mb-3 italic">Actions immédiates recommandées</h3>
             <ul className="space-y-2 mb-4 ml-4">
-              {reportData.priorites_actions.map((action: string, index: number) => (
+              {reportData.quick_wins.map((action: string, index: number) => (
                 <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
                   <span className="text-[#0080a3] mr-2 text-6xl">•</span>
                   <span className="flex-1">
@@ -67,21 +67,21 @@ export function OpenAIReportSectionJSON({ usecaseId }: OpenAIReportSectionProps)
             </ul>
           </div>
 
-          {/* Quick wins */}
+          {/* Priorités d'actions */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <img 
-                src="/icons/work-in-progress.png" 
-                alt="Actions rapides" 
-                width={24} 
-                height={24} 
+              <img
+                src="/icons/attention.png"
+                alt="Actions prioritaires"
+                width={24}
+                height={24}
                 className="flex-shrink-0"
               />
-              <h2 className="text-xl font-semibold text-gray-900">Actions rapides et concrètes à mettre en œuvre :</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Mesures importantes de conformité à renseigner :</h2>
             </div>
-            <h3 className="text-lg font-medium text-gray-700 mb-3 italic">Actions immédiates recommandées</h3>
+            <h3 className="text-lg font-medium text-gray-700 mb-3 italic">Actions réglementaires et documents techniques</h3>
             <ul className="space-y-2 mb-4 ml-4">
-              {reportData.quick_wins.map((action: string, index: number) => (
+              {reportData.priorites_actions.map((action: string, index: number) => (
                 <li key={index} className="text-base leading-relaxed text-gray-800 flex items-center">
                   <span className="text-[#0080a3] mr-2 text-6xl">•</span>
                   <span className="flex-1">

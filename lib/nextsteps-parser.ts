@@ -20,7 +20,6 @@ function extractBoldItemsWithDescription(text: string): string[] {
 
   for (let i = 0; i < matches.length; i++) {
     const match = matches[i]
-    const boldText = match[1].trim()
     const matchIndex = match.index!
 
     // Trouver le début de la phrase (après un point ou début du texte)
@@ -84,7 +83,7 @@ export function extractNextStepsFromReport(reportText: string): Partial<UseCaseN
   }
   
   // Détecter le format Markdown structuré
-  if (reportText.includes('## Introduction contextuelle') || reportText.includes('### Les 3 priorités')) {
+  if (reportText.includes('## Introduction contextuelle') || reportText.includes('### Actions réglementaires et documents techniques')) {
     return extractNextStepsFromMarkdown(reportText)
   }
   
