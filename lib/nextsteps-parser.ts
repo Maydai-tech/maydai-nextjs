@@ -1,6 +1,72 @@
 import { UseCaseNextStepsInput } from './supabase'
 
 /**
+ * Extrait les items en gras avec leur description depuis un paragraphe.
+ * Gère le format où tout est dans un seul paragraphe avec plusieurs **items** en gras.
+ * Exemple: "Il est essentiel de **compléter la doc** en fournissant... De plus, il est nécessaire de **justifier**..."
+ * Retourne un tableau de phrases complètes incluant le contexte avant le gras et la description après.
+ */
+function extractBoldItemsWithDescription(text: string): string[] {
+  const items: string[] = []
+
+  // Pattern pour trouver tous les segments **texte** avec leur contexte
+  // On cherche: [contexte optionnel] **titre** [description jusqu'au prochain ** ou fin de phrase]
+  const boldPattern = /\*\*([^*]+)\*\*/g
+  const matches = [...text.matchAll(boldPattern)]
+
+  if (matches.length === 0) {
+    return items
+  }
+
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i]
+    const boldText = match[1].trim()
+    const matchIndex = match.index!
+
+    // Trouver le début de la phrase (après un point ou début du texte)
+    let startIndex = matchIndex
+    // Chercher le dernier marqueur de phrase avant ce match (. ou début de section)
+    const textBefore = text.substring(0, matchIndex)
+    const lastSentenceEnd = Math.max(
+      textBefore.lastIndexOf('. '),
+      textBefore.lastIndexOf('.\n'),
+      textBefore.lastIndexOf('! '),
+      textBefore.lastIndexOf('? ')
+    )
+    if (lastSentenceEnd !== -1) {
+      startIndex = lastSentenceEnd + 2
+    } else {
+      startIndex = 0
+    }
+
+    // Trouver la fin de la description (jusqu'au prochain ** ou fin de phrase)
+    const afterBold = text.substring(matchIndex + match[0].length)
+    let endOffset = afterBold.length
+
+    // Chercher la fin de la phrase (prochain point suivi d'espace ou de majuscule)
+    const sentenceEndMatch = afterBold.match(/\.\s+(?=[A-ZÀ-Ú]|De plus|Par ailleurs|Enfin|En outre|Il est)/)
+    if (sentenceEndMatch && sentenceEndMatch.index !== undefined) {
+      endOffset = sentenceEndMatch.index + 1
+    }
+
+    // Extraire la phrase complète
+    const fullSentence = text.substring(startIndex, matchIndex + match[0].length + endOffset).trim()
+
+    // Nettoyer: enlever les ** pour avoir un texte lisible
+    const cleanedSentence = fullSentence
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/^\s*[-•]\s*/, '')
+      .trim()
+
+    if (cleanedSentence.length > 10) {
+      items.push(cleanedSentence)
+    }
+  }
+
+  return items
+}
+
+/**
  * Fonction principale qui détecte automatiquement le format du rapport
  * et extrait les données structurées
  */
@@ -174,43 +240,36 @@ export function extractNextStepsFromMarkdown(reportText: string): Partial<UseCas
   const prioritiesMatch = reportText.match(/### Actions réglementaires et documents techniques\s*\n([\s\S]*?)(?=###|##|$)/)
   if (prioritiesMatch) {
     const prioritiesSection = prioritiesMatch[1]
-    // Chercher le contenu des priorités au format **Titre** description complète...
-    const priorityMatches = prioritiesSection.match(/\*\*([^*]+)\*\*\s*([^\n]+)/g)
-    
-    if (priorityMatches && priorityMatches.length >= 3) {
-      result.priorite_1 = priorityMatches[0].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
-      result.priorite_2 = priorityMatches[1].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
-      result.priorite_3 = priorityMatches[2].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
-    }
+    // Extraire les items en gras avec leur description (jusqu'au prochain ** ou fin de phrase)
+    const extractedPriorities = extractBoldItemsWithDescription(prioritiesSection)
+
+    if (extractedPriorities.length >= 1) result.priorite_1 = extractedPriorities[0]
+    if (extractedPriorities.length >= 2) result.priorite_2 = extractedPriorities[1]
+    if (extractedPriorities.length >= 3) result.priorite_3 = extractedPriorities[2]
   }
   
   // Extraire les quick wins & actions immédiates
   const quickWinsMatch = reportText.match(/### Actions immédiates recommandées\s*\n([\s\S]*?)(?=###|##|$)/)
   if (quickWinsMatch) {
     const quickWinsSection = quickWinsMatch[1]
-    // Chercher les patterns avec ou sans numérotation : **1. texte.** ou **texte.**
-    const quickWinMatches = quickWinsSection.match(/\*\*([^*]+)\*\*\s*([^\n]+)/g)
-    
-    if (quickWinMatches && quickWinMatches.length >= 3) {
-      result.quick_win_1 = quickWinMatches[0].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
-      result.quick_win_2 = quickWinMatches[1].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
-      result.quick_win_3 = quickWinMatches[2].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
-    }
+    // Extraire les items en gras avec leur description (jusqu'au prochain ** ou fin de phrase)
+    const extractedQuickWins = extractBoldItemsWithDescription(quickWinsSection)
+
+    if (extractedQuickWins.length >= 1) result.quick_win_1 = extractedQuickWins[0]
+    if (extractedQuickWins.length >= 2) result.quick_win_2 = extractedQuickWins[1]
+    if (extractedQuickWins.length >= 3) result.quick_win_3 = extractedQuickWins[2]
   }
   
   // Extraire les actions à moyen terme
   const actionsMatch = reportText.match(/### Actions à moyen terme\s*\n([\s\S]*?)(?=###|##|$)/)
   if (actionsMatch) {
     const actionsSection = actionsMatch[1]
-    // Chercher le contenu des actions au format **Titre** description complète...
-    const actionMatches = actionsSection.match(/\*\*([^*]+)\*\*\s*([^\n]+)/g)
-    
-    if (actionMatches && actionMatches.length >= 3) {
-      // Extraire toute la phrase en supprimant seulement les ** du titre
-      result.action_1 = actionMatches[0].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
-      result.action_2 = actionMatches[1].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
-      result.action_3 = actionMatches[2].replace(/\*\*([^*]+)\*\*\s*/, '$1 ').trim()
-    }
+    // Extraire les items en gras avec leur description (jusqu'au prochain ** ou fin de phrase)
+    const extractedActions = extractBoldItemsWithDescription(actionsSection)
+
+    if (extractedActions.length >= 1) result.action_1 = extractedActions[0]
+    if (extractedActions.length >= 2) result.action_2 = extractedActions[1]
+    if (extractedActions.length >= 3) result.action_3 = extractedActions[2]
   }
   
   return result
