@@ -120,7 +120,8 @@ export async function GET(request: NextRequest) {
     if (usecaseAccess) {
       usecaseAccess.forEach(ua => {
         // Skip entries where usecase access was revoked (RLS blocks the join)
-        const usecases = ua.usecases as { company_id: string } | null
+        // Supabase returns the joined relation as an object (not array) for single FK relationships
+        const usecases = ua.usecases as unknown as { company_id: string } | null
         if (!usecases || !usecases.company_id) return
 
         const companyId = usecases.company_id
