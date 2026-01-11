@@ -1,8 +1,12 @@
 {
   "mcpServers": {
-    "supabase": {
+    "supabase-cloud": {
       "type": "http",
       "url": "https://mcp.supabase.com/mcp?project_ref=kzdolxpjysirikcpusrv"
+    },
+    "supabase-ovh": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp"
     },
     "notion": {
       "type": "http",
