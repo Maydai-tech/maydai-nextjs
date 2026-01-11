@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     // TEMPORARY: Use hybrid approach - check both user_companies and profiles.company_id
     // This ensures compatibility while RLS policies are being updated
-    
+
     // Get companies the user has direct access to via user_companies
     const { data: userCompanies, error: userCompaniesError } = await supabase
       .from('user_companies')
@@ -70,10 +70,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user has profile-level access
-    const { data: profileAccess } = await supabase
+    const { data: profileAccess, error: profileAccessError } = await supabase
       .from('user_profiles')
       .select('inviter_user_id, role')
       .eq('invited_user_id', user.id)
+
+    if (profileAccessError) {
+      console.error('Error fetching profile access:', profileAccessError)
+    }
 
     // If user has profile-level access, get only companies where the inviter is owner
     if (profileAccess && profileAccess.length > 0) {
@@ -97,19 +101,29 @@ export async function GET(request: NextRequest) {
     }
 
     // Get companies from use cases the user has access to
-    const { data: usecaseAccess } = await supabase
+    // Use left join (no !inner) to avoid RLS errors when usecase access was revoked
+    const { data: usecaseAccess, error: usecaseAccessError } = await supabase
       .from('user_usecases')
       .select(`
         usecase_id,
-        usecases!inner (
+        usecases (
           company_id
         )
       `)
       .eq('user_id', user.id)
 
+    if (usecaseAccessError) {
+      console.error('Error fetching usecase access:', usecaseAccessError)
+      // Don't fail the whole request, just continue without usecase-level access
+    }
+
     if (usecaseAccess) {
       usecaseAccess.forEach(ua => {
-        const companyId = (ua.usecases as any).company_id
+        // Skip entries where usecase access was revoked (RLS blocks the join)
+        const usecases = ua.usecases as { company_id: string } | null
+        if (!usecases || !usecases.company_id) return
+
+        const companyId = usecases.company_id
         companyIds.add(companyId)
         // Only set role if not already set by higher-level access
         if (!roleMap.has(companyId)) {
