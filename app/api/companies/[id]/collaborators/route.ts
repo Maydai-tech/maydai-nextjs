@@ -82,25 +82,16 @@ export async function POST(
 
       collaboratorProfileId = existingAuthUser.id
 
-      // Check if profile exists, if not create it
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', existingAuthUser.id)
-        .single()
+      // Create or update profile for existing auth user with provided firstName/lastName
+      const { error: createProfileError } = await createProfileForUser(
+        existingAuthUser.id,
+        firstName,
+        lastName
+      )
 
-      if (!existingProfile) {
-        // Create profile for existing auth user
-        const { error: createProfileError } = await createProfileForUser(
-          existingAuthUser.id,
-          firstName,
-          lastName
-        )
-
-        if (createProfileError) {
-          logger.error('Failed to create profile for existing user', createProfileError, createRequestContext(request))
-          return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
-        }
+      if (createProfileError) {
+        logger.error('Failed to create/update profile for existing user', createProfileError, createRequestContext(request))
+        return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
       }
     } else {
       // User doesn't exist, create them (email will be sent via Mailjet)
