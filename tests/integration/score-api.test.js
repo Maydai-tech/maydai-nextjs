@@ -42,18 +42,18 @@ describe('Score API Integration Tests', () => {
         'prohibited_practices': { weight: 0.05 }
       };
 
-      const BASE_SCORE = 90;
+      const BASE_SCORE = 100;
 
       // Avec le nouveau système, toutes les catégories ont le même score de base
       Object.entries(RISK_CATEGORIES).forEach(([categoryId, category]) => {
         const oldBaseScore = BASE_SCORE * category.weight; // Ancien comportement
         const newBaseScore = BASE_SCORE; // Nouveau comportement
 
-        // Vérifier que le nouveau score de base est 90 pour toutes les catégories
-        expect(newBaseScore).toBe(90);
-        
+        // Vérifier que le nouveau score de base est 100 pour toutes les catégories
+        expect(newBaseScore).toBe(100);
+
         // Vérifier que c'est une amélioration pour les catégories qui avaient un score plus bas
-        if (oldBaseScore < 90) {
+        if (oldBaseScore < 100) {
           expect(newBaseScore).toBeGreaterThan(oldBaseScore);
         }
       });
@@ -68,8 +68,8 @@ describe('Score API Integration Tests', () => {
         }
       ];
 
-      const BASE_SCORE = 90;
-      const expectedScore = BASE_SCORE - 5; // 85
+      const BASE_SCORE = 100;
+      const expectedScore = BASE_SCORE - 5; // 95
 
       // Simulation du calcul
       let score = BASE_SCORE;
@@ -80,11 +80,11 @@ describe('Score API Integration Tests', () => {
       });
 
       expect(score).toBe(expectedScore);
-      expect(score).toBe(85);
+      expect(score).toBe(95);
     });
 
     test('Category scores should be calculated correctly', () => {
-      const BASE_SCORE = 90;
+      const BASE_SCORE = 100;
       const mockCategoryData = {
         transparency: { totalImpact: -5, questionCount: 1 },
         technical_robustness: { totalImpact: 0, questionCount: 0 },
@@ -92,19 +92,19 @@ describe('Score API Integration Tests', () => {
       };
 
       Object.entries(mockCategoryData).forEach(([categoryId, data]) => {
-        const baseScore = BASE_SCORE; // Nouveau comportement : toutes les catégories ont 90
+        const baseScore = BASE_SCORE; // Nouveau comportement : toutes les catégories ont 100
         const adjustedScore = Math.max(0, baseScore + data.totalImpact);
         const percentage = Math.round((adjustedScore / baseScore) * 100);
 
         if (categoryId === 'transparency') {
-          expect(adjustedScore).toBe(85); // 90 - 5
-          expect(percentage).toBe(94);
+          expect(adjustedScore).toBe(95); // 100 - 5
+          expect(percentage).toBe(95);
         } else if (categoryId === 'technical_robustness') {
-          expect(adjustedScore).toBe(90); // 90 + 0
+          expect(adjustedScore).toBe(100); // 100 + 0
           expect(percentage).toBe(100);
         } else if (categoryId === 'human_agency') {
-          expect(adjustedScore).toBe(80); // 90 - 10
-          expect(percentage).toBe(89);
+          expect(adjustedScore).toBe(90); // 100 - 10
+          expect(percentage).toBe(90);
         }
       });
     });
@@ -126,8 +126,8 @@ describe('Score API Integration Tests', () => {
       // Ce test vérifie que notre logique n'a plus besoin de sauvegarder en base
       const mockScoreData = {
         usecase_id: 'test-123',
-        score: 85,
-        max_score: 90,
+        score: 95,
+        max_score: 150, // 100 questionnaire + 50 modèle COMPL-AI
         calculated_at: new Date().toISOString(),
         category_scores: []
       };
@@ -135,7 +135,7 @@ describe('Score API Integration Tests', () => {
       // Vérifier que la structure est correcte pour un retour direct (pas de sauvegarde)
       expect(mockScoreData.usecase_id).toBeDefined();
       expect(mockScoreData.score).toBeGreaterThanOrEqual(0);
-      expect(mockScoreData.max_score).toBe(90);
+      expect(mockScoreData.max_score).toBe(150);
       expect(mockScoreData.calculated_at).toBeDefined();
       expect(Array.isArray(mockScoreData.category_scores)).toBe(true);
 

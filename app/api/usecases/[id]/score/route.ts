@@ -91,7 +91,7 @@ export async function GET(
       return NextResponse.json({
         usecase_id: usecaseId,
         score: usecaseData.score_final,
-        max_score: 120, // Score maximum avec bonus COMPL-AI (base 90 + modèle 20 + marge 10)
+        max_score: 150, // Score maximum : 100 questionnaire + 50 modèle COMPL-AI (5 principes × 10 pts)
         score_breakdown: fullScoreData.score_breakdown,
         category_scores: fullScoreData.category_scores,
         calculated_at: usecaseData.last_calculation_date || new Date().toISOString(),

@@ -4,17 +4,19 @@ import QUESTIONS_DATA from './questions-data.json' assert { type: 'json' };
 
 // ===== CONSTANTES =====
 // Score de départ pour tous les cas d'usage
-const BASE_SCORE = 90;
-// Multiplicateur pour convertir le score COMPL-AI (0-1) en score sur 20
-const COMPL_AI_MULTIPLIER = 20;
+// Répartition 2/3 (Questionnaire) - 1/3 (Modèle LLM)
+const BASE_SCORE = 100;
+// Multiplicateur pour convertir le score COMPL-AI (0-1) en score sur 50
+// 5 principes × 10 points = 50 points max
+const COMPL_AI_MULTIPLIER = 50;
 // Poids du score de base dans le calcul final
 const BASE_SCORE_WEIGHT = 100;
 // Poids du score modèle dans le calcul final
-const MODEL_SCORE_WEIGHT = 20;
+const MODEL_SCORE_WEIGHT = 50;
 // Marge fixe pour le calcul final (actuellement 0)
 const MARGIN_SCORE = 0;
 // Poids total pour le calcul final
-const TOTAL_WEIGHT = 120;
+const TOTAL_WEIGHT = 150;
 
 // ===== FONCTIONS UTILITAIRES =====
 
@@ -131,8 +133,8 @@ Deno.serve(async (req) => {
       }
     }
     // ===== ÉTAPE 7: CALCUL DU SCORE FINAL =====
-    // Formule : ((Score_base + Score_model + Marge) / 120) * 100
-    // Exemple: base 60, modèle 16.1, marge 0 → ((60 + 16.1 + 0) / 120) * 100 = 63.42%
+    // Formule : ((Score_base + Score_model + Marge) / 150) * 100
+    // Exemple: base 60, modèle 40.25, marge 0 → ((60 + 40.25 + 0) / 150) * 100 = 66.83%
     let finalScore = 0;
     
     if (baseScoreResult.is_eliminated) {
@@ -142,7 +144,7 @@ Deno.serve(async (req) => {
       // Calculer le score brut (score_base + model_score + marge)
       const scoreBrut = baseScoreResult.score_base + (modelScore || 0) + MARGIN_SCORE;
       
-      // Formule finale : (score_brut / 120) * 100
+      // Formule finale : (score_brut / 150) * 100
       finalScore = (scoreBrut / TOTAL_WEIGHT) * 100;
     }
     
