@@ -130,24 +130,26 @@ export async function getComplAiScore(modelId: string, supabaseClient?: Supabase
 /**
  * Calcule le bonus à appliquer basé sur le score COMPL-AI original
  * Selon la formule fournie : Score final = (Score de base + Bonus) / Score maximum possible
+ *
+ * Répartition 2/3 - 1/3 :
+ * - Questionnaire : 100 points max (2/3)
+ * - Modèle COMPL-AI : 50 points max (1/3) - 5 principes × 10 points
  */
 export function calculateComplAiBonus(complAiScore: number): number {
-  // Le score COMPL-AI est un pourcentage (0-1), on le convertit en points sur 20
-  const bonusPoints = complAiScore * 20
-  
-  // Appliquer la formule : Score final = (Score de base + Bonus) / Score maximum possible
-  // Score maximum possible = 120 (90 de base + 20 de bonus max + 10 marge théorique)
-  // Mais on retourne juste le bonus pour l'ajouter au score de base
+  // Le score COMPL-AI est un pourcentage (0-1), on le convertit en points sur 50
+  const bonusPoints = complAiScore * 50
+
+  // Score maximum possible = 150 (100 questionnaire + 50 modèle)
   return bonusPoints
 }
 
 /**
- * Calcule le bonus à appliquer basé sur le score MaydAI (normalisé sur 20 points)
- * Le score MaydAI est déjà normalisé : chaque principe vaut 4 points max, total 20 points
+ * Calcule le bonus à appliquer basé sur le score MaydAI (normalisé sur 50 points)
+ * Le score MaydAI est normalisé : chaque principe vaut 10 points max, total 50 points
  */
 export function calculateMaydAiBonus(maydaiScore: number): number {
-  // Le score MaydAI est déjà sur 20 points, on le retourne directement
-  return Math.min(Math.max(maydaiScore, 0), 20)
+  // Le score MaydAI est sur 50 points max, on le retourne plafonné
+  return Math.min(Math.max(maydaiScore, 0), 50)
 }
 
 /**
@@ -188,8 +190,8 @@ export async function getMaydAiScoresByPrinciple(modelId: string, supabaseClient
     scores.forEach(score => {
       const categoryId = PRINCIPLE_TO_CATEGORY_MAPPING[score.principle_code]
       if (categoryId) {
-        // Convertir le score en nombre et s'assurer qu'il ne dépasse pas 4
-        const scoreValue = Math.min(Math.max(parseFloat(score.average_maydai_score) || 0, 0), 4)
+        // Convertir le score en nombre et s'assurer qu'il ne dépasse pas 10 (nouveau max par principe)
+        const scoreValue = Math.min(Math.max(parseFloat(score.average_maydai_score) || 0, 0), 10)
         mappedScores[categoryId] = scoreValue
       }
     })

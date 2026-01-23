@@ -380,11 +380,11 @@ export async function PUT(
 
         if (previousScore !== null) {
           // Calculate new scores by adding the expected points
-          // The points gained affect the base score (which is on a /120 scale)
+          // The points gained affect the base score (which is on a /150 scale)
           // IMPORTANT: Include score_model in the final score calculation
-          // score_final = ((score_base + score_model) / 120) * 100
+          // score_final = ((score_base + score_model) / 150) * 100
           const newBaseScore = previousBaseScore + syncResult.expectedPointsGained;
-          const newFinalScore = Math.round(((newBaseScore + scoreModel) / 120) * 100 * 100) / 100;
+          const newFinalScore = Math.round(((newBaseScore + scoreModel) / 150) * 100 * 100) / 100;
 
           console.log(`[PUT /upload] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
 

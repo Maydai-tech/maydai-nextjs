@@ -4,8 +4,8 @@ import { RISK_CATEGORIES } from './risk-categories'
 import { getUseCaseComplAiBonus, getMaydAiScoresByPrinciple } from './compl-ai-scoring'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-const BASE_SCORE = 90
-const MAX_POSSIBLE_SCORE = 120 // 90 de base + 20 de bonus COMPL-AI + 10 marge théorique
+const BASE_SCORE = 100
+const MAX_POSSIBLE_SCORE = 150 // 100 points Questionnaire (2/3) + 50 points Modèle COMPL-AI (1/3)
 
 // Fonction de mapping des catégories du JSON vers les IDs de risk-categories.ts
 function mapCategoryFromJson(jsonCategoryId: string): string {
@@ -475,7 +475,7 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
       // Vérifier si ce principe a un score MaydAI
       if (maydaiScoresByPrinciple[categoryId]) {
         maydaiScore = maydaiScoresByPrinciple[categoryId]
-        maxMaydaiScore = 4 // Chaque principe MaydAI vaut max 4 points
+        maxMaydaiScore = 10 // Chaque principe MaydAI vaut max 10 points (50 total / 5 principes)
       }
 
       // Calcul final : questionnaire + MaydAI

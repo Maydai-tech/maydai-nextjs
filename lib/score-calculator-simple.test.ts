@@ -104,7 +104,7 @@ describe('Score Calculator', () => {
         },
       ];
       const result = calculateBaseScore(responses);
-      expect(result.score_base).toBe(BASE_SCORE - 45 - 5); // 90 - 45 - 5 = 40
+      expect(result.score_base).toBe(BASE_SCORE - 45 - 5); // 100 - 45 - 5 = 50
       expect(result.is_eliminated).toBe(false);
       expect(result.calculation_details.total_impact).toBe(-50);
     });
@@ -153,7 +153,7 @@ describe('Score Calculator', () => {
         },
       ];
       const result = calculateBaseScore(responses);
-      expect(result.score_base).toBe(BASE_SCORE - 6); // 90 - 6 = 84
+      expect(result.score_base).toBe(BASE_SCORE - 6); // 100 - 6 = 94
       expect(result.is_eliminated).toBe(false);
     });
 
@@ -200,48 +200,48 @@ describe('Score Calculator', () => {
       elimination_reason: '',
       calculation_details: {
         base_score: BASE_SCORE,
-        total_impact: -30,
+        total_impact: -40,
         final_base_score: 60,
       },
     };
 
     it('should calculate final score without model score', () => {
       const result = calculateFinalScore(baseResult, null, 'test-123');
-      
-      // Formula: (60 + 0) / 120 * 100 = 50%
-      expect(result.scores.score_final).toBe(50);
+
+      // Formula: (60 + 0) / 150 * 100 = 40%
+      expect(result.scores.score_final).toBe(40);
       expect(result.scores.score_base).toBe(60);
       expect(result.scores.score_model).toBeNull();
       expect(result.calculation_details.has_model_score).toBe(false);
     });
 
     it('should calculate final score with model score', () => {
-      const modelScore = 15; // 15/20 = 75%
+      const modelScore = 37.5; // 37.5/50 = 75%
       const result = calculateFinalScore(baseResult, modelScore, 'test-123');
-      
-      // Formula: (60 + (0.75 * 20)) / 120 * 100 = (60 + 15) / 120 * 100 = 62.5%
-      expect(result.scores.score_final).toBe(62.5);
+
+      // Formula: (60 + 37.5) / 150 * 100 = 65%
+      expect(result.scores.score_final).toBe(65);
       expect(result.scores.score_base).toBe(60);
-      expect(result.scores.score_model).toBe(15);
+      expect(result.scores.score_model).toBe(37.5);
       expect(result.calculation_details.model_percentage).toBe(75);
       expect(result.calculation_details.has_model_score).toBe(true);
     });
 
     it('should handle perfect model score', () => {
-      const modelScore = 20; // 20/20 = 100%
+      const modelScore = 50; // 50/50 = 100%
       const result = calculateFinalScore(baseResult, modelScore, 'test-123');
-      
-      // Formula: (60 + (1.0 * 20)) / 120 * 100 = (60 + 20) / 120 * 100 = 66.67%
-      expect(result.scores.score_final).toBe(66.67);
+
+      // Formula: (60 + 50) / 150 * 100 = 73.33%
+      expect(result.scores.score_final).toBe(73.33);
       expect(result.calculation_details.model_percentage).toBe(100);
     });
 
     it('should handle zero model score', () => {
-      const modelScore = 0; // 0/20 = 0%
+      const modelScore = 0; // 0/50 = 0%
       const result = calculateFinalScore(baseResult, modelScore, 'test-123');
-      
-      // Formula: (60 + (0 * 20)) / 120 * 100 = 60 / 120 * 100 = 50%
-      expect(result.scores.score_final).toBe(50);
+
+      // Formula: (60 + 0) / 150 * 100 = 40%
+      expect(result.scores.score_final).toBe(40);
       expect(result.calculation_details.model_percentage).toBe(0);
     });
 
@@ -256,8 +256,8 @@ describe('Score Calculator', () => {
           final_base_score: 0,
         },
       };
-      
-      const result = calculateFinalScore(eliminatedResult, 20, 'test-123');
+
+      const result = calculateFinalScore(eliminatedResult, 50, 'test-123');
       expect(result.scores.score_final).toBe(0);
       expect(result.scores.is_eliminated).toBe(true);
       expect(result.scores.elimination_reason).toBe('Pratique interdite');
@@ -265,7 +265,7 @@ describe('Score Calculator', () => {
 
     it('should calculate maximum possible score', () => {
       const maxBaseResult = {
-        score_base: BASE_SCORE, // 90
+        score_base: BASE_SCORE, // 100
         is_eliminated: false,
         elimination_reason: '',
         calculation_details: {
@@ -274,17 +274,17 @@ describe('Score Calculator', () => {
           final_base_score: BASE_SCORE,
         },
       };
-      
-      const result = calculateFinalScore(maxBaseResult, 20, 'test-123');
-      // Formula: (90 + 20) / 120 * 100 = 91.67%
-      expect(result.scores.score_final).toBe(91.67);
+
+      const result = calculateFinalScore(maxBaseResult, 50, 'test-123');
+      // Formula: (100 + 50) / 150 * 100 = 100%
+      expect(result.scores.score_final).toBe(100);
     });
 
     it('should include correct formula in details', () => {
-      const result = calculateFinalScore(baseResult, 10, 'test-123');
+      const result = calculateFinalScore(baseResult, 25, 'test-123');
       expect(result.calculation_details.formula_used).toContain('60');
-      expect(result.calculation_details.formula_used).toContain('50%'); // 10/20 = 50%
-      expect(result.calculation_details.formula_used).toContain('120');
+      expect(result.calculation_details.formula_used).toContain('50%'); // 25/50 = 50%
+      expect(result.calculation_details.formula_used).toContain('150');
     });
 
     it('should include correct weights in details', () => {
