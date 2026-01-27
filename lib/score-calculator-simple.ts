@@ -1,15 +1,19 @@
 /**
  * Calculateur de score simple pour les cas d'usage IA
- * 
+ *
  * Ce fichier contient la logique métier pure pour calculer le score d'un cas d'usage
  * basé sur les réponses de l'utilisateur au questionnaire IA Act.
- * 
+ *
  * Principe :
- * 1. Score de base = 90 points
- * 2. Les réponses peuvent diminuer le score (impacts négatifs)  
+ * 1. Score de base = 100 points (questionnaire = 2/3 du score)
+ * 2. Les réponses peuvent diminuer le score (impacts négatifs)
  * 3. Certaines réponses sont éliminatoires (score = 0)
- * 4. Un bonus COMPL-AI peut être ajouté (jusqu'à 20 points)
- * 5. Score final = (score_base + bonus_model) avec pondération
+ * 4. Un bonus COMPL-AI peut être ajouté (jusqu'à 50 points = 1/3 du score)
+ * 5. Score final = (score_base + bonus_model) / 150 * 100
+ *
+ * Répartition 2/3 - 1/3 :
+ * - Questionnaire : 100 points max (2/3)
+ * - Modèle COMPL-AI : 50 points max (1/3) - 5 principes × 10 points
  */
 
 import { loadQuestions } from '@/app/usecases/[id]/utils/questions-loader';
@@ -21,24 +25,24 @@ const QUESTIONS_DATA = loadQuestions();
 // ===== CONSTANTES DE CALCUL =====
 /**
  * Score de départ pour tous les cas d'usage
- * Tous les cas d'usage commencent avec 90 points
+ * Tous les cas d'usage commencent avec 100 points
  */
-export const BASE_SCORE = 90;
+export const BASE_SCORE = 100;
 
 /**
- * Multiplicateur pour convertir le score COMPL-AI (0-1) en score sur 20
+ * Multiplicateur pour convertir le score COMPL-AI (0-1) en score sur 50
  */
-export const COMPL_AI_MULTIPLIER = 20;
+export const COMPL_AI_MULTIPLIER = 50;
 
 /**
- * Poids du score de base dans le calcul final (sur 120 total)
+ * Poids du score de base dans le calcul final (sur 150 total)
  */
 export const BASE_SCORE_WEIGHT = 100;
 
 /**
- * Poids du score modèle dans le calcul final (sur 120 total)
+ * Poids du score modèle dans le calcul final (sur 150 total)
  */
-export const MODEL_SCORE_WEIGHT = 20;
+export const MODEL_SCORE_WEIGHT = 50;
 
 /**
  * Marge fixe pour le calcul final (actuellement 0)
@@ -48,7 +52,7 @@ export const MARGIN_SCORE = 0;
 /**
  * Poids total pour le calcul final
  */
-export const TOTAL_WEIGHT = 120;
+export const TOTAL_WEIGHT = 150;
 
 // ===== TYPES ET INTERFACES =====
 
@@ -128,7 +132,7 @@ export function roundToTwoDecimals(value: number): number {
  * The final score formula is: ((score_base + score_model) / TOTAL_WEIGHT) * 100
  * This function applies the same ratio to any raw point value.
  *
- * Example: If TOTAL_WEIGHT=120 and rawPoints=10, result = (10/120)*100 = 8.33 → 8
+ * Example: If TOTAL_WEIGHT=150 and rawPoints=10, result = (10/150)*100 = 6.67 → 7
  *
  * @param rawPoints - Raw score impact points (e.g., 10)
  * @returns Normalized points as they appear in final score (e.g., 8)
@@ -288,13 +292,13 @@ export function getCompanyStatusDefinition(status: CompanyStatus): string {
 
 /**
  * Calcule le score de base à partir des réponses de l'utilisateur
- * 
+ *
  * Logique :
- * 1. Commence avec BASE_SCORE (90 points)
+ * 1. Commence avec BASE_SCORE (100 points)
  * 2. Vérifie d'abord les réponses éliminatoires
  * 3. Si pas éliminé, applique tous les impacts négatifs
  * 4. Le score ne peut pas descendre en dessous de 0
- * 
+ *
  * @param responses - Toutes les réponses de l'utilisateur
  * @returns Résultat du calcul avec détails
  */
@@ -378,11 +382,11 @@ export function calculateBaseScore(responses: UserResponse[]): BaseScoreResult {
 
 /**
  * Calcule le score final complet incluant le bonus COMPL-AI
- * 
- * Formule : ((Score_base + Score_model + Marge) / 120) * 100
- * 
+ *
+ * Formule : ((Score_base + Score_model + Marge) / 150) * 100
+ *
  * @param baseScoreResult - Résultat du calcul de score de base
- * @param modelScore - Score du modèle COMPL-AI (0-20) ou null
+ * @param modelScore - Score du modèle COMPL-AI (0-50) ou null
  * @param usecaseId - ID du cas d'usage
  * @returns Résultat complet du calcul
  */
@@ -408,7 +412,7 @@ export function calculateFinalScore(
     console.log(`📊 Score brut: ${baseScoreResult.score_base} + ${modelScore || 0} + ${MARGIN_SCORE} = ${roundToTwoDecimals(scoreBrut)}`);
     
     // ÉTAPE 2 : Appliquer la formule finale
-    // Formule : (score_brut / 120) * 100
+    // Formule : (score_brut / 150) * 100
     finalScore = (scoreBrut / TOTAL_WEIGHT) * 100;
     console.log(`✨ Score final calculé: ${roundToTwoDecimals(finalScore)}%`);
   }

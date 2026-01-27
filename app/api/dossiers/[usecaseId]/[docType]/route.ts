@@ -235,7 +235,7 @@ export async function POST(
             // Calculate new scores by adding the expected points
             // IMPORTANT: Include score_model in the final score calculation
             const newBaseScore = previousBaseScore + syncResult.expectedPointsGained
-            const newFinalScore = Math.round(((newBaseScore + scoreModel) / 120) * 100 * 100) / 100
+            const newFinalScore = Math.round(((newBaseScore + scoreModel) / 150) * 100 * 100) / 100
 
             console.log(`[POST /dossiers] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`)
 

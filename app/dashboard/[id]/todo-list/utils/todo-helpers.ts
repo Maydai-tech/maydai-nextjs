@@ -166,12 +166,12 @@ export const getDocumentExplanation = (docType: DocumentType): string => {
  * response is the "negative" answer.
  * Returns 0 if no response exists or if response is already positive.
  *
- * The final score formula is: ((score_base + score_model) / 120) * 100
- * So raw points are converted with: (rawPoints / 120) * 100
+ * The final score formula is: ((score_base + score_model) / 150) * 100
+ * So raw points are converted with: (rawPoints / 150) * 100
  *
  * For example, if technical_documentation has score_impact -10:
  * - Raw points: 10
- * - Normalized points: (10 / 120) * 100 ≈ 8 points
+ * - Normalized points: (10 / 150) * 100 ≈ 7 points
  *
  * Uses the mapping from questions-with-scores.json via getTodoActionMapping
  * to maintain a single source of truth.
