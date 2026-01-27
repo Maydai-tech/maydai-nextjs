@@ -25,7 +25,7 @@ describe('Score Calculator', () => {
       const result = await calculateScore(mockUsecaseId, [])
 
       expect(result.score).toBe(90) // Base score sans COMPL-AI
-      expect(result.max_score).toBe(120)
+      expect(result.max_score).toBe(90) // Max = 90 sans COMPL-AI (questionnaire seul)
       expect(result.usecase_id).toBe(mockUsecaseId)
       expect(result.score_breakdown).toHaveLength(0)
       expect(result.category_scores).toHaveLength(8) // 8 catégories incluant prohibited_practices
