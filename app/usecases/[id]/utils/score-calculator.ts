@@ -4,8 +4,11 @@ import { RISK_CATEGORIES } from './risk-categories'
 import { getUseCaseComplAiBonus, getMaydAiScoresByPrinciple } from './compl-ai-scoring'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-const BASE_SCORE = 100
-const MAX_POSSIBLE_SCORE = 150 // 100 points Questionnaire (2/3) + 50 points Modèle COMPL-AI (1/3)
+const BASE_SCORE = 90
+const COMPL_AI_WEIGHT = 2.5           // Multiplicateur COMPL-AI (20 × 2.5 = 50 points max)
+const MAX_WITH_COMPL_AI = 150         // Diviseur avec COMPL-AI (90 questionnaire + 50 COMPL-AI)
+const MAX_WITHOUT_COMPL_AI = 90       // Max sans COMPL-AI (questionnaire seul)
+const MAX_SCORE_PERCENTAGE = 100      // Score final affiché sur 100 avec COMPL-AI
 
 // Fonction de mapping des catégories du JSON vers les IDs de risk-categories.ts
 function mapCategoryFromJson(jsonCategoryId: string): string {
@@ -426,40 +429,46 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
       currentScore = 0
     }
 
-    // Calculer le bonus COMPL-AI et récupérer les scores MaydAI par principe
+    // Calculer le score COMPL-AI et récupérer les scores MaydAI par principe
     let complAiBonus = 0
     let complAiScore: number | null = null
+    let complAiRawScore: number | null = null  // Score brut COMPL-AI (0-20)
     let modelInfo: { id: string; name: string; provider: string } | null = null
     let maydaiScoresByPrinciple: Record<string, number> = {}
-    
+    let maxScore = MAX_WITHOUT_COMPL_AI  // Par défaut, max = 90 (questionnaire seul)
+
     if (!isEliminated) {
       const complAiData = await getUseCaseComplAiBonus(usecaseId, supabaseClient)
 
       complAiBonus = complAiData.bonus
       complAiScore = complAiData.complAiScore
       modelInfo = complAiData.modelInfo
-      
+
       // Récupérer les scores MaydAI par principe si un modèle est associé
       if (modelInfo?.id) {
         maydaiScoresByPrinciple = await getMaydAiScoresByPrinciple(modelInfo.id, supabaseClient)
       }
 
-      
-      // Ajouter le bonus au score (selon la formule fournie)
-      currentScore = Math.min(currentScore + complAiBonus, MAX_POSSIBLE_SCORE)
-      
-      // Ajouter l'explication du bonus au breakdown
-      if (complAiBonus > 0 && modelInfo) {
+      // Calculer le score final selon la présence de COMPL-AI
+      if (complAiScore !== null && modelInfo) {
+        // AVEC COMPL-AI : formule (Questionnaire + COMPL-AI × 2.5) / 150 × 100
+        complAiRawScore = complAiScore * 20  // Convertir % (0-1) en score brut (0-20)
+        const weightedScore = currentScore + (complAiRawScore * COMPL_AI_WEIGHT)
+        currentScore = Math.round((weightedScore / MAX_WITH_COMPL_AI) * 1000) / 10
+        maxScore = MAX_SCORE_PERCENTAGE  // Le résultat est sur 100
+
+        // Ajouter l'explication au breakdown
         breakdown.push({
           question_id: 'compl_ai_bonus',
-          question_text: `Bonus COMPL-AI (${modelInfo.name} - ${modelInfo.provider})`,
-          answer_value: `Score COMPL-AI: ${Math.round((complAiScore || 0) * 100)}%`,
-          score_impact: complAiBonus,
-          reasoning: `Bonus de ${complAiBonus.toFixed(1)} points basé sur le score COMPL-AI de ${Math.round((complAiScore || 0) * 100)}%`,
+          question_text: `Score COMPL-AI (${modelInfo.name} - ${modelInfo.provider})`,
+          answer_value: `Score COMPL-AI: ${complAiRawScore.toFixed(2)}/20 (${Math.round(complAiScore * 100)}%)`,
+          score_impact: complAiRawScore * COMPL_AI_WEIGHT,
+          reasoning: `Contribution COMPL-AI: ${complAiRawScore.toFixed(2)} × ${COMPL_AI_WEIGHT} = ${(complAiRawScore * COMPL_AI_WEIGHT).toFixed(1)} points`,
           risk_category: 'compl_ai_conformity',
           category_impacts: {}
         })
       }
+      // SANS COMPL-AI : score questionnaire seul (currentScore reste inchangé, max = 90)
     }
 
     // Calculer les scores par catégorie avec les constantes pré-calculées
@@ -505,13 +514,13 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
     return {
       usecase_id: usecaseId,
       score: currentScore,
-      max_score: MAX_POSSIBLE_SCORE,
+      max_score: maxScore,
       score_breakdown: breakdown,
       category_scores: categoryScores,
       calculated_at: new Date().toISOString(),
       version: 1,
       is_eliminated: isEliminated,
-      compl_ai_bonus: complAiBonus,
+      compl_ai_bonus: complAiRawScore !== null ? complAiRawScore * COMPL_AI_WEIGHT : 0,
       compl_ai_score: complAiScore,
       model_info: modelInfo
     }
@@ -521,7 +530,7 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
     return {
       usecase_id: usecaseId,
       score: BASE_SCORE,
-      max_score: MAX_POSSIBLE_SCORE,
+      max_score: MAX_WITHOUT_COMPL_AI,
       score_breakdown: [],
       category_scores: [],
       calculated_at: new Date().toISOString(),

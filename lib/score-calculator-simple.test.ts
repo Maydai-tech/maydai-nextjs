@@ -96,7 +96,7 @@ describe('Score Calculator', () => {
       const responses: UserResponse[] = [
         {
           question_code: 'E4.N7.Q2',
-          multiple_codes: ['E4.N7.Q2.A'], // -45 impact
+          multiple_codes: ['E4.N7.Q2.A'], // -30 impact (mis à jour selon CSV)
         },
         {
           question_code: 'E4.N8.Q2',
@@ -104,9 +104,9 @@ describe('Score Calculator', () => {
         },
       ];
       const result = calculateBaseScore(responses);
-      expect(result.score_base).toBe(BASE_SCORE - 45 - 5); // 100 - 45 - 5 = 50
+      expect(result.score_base).toBe(BASE_SCORE - 30 - 5); // 90 - 30 - 5 = 55
       expect(result.is_eliminated).toBe(false);
-      expect(result.calculation_details.total_impact).toBe(-50);
+      expect(result.calculation_details.total_impact).toBe(-35);
     });
 
     it('should handle eliminatory responses', () => {
@@ -126,13 +126,13 @@ describe('Score Calculator', () => {
       const responses: UserResponse[] = [
         {
           question_code: 'E4.N7.Q2',
-          multiple_codes: ['E4.N7.Q2.A', 'E4.N7.Q2.B', 'E4.N7.Q2.C'], // -135 total impact
+          multiple_codes: ['E4.N7.Q2.A', 'E4.N7.Q2.B', 'E4.N7.Q2.C'], // -90 total impact (3 × -30, mis à jour selon CSV)
         },
       ];
       const result = calculateBaseScore(responses);
       expect(result.score_base).toBe(0); // Can't go below 0
       expect(result.is_eliminated).toBe(false);
-      expect(result.calculation_details.total_impact).toBe(-135);
+      expect(result.calculation_details.total_impact).toBe(-90);
     });
 
     it('should handle mixed response types', () => {
@@ -283,8 +283,8 @@ describe('Score Calculator', () => {
     it('should include correct formula in details', () => {
       const result = calculateFinalScore(baseResult, 25, 'test-123');
       expect(result.calculation_details.formula_used).toContain('60');
-      expect(result.calculation_details.formula_used).toContain('50%'); // 25/50 = 50%
-      expect(result.calculation_details.formula_used).toContain('150');
+      expect(result.calculation_details.formula_used).toContain('10'); // model score raw value
+      expect(result.calculation_details.formula_used).toContain('120');
     });
 
     it('should include correct weights in details', () => {

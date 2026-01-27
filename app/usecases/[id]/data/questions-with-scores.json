@@ -622,10 +622,10 @@
       {
         "code": "E4.N8.Q9.A",
         "label": "Oui",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "human_oversight": -5
+          "human_oversight": -3
         }
       },
       {
@@ -657,46 +657,46 @@
       {
         "code": "E4.N8.Q10.B",
         "label": "> à 100",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "human_oversight": -5
+          "human_oversight": -3
         }
       },
       {
         "code": "E4.N8.Q10.C",
         "label": "> à 1000",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "human_oversight": -5
+          "human_oversight": -3
         }
       },
       {
         "code": "E4.N8.Q10.D",
         "label": "> à 10 000",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "human_oversight": -5
+          "human_oversight": -3
         }
       },
       {
         "code": "E4.N8.Q10.E",
         "label": "> à 100 000",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "human_oversight": -5
+          "human_oversight": -3
         }
       },
       {
         "code": "E4.N8.Q10.F",
         "label": "> à 1 M",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "human_oversight": -5
+          "human_oversight": -3
         }
       }
     ]
@@ -717,28 +717,28 @@
       {
         "code": "E4.N8.Q11.B",
         "label": "Image",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "social_environmental": -5
+          "social_environmental": -3
         }
       },
       {
         "code": "E4.N8.Q11.C",
         "label": "audio",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "social_environmental": -5
+          "social_environmental": -3
         }
       },
       {
         "code": "E4.N8.Q11.D",
         "label": "Vidéo",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "social_environmental": -5
+          "social_environmental": -3
         }
       }
     ]
@@ -758,9 +758,9 @@
       {
         "code": "E4.N8.Q12.B",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -0.8,
         "category_impacts": {
-          "privacy_data": -5
+          "privacy_data": -0.8
         }
       }
     ]
@@ -786,10 +786,10 @@
       {
         "code": "E5.N9.Q1.B",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "technical_robustness": -5
+          "technical_robustness": -3
         }
       }
     ]
@@ -815,10 +815,10 @@
       {
         "code": "E5.N9.Q2.B",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "technical_robustness": -5
+          "technical_robustness": -3
         }
       }
     ]
@@ -844,10 +844,10 @@
       {
         "code": "E5.N9.Q3.B",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "technical_robustness": -5
+          "technical_robustness": -3
         }
       }
     ]
@@ -873,10 +873,10 @@
       {
         "code": "E5.N9.Q4.B",
         "label": "Non",
-        "score_impact": -10,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "human_oversight": -10
+          "human_oversight": -3
         }
       }
     ]
@@ -896,28 +896,28 @@
       {
         "code": "E5.N9.Q5.B",
         "label": "Personnelles",
-        "score_impact": -10,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "privacy_data": -10
+          "privacy_data": -3
         }
       },
       {
         "code": "E5.N9.Q5.C",
         "label": "Stratégiques",
-        "score_impact": -10,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "privacy_data": -5
+          "privacy_data": -3
         }
       },
       {
         "code": "E5.N9.Q5.D",
         "label": "sensibles",
-        "score_impact": -10,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "privacy_data": -5
+          "privacy_data": -3
         }
       }
     ]
@@ -955,10 +955,10 @@
       {
         "code": "E5.N9.Q6.A",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "privacy_data": -5
+          "privacy_data": -3
         }
       }
     ]
@@ -1001,10 +1001,10 @@
       {
         "code": "E5.N9.Q7.A",
         "label": "Non",
-        "score_impact": -10,
+        "score_impact": -5,
         "risk": "minimal",
         "category_impacts": {
-          "human_oversight": -10
+          "human_oversight": -5
         }
       }
     ]
@@ -1047,10 +1047,10 @@
       {
         "code": "E5.N9.Q8.A",
         "label": "Non",
-        "score_impact": -10,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "human_oversight": -10
+          "human_oversight": -3
         }
       }
     ]
@@ -1088,10 +1088,10 @@
       {
         "code": "E5.N9.Q9.A",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "technical_robustness": -5
+          "technical_robustness": -3
         }
       }
     ]
@@ -1117,10 +1117,10 @@
       {
         "code": "E6.N10.Q1.B",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "transparency": -5
+          "transparency": -3
         }
       }
     ]
@@ -1146,10 +1146,10 @@
       {
         "code": "E6.N10.Q2.B",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "transparency": -5
+          "transparency": -3
         }
       }
     ]
