@@ -345,7 +345,7 @@ export default function AdminUsersPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <select
-                            value={userItem.role}
+                            value={userItem.role ?? 'user'}
                             onChange={(e) => handleRoleChange(userItem.id, e.target.value as any)}
                             disabled={updating === userItem.id || userItem.id === user?.id}
                             className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md disabled:opacity-50"
