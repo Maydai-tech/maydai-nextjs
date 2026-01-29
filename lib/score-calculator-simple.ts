@@ -25,19 +25,25 @@ const QUESTIONS_DATA = loadQuestions();
 // ===== CONSTANTES DE CALCUL =====
 /**
  * Score de départ pour tous les cas d'usage
- * Tous les cas d'usage commencent avec 100 points
+ * Tous les cas d'usage commencent avec 90 points (2/3 du score final)
  */
-export const BASE_SCORE = 100;
+export const BASE_SCORE = 90;
 
 /**
- * Multiplicateur pour convertir le score COMPL-AI (0-1) en score sur 50
+ * Multiplicateur pour convertir le score COMPL-AI (0-1) en score brut sur 20
  */
-export const COMPL_AI_MULTIPLIER = 50;
+export const COMPL_AI_MULTIPLIER = 20;
+
+/**
+ * Poids appliqué au score COMPL-AI brut pour obtenir la contribution finale
+ * score_model_raw (0-20) × 2.5 = contribution (0-50)
+ */
+export const COMPL_AI_WEIGHT = 2.5;
 
 /**
  * Poids du score de base dans le calcul final (sur 150 total)
  */
-export const BASE_SCORE_WEIGHT = 100;
+export const BASE_SCORE_WEIGHT = 90;
 
 /**
  * Poids du score modèle dans le calcul final (sur 150 total)
@@ -383,10 +389,14 @@ export function calculateBaseScore(responses: UserResponse[]): BaseScoreResult {
 /**
  * Calcule le score final complet incluant le bonus COMPL-AI
  *
- * Formule : ((Score_base + Score_model + Marge) / 150) * 100
+ * Formule : ((Score_base + Score_model × 2.5) / 150) * 100
+ *
+ * Répartition 2/3 - 1/3 :
+ * - Score de base (questionnaire) : max 90 points (60%)
+ * - Score modèle (COMPL-AI) : max 20 brut × 2.5 = 50 points (33%)
  *
  * @param baseScoreResult - Résultat du calcul de score de base
- * @param modelScore - Score du modèle COMPL-AI (0-50) ou null
+ * @param modelScore - Score du modèle COMPL-AI brut (0-20) ou null
  * @param usecaseId - ID du cas d'usage
  * @returns Résultat complet du calcul
  */
@@ -397,34 +407,36 @@ export function calculateFinalScore(
 ): CompleteScoreResult {
   console.log(`🎯 Calcul du score final pour le cas d'usage ${usecaseId}`);
   console.log(`📊 Score de base: ${baseScoreResult.score_base}`);
-  console.log(`🤖 Score modèle: ${modelScore !== null ? modelScore : 'N/A'}`);
-  
+  console.log(`🤖 Score modèle brut: ${modelScore !== null ? modelScore : 'N/A'}`);
+
   let finalScore = 0;
   let hasValidModelScore = modelScore !== null && modelScore !== undefined;
-  
+
+  // Calculer la contribution pondérée du modèle (score_model × 2.5)
+  const modelContribution = (modelScore || 0) * COMPL_AI_WEIGHT;
+
   if (baseScoreResult.is_eliminated) {
     // Si éliminé, le score final est toujours 0
     finalScore = 0;
     console.log(`💀 Score final : 0 (cas éliminé)`);
   } else {
-    // ÉTAPE 1 : Calculer le score brut (score_base + model_score + marge)
-    const scoreBrut = baseScoreResult.score_base + (modelScore || 0) + MARGIN_SCORE;
-    console.log(`📊 Score brut: ${baseScoreResult.score_base} + ${modelScore || 0} + ${MARGIN_SCORE} = ${roundToTwoDecimals(scoreBrut)}`);
-    
+    // ÉTAPE 1 : Calculer le score brut (score_base + model_score × 2.5)
+    const scoreBrut = baseScoreResult.score_base + modelContribution + MARGIN_SCORE;
+    console.log(`📊 Score brut: ${baseScoreResult.score_base} + (${modelScore || 0} × ${COMPL_AI_WEIGHT}) + ${MARGIN_SCORE} = ${roundToTwoDecimals(scoreBrut)}`);
+
     // ÉTAPE 2 : Appliquer la formule finale
     // Formule : (score_brut / 150) * 100
     finalScore = (scoreBrut / TOTAL_WEIGHT) * 100;
     console.log(`✨ Score final calculé: ${roundToTwoDecimals(finalScore)}%`);
   }
-  
+
   // ÉTAPE 3 : Construire la formule utilisée pour debug
-  const scoreBrutDebug = baseScoreResult.score_base + (modelScore || 0) + MARGIN_SCORE;
-  const formulaUsed = hasValidModelScore && modelScore !== null 
-    ? `((${baseScoreResult.score_base} + ${roundToTwoDecimals(modelScore)} + ${MARGIN_SCORE}) / ${TOTAL_WEIGHT}) * 100`
-    : `((${baseScoreResult.score_base} + 0 + ${MARGIN_SCORE}) / ${TOTAL_WEIGHT}) * 100`;
-  
+  const formulaUsed = hasValidModelScore && modelScore !== null
+    ? `((${baseScoreResult.score_base} + ${roundToTwoDecimals(modelScore)} × ${COMPL_AI_WEIGHT}) / ${TOTAL_WEIGHT}) * 100`
+    : `((${baseScoreResult.score_base} + 0) / ${TOTAL_WEIGHT}) * 100`;
+
   console.log(`📐 Formule utilisée: ${formulaUsed}`);
-  
+
   return {
     success: true,
     usecase_id: usecaseId,
@@ -438,7 +450,7 @@ export function calculateFinalScore(
     calculation_details: {
       ...baseScoreResult.calculation_details,
       model_score: modelScore !== null ? roundToTwoDecimals(modelScore) : null,
-      model_percentage: modelScore !== null ? roundToTwoDecimals(modelScore / COMPL_AI_MULTIPLIER * 100) : null,
+      model_percentage: modelScore !== null ? roundToTwoDecimals((modelScore / COMPL_AI_MULTIPLIER) * 100) : null,
       has_model_score: hasValidModelScore,
       formula_used: formulaUsed,
       weights: {

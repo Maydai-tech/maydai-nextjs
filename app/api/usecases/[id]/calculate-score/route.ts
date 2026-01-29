@@ -258,9 +258,9 @@ export async function POST(
     
     // ===== ÉTAPE 6: RÉCUPÉRATION DU SCORE MODÈLE COMPL-AI =====
     console.log('🤖 Récupération du score modèle COMPL-AI...');
-    
+
     let modelScore: number | null = null;
-    
+
     try {
       // 1. D'abord récupérer le primary_model_id du cas d'usage
       const { data: usecaseModel, error: modelError } = await supabase
@@ -268,43 +268,53 @@ export async function POST(
         .select('primary_model_id')
         .eq('id', finalUsecaseId)
         .single();
-      
+
       if (modelError) {
         console.warn('⚠️ Impossible de récupérer les infos du modèle:', modelError.message);
       } else if (usecaseModel?.primary_model_id) {
         console.log(`📋 Modèle trouvé: ${usecaseModel.primary_model_id}`);
-        
-        // 2. Récupérer les évaluations du modèle avec les scores MaydAI
+
+        // 2. Récupérer les évaluations du modèle avec les scores COMPL-AI originaux
         const { data: evaluations, error: evalError } = await supabase
           .from('compl_ai_evaluations')
-          .select('maydai_score, principle_id')
+          .select('score, principle_id')
           .eq('model_id', usecaseModel.primary_model_id)
-          .not('maydai_score', 'is', null);
-        
+          .not('score', 'is', null);
+
         if (evalError) {
           console.warn('⚠️ Erreur lors de la récupération des évaluations:', evalError.message);
         } else if (evaluations && evaluations.length > 0) {
-          // 3. Calculer la somme des scores MaydAI par principe
-          // Les scores MaydAI sont déjà normalisés : chaque principe vaut max 4 points
-          const principleScores: Record<string, number> = {};
-          
+          // 3. Calculer la moyenne des scores COMPL-AI par principe
+          const principleScores: Record<string, { sum: number; count: number }> = {};
+
           evaluations.forEach((evaluation: any) => {
             const principleId = evaluation.principle_id;
             if (!principleScores[principleId]) {
-              principleScores[principleId] = 0;
+              principleScores[principleId] = { sum: 0, count: 0 };
             }
-            principleScores[principleId] += evaluation.maydai_score;
+            principleScores[principleId].sum += evaluation.score;
+            principleScores[principleId].count += 1;
           });
-          
-          // 4. Calculer le score total (somme des scores par principe, max 20)
-          const totalMaydaiScore = Object.values(principleScores).reduce((sum, score) => sum + score, 0);
-          modelScore = Math.min(totalMaydaiScore, 20); // Plafonner à 20
-          
-          console.log(`📊 Scores par principe:`, principleScores);
-          console.log(`🎯 Score modèle COMPL-AI total: ${modelScore.toFixed(2)}/20 (${Math.round(modelScore / 20 * 100)}%)`);
-          console.log(`📈 Nombre de principes évalués: ${Object.keys(principleScores).length}`);
+
+          // 4. Calculer la moyenne par principe puis la moyenne globale
+          const principleAverages = Object.entries(principleScores).map(([id, data]) => ({
+            principleId: id,
+            average: data.sum / data.count
+          }));
+
+          const globalAverageScore = principleAverages.length > 0
+            ? principleAverages.reduce((sum, p) => sum + p.average, 0) / principleAverages.length
+            : 0;
+
+          // 5. Convertir en score brut sur 20 : moyenne (0-1) × 20
+          modelScore = globalAverageScore * COMPL_AI_MULTIPLIER;
+
+          console.log(`📊 Moyennes par principe:`, principleAverages.map(p => `${p.principleId}: ${(p.average * 100).toFixed(1)}%`));
+          console.log(`🎯 Moyenne COMPL-AI globale: ${(globalAverageScore * 100).toFixed(1)}%`);
+          console.log(`📈 Score modèle brut: ${modelScore.toFixed(2)}/20`);
+          console.log(`📈 Nombre de principes évalués: ${principleAverages.length}`);
         } else {
-          console.log('ℹ️ Aucun score MaydAI trouvé pour ce modèle');
+          console.log('ℹ️ Aucun score COMPL-AI trouvé pour ce modèle');
         }
       } else {
         console.log('ℹ️ Aucun modèle COMPL-AI associé à ce cas d\'usage');

@@ -58,20 +58,47 @@ function calculateMaxCategoryScoresFromAllQuestions(): Record<string, number> {
         maxScores[categoryId] += maxImpact
       })
     }
-    // Pour les questions checkbox/tags : TOUTES les options peuvent être sélectionnées
+    // Pour les questions checkbox/tags
     else if (question.type === 'checkbox' || question.type === 'tags') {
-      question.options.forEach(option => {
-        if (option.category_impacts) {
-          Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]) => {
-            if (impact < 0) { // Seuls les impacts négatifs comptent pour le maximum
-              const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
-              if (maxScores[mappedCategoryId] !== undefined) {
-                maxScores[mappedCategoryId] += Math.abs(impact)
+      const isAnyMode = question.impact_mode === 'any'
+
+      if (isAnyMode) {
+        // Mode "any" : prendre le max par catégorie (comme radio)
+        const categoryMaxImpacts: Record<string, number> = {}
+        question.options.forEach(option => {
+          if (option.category_impacts) {
+            Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]) => {
+              if (impact < 0) {
+                const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+                if (maxScores[mappedCategoryId] !== undefined) {
+                  const absImpact = Math.abs(impact)
+                  categoryMaxImpacts[mappedCategoryId] = Math.max(
+                    categoryMaxImpacts[mappedCategoryId] || 0,
+                    absImpact
+                  )
+                }
               }
-            }
-          })
-        }
-      })
+            })
+          }
+        })
+        Object.entries(categoryMaxImpacts).forEach(([categoryId, maxImpact]) => {
+          maxScores[categoryId] += maxImpact
+        })
+      } else {
+        // Mode cumulatif : TOUTES les options peuvent être sélectionnées
+        question.options.forEach(option => {
+          if (option.category_impacts) {
+            Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]) => {
+              if (impact < 0) {
+                const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+                if (maxScores[mappedCategoryId] !== undefined) {
+                  maxScores[mappedCategoryId] += Math.abs(impact)
+                }
+              }
+            })
+          }
+        })
+      }
     }
   })
   
@@ -156,66 +183,103 @@ function calculateQuestionCategoryPoints(questionCode: string, response: any, qu
   }
   else if ((question.type === 'checkbox' || question.type === 'tags') && response.multiple_codes) {
     const selectedCodes = response.multiple_codes || []
-    
-    // Une seule boucle pour calculer à la fois les points possibles ET gagnés
-    question.options.forEach((option: any) => {
-      const isSelected = selectedCodes.includes(option.code)
-      
-      if (option.category_impacts) {
-        Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
-          if (impact < 0) {
-            const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
-            if (!categoryPointsData[mappedCategoryId]) {
-              categoryPointsData[mappedCategoryId] = { possible: 0, earned: 0 }
+    const isAnyMode = question.impact_mode === 'any'
+
+    if (isAnyMode) {
+      // Mode "any" : prendre le max par catégorie, perdu si AU MOINS UNE option impactante sélectionnée
+      const categoryMaxImpacts: Record<string, number> = {}
+      let hasSelectedImpactingOption = false
+
+      question.options.forEach((option: any) => {
+        const isSelected = selectedCodes.includes(option.code)
+        if (option.category_impacts) {
+          Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
+            if (impact < 0) {
+              const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+              const absImpact = Math.abs(impact)
+              categoryMaxImpacts[mappedCategoryId] = Math.max(
+                categoryMaxImpacts[mappedCategoryId] || 0,
+                absImpact
+              )
+              if (isSelected) {
+                hasSelectedImpactingOption = true
+              }
             }
-            // Points possibles
-            categoryPointsData[mappedCategoryId].possible += Math.abs(impact)
-            
-            // Points gagnés si l'option négative n'est PAS sélectionnée
-            if (!isSelected) {
-              categoryPointsData[mappedCategoryId].earned += Math.abs(impact)
-            }
-          }
-        })
-      }
-    })
-  }
-  else if (question.type === 'conditional' && response.conditional_main) {
-    // Pour conditional : même logique que radio - prendre le MAXIMUM des impacts négatifs par catégorie
-    const categoryMaxImpacts: Record<string, number> = {}
-    
-    question.options.forEach((option: any) => {
-      if (option.category_impacts) {
-        Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
-          if (impact < 0) {
-            const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
-            const absImpact = Math.abs(impact)
-            categoryMaxImpacts[mappedCategoryId] = Math.max(
-              categoryMaxImpacts[mappedCategoryId] || 0,
-              absImpact
-            )
-          }
-        })
-      }
-    })
-    
-    // Initialiser les points possibles avec les maximums calculés
-    Object.entries(categoryMaxImpacts).forEach(([categoryId, maxImpact]) => {
-      categoryPointsData[categoryId] = { possible: maxImpact, earned: 0 }
-    })
-    
-    const selectedOption = question.options.find((opt: any) => opt.code === response.conditional_main)
-    if (selectedOption?.category_impacts) {
-      Object.entries(selectedOption.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
-        const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
-        if (categoryPointsData[mappedCategoryId]) {
-          categoryPointsData[mappedCategoryId].earned = impact >= 0 ? categoryPointsData[mappedCategoryId].possible : 0
+          })
+        }
+      })
+
+      Object.entries(categoryMaxImpacts).forEach(([categoryId, maxImpact]) => {
+        categoryPointsData[categoryId] = {
+          possible: maxImpact,
+          earned: hasSelectedImpactingOption ? 0 : maxImpact
         }
       })
     } else {
-      Object.keys(categoryPointsData).forEach(categoryId => {
-        categoryPointsData[categoryId].earned = categoryPointsData[categoryId].possible
+      // Mode cumulatif : une seule boucle pour calculer à la fois les points possibles ET gagnés
+      question.options.forEach((option: any) => {
+        const isSelected = selectedCodes.includes(option.code)
+
+        if (option.category_impacts) {
+          Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
+            if (impact < 0) {
+              const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+              if (!categoryPointsData[mappedCategoryId]) {
+                categoryPointsData[mappedCategoryId] = { possible: 0, earned: 0 }
+              }
+              // Points possibles
+              categoryPointsData[mappedCategoryId].possible += Math.abs(impact)
+
+              // Points gagnés si l'option négative n'est PAS sélectionnée
+              if (!isSelected) {
+                categoryPointsData[mappedCategoryId].earned += Math.abs(impact)
+              }
+            }
+          })
+        }
       })
+    }
+  }
+  else if (question.type === 'conditional') {
+    // Pour conditional : même logique que radio - prendre le MAXIMUM des impacts négatifs par catégorie
+    // Fallback: utiliser single_value si conditional_main est absent (données legacy)
+    const selectedCode = response.conditional_main || response.single_value
+    if (selectedCode) {
+      const categoryMaxImpacts: Record<string, number> = {}
+
+      question.options.forEach((option: any) => {
+        if (option.category_impacts) {
+          Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
+            if (impact < 0) {
+              const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+              const absImpact = Math.abs(impact)
+              categoryMaxImpacts[mappedCategoryId] = Math.max(
+                categoryMaxImpacts[mappedCategoryId] || 0,
+                absImpact
+              )
+            }
+          })
+        }
+      })
+
+      // Initialiser les points possibles avec les maximums calculés
+      Object.entries(categoryMaxImpacts).forEach(([categoryId, maxImpact]) => {
+        categoryPointsData[categoryId] = { possible: maxImpact, earned: 0 }
+      })
+
+      const selectedOption = question.options.find((opt: any) => opt.code === selectedCode)
+      if (selectedOption?.category_impacts) {
+        Object.entries(selectedOption.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
+          const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+          if (categoryPointsData[mappedCategoryId]) {
+            categoryPointsData[mappedCategoryId].earned = impact >= 0 ? categoryPointsData[mappedCategoryId].possible : 0
+          }
+        })
+      } else {
+        Object.keys(categoryPointsData).forEach(categoryId => {
+          categoryPointsData[categoryId].earned = categoryPointsData[categoryId].possible
+        })
+      }
     }
   }
   
@@ -326,47 +390,85 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
       else if (question.type === 'checkbox' || question.type === 'tags') {
         // Réponses multiples stockées dans multiple_codes
         const answerCodes = response.multiple_codes || []
-        
+
         const impacts: string[] = []
         let totalImpact = 0
-        
-        // Pour les questions multiples, CUMULER tous les impacts
-        for (const code of answerCodes) {
-          const answerImpacts = getAnswerImpactsFromJSON(response.question_code, code)
-          if (answerImpacts.score_impact !== 0) {
-            impacts.push(`${code}: ${answerImpacts.score_impact}`)
-            totalImpact += answerImpacts.score_impact
+
+        // Mode "any" : appliquer l'impact une seule fois si au moins une option impactante est sélectionnée
+        const isAnyMode = question.impact_mode === 'any'
+
+        if (isAnyMode) {
+          // Trouver l'impact le plus négatif parmi les options sélectionnées
+          let minScoreImpact = 0
+          const categoryMinImpacts: Record<string, number> = {}
+
+          for (const code of answerCodes) {
+            const answerImpacts = getAnswerImpactsFromJSON(response.question_code, code)
+            if (answerImpacts.score_impact < minScoreImpact) {
+              minScoreImpact = answerImpacts.score_impact
+            }
+            if (answerImpacts.category_impacts) {
+              Object.entries(answerImpacts.category_impacts).forEach(([jsonCategoryId, impact]) => {
+                const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+                // Garder l'impact le plus négatif par catégorie
+                if (!categoryMinImpacts[mappedCategoryId] || impact < categoryMinImpacts[mappedCategoryId]) {
+                  categoryMinImpacts[mappedCategoryId] = impact
+                }
+              })
+            }
           }
-          
-          // Cumuler les impacts par catégorie avec mapping
-          if (answerImpacts.category_impacts) {
-            Object.entries(answerImpacts.category_impacts).forEach(([jsonCategoryId, impact]) => {
+
+          questionImpact = minScoreImpact
+          Object.assign(categoryImpactsForQuestion, categoryMinImpacts)
+
+          if (minScoreImpact !== 0 || Object.keys(categoryMinImpacts).length > 0) {
+            impacts.push(`${answerCodes.join(', ')}: ${minScoreImpact} points (mode any)`)
+          }
+          reasoning = impacts.length > 0 ?
+            `${impacts.join(', ')}` :
+            'Aucun impact'
+        } else {
+          // Mode cumulatif (comportement par défaut)
+          for (const code of answerCodes) {
+            const answerImpacts = getAnswerImpactsFromJSON(response.question_code, code)
+            if (answerImpacts.score_impact !== 0) {
+              impacts.push(`${code}: ${answerImpacts.score_impact}`)
+              totalImpact += answerImpacts.score_impact
+            }
+
+            // Cumuler les impacts par catégorie avec mapping
+            if (answerImpacts.category_impacts) {
+              Object.entries(answerImpacts.category_impacts).forEach(([jsonCategoryId, impact]) => {
+                const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
+                categoryImpactsForQuestion[mappedCategoryId] = (categoryImpactsForQuestion[mappedCategoryId] || 0) + impact
+              })
+            }
+          }
+
+          questionImpact = totalImpact
+          reasoning = impacts.length > 0 ?
+            `${impacts.join(', ')} → Impact total: ${totalImpact} points (cumul)` :
+            'Aucun impact'
+        }
+      }
+      else if (question.type === 'conditional') {
+        // Réponse conditionnelle stockée dans conditional_main, conditional_keys, conditional_values
+        // Fallback: utiliser single_value si conditional_main est absent (données legacy)
+        const selectedCode = response.conditional_main || response.single_value
+        if (selectedCode) {
+          const impacts = getAnswerImpactsFromJSON(response.question_code, selectedCode)
+          questionImpact = impacts.score_impact
+
+          // Appliquer les impacts par catégorie avec mapping
+          if (impacts.category_impacts) {
+            Object.entries(impacts.category_impacts).forEach(([jsonCategoryId, impact]) => {
               const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
-              categoryImpactsForQuestion[mappedCategoryId] = (categoryImpactsForQuestion[mappedCategoryId] || 0) + impact
+              categoryImpactsForQuestion[mappedCategoryId] = impact
             })
           }
+
+          reasoning = `${selectedCode}: ${questionImpact} points`
         }
-        
-        questionImpact = totalImpact
-        reasoning = impacts.length > 0 ? 
-          `${impacts.join(', ')} → Impact total: ${totalImpact} points (cumul)` : 
-          'Aucun impact'
-      }
-      else if (question.type === 'conditional' && response.conditional_main) {
-        // Réponse conditionnelle stockée dans conditional_main, conditional_keys, conditional_values
-        const selectedCode = response.conditional_main
-        const impacts = getAnswerImpactsFromJSON(response.question_code, selectedCode)
-        questionImpact = impacts.score_impact
-        
-        // Appliquer les impacts par catégorie avec mapping
-        if (impacts.category_impacts) {
-          Object.entries(impacts.category_impacts).forEach(([jsonCategoryId, impact]) => {
-            const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
-            categoryImpactsForQuestion[mappedCategoryId] = impact
-          })
-        }
-        
-        reasoning = `${selectedCode}: ${questionImpact} points`
       }
 
       // Ajouter l'impact au score total

@@ -46,6 +46,9 @@ export interface Question {
     placeholder: string;
   }>;
   tooltip?: Tooltip;
+  todo_action?: string;
+  /** Mode d'impact pour les questions checkbox/tags: 'any' = impact unique si au moins une option sélectionnée */
+  impact_mode?: 'any' | 'cumulative';
 }
 
 /**

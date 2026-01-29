@@ -42,9 +42,9 @@ describe('Score Calculator', () => {
         },
         {
           question_code: 'E5.N9.Q9',
-          single_value: 'E5.N9.Q9.A', // OUI = 0
-          multiple_codes: null,
-          conditional_main: null
+          conditional_main: 'E5.N9.Q9.B', // OUI = 0 (question conditional)
+          single_value: null,
+          multiple_codes: null
         }
       ]
 
