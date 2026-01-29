@@ -707,6 +707,7 @@
     "type": "tags",
     "required": true,
     "risk": "limited",
+    "impact_mode": "any",
     "options": [
       {
         "code": "E4.N8.Q11.A",

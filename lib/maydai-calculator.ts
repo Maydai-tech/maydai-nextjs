@@ -1,6 +1,6 @@
 /**
  * Calculateur de scores MaydAI
- * 
+ *
  * Logique de normalisation des scores COMPL-AI :
  * - Chaque principe EU AI Act vaut 4 points maximum
  * - Score total maximum = 20 points (5 principes × 4 points)
@@ -8,7 +8,29 @@
  * - Formule : (somme des scores valides) × (4 / nombre de benchmarks valides)
  */
 
-import { supabase } from '@/lib/supabase'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
+
+// Créer un client Supabase avec service role pour contourner les RLS
+function getServiceRoleClient(): SupabaseClient {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Variables d\'environnement Supabase manquantes')
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey)
+}
+
+// Client par défaut (sera initialisé à la demande)
+let supabase: SupabaseClient | null = null
+
+function getSupabase(): SupabaseClient {
+  if (!supabase) {
+    supabase = getServiceRoleClient()
+  }
+  return supabase
+}
 
 // Interface pour une évaluation COMPL-AI
 export interface ComplAiEvaluation {
@@ -88,7 +110,8 @@ export async function getModelEvaluations(modelId: string): Promise<{
   principles: Record<string, PrincipleInfo>
 }> {
   // Récupérer toutes les évaluations du modèle (ordonnées par ID pour cohérence avec saveMaydaiScores)
-  const { data: evaluations, error: evalError } = await supabase
+  // Limite explicite de 10000 pour éviter la limite par défaut de Supabase (1000)
+  const { data: evaluations, error: evalError } = await getSupabase()
     .from('compl_ai_evaluations')
     .select(`
       id,
@@ -100,6 +123,7 @@ export async function getModelEvaluations(modelId: string): Promise<{
     `)
     .eq('model_id', modelId)
     .order('id')
+    .limit(10000)
 
   if (evalError) {
     throw new Error(`Erreur lors de la récupération des évaluations: ${evalError.message}`)
@@ -107,7 +131,7 @@ export async function getModelEvaluations(modelId: string): Promise<{
 
   // Récupérer les informations des principes
   const principleIds = [...new Set(evaluations?.map(e => e.principle_id) || [])]
-  const { data: principlesData, error: principlesError } = await supabase
+  const { data: principlesData, error: principlesError } = await getSupabase()
     .from('compl_ai_principles')
     .select('id, code, name')
     .in('id', principleIds)
@@ -135,7 +159,7 @@ export async function calculateModelMaydaiScores(modelId: string): Promise<Model
   console.log(`calculateModelMaydaiScores - Start for model ID: ${modelId}`)
   
   // Récupérer les informations du modèle
-  const { data: model, error: modelError } = await supabase
+  const { data: model, error: modelError } = await getSupabase()
     .from('compl_ai_models')
     .select('id, model_name, model_provider')
     .eq('id', modelId)
@@ -224,12 +248,14 @@ export async function saveMaydaiScores(modelId: string, results: ModelScoreResul
   // Pour chaque principe, récupérer les évaluations et mettre à jour individuellement
   for (const principleResult of results.principle_scores) {
     // Récupérer les évaluations dans l'ordre pour les associer aux scores calculés
-    const { data: evaluations, error: fetchError } = await supabase
+    // Limite explicite de 10000 pour éviter la limite par défaut de Supabase (1000)
+    const { data: evaluations, error: fetchError } = await getSupabase()
       .from('compl_ai_evaluations')
       .select('id, score')
       .eq('model_id', modelId)
       .eq('principle_id', principleResult.principle_id)
       .order('id')
+      .limit(10000)
 
     if (fetchError) {
       console.error(`Erreur lors de la récupération des évaluations pour le principe ${principleResult.principle_code}:`, fetchError)
@@ -246,7 +272,7 @@ export async function saveMaydaiScores(modelId: string, results: ModelScoreResul
       const evaluation = evaluations[i]
       const maydaiScore = principleResult.individual_maydai_scores[i]
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await getSupabase()
         .from('compl_ai_evaluations')
         .update({ 
           maydai_score: maydaiScore,
@@ -287,61 +313,37 @@ export async function recalculateModelMaydaiScores(modelId: string): Promise<Mod
  */
 export async function recalculateAllMaydaiScores(): Promise<ModelScoreResult[]> {
   console.log('recalculateAllMaydaiScores - Start')
-  
-  // D'abord récupérer tous les model_id distincts
-  console.log('Fetching distinct model IDs from compl_ai_evaluations...')
-  const { data: modelIds, error: modelIdsError } = await supabase
-    .from('compl_ai_evaluations')
-    .select('model_id')
-    .not('model_id', 'is', null)
 
-  console.log('Model IDs query result:', { 
-    count: modelIds?.length, 
-    error: modelIdsError,
-    sample: modelIds?.slice(0, 3)
+  // Récupérer tous les modèles directement - on traitera tous ceux qui ont des évaluations
+  console.log('Fetching all models...')
+
+  const { data: allModels, error: modelsError } = await getSupabase()
+    .from('compl_ai_models')
+    .select('id, model_name, model_provider')
+    .limit(1000)
+
+  console.log('Models query result:', {
+    count: allModels?.length,
+    error: modelsError
   })
 
-  if (modelIdsError) {
-    console.error('Error fetching model IDs:', modelIdsError)
-    throw new Error(`Erreur lors de la récupération des IDs de modèles: ${modelIdsError.message}`)
+  if (modelsError) {
+    console.error('Error fetching models:', modelsError)
+    throw new Error(`Erreur lors de la récupération des modèles: ${modelsError.message}`)
   }
 
-  // Extraire les IDs uniques
-  const uniqueModelIds = [...new Set(modelIds?.map(m => m.model_id) || [])]
-  console.log(`Found ${uniqueModelIds.length} unique model IDs`)
+  console.log(`Found ${allModels?.length || 0} models to process`)
 
-  if (uniqueModelIds.length === 0) {
-    console.log('Aucun modèle trouvé avec des évaluations')
+  if (!allModels || allModels.length === 0) {
+    console.log('Aucun modèle trouvé')
     return []
   }
 
-  // Puis récupérer les modèles
-  console.log('Fetching models from compl_ai_models...')
-  const { data: models, error } = await supabase
-    .from('compl_ai_models')
-    .select(`
-      id,
-      model_name,
-      model_provider
-    `)
-    .in('id', uniqueModelIds)
-
-  console.log('Models query result:', { 
-    count: models?.length, 
-    error,
-    sample: models?.slice(0, 3)
-  })
-
-  if (error) {
-    console.error('Error fetching models:', error)
-    throw new Error(`Erreur lors de la récupération des modèles: ${error.message}`)
-  }
-
   const results: ModelScoreResult[] = []
-  
+
   // Traiter chaque modèle
-  console.log(`Processing ${models?.length || 0} models...`)
-  for (const model of models || []) {
+  console.log(`Processing ${allModels.length} models...`)
+  for (const model of allModels) {
     try {
       console.log(`Processing model: ${model.model_name} (${model.id})`)
       const result = await recalculateModelMaydaiScores(model.id)
@@ -369,7 +371,7 @@ export async function getMaydaiStatistics(): Promise<{
   min_maydai_score: number
   max_maydai_score: number
 }> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('compl_ai_evaluations')
     .select('maydai_score')
     .not('maydai_score', 'is', null)
@@ -378,11 +380,11 @@ export async function getMaydaiStatistics(): Promise<{
     throw new Error(`Erreur lors de la récupération des statistiques: ${error.message}`)
   }
 
-  const { data: totalEvaluations } = await supabase
+  const { data: totalEvaluations } = await getSupabase()
     .from('compl_ai_evaluations')
     .select('id', { count: 'exact' })
 
-  const { data: totalModels } = await supabase
+  const { data: totalModels } = await getSupabase()
     .from('compl_ai_models')
     .select('id', { count: 'exact' })
 
