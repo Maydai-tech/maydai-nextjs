@@ -75,6 +75,8 @@ export interface Question {
   required: boolean
   conditionalFields?: { key: string, label: string, placeholder?: string }[]
   tooltip?: Tooltip
+  /** Mode d'impact pour les questions checkbox/tags: 'any' = impact unique si au moins une option sélectionnée */
+  impact_mode?: 'any' | 'cumulative'
 }
 
 export interface QuestionnaireData {
