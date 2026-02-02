@@ -52,9 +52,7 @@ export default function MistralDashboard() {
             Évaluation des LLM pour l'IA Act
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto italic text-center">
-            Exemple avec le modèle de langage large (LLM) Mistral-7B-v0.3 
-            <br />
-            qui est un Mistral-7B-v0.2 avec un vocabulaire étendu.
+            Exemple avec le modèle de langage large (LLM) mistral-7B-v0.3
           </p>
         </div>
 
