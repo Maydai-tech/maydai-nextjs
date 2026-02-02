@@ -88,7 +88,7 @@ export default function AuditAIActCompliance() {
           
           <div className="bg-primary/10 rounded-lg p-6 mt-8">
             <p className="text-lg font-medium text-primary-dark leading-relaxed italic">
-              Avec MaydAI, rendez votre IA non seulement conforme, mais aussi un peu plus humaine. C'est peut-être un détail pour l'univers, mais pour vos utilisateurs, ça veut dire beaucoup.
+              Avec MaydAI, optimisez vos systèmes d'IA pour les rendre plus conformes, responsables et performants grâce à la maîtrise humaine. Nous vous accompagnons pour transformer vos outils en un instrument de précision dont vous gardez le contrôle absolu, garantissant une interaction fiable et une gouvernance transparente pour votre organisation.
             </p>
           </div>
         </div>
