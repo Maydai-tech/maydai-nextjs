@@ -40,26 +40,19 @@ export const getNextQuestion = (currentQuestionId: string, answers: Record<strin
       return 'E5.N9.Q1'
     
     case 'E5.N9.Q1':
-      // Toujours rediriger vers E5.N9.Q9 après E5.N9.Q1
-      return 'E5.N9.Q9'
-    
+      // Toujours afficher E5.N9.Q2 après E5.N9.Q1
+      return 'E5.N9.Q2'
+
     case 'E5.N9.Q2':
       return 'E5.N9.Q3'
-    
+
     case 'E5.N9.Q3':
-      return 'E5.N9.Q5'
-    
+      // Après E5.N9.Q3, continuer vers E5.N9.Q9
+      return 'E5.N9.Q9'
+
     case 'E5.N9.Q9':
-      // Après E5.N9.Q9, rediriger vers E5.N9.Q5 si pas de risques, sinon vers E5.N9.Q2 pour la séquence conditionnelle
-      const q2Answers = answers['E4.N7.Q2'] || []
-      const q21Answers = answers['E4.N7.Q2.1'] || []
-      const q3Answers = answers['E4.N7.Q3'] || []
-      const q31Answers = answers['E4.N7.Q3.1'] || []
-      const hasRiskAnswers = (q2Answers.length > 0 && !q2Answers.includes('E4.N7.Q2.G')) ||
-                            (q21Answers.length > 0 && !q21Answers.includes('E4.N7.Q2.1.E')) ||
-                            (q3Answers.length > 0 && !q3Answers.includes('E4.N7.Q3.E')) ||
-                            (q31Answers.length > 0 && !q31Answers.includes('E4.N7.Q3.1.E'))
-      return hasRiskAnswers ? 'E5.N9.Q2' : 'E5.N9.Q5'
+      // Toujours rediriger vers E5.N9.Q5 après E5.N9.Q9
+      return 'E5.N9.Q5'
     
     case 'E5.N9.Q5':
       return 'E5.N9.Q6'
@@ -102,28 +95,18 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
   // Toujours compter E5.N9.Q4, E5.N9.Q1, E5.N9.Q9, E5.N9.Q5, Q6, Q7, Q8
   totalQuestions += 7 // E5.N9.Q4, E5.N9.Q1, E5.N9.Q9, E5.N9.Q5, Q6, Q7, Q8
   
-  const q2Answers = answers['E4.N7.Q2'] || []
-  const q21Answers = answers['E4.N7.Q2.1'] || []
-  const q3Answers = answers['E4.N7.Q3'] || []
-  const q31Answers = answers['E4.N7.Q3.1'] || []
-  const hasRiskAnswers = (q2Answers.length > 0 && !q2Answers.includes('E4.N7.Q2.G')) ||
-                        (q21Answers.length > 0 && !q21Answers.includes('E4.N7.Q2.1.E')) ||
-                        (q3Answers.length > 0 && !q3Answers.includes('E4.N7.Q3.E')) ||
-                        (q31Answers.length > 0 && !q31Answers.includes('E4.N7.Q3.1.E'))
-  
-  if (hasRiskAnswers) {
-    totalQuestions += 2 // High-risk sequence Q2, Q3 (Q1, Q9, Q5-Q8 déjà comptées)
-  }
-  
+  // E5.N9.Q2 et E5.N9.Q3 sont maintenant toujours affichées
+  totalQuestions += 2 // E5.N9.Q2, E5.N9.Q3
+
   totalQuestions += 1 // E4.N8.Q12
-  
+
   if (answers['E4.N8.Q12'] === 'E4.N8.Q12.B') {
     totalQuestions += 3 // E4.N8.Q9, Q11, transparency questions
     if (answers['E4.N8.Q9'] === 'E4.N8.Q9.A') {
       totalQuestions += 1 // E4.N8.Q10
     }
   }
-  
+
   // Count current progress
   const questionOrder = ['E4.N7.Q1']
   // Add Q1.1 or Q1.2 based on Q1 answer
@@ -133,16 +116,9 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
     questionOrder.push('E4.N7.Q1.2')
   }
   questionOrder.push('E4.N7.Q2', 'E4.N7.Q2.1', 'E4.N7.Q3', 'E4.N7.Q3.1')
-  
-  // Toujours inclure E5.N9.Q4, E5.N9.Q1, E5.N9.Q9, puis Q5, Q6, Q7, Q8
-  questionOrder.push('E5.N9.Q4', 'E5.N9.Q1', 'E5.N9.Q9')
-  
-  // Si hasRiskAnswers, ajouter la séquence conditionnelle Q2, Q3 avant Q5
-  if (hasRiskAnswers) {
-    questionOrder.push('E5.N8.Q1', 'E5.N8.Q2', 'E5.N9.Q3', 'E5.N9.Q2')
-  }
-  
-  // Toujours inclure Q5, Q6, Q7, Q8 après Q9 (ou après Q2 si hasRiskAnswers)
+
+  // Flux: E5.N9.Q4 → E5.N9.Q1 → E5.N9.Q2 → E5.N9.Q3 → E5.N9.Q9 → E5.N9.Q5 → Q6 → Q7 → Q8
+  questionOrder.push('E5.N9.Q4', 'E5.N9.Q1', 'E5.N9.Q2', 'E5.N9.Q3', 'E5.N9.Q9')
   questionOrder.push('E5.N9.Q5', 'E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8')
   
   questionOrder.push('E4.N8.Q12')
