@@ -586,7 +586,7 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
       // Vérifier si ce principe a un score MaydAI
       if (maydaiScoresByPrinciple[categoryId]) {
         maydaiScore = maydaiScoresByPrinciple[categoryId]
-        maxMaydaiScore = 10 // Chaque principe MaydAI vaut max 10 points (50 total / 5 principes)
+        maxMaydaiScore = 4 // Chaque principe MaydAI vaut max 4 points (20 total / 5 principes)
       }
 
       // Calcul final : questionnaire + MaydAI
