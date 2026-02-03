@@ -678,6 +678,7 @@
     "type": "tags",
     "required": true,
     "risk": "limited",
+    "impact_mode": "any",
     "options": [
       {
         "code": "E5.N9.Q5.A",
