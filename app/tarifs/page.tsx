@@ -181,7 +181,7 @@ const TarifsPage: NextPage = () => {
                   </a>
                 </div>
                 <p className="text-sm text-gray-500 mt-6">
-                  Aucun engagement • Support inclus • Conformité garantie
+                  Aucun engagement • Support sur mesure • Assistance conformité
                 </p>
               </div>
             </div>
