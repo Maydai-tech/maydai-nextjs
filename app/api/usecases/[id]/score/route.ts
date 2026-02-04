@@ -91,7 +91,7 @@ export async function GET(
       return NextResponse.json({
         usecase_id: usecaseId,
         score: usecaseData.score_final,
-        max_score: 150, // Score maximum : 100 questionnaire + 50 modèle COMPL-AI (5 principes × 10 pts)
+        max_score: fullScoreData.max_score,
         score_breakdown: fullScoreData.score_breakdown,
         category_scores: fullScoreData.category_scores,
         calculated_at: usecaseData.last_calculation_date || new Date().toISOString(),
@@ -99,7 +99,8 @@ export async function GET(
         is_eliminated: usecaseData.is_eliminated || false,
         compl_ai_bonus: usecaseData.score_model || 0,
         compl_ai_score: fullScoreData.compl_ai_score,
-        model_info: fullScoreData.model_info
+        model_info: fullScoreData.model_info,
+        risk_use_case: fullScoreData.risk_use_case
       })
     }
 

@@ -134,6 +134,10 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
       return indexA - indexB
     })
 
+  // Score "Risque Cas d'Usage" calculé par reverse engineering (pour affichage)
+  const riskUseCase = score.risk_use_case
+  const globalScorePercent = score.max_score > 0 ? Math.round((score.score / score.max_score) * 100) : 0
+
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par principes</h3>
@@ -188,7 +192,69 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
             )
           })}
       </div>
-      
+
+      {/* Section Score risques (Risque Cas d'Usage) */}
+      {riskUseCase != null && (
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Score risques</h3>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Image
+                  src="/icons/risk.png"
+                  alt="Risque cas d'usage"
+                  width={20}
+                  height={20}
+                  className="w-5 h-5"
+                />
+                <span className="text-sm font-medium text-gray-900">
+                  Score risque du cas d&apos;usage
+                </span>
+              </div>
+              <span className={`text-sm font-bold ${getScoreColor(riskUseCase.percentage).text}`}>
+                {Math.round(riskUseCase.percentage)}/100
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div
+                className={`h-2.5 rounded-full transition-all duration-500 ${getScoreColor(riskUseCase.percentage).bg}`}
+                style={{ width: `${Math.max(riskUseCase.percentage, 2)}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-gray-600 italic">
+              Risques identifiés dans le questionnaire
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Total Global - Mise en avant : résultat de l'addition des scores ci-dessus */}
+      <div className="mt-6 pt-5 border-t-2 border-[#0080A3]/30 bg-gray-50/80 rounded-b-xl -mx-1 px-4 pb-4 -mb-1">
+        <h3 className="text-base font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Image
+            src="/icons/evaluation.png"
+            alt="Total Global"
+            width={24}
+            height={24}
+            className="w-6 h-6"
+          />
+          Total Global
+        </h3>
+        <div className="flex items-baseline justify-between gap-3 mb-2">
+          <p className="text-xs text-gray-600 italic flex-1">
+            Ensemble Scores principes + Score risques + Model LLM
+          </p>
+          <span className={`text-xl font-bold shrink-0 ${getScoreColor(globalScorePercent).text}`}>
+            {globalScorePercent}/100
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-3.5">
+          <div
+            className={`h-3.5 rounded-full transition-all duration-500 ${getScoreColor(globalScorePercent).bg}`}
+            style={{ width: `${Math.max(globalScorePercent, 2)}%` }}
+          ></div>
+        </div>
+      </div>
     </div>
   )
 }) 

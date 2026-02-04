@@ -10,6 +10,43 @@ const MAX_WITH_COMPL_AI = 150         // Diviseur avec COMPL-AI (90 questionnair
 const MAX_WITHOUT_COMPL_AI = 90       // Max sans COMPL-AI (questionnaire seul)
 const MAX_SCORE_PERCENTAGE = 100      // Score final affiché sur 100 avec COMPL-AI
 
+// Constantes pour le calcul "Risque Cas d'Usage" (reverse engineering)
+const BASE_GLOBALE_POINTS = 189.8       // Total des points max de toutes les catégories
+const BASE_RISQUE_USE_CASE = 125        // Points max pour la catégorie "Risque Cas d'Usage"
+const SIX_PRINCIPLES_IDS = [
+  'human_agency',
+  'technical_robustness',
+  'privacy_data',
+  'transparency',
+  'diversity_fairness',
+  'social_environmental'
+] as const
+
+/**
+ * Calcule le score "Risque Cas d'Usage" par reverse engineering.
+ * Le score global est la vérité terrain ; on déduit les points de risque pour que
+ * (Points RiskUseCase + Points des 6 Principes) / BASE_GLOBALE_POINTS == Score Global %
+ */
+function calculateRiskUseCaseByReverseEngineering(
+  globalScorePercent: number,
+  categoryScores: CategoryScore[]
+): { points: number; percentage: number; max_points: number } {
+  const targetPoints = BASE_GLOBALE_POINTS * globalScorePercent
+  const principlesPoints = categoryScores
+    .filter(cat => SIX_PRINCIPLES_IDS.includes(cat.category_id as typeof SIX_PRINCIPLES_IDS[number]))
+    .reduce((sum, cat) => sum + cat.score, 0)
+  const riskUseCasePoints = targetPoints - principlesPoints
+  const riskUseCasePercentRaw = riskUseCasePoints / BASE_RISQUE_USE_CASE
+  const riskUseCasePercentClamped = Math.max(0, Math.min(1, riskUseCasePercentRaw))
+  const riskUseCasePercentage = Math.round(riskUseCasePercentClamped * 10000) / 100
+  const riskUseCasePointsClamped = Math.max(0, Math.min(BASE_RISQUE_USE_CASE, riskUseCasePoints))
+  return {
+    points: Math.round(riskUseCasePointsClamped * 100) / 100,
+    percentage: riskUseCasePercentage,
+    max_points: BASE_RISQUE_USE_CASE
+  }
+}
+
 // Fonction de mapping des catégories du JSON vers les IDs de risk-categories.ts
 function mapCategoryFromJson(jsonCategoryId: string): string {
   // Seule différence : human_oversight (JSON) → human_agency (risk-categories)
@@ -613,6 +650,13 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
     // console.log('Breakdown entries:', breakdown.length)
     // console.log('Category scores:', categoryScores.length)
 
+    // Calcul du "Risque Cas d'Usage" par reverse engineering (pour affichage uniquement)
+    const globalScorePercent = maxScore > 0 ? currentScore / maxScore : 0
+    const riskUseCaseResult = calculateRiskUseCaseByReverseEngineering(
+      globalScorePercent,
+      categoryScores
+    )
+
     return {
       usecase_id: usecaseId,
       score: currentScore,
@@ -624,7 +668,8 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
       is_eliminated: isEliminated,
       compl_ai_bonus: complAiRawScore !== null ? complAiRawScore * COMPL_AI_WEIGHT : 0,
       compl_ai_score: complAiScore,
-      model_info: modelInfo
+      model_info: modelInfo,
+      risk_use_case: riskUseCaseResult
     }
   } catch (error) {
     console.error('Error in calculateScore:', error)
@@ -640,7 +685,12 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
       is_eliminated: false,
       compl_ai_bonus: 0,
       compl_ai_score: null,
-      model_info: null
+      model_info: null,
+      risk_use_case: {
+        points: 0,
+        percentage: 0,
+        max_points: BASE_RISQUE_USE_CASE
+      }
     }
   }
 } 
