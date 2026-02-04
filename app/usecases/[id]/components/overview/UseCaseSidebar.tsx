@@ -12,7 +12,7 @@ interface UseCaseSidebarProps {
 export function UseCaseSidebar({ useCase, onUpdateUseCase, isRecalculating = false }: UseCaseSidebarProps) {
 
   return (
-    <div className="space-y-6">
+    <div id="scores-description" className="space-y-6" tabIndex={-1}>
       {/* Scores par Catégorie - Seul contenu de la sidebar */}
       <CategoryScores usecaseId={useCase.id} />
     </div>

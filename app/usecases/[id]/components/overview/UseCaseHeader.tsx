@@ -117,6 +117,16 @@ function HeaderScore({ useCaseId }: { useCaseId: string }) {
           )}
         </div>
       </div>
+      <a
+        href="#scores-description"
+        className="mt-3 block text-xs text-[#0080A3] hover:text-[#006280] hover:underline focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-1 rounded"
+        onClick={(e) => {
+          e.preventDefault()
+          document.getElementById('scores-description')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }}
+      >
+        Comment est calculé ce score ?
+      </a>
     </div>
   )
 }
