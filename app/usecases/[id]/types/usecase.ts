@@ -125,6 +125,12 @@ export interface UseCaseScore {
     name: string
     provider: string
   } | null
+  // Score "Risque Cas d'Usage" calculé par reverse engineering (pour affichage uniquement)
+  risk_use_case?: {
+    points: number
+    percentage: number
+    max_points: number
+  }
 }
 
 export interface ScoreBreakdown {
