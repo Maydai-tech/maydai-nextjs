@@ -17,6 +17,7 @@ export default function Sidebar() {
   const { plan, loading: planLoading } = useUserPlan();
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [useCaseRegistryId, setUseCaseRegistryId] = useState<string | null>(null);
+  const [roleMap, setRoleMap] = useState<Map<string, string>>(new Map());
   const api = useApiCall();
 
   // Fetch company ID when user is available
@@ -29,6 +30,13 @@ export default function Sidebar() {
           if (result.data && result.data.length > 0) {
             // Since users currently have only one company, take the first one
             setCompanyId(result.data[0].id);
+
+            // Build role map for all registries
+            const roles = new Map<string, string>();
+            result.data.forEach((c: { id: string; role: string }) => {
+              if (c.role) roles.set(c.id, c.role);
+            });
+            setRoleMap(roles);
           }
         } catch (error) {
           console.error('Error fetching company ID:', error);
@@ -180,6 +188,20 @@ export default function Sidebar() {
     return '/bench-llm';
   };
 
+  // Determine the current registry ID to check the user's role
+  const getCurrentRegistryId = (): string | null => {
+    if (useCaseRegistryId) return useCaseRegistryId;
+    const dashboardMatch = pathname.match(/^\/dashboard\/([^\/]+)/);
+    if (dashboardMatch && dashboardMatch[1] !== 'companies' && dashboardMatch[1] !== 'registries') {
+      return dashboardMatch[1];
+    }
+    return companyId;
+  };
+
+  const currentRegistryId = getCurrentRegistryId();
+  const currentRegistryRole = currentRegistryId ? roleMap.get(currentRegistryId) : undefined;
+  const isCurrentRegistryOwner = currentRegistryRole === 'owner' || currentRegistryRole === 'company_owner';
+
   const mainMenuItems = [
     {
       name: 'Dashboard',
@@ -281,6 +303,25 @@ export default function Sidebar() {
                       : item.name === 'Bench LLM'
                         ? pathname === '/bench-llm'
                         : pathname === item.href;
+
+            // Disable "Paramètres" for non-owners
+            const isDisabled = item.name === 'Paramètres' && !isCurrentRegistryOwner;
+
+            if (isDisabled) {
+              return (
+                <div
+                  key={item.name}
+                  className="relative flex items-center space-x-3 px-4 py-3 rounded-xl text-white/30 cursor-not-allowed group/disabled"
+                >
+                  <Icon className="w-5 h-5 text-white/30" />
+                  <span className="font-medium">{item.name}</span>
+                  {/* Tooltip personnalisé */}
+                  <span className="absolute left-full ml-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/disabled:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                    Réservé au propriétaire du registre
+                  </span>
+                </div>
+              );
+            }
 
             return (
               <Link

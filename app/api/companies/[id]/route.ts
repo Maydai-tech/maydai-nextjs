@@ -52,6 +52,7 @@ export async function GET(
       .maybeSingle()
 
     let hasAccess = !!userCompany
+    let profileRole: string | null = null
 
     // 2. If no direct access, check profile-level access
     if (!hasAccess) {
@@ -66,12 +67,15 @@ export async function GET(
       if (ownerRecord) {
         const { data: profileAccess } = await supabase
           .from('user_profiles')
-          .select('id')
+          .select('id, role')
           .eq('inviter_user_id', ownerRecord.user_id)
           .eq('invited_user_id', user.id)
           .maybeSingle()
 
         hasAccess = !!profileAccess
+        if (profileAccess) {
+          profileRole = profileAccess.role
+        }
       }
     }
 
@@ -94,9 +98,10 @@ export async function GET(
     }
 
     // Include user's role in the response
+    // Priority: direct role from user_companies, then profile-level role
     return NextResponse.json({
       ...companyData,
-      role: userCompany?.role || null
+      role: userCompany?.role || profileRole || null
     })
 
   } catch (error) {
