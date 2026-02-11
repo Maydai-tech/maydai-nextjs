@@ -107,6 +107,9 @@ const COUNTRY_TO_CONTINENT: { [key: string]: GeographicZone } = {
   'Slovénie': 'europe',
   'Slovenia': 'europe',
   'SI': 'europe',
+  'Irlande': 'europe',
+  'Ireland': 'europe',
+  'IE': 'europe',
 
   // Amérique du Nord
   'USA': 'north-america',
@@ -309,7 +312,10 @@ const WorldMapComponent: React.FC<WorldMapProps> = ({ deploymentCountries, count
     'ZA': '710',
     'Slovénie': '705',
     'Slovenia': '705',
-    'SI': '705'
+    'SI': '705',
+    'Irlande': '372',
+    'Ireland': '372',
+    'IE': '372'
   }
 
   // Mapping pour normaliser les codes ISO en noms français
@@ -342,7 +348,8 @@ const WorldMapComponent: React.FC<WorldMapProps> = ({ deploymentCountries, count
     'NZ': 'Nouvelle-Zélande',
     'AR': 'Argentine',
     'ZA': 'Afrique du Sud',
-    'SI': 'Slovénie'
+    'SI': 'Slovénie',
+    'IE': 'Irlande'
   }
 
   // Normaliser les pays : convertir les codes ISO en noms si nécessaire

@@ -99,7 +99,10 @@ const countryToFlagCode: { [key: string]: string } = {
   'ZA': 'za',
   'Slovénie': 'si',
   'Slovenia': 'si',
-  'SI': 'si'
+  'SI': 'si',
+  'Irlande': 'ie',
+  'Ireland': 'ie',
+  'IE': 'ie'
 }
 
 // Noms d'affichage préférés pour les pays
@@ -133,7 +136,9 @@ const getDisplayName = (country: string): string => {
     'New Zealand': 'Nouvelle-Zélande',
     'South Africa': 'Afrique du Sud',
     'Slovenia': 'Slovénie',
-    'SI': 'Slovénie'
+    'SI': 'Slovénie',
+    'Ireland': 'Irlande',
+    'IE': 'Irlande'
   }
   
   return displayNames[country] || country
@@ -169,7 +174,8 @@ const codeToCountryName: { [key: string]: string } = {
   'NZ': 'Nouvelle-Zélande',
   'AR': 'Argentine',
   'ZA': 'Afrique du Sud',
-  'SI': 'Slovénie'
+  'SI': 'Slovénie',
+  'IE': 'Irlande'
 }
 
 // Fonction de normalisation pour convertir les codes ISO en noms français si nécessaire

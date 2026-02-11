@@ -74,7 +74,10 @@ const countryToFlagCode: { [key: string]: string } = {
   'South Africa': 'za',
   'Slovénie': 'si',
   'Slovenia': 'si',
-  'SI': 'si'
+  'SI': 'si',
+  'Irlande': 'ie',
+  'Ireland': 'ie',
+  'IE': 'ie'
 }
 
 // Noms d'affichage préférés pour les pays
@@ -108,7 +111,9 @@ const getDisplayName = (country: string): string => {
     'New Zealand': 'Nouvelle-Zélande',
     'South Africa': 'Afrique du Sud',
     'Slovenia': 'Slovénie',
-    'SI': 'Slovénie'
+    'SI': 'Slovénie',
+    'Ireland': 'Irlande',
+    'IE': 'Irlande'
   }
   
   return displayNames[country] || country

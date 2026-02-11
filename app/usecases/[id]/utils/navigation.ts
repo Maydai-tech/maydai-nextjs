@@ -13,6 +13,8 @@ export function useUseCaseNavigation(useCaseId: string, companyId: string) {
 
   const getCurrentSection = () => {
     if (pathname.includes('/rapport')) return 'rapport'
+    if (pathname.includes('/conformite')) return 'conformite'
+    if (pathname.includes('/annexes')) return 'annexes'
     if (pathname.includes('/collaboration')) return 'collaboration'
     return 'overview'
   }
