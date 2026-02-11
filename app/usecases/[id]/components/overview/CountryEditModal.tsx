@@ -42,7 +42,8 @@ const isoToCountryName: { [key: string]: string } = {
   'nz': 'Nouvelle-Zélande',
   'ar': 'Argentine',
   'za': 'Afrique du Sud',
-  'si': 'Slovénie'
+  'si': 'Slovénie',
+  'ie': 'Irlande'
 }
 
 // Mapping inverse : noms vers codes ISO
@@ -132,7 +133,10 @@ const countryNameToIso: { [key: string]: string } = {
   'ZA': 'za',
   'Slovénie': 'si',
   'Slovenia': 'si',
-  'SI': 'si'
+  'SI': 'si',
+  'Irlande': 'ie',
+  'Ireland': 'ie',
+  'IE': 'ie'
 }
 
 export default function CountryEditModal({ isOpen, onClose, currentCountries, onSave, saving = false }: CountryEditModalProps) {

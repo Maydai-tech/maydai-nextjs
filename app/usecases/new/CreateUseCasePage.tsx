@@ -16,12 +16,15 @@ import {
   Search,
   HelpCircle,
   X,
-  Sparkles
+  Sparkles,
+  UserPlus
 } from 'lucide-react'
 import Image from 'next/image'
 import { getProviderIcon } from '@/lib/provider-icons'
 import Tooltip from '@/components/Tooltip'
 import ModelTooltip from '@/components/ModelTooltip'
+import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
+import { useCompanyInfo } from '../[id]/hooks/useCompanyInfo'
 import { loadCreationQuestions } from './questions-loader'
 
 interface Company {
@@ -238,6 +241,8 @@ function CreateUseCasePageContent() {
   const [showGeneratedDescription, setShowGeneratedDescription] = useState(false)
 
   const companyId = searchParams.get('company')
+  const { isOwner } = useCompanyInfo(companyId)
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
 
   // Fonction de validation du format de date DD/MM/YYYY
   const validateDateFormat = (dateString: string): boolean => {
@@ -591,6 +596,28 @@ function CreateUseCasePageContent() {
       if (currentQuestion.type === 'countries') {
         setSelectedCountries([])
       }
+    }
+  }
+
+  const handleInviteClick = () => {
+    setIsInviteModalOpen(true)
+  }
+
+  const handleInvite = async (data: { email: string; firstName: string; lastName: string }) => {
+    if (!session?.access_token || !companyId) {
+      throw new Error('Non authentifié ou registre non sélectionné')
+    }
+    const response = await fetch(`/api/companies/${companyId}/collaborators`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify(data)
+    })
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || "Erreur lors de l'invitation")
     }
   }
 
@@ -1409,7 +1436,7 @@ function CreateUseCasePageContent() {
         </div>
 
         {/* Navigation Buttons */}
-        <div className="flex flex-col sm:flex-row sm:justify-between space-y-3 sm:space-y-0 sm:space-x-4">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0 pt-6 border-t border-gray-200">
           <button
             onClick={handlePrevious}
             disabled={isFirstQuestion}
@@ -1418,6 +1445,18 @@ function CreateUseCasePageContent() {
             <ChevronLeft className="h-4 w-4 mr-2" />
             Précédent
           </button>
+
+          {isOwner && companyId && (
+            <button
+              type="button"
+              onClick={handleInviteClick}
+              className="group inline-flex items-center justify-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-blue-50 rounded-lg px-3 py-2"
+              title="Inviter un collaborateur"
+            >
+              <UserPlus className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
+              <span className="text-sm font-medium">Inviter un collaborateur</span>
+            </button>
+          )}
 
           <button
             onClick={handleNext}
@@ -1461,6 +1500,13 @@ function CreateUseCasePageContent() {
           </div>
         )}
       </div>
+
+      <InviteCollaboratorModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        onInvite={handleInvite}
+        scope="registry"
+      />
     </div>
   )
 }

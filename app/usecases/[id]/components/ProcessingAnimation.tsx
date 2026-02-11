@@ -126,8 +126,8 @@ export function ProcessingAnimation({ isVisible, onComplete }: ProcessingAnimati
   const currentStep = PROCESSING_STEPS[currentStepIndex]
 
   return (
-    <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center overflow-y-auto">
-      <div className="max-w-2xl w-full mx-4 my-8">
+    <div className="fixed inset-0 bg-white/95 backdrop-blur-sm z-50 flex justify-center overflow-y-auto">
+      <div className="max-w-2xl w-full mx-4 py-8 m-auto">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-[#0080A3]/10 rounded-full mb-4">
@@ -166,15 +166,12 @@ export function ProcessingAnimation({ isVisible, onComplete }: ProcessingAnimati
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className={`text-lg font-semibold transition-colors duration-300 ${
+              <p className={`text-base font-medium transition-colors duration-300 ${
                 isCompleted ? 'text-green-700' : 'text-gray-900'
               }`}>
-                {isCompleted ? 'Analyse terminée !' : currentStep.title}
-              </h3>
-              <p className={`text-sm mt-1 transition-colors duration-300 ${
-                isCompleted ? 'text-green-600' : 'text-gray-600'
-              }`}>
-                {isCompleted ? 'Votre rapport de conformité est prêt' : currentStep.description}
+                {isCompleted
+                  ? 'Analyse terminée ! Votre rapport de conformité est prêt'
+                  : `${currentStep.title} : ${currentStep.description}`}
               </p>
             </div>
           </div>
@@ -209,14 +206,7 @@ export function ProcessingAnimation({ isVisible, onComplete }: ProcessingAnimati
                     isStepCompleted ? 'text-green-700' :
                     'text-gray-500'
                   }`}>
-                    {step.title}
-                  </p>
-                  <p className={`text-xs mt-0.5 transition-colors duration-300 ${
-                    isActive ? 'text-[#0080A3]/70' :
-                    isStepCompleted ? 'text-green-600' :
-                    'text-gray-400'
-                  }`}>
-                    {step.description}
+                    {step.title} : {step.description}
                   </p>
                 </div>
                 {isActive && (
