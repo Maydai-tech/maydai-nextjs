@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { AlertTriangle, Save, Edit, X, CheckCircle } from 'lucide-react'
+import { AlertTriangle, Save, Edit, X, CheckCircle, Settings, ArrowLeft } from 'lucide-react'
 import DeleteRegistryModal from '../components/DeleteRegistryModal'
 import ConfirmCentralizedRegistryModal from '../components/ConfirmCentralizedRegistryModal'
 import EditCentralizedRegistryModal from '../components/EditCentralizedRegistryModal'
@@ -88,9 +88,9 @@ export default function RegistrySettingsPage() {
 
         const data = await response.json()
 
-        // Only owners can access settings
+        // Non-owners: store company data but don't populate form (restricted UI will show)
         if (data.role !== 'owner') {
-          router.push(`/dashboard/${companyId}`)
+          setCompany(data)
           return
         }
 
@@ -319,6 +319,32 @@ export default function RegistrySettingsPage() {
 
   if (!user || !company) {
     return null
+  }
+
+  // Non-owner: show restricted access message
+  if (company.role !== 'owner') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+            <Settings className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Accès réservé au propriétaire
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Seul le propriétaire du registre peut accéder aux paramètres et les modifier.
+            </p>
+            <button
+              onClick={() => router.push(`/dashboard/${companyId}`)}
+              className="inline-flex items-center px-6 py-3 bg-[#0080A3] text-white rounded-lg hover:bg-[#006280] transition-colors font-medium"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour au dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
