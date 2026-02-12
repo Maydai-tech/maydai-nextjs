@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   getTodoActionMapping,
   syncTodoActionToResponse,
+  reverseTodoActionResponse,
 } from "@/lib/todo-action-sync";
 import { recordUseCaseHistory } from "@/lib/usecase-history";
 
@@ -381,10 +382,11 @@ export async function PUT(
         if (previousScore !== null) {
           // Calculate new scores by adding the expected points
           // The points gained affect the base score (which is on a /150 scale)
-          // IMPORTANT: Include score_model in the final score calculation
-          // score_final = ((score_base + score_model) / 150) * 100
+          // IMPORTANT: score_model en DB est le score brut (0-20), il faut appliquer le multiplicateur 2.5
+          // score_final = ((score_base + score_model * 2.5) / 150) * 100
+          const COMPL_AI_WEIGHT = 2.5;
           const newBaseScore = previousBaseScore + syncResult.expectedPointsGained;
-          const newFinalScore = Math.round(((newBaseScore + scoreModel) / 150) * 100 * 100) / 100;
+          const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
 
           console.log(`[PUT /upload] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
 
@@ -483,10 +485,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Get current document to find file path
+    // Get current document to find file path and previous status
     const { data: doc } = await supabase
       .from("dossier_documents")
-      .select("id, file_url, form_data")
+      .select("id, file_url, form_data, status")
       .eq("dossier_id", dossier.id)
       .eq("doc_type", docType)
       .maybeSingle();
@@ -497,6 +499,8 @@ export async function DELETE(
         { status: 404 },
       );
     }
+
+    const previousStatus = doc.status;
 
     // Delete file from storage if it exists
     if (doc.file_url) {
@@ -541,7 +545,81 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json({ ok: true });
+    // === Score decrease and history when deleting a previously completed document ===
+    let scoreChange = null;
+    if (previousStatus === "complete" || previousStatus === "validated") {
+      console.log("[DELETE /upload] Document was", previousStatus, "- reversing score for docType:", docType);
+
+      const todoMapping = getTodoActionMapping(docType);
+      if (todoMapping) {
+        // Reverse the questionnaire response (set back to "Non")
+        const reverseResult = await reverseTodoActionResponse(
+          supabase,
+          usecaseId,
+          docType,
+          user.email || user.id,
+        );
+
+        if (reverseResult.shouldRecalculate && reverseResult.expectedPointsLost > 0) {
+          console.log("[DELETE /upload] Decreasing score by", reverseResult.expectedPointsLost, "points");
+
+          const { data: currentUsecase } = await supabase
+            .from("usecases")
+            .select("score_final, score_base, score_model")
+            .eq("id", usecaseId)
+            .single();
+
+          const previousScore = currentUsecase?.score_final ?? null;
+          const previousBaseScore = currentUsecase?.score_base ?? 0;
+          const scoreModel = currentUsecase?.score_model ?? 0;
+
+          if (previousScore !== null) {
+            const newBaseScore = Math.max(0, previousBaseScore - reverseResult.expectedPointsLost);
+            // IMPORTANT: score_model en DB est le score brut (0-20), il faut appliquer le multiplicateur 2.5
+            const COMPL_AI_WEIGHT = 2.5;
+            const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
+
+            console.log(`[DELETE /upload] Score decrease: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
+
+            const { error: scoreUpdateError } = await supabase
+              .from("usecases")
+              .update({
+                score_base: newBaseScore,
+                score_final: newFinalScore,
+                last_calculation_date: new Date().toISOString(),
+              })
+              .eq("id", usecaseId);
+
+            if (!scoreUpdateError) {
+              const pointsLostFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
+              scoreChange = {
+                previousScore,
+                newScore: newFinalScore,
+                pointsGained: pointsLostFinal,
+                reason: reverseResult.reason,
+              };
+              console.log("[DELETE /upload] Score decreased:", scoreChange);
+            }
+          }
+        }
+      }
+
+      // Record history: document_reset
+      const historyMetadata: Record<string, unknown> = {
+        doc_type: docType,
+        document_name: docType.replace(/_/g, " "),
+      };
+      if (scoreChange) {
+        historyMetadata.previous_score = scoreChange.previousScore;
+        historyMetadata.new_score = scoreChange.newScore;
+        historyMetadata.score_change = scoreChange.pointsGained;
+      }
+      await recordUseCaseHistory(supabase, usecaseId, user.id, "document_reset", {
+        metadata: historyMetadata,
+      });
+    }
+
+    return NextResponse.json({ ok: true, scoreChange });
   } catch (e) {
     console.error("[DELETE /upload] Internal server error:", e);
     return NextResponse.json(

@@ -89,7 +89,7 @@ export function getTodoActionMapping(todoAction: string): TodoActionMapping | nu
 }
 
 /**
- * Returns a human-readable reason for why the score changed
+ * Returns a human-readable reason for why the score changed (increase)
  */
 function getReasonForTodoAction(todoAction: string): string {
   const reasons: Record<string, string> = {
@@ -102,6 +102,22 @@ function getReasonForTodoAction(todoAction: string): string {
     human_oversight: 'Surveillance humaine mise en place'
   }
   return reasons[todoAction] || 'Document de conformite ajoute'
+}
+
+/**
+ * Returns a human-readable reason for why the score decreased (reset)
+ */
+function getReasonForTodoActionReset(todoAction: string): string {
+  const reasons: Record<string, string> = {
+    technical_documentation: 'Documentation technique reintialisee',
+    transparency_marking: 'Marquage de transparence reinitialise',
+    continuous_monitoring: 'Surveillance continue reintialisee',
+    risk_management: 'Systeme de gestion des risques reinitialise',
+    data_quality: 'Procedures qualite des donnees reintialisees',
+    registry_proof: 'Preuve de registre reintialisee',
+    human_oversight: 'Surveillance humaine reintialisee'
+  }
+  return reasons[todoAction] || 'Document de conformite reinitialise'
 }
 
 /**
@@ -190,6 +206,106 @@ export async function syncTodoActionToResponse(
     shouldRecalculate: wasNegativeAnswer,
     previousValue,
     expectedPointsGained: wasNegativeAnswer ? mapping.expectedPointsGained : 0
+  }
+}
+
+/**
+ * Reverses the questionnaire response for the given todo_action
+ * Sets the response back to the NEGATIVE answer ("Non") when a document is reset/deleted.
+ * Returns info about whether the response changed and how many points should be lost.
+ *
+ * Score should only decrease when:
+ * - Previous value was the POSITIVE answer (e.g., "Oui" with 0 score_impact)
+ * - In this case, changing to negative loses points
+ *
+ * Score should NOT decrease when:
+ * - Previous value was null (no answer) - no change
+ * - Previous value was already negative - no change
+ * - No negative answer exists for this mapping
+ */
+export async function reverseTodoActionResponse(
+  supabase: SupabaseClient,
+  usecaseId: string,
+  todoAction: string,
+  userEmail: string
+): Promise<{
+  changed: boolean
+  shouldRecalculate: boolean
+  previousValue: string | null
+  expectedPointsLost: number
+  reason: string
+}> {
+  const mapping = getTodoActionMapping(todoAction)
+  if (!mapping) {
+    console.log(`[TODO-REVERSE] No mapping found for todo_action: ${todoAction}`)
+    return { changed: false, shouldRecalculate: false, previousValue: null, expectedPointsLost: 0, reason: '' }
+  }
+
+  // If there's no negative answer, we can't reverse
+  if (!mapping.negativeAnswerCode) {
+    console.log(`[TODO-REVERSE] No negative answer code for ${todoAction}, cannot reverse`)
+    return { changed: false, shouldRecalculate: false, previousValue: null, expectedPointsLost: 0, reason: '' }
+  }
+
+  console.log(`[TODO-REVERSE] Found mapping for ${todoAction}:`, mapping)
+
+  // Check current response value
+  const { data: existingResponse } = await supabase
+    .from('usecase_responses')
+    .select('single_value')
+    .eq('usecase_id', usecaseId)
+    .eq('question_code', mapping.questionCode)
+    .maybeSingle()
+
+  const previousValue = existingResponse?.single_value || null
+
+  // If already set to the negative answer, no change needed
+  if (previousValue === mapping.negativeAnswerCode) {
+    console.log(`[TODO-REVERSE] Response already set to negative value, no change needed`)
+    return { changed: false, shouldRecalculate: false, previousValue, expectedPointsLost: 0, reason: '' }
+  }
+
+  // Check if previous value was the positive answer (score should decrease)
+  const wasPositiveAnswer = previousValue === mapping.positiveAnswerCode
+
+  console.log(`[TODO-REVERSE] Updating response from ${previousValue} to ${mapping.negativeAnswerCode}`)
+  console.log(`[TODO-REVERSE] Was positive answer: ${wasPositiveAnswer}, Expected points lost: ${wasPositiveAnswer ? mapping.expectedPointsGained : 0}`)
+
+  // Update the response to the negative answer
+  const { error } = await supabase
+    .from('usecase_responses')
+    .upsert({
+      usecase_id: usecaseId,
+      question_code: mapping.questionCode,
+      single_value: mapping.negativeAnswerCode,
+      answered_by: userEmail,
+      answered_at: new Date().toISOString(),
+      // Reset other fields
+      multiple_codes: null,
+      multiple_labels: null,
+      conditional_main: null,
+      conditional_keys: null,
+      conditional_values: null
+    }, {
+      onConflict: 'usecase_id,question_code'
+    })
+
+  if (error) {
+    console.error(`[TODO-REVERSE] Error updating response:`, error)
+    return { changed: false, shouldRecalculate: false, previousValue, expectedPointsLost: 0, reason: '' }
+  }
+
+  console.log(`[TODO-REVERSE] Response reversed successfully`)
+
+  const reason = getReasonForTodoActionReset(todoAction)
+
+  // Only recalculate score if the previous answer was the positive one
+  return {
+    changed: true,
+    shouldRecalculate: wasPositiveAnswer,
+    previousValue,
+    expectedPointsLost: wasPositiveAnswer ? mapping.expectedPointsGained : 0,
+    reason
   }
 }
 
