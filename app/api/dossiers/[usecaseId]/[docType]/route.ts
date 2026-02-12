@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import {
   getTodoActionMapping,
   syncTodoActionToResponse,
+  reverseTodoActionResponse,
 } from '@/lib/todo-action-sync'
 import { recordUseCaseHistory } from '@/lib/usecase-history'
 
@@ -171,14 +172,17 @@ export async function POST(
     if (formData !== undefined) payload.form_data = formData
     if (status) payload.status = status
 
-    // Try update first
+    // Check if document already exists and get its previous status BEFORE updating
     const { data: existingDoc } = await supabase
       .from('dossier_documents')
-      .select('id')
+      .select('id, status')
       .eq('dossier_id', dossierId)
       .eq('doc_type', docType)
       .maybeSingle()
 
+    const previousStatus: string | null = existingDoc?.status || null
+
+    // Upsert: update if exists, insert if not
     if (existingDoc?.id) {
       const { error: upErr } = await supabase
         .from('dossier_documents')
@@ -192,35 +196,123 @@ export async function POST(
       if (insDocErr) return NextResponse.json({ error: 'Failed to insert document' }, { status: 500 })
     }
 
-    // Enregistrer l'événement dans l'historique du use case quand le document est complété
-    // Note: L'événement sera enrichi avec les infos de score après le calcul du scoreChange
+    // Metadata for history events
     let historyMetadata: Record<string, unknown> = {
       doc_type: docType,
       document_name: docType.replace(/_/g, ' ')
     }
 
-    // Check if this docType has a todo_action mapping and sync the response
-    // Only trigger when document is being marked as complete
     let scoreChange = null
+
+    // ===== CASE 1: Document is being marked as COMPLETE =====
     if (status === 'complete') {
+      const isFirstCompletion = previousStatus !== 'complete' && previousStatus !== 'validated'
+      const isModification = previousStatus === 'complete' || previousStatus === 'validated'
+
+      // Sync questionnaire response and update score (only on first completion)
+      if (isFirstCompletion) {
+        const todoMapping = getTodoActionMapping(docType)
+        if (todoMapping) {
+          console.log('[POST /dossiers] Found todo_action mapping for docType:', docType)
+
+          const syncResult = await syncTodoActionToResponse(
+            supabase,
+            usecaseId,
+            docType,
+            user.email || user.id
+          )
+
+          // Only update score if the previous answer was the NEGATIVE one
+          if (syncResult.shouldRecalculate && syncResult.expectedPointsGained > 0) {
+            console.log('[POST /dossiers] Previous answer was negative, updating score')
+            console.log('[POST /dossiers] Expected points gained:', syncResult.expectedPointsGained)
+
+            const { data: currentUsecase } = await supabase
+              .from('usecases')
+              .select('score_final, score_base, score_model')
+              .eq('id', usecaseId)
+              .single()
+
+            const previousScore = currentUsecase?.score_final ?? null
+            const previousBaseScore = currentUsecase?.score_base ?? 0
+            const scoreModel = currentUsecase?.score_model ?? 0
+
+            if (previousScore !== null) {
+              const newBaseScore = previousBaseScore + syncResult.expectedPointsGained
+              // IMPORTANT: score_model en DB est le score brut (0-20), il faut appliquer le multiplicateur 2.5
+              const COMPL_AI_WEIGHT = 2.5
+              const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100
+
+              console.log(`[POST /dossiers] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`)
+
+              const { error: updateError } = await supabase
+                .from('usecases')
+                .update({
+                  score_base: newBaseScore,
+                  score_final: newFinalScore,
+                  last_calculation_date: new Date().toISOString(),
+                })
+                .eq('id', usecaseId)
+
+              if (!updateError) {
+                const pointsGainedFinal = Math.round((newFinalScore - previousScore) * 100) / 100
+
+                scoreChange = {
+                  previousScore: previousScore,
+                  newScore: newFinalScore,
+                  pointsGained: pointsGainedFinal,
+                  reason: todoMapping.reason,
+                }
+                console.log('[POST /dossiers] Score changed:', scoreChange)
+              } else {
+                console.error('[POST /dossiers] Error updating score:', updateError)
+              }
+            }
+          } else if (syncResult.changed) {
+            console.log('[POST /dossiers] Response was updated but previous was null, no score update needed')
+          } else {
+            console.log('[POST /dossiers] Response was already set to positive value, no score update needed')
+          }
+        }
+
+        // Record history: document_uploaded (first completion)
+        if (scoreChange) {
+          historyMetadata.previous_score = scoreChange.previousScore
+          historyMetadata.new_score = scoreChange.newScore
+          historyMetadata.score_change = scoreChange.pointsGained
+        }
+        await recordUseCaseHistory(supabase, usecaseId, user.id, 'document_uploaded', {
+          metadata: historyMetadata
+        })
+      } else if (isModification) {
+        // Record history: document_modified (updating existing completed document)
+        await recordUseCaseHistory(supabase, usecaseId, user.id, 'document_modified', {
+          metadata: historyMetadata
+        })
+      }
+    }
+
+    // ===== CASE 2: Document is being RESET to incomplete =====
+    if (status === 'incomplete' && (previousStatus === 'complete' || previousStatus === 'validated')) {
+      console.log('[POST /dossiers] Document being reset from', previousStatus, 'to incomplete')
+
       const todoMapping = getTodoActionMapping(docType)
       if (todoMapping) {
-        console.log('[POST /dossiers] Found todo_action mapping for docType:', docType)
+        console.log('[POST /dossiers] Found todo_action mapping for reset, docType:', docType)
 
-        // Sync the questionnaire response
-        const syncResult = await syncTodoActionToResponse(
+        // Reverse the questionnaire response (set back to "Non")
+        const reverseResult = await reverseTodoActionResponse(
           supabase,
           usecaseId,
           docType,
           user.email || user.id
         )
 
-        // Only update score if the previous answer was the NEGATIVE one
-        if (syncResult.shouldRecalculate && syncResult.expectedPointsGained > 0) {
-          console.log('[POST /dossiers] Previous answer was negative, updating score')
-          console.log('[POST /dossiers] Expected points gained:', syncResult.expectedPointsGained)
+        // Only decrease score if the previous answer was the POSITIVE one
+        if (reverseResult.shouldRecalculate && reverseResult.expectedPointsLost > 0) {
+          console.log('[POST /dossiers] Previous answer was positive, decreasing score')
+          console.log('[POST /dossiers] Expected points lost:', reverseResult.expectedPointsLost)
 
-          // Get the current score from the database
           const { data: currentUsecase } = await supabase
             .from('usecases')
             .select('score_final, score_base, score_model')
@@ -232,14 +324,14 @@ export async function POST(
           const scoreModel = currentUsecase?.score_model ?? 0
 
           if (previousScore !== null) {
-            // Calculate new scores by adding the expected points
-            // IMPORTANT: Include score_model in the final score calculation
-            const newBaseScore = previousBaseScore + syncResult.expectedPointsGained
-            const newFinalScore = Math.round(((newBaseScore + scoreModel) / 150) * 100 * 100) / 100
+            // Decrease the base score (subtract the points that were gained)
+            const newBaseScore = Math.max(0, previousBaseScore - reverseResult.expectedPointsLost)
+            // IMPORTANT: score_model en DB est le score brut (0-20), il faut appliquer le multiplicateur 2.5
+            const COMPL_AI_WEIGHT = 2.5
+            const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100
 
-            console.log(`[POST /dossiers] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`)
+            console.log(`[POST /dossiers] Score decrease: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`)
 
-            // Update the score in the database
             const { error: updateError } = await supabase
               .from('usecases')
               .update({
@@ -250,37 +342,31 @@ export async function POST(
               .eq('id', usecaseId)
 
             if (!updateError) {
-              const pointsGainedFinal = Math.round((newFinalScore - previousScore) * 100) / 100
+              const pointsLostFinal = Math.round((newFinalScore - previousScore) * 100) / 100
 
               scoreChange = {
                 previousScore: previousScore,
                 newScore: newFinalScore,
-                pointsGained: pointsGainedFinal,
-                reason: todoMapping.reason,
+                pointsGained: pointsLostFinal, // Will be negative
+                reason: reverseResult.reason,
               }
-              console.log('[POST /dossiers] Score changed:', scoreChange)
+              console.log('[POST /dossiers] Score decreased:', scoreChange)
             } else {
               console.error('[POST /dossiers] Error updating score:', updateError)
             }
           }
-        } else if (syncResult.changed) {
-          console.log('[POST /dossiers] Response was updated but previous was null, no score update needed')
         } else {
-          console.log('[POST /dossiers] Response was already set to positive value, no score update needed')
+          console.log('[POST /dossiers] No score decrease needed (response was not positive or no mapping)')
         }
       }
-    }
 
-    // Enregistrer l'événement dans l'historique si le document est complété
-    if (status === 'complete') {
-      // Enrichir les métadonnées avec les infos de score si disponibles
+      // Record history: document_reset
       if (scoreChange) {
         historyMetadata.previous_score = scoreChange.previousScore
         historyMetadata.new_score = scoreChange.newScore
         historyMetadata.score_change = scoreChange.pointsGained
       }
-
-      await recordUseCaseHistory(supabase, usecaseId, user.id, 'document_uploaded', {
+      await recordUseCaseHistory(supabase, usecaseId, user.id, 'document_reset', {
         metadata: historyMetadata
       })
     }

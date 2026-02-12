@@ -4,6 +4,8 @@ export type UseCaseHistoryEventType =
   | 'created'
   | 'reevaluated'
   | 'document_uploaded'
+  | 'document_modified'
+  | 'document_reset'
   | 'field_updated'
 
 export interface UseCaseHistoryEntry {
@@ -180,7 +182,9 @@ export const DOC_TYPE_LABELS: Record<string, string> = {
 export const EVENT_TYPE_LABELS: Record<UseCaseHistoryEventType, string> = {
   created: 'Cas d\'usage créé',
   reevaluated: 'Évaluation complétée',
-  document_uploaded: 'Document uploadé',
+  document_uploaded: 'Document complété',
+  document_modified: 'Document modifié',
+  document_reset: 'Document réinitialisé',
   field_updated: 'Information modifiée'
 }
 

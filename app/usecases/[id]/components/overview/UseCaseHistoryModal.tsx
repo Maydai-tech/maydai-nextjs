@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, History, Plus, RefreshCw, FileUp, Edit, ArrowRight, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { X, History, Plus, RefreshCw, FileUp, Edit, ArrowRight, TrendingUp, TrendingDown, Minus, RotateCcw, FilePen } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import {
   UseCaseHistoryEntry,
@@ -24,6 +24,8 @@ const EVENT_ICONS: Record<UseCaseHistoryEventType, React.ReactNode> = {
   created: <Plus className="h-4 w-4" />,
   reevaluated: <RefreshCw className="h-4 w-4" />,
   document_uploaded: <FileUp className="h-4 w-4" />,
+  document_modified: <FilePen className="h-4 w-4" />,
+  document_reset: <RotateCcw className="h-4 w-4" />,
   field_updated: <Edit className="h-4 w-4" />
 }
 
@@ -31,6 +33,8 @@ const EVENT_COLORS: Record<UseCaseHistoryEventType, { bg: string; text: string }
   created: { bg: 'bg-green-100', text: 'text-green-600' },
   reevaluated: { bg: 'bg-blue-100', text: 'text-blue-600' },
   document_uploaded: { bg: 'bg-purple-100', text: 'text-purple-600' },
+  document_modified: { bg: 'bg-amber-100', text: 'text-amber-600' },
+  document_reset: { bg: 'bg-red-100', text: 'text-red-600' },
   field_updated: { bg: 'bg-orange-100', text: 'text-orange-600' }
 }
 
@@ -84,6 +88,14 @@ export const UseCaseHistoryModal: React.FC<UseCaseHistoryModalProps> = ({
     if (entry.event_type === 'document_uploaded' && entry.metadata?.doc_type) {
       const docTypeLabel = DOC_TYPE_LABELS[String(entry.metadata.doc_type)] || String(entry.metadata.doc_type)
       return `Document complété : ${docTypeLabel}`
+    }
+    if (entry.event_type === 'document_modified' && entry.metadata?.doc_type) {
+      const docTypeLabel = DOC_TYPE_LABELS[String(entry.metadata.doc_type)] || String(entry.metadata.doc_type)
+      return `Document modifié : ${docTypeLabel}`
+    }
+    if (entry.event_type === 'document_reset' && entry.metadata?.doc_type) {
+      const docTypeLabel = DOC_TYPE_LABELS[String(entry.metadata.doc_type)] || String(entry.metadata.doc_type)
+      return `Document réinitialisé : ${docTypeLabel}`
     }
     return EVENT_TYPE_LABELS[entry.event_type]
   }
@@ -281,8 +293,8 @@ export const UseCaseHistoryModal: React.FC<UseCaseHistoryModalProps> = ({
                             </p>
                           ) : null}
 
-                          {/* Show score evolution for reevaluated and document_uploaded events */}
-                          {(entry.event_type === 'reevaluated' || entry.event_type === 'document_uploaded') && entry.metadata?.new_score !== undefined ? (
+                          {/* Show score evolution for events that can change the score */}
+                          {(entry.event_type === 'reevaluated' || entry.event_type === 'document_uploaded' || entry.event_type === 'document_reset' || entry.event_type === 'document_modified') && entry.metadata?.new_score !== undefined ? (
                             renderScoreChange(entry)
                           ) : null}
                         </div>

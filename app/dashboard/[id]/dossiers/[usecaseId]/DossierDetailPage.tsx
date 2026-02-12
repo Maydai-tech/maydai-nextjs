@@ -5,7 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { useApiCall } from '@/lib/api-client-legacy'
-import { ArrowLeft, FileText, Check, Loader2, Info, ChevronDown, X, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, FileText, Check, Loader2, Info, ChevronDown, X, AlertTriangle, RotateCcw, Pencil } from 'lucide-react'
 import ComplianceFileUpload from '@/components/ComplianceFileUpload'
 import UploadedFileDisplay from '@/components/UploadedFileDisplay'
 import ScoreEvolutionPopup from '@/components/ScoreEvolutionPopup'
@@ -161,6 +161,7 @@ export default function DossierDetailPage() {
   const [saving, setSaving] = useState<Record<string, boolean>>({})
   const [uploading, setUploading] = useState<Record<string, boolean>>({})
   const [deleting, setDeleting] = useState<Record<string, boolean>>({})
+  const [resetting, setResetting] = useState<Record<string, boolean>>({})
   const [showInfoTooltip, setShowInfoTooltip] = useState<string | null>(null)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
   const [scoreChangePopup, setScoreChangePopup] = useState<{
@@ -661,6 +662,26 @@ export default function DossierDetailPage() {
       })
 
       if (res.ok) {
+        const deleteResult = await res.json()
+
+        // Show score change popup if score decreased
+        if (deleteResult.scoreChange) {
+          setScoreChangePopup({
+            previousScore: deleteResult.scoreChange.previousScore,
+            newScore: deleteResult.scoreChange.newScore,
+            pointsGained: deleteResult.scoreChange.pointsGained,
+            reason: deleteResult.scoreChange.reason || 'Document reinitialise'
+          })
+
+          // Update the local useCase score
+          if (useCase && deleteResult.scoreChange.newScore !== null) {
+            setUseCase({
+              ...useCase,
+              score_final: deleteResult.scoreChange.newScore
+            })
+          }
+        }
+
         // Refresh document data
         const getRes = await fetch(`/api/dossiers/${usecaseId}/${docType}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -683,6 +704,103 @@ export default function DossierDetailPage() {
       alert('Erreur lors de la suppression du fichier')
     } finally {
       setDeleting({ ...deleting, [docType]: false })
+    }
+  }
+
+  /**
+   * Handles resetting a document to incomplete status.
+   * Clears form data/text content and decreases score if applicable.
+   */
+  const handleReset = async (docType: string) => {
+    if (!user) return
+
+    const confirmReset = window.confirm(
+      'Êtes-vous sûr de vouloir réinitialiser ce document ? Les points associés seront retirés de votre score.'
+    )
+    if (!confirmReset) return
+
+    try {
+      setResetting({ ...resetting, [docType]: true })
+      const token = getAccessToken()
+      if (!token) {
+        console.error('No access token available')
+        return
+      }
+
+      // Build empty formData based on docType
+      let emptyFormData: Record<string, any> = {}
+      if (docType === 'system_prompt') {
+        emptyFormData = { system_instructions: '' }
+      } else if (docType === 'transparency_marking') {
+        emptyFormData = { marking_description: '' }
+      } else if (docType === 'human_oversight') {
+        emptyFormData = {
+          supervisorName: '',
+          supervisorRole: '',
+          supervisorEmail: ''
+        }
+      } else if (docType === 'training_plan') {
+        emptyFormData = { training_plan_description: '' }
+      }
+
+      const payload = { formData: emptyFormData, status: 'incomplete' }
+
+      const res = await fetch(`/api/dossiers/${usecaseId}/${docType}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+
+      if (res.ok) {
+        const resetResult = await res.json()
+
+        // Show score change popup if score decreased
+        if (resetResult.scoreChange) {
+          setScoreChangePopup({
+            previousScore: resetResult.scoreChange.previousScore,
+            newScore: resetResult.scoreChange.newScore,
+            pointsGained: resetResult.scoreChange.pointsGained,
+            reason: resetResult.scoreChange.reason || 'Document reinitialise'
+          })
+
+          // Update the local useCase score
+          if (useCase && resetResult.scoreChange.newScore !== null) {
+            setUseCase({
+              ...useCase,
+              score_final: resetResult.scoreChange.newScore
+            })
+          }
+        }
+
+        // Clear local state
+        if (docType === 'human_oversight') {
+          const emptyData = { name: '', role: '', email: '' }
+          setSupervisorData(emptyData)
+          setInitialSupervisorData(emptyData)
+        } else {
+          setTextContents({ ...textContents, [docType]: '' })
+          setInitialTextContents({ ...initialTextContents, [docType]: '' })
+        }
+
+        // Refresh document data
+        const getRes = await fetch(`/api/dossiers/${usecaseId}/${docType}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (getRes.ok) {
+          const data = await getRes.json()
+          setDocuments({ ...documents, [docType]: data })
+        }
+      } else {
+        alert('Erreur lors de la réinitialisation du document')
+      }
+    } catch (error) {
+      console.error('Error resetting document:', error)
+      alert('Erreur lors de la réinitialisation du document')
+    } finally {
+      setResetting({ ...resetting, [docType]: false })
     }
   }
 
@@ -724,6 +842,30 @@ export default function DossierDetailPage() {
     }
 
     return false
+  }
+
+  /**
+   * Checks if a document is currently in a completed/validated state
+   */
+  const isDocumentCompleted = (docTypeKey: string): boolean => {
+    const doc = documents[docTypeKey]
+    return doc?.status === 'complete' || doc?.status === 'validated'
+  }
+
+  /**
+   * Returns the appropriate save button label based on document status
+   */
+  const getSaveButtonLabel = (docTypeKey: string): string => {
+    return isDocumentCompleted(docTypeKey) ? 'Modifier' : 'Enregistrer'
+  }
+
+  /**
+   * Returns the appropriate save button icon based on document status
+   */
+  const getSaveButtonIcon = (docTypeKey: string) => {
+    return isDocumentCompleted(docTypeKey)
+      ? <Pencil className="w-4 h-4 mr-2" />
+      : <Check className="w-4 h-4 mr-2" />
   }
 
   const toggleSection = (docTypeKey: string) => {
@@ -1159,11 +1301,30 @@ export default function DossierDetailPage() {
                             </>
                           ) : (
                             <>
-                              <Check className="w-4 h-4 mr-2" />
-                              Enregistrer
+                              {getSaveButtonIcon(docType.key)}
+                              {getSaveButtonLabel(docType.key)}
                             </>
                           )}
                         </button>
+                        {isDocumentCompleted(docType.key) && (
+                          <button
+                            onClick={() => handleReset(docType.key)}
+                            disabled={resetting[docType.key] || false}
+                            className="inline-flex items-center px-4 py-2 bg-white text-red-600 font-medium rounded-lg border border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {resetting[docType.key] ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Réinitialisation...
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw className="w-4 h-4 mr-2" />
+                                Réinitialiser
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
 
                       {docType.acceptedFormats && (
@@ -1242,23 +1403,44 @@ export default function DossierDetailPage() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
                         />
                       </div>
-                      <button
-                        onClick={() => handleTextSave(docType.key)}
-                        disabled={isSaving || !canSave(docType)}
-                        className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {isSaving ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Enregistrement...
-                          </>
-                        ) : (
-                          <>
-                            <Check className="w-4 h-4 mr-2" />
-                            Enregistrer
-                          </>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => handleTextSave(docType.key)}
+                          disabled={isSaving || !canSave(docType)}
+                          className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isSaving ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Enregistrement...
+                            </>
+                          ) : (
+                            <>
+                              {getSaveButtonIcon(docType.key)}
+                              {getSaveButtonLabel(docType.key)}
+                            </>
+                          )}
+                        </button>
+                        {isDocumentCompleted(docType.key) && (
+                          <button
+                            onClick={() => handleReset(docType.key)}
+                            disabled={resetting[docType.key] || false}
+                            className="inline-flex items-center px-4 py-2 bg-white text-red-600 font-medium rounded-lg border border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {resetting[docType.key] ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Réinitialisation...
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw className="w-4 h-4 mr-2" />
+                                Réinitialiser
+                              </>
+                            )}
+                          </button>
                         )}
-                      </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1285,23 +1467,44 @@ export default function DossierDetailPage() {
                           rows={4}
                         />
                       </div>
-                      <button
-                        onClick={() => handleTextSave(docType.key)}
-                        disabled={isSaving || !canSave(docType)}
-                        className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {isSaving ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Enregistrement...
-                          </>
-                        ) : (
-                          <>
-                            <Check className="w-4 h-4 mr-2" />
-                            Enregistrer la description
-                          </>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => handleTextSave(docType.key)}
+                          disabled={isSaving || !canSave(docType)}
+                          className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isSaving ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Enregistrement...
+                            </>
+                          ) : (
+                            <>
+                              {getSaveButtonIcon(docType.key)}
+                              {getSaveButtonLabel(docType.key)} la description
+                            </>
+                          )}
+                        </button>
+                        {isDocumentCompleted(docType.key) && (
+                          <button
+                            onClick={() => handleReset(docType.key)}
+                            disabled={resetting[docType.key] || false}
+                            className="inline-flex items-center px-4 py-2 bg-white text-red-600 font-medium rounded-lg border border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {resetting[docType.key] ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Réinitialisation...
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw className="w-4 h-4 mr-2" />
+                                Réinitialiser
+                              </>
+                            )}
+                          </button>
                         )}
-                      </button>
+                      </div>
 
                       <div className="pt-4 border-t border-gray-200">
                         {doc.fileUrl ? (
