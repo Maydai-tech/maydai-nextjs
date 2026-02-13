@@ -292,7 +292,7 @@ export async function PUT(
     );
     const { data: existingDoc, error: existingDocError } = await supabase
       .from("dossier_documents")
-      .select("id")
+      .select("id, status")
       .eq("dossier_id", dossierId)
       .eq("doc_type", docType)
       .maybeSingle();
@@ -349,48 +349,40 @@ export async function PUT(
 
     // Check if this docType has a todo_action mapping and sync the response
     let scoreChange = null;
-    const todoMapping = getTodoActionMapping(docType);
-    if (todoMapping) {
-      console.log("[PUT /upload] Found todo_action mapping for docType:", docType);
-
-      // Sync the questionnaire response
-      const syncResult = await syncTodoActionToResponse(
-        supabase,
-        usecaseId,
-        docType,
-        user.email || user.id
-      );
-
-      // Only update score if the previous answer was the NEGATIVE one
-      // (e.g., changing from "Non" to "Oui" gives +10 points)
-      // If previous was null or already positive, don't update score (delta = 0)
-      if (syncResult.shouldRecalculate && syncResult.expectedPointsGained > 0) {
-        console.log("[PUT /upload] Previous answer was negative, updating score");
-        console.log("[PUT /upload] Expected points gained:", syncResult.expectedPointsGained);
-
-        // Get the current score from the database
+    
+    // Direct bonus document types: system_prompt and training_census
+    // These don't have questionnaire questions - bonus is added directly to score
+    const DIRECT_BONUS_DOC_TYPES = ["system_prompt", "training_census"];
+    const DIRECT_BONUS_RAW_POINTS = 3;
+    
+    if (DIRECT_BONUS_DOC_TYPES.includes(docType)) {
+      console.log("[PUT /upload] Direct bonus docType:", docType, "+", DIRECT_BONUS_RAW_POINTS, "raw points");
+      
+      // Only add bonus if this is a NEW completion (document was not already complete)
+      // existingDoc was fetched BEFORE our update, so its status reflects the previous state
+      const wasAlreadyCompleted = existingDoc?.status === "complete" || existingDoc?.status === "validated";
+      
+      if (wasAlreadyCompleted) {
+        console.log("[PUT /upload] Document was already completed, no bonus to add (re-upload)");
+      } else {
+        // Get the current score
         const { data: currentUsecase } = await supabase
           .from("usecases")
           .select("score_final, score_base, score_model")
           .eq("id", usecaseId)
           .single();
-
+        
         const previousScore = currentUsecase?.score_final ?? null;
         const previousBaseScore = currentUsecase?.score_base ?? 0;
         const scoreModel = currentUsecase?.score_model ?? 0;
-
+        
         if (previousScore !== null) {
-          // Calculate new scores by adding the expected points
-          // The points gained affect the base score (which is on a /150 scale)
-          // IMPORTANT: score_model en DB est le score brut (0-20), il faut appliquer le multiplicateur 2.5
-          // score_final = ((score_base + score_model * 2.5) / 150) * 100
           const COMPL_AI_WEIGHT = 2.5;
-          const newBaseScore = previousBaseScore + syncResult.expectedPointsGained;
+          const newBaseScore = previousBaseScore + DIRECT_BONUS_RAW_POINTS;
           const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
-
-          console.log(`[PUT /upload] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
-
-          // Update the score in the database
+          
+          console.log(`[PUT /upload] Direct bonus score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
+          
           const { error: updateError } = await supabase
             .from("usecases")
             .update({
@@ -399,26 +391,89 @@ export async function PUT(
               last_calculation_date: new Date().toISOString(),
             })
             .eq("id", usecaseId);
-
+          
           if (!updateError) {
-            // Calculate the actual points gained in final score terms
             const pointsGainedFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
-
             scoreChange = {
-              previousScore: previousScore,
+              previousScore,
               newScore: newFinalScore,
               pointsGained: pointsGainedFinal,
-              reason: todoMapping.reason,
+              reason: docType === "system_prompt" 
+                ? "Instructions systeme et prompts definis"
+                : "Formations AI Act recensees",
             };
-            console.log("[PUT /upload] Score changed:", scoreChange);
+            console.log("[PUT /upload] Direct bonus score changed:", scoreChange);
           } else {
             console.error("[PUT /upload] Error updating score:", updateError);
           }
         }
-      } else if (syncResult.changed) {
-        console.log("[PUT /upload] Response was updated but previous was null, no score update needed (delta = 0)");
-      } else {
-        console.log("[PUT /upload] Response was already set to positive value, no score update needed");
+      }
+    } else {
+      // Standard todo_action mapping (questionnaire-linked)
+      const todoMapping = getTodoActionMapping(docType);
+      if (todoMapping) {
+        console.log("[PUT /upload] Found todo_action mapping for docType:", docType);
+
+        // Sync the questionnaire response
+        const syncResult = await syncTodoActionToResponse(
+          supabase,
+          usecaseId,
+          docType,
+          user.email || user.id
+        );
+
+        // Only update score if the previous answer was the NEGATIVE one
+        // (e.g., changing from "Non" to "Oui" gives +10 points)
+        // If previous was null or already positive, don't update score (delta = 0)
+        if (syncResult.shouldRecalculate && syncResult.expectedPointsGained > 0) {
+          console.log("[PUT /upload] Previous answer was negative, updating score");
+          console.log("[PUT /upload] Expected points gained:", syncResult.expectedPointsGained);
+
+          // Get the current score from the database
+          const { data: currentUsecase } = await supabase
+            .from("usecases")
+            .select("score_final, score_base, score_model")
+            .eq("id", usecaseId)
+            .single();
+
+          const previousScore = currentUsecase?.score_final ?? null;
+          const previousBaseScore = currentUsecase?.score_base ?? 0;
+          const scoreModel = currentUsecase?.score_model ?? 0;
+
+          if (previousScore !== null) {
+            const COMPL_AI_WEIGHT = 2.5;
+            const newBaseScore = previousBaseScore + syncResult.expectedPointsGained;
+            const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
+
+            console.log(`[PUT /upload] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
+
+            const { error: updateError } = await supabase
+              .from("usecases")
+              .update({
+                score_base: newBaseScore,
+                score_final: newFinalScore,
+                last_calculation_date: new Date().toISOString(),
+              })
+              .eq("id", usecaseId);
+
+            if (!updateError) {
+              const pointsGainedFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
+              scoreChange = {
+                previousScore: previousScore,
+                newScore: newFinalScore,
+                pointsGained: pointsGainedFinal,
+                reason: todoMapping.reason,
+              };
+              console.log("[PUT /upload] Score changed:", scoreChange);
+            } else {
+              console.error("[PUT /upload] Error updating score:", updateError);
+            }
+          }
+        } else if (syncResult.changed) {
+          console.log("[PUT /upload] Response was updated but previous was null, no score update needed (delta = 0)");
+        } else {
+          console.log("[PUT /upload] Response was already set to positive value, no score update needed");
+        }
       }
     }
 
@@ -547,58 +602,108 @@ export async function DELETE(
 
     // === Score decrease and history when deleting a previously completed document ===
     let scoreChange = null;
+    
+    // Direct bonus document types
+    const DIRECT_BONUS_DOC_TYPES = ["system_prompt", "training_census"];
+    const DIRECT_BONUS_RAW_POINTS = 3;
+    
     if (previousStatus === "complete" || previousStatus === "validated") {
       console.log("[DELETE /upload] Document was", previousStatus, "- reversing score for docType:", docType);
 
-      const todoMapping = getTodoActionMapping(docType);
-      if (todoMapping) {
-        // Reverse the questionnaire response (set back to "Non")
-        const reverseResult = await reverseTodoActionResponse(
-          supabase,
-          usecaseId,
-          docType,
-          user.email || user.id,
-        );
+      if (DIRECT_BONUS_DOC_TYPES.includes(docType)) {
+        // Direct bonus type: subtract the bonus from score_base
+        console.log("[DELETE /upload] Direct bonus docType, removing", DIRECT_BONUS_RAW_POINTS, "raw points");
+        
+        const { data: currentUsecase } = await supabase
+          .from("usecases")
+          .select("score_final, score_base, score_model")
+          .eq("id", usecaseId)
+          .single();
 
-        if (reverseResult.shouldRecalculate && reverseResult.expectedPointsLost > 0) {
-          console.log("[DELETE /upload] Decreasing score by", reverseResult.expectedPointsLost, "points");
+        const previousScore = currentUsecase?.score_final ?? null;
+        const previousBaseScore = currentUsecase?.score_base ?? 0;
+        const scoreModel = currentUsecase?.score_model ?? 0;
 
-          const { data: currentUsecase } = await supabase
+        if (previousScore !== null) {
+          const COMPL_AI_WEIGHT = 2.5;
+          const newBaseScore = Math.max(0, previousBaseScore - DIRECT_BONUS_RAW_POINTS);
+          const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
+
+          console.log(`[DELETE /upload] Direct bonus score decrease: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
+
+          const { error: scoreUpdateError } = await supabase
             .from("usecases")
-            .select("score_final, score_base, score_model")
-            .eq("id", usecaseId)
-            .single();
+            .update({
+              score_base: newBaseScore,
+              score_final: newFinalScore,
+              last_calculation_date: new Date().toISOString(),
+            })
+            .eq("id", usecaseId);
 
-          const previousScore = currentUsecase?.score_final ?? null;
-          const previousBaseScore = currentUsecase?.score_base ?? 0;
-          const scoreModel = currentUsecase?.score_model ?? 0;
+          if (!scoreUpdateError) {
+            const pointsLostFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
+            scoreChange = {
+              previousScore,
+              newScore: newFinalScore,
+              pointsGained: pointsLostFinal,
+              reason: docType === "system_prompt"
+                ? "Instructions systeme reintialisees"
+                : "Formations AI Act reintialisees",
+            };
+            console.log("[DELETE /upload] Direct bonus score decreased:", scoreChange);
+          }
+        }
+      } else {
+        // Standard todo_action mapping (questionnaire-linked)
+        const todoMapping = getTodoActionMapping(docType);
+        if (todoMapping) {
+          // Reverse the questionnaire response (set back to "Non")
+          const reverseResult = await reverseTodoActionResponse(
+            supabase,
+            usecaseId,
+            docType,
+            user.email || user.id,
+          );
 
-          if (previousScore !== null) {
-            const newBaseScore = Math.max(0, previousBaseScore - reverseResult.expectedPointsLost);
-            // IMPORTANT: score_model en DB est le score brut (0-20), il faut appliquer le multiplicateur 2.5
-            const COMPL_AI_WEIGHT = 2.5;
-            const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
+          if (reverseResult.shouldRecalculate && reverseResult.expectedPointsLost > 0) {
+            console.log("[DELETE /upload] Decreasing score by", reverseResult.expectedPointsLost, "points");
 
-            console.log(`[DELETE /upload] Score decrease: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
-
-            const { error: scoreUpdateError } = await supabase
+            const { data: currentUsecase } = await supabase
               .from("usecases")
-              .update({
-                score_base: newBaseScore,
-                score_final: newFinalScore,
-                last_calculation_date: new Date().toISOString(),
-              })
-              .eq("id", usecaseId);
+              .select("score_final, score_base, score_model")
+              .eq("id", usecaseId)
+              .single();
 
-            if (!scoreUpdateError) {
-              const pointsLostFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
-              scoreChange = {
-                previousScore,
-                newScore: newFinalScore,
-                pointsGained: pointsLostFinal,
-                reason: reverseResult.reason,
-              };
-              console.log("[DELETE /upload] Score decreased:", scoreChange);
+            const previousScore = currentUsecase?.score_final ?? null;
+            const previousBaseScore = currentUsecase?.score_base ?? 0;
+            const scoreModel = currentUsecase?.score_model ?? 0;
+
+            if (previousScore !== null) {
+              const newBaseScore = Math.max(0, previousBaseScore - reverseResult.expectedPointsLost);
+              const COMPL_AI_WEIGHT = 2.5;
+              const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
+
+              console.log(`[DELETE /upload] Score decrease: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
+
+              const { error: scoreUpdateError } = await supabase
+                .from("usecases")
+                .update({
+                  score_base: newBaseScore,
+                  score_final: newFinalScore,
+                  last_calculation_date: new Date().toISOString(),
+                })
+                .eq("id", usecaseId);
+
+              if (!scoreUpdateError) {
+                const pointsLostFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
+                scoreChange = {
+                  previousScore,
+                  newScore: newFinalScore,
+                  pointsGained: pointsLostFinal,
+                  reason: reverseResult.reason,
+                };
+                console.log("[DELETE /upload] Score decreased:", scoreChange);
+              }
             }
           }
         }

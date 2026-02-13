@@ -211,28 +211,9 @@ export default function TodoListPage({ params }: TodoListPageProps) {
           }
           setComplianceDocStatuses(complianceMap)
 
-          // Fetch registry_proof document statuses for cases A and C
+          // Fetch registry_proof document statuses for all completed non-unacceptable (needed for registry todo completion when no response = Case A)
           const registryProofMap: Record<string, DocumentStatus> = {}
-          const useCasesNeedingRegistryProof = completedNonUnacceptable.filter((uc: UseCase) => {
-            const responses = responsesMap[uc.id] || []
-            const registryResponse = responses.find((r: any) => r.question_code === 'E5.N9.Q7')
-            if (!registryResponse) return false
-
-            // Cas A: "Non"
-            if (registryResponse.single_value === 'E5.N9.Q7.A') {
-              console.log(`[FETCH] UseCase ${uc.id} (${uc.name}) - Case A detected`)
-              return true
-            }
-
-            // Cas C: "Oui - autre registre"
-            if (registryResponse.conditional_main === 'E5.N9.Q7.B') {
-              const systemName = registryResponse.conditional_values?.[0]?.toLowerCase() || ''
-              const isCaseC = systemName !== 'maydai'
-              console.log(`[FETCH] UseCase ${uc.id} (${uc.name}) - Registry: ${systemName}, Case C: ${isCaseC}`)
-              return isCaseC
-            }
-            return false
-          })
+          const useCasesNeedingRegistryProof = completedNonUnacceptable
 
           console.log(`[FETCH] Found ${useCasesNeedingRegistryProof.length} use cases needing registry_proof`)
 
@@ -350,10 +331,14 @@ export default function TodoListPage({ params }: TodoListPageProps) {
   const isRegistryTodoCompleted = (useCaseId: string, registryCase: 'A' | 'B' | 'C'): boolean => {
     console.log('[COMPLETION CHECK] Checking:', { useCaseId, registryCase })
 
+    // When MaydAI is the default registry, registry action is completed by default (all cases)
+    if (company?.maydai_as_registry === true) {
+      console.log('[COMPLETION CHECK] MaydAI as registry: completed by default')
+      return true
+    }
+
     if (registryCase === 'B') {
-      const completed = company?.maydai_as_registry === true
-      console.log('[COMPLETION CHECK] Case B:', { maydaiAsRegistry: company?.maydai_as_registry, completed })
-      return completed
+      return false
     }
 
     // For cases A and C, check if registry_proof document exists
@@ -397,30 +382,26 @@ export default function TodoListPage({ params }: TodoListPageProps) {
       const useCaseDocs = complianceDocStatuses[useCase.id] || {}
       const responses = useCaseResponses[useCase.id] || []
 
-      // Check for registry-related todos - Add FIRST with number 1
+      // Registry todo: always show (9 actions). When no response to E5.N9.Q7, treat as Case A.
       const registryCase = determineRegistryCase(useCase.id)
-      let startNumber = 1
+      const effectiveRegistryCase: 'A' | 'B' | 'C' = registryCase ?? 'A'
+      const registryCompleted = isRegistryTodoCompleted(useCase.id, effectiveRegistryCase)
+      const registryPotentialPoints = getPotentialPoints('registry_proof', responses)
+      const registryEarnedPoints = getEarnedPoints('registry_proof', responses, registryCompleted)
+      todos.push({
+        id: `${useCase.id}-registry`,
+        text: getRegistryTodoText(effectiveRegistryCase),
+        completed: registryCompleted,
+        useCaseId: useCase.id,
+        docType: 'registry_action',
+        registryCase: effectiveRegistryCase,
+        actionNumber: 1,
+        potentialPoints: registryPotentialPoints > 0 ? registryPotentialPoints : undefined,
+        earnedPoints: registryEarnedPoints > 0 ? registryEarnedPoints : undefined
+      })
 
-      if (registryCase) {
-        const registryCompleted = isRegistryTodoCompleted(useCase.id, registryCase)
-        // Calculate potential points (if action not done) or earned points (if action done)
-        const registryPotentialPoints = getPotentialPoints('registry_proof', responses)
-        const registryEarnedPoints = getEarnedPoints('registry_proof', responses, registryCompleted)
-        todos.push({
-          id: `${useCase.id}-registry`,
-          text: getRegistryTodoText(registryCase),
-          completed: registryCompleted,
-          useCaseId: useCase.id,
-          docType: 'registry_action',
-          registryCase,
-          actionNumber: 1, // Registry action is always number 1
-          potentialPoints: registryPotentialPoints > 0 ? registryPotentialPoints : undefined,
-          earnedPoints: registryEarnedPoints > 0 ? registryEarnedPoints : undefined
-        })
-        startNumber = 2 // Next actions start at 2
-      }
-
-      // Add todos for each of the 8 compliance documents with hierarchical numbering
+      // Add todos for each of the 8 compliance documents with hierarchical numbering (2–9)
+      const startNumber = 2
       COMPLIANCE_DOCUMENT_TYPES.forEach((docType, index) => {
         const docStatus = useCaseDocs[docType]
         const completed = isTodoCompleted(docStatus)

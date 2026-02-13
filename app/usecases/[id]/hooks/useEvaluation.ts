@@ -28,13 +28,20 @@ interface UseEvaluationReturn {
   handleProcessingComplete: () => void
 }
 
+const E5_N9_Q7_MAYDAI_DEFAULT = {
+  selected: 'E5.N9.Q7.B',
+  conditionalValues: { registry_type: 'Interne', system_name: 'MaydAI' }
+} as const
+
 interface UseEvaluationProps {
   usecaseId: string
+  companyId?: string
   onComplete: () => void
 }
 
-export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): UseEvaluationReturn {
+export function useEvaluation({ usecaseId, companyId, onComplete }: UseEvaluationProps): UseEvaluationReturn {
   const { session } = useAuth()
+  const [company, setCompany] = useState<{ maydai_as_registry?: boolean } | null>(null)
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData>({
     currentQuestionId: 'E4.N7.Q1',
     answers: {},
@@ -55,6 +62,19 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
     saveResponse,
     refreshResponses
   } = useQuestionnaireResponses(usecaseId)
+
+  // Fetch company for MaydAI registry default
+  useEffect(() => {
+    if (!companyId || !session?.access_token) return
+    let cancelled = false
+    fetch(`/api/companies/${companyId}`, {
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (!cancelled && data) setCompany(data) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [companyId, session?.access_token])
 
   // Load initial data once
   useEffect(() => {
@@ -106,6 +126,21 @@ export function useEvaluation({ usecaseId, onComplete }: UseEvaluationProps): Us
       setInitialDataLoaded(true)
     }
   }, [savedAnswers, loadingResponses, initialDataLoaded])
+
+  // Pre-fill E5.N9.Q7 with "Oui + MaydAI" when company has MaydAI as registry and no saved response
+  useEffect(() => {
+    if (!company?.maydai_as_registry || !initialDataLoaded) return
+    setQuestionnaireData(prev => {
+      if (prev.answers['E5.N9.Q7']) return prev
+      return {
+        ...prev,
+        answers: {
+          ...prev.answers,
+          'E5.N9.Q7': { ...E5_N9_Q7_MAYDAI_DEFAULT }
+        }
+      }
+    })
+  }, [company?.maydai_as_registry, initialDataLoaded])
 
   const questions = loadQuestions()
   const currentQuestion = questions[questionnaireData.currentQuestionId]

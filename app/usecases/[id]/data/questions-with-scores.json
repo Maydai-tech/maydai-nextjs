@@ -1104,7 +1104,6 @@
     "type": "radio",
     "required": true,
     "risk": "limited",
-    "todo_action": "transparency_marking",
     "tooltip": {
       "title": "Information utilisateurs",
       "shortContent": "L'entreprise doit veiller à ce que les personnes interagissant directement avec une IA (ex: chatbot) soient informées qu'elles sont en contact avec une machine, afin de garantir la transparence (Article 50(1)).",
