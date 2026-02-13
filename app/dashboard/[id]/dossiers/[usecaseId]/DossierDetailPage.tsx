@@ -11,6 +11,7 @@ import UploadedFileDisplay from '@/components/UploadedFileDisplay'
 import ScoreEvolutionPopup from '@/components/ScoreEvolutionPopup'
 import { useUnacceptableCaseWorkflow } from '@/hooks/useUnacceptableCaseWorkflow'
 import UnacceptableCaseWorkflowSteps from '@/components/UnacceptableCase/UnacceptableCaseWorkflowSteps'
+import RegistreMaydaiBadge from '@/app/dashboard/[id]/components/RegistreMaydaiBadge'
 
 const SYSTEM_PROMPT_DOC = {
   key: 'system_prompt',
@@ -1189,17 +1190,21 @@ export default function DossierDetailPage() {
 
             // Special handling for registry_proof when MaydAI is declared as registry
             if (docType.key === 'registry_proof' && company?.maydai_as_registry === true) {
+              const hasComplementaryDoc = doc.fileUrl || (doc.formData && Object.keys(doc.formData).length > 0)
               return (
                 <div
                   key={docType.key}
                   id={`section-${docType.key}`}
-                  className="bg-white rounded-xl shadow-sm border bg-green-50 border-green-300"
+                  className="bg-white rounded-xl shadow-sm border border-green-300 bg-green-50/50"
                 >
-                  <div className="flex items-start justify-between p-6">
-                    <div className="flex items-start gap-3 flex-1">
-                      <Check className="w-5 h-5 text-green-600 flex-shrink-0" />
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">{docType.label}</h3>
+                  <div className="flex items-start justify-between p-6 flex-wrap gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-lg font-semibold text-gray-900">{docType.label}</h3>
+                          <RegistreMaydaiBadge />
+                        </div>
                         <p className="text-sm text-gray-600 mt-1">
                           Complété automatiquement - Vous avez déclaré MaydAI comme votre registre centralisé.
                         </p>
@@ -1213,6 +1218,44 @@ export default function DossierDetailPage() {
                     <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-300 whitespace-nowrap">
                       ✓ Complété
                     </span>
+                  </div>
+                  {/* Document complémentaire déjà uploadé */}
+                  {hasComplementaryDoc && doc.fileUrl && (
+                    <div className="px-6 pb-6 pt-0">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Document complémentaire</p>
+                      <UploadedFileDisplay
+                        fileUrl={doc.fileUrl}
+                        onDelete={() => handleFileDelete(docType.key)}
+                        isDeleting={deleting[docType.key] || false}
+                      />
+                    </div>
+                  )}
+                  {/* Option : ajouter un document complémentaire */}
+                  <div className="px-6 pb-6 border-t border-green-200/60 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(docType.key)}
+                      className="text-sm font-medium text-[#0080A3] hover:text-[#006280] flex items-center gap-2"
+                    >
+                      <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections[docType.key] ? 'rotate-180' : ''}`} />
+                      {hasComplementaryDoc ? 'Modifier le document complémentaire' : 'Ajouter un document complémentaire (optionnel)'}
+                    </button>
+                    {expandedSections[docType.key] && (
+                      <div className="mt-3">
+                        <ComplianceFileUpload
+                          label="Importer un document"
+                          helpText="Formats acceptés: .pdf,.png,.jpg,.jpeg (max 10MB)"
+                          acceptedFormats=".pdf,.png,.jpg,.jpeg"
+                          onFileSelected={(file) => handleFileUpload(docType.key, file)}
+                        />
+                        {isUploading && (
+                          <div className="mt-3 flex items-center text-sm text-gray-600">
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Upload en cours...
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )

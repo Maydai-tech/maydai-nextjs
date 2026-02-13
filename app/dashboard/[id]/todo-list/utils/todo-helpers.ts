@@ -161,26 +161,40 @@ export const getDocumentExplanation = (docType: DocumentType): string => {
 }
 
 /**
+ * List of document types that give a DIRECT BONUS when completed.
+ * These types don't have questionnaire questions - the bonus is added
+ * directly to score_base when the dossier is completed.
+ * Each gives +3 raw points = 2 normalized points.
+ */
+export const DIRECT_BONUS_DOC_TYPES = ['system_prompt', 'training_census'] as const
+
+/**
+ * Raw bonus points given per direct bonus document type
+ */
+export const DIRECT_BONUS_RAW_POINTS = 3
+
+/**
  * Gets the potential score points that can be gained by completing a document action.
- * Returns the NORMALIZED points (as they appear in final score) only if the current
- * response is the "negative" answer.
- * Returns 0 if no response exists or if response is already positive.
+ * Returns the NORMALIZED points (as they appear in final score) only if points
+ * can still be gained (response is "negative" or dossier not yet completed).
+ * Returns 0 if points are already earned.
  *
- * The final score formula is: ((score_base + score_model) / 150) * 100
- * So raw points are converted with: (rawPoints / 150) * 100
- *
- * For example, if technical_documentation has score_impact -10:
- * - Raw points: 10
- * - Normalized points: (10 / 150) * 100 ≈ 7 points
- *
- * Uses the mapping from questions-with-scores.json via getTodoActionMapping
- * to maintain a single source of truth.
+ * Handles 3 types of actions:
+ * 1. Standard questionnaire-linked actions (e.g., technical_documentation)
+ * 2. Conditional question actions (e.g., data_quality, continuous_monitoring)
+ * 3. Direct bonus actions (system_prompt, training_census) - no questionnaire link
  *
  * @param docType - The document type (e.g., 'technical_documentation')
  * @param responses - Array of questionnaire responses for the use case
  * @returns The potential normalized points to gain (0 if no points can be gained)
  */
 export const getPotentialPoints = (docType: string, responses: any[]): number => {
+  // Direct bonus types: always return 2 normalized points as potential
+  // (the actual check for completion is done by the caller via earnedPoints)
+  if ((DIRECT_BONUS_DOC_TYPES as readonly string[]).includes(docType)) {
+    return normalizeScoreTo100(DIRECT_BONUS_RAW_POINTS)
+  }
+
   // Get the mapping dynamically from questions-with-scores.json
   const mapping = getTodoActionMapping(docType)
   if (!mapping) return 0
@@ -188,24 +202,38 @@ export const getPotentialPoints = (docType: string, responses: any[]): number =>
   // Find the current response for this question
   const response = responses.find((r: any) => r.question_code === mapping.questionCode)
 
-  // Only return points if the current answer is the "negative" one
-  // (meaning completing the action will change it to positive and gain points)
-  if (response?.single_value === mapping.negativeAnswerCode) {
-    // Convert raw points to normalized points (as they appear in final score)
+  // If no response yet, user can gain points by completing the dossier → show potential
+  if (!response) {
     return normalizeScoreTo100(mapping.expectedPointsGained)
   }
 
-  return 0
+  // If current answer is positive (already have points), no potential to show
+  const isPositive =
+    response.single_value === mapping.positiveAnswerCode ||
+    response.conditional_main === mapping.positiveAnswerCode
+  if (isPositive) return 0
+
+  // Negative answer or other: check single_value (radio/synced) and conditional_main (conditional questions)
+  // Actions 6 (data_quality) and 8 (continuous_monitoring) use conditional questions → value in conditional_main
+  const isNegative =
+    response.single_value === mapping.negativeAnswerCode ||
+    response.conditional_main === mapping.negativeAnswerCode
+  if (isNegative) {
+    return normalizeScoreTo100(mapping.expectedPointsGained)
+  }
+
+  // No clear positive → still potential to gain (e.g. partial answer)
+  return normalizeScoreTo100(mapping.expectedPointsGained)
 }
 
 /**
  * Gets the points that were EARNED by completing a document action.
- * Returns points only if:
- * - The document is completed (status = 'complete' or 'validated')
- * - The current response is the POSITIVE answer (meaning points were gained)
- * - There was a potential negative answer (meaning this action gives points)
+ * Returns points only if the document is completed AND points are applicable.
  *
- * This is used to show a "points earned" badge on completed actions.
+ * Handles 3 types of actions:
+ * 1. Standard questionnaire-linked: checks if response is positive (single_value)
+ * 2. Conditional question actions: checks both single_value AND conditional_main
+ * 3. Direct bonus actions (system_prompt, training_census): returns points if completed
  *
  * @param docType - The document type (e.g., 'technical_documentation')
  * @param responses - Array of questionnaire responses for the use case
@@ -214,6 +242,11 @@ export const getPotentialPoints = (docType: string, responses: any[]): number =>
  */
 export const getEarnedPoints = (docType: string, responses: any[], isCompleted: boolean): number => {
   if (!isCompleted) return 0
+
+  // Direct bonus types: if dossier is completed, points are earned
+  if ((DIRECT_BONUS_DOC_TYPES as readonly string[]).includes(docType)) {
+    return normalizeScoreTo100(DIRECT_BONUS_RAW_POINTS)
+  }
 
   // Get the mapping dynamically from questions-with-scores.json
   const mapping = getTodoActionMapping(docType)
@@ -224,8 +257,12 @@ export const getEarnedPoints = (docType: string, responses: any[], isCompleted: 
   const response = responses.find((r: any) => r.question_code === mapping.questionCode)
 
   // Return points if the current answer is the positive one
-  // (meaning points were earned by completing this action)
-  if (response?.single_value === mapping.positiveAnswerCode) {
+  // For radio questions: positive answer is in single_value
+  // For conditional questions: positive answer may be in conditional_main
+  if (
+    response?.single_value === mapping.positiveAnswerCode ||
+    response?.conditional_main === mapping.positiveAnswerCode
+  ) {
     return normalizeScoreTo100(mapping.expectedPointsGained)
   }
 
@@ -234,28 +271,28 @@ export const getEarnedPoints = (docType: string, responses: any[], isCompleted: 
 
 /**
  * Gets fixed action points for display purposes.
- * Returns a fixed number of points associated with an action.
- * Used to show consistent point values in both completed and pending states.
+ * Returns the REAL normalized points (on the 100-basis scale) for each action.
+ * 
+ * Total: 19 normalized points from 9 actions
+ * - Registry: 3 normalized points
+ * - All 8 other compliance actions: 2 normalized points each (= 16)
  *
  * @param docType - The document type
- * @returns The fixed points for this action (0 if no points defined)
+ * @returns The normalized points for this action (0 if no points defined)
  */
 export const getFixedActionPoints = (docType: string): number => {
   switch (docType) {
-    case 'human_oversight':
-      return 8
-    case 'technical_documentation':
-      return 8
-    case 'transparency_marking':
-      return 8
-    case 'risk_management':
-      return 4
-    case 'continuous_monitoring':
-      return 4
-    // Actions without fixed points display
+    // 8 standard compliance actions: 2 normalized points each
     case 'system_prompt':
+    case 'human_oversight':
+    case 'technical_documentation':
+    case 'transparency_marking':
+    case 'risk_management':
     case 'data_quality':
+    case 'continuous_monitoring':
     case 'training_census':
+      return 2
+    // stopping_proof has no points
     case 'stopping_proof':
     default:
       return 0
@@ -263,11 +300,11 @@ export const getFixedActionPoints = (docType: string): number => {
 }
 
 /**
- * Gets fixed points for registry action (always 8 points)
- * @returns 8 points
+ * Gets fixed points for registry action (3 normalized points)
+ * @returns 3 normalized points
  */
 export const getRegistryActionPoints = (): number => {
-  return 8
+  return 3
 }
 
 /**

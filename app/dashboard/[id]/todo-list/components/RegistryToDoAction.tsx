@@ -15,6 +15,7 @@ import {
   Check
 } from 'lucide-react'
 import RegistryProofUpload from '@/components/RegistryProofUpload'
+import RegistreMaydaiBadge from '@/app/dashboard/[id]/components/RegistreMaydaiBadge'
 
 interface TodoItem {
   id: string
@@ -240,6 +241,11 @@ export default function RegistryToDoAction({
           </span>
         ) : null}
 
+        {/* Badge Registre MaydAI (uniquement sur la ligne registre quand MaydAI est le registre) */}
+        {maydaiAsRegistry && (
+          <RegistreMaydaiBadge compact className="flex-shrink-0" />
+        )}
+
         {/* Chevron icon */}
         <ChevronDown
           className={`w-5 h-5 text-gray-400 flex-shrink-0 group-hover:text-[#0080A3] transition-transform duration-300 ${
@@ -265,13 +271,14 @@ export default function RegistryToDoAction({
           </div>
 
           {/* Status indicator */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {todo.completed ? (
               <>
                 <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
                 <span className="text-sm font-medium text-green-600">
                   Action complétée
                 </span>
+                {maydaiAsRegistry && <RegistreMaydaiBadge compact />}
               </>
             ) : null }
           </div>

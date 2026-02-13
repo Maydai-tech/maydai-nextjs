@@ -242,6 +242,31 @@ export async function POST(request: NextRequest) {
     // Enregistrer l'événement de création dans l'historique
     await recordUseCaseHistory(supabase, usecase.id, user.id, 'created')
 
+    // Si la company a MaydAI comme registre par défaut, créer la réponse E5.N9.Q7 (Oui + MaydAI)
+    const { data: company } = await supabase
+      .from('companies')
+      .select('maydai_as_registry')
+      .eq('id', company_id)
+      .single()
+    if (company?.maydai_as_registry === true) {
+      const timestamp = new Date().toISOString()
+      await supabase
+        .from('usecase_responses')
+        .upsert({
+          usecase_id: usecase.id,
+          question_code: 'E5.N9.Q7',
+          conditional_main: 'E5.N9.Q7.B',
+          conditional_keys: ['registry_type', 'system_name'],
+          conditional_values: ['Interne', 'MaydAI'],
+          single_value: null,
+          multiple_codes: null,
+          multiple_labels: null,
+          answered_by: user.email || user.id,
+          answered_at: timestamp,
+          updated_at: timestamp
+        }, { onConflict: 'usecase_id,question_code' })
+    }
+
     return NextResponse.json(usecase, { status: 201 })
 
   } catch (error: any) {

@@ -324,6 +324,54 @@ export async function POST(
       // Continuer sans le score modèle
     }
     
+    // ===== ÉTAPE 6.5: CALCUL DU BONUS DIRECT (DOSSIERS) =====
+    // system_prompt and training_census give +3 raw points each when their dossier is completed
+    // This bonus is separate from questionnaire impacts
+    console.log('📁 Vérification des bonus dossiers (system_prompt, training_census)...');
+    
+    let todoBonus = 0;
+    const DIRECT_BONUS_RAW_POINTS = 3;
+    const DIRECT_BONUS_DOC_TYPES = ['system_prompt', 'training_census'];
+    
+    try {
+      // Get the dossier for this use case
+      const { data: dossier } = await supabase
+        .from('dossiers')
+        .select('id')
+        .eq('usecase_id', finalUsecaseId)
+        .maybeSingle();
+      
+      if (dossier?.id) {
+        // Check which direct bonus documents are completed
+        const { data: bonusDocs } = await supabase
+          .from('dossier_documents')
+          .select('doc_type, status')
+          .eq('dossier_id', dossier.id)
+          .in('doc_type', DIRECT_BONUS_DOC_TYPES);
+        
+        if (bonusDocs) {
+          for (const doc of bonusDocs) {
+            if (doc.status === 'complete' || doc.status === 'validated') {
+              todoBonus += DIRECT_BONUS_RAW_POINTS;
+              console.log(`📁 Bonus direct +${DIRECT_BONUS_RAW_POINTS} pts bruts pour ${doc.doc_type}`);
+            }
+          }
+        }
+      }
+      
+      console.log(`📁 Total bonus dossiers: +${todoBonus} pts bruts`);
+    } catch (error) {
+      console.warn('⚠️ Erreur lors de la vérification des bonus dossiers:', error);
+      // Continue without bonus
+    }
+    
+    // Apply the todo bonus to the base score before final calculation
+    if (todoBonus > 0 && !baseScoreResult.is_eliminated) {
+      baseScoreResult.score_base += todoBonus;
+      baseScoreResult.calculation_details.final_base_score += todoBonus;
+      console.log(`📈 Score de base après bonus dossiers: ${baseScoreResult.score_base}`);
+    }
+    
     // ===== ÉTAPE 7: CALCUL DU SCORE FINAL =====
     console.log('🏁 Calcul du score final...');
     

@@ -30,6 +30,7 @@ import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import Image from 'next/image'
 import { getCompactScoreStyle, getSpecialScoreStyles } from '@/lib/score-styles'
 import { CategoryScoresRegistry } from './components/CategoryScoresRegistry'
+import RegistreMaydaiBadge from './components/RegistreMaydaiBadge'
 
 interface Company {
   id: string
@@ -38,6 +39,7 @@ interface Company {
   city: string
   country: string
   role?: string
+  maydai_as_registry?: boolean
 }
 
 interface UseCase {
@@ -616,8 +618,11 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
               <div className="bg-[#0080A3]/10 p-2 sm:p-3 rounded-lg">
                 <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-[#0080A3]" />
               </div>
-              <div>
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{company.name}</h1>
+                {company.maydai_as_registry && (
+                  <RegistreMaydaiBadge inline />
+                )}
               </div>
             </div>
 

@@ -21,34 +21,44 @@ describe('updateUseCaseRegistryResponses', () => {
   })
 
   describe('when MaydAI is declared as centralized registry', () => {
-    test('should update all use cases with "Yes - MaydAI" response', async () => {
+    test('should update only use cases with "No" or no response (not "Oui + other")', async () => {
       const mockUseCases = [
         { id: 'usecase-1' },
         { id: 'usecase-2' },
         { id: 'usecase-3' }
       ]
+      // No existing responses => all 3 get "Oui + MaydAI"
+      const existingResponses: any[] = []
 
-      // Mock the select query for use cases
-      const mockSelect = jest.fn().mockReturnThis()
-      const mockEq = jest.fn().mockResolvedValue({
+      const mockUseCasesSelect = jest.fn().mockReturnThis()
+      const mockUseCasesEq = jest.fn().mockResolvedValue({
         data: mockUseCases,
         error: null
       })
-
-      // Mock the upsert operations
+      const mockResponsesSelect = jest.fn().mockReturnThis()
+      const mockResponsesEq = jest.fn().mockReturnThis()
+      const mockResponsesIn = jest.fn().mockResolvedValue({
+        data: existingResponses,
+        error: null
+      })
       const mockUpsert = jest.fn().mockResolvedValue({ error: null })
 
       ;(mockSupabase.from as jest.Mock).mockImplementation((table: string) => {
         if (table === 'usecases') {
           return {
-            select: mockSelect,
-            eq: mockEq
+            select: mockUseCasesSelect,
+            eq: mockUseCasesEq
           }
-        } else if (table === 'usecase_responses') {
+        }
+        if (table === 'usecase_responses') {
           return {
+            select: mockResponsesSelect,
+            eq: mockResponsesEq,
+            in: mockResponsesIn,
             upsert: mockUpsert
           }
         }
+        return {}
       })
 
       const result = await updateUseCaseRegistryResponses(
@@ -58,20 +68,14 @@ describe('updateUseCaseRegistryResponses', () => {
         mockSupabase
       )
 
-      // Verify result
       expect(result.success).toBe(true)
       expect(result.updatedCount).toBe(3)
       expect(result.error).toBeUndefined()
-
-      // Verify select was called correctly
       expect(mockSupabase.from).toHaveBeenCalledWith('usecases')
-      expect(mockSelect).toHaveBeenCalledWith('id')
-      expect(mockEq).toHaveBeenCalledWith('company_id', companyId)
-
-      // Verify upsert was called for each use case
+      expect(mockUseCasesSelect).toHaveBeenCalledWith('id')
+      expect(mockUseCasesEq).toHaveBeenCalledWith('company_id', companyId)
+      expect(mockResponsesIn).toHaveBeenCalled()
       expect(mockUpsert).toHaveBeenCalledTimes(3)
-
-      // Verify the data structure for MaydAI declaration
       expect(mockUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           usecase_id: 'usecase-1',
@@ -80,14 +84,9 @@ describe('updateUseCaseRegistryResponses', () => {
           conditional_keys: ['system_name'],
           conditional_values: ['MaydAI'],
           single_value: null,
-          multiple_codes: null,
-          multiple_labels: null,
           answered_by: userEmail
         }),
-        {
-          onConflict: 'usecase_id,question_code',
-          ignoreDuplicates: false
-        }
+        expect.any(Object)
       )
     })
 
@@ -116,31 +115,46 @@ describe('updateUseCaseRegistryResponses', () => {
   })
 
   describe('when MaydAI is removed as centralized registry', () => {
-    test('should reset all use cases to "No" response', async () => {
+    test('should reset only use cases with "Oui + MaydAI" to "No"', async () => {
       const mockUseCases = [
         { id: 'usecase-1' },
         { id: 'usecase-2' }
       ]
+      // Both have "Oui + MaydAI" => both get reset to "Non"
+      const existingResponses = [
+        { usecase_id: 'usecase-1', single_value: null, conditional_main: 'E5.N9.Q7.B', conditional_values: ['MaydAI'] },
+        { usecase_id: 'usecase-2', single_value: null, conditional_main: 'E5.N9.Q7.B', conditional_values: ['MaydAI'] }
+      ]
 
-      const mockSelect = jest.fn().mockReturnThis()
-      const mockEq = jest.fn().mockResolvedValue({
+      const mockUseCasesSelect = jest.fn().mockReturnThis()
+      const mockUseCasesEq = jest.fn().mockResolvedValue({
         data: mockUseCases,
         error: null
       })
-
+      const mockResponsesSelect = jest.fn().mockReturnThis()
+      const mockResponsesEq = jest.fn().mockReturnThis()
+      const mockResponsesIn = jest.fn().mockResolvedValue({
+        data: existingResponses,
+        error: null
+      })
       const mockUpsert = jest.fn().mockResolvedValue({ error: null })
 
       ;(mockSupabase.from as jest.Mock).mockImplementation((table: string) => {
         if (table === 'usecases') {
           return {
-            select: mockSelect,
-            eq: mockEq
+            select: mockUseCasesSelect,
+            eq: mockUseCasesEq
           }
-        } else if (table === 'usecase_responses') {
+        }
+        if (table === 'usecase_responses') {
           return {
+            select: mockResponsesSelect,
+            eq: mockResponsesEq,
+            in: mockResponsesIn,
             upsert: mockUpsert
           }
         }
+        return {}
       })
 
       const result = await updateUseCaseRegistryResponses(
@@ -152,8 +166,6 @@ describe('updateUseCaseRegistryResponses', () => {
 
       expect(result.success).toBe(true)
       expect(result.updatedCount).toBe(2)
-
-      // Verify the data structure for removal (No response)
       expect(mockUpsert).toHaveBeenCalledWith(
         expect.objectContaining({
           usecase_id: 'usecase-1',
@@ -162,14 +174,9 @@ describe('updateUseCaseRegistryResponses', () => {
           conditional_keys: null,
           conditional_values: null,
           single_value: 'E5.N9.Q7.A',
-          multiple_codes: null,
-          multiple_labels: null,
           answered_by: userEmail
         }),
-        {
-          onConflict: 'usecase_id,question_code',
-          ignoreDuplicates: false
-        }
+        expect.any(Object)
       )
     })
   })
@@ -182,10 +189,10 @@ describe('updateUseCaseRegistryResponses', () => {
         error: { message: 'Database connection failed' }
       })
 
-      ;(mockSupabase.from as jest.Mock).mockReturnValue({
+      ;(mockSupabase.from as jest.Mock).mockImplementation((table: string) => ({
         select: mockSelect,
         eq: mockEq
-      })
+      }))
 
       const result = await updateUseCaseRegistryResponses(
         companyId,
@@ -205,14 +212,7 @@ describe('updateUseCaseRegistryResponses', () => {
         { id: 'usecase-2' },
         { id: 'usecase-3' }
       ]
-
-      const mockSelect = jest.fn().mockReturnThis()
-      const mockEq = jest.fn().mockResolvedValue({
-        data: mockUseCases,
-        error: null
-      })
-
-      // Mock upsert to fail on the second call
+      const mockResponsesIn = jest.fn().mockResolvedValue({ data: [], error: null })
       const mockUpsert = jest.fn()
         .mockResolvedValueOnce({ error: null })
         .mockResolvedValueOnce({ error: { message: 'Upsert failed' } })
@@ -221,14 +221,19 @@ describe('updateUseCaseRegistryResponses', () => {
       ;(mockSupabase.from as jest.Mock).mockImplementation((table: string) => {
         if (table === 'usecases') {
           return {
-            select: mockSelect,
-            eq: mockEq
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockResolvedValue({ data: mockUseCases, error: null })
           }
-        } else if (table === 'usecase_responses') {
+        }
+        if (table === 'usecase_responses') {
           return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            in: mockResponsesIn,
             upsert: mockUpsert
           }
         }
+        return {}
       })
 
       const result = await updateUseCaseRegistryResponses(
@@ -263,28 +268,27 @@ describe('updateUseCaseRegistryResponses', () => {
   })
 
   describe('data integrity', () => {
-    test('should always overwrite existing responses', async () => {
+    test('should overwrite when updating (ignoreDuplicates false)', async () => {
       const mockUseCases = [{ id: 'usecase-1' }]
-
-      const mockSelect = jest.fn().mockReturnThis()
-      const mockEq = jest.fn().mockResolvedValue({
-        data: mockUseCases,
-        error: null
-      })
-
+      const mockResponsesIn = jest.fn().mockResolvedValue({ data: [], error: null })
       const mockUpsert = jest.fn().mockResolvedValue({ error: null })
 
       ;(mockSupabase.from as jest.Mock).mockImplementation((table: string) => {
         if (table === 'usecases') {
           return {
-            select: mockSelect,
-            eq: mockEq
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockResolvedValue({ data: mockUseCases, error: null })
           }
-        } else if (table === 'usecase_responses') {
+        }
+        if (table === 'usecase_responses') {
           return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            in: mockResponsesIn,
             upsert: mockUpsert
           }
         }
+        return {}
       })
 
       await updateUseCaseRegistryResponses(
@@ -305,26 +309,25 @@ describe('updateUseCaseRegistryResponses', () => {
 
     test('should include timestamp fields', async () => {
       const mockUseCases = [{ id: 'usecase-1' }]
-
-      const mockSelect = jest.fn().mockReturnThis()
-      const mockEq = jest.fn().mockResolvedValue({
-        data: mockUseCases,
-        error: null
-      })
-
+      const mockResponsesIn = jest.fn().mockResolvedValue({ data: [], error: null })
       const mockUpsert = jest.fn().mockResolvedValue({ error: null })
 
       ;(mockSupabase.from as jest.Mock).mockImplementation((table: string) => {
         if (table === 'usecases') {
           return {
-            select: mockSelect,
-            eq: mockEq
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockResolvedValue({ data: mockUseCases, error: null })
           }
-        } else if (table === 'usecase_responses') {
+        }
+        if (table === 'usecase_responses') {
           return {
+            select: jest.fn().mockReturnThis(),
+            eq: jest.fn().mockReturnThis(),
+            in: mockResponsesIn,
             upsert: mockUpsert
           }
         }
+        return {}
       })
 
       await updateUseCaseRegistryResponses(
