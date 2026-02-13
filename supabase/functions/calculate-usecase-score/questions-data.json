@@ -716,7 +716,7 @@
   },
   "E5.N9.Q6": {
     "id": "E5.N9.Q6",
-    "question": "Avez vous de procédures de vérification de la qualité des données ?",
+    "question": "Avez vous des procédures de vérification de la qualité des données ?",
     "type": "conditional",
     "required": true,
     "risk": "limited",
