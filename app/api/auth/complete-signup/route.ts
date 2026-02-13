@@ -18,7 +18,7 @@ import { validateIndustrySelection } from '@/lib/validation/industries'
  *   companyName: string (required)
  *   mainIndustryId: string (required, custom industry ID)
  *   subCategoryId: string (required, custom sub-category ID)
- *   phone?: string (optional)
+ *   phone: string (required, min 10 digits)
  *   siren?: string (optional, validated with Luhn algorithm)
  * }
  *
@@ -103,26 +103,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate phone if provided
-    let cleanedPhone: string | null = null
-    if (phone) {
-      if (typeof phone !== 'string') {
-        return NextResponse.json(
-          { error: 'Le téléphone doit être une chaîne de caractères' },
-          { status: 400 }
-        )
-      }
+    // Validate phone (required)
+    if (!phone || typeof phone !== 'string' || phone.trim() === '') {
+      return NextResponse.json(
+        { error: 'Le numéro de téléphone est obligatoire' },
+        { status: 400 }
+      )
+    }
 
-      // Clean phone: remove spaces, dots, dashes
-      cleanedPhone = phone.replace(/[\s.-]/g, '')
-
-      // Validate phone length (minimum 10 characters for French numbers)
-      if (cleanedPhone.length < 10) {
-        return NextResponse.json(
-          { error: 'Le numéro de téléphone doit contenir au moins 10 chiffres' },
-          { status: 400 }
-        )
-      }
+    const cleanedPhone = phone.replace(/[\s.-]/g, '')
+    if (cleanedPhone.length < 10) {
+      return NextResponse.json(
+        { error: 'Le numéro de téléphone doit contenir au moins 10 chiffres' },
+        { status: 400 }
+      )
     }
 
     // Create/update profile with all signup data

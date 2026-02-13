@@ -165,12 +165,19 @@ export default function SignupPage() {
     setFormLoading(true)
 
     // Validate required fields
+    const phoneTrimmed = formData.phone.replace(/[\s.-]/g, '')
     if (!formData.email || !formData.firstName || !formData.lastName ||
-      !formData.companyName || !formData.mainIndustryId || !formData.subCategoryId) {
+      !formData.companyName || !formData.mainIndustryId || !formData.subCategoryId ||
+      !formData.phone.trim()) {
       setError('Veuillez remplir tous les champs obligatoires')
       if (!formData.mainIndustryId || !formData.subCategoryId) {
         setIndustryError('Veuillez sélectionner un secteur d\'activité et une sous-catégorie')
       }
+      setFormLoading(false)
+      return
+    }
+    if (phoneTrimmed.length < 10) {
+      setError('Le numéro de téléphone doit contenir au moins 10 chiffres')
       setFormLoading(false)
       return
     }
@@ -450,10 +457,10 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Phone (optional) */}
+            {/* Phone (required) */}
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                Téléphone <span className="text-gray-500 text-xs">(optionnel)</span>
+                Téléphone <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -464,6 +471,7 @@ export default function SignupPage() {
                   name="phone"
                   type="tel"
                   autoComplete="tel"
+                  required
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
