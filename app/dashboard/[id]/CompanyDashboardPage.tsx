@@ -621,7 +621,7 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{company.name}</h1>
                 {company.maydai_as_registry && (
-                  <RegistreMaydaiBadge inline />
+                  <RegistreMaydaiBadge inline className="ml-2 sm:ml-3" />
                 )}
               </div>
             </div>

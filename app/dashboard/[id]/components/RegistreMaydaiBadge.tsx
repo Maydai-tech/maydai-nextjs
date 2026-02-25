@@ -1,11 +1,9 @@
 'use client'
 
-import { BookMarked } from 'lucide-react'
-
-const MAYDAI_PRIMARY = '#0080A3'
+const REGISTRE_LOGO_SRC = '/logos/logo-maydai/registre_maydai.svg'
 
 interface RegistreMaydaiBadgeProps {
-  /** Version compacte (icône + texte court) pour todo/dossier */
+  /** Version compacte pour todo/dossier */
   compact?: boolean
   /** Version pour le header dashboard (à côté du nom) */
   inline?: boolean
@@ -13,19 +11,24 @@ interface RegistreMaydaiBadgeProps {
 }
 
 /**
- * Badge "Registre MaydAI" réutilisable (couleur de marque MaydAI).
+ * Badge "Registre MaydAI" réutilisable avec le logo officiel.
  * Utilisé dans la todo list (ligne registre), la section dossiers registre, et à côté du nom du dashboard.
+ * En mode inline (header) : badge plus grand pour lisibilité du texte (48×48px mobile, 64×64px sm+), SANS fond.
  */
 export default function RegistreMaydaiBadge({ compact = false, inline = false, className = '' }: RegistreMaydaiBadgeProps) {
   if (inline) {
     return (
       <span
-        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${className}`}
-        style={{ backgroundColor: `${MAYDAI_PRIMARY}18`, color: MAYDAI_PRIMARY, border: `1px solid ${MAYDAI_PRIMARY}40` }}
+        className={`inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-lg flex-shrink-0 ${className}`}
         title="MaydAI est déclaré comme registre centralisé"
       >
-        <BookMarked className="w-3.5 h-3.5 flex-shrink-0" style={{ color: MAYDAI_PRIMARY }} />
-        <span>Registre MaydAI</span>
+        <img
+          src={REGISTRE_LOGO_SRC}
+          alt="Registre MaydAI"
+          className="flex-shrink-0 object-contain w-full h-full"
+          width={64}
+          height={64}
+        />
       </span>
     )
   }
@@ -33,24 +36,33 @@ export default function RegistreMaydaiBadge({ compact = false, inline = false, c
   if (compact) {
     return (
       <span
-        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium ${className}`}
-        style={{ backgroundColor: `${MAYDAI_PRIMARY}18`, color: MAYDAI_PRIMARY, border: `1px solid ${MAYDAI_PRIMARY}40` }}
+        className={`inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex-shrink-0 ${className}`}
         title="MaydAI est déclaré comme registre centralisé"
       >
-        <BookMarked className="w-3.5 h-3.5 flex-shrink-0" style={{ color: MAYDAI_PRIMARY }} />
-        <span>Registre MaydAI</span>
+        <img
+          src={REGISTRE_LOGO_SRC}
+          alt="Registre MaydAI"
+          className="flex-shrink-0 object-contain w-full h-full"
+          width={48}
+          height={48}
+        />
       </span>
     )
   }
 
+  // Mode défaut (section Dossier) : même rendu que compact — plus grand, sans fond
   return (
     <span
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${className}`}
-      style={{ backgroundColor: `${MAYDAI_PRIMARY}18`, color: MAYDAI_PRIMARY, border: `1px solid ${MAYDAI_PRIMARY}40` }}
+      className={`inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex-shrink-0 ${className}`}
       title="MaydAI est déclaré comme registre centralisé"
     >
-      <BookMarked className="w-4 h-4 flex-shrink-0" style={{ color: MAYDAI_PRIMARY }} />
-      <span>Registre MaydAI</span>
+      <img
+        src={REGISTRE_LOGO_SRC}
+        alt="Registre MaydAI"
+        className="flex-shrink-0 object-contain w-full h-full"
+        width={48}
+        height={48}
+      />
     </span>
   )
 }
