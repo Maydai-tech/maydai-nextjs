@@ -28,7 +28,7 @@ export default function Security() {
         <div className="text-center mb-14">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">
             Une infrastructure{' '}
-            <span className="text-[#0080a3]">blindée</span>
+            <span className="text-[#0080a3]">sécurisée</span>
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
             Souveraineté des données, certifications internationales et
@@ -58,24 +58,20 @@ export default function Security() {
           })}
         </div>
 
-        {/* Trust badges */}
-        <div className="mt-10 flex flex-wrap justify-center items-center gap-4 text-sm text-gray-500">
-          <span className="inline-flex items-center gap-1.5 bg-white border border-gray-200 px-3 py-1.5 rounded-full">
-            <ShieldCheck className="w-4 h-4 text-[#0080a3]" />
-            ISO 27001
-          </span>
-          <span className="inline-flex items-center gap-1.5 bg-white border border-gray-200 px-3 py-1.5 rounded-full">
-            <ShieldCheck className="w-4 h-4 text-[#0080a3]" />
-            SOC 2 Type II
-          </span>
-          <span className="inline-flex items-center gap-1.5 bg-white border border-gray-200 px-3 py-1.5 rounded-full">
-            <ShieldCheck className="w-4 h-4 text-[#0080a3]" />
-            RGPD
-          </span>
-          <span className="inline-flex items-center gap-1.5 bg-white border border-gray-200 px-3 py-1.5 rounded-full">
-            <Server className="w-4 h-4 text-[#0080a3]" />
-            OVHcloud France
-          </span>
+        {/* Trust badges - logos de certification */}
+        <div className="mt-14 text-center">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6">
+            Nos garanties de sécurité
+          </h3>
+          <img
+            src="/images/security-badges.png"
+            alt="ISO 27001, SOC 2 Type II, RGPD, OVHcloud, France - certifications de sécurité"
+            className="w-full max-w-[640px] h-auto object-contain mx-auto"
+          />
+          <p className="mt-6 text-gray-600 text-sm sm:text-base italic max-w-2xl mx-auto">
+            MaydAI repose sur l&apos;infrastructure OVHcloud certifiée selon les
+            normes internationales les plus strictes.
+          </p>
         </div>
       </div>
     </section>
