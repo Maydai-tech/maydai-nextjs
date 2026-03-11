@@ -112,8 +112,8 @@ const nextConfig: NextConfig = {
               // Polices - Autoriser les polices personnalisées et Google Fonts
               "font-src 'self' data: https://fonts.gstatic.com https://cdn-cookieyes.com https://app.cookieyes.com",
               
-              // Frames - Autoriser les iframes pour GTM noscript, Stripe Checkout et HubSpot
-              "frame-src 'self' https://www.googletagmanager.com https://js.stripe.com https://cookieyes.com https://app.cookieyes.com https://widget.cookieyes.com https://app.hubspot.com https://app-eu1.hubspot.com https://forms-eu1.hsforms.com",
+              // Frames - Autoriser les iframes pour GTM noscript, Stripe Checkout, HubSpot et YouTube
+              "frame-src 'self' https://www.googletagmanager.com https://js.stripe.com https://cookieyes.com https://app.cookieyes.com https://widget.cookieyes.com https://app.hubspot.com https://app-eu1.hubspot.com https://forms-eu1.hsforms.com https://www.youtube.com https://www.youtube-nocookie.com",
               
               // Objets - Interdire tous les objets pour la sécurité
               "object-src 'none'",
