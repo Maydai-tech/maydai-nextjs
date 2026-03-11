@@ -32,7 +32,7 @@ export default function LandingFooter() {
               </Link>
             </div>
             <p className="text-sm text-gray-400 mt-6">
-              Gratuit 14 jours &middot; Sans carte bancaire &middot; Hébergé en France
+              Premier registre gratuit &middot; Sans carte bancaire &middot; Hébergé en France
             </p>
           </div>
         </div>
