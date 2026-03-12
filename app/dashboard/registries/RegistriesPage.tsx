@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { supabase } from '@/lib/supabase'
-import { Building2, Plus, ChevronRight, CheckCircle, X, MoreVertical, Trash2 } from 'lucide-react'
+import { Building2, Plus, ChevronRight, CheckCircle, X, MoreVertical, Trash2, Server, Lock, ShieldCheck } from 'lucide-react'
 import Footer from '@/components/site-vitrine/Footer'
 import NavBar from '@/components/NavBar/NavBar'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
@@ -305,6 +305,57 @@ export default function RegistriesPage() {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Sélectionnez le registre sur lequel vous souhaitez travailler pour accéder au dashboard de conformité IA Act.
           </p>
+
+          {/* Data protection reassurance */}
+          <div className="mt-8 bg-[#0080A3]/5 border border-[#0080A3]/15 rounded-2xl px-6 sm:px-10 py-7 max-w-2xl mx-auto text-left">
+            <h3 className="text-lg font-bold text-gray-900 mb-2 text-center sm:text-left">
+              Vos données, notre priorité absolue : Sécurité, Souveraineté et Transparence
+            </h3>
+            <p className="text-base text-gray-600 mb-6 leading-relaxed">
+              Chez MaydAI, nous ne faisons aucun compromis avec la sécurité. Nous avons fait le choix stratégique d&apos;une infrastructure souveraine et robuste pour garantir que vos données restent protégées, confidentielles et sous juridiction européenne.
+            </p>
+
+            <div className="flex flex-col gap-3 mb-7">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#0080A3]/10 rounded-lg shrink-0">
+                  <Server className="h-5 w-5 text-[#0080A3]" />
+                </div>
+                <span className="text-base text-gray-700 font-medium">Hébergement 100% français (OVHcloud)</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#0080A3]/10 rounded-lg shrink-0">
+                  <Lock className="h-5 w-5 text-[#0080A3]" />
+                </div>
+                <span className="text-base text-gray-700 font-medium">Chiffrement TLS 1.3 de bout en bout</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#0080A3]/10 rounded-lg shrink-0">
+                  <ShieldCheck className="h-5 w-5 text-[#0080A3]" />
+                </div>
+                <span className="text-base text-gray-700 font-medium">Conformité RGPD garantie</span>
+              </div>
+            </div>
+
+            <div className="border-t border-[#0080A3]/15 pt-6">
+              <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-8">
+                {[
+                  { src: '/icons_sec/ISOIEC_27001.webp', alt: 'ISO/IEC 27001', label: 'ISO 27001' },
+                  { src: '/icons_sec/Soc_1.webp', alt: 'SOC 1 Type II', label: 'SOC 1' },
+                  { src: '/icons_sec/Soc_2.webp', alt: 'SOC 2 Type II', label: 'SOC 2' },
+                  { src: '/icons_sec/RGPD_Certif.webp', alt: 'RGPD', label: 'RGPD' },
+                  { src: '/icons_sec/Webcloud_1.webp', alt: 'OVHcloud', label: 'OVHcloud' },
+                  { src: '/icons_sec/FR_Hosting.webp', alt: 'Hébergé en France', label: 'France' },
+                ].map((cert) => (
+                  <div key={cert.label} className="flex flex-col items-center gap-1.5">
+                    <div className="relative w-14 h-14">
+                      <Image src={cert.src} alt={cert.alt} fill className="object-contain" />
+                    </div>
+                    <span className="text-xs text-gray-500 font-medium">{cert.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {loadingData ? (
