@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Users, FileText, Settings, BarChart3, TrendingUp, Activity } from 'lucide-react'
+import Link from 'next/link'
+import { Users, FileText, Settings, BarChart3, TrendingUp, Activity, LineChart } from 'lucide-react'
 
 interface AdminStats {
   sectionsCount: number
@@ -167,7 +168,19 @@ export default function AdminDashboard() {
             </a>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Link
+              href="/admin/analytics"
+              className="block p-4 border border-gray-200 rounded-lg hover:border-[#0080A3] hover:shadow-md transition-colors"
+            >
+              <LineChart className="h-6 w-6 text-[#0080A3] mb-2" />
+              <h3 className="font-medium text-gray-900">Analytics</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Inscriptions, utilisateurs et cas d&apos;usage dans le temps (filtres plan,
+                rôle, abonnement)
+              </p>
+            </Link>
+
             <a
               href="/admin/usecase-scores"
               className="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition-colors"
