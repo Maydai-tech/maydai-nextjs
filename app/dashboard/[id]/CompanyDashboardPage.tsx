@@ -971,10 +971,12 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                                   )}
                                 </div>
 
-                                {/* Cartes d'information alignées horizontalement */}
-                                <div className="flex flex-row gap-2">
+                                {/* Cartes d'information */}
+                                {/* Mobile: grille 2 colonnes (Modèle en pleine largeur, puis Niveau IA Act + Score en 50/50) */}
+                                {/* Desktop (>= sm): l'ancien layout en ligne */}
+                                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:items-start">
                                   {/* Carte Modèle utilisé */}
-                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0">
+                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0 col-span-2 w-full sm:w-auto">
                                     <div className="flex items-center justify-between mb-2">
                                       <span className="text-xs font-medium text-gray-600">Modèle utilisé</span>
                                       <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1012,14 +1014,14 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                                   </div>
 
                                   {/* Carte Niveau IA Act */}
-                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0">
+                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0 col-span-1 w-full sm:w-auto">
                                     <div className="text-xs font-medium text-gray-600 mb-2">Niveau IA Act</div>
                                     {useCase.score_final === 0 ? (
-                                      <div className="bg-red-50 border border-red-200 rounded-lg p-2 flex items-center space-x-2">
+                                      <div className="bg-red-50 border border-red-200 rounded-lg p-1.5 sm:p-2 flex items-center space-x-2">
                                         <AlertTriangle className="h-4 w-4 text-red-500" />
                                         <div>
                                           <div className="text-xs text-red-600 opacity-75">Risque</div>
-                                          <div className="text-sm font-semibold text-red-800">
+                                          <div className="text-xs sm:text-sm font-semibold text-red-800">
                                             Inacceptable
                                           </div>
                                         </div>
@@ -1057,7 +1059,7 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                                   </div>
 
                                   {/* Carte Score de conformité */}
-                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0">
+                                  <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex-shrink-0 col-span-1 w-full sm:w-auto">
                                     {useCase.score_final !== null && useCase.score_final !== undefined ? (
                                       <>
                                         <div className="flex items-center space-x-1 mb-2">
