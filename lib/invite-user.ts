@@ -16,9 +16,22 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
  * Recherche un utilisateur par email dans auth.users
  */
 export async function getUserByEmail(email: string) {
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers()
-  const user = data.users.find((user) => user.email === email)
-  return { user: user, error }
+  const perPage = 100
+  let page = 1
+
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
+    if (error) return { user: undefined, error }
+
+    const user = data.users.find((u) => u.email === email)
+    if (user) return { user, error: null }
+
+    // No more pages
+    if (data.users.length < perPage) break
+    page++
+  }
+
+  return { user: undefined, error: null }
 }
 
 /**
