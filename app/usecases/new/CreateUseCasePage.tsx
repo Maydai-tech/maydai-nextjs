@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import { getProviderIcon } from '@/lib/provider-icons'
+import { trackUseCaseCreation } from '@/lib/gtm'
 import Tooltip from '@/components/Tooltip'
 import ModelTooltip from '@/components/ModelTooltip'
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
@@ -648,6 +649,9 @@ function CreateUseCasePageContent() {
 
       if (response.data?.id) {
         console.log('Redirection vers:', `/usecases/${response.data.id}/evaluation`)
+        if (companyId && formData.ai_category) {
+          trackUseCaseCreation(companyId, formData.ai_category)
+        }
         router.push(`/usecases/${response.data.id}/evaluation`)
       }
     } catch (error: any) {

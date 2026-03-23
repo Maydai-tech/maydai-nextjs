@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import BillingToggle from '@/components/Subscriptions/BillingToggle'
 import { fetchPlans, type MaydAIPlan } from '@/lib/api/plans'
+import { trackPricingClick, type PlanName } from '@/lib/gtm'
 
 type BillingCycle = 'monthly' | 'yearly'
 
@@ -190,6 +191,7 @@ export default function TarifsPricingClient() {
               <a
                 href="/contact"
                 className={isPro ? CTA_CLASS_PRO : CTA_CLASS_DEFAULT}
+                onClick={() => trackPricingClick(planId as PlanName)}
               >
                 {label.cta}
               </a>

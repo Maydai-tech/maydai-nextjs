@@ -58,16 +58,12 @@ export default function RegistriesPage() {
 
     // Check for deletion success message
     if (searchParams.get('deleted') === 'true') {
-      const registryName = searchParams.get('registryName')
-      setSuccessMessage(`Le registre "${registryName || 'Registre'}" a été supprimé avec succès`)
+      setSuccessMessage('Le registre a été supprimé avec succès')
 
-      // Clear the message after 5 seconds
       setTimeout(() => {
         setSuccessMessage(null)
-        // Clean up the URL
         const url = new URL(window.location.href)
         url.searchParams.delete('deleted')
-        url.searchParams.delete('registryName')
         router.replace(url.pathname)
       }, 5000)
     }
@@ -181,8 +177,8 @@ export default function RegistriesPage() {
         throw new Error(error.error || 'Erreur lors de la suppression')
       }
 
-      // Rediriger avec message de succès
-      router.push(`/dashboard/registries?deleted=true&registryName=${encodeURIComponent(registryToDelete.name)}`)
+      // Rediriger avec message de succès (pas de nom dans l'URL)
+      router.push(`/dashboard/registries?deleted=true`)
 
       // Rafraîchir la liste
       await fetchCompanies()

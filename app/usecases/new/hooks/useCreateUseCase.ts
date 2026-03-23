@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useApiCall } from '@/lib/api-client-legacy'
 import type { CreateUseCasePayload } from '../types'
 
+export interface UseCreateUseCaseOptions {
+  onSuccess?: (usecaseId: string) => void
+}
+
 export interface UseCreateUseCaseReturn {
   submit: (payload: CreateUseCasePayload) => Promise<void>
   submitting: boolean
@@ -12,7 +16,7 @@ export interface UseCreateUseCaseReturn {
   clearError: () => void
 }
 
-export function useCreateUseCase(): UseCreateUseCaseReturn {
+export function useCreateUseCase(options?: UseCreateUseCaseOptions): UseCreateUseCaseReturn {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -46,6 +50,7 @@ export function useCreateUseCase(): UseCreateUseCaseReturn {
       }
 
       if (response.data?.id) {
+        options?.onSuccess?.(response.data.id)
         router.push(`/usecases/${response.data.id}/evaluation`)
       }
     } catch (err: unknown) {
