@@ -272,7 +272,9 @@ export default function SignupPage() {
         userEmail: formData.email,
       })
 
-      router.push('/dashboard/registries')
+      setTimeout(() => {
+        router.push('/dashboard/registries')
+      }, 500)
     } catch (err) {
       console.error('Complete signup error:', err)
       setError(err instanceof Error ? err.message : 'Erreur lors de la création du profil')
