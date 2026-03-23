@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { validateSIREN, cleanSIREN, formatSIREN } from '@/lib/validation/siren'
+import { sendSignUpEvent } from '@/lib/gtm'
 import OTPVerification from '@/components/auth/OTPVerification'
 import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
 import { User, Building2, Phone, FileText, ArrowRight, CheckCircle, Mail } from 'lucide-react'
@@ -266,7 +267,11 @@ export default function SignupPage() {
         throw new Error(errorData.error || 'Erreur lors de la création du profil')
       }
 
-      // Success! Redirect to dashboard
+      sendSignUpEvent('email', {
+        userId: session.user?.id,
+        userEmail: formData.email,
+      })
+
       router.push('/dashboard/registries')
     } catch (err) {
       console.error('Complete signup error:', err)

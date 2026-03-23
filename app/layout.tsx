@@ -7,6 +7,7 @@ import ConditionalLayout from "@/components/ConditionalLayout";
 import GlobalLoader from "@/components/GlobalLoader";
 import SmartLoader from "@/components/SmartLoader";
 import { getNonce } from "@/lib/csp-nonce";
+import GTMPageViewTracker from "@/components/GTMPageViewTracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -138,6 +139,7 @@ export default async function RootLayout({
         )}
         
         <AuthProvider>
+          <GTMPageViewTracker />
           <SmartLoader>
             <ConditionalLayout>
               {children}
