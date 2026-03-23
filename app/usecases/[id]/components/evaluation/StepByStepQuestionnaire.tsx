@@ -146,6 +146,16 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
     }
   }
 
+  // Auto-redirect quand le questionnaire est terminé
+  useEffect(() => {
+    if (isCompleted) {
+      const timer = setTimeout(() => {
+        router.push(useCaseRoutes.overview(useCase.id))
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [isCompleted, router, useCase.id])
+
   // État de fin : questionnaire terminé avec succès
   if (isCompleted) {
     return (
@@ -159,9 +169,17 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
             Questionnaire terminé !
           </h2>
-          <p className="text-gray-600">
+          <p className="text-gray-600 mb-6">
             Votre évaluation a été sauvegardée avec succès et le score de votre use case a été calculé.
           </p>
+          <button
+            onClick={() => router.push(useCaseRoutes.overview(useCase.id))}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors"
+          >
+            Voir les résultats
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <p className="text-xs text-gray-400 mt-3">Redirection automatique dans quelques secondes...</p>
         </div>
       </div>
     )

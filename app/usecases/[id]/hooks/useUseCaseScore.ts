@@ -9,26 +9,21 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
   const { user, session } = useAuth()
 
   const fetchScore = async () => {
-    if (!user || !usecaseId || usecaseId === '') return
+    if (!user || !session?.access_token || !usecaseId || usecaseId === '') return
 
     setLoading(true)
     setError(null)
     
     try {
       const url = `/api/usecases/${usecaseId}/score`
-      console.log('Fetching score from:', url)
-      console.log('With token:', session?.access_token ? 'Present' : 'Missing')
       
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         }
       })
       
-      console.log('Response status:', response.status)
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
-
       if (!response.ok) {
         let errorMessage = 'Erreur lors du calcul du score'
         
@@ -60,7 +55,7 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
   }
 
   const recalculateScore = async () => {
-    if (!user || !usecaseId || usecaseId === '') return
+    if (!user || !session?.access_token || !usecaseId || usecaseId === '') return
 
     setLoading(true)
     setError(null)
@@ -69,7 +64,7 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
       const response = await fetch(`/api/usecases/${usecaseId}/score`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         }
       })
@@ -107,10 +102,10 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
   }
 
   useEffect(() => {
-    if (autoFetch && usecaseId && user) {
+    if (autoFetch && usecaseId && user && session?.access_token) {
       fetchScore()
     }
-  }, [usecaseId, user, autoFetch])
+  }, [usecaseId, user, session?.access_token, autoFetch])
 
   return {
     score,

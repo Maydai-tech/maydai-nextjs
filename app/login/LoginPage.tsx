@@ -48,10 +48,20 @@ export default function LoginPage() {
 
         try {
             // Send OTP
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/517bfc0e-be36-45ac-a3ee-60c7f4fa816a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4e3066'},body:JSON.stringify({sessionId:'4e3066',location:'LoginPage.tsx:50',message:'Before signInWithOtp',data:{email:email.substring(0,3)+'***'},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
             const { error: otpError } = await signInWithOtp(email, false)
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/517bfc0e-be36-45ac-a3ee-60c7f4fa816a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4e3066'},body:JSON.stringify({sessionId:'4e3066',location:'LoginPage.tsx:53',message:'After signInWithOtp',data:{hasError:!!otpError,errorMessage:otpError?.message,errorName:otpError?.name,errorStatus:(otpError as any)?.status,errorCode:(otpError as any)?.code},timestamp:Date.now(),hypothesisId:'A,B'})}).catch(()=>{});
+            // #endregion
 
             if (otpError) {
-                setError('Erreur lors de l\'envoi du code. Veuillez réessayer.')
+                // #region agent log
+                const debugMsg = `[DEBUG] ${otpError.message || 'no message'} | name=${otpError.name} | status=${(otpError as any).status || 'n/a'} | code=${(otpError as any).code || 'n/a'}`
+                console.error('OTP ERROR DETAILS:', otpError, JSON.stringify(otpError))
+                // #endregion
+                setError(`Erreur lors de l'envoi du code: ${debugMsg}`)
                 setFormLoading(false)
                 return
             }
@@ -60,7 +70,7 @@ export default function LoginPage() {
             setFormLoading(false)
         } catch (err) {
             console.error('Login error:', err)
-            setError('Une erreur est survenue. Veuillez réessayer.')
+            setError(`Une erreur est survenue: ${(err as any)?.message || 'unknown'}`)
             setFormLoading(false)
         }
     }
