@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
-import { GoogleTagManager } from "next/third-parties/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import ConditionalLayout from "@/components/ConditionalLayout";
@@ -111,7 +110,31 @@ export default async function RootLayout({
       >
         {/* Google Tag Manager - Seulement en production */}
         {process.env.NODE_ENV === 'production' && (
-          <GoogleTagManager gtmId="GTM-KLSD6BXG" />
+          <>
+            <Script
+              id="google-tag-manager"
+              strategy="afterInteractive"
+              nonce={nonce}
+              dangerouslySetInnerHTML={{
+                __html: `
+                  (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+                  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+                  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+                  })(window,document,'script','dataLayer','GTM-KLSD6BXG');
+                `,
+              }}
+            />
+            <noscript>
+              <iframe
+                src="https://www.googletagmanager.com/ns.html?id=GTM-KLSD6BXG"
+                height="0"
+                width="0"
+                style={{ display: "none", visibility: "hidden" }}
+                title="Google Tag Manager"
+              />
+            </noscript>
+          </>
         )}
         
         <AuthProvider>
