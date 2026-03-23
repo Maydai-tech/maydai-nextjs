@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getUserByEmail } from '@/lib/invite-user'
 
 /**
  * API Route: Check if email already exists
@@ -31,27 +31,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase credentials')
-      return NextResponse.json(
-        { error: 'Configuration serveur manquante' },
-        { status: 500 }
-      )
-    }
-
-    // Create admin client with service role key
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-
-    // Check if user exists in auth.users
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers()
+    // Check if user exists in auth.users (with pagination)
+    const { user: existingUser, error } = await getUserByEmail(email)
 
     if (error) {
       console.error('Error checking email:', error)
@@ -61,11 +42,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if email exists (case-insensitive)
-    const emailLower = email.toLowerCase()
-    const userExists = data.users.some(
-      user => user.email?.toLowerCase() === emailLower
-    )
+    const userExists = !!existingUser
 
     return NextResponse.json({
       exists: userExists,
