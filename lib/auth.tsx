@@ -133,14 +133,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithOtp = useCallback(async (email: string, shouldCreateUser = false) => {
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/517bfc0e-be36-45ac-a3ee-60c7f4fa816a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4e3066'},body:JSON.stringify({sessionId:'4e3066',location:'auth.tsx:signInWithOtp:before',message:'Calling supabase.auth.signInWithOtp',data:{emailPrefix:email.substring(0,3),shouldCreateUser},timestamp:Date.now(),hypothesisId:'B,D'})}).catch(()=>{});
+      // #endregion
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser, // Paramétrable : false pour login, true pour signup
+          shouldCreateUser,
         }
       })
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/517bfc0e-be36-45ac-a3ee-60c7f4fa816a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4e3066'},body:JSON.stringify({sessionId:'4e3066',location:'auth.tsx:signInWithOtp:after',message:'Supabase OTP result',data:{hasError:!!error,errorMessage:error?.message,errorName:error?.name,errorStatus:(error as any)?.status,errorCode:(error as any)?.code,errorDetails:JSON.stringify(error)?.substring(0,500)},timestamp:Date.now(),hypothesisId:'A,B,D'})}).catch(()=>{});
+      // #endregion
       return { error }
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/517bfc0e-be36-45ac-a3ee-60c7f4fa816a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4e3066'},body:JSON.stringify({sessionId:'4e3066',location:'auth.tsx:signInWithOtp:catch',message:'Supabase OTP exception',data:{errorMessage:(error as any)?.message,errorName:(error as any)?.name},timestamp:Date.now(),hypothesisId:'C,E'})}).catch(()=>{});
+      // #endregion
       console.error('Error in signInWithOtp:', error)
       return { error: error as Error }
     }

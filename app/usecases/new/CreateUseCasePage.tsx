@@ -26,6 +26,12 @@ import ModelTooltip from '@/components/ModelTooltip'
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
 import { useCompanyInfo } from '../[id]/hooks/useCompanyInfo'
 import { loadCreationQuestions } from './questions-loader'
+import { useModelProviders } from './hooks/useModelProviders'
+import { useCreateUseCase } from './hooks/useCreateUseCase'
+import { validateDeploymentDateDDMMYYYY } from './lib/validators'
+import { resolvePrimaryModelId, isCustomPartner as isCustomPartnerCheck } from './lib/model-resolver'
+import { normalizeDeploymentCountriesToArray } from './lib/payload-builder'
+import { ISO_TO_COUNTRY_NAME } from './lib/countries'
 
 interface Company {
   id: string
@@ -86,38 +92,7 @@ interface Question {
   }
 }
 
-// Mapping des codes ISO vers les noms de pays en français
-const isoToCountryName: { [key: string]: string } = {
-  'fr': 'France',
-  'us': 'États-Unis',
-  'ca': 'Canada',
-  'gb': 'Royaume-Uni',
-  'de': 'Allemagne',
-  'es': 'Espagne',
-  'it': 'Italie',
-  'au': 'Australie',
-  'jp': 'Japon',
-  'cn': 'Chine',
-  'in': 'Inde',
-  'br': 'Brésil',
-  'mx': 'Mexique',
-  'nl': 'Pays-Bas',
-  'be': 'Belgique',
-  'ch': 'Suisse',
-  'se': 'Suède',
-  'no': 'Norvège',
-  'dk': 'Danemark',
-  'fi': 'Finlande',
-  'pt': 'Portugal',
-  'pl': 'Pologne',
-  'ru': 'Russie',
-  'kr': 'Corée du Sud',
-  'sg': 'Singapour',
-  'nz': 'Nouvelle-Zélande',
-  'ar': 'Argentine',
-  'za': 'Afrique du Sud',
-  'si': 'Slovénie'
-}
+const isoToCountryName = ISO_TO_COUNTRY_NAME
 
 function CreateUseCasePageContent() {
   // Add animation styles
@@ -244,21 +219,8 @@ function CreateUseCasePageContent() {
   const { isOwner } = useCompanyInfo(companyId)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
 
-  // Fonction de validation du format de date DD/MM/YYYY
   const validateDateFormat = (dateString: string): boolean => {
-    if (!dateString) return true // Champ optionnel
-
-    const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/
-    const match = dateString.match(dateRegex)
-
-    if (!match) return false
-
-    const [, day, month, year] = match
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
-
-    return date.getDate() == parseInt(day) &&
-           date.getMonth() == parseInt(month) - 1 &&
-           date.getFullYear() == parseInt(year)
+    return validateDeploymentDateDDMMYYYY(dateString).isValid
   }
 
   // Fonction pour récupérer les partenaires depuis l'API
@@ -351,21 +313,14 @@ function CreateUseCasePageContent() {
     return sortedModels
   }
 
-  // Fonction pour récupérer l'ID du modèle sélectionné
   const findModelId = (modelName: string): string | null => {
-    if (!modelName || !availableModels.length) return null
-
-    const model = availableModels.find(m => m.model_name === modelName)
-    return model?.id || null
+    return resolvePrimaryModelId(modelName, availableModels)
   }
 
-  // Fonction pour détecter si le partenaire technologique est personnalisé
   const isCustomTechnologyPartner = (): boolean => {
     const selectedPartner = typeof formData.technology_partner === 'string' ? formData.technology_partner.trim() : ''
     if (!selectedPartner) return false
-
-    // Vérifier si le partenaire sélectionné fait partie de la liste prédéfinie
-    return !partners.some(p => p.name === selectedPartner)
+    return isCustomPartnerCheck(selectedPartner, partners)
   }
 
   // Update current question with dynamic models or text input for custom partners
@@ -632,19 +587,9 @@ function CreateUseCasePageContent() {
         primary_model_id = findModelId(modelVersionStr)
       }
 
-      // Convertir deployment_countries de chaîne vers tableau de noms français
-      let deploymentCountriesArray: string[] = []
-      if (formData.deployment_countries) {
-        // Si c'est une chaîne, la splitter par virgule
-        if (typeof formData.deployment_countries === 'string') {
-          const countries = formData.deployment_countries.split(',')
-          deploymentCountriesArray = countries
-            .map(country => country.trim())
-            .filter(country => country.length > 0)
-        } else if (Array.isArray(formData.deployment_countries)) {
-          deploymentCountriesArray = formData.deployment_countries
-        }
-      }
+      const deploymentCountriesArray = normalizeDeploymentCountriesToArray(
+        formData.deployment_countries
+      )
 
       // Log des données à envoyer
       const payload = {
