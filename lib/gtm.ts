@@ -29,7 +29,7 @@ type GTMEvent = SignUpEvent | LoginEvent | PageViewEvent | CustomEvent
 
 declare global {
   interface Window {
-    dataLayer: Record<string, unknown>[]
+    dataLayer: GTMEvent[]
   }
 }
 
