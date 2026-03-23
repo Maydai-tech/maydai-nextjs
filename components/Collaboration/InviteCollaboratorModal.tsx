@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { UserPlus, X, Mail, User, AlertCircle, CheckCircle, Users, Building2 } from 'lucide-react';
+import { trackCollaboratorInvite } from '@/lib/gtm';
 
 interface InviteCollaboratorModalProps {
   isOpen: boolean;
@@ -52,7 +53,8 @@ export default function InviteCollaboratorModal({
         lastName: formData.lastName
       });
 
-      // Sauvegarder les infos de l'utilisateur invité pour l'écran de confirmation
+      trackCollaboratorInvite('editor');
+
       setInvitedUser({
         firstName: formData.firstName,
         lastName: formData.lastName,

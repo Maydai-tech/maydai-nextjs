@@ -9,14 +9,12 @@ interface SignUpEvent {
   event: 'sign_up'
   method: SignUpMethod
   user_id?: string
-  user_email?: string
 }
 
 interface LoginEvent {
   event: 'login'
   method: SignUpMethod
   user_id?: string
-  user_email?: string
 }
 
 interface PageViewEvent {
@@ -40,7 +38,7 @@ interface UseCaseCreationEvent {
 
 interface CollaboratorInviteEvent {
   event: 'collaborator_invite'
-  role: CollaboratorRole
+  role_invited: CollaboratorRole
 }
 
 interface PricingClickEvent {
@@ -98,25 +96,23 @@ export function sendGTMEvent(event: GTMEvent): void {
 
 export function sendSignUpEvent(
   method: SignUpMethod,
-  options?: { userId?: string; userEmail?: string }
+  options?: { userId?: string }
 ): void {
   sendGTMEvent({
     event: 'sign_up',
     method,
     ...(options?.userId && { user_id: options.userId }),
-    ...(options?.userEmail && { user_email: options.userEmail }),
   })
 }
 
 export function sendLoginEvent(
   method: SignUpMethod,
-  options?: { userId?: string; userEmail?: string }
+  options?: { userId?: string }
 ): void {
   sendGTMEvent({
     event: 'login',
     method,
     ...(options?.userId && { user_id: options.userId }),
-    ...(options?.userEmail && { user_email: options.userEmail }),
   })
 }
 
@@ -152,14 +148,15 @@ export function trackUseCaseCreation(registryId: string, aiCategory: string): vo
 export function trackCollaboratorInvite(role: CollaboratorRole): void {
   sendGTMEvent({
     event: 'collaborator_invite',
-    role,
+    role_invited: role,
   })
 }
 
 export function trackPricingClick(planName: PlanName): void {
+  const titleCase = planName.charAt(0).toUpperCase() + planName.slice(1)
   sendGTMEvent({
     event: 'pricing_click',
-    plan_name: planName,
+    plan_name: titleCase,
   })
 }
 

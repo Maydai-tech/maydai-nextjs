@@ -52,7 +52,7 @@ export default function NewRegistryPage() {
       })
       if (result.data && result.data.id) {
         const planName = (plan.name || 'freemium') as PlanName
-        const registryType = typeValue || 'non_specifie'
+        const registryType = selectedType === 'autre' ? 'autre' : (selectedType || 'non_specifie')
         const isFirst = existingRegistryCount === 0
 
         trackRegistryCreation(registryType, planName, isFirst)

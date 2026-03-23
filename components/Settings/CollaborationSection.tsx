@@ -5,6 +5,7 @@ import { Users, Settings } from 'lucide-react'
 import CollaboratorList from '@/components/Collaboration/CollaboratorList'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
+import { trackLimitReached } from '@/lib/gtm'
 
 interface CollaborationSectionProps {
   collaborators: any[]
@@ -26,6 +27,7 @@ export default function CollaborationSection({
     const maxCollaborators = plan.maxCollaborators ?? Infinity
 
     if (collaborators.length >= maxCollaborators) {
+      trackLimitReached('collaborators')
       setShowLimitModal(true)
     } else {
       onInvite()
