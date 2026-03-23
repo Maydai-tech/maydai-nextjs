@@ -27,6 +27,7 @@ import RiskPyramid from '@/components/RiskPyramid'
 import DeleteConfirmationModal from '@/app/usecases/[id]/components/DeleteConfirmationModal'
 import Toast from '@/components/Toast'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
+import { trackLimitReached } from '@/lib/gtm'
 import Image from 'next/image'
 import { getCompactScoreStyle, getSpecialScoreStyles } from '@/lib/score-styles'
 import { CategoryScoresRegistry } from './components/CategoryScoresRegistry'
@@ -628,6 +629,7 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                 const maxUseCases = plan.maxUseCasesPerRegistry || 3
 
                 if (useCases.length >= maxUseCases) {
+                  trackLimitReached('usecases')
                   setShowUseCaseLimitModal(true)
                 } else {
                   router.push(`/usecases/new?company=${companyId}`)
@@ -765,6 +767,7 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                     const maxUseCases = plan.maxUseCasesPerRegistry || 3
 
                     if (useCases.length >= maxUseCases) {
+                      trackLimitReached('usecases')
                       setShowUseCaseLimitModal(true)
                     } else {
                       router.push(`/usecases/new?company=${companyId}`)

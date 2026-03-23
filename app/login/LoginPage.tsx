@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/lib/auth'
 import OTPVerification from '@/components/auth/OTPVerification'
+import { sendLoginEvent } from '@/lib/gtm'
 import { Mail, ArrowRight } from 'lucide-react'
 
 type LoginStep = 'email' | 'otp'
@@ -76,7 +77,7 @@ export default function LoginPage() {
     }
 
     const handleOtpSuccess = () => {
-        // Redirect to dashboard - profile check is done there
+        sendLoginEvent('email')
         router.push('/dashboard/registries')
     }
 

@@ -9,6 +9,7 @@ import RegistryCollaboratorList from '@/components/Collaboration/RegistryCollabo
 import ConfirmRemoveCollaboratorModal from '@/components/Collaboration/ConfirmRemoveCollaboratorModal';
 import PlanLimitModal from '@/components/Shared/PlanLimitModal';
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan';
+import { trackLimitReached } from '@/lib/gtm';
 
 interface Company {
   id: string;
@@ -146,6 +147,7 @@ export default function CollaborationPage() {
     const maxCollaborators = plan.maxCollaborators ?? Infinity;
 
     if (totalCollaborators.length >= maxCollaborators) {
+      trackLimitReached('collaborators');
       setShowLimitModal(true);
     } else {
       setShowInviteModal(true);

@@ -269,7 +269,6 @@ export default function SignupPage() {
 
       sendSignUpEvent('email', {
         userId: session.user?.id,
-        userEmail: formData.email,
       })
 
       setTimeout(() => {

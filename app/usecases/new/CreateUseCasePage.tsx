@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import { getProviderIcon } from '@/lib/provider-icons'
-import { trackUseCaseCreation } from '@/lib/gtm'
+import { trackUseCaseCreation, trackLimitReached } from '@/lib/gtm'
 import Tooltip from '@/components/Tooltip'
 import ModelTooltip from '@/components/ModelTooltip'
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
@@ -632,6 +632,7 @@ function CreateUseCasePageContent() {
         const errorCode = response.data?.code
 
         if (errorCode === 'PLAN_LIMIT_REACHED') {
+          trackLimitReached('usecases')
           const limit = response.data?.limit || 3
           const current = response.data?.current || 0
           errorMessage = `Vous avez atteint la limite de ${limit} cas d'usage pour ce registre (${current}/${limit}). Mettez à niveau votre plan pour en créer davantage.`

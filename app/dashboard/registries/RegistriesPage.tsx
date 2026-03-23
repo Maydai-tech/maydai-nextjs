@@ -12,6 +12,7 @@ import { Building2, Plus, ChevronRight, CheckCircle, X, MoreVertical, Trash2, Se
 import Footer from '@/components/site-vitrine/Footer'
 import NavBar from '@/components/NavBar/NavBar'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
+import { trackLimitReached } from '@/lib/gtm'
 import DeleteRegistryModal from '@/app/dashboard/[id]/components/DeleteRegistryModal'
 import CompleteProfileModal from '@/components/auth/CompleteProfileModal'
 
@@ -450,6 +451,7 @@ export default function RegistriesPage() {
                       const maxRegistries = plan.maxRegistries || 1
 
                       if (ownedRegistriesCount >= maxRegistries) {
+                        trackLimitReached('registries')
                         setShowLimitModal(true)
                       } else {
                         router.push('/registries/new')
