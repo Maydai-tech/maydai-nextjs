@@ -1,5 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorMonitor } from '@/lib/error-monitor'
+import { exec } from 'node:child_process'
+import { promisify } from 'node:util'
+
+const execAsync = promisify(exec)
+const PROD_DISK_JSON_URL = 'http://57.130.47.254:8080/monitoring/disk.json'
+const PROD_EMAIL_STATUS_JSON_URL = 'http://57.130.47.254:8080/monitoring/email-status.json'
+
+async function getLocalDiskUsage() {
+  const { stdout } = await execAsync('df -h /')
+  const lines = stdout.trim().split('\n')
+  const values = lines[1]?.trim().split(/\s+/)
+
+  if (!values || values.length < 6) {
+    throw new Error('Format df inattendu')
+  }
+
+  return {
+    filesystem: values[0],
+    total: values[1],
+    used: values[2],
+    available: values[3],
+    usePercent: values[4],
+    mountedOn: values[5],
+    host: 'local-runtime',
+    server: 'local',
+    source: 'local',
+  }
+}
+
+async function getProductionDiskUsage() {
+  const response = await fetch(PROD_DISK_JSON_URL, { cache: 'no-store' })
+  if (!response.ok) {
+    throw new Error(`Source monitoring indisponible (${response.status})`)
+  }
+
+  const json = await response.json()
+  if (
+    !json ||
+    typeof json.usePercent !== 'string' ||
+    typeof json.total !== 'string' ||
+    typeof json.used !== 'string' ||
+    typeof json.available !== 'string'
+  ) {
+    throw new Error('Format JSON monitoring invalide')
+  }
+
+  return {
+    ...json,
+    source: 'production',
+  }
+}
+
+async function getDiskUsage() {
+  try {
+    return await getProductionDiskUsage()
+  } catch (error) {
+    console.error('Erreur lecture disque production, fallback local:', error)
+    return getLocalDiskUsage()
+  }
+}
+
+async function getProductionEmailStatus() {
+  const response = await fetch(PROD_EMAIL_STATUS_JSON_URL, { cache: 'no-store' })
+  if (!response.ok) {
+    throw new Error(`Source statut email indisponible (${response.status})`)
+  }
+  const json = await response.json()
+  return {
+    active: Boolean(json?.active),
+    recipient: typeof json?.recipient === 'string' ? json.recipient : '',
+    lastSentAt: typeof json?.lastSentAt === 'string' ? json.lastSentAt : '',
+    lastSubject: typeof json?.lastSubject === 'string' ? json.lastSubject : '',
+    lastMessageId: typeof json?.lastMessageId === 'string' ? json.lastMessageId : '',
+    source: 'production',
+  }
+}
 
 // GET: Obtenir les statistiques de monitoring
 export async function GET(req: NextRequest) {
@@ -10,10 +86,31 @@ export async function GET(req: NextRequest) {
 
     switch (action) {
       case 'stats':
+        const diskUsage = await getDiskUsage()
+        let emailStatus = null
+        try {
+          emailStatus = await getProductionEmailStatus()
+        } catch {
+          emailStatus = null
+        }
         return NextResponse.json({
           errors: errorMonitor.getErrorStats(),
           performance: errorMonitor.getPerformanceStats(),
-          issues: errorMonitor.checkForIssues()
+          issues: errorMonitor.checkForIssues(),
+          disk: diskUsage,
+          email: emailStatus,
+        })
+
+      case 'disk':
+        let emailForDisk = null
+        try {
+          emailForDisk = await getProductionEmailStatus()
+        } catch {
+          emailForDisk = null
+        }
+        return NextResponse.json({
+          disk: await getDiskUsage(),
+          email: emailForDisk,
         })
 
       case 'errors':

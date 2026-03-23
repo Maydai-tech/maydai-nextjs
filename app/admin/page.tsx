@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { Users, FileText, Settings, BarChart3, TrendingUp, Activity, LineChart } from 'lucide-react'
+import { Users, FileText, Settings, BarChart3, TrendingUp, Activity, LineChart, ShieldCheck } from 'lucide-react'
 
 interface AdminStats {
   sectionsCount: number
@@ -200,6 +200,17 @@ export default function AdminDashboard() {
               <h3 className="font-medium text-gray-900">Scores COMPL-AI</h3>
               <p className="text-sm text-gray-500 mt-1">
                 Consulter les scores de conformité des modèles IA
+              </p>
+            </a>
+
+            <a
+              href="/admin/monitoring"
+              className="block p-4 border border-gray-200 rounded-lg hover:border-teal-500 hover:shadow-md transition-colors"
+            >
+              <ShieldCheck className="h-6 w-6 text-teal-600 mb-2" />
+              <h3 className="font-medium text-gray-900">Monitoring</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Superviser les alertes disque et les protections opérationnelles
               </p>
             </a>
           </div>
