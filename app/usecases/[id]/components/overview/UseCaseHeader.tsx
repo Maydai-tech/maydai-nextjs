@@ -244,8 +244,8 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         throw new Error(error.error || 'Erreur lors de la suppression')
       }
 
-      // Redirection vers le dashboard avec un message de succès
-      router.push(`/dashboard/${useCase.company_id}?deleted=true&useCaseName=${encodeURIComponent(useCase.name)}`)
+      // Redirection vers le dashboard avec un message de succès (pas de nom dans l'URL)
+      router.push(`/dashboard/${useCase.company_id}?deleted=true`)
     } catch (error) {
       console.error('Erreur lors de la suppression:', error)
       alert('Une erreur est survenue lors de la suppression du use case')

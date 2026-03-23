@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { useGuidedChatState } from '../../hooks/useGuidedChatState'
 import { useModelProviders } from '../../hooks/useModelProviders'
 import { useCreateUseCase } from '../../hooks/useCreateUseCase'
+import { trackUseCaseCreation } from '@/lib/gtm'
 import { validateDeploymentDateDDMMYYYY } from '../../lib/validators'
 import { validateDraft, validateFinalClosedFieldsAgainstReferentials } from '../../lib/validators'
 import { isCustomPartner as isCustomPartnerCheck } from '../../lib/model-resolver'
@@ -33,7 +34,14 @@ interface GuidedChatProps {
 export default function GuidedChat({ companyId, company }: GuidedChatProps) {
   const { state, actions } = useGuidedChatState()
   const modelProviders = useModelProviders()
-  const { submit, submitting, error: submitError, clearError } = useCreateUseCase()
+  const { submit, submitting, error: submitError, clearError } = useCreateUseCase({
+    onSuccess: () => {
+      const aiCategory = state.draft.ai_category
+      if (companyId && aiCategory) {
+        trackUseCaseCreation(companyId, aiCategory)
+      }
+    },
+  })
   const [stepError, setStepError] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 

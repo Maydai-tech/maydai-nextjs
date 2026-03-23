@@ -131,14 +131,11 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
 
     // Check for deletion success message from URL
     if (searchParams.get('deleted') === 'true') {
-      const useCaseName = searchParams.get('useCaseName')
-      setToastMessage(`Le use case "${useCaseName || 'Use case'}" a été supprimé avec succès`)
+      setToastMessage('Le cas d\'usage a été supprimé avec succès')
       setShowToast(true)
 
-      // Clean up the URL
       const url = new URL(window.location.href)
       url.searchParams.delete('deleted')
-      url.searchParams.delete('useCaseName')
       router.replace(url.pathname)
     }
   }, [searchParams, router])

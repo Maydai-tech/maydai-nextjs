@@ -8,6 +8,7 @@ import GlobalLoader from "@/components/GlobalLoader";
 import SmartLoader from "@/components/SmartLoader";
 import { getNonce } from "@/lib/csp-nonce";
 import GTMPageViewTracker from "@/components/GTMPageViewTracker";
+import HubSpotTrigger from "@/components/tracking/HubSpotTrigger";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -71,6 +72,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const nonce = await getNonce()
+  const gtmId = process.env.NEXT_PUBLIC_GTM_ID
   
   return (
     <html lang="fr">
@@ -78,7 +80,7 @@ export default async function RootLayout({
         {/* Meta pour exposer le nonce au client */}
         {nonce && <meta name="csp-nonce" content={nonce} />}
         {/* Google Consent Mode Script - Doit être chargé AVANT GTM */}
-        {process.env.NODE_ENV === 'production' && (
+        {process.env.NODE_ENV === 'production' && gtmId && (
           <Script
             id="google-consent-mode"
             strategy="beforeInteractive"
@@ -109,8 +111,8 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
-        {/* Google Tag Manager - Seulement en production */}
-        {process.env.NODE_ENV === 'production' && (
+        {/* Google Tag Manager - Seulement en production avec GTM_ID configuré */}
+        {process.env.NODE_ENV === 'production' && gtmId && (
           <>
             <Script
               id="google-tag-manager"
@@ -122,13 +124,13 @@ export default async function RootLayout({
                   new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
                   j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                   'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                  })(window,document,'script','dataLayer','GTM-KLSD6BXG');
+                  })(window,document,'script','dataLayer','${gtmId}');
                 `,
               }}
             />
             <noscript>
               <iframe
-                src="https://www.googletagmanager.com/ns.html?id=GTM-KLSD6BXG"
+                src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
                 height="0"
                 width="0"
                 style={{ display: "none", visibility: "hidden" }}
@@ -140,6 +142,7 @@ export default async function RootLayout({
         
         <AuthProvider>
           <GTMPageViewTracker />
+          <HubSpotTrigger />
           <SmartLoader>
             <ConditionalLayout>
               {children}
