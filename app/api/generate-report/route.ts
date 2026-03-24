@@ -335,13 +335,13 @@ export async function POST(req: NextRequest) {
       processing_time_ms: processingTime
     }
 
-    // Valider les données extraites
+    // Valider les données extraites (validation stricte : 9 actions + pas de doublons)
     const validation = validateNextStepsData(nextStepsData)
     logExtractionResults(analysis, nextStepsData, validation)
 
-    // Sauvegarder les prochaines étapes structurées dans la table usecase_nextsteps
     let nextStepsSaved = false
     let nextStepsError = null
+    let nextStepsStatus: 'saved' | 'parse_failed' | 'save_error' = 'parse_failed'
 
     if (validation.isValid) {
       try {
@@ -354,12 +354,25 @@ export async function POST(req: NextRequest) {
 
         if (nextStepsSaveError) {
           nextStepsError = nextStepsSaveError.message
+          nextStepsStatus = 'save_error'
         } else {
           nextStepsSaved = true
+          nextStepsStatus = 'saved'
         }
       } catch (error) {
         nextStepsError = error instanceof Error ? error.message : 'Erreur inconnue'
+        nextStepsStatus = 'save_error'
       }
+    } else {
+      // Données corrompues — on ne les écrit PAS en base
+      const reason = validation.hasDuplicates
+        ? `Doublons détectés: ${validation.duplicateDetails.join('; ')}`
+        : `Actions manquantes: ${validation.missingFields.join(', ')}`
+
+      console.error(`[generate-report] PARSE_FAILED pour ${usecase_id}: ${reason}`)
+
+      nextStepsError = `Extraction incomplète ou corrompue — données non sauvegardées. ${reason}`
+      nextStepsStatus = 'parse_failed'
     }
 
     return NextResponse.json({
@@ -369,12 +382,15 @@ export async function POST(req: NextRequest) {
       usecase_id: usecase.id,
       usecase_name: usecase.name,
       saved_to_db: true,
+      next_steps_status: nextStepsStatus,
       next_steps_extracted: validation.isValid,
       next_steps_saved: nextStepsSaved,
       next_steps_validation: {
         isValid: validation.isValid,
         warnings: validation.warnings,
-        missingFields: validation.missingFields
+        missingFields: validation.missingFields,
+        hasDuplicates: validation.hasDuplicates,
+        duplicateDetails: validation.duplicateDetails
       },
       next_steps_error: nextStepsError,
       processing_time_ms: processingTime

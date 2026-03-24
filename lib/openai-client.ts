@@ -487,55 +487,40 @@ ${conditionalDetails}`
     // Construire la section du questionnaire
     const questionnaireSection = this.buildQuestionnaireSection(questionnaire_questions)
 
-    // Instructions de formatage
+    // Instructions de formatage JSON strict avec les 9 clés d'action
     const formattingInstructions = `
-**INSTRUCTIONS DE FORMATAGE OBLIGATOIRES :**
+**FORMAT DE SORTIE OBLIGATOIRE — JSON STRICT**
 
-Tu dois suivre EXACTEMENT cette structure Markdown, sans modification :
+Tu DOIS répondre UNIQUEMENT avec un objet JSON valide respectant EXACTEMENT cette structure.
+Aucun texte avant ou après le JSON. Aucun bloc Markdown. Juste le JSON.
 
-1. **Titre principal** : "# Recommandations et plan d'action"
+{
+  "introduction_contextuelle": "<Paragraphe narratif décrivant le contexte de l'entreprise ${entreprise.name} et du système d'IA ${cas_usage.name} au regard de l'AI Act. 3 à 5 phrases.>",
+  "evaluation_risque": {
+    "niveau": "<Risque minimal | Risque limité | Risque élevé | Risque inacceptable>",
+    "justification": "<Justification détaillée du niveau de risque. 2 à 4 phrases.>"
+  },
+  "quick_win_1": "<Action immédiate sur le REGISTRE CENTRALISÉ IA : initialiser et tenir à jour un registre des systèmes d'IA conformément à l'article 49 de l'AI Act. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
+  "quick_win_2": "<Action immédiate sur la SURVEILLANCE HUMAINE : désigner le(s) responsable(s) de la surveillance humaine du système d'IA. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
+  "quick_win_3": "<Action immédiate sur les INSTRUCTIONS SYSTÈME / PROMPTS : définir et documenter les instructions système, les prompts et les garde-fous du système d'IA. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
+  "priorite_1": "<Action réglementaire sur la DOCUMENTATION TECHNIQUE : constituer ou compléter la documentation technique exigée par l'AI Act. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
+  "priorite_2": "<Action réglementaire sur le MARQUAGE DE TRANSPARENCE : mettre en place les marquages et obligations de transparence envers les utilisateurs. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
+  "priorite_3": "<Action réglementaire sur la QUALITÉ DES DONNÉES : évaluer et documenter la qualité, la pertinence et la gouvernance des données d'entraînement et d'exploitation. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
+  "action_1": "<Action moyen terme sur la GESTION DES RISQUES : élaborer un plan de gestion des risques couvrant les risques identifiés et les mesures d'atténuation. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
+  "action_2": "<Action moyen terme sur la SURVEILLANCE CONTINUE : établir un plan de surveillance continue des performances et de la conformité du système d'IA. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
+  "action_3": "<Action moyen terme sur les FORMATIONS AI ACT : recenser et planifier les formations nécessaires pour les équipes impliquées dans le déploiement et l'utilisation du système. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
+  "impact_attendu": "<Paragraphe décrivant l'impact attendu de la mise en œuvre de ces 9 actions sur la conformité et la performance de l'entreprise. 2 à 4 phrases.>",
+  "conclusion": "<Paragraphe de conclusion résumant les priorités et les prochaines étapes. 2 à 4 phrases.>"
+}
 
-2. **Introduction contextuelle** : "## Introduction contextuelle"
-   - Texte narratif décrivant le contexte de l'entreprise et du système IA
-
-3. **Évaluation du niveau de risque AI Act** : "## Évaluation du niveau de risque AI Act"
-   - Texte narratif évaluant le niveau de risque spécifique
-
-4. **Mesures importantes de conformité à renseigner :** : "## Mesures importantes de conformité à renseigner :"
-   - **Actions réglementaires et documents techniques** : "### Actions réglementaires et documents techniques"
-   - **Phrase 1.** Suite du texte.
-   - **Phrase 2.** Suite du texte.
-   - **Phrase 3.** Suite du texte.
-
-5. **Actions rapides et concrètes à mettre en œuvre :** : "## Actions rapides et concrètes à mettre en œuvre :"
-   - **Actions immédiates recommandées** : "### Actions immédiates recommandées"
-   - **Phrase 1.** Suite du texte.
-   - **Phrase 2.** Suite du texte.
-   - **Phrase 3.** Suite du texte.
-
-6. **Impact attendu** : "## Impact attendu"
-   - [Texte narratif]
-
-7. **Trois actions structurantes à mener dans les 3 à 6 mois :** : "## Trois actions structurantes à mener dans les 3 à 6 mois :"
-   - **Actions à moyen terme** : "### Actions à moyen terme"
-   - **Sous-titre 1 :** [Texte narratif]
-   - **Sous-titre 2 :** [Texte narratif]
-   - **Sous-titre 3 :** [Texte narratif]
-
-8. **Conclusion** : "## Conclusion"
-   - [Texte narratif]
-
-**RÈGLES STRICTES :**
-- Utilise EXACTEMENT la syntaxe Markdown fournie
-- Respecte EXACTEMENT cette structure
-- Ne modifie pas les titres ou sous-titres
-- Utilise des phrases complètes et professionnelles
-- Adapte le contenu selon l'entreprise et le système IA analysé
-- Utilise **texte en gras** pour les phrases d'action importantes
-- Utilise # pour les titres principaux, ## pour les sections, ### pour les sous-sections
-
-Sois précis, professionnel et actionnable dans tes recommandations.
-**RAPPEL :** Utilise "${entreprise.name}" comme nom de l'entreprise et "${cas_usage.name}" comme nom du système d'IA.`
+**RÈGLES ABSOLUES :**
+- Réponds UNIQUEMENT en JSON valide, sans texte autour
+- Chaque clé d'action (quick_win_*, priorite_*, action_*) doit contenir un texte UNIQUE et DISTINCT
+- Deux actions ne doivent JAMAIS contenir le même contenu ou des paragraphes similaires
+- Chaque action doit être AUTONOME : compréhensible sans lire les autres
+- Adapte chaque recommandation au contexte spécifique de "${entreprise.name}" et "${cas_usage.name}"
+- N'invente pas de données : base-toi sur les informations du questionnaire ci-dessus
+- Utilise un ton professionnel, précis et actionnable`
 
     return `${baseInfo}\n\n${questionnaireSection}\n\n${formattingInstructions}`.trim()
   }
