@@ -97,17 +97,20 @@ const nextConfig: NextConfig = {
               // Source par défaut - Autoriser uniquement le domaine actuel
               "default-src 'self'",
               
-              // Scripts - Autoriser GTM, CookieYes, Stripe, HubSpot et les scripts nécessaires à Next.js
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://cdn-cookieyes.com https://app.cookieyes.com https://js.stripe.com https://js-eu1.hsforms.net https://js.hsforms.net https://js-eu1.hs-scripts.com https://js.hs-scripts.com https://js-eu1.hs-analytics.net https://js.hs-analytics.net https://js-eu1.hs-banner.com https://js.hs-banner.com https://js-eu1.hscollectedforms.net https://js.hscollectedforms.net",
+              // Scripts - Autoriser GTM, Google Ads, CookieYes, Stripe, HubSpot et les scripts nécessaires à Next.js
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://js.stripe.com https://js-eu1.hsforms.net https://js.hsforms.net https://js-eu1.hs-scripts.com https://js.hs-scripts.com https://js-eu1.hs-analytics.net https://js.hs-analytics.net https://js-eu1.hs-banner.com https://js.hs-banner.com https://js-eu1.hscollectedforms.net https://js.hscollectedforms.net",
+              
+              // Script elements - Même liste que script-src pour les navigateurs supportant script-src-elem
+              "script-src-elem 'self' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://js.stripe.com https://js-eu1.hsforms.net https://js.hsforms.net https://js-eu1.hs-scripts.com https://js.hs-scripts.com https://js-eu1.hs-analytics.net https://js.hs-analytics.net https://js-eu1.hs-banner.com https://js.hs-banner.com https://js-eu1.hscollectedforms.net https://js.hscollectedforms.net",
               
               // Styles - Autoriser les styles inline (nécessaire pour Next.js et les bandeaux)
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn-cookieyes.com https://app.cookieyes.com",
               
-              // Images - Autoriser toutes les images HTTPS et data URIs + GA4/GTM + Google Ads + HubSpot tracking
-              "img-src 'self' data: https: https://www.google.com https://www.google-analytics.com https://www.googletagmanager.com https://cdn-cookieyes.com https://app.cookieyes.com https://track.hubspot.com https://track.hubspot.eu",
+              // Images - Autoriser toutes les images HTTPS et data URIs + GA4/GTM + Google Ads pixels + HubSpot tracking
+              "img-src 'self' data: https: https://www.google.com https://www.google-analytics.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://track.hubspot.com https://track.hubspot.eu",
               
               // Connexions - Autoriser les appels API nécessaires (Supabase + GA4 + GTM + Google Ads + CookieYes + Stripe + HubSpot)
-              "connect-src 'self' https://*.supabase.co https://api.maydai.io https://www.google.com https://region1.google-analytics.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://cookieyes.com https://cdn-cookieyes.com https://app.cookieyes.com https://log.cookieyes.com https://api.cookieyes.com https://widget.cookieyes.com https://api.stripe.com https://api.hsforms.com https://forms.hubspot.com https://forms-eu1.hsforms.com https://forms-eu1.hscollectedforms.net https://hscollectedforms.net https://api.hubspot.com https://api.hubapi.com",
+              "connect-src 'self' https://*.supabase.co https://api.maydai.io https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://region1.google-analytics.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.googletagmanager.com https://cookieyes.com https://cdn-cookieyes.com https://app.cookieyes.com https://log.cookieyes.com https://api.cookieyes.com https://widget.cookieyes.com https://api.stripe.com https://api.hsforms.com https://forms.hubspot.com https://forms-eu1.hsforms.com https://forms-eu1.hscollectedforms.net https://hscollectedforms.net https://api.hubspot.com https://api.hubapi.com",
               
               // Polices - Autoriser les polices personnalisées et Google Fonts
               "font-src 'self' data: https://fonts.gstatic.com https://cdn-cookieyes.com https://app.cookieyes.com",
