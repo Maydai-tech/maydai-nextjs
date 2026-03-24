@@ -1,8 +1,13 @@
 /**
- * Template de formatage standardisé pour les rapports de conformité AI Act
- * Structure fixe permettant à Cursor de gérer automatiquement la mise en page
+ * Template et instructions de formatage pour les rapports de conformité AI Act.
+ *
+ * Le format cible est un JSON strict avec les 9 clés d'action directes.
+ * Le template Markdown legacy est conservé pour référence / affichage.
  */
 
+/**
+ * Template Markdown legacy — conservé pour le rendu visuel des anciens rapports.
+ */
 export const COMPLIANCE_REPORT_TEMPLATE = `
 # Recommandations et plan d'action
 
@@ -42,59 +47,58 @@ export const COMPLIANCE_REPORT_TEMPLATE = `
 `
 
 /**
- * Instructions de formatage pour l'Assistant OpenAI
- * Spécifie exactement comment structurer la réponse
+ * Instructions JSON strictes pour les nouvelles générations de rapports.
+ * Utilisé dans buildCompleteAnalysisPrompt (openai-client.ts).
+ * Conservé ici comme référence — le prompt réel est inline dans openai-client.ts.
+ */
+export const JSON_SCHEMA_KEYS = [
+  'introduction_contextuelle',
+  'evaluation_risque',
+  'quick_win_1',
+  'quick_win_2',
+  'quick_win_3',
+  'priorite_1',
+  'priorite_2',
+  'priorite_3',
+  'action_1',
+  'action_2',
+  'action_3',
+  'impact_attendu',
+  'conclusion',
+] as const
+
+/**
+ * Instructions de formatage legacy (Markdown).
+ * Conservé pour le workflow buildStandardizedPrompt (ancien format).
  */
 export const FORMATTING_INSTRUCTIONS = `
-**INSTRUCTIONS DE FORMATAGE OBLIGATOIRES :**
+**FORMAT DE SORTIE OBLIGATOIRE — JSON STRICT**
 
-Tu dois suivre EXACTEMENT cette structure Markdown, sans modification :
+Tu DOIS répondre UNIQUEMENT avec un objet JSON valide.
+Aucun texte avant ou après le JSON. Aucun bloc Markdown autour.
 
-1. **Titre principal** : "# Recommandations et plan d'action"
+La structure attendue contient ces clés exactes :
+- "introduction_contextuelle" : texte narratif
+- "evaluation_risque" : objet { "niveau": "...", "justification": "..." }
+- "quick_win_1" : action sur le registre centralisé IA
+- "quick_win_2" : action sur la surveillance humaine
+- "quick_win_3" : action sur les instructions système / prompts
+- "priorite_1" : action sur la documentation technique
+- "priorite_2" : action sur le marquage de transparence
+- "priorite_3" : action sur la qualité des données
+- "action_1" : action sur la gestion des risques
+- "action_2" : action sur la surveillance continue
+- "action_3" : action sur les formations AI Act
+- "impact_attendu" : texte narratif
+- "conclusion" : texte narratif
 
-2. **Introduction contextuelle** : "## Introduction contextuelle"
-   - Texte narratif décrivant le contexte de l'entreprise et du système IA
-
-3. **Évaluation du niveau de risque AI Act** : "## Évaluation du niveau de risque AI Act"
-   - Texte narratif évaluant le niveau de risque spécifique
-
-4. **Mesures importantes de conformité à renseigner :** : "## Mesures importantes de conformité à renseigner :"
-   - **Actions réglementaires et documents techniques** : "### Actions réglementaires et documents techniques"
-   - **Phrase 1.** Suite du texte.
-   - **Phrase 2.** Suite du texte.
-   - **Phrase 3.** Suite du texte.
-
-5. **Actions rapides et concrètes à mettre en œuvre :** : "## Actions rapides et concrètes à mettre en œuvre :"
-   - **Actions immédiates recommandées** : "### Actions immédiates recommandées"
-   - **Phrase 1.** Suite du texte.
-   - **Phrase 2.** Suite du texte.
-   - **Phrase 3.** Suite du texte.
-
-6. **Impact attendu** : "## Impact attendu"
-   - [Texte narratif]
-
-7. **Trois actions structurantes à mener dans les 3 à 6 mois :** : "## Trois actions structurantes à mener dans les 3 à 6 mois :"
-   - **Actions à moyen terme** : "### Actions à moyen terme"
-   - **Sous-titre 1 :** [Texte narratif]
-   - **Sous-titre 2 :** [Texte narratif]
-   - **Sous-titre 3 :** [Texte narratif]
-
-8. **Conclusion** : "## Conclusion"
-   - [Texte narratif]
-
-**RÈGLES STRICTES :**
-- Utilise EXACTEMENT la syntaxe Markdown fournie
-- Respecte EXACTEMENT cette structure
-- Ne modifie pas les titres ou sous-titres
-- Utilise des phrases complètes et professionnelles
-- Adapte le contenu selon l'entreprise et le système IA analysé
-- Utilise **texte en gras** pour les phrases d'action importantes
-- Utilise # pour les titres principaux, ## pour les sections, ### pour les sous-sections
+Chaque action doit être un texte UNIQUE, AUTONOME et SPÉCIFIQUE (2 à 4 phrases).
+Deux actions ne doivent JAMAIS avoir un contenu similaire.
 `
 
 /**
- * Template de prompt pour l'Assistant OpenAI
- * Intègre la structure de formatage standardisée
+ * Template de prompt legacy pour l'Assistant OpenAI (ancien format simplifié).
+ * Utilisé uniquement par generateComplianceAnalysis (ancien workflow).
  */
 export function buildStandardizedPrompt(
   companyName: string,
@@ -117,7 +121,7 @@ export function buildStandardizedPrompt(
 - Nom du système : ${usecaseName}
 - ID : ${usecaseId}
 
-**IMPORTANT :** 
+**IMPORTANT :**
 - L'entreprise s'appelle "${companyName}"
 - Le système d'IA s'appelle "${usecaseName}"
 - Dans ton analyse, utilise toujours "${companyName}" comme nom de l'entreprise

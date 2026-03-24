@@ -1,30 +1,344 @@
 import { UseCaseNextStepsInput } from './supabase'
 
+const ACTION_KEYS = [
+  'quick_win_1', 'quick_win_2', 'quick_win_3',
+  'priorite_1', 'priorite_2', 'priorite_3',
+  'action_1', 'action_2', 'action_3',
+] as const
+
+type ActionKey = typeof ACTION_KEYS[number]
+
+const SECTION_KEYS = ['introduction', 'evaluation', 'impact', 'conclusion'] as const
+
+export interface ValidationResult {
+  isValid: boolean
+  missingFields: string[]
+  warnings: string[]
+  hasDuplicates: boolean
+  duplicateDetails: string[]
+}
+
 /**
- * Extrait les items en gras avec leur description depuis un paragraphe.
- * Gère le format où tout est dans un seul paragraphe avec plusieurs **items** en gras.
- * Exemple: "Il est essentiel de **compléter la doc** en fournissant... De plus, il est nécessaire de **justifier**..."
- * Retourne un tableau de phrases complètes incluant le contexte avant le gras et la description après.
+ * Calcule la similarité Jaccard entre deux textes (0 = aucun mot commun, 1 = identiques).
+ * Utilisé pour détecter les quasi-doublons entre actions d'un même groupe.
+ */
+export function computeTextSimilarity(a: string, b: string): number {
+  if (!a || !b) return 0
+  const normalize = (s: string) => s.toLowerCase().replace(/[^a-zà-ÿ0-9\s]/g, '')
+  const wordsA = new Set(normalize(a).split(/\s+/).filter(w => w.length > 2))
+  const wordsB = new Set(normalize(b).split(/\s+/).filter(w => w.length > 2))
+  if (wordsA.size === 0 || wordsB.size === 0) return 0
+  const intersection = [...wordsA].filter(w => wordsB.has(w)).length
+  const union = new Set([...wordsA, ...wordsB]).size
+  return union === 0 ? 0 : intersection / union
+}
+
+/**
+ * Point d'entrée principal : détecte le format du rapport et extrait les données structurées.
+ * Priorité : JSON direct (9 clés) > JSON tableaux > Markdown legacy.
+ */
+export function extractNextStepsFromReport(reportText: string): Partial<UseCaseNextStepsInput> {
+  const trimmed = reportText.trim()
+
+  if (trimmed.startsWith('{')) {
+    try {
+      JSON.parse(trimmed)
+      console.log('[nextsteps-parser] Format JSON détecté')
+      return extractNextStepsFromJSON(trimmed)
+    } catch {
+      // JSON invalide, on tente Markdown
+    }
+  }
+
+  if (trimmed.includes('"introduction"') || trimmed.includes('"priorite_1"') || trimmed.includes('"introduction_contextuelle"')) {
+    try {
+      const jsonMatch = trimmed.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        JSON.parse(jsonMatch[0])
+        console.log('[nextsteps-parser] JSON embarqué détecté dans du texte')
+        return extractNextStepsFromJSON(jsonMatch[0])
+      }
+    } catch { /* pas de JSON valide embarqué */ }
+  }
+
+  if (
+    trimmed.includes('## Introduction contextuelle') ||
+    trimmed.includes('### Actions réglementaires et documents techniques') ||
+    trimmed.includes('### Actions immédiates recommandées')
+  ) {
+    console.log('[nextsteps-parser] Format Markdown détecté (legacy)')
+    return extractNextStepsFromMarkdown(trimmed)
+  }
+
+  console.warn('[nextsteps-parser] Format non reconnu, fallback Markdown')
+  return extractNextStepsFromMarkdown(trimmed)
+}
+
+/**
+ * Extraction depuis un rapport JSON.
+ * Gère 3 formats par ordre de priorité :
+ *   1. Clés directes (quick_win_1, priorite_1, action_1...) — format cible
+ *   2. Tableaux (priorites_actions_reglementaires[], quick_wins_actions_immediates[], actions_moyen_terme[])
+ *   3. Clés legacy (introduction, priorite_1 comme anciennes clés plates)
+ */
+export function extractNextStepsFromJSON(reportText: string): Partial<UseCaseNextStepsInput> {
+  try {
+    const json = JSON.parse(reportText)
+    const result: Partial<UseCaseNextStepsInput> = {}
+
+    // --- Sections narratives ---
+    result.introduction = extractString(json.introduction_contextuelle) || extractString(json.introduction)
+    if (result.introduction) {
+      result.introduction = result.introduction.replace(/^##\s*Introduction contextuelle\s*\n?/i, '').trim()
+    }
+
+    if (json.evaluation_risque) {
+      if (typeof json.evaluation_risque === 'string') {
+        result.evaluation = json.evaluation_risque
+      } else if (typeof json.evaluation_risque === 'object') {
+        const niveau = json.evaluation_risque.niveau || ''
+        const justification = json.evaluation_risque.justification || ''
+        result.evaluation = `${niveau}${justification ? ': ' + justification : ''}`.trim()
+      }
+    }
+    if (!result.evaluation && json.evaluation) {
+      result.evaluation = extractString(json.evaluation)
+    }
+
+    result.impact = extractString(json.impact_attendu) || extractString(json.impact)
+    if (result.impact) {
+      result.impact = result.impact.replace(/^##\s*Impact attendu\s*\n?/i, '').trim()
+    }
+
+    const rawConclusion = extractString(json.conclusion)
+    if (rawConclusion) {
+      result.conclusion = rawConclusion.replace(/^##\s*Conclusion\s*\n?/i, '').trim()
+    }
+
+    // --- 9 actions : priorité aux clés directes ---
+    for (const key of ACTION_KEYS) {
+      const val = extractString(json[key])
+      if (val) {
+        result[key] = val
+      }
+    }
+
+    // --- Fallback tableaux si des actions manquent ---
+    fillFromArray(result, json.quick_wins_actions_immediates, ['quick_win_1', 'quick_win_2', 'quick_win_3'])
+    fillFromArray(result, json.priorites_actions_reglementaires, ['priorite_1', 'priorite_2', 'priorite_3'])
+    fillFromArray(result, json.actions_moyen_terme, ['action_1', 'action_2', 'action_3'])
+
+    logParsedActions(result, 'JSON')
+    return result
+  } catch (error) {
+    console.error('[nextsteps-parser] Erreur parsing JSON:', error)
+    return {}
+  }
+}
+
+/**
+ * Extraction legacy depuis un rapport Markdown.
+ * Conservé pour les anciens rapports déjà stockés.
+ */
+export function extractNextStepsFromMarkdown(reportText: string): Partial<UseCaseNextStepsInput> {
+  const result: Partial<UseCaseNextStepsInput> = {}
+
+  const sectionRegex = (heading: string) =>
+    new RegExp(`${heading}\\s*\\n([\\s\\S]*?)(?=\\n##|$)`)
+
+  const introMatch = reportText.match(sectionRegex('## Introduction contextuelle'))
+  if (introMatch) result.introduction = introMatch[1].trim()
+
+  const evalMatch = reportText.match(sectionRegex('## Évaluation du niveau de risque AI Act'))
+  if (evalMatch) result.evaluation = evalMatch[1].trim()
+
+  const impactMatch = reportText.match(sectionRegex('## Impact attendu'))
+  if (impactMatch) result.impact = impactMatch[1].trim()
+
+  const conclusionMatch = reportText.match(sectionRegex('## Conclusion'))
+  if (conclusionMatch) result.conclusion = conclusionMatch[1].trim()
+
+  const subsectionRegex = (heading: string) =>
+    new RegExp(`${heading}\\s*\\n([\\s\\S]*?)(?=\\n###|\\n##|$)`)
+
+  const prioritiesMatch = reportText.match(subsectionRegex('### Actions réglementaires et documents techniques'))
+  if (prioritiesMatch) {
+    const items = extractBoldItemsWithDescription(prioritiesMatch[1])
+    if (items.length >= 1) result.priorite_1 = items[0]
+    if (items.length >= 2) result.priorite_2 = items[1]
+    if (items.length >= 3) result.priorite_3 = items[2]
+  }
+
+  const qwMatch = reportText.match(subsectionRegex('### Actions immédiates recommandées'))
+  if (qwMatch) {
+    const items = extractBoldItemsWithDescription(qwMatch[1])
+    if (items.length >= 1) result.quick_win_1 = items[0]
+    if (items.length >= 2) result.quick_win_2 = items[1]
+    if (items.length >= 3) result.quick_win_3 = items[2]
+  }
+
+  const actionsMatch = reportText.match(subsectionRegex('### Actions à moyen terme'))
+  if (actionsMatch) {
+    const items = extractBoldItemsWithDescription(actionsMatch[1])
+    if (items.length >= 1) result.action_1 = items[0]
+    if (items.length >= 2) result.action_2 = items[1]
+    if (items.length >= 3) result.action_3 = items[2]
+  }
+
+  logParsedActions(result, 'Markdown')
+  return result
+}
+
+/**
+ * Validation stricte des données extraites.
+ * isValid = true seulement si usecase_id + toutes les 9 actions + pas de doublons.
+ */
+export function validateNextStepsData(data: Partial<UseCaseNextStepsInput>): ValidationResult {
+  const missingFields: string[] = []
+  const warnings: string[] = []
+  const duplicateDetails: string[] = []
+  let hasDuplicates = false
+
+  if (!data.usecase_id) {
+    missingFields.push('usecase_id')
+  }
+
+  for (const key of ACTION_KEYS) {
+    if (!data[key]) {
+      missingFields.push(key)
+    }
+  }
+
+  for (const key of SECTION_KEYS) {
+    if (!data[key]) {
+      warnings.push(`Section "${key}" manquante`)
+    }
+  }
+
+  const groups: ActionKey[][] = [
+    ['quick_win_1', 'quick_win_2', 'quick_win_3'],
+    ['priorite_1', 'priorite_2', 'priorite_3'],
+    ['action_1', 'action_2', 'action_3'],
+  ]
+
+  for (const group of groups) {
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        const textA = data[group[i]]
+        const textB = data[group[j]]
+        if (textA && textB) {
+          const similarity = computeTextSimilarity(textA, textB)
+          if (similarity > 0.8) {
+            hasDuplicates = true
+            duplicateDetails.push(
+              `${group[i]} ↔ ${group[j]} : similarité ${Math.round(similarity * 100)}%`
+            )
+          }
+        }
+      }
+    }
+  }
+
+  const actionsMissing = missingFields.filter(f => ACTION_KEYS.includes(f as ActionKey))
+  const isValid = !missingFields.includes('usecase_id') && actionsMissing.length === 0 && !hasDuplicates
+
+  return { isValid, missingFields, warnings, hasDuplicates, duplicateDetails }
+}
+
+/**
+ * Log structuré des résultats d'extraction et de validation.
+ */
+export function logExtractionResults(
+  reportText: string,
+  extractedData: Partial<UseCaseNextStepsInput>,
+  validation: ValidationResult
+): void {
+  const filledActions = ACTION_KEYS.filter(k => !!extractedData[k]).length
+  const filledSections = SECTION_KEYS.filter(k => !!extractedData[k]).length
+
+  console.log('[nextsteps-parser] === RÉSULTATS D\'EXTRACTION ===')
+  console.log(`  Rapport: ${reportText.length} caractères`)
+  console.log(`  Actions remplies: ${filledActions}/9`)
+  console.log(`  Sections narratives: ${filledSections}/4`)
+  console.log(`  Validation: ${validation.isValid ? 'OK' : 'ÉCHEC'}`)
+
+  if (validation.missingFields.length > 0) {
+    console.log('  Champs manquants:', validation.missingFields.join(', '))
+  }
+  if (validation.hasDuplicates) {
+    console.warn('  DOUBLONS DÉTECTÉS:', validation.duplicateDetails.join(' | '))
+  }
+  if (validation.warnings.length > 0) {
+    console.log('  Avertissements:', validation.warnings.join(', '))
+  }
+
+  for (const key of ACTION_KEYS) {
+    const val = extractedData[key]
+    if (val) {
+      console.log(`  ${key}: "${val.substring(0, 80)}${val.length > 80 ? '...' : ''}"`)
+    } else {
+      console.log(`  ${key}: (vide)`)
+    }
+  }
+  console.log('[nextsteps-parser] === FIN ===')
+}
+
+/**
+ * Nettoie et formate le texte extrait.
+ */
+export function cleanExtractedText(text: string): string {
+  return text
+    .replace(/\n\s*\n\s*\n/g, '\n\n')
+    .replace(/^\s+|\s+$/g, '')
+    .replace(/\*\*/g, '')
+    .trim()
+}
+
+// ─── Fonctions utilitaires internes ─────────────────────────────────────────
+
+function extractString(value: unknown): string | undefined {
+  if (typeof value === 'string' && value.trim().length > 0) return value.trim()
+  return undefined
+}
+
+function fillFromArray(
+  result: Partial<UseCaseNextStepsInput>,
+  arr: unknown,
+  keys: ActionKey[]
+): void {
+  if (!Array.isArray(arr)) return
+  for (let i = 0; i < keys.length; i++) {
+    if (!result[keys[i]] && arr[i]) {
+      const val = extractString(arr[i])
+      if (val) result[keys[i]] = val
+    }
+  }
+}
+
+function logParsedActions(result: Partial<UseCaseNextStepsInput>, source: string): void {
+  const filled = ACTION_KEYS.filter(k => !!result[k])
+  console.log(`[nextsteps-parser] Extraction ${source}: ${filled.length}/9 actions extraites`)
+  if (filled.length < 9) {
+    const missing = ACTION_KEYS.filter(k => !result[k])
+    console.warn(`[nextsteps-parser] Actions manquantes: ${missing.join(', ')}`)
+  }
+}
+
+/**
+ * Extraction legacy d'éléments en gras depuis un paragraphe Markdown.
+ * Conservé uniquement pour les rapports Markdown historiques.
  */
 function extractBoldItemsWithDescription(text: string): string[] {
   const items: string[] = []
-
-  // Pattern pour trouver tous les segments **texte** avec leur contexte
-  // On cherche: [contexte optionnel] **titre** [description jusqu'au prochain ** ou fin de phrase]
   const boldPattern = /\*\*([^*]+)\*\*/g
   const matches = [...text.matchAll(boldPattern)]
 
-  if (matches.length === 0) {
-    return items
-  }
+  if (matches.length === 0) return items
 
   for (let i = 0; i < matches.length; i++) {
     const match = matches[i]
     const matchIndex = match.index!
 
-    // Trouver le début de la phrase (après un point ou début du texte)
-    let startIndex = matchIndex
-    // Chercher le dernier marqueur de phrase avant ce match (. ou début de section)
     const textBefore = text.substring(0, matchIndex)
     const lastSentenceEnd = Math.max(
       textBefore.lastIndexOf('. '),
@@ -32,499 +346,128 @@ function extractBoldItemsWithDescription(text: string): string[] {
       textBefore.lastIndexOf('! '),
       textBefore.lastIndexOf('? ')
     )
-    if (lastSentenceEnd !== -1) {
-      startIndex = lastSentenceEnd + 2
-    } else {
-      startIndex = 0
-    }
+    const startIndex = lastSentenceEnd !== -1 ? lastSentenceEnd + 2 : 0
 
-    // Trouver la fin de la description (jusqu'au prochain ** ou fin de phrase)
     const afterBold = text.substring(matchIndex + match[0].length)
     let endOffset = afterBold.length
-
-    // Chercher la fin de la phrase (prochain point suivi d'espace ou de majuscule)
     const sentenceEndMatch = afterBold.match(/\.\s+(?=[A-ZÀ-Ú]|De plus|Par ailleurs|Enfin|En outre|Il est)/)
-    if (sentenceEndMatch && sentenceEndMatch.index !== undefined) {
+    if (sentenceEndMatch?.index !== undefined) {
       endOffset = sentenceEndMatch.index + 1
     }
 
-    // Extraire la phrase complète
     const fullSentence = text.substring(startIndex, matchIndex + match[0].length + endOffset).trim()
-
-    // Nettoyer: enlever les ** pour avoir un texte lisible
-    const cleanedSentence = fullSentence
+    const cleaned = fullSentence
       .replace(/\*\*([^*]+)\*\*/g, '$1')
       .replace(/^\s*[-•]\s*/, '')
       .trim()
 
-    if (cleanedSentence.length > 10) {
-      items.push(cleanedSentence)
-    }
+    if (cleaned.length > 10) items.push(cleaned)
   }
 
   return items
 }
 
-/**
- * Fonction principale qui détecte automatiquement le format du rapport
- * et extrait les données structurées
- */
-export function extractNextStepsFromReport(reportText: string): Partial<UseCaseNextStepsInput> {
-  // Détecter le format JSON en premier (vérifier si c'est un JSON valide)
-  const trimmedText = reportText.trim()
-  if (trimmedText.startsWith('{')) {
-    try {
-      JSON.parse(trimmedText)
-      // C'est un JSON valide, utiliser l'extraction JSON
-      return extractNextStepsFromJSON(trimmedText)
-    } catch {
-      // Pas un JSON valide, continuer avec la détection Markdown
-    }
-  }
-  
-  // Détecter le format Markdown structuré
-  if (reportText.includes('## Introduction contextuelle') || reportText.includes('### Actions réglementaires et documents techniques')) {
-    return extractNextStepsFromMarkdown(reportText)
-  }
-  
-  // Détecter l'ancien format JSON avec les clés attendues
-  if (reportText.includes('"introduction"') || reportText.includes('"priorite_1"')) {
-    return extractNextStepsFromJSON(reportText)
-  }
-  
-  // Format inconnu, essayer l'extraction Markdown par défaut
-  console.warn('⚠️ Format de rapport non reconnu, tentative d\'extraction Markdown')
-  return extractNextStepsFromMarkdown(reportText)
-}
+// ─── Exports legacy (conservés pour compatibilité) ──────────────────────────
 
-/**
- * Extrait les données depuis un rapport au format JSON
- * Gère deux formats JSON :
- * 1. Format ancien avec clés : introduction, priorite_1, priorite_2, etc.
- * 2. Format nouveau avec clés : introduction_contextuelle, priorites_actions_reglementaires (tableau), etc.
- */
-export function extractNextStepsFromJSON(reportText: string): Partial<UseCaseNextStepsInput> {
-  try {
-    // Essayer de parser le JSON
-    const jsonData = JSON.parse(reportText)
-    
-    // Extraire les champs pertinents
-    const result: Partial<UseCaseNextStepsInput> = {}
-    
-    // === FORMAT ANCIEN (clés directes) ===
-    if (jsonData.introduction) {
-      result.introduction = jsonData.introduction
-    }
-    if (jsonData.evaluation) {
-      result.evaluation = jsonData.evaluation
-    }
-    if (jsonData.impact) {
-      result.impact = jsonData.impact
-    }
-    if (jsonData.conclusion) {
-      result.conclusion = jsonData.conclusion
-    }
-    
-    if (jsonData.priorite_1) result.priorite_1 = jsonData.priorite_1
-    if (jsonData.priorite_2) result.priorite_2 = jsonData.priorite_2
-    if (jsonData.priorite_3) result.priorite_3 = jsonData.priorite_3
-    
-    if (jsonData.quick_win_1) result.quick_win_1 = jsonData.quick_win_1
-    if (jsonData.quick_win_2) result.quick_win_2 = jsonData.quick_win_2
-    if (jsonData.quick_win_3) result.quick_win_3 = jsonData.quick_win_3
-    
-    if (jsonData.action_1) result.action_1 = jsonData.action_1
-    if (jsonData.action_2) result.action_2 = jsonData.action_2
-    if (jsonData.action_3) result.action_3 = jsonData.action_3
-    
-    // === FORMAT NOUVEAU (clés avec underscores et tableaux) ===
-    // Introduction contextuelle
-    if (jsonData.introduction_contextuelle && !result.introduction) {
-      // Nettoyer le préfixe Markdown si présent
-      result.introduction = jsonData.introduction_contextuelle
-        .replace(/^## Introduction contextuelle\s*\n?/i, '')
-        .trim()
-    }
-    
-    // Évaluation du risque (peut être un objet ou une string)
-    if (jsonData.evaluation_risque && !result.evaluation) {
-      if (typeof jsonData.evaluation_risque === 'string') {
-        result.evaluation = jsonData.evaluation_risque
-      } else if (typeof jsonData.evaluation_risque === 'object') {
-        const niveau = jsonData.evaluation_risque.niveau || ''
-        const justification = jsonData.evaluation_risque.justification || ''
-        result.evaluation = `${niveau}${justification ? ': ' + justification : ''}`.trim()
-      }
-    }
-    
-    // Priorités d'actions réglementaires (tableau)
-    if (Array.isArray(jsonData.priorites_actions_reglementaires)) {
-      const priorities = jsonData.priorites_actions_reglementaires
-      if (priorities[0] && !result.priorite_1) result.priorite_1 = priorities[0]
-      if (priorities[1] && !result.priorite_2) result.priorite_2 = priorities[1]
-      if (priorities[2] && !result.priorite_3) result.priorite_3 = priorities[2]
-    }
-    
-    // Quick wins & actions immédiates (tableau)
-    if (Array.isArray(jsonData.quick_wins_actions_immediates)) {
-      const quickWins = jsonData.quick_wins_actions_immediates
-      if (quickWins[0] && !result.quick_win_1) result.quick_win_1 = quickWins[0]
-      if (quickWins[1] && !result.quick_win_2) result.quick_win_2 = quickWins[1]
-      if (quickWins[2] && !result.quick_win_3) result.quick_win_3 = quickWins[2]
-    }
-    
-    // Actions à moyen terme (tableau)
-    if (Array.isArray(jsonData.actions_moyen_terme)) {
-      const actions = jsonData.actions_moyen_terme
-      if (actions[0] && !result.action_1) result.action_1 = actions[0]
-      if (actions[1] && !result.action_2) result.action_2 = actions[1]
-      if (actions[2] && !result.action_3) result.action_3 = actions[2]
-    }
-    
-    // Impact attendu
-    if (jsonData.impact_attendu && !result.impact) {
-      // Nettoyer le préfixe Markdown si présent
-      result.impact = jsonData.impact_attendu
-        .replace(/^## Impact attendu\s*\n?/i, '')
-        .trim()
-    }
-    
-    // Conclusion
-    if (jsonData.conclusion && !result.conclusion) {
-      // Nettoyer le préfixe Markdown si présent
-      result.conclusion = jsonData.conclusion
-        .replace(/^## Conclusion\s*\n?/i, '')
-        .trim()
-    }
-    
-    return result
-  } catch (error) {
-    console.error('❌ Erreur parsing JSON:', error)
-    return {}
-  }
-}
-
-/**
- * Extrait les sections structurées d'un rapport Markdown OpenAI
- * et les transforme en format UseCaseNextStepsInput
- */
-export function extractNextStepsFromMarkdown(reportText: string): Partial<UseCaseNextStepsInput> {
-  const result: Partial<UseCaseNextStepsInput> = {}
-  
-  // Extraire l'introduction contextuelle
-  const introductionMatch = reportText.match(/## Introduction contextuelle\s*\n([\s\S]*?)(?=##|$)/)
-  if (introductionMatch) {
-    result.introduction = introductionMatch[1].trim()
-  }
-  
-  // Extraire l'évaluation du niveau de risque
-  const evaluationMatch = reportText.match(/## Évaluation du niveau de risque AI Act\s*\n([\s\S]*?)(?=##|$)/)
-  if (evaluationMatch) {
-    result.evaluation = evaluationMatch[1].trim()
-  }
-  
-  // Extraire l'impact attendu
-  const impactMatch = reportText.match(/## Impact attendu\s*\n([\s\S]*?)(?=##|$)/)
-  if (impactMatch) {
-    result.impact = impactMatch[1].trim()
-  }
-  
-  // Extraire la conclusion
-  const conclusionMatch = reportText.match(/## Conclusion\s*\n([\s\S]*?)(?=##|$)/)
-  if (conclusionMatch) {
-    result.conclusion = conclusionMatch[1].trim()
-  }
-  
-  // Extraire les 3 priorités d'actions réglementaires
-  const prioritiesMatch = reportText.match(/### Actions réglementaires et documents techniques\s*\n([\s\S]*?)(?=###|##|$)/)
-  if (prioritiesMatch) {
-    const prioritiesSection = prioritiesMatch[1]
-    // Extraire les items en gras avec leur description (jusqu'au prochain ** ou fin de phrase)
-    const extractedPriorities = extractBoldItemsWithDescription(prioritiesSection)
-
-    if (extractedPriorities.length >= 1) result.priorite_1 = extractedPriorities[0]
-    if (extractedPriorities.length >= 2) result.priorite_2 = extractedPriorities[1]
-    if (extractedPriorities.length >= 3) result.priorite_3 = extractedPriorities[2]
-  }
-  
-  // Extraire les quick wins & actions immédiates
-  const quickWinsMatch = reportText.match(/### Actions immédiates recommandées\s*\n([\s\S]*?)(?=###|##|$)/)
-  if (quickWinsMatch) {
-    const quickWinsSection = quickWinsMatch[1]
-    // Extraire les items en gras avec leur description (jusqu'au prochain ** ou fin de phrase)
-    const extractedQuickWins = extractBoldItemsWithDescription(quickWinsSection)
-
-    if (extractedQuickWins.length >= 1) result.quick_win_1 = extractedQuickWins[0]
-    if (extractedQuickWins.length >= 2) result.quick_win_2 = extractedQuickWins[1]
-    if (extractedQuickWins.length >= 3) result.quick_win_3 = extractedQuickWins[2]
-  }
-  
-  // Extraire les actions à moyen terme
-  const actionsMatch = reportText.match(/### Actions à moyen terme\s*\n([\s\S]*?)(?=###|##|$)/)
-  if (actionsMatch) {
-    const actionsSection = actionsMatch[1]
-    // Extraire les items en gras avec leur description (jusqu'au prochain ** ou fin de phrase)
-    const extractedActions = extractBoldItemsWithDescription(actionsSection)
-
-    if (extractedActions.length >= 1) result.action_1 = extractedActions[0]
-    if (extractedActions.length >= 2) result.action_2 = extractedActions[1]
-    if (extractedActions.length >= 3) result.action_3 = extractedActions[2]
-  }
-  
-  return result
-}
-
-/**
- * Valide qu'un objet UseCaseNextStepsInput contient les données essentielles
- */
-export function validateNextStepsData(data: Partial<UseCaseNextStepsInput>): {
-  isValid: boolean
-  missingFields: string[]
-  warnings: string[]
-} {
-  const missingFields: string[] = []
-  const warnings: string[] = []
-  
-  // Vérifier les champs obligatoires
-  if (!data.usecase_id) {
-    missingFields.push('usecase_id')
-  }
-  
-  // Vérifier les sections principales
-  if (!data.introduction) {
-    warnings.push('Introduction manquante')
-  }
-  
-  if (!data.evaluation) {
-    warnings.push('Évaluation du niveau de risque manquante')
-  }
-  
-  if (!data.impact) {
-    warnings.push('Impact attendu manquant')
-  }
-  
-  if (!data.conclusion) {
-    warnings.push('Conclusion manquante')
-  }
-  
-  // Vérifier les priorités
-  const prioritiesCount = [data.priorite_1, data.priorite_2, data.priorite_3].filter(Boolean).length
-  if (prioritiesCount < 3) {
-    warnings.push(`Seulement ${prioritiesCount}/3 priorités trouvées`)
-  }
-  
-  // Vérifier les quick wins
-  const quickWinsCount = [data.quick_win_1, data.quick_win_2, data.quick_win_3].filter(Boolean).length
-  if (quickWinsCount < 3) {
-    warnings.push(`Seulement ${quickWinsCount}/3 quick wins trouvés`)
-  }
-  
-  // Vérifier les actions à moyen terme
-  const actionsCount = [data.action_1, data.action_2, data.action_3].filter(Boolean).length
-  if (actionsCount < 3) {
-    warnings.push(`Seulement ${actionsCount}/3 actions à moyen terme trouvées`)
-  }
-  
-  return {
-    isValid: missingFields.length === 0,
-    missingFields,
-    warnings
-  }
-}
-
-/**
- * Nettoie et formate le texte extrait
- */
-export function cleanExtractedText(text: string): string {
-  return text
-    .replace(/\n\s*\n\s*\n/g, '\n\n') // Nettoyer les retours à la ligne multiples
-    .replace(/^\s+|\s+$/g, '') // Supprimer les espaces en début/fin
-    .replace(/\*\*/g, '') // Supprimer les ** restants
-    .trim()
-}
-
-/**
- * Log les résultats de l'extraction pour le debug
- */
-export function logExtractionResults(
-  reportText: string, 
-  extractedData: Partial<UseCaseNextStepsInput>,
-  validation: { isValid: boolean; missingFields: string[]; warnings: string[] }
-): void {
-  console.log('🔍 === RÉSULTATS D\'EXTRACTION ===')
-  console.log('📄 Longueur du rapport:', reportText.length, 'caractères')
-  console.log('📊 Données extraites:', Object.keys(extractedData).length, 'champs')
-  console.log('✅ Validation:', validation.isValid ? 'OK' : 'ERREUR')
-  
-  if (validation.missingFields.length > 0) {
-    console.log('❌ Champs manquants:', validation.missingFields)
-  }
-  
-  if (validation.warnings.length > 0) {
-    console.log('⚠️ Avertissements:', validation.warnings)
-  }
-  
-  // Log des sections extraites
-  console.log('📋 Sections extraites:')
-  if (extractedData.introduction) console.log('  - Introduction:', extractedData.introduction.substring(0, 100) + '...')
-  if (extractedData.evaluation) console.log('  - Évaluation:', extractedData.evaluation.substring(0, 100) + '...')
-  if (extractedData.impact) console.log('  - Impact:', extractedData.impact.substring(0, 100) + '...')
-  if (extractedData.conclusion) console.log('  - Conclusion:', extractedData.conclusion.substring(0, 100) + '...')
-  
-  // Log des priorités
-  console.log('🎯 Priorités:')
-  if (extractedData.priorite_1) console.log('  1.', extractedData.priorite_1)
-  if (extractedData.priorite_2) console.log('  2.', extractedData.priorite_2)
-  if (extractedData.priorite_3) console.log('  3.', extractedData.priorite_3)
-  
-  console.log('🔍 === FIN RÉSULTATS ===')
-}
-
-/**
- * Interface pour les étapes extraites (format simple)
- */
 export interface NextStep {
-  title: string;
-  description: string;
-  priority: 'haute' | 'moyenne' | 'faible' | 'non-spécifiée';
-  deadline?: string;
+  title: string
+  description: string
+  priority: 'haute' | 'moyenne' | 'faible' | 'non-spécifiée'
+  deadline?: string
 }
 
-/**
- * Parse les prochaines étapes depuis un texte de réponse OpenAI
- * Version simplifiée pour l'extraction d'étapes structurées
- */
 export function parseNextSteps(responseText: string): NextStep[] {
-  const steps: NextStep[] = [];
-  const seenTitles = new Set<string>();
-  
-  // Patterns pour détecter les étapes (ordre de priorité)
+  const steps: NextStep[] = []
+  const seenTitles = new Set<string>()
+
   const stepPatterns = [
-    // Format: 1. **Titre** (Priorité : X) - Description
     /(\d+)\.\s*\*\*([^*]+)\*\*\s*\([^)]*[Pp]riorit[ée]\s*:\s*([^)]+)\)[^-\n]*-?\s*([^\n]+)/g,
-    // Format: 1. **Titre** - Description (Échéance : X)
     /(\d+)\.\s*\*\*([^*]+)\*\*\s*-?\s*([^(\n]+?)(?:\s*\([^)]*[Éé]chéance\s*:\s*([^)]+)\))?/g,
-    // Format avec tirets: - **Titre** (Priorité : X)
     /-\s*\*\*([^*]+)\*\*\s*\([^)]*[Pp]riorit[ée]\s*:\s*([^)]+)\)[^-\n]*-?\s*([^\n]+)/g,
-    // Format simple: 1. Titre - Description
     /(\d+)\.\s*([^-\n]+?)\s*-\s*([^\n]+)/g,
-    // Format simple avec tirets: - Titre
-    /-\s*([^-\n]+?)(?:\s*\([^)]*[Éé]chéance\s*:\s*([^)]+)\))?/g
-  ];
-  
+    /-\s*([^-\n]+?)(?:\s*\([^)]*[Éé]chéance\s*:\s*([^)]+)\))?/g,
+  ]
+
   for (const pattern of stepPatterns) {
-    let match;
+    let match
     while ((match = pattern.exec(responseText)) !== null) {
-      let title = '';
-      let description = '';
-      let priority: 'haute' | 'moyenne' | 'faible' | 'non-spécifiée' = 'non-spécifiée';
-      let deadline: string | undefined;
-      
+      let title = ''
+      let description = ''
+      let priority: NextStep['priority'] = 'non-spécifiée'
+      let deadline: string | undefined
+
       if (match.length >= 4) {
-        // Format avec priorité
-        title = match[2] || match[1];
-        description = match[4] || match[3];
-        
-        // Détecter la priorité dans le match complet
-        const fullMatch = match[0].toLowerCase();
+        title = match[2] || match[1]
+        description = match[4] || match[3]
+
+        const fullMatch = match[0].toLowerCase()
         if (fullMatch.includes('haute') || fullMatch.includes('critique') || fullMatch.includes('urgent')) {
-          priority = 'haute';
+          priority = 'haute'
         } else if (fullMatch.includes('moyenne') || fullMatch.includes('important')) {
-          priority = 'moyenne';
+          priority = 'moyenne'
         } else if (fullMatch.includes('faible') || fullMatch.includes('basse')) {
-          priority = 'faible';
+          priority = 'faible'
         }
-        
-        // Détecter l'échéance
-        const deadlineMatch = match[0].match(/(\d+)\s*(semaines?|mois|jours?|semaine)/i);
-        if (deadlineMatch) {
-          deadline = `${deadlineMatch[1]} ${deadlineMatch[2]}`;
-        }
+
+        const deadlineMatch = match[0].match(/(\d+)\s*(semaines?|mois|jours?)/i)
+        if (deadlineMatch) deadline = `${deadlineMatch[1]} ${deadlineMatch[2]}`
       }
-      
+
       if (title && description) {
-        const cleanTitle = title.trim();
-        // Éviter les doublons
+        const cleanTitle = title.trim()
         if (!seenTitles.has(cleanTitle)) {
-          seenTitles.add(cleanTitle);
-          steps.push({
-            title: cleanTitle,
-            description: description.trim(),
-            priority,
-            deadline
-          });
+          seenTitles.add(cleanTitle)
+          steps.push({ title: cleanTitle, description: description.trim(), priority, deadline })
         }
       }
     }
   }
-  
-  // Si aucun pattern n'a fonctionné, essayer une extraction basique
-  if (steps.length === 0) {
-    const basicSteps = extractNextSteps(responseText);
-    return basicSteps;
-  }
-  
-  return steps;
+
+  if (steps.length === 0) return extractNextSteps(responseText)
+  return steps
 }
 
-/**
- * Extraction basique des étapes (fallback)
- */
 export function extractNextSteps(text: string): NextStep[] {
-  const steps: NextStep[] = [];
-  
-  // Chercher des listes numérotées ou à puces
-  const lines = text.split('\n');
-  let currentStep: Partial<NextStep> = {};
-  
+  const steps: NextStep[] = []
+  const lines = text.split('\n')
+  let currentStep: Partial<NextStep> = {}
+
   for (const line of lines) {
-    const trimmedLine = line.trim();
-    
-    // Détecter le début d'une étape
+    const trimmedLine = line.trim()
+
     if (/^\d+\./.test(trimmedLine) || /^-/.test(trimmedLine)) {
-      // Sauvegarder l'étape précédente si elle existe
       if (currentStep.title && currentStep.description) {
         steps.push({
           title: currentStep.title,
           description: currentStep.description,
           priority: currentStep.priority || 'non-spécifiée',
-          deadline: currentStep.deadline
-        });
+          deadline: currentStep.deadline,
+        })
       }
-      
-      // Commencer une nouvelle étape
-      const stepText = trimmedLine.replace(/^\d+\.\s*/, '').replace(/^-\s*/, '');
-      currentStep = {
-        title: stepText,
-        description: '',
-        priority: 'non-spécifiée'
-      };
-      
-      // Détecter la priorité dans le titre
-      const titleLower = stepText.toLowerCase();
-      if (titleLower.includes('haute') || titleLower.includes('critique') || titleLower.includes('urgent')) {
-        currentStep.priority = 'haute';
-      } else if (titleLower.includes('moyenne') || titleLower.includes('important')) {
-        currentStep.priority = 'moyenne';
-      } else if (titleLower.includes('faible') || titleLower.includes('basse')) {
-        currentStep.priority = 'faible';
+      const stepText = trimmedLine.replace(/^\d+\.\s*/, '').replace(/^-\s*/, '')
+      currentStep = { title: stepText, description: '', priority: 'non-spécifiée' }
+
+      const lower = stepText.toLowerCase()
+      if (lower.includes('haute') || lower.includes('critique') || lower.includes('urgent')) {
+        currentStep.priority = 'haute'
+      } else if (lower.includes('moyenne') || lower.includes('important')) {
+        currentStep.priority = 'moyenne'
+      } else if (lower.includes('faible') || lower.includes('basse')) {
+        currentStep.priority = 'faible'
       }
-      
     } else if (currentStep.title && trimmedLine && !trimmedLine.startsWith('##')) {
-      // Continuer la description
-      currentStep.description += (currentStep.description ? ' ' : '') + trimmedLine;
+      currentStep.description += (currentStep.description ? ' ' : '') + trimmedLine
     }
   }
-  
-  // Ajouter la dernière étape
+
   if (currentStep.title && currentStep.description) {
     steps.push({
       title: currentStep.title,
       description: currentStep.description,
       priority: currentStep.priority || 'non-spécifiée',
-      deadline: currentStep.deadline
-    });
+      deadline: currentStep.deadline,
+    })
   }
-  
-  return steps;
+
+  return steps
 }
