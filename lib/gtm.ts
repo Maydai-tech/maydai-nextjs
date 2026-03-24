@@ -94,7 +94,7 @@ export function sendGTMEvent(event: GTMEvent): void {
   window.dataLayer.push(event)
 }
 
-const CONSENT_DELAY_MS = 500
+const CONSENT_DELAY_MS = 1000
 
 /**
  * Pousse un événement dans le dataLayer après un court délai,
