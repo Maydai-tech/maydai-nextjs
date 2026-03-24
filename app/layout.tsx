@@ -79,7 +79,7 @@ export default async function RootLayout({
       <head>
         {/* Meta pour exposer le nonce au client */}
         {nonce && <meta name="csp-nonce" content={nonce} />}
-        {/* Google Consent Mode Script - Doit être chargé AVANT GTM */}
+        {/* Google Consent Mode Script - Doit être chargé AVANT CookieYes et GTM */}
         {process.env.NODE_ENV === 'production' && gtmId && (
           <Script
             id="google-consent-mode"
@@ -103,6 +103,15 @@ export default async function RootLayout({
                 gtag('set', 'url_passthrough', true);
               `,
             }}
+          />
+        )}
+        {/* CookieYes - Bandeau de consentement, appelle gtag('consent','update') quand l'utilisateur accepte */}
+        {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_COOKIEYES_ID && (
+          <Script
+            id="cookieyes"
+            src={`https://cdn-cookieyes.com/client_data/${process.env.NEXT_PUBLIC_COOKIEYES_ID}/script.js`}
+            strategy="beforeInteractive"
+            nonce={nonce}
           />
         )}
 

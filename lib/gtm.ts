@@ -94,11 +94,25 @@ export function sendGTMEvent(event: GTMEvent): void {
   window.dataLayer.push(event)
 }
 
+const CONSENT_DELAY_MS = 500
+
+/**
+ * Pousse un événement dans le dataLayer après un court délai,
+ * laissant le temps à CookieYes de mettre à jour le Consent Mode
+ * via gtag('consent','update') avant que GTM ne traite l'événement.
+ */
+function sendGTMEventAfterConsentDelay(event: GTMEvent): void {
+  if (!isDataLayerAvailable()) return
+  setTimeout(() => {
+    window.dataLayer.push(event)
+  }, CONSENT_DELAY_MS)
+}
+
 export function sendSignUpEvent(
   method: SignUpMethod,
   options?: { userId?: string }
 ): void {
-  sendGTMEvent({
+  sendGTMEventAfterConsentDelay({
     event: 'sign_up',
     method,
     ...(options?.userId && { user_id: options.userId }),
@@ -109,7 +123,7 @@ export function sendLoginEvent(
   method: SignUpMethod,
   options?: { userId?: string }
 ): void {
-  sendGTMEvent({
+  sendGTMEventAfterConsentDelay({
     event: 'login',
     method,
     ...(options?.userId && { user_id: options.userId }),
