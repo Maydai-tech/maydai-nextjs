@@ -222,7 +222,7 @@ export default function ContactPage() {
                 <div className="relative hidden lg:block h-[600px] bg-gray-100 flex items-center justify-center p-4">
                   <div className="relative w-full h-[500px]">
                     <Image
-                      src="/icons/Dashboard MaydAI.png"
+                      src="/icons/dashboard-maydai.png"
                       alt="Dashboard MaydAI - Registre de conformité et Audit IA Act"
                       fill
                       className="object-contain"
