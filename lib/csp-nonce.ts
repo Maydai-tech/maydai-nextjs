@@ -71,7 +71,8 @@ export function createCSPHeader(nonce: string): string {
     // Script elements : même liste pour les navigateurs supportant script-src-elem
     `script-src-elem 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://js-eu1.hsforms.net https://js.hsforms.net https://js-eu1.hs-scripts.com https://js.hs-scripts.com https://js-eu1.hs-analytics.net https://js.hs-analytics.net https://js-eu1.hs-banner.com https://js.hs-banner.com https://js-eu1.hscollectedforms.net https://js.hscollectedforms.net`,
     // Styles : permet inline + domaines externes
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn-cookieyes.com https://app.cookieyes.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn-cookieyes.com https://app.cookieyes.com https://www.googletagmanager.com https://tagmanager.google.com",
+    "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn-cookieyes.com https://app.cookieyes.com https://www.googletagmanager.com https://tagmanager.google.com",
     // Images : tracking pixels, analytics et Google Ads conversion
     "img-src 'self' data: https: https://www.google.com https://www.google-analytics.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://track.hubspot.com https://track.hubspot.eu",
     // Connexions : APIs, logs et Google Ads conversion (CRITIQUE pour formulaires et consentement)

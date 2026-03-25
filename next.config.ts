@@ -104,7 +104,10 @@ const nextConfig: NextConfig = {
               "script-src-elem 'self' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://js.stripe.com https://js-eu1.hsforms.net https://js.hsforms.net https://js-eu1.hs-scripts.com https://js.hs-scripts.com https://js-eu1.hs-analytics.net https://js.hs-analytics.net https://js-eu1.hs-banner.com https://js.hs-banner.com https://js-eu1.hscollectedforms.net https://js.hscollectedforms.net",
               
               // Styles - Autoriser les styles inline (nécessaire pour Next.js et les bandeaux)
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn-cookieyes.com https://app.cookieyes.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn-cookieyes.com https://app.cookieyes.com https://www.googletagmanager.com https://tagmanager.google.com",
+              
+              // Style elements - Même liste pour les navigateurs supportant style-src-elem
+              "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn-cookieyes.com https://app.cookieyes.com https://www.googletagmanager.com https://tagmanager.google.com",
               
               // Images - Autoriser toutes les images HTTPS et data URIs + GA4/GTM + Google Ads pixels + HubSpot tracking
               "img-src 'self' data: https: https://www.google.com https://www.google-analytics.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://track.hubspot.com https://track.hubspot.eu",
