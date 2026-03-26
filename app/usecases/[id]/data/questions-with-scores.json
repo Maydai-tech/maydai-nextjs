@@ -746,7 +746,7 @@
   },
   "E4.N8.Q12": {
     "id": "E4.N8.Q12",
-    "question": "Votre système d'IA est utilisé dans des jeux vidéos ou comme filtre anti-spam ?",
+    "question": "Avez-vous suivi ou mis en place des formations liées à l'IA Act ?",
     "type": "radio",
     "required": true,
     "risk": "minimal",

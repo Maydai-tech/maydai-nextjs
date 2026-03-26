@@ -345,19 +345,19 @@
     },
     "E4.N8.Q12": {
       "code": "E4.N8.Q12",
-      "question_text": "Votre système d'IA est utilisé dans des jeux vidéos ou comme filtre anti-spam ?",
+      "question_text": "Avez-vous suivi ou mis en place des formations liées à l'IA Act ?",
       "type": "radio",
       "status": "minimal",
       "possible_answers": ["Oui", "Non"],
-      "interpretation": "Détermine si le système est exempté des obligations de l'AI Act",
+      "interpretation": "Évalue si des formations IA Act ont été suivies ou mises en place (littératie IA).",
       "quick_wins": [
-        "Vérifier l'éligibilité aux exemptions",
-        "Documenter le statut d'exemption"
+        "Mettre en place une sensibilisation IA Act (Article 4) pour les équipes concernées",
+        "Conserver une preuve des formations (programme, dates, participants)"
       ],
       "priority": 5,
-      "article_concerne": "Article 6 (Approche fondée sur le risque)",
+      "article_concerne": "Article 4 (Littératie en IA)",
       "risk_category": "Privacy & Data Governance",
-      "impact_conformite": "Une réponse 'Oui' suggère un risque minimal"
+      "impact_conformite": "Une réponse 'Non' suggère un manque de maturité sur les exigences de littératie en IA."
     },
     "E5.N9.Q1": {
       "code": "E5.N9.Q1",
