@@ -6,11 +6,12 @@ import { AlertTriangle, Bell, HardDrive, RefreshCw, ShieldCheck } from 'lucide-r
 interface DiskUsage {
   total: string
   used: string
-  available: string
   usePercent: string
+  updatedAt: string
+  free?: string
+  available?: string
   server?: string
   source?: string
-  updatedAt?: string
 }
 
 interface EmailStatus {
@@ -87,27 +88,26 @@ export default function AdminMonitoringPage() {
 
   const usePercentNumber = diskUsage ? parseInt(diskUsage.usePercent.replace('%', ''), 10) : 0
   const usageColorClass =
-    usePercentNumber >= 95
-      ? 'text-red-700'
-      : usePercentNumber >= 90
-        ? 'text-orange-700'
-        : usePercentNumber >= 80
-          ? 'text-amber-700'
-          : 'text-emerald-700'
+    usePercentNumber >= 85 ? 'text-red-700' : usePercentNumber >= 70 ? 'text-orange-700' : 'text-emerald-700'
 
   const usageRingClass =
-    usePercentNumber >= 95
-      ? 'stroke-red-600'
-      : usePercentNumber >= 90
-        ? 'stroke-orange-600'
-        : usePercentNumber >= 80
-          ? 'stroke-amber-600'
-          : 'stroke-emerald-600'
+    usePercentNumber >= 85 ? 'stroke-red-600' : usePercentNumber >= 70 ? 'stroke-orange-600' : 'stroke-emerald-600'
 
   const totalValue = diskUsage ? Number.parseFloat(diskUsage.total.replace(/[^\d.]/g, '')) : 0
   const usedValue = diskUsage ? Number.parseFloat(diskUsage.used.replace(/[^\d.]/g, '')) : 0
-  const availableValue = diskUsage ? Number.parseFloat(diskUsage.available.replace(/[^\d.]/g, '')) : 0
-  const maxBarValue = Math.max(totalValue, usedValue, availableValue, 1)
+  const freeValue = diskUsage
+    ? Number.parseFloat((diskUsage.free ?? diskUsage.available ?? '0').replace(/[^\d.]/g, ''))
+    : 0
+  const maxBarValue = Math.max(totalValue, usedValue, freeValue, 1)
+
+  const formatUpdatedAtFr = (iso: string) => {
+    const date = new Date(iso)
+    if (Number.isNaN(date.getTime())) return iso
+
+    const datePart = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+    const timePart = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h')
+    return `${datePart} à ${timePart}`
+  }
 
   return (
     <div className="space-y-6">
@@ -123,7 +123,14 @@ export default function AdminMonitoringPage() {
       </div>
 
       <section className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900">Occupation disque serveur prod (57.130.47.254)</h2>
+        <div className="flex items-start justify-between gap-4">
+          <h2 className="text-lg font-semibold text-gray-900">Occupation disque serveur prod (57.130.47.254)</h2>
+          {!loadingDiskUsage && diskUsage?.updatedAt && (
+            <p className="text-xs text-gray-400 whitespace-nowrap">
+              Dernière mise à jour : {formatUpdatedAtFr(diskUsage.updatedAt)}
+            </p>
+          )}
+        </div>
         {loadingDiskUsage && <p className="mt-2 text-sm text-gray-600">Chargement...</p>}
         {!loadingDiskUsage && !diskUsage && (
           <p className="mt-2 text-sm text-gray-600">Information indisponible pour le moment.</p>
@@ -156,7 +163,12 @@ export default function AdminMonitoringPage() {
               {[
                 { label: 'Total', value: diskUsage.total, numeric: totalValue, color: 'bg-[#0080A3]' },
                 { label: 'Utilise', value: diskUsage.used, numeric: usedValue, color: 'bg-orange-500' },
-                { label: 'Libre', value: diskUsage.available, numeric: availableValue, color: 'bg-emerald-500' },
+                {
+                  label: 'Libre',
+                  value: diskUsage.free ?? diskUsage.available ?? '—',
+                  numeric: freeValue,
+                  color: 'bg-emerald-500',
+                },
               ].map((item) => (
                 <div key={item.label}>
                   <div className="flex items-center justify-between text-sm mb-1">
@@ -173,12 +185,6 @@ export default function AdminMonitoringPage() {
               ))}
             </div>
           </div>
-        )}
-        {!loadingDiskUsage && diskUsage?.updatedAt && (
-          <p className="mt-2 text-xs text-gray-500">
-            Derniere mise a jour: {new Date(diskUsage.updatedAt).toLocaleString('fr-FR')}
-            {diskUsage.source === 'local' ? ' (fallback local)' : ''}
-          </p>
         )}
       </section>
 
