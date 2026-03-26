@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, Bell, HardDrive, RefreshCw, ShieldCheck } from 'lucide-react'
 
 interface DiskUsage {
-  total: string
-  used: string
+  total: string | number
+  used: string | number
   usePercent: string
   updatedAt: string
-  free?: string
-  available?: string
+  free?: string | number
+  available?: string | number
   server?: string
   source?: string
 }
@@ -93,11 +93,15 @@ export default function AdminMonitoringPage() {
   const usageRingClass =
     usePercentNumber >= 85 ? 'stroke-red-600' : usePercentNumber >= 70 ? 'stroke-orange-600' : 'stroke-emerald-600'
 
-  const totalValue = diskUsage ? Number.parseFloat(diskUsage.total.replace(/[^\d.]/g, '')) : 0
-  const usedValue = diskUsage ? Number.parseFloat(diskUsage.used.replace(/[^\d.]/g, '')) : 0
-  const freeValue = diskUsage
-    ? Number.parseFloat((diskUsage.free ?? diskUsage.available ?? '0').replace(/[^\d.]/g, ''))
-    : 0
+  const sanitizeToNumber = (value: unknown) => {
+    if (typeof value === 'number') return value
+    if (value === null || value === undefined) return 0
+    return Number.parseFloat(value.toString().replace(/[^\d.]/g, ''))
+  }
+
+  const totalValue = sanitizeToNumber(diskUsage?.total)
+  const usedValue = sanitizeToNumber(diskUsage?.used)
+  const freeValue = sanitizeToNumber(diskUsage?.free ?? diskUsage?.available)
   const maxBarValue = Math.max(totalValue, usedValue, freeValue, 1)
 
   const formatUpdatedAtFr = (iso: string) => {
