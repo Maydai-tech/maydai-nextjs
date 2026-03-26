@@ -6,8 +6,8 @@ import { promisify } from 'node:util'
 export const dynamic = 'force-dynamic'
 
 const execAsync = promisify(exec)
-const PROD_DISK_JSON_URL = 'http://57.130.47.254:8080/monitoring/disk.json'
-const PROD_EMAIL_STATUS_JSON_URL = 'http://57.130.47.254:8080/monitoring/email-status.json'
+const PROD_DISK_JSON_URL = 'http://57.130.47.254/monitoring/disk.json'
+const PROD_EMAIL_STATUS_JSON_URL = 'http://57.130.47.254/monitoring/email-status.json'
 
 type ProductionDiskUsage = {
   total: number
