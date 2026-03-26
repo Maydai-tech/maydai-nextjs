@@ -1,3 +1,8 @@
+'use client'
+
+import LiteYouTubeEmbed from 'react-lite-youtube-embed'
+import 'react-lite-youtube-embed/dist/LiteYouTubeEmbed.css'
+
 export default function VideoSection() {
   return (
     <section className="py-16 md:py-24 px-5 sm:px-6 bg-white">
@@ -12,22 +17,20 @@ export default function VideoSection() {
           </p>
         </div>
 
-        {/* YouTube embed */}
-        <div className="mx-auto w-full" style={{ maxWidth: '900px' }}>
-          <iframe
-            width="100%"
-            style={{
-              aspectRatio: '16/9',
-              borderRadius: '12px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-              display: 'block',
-            }}
-            src="https://www.youtube.com/embed/r5uoW_Hbwok?si=z4f54sVaUzeyNF4u&rel=0"
+        <div
+          className="mx-auto w-full overflow-hidden"
+          style={{
+            maxWidth: '900px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+          }}
+        >
+          <LiteYouTubeEmbed
+            id="r5uoW_Hbwok"
             title="Présentation de la plateforme Maydai - Conformité AI Act"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
+            poster="maxresdefault"
+            params="rel=0"
+            webp
           />
         </div>
       </div>
