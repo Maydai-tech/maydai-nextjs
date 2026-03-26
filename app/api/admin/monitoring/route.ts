@@ -3,9 +3,19 @@ import { errorMonitor } from '@/lib/error-monitor'
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 
+export const dynamic = 'force-dynamic'
+
 const execAsync = promisify(exec)
 const PROD_DISK_JSON_URL = 'http://57.130.47.254:8080/monitoring/disk.json'
 const PROD_EMAIL_STATUS_JSON_URL = 'http://57.130.47.254:8080/monitoring/email-status.json'
+
+type ProductionDiskUsage = {
+  total: number
+  used: number
+  free: number
+  usePercent: string
+  updatedAt: string
+}
 
 async function getLocalDiskUsage() {
   const { stdout } = await execAsync('df -h /')
@@ -39,15 +49,16 @@ async function getProductionDiskUsage() {
   if (
     !json ||
     typeof json.usePercent !== 'string' ||
-    typeof json.total !== 'string' ||
-    typeof json.used !== 'string' ||
-    typeof json.available !== 'string'
+    typeof json.updatedAt !== 'string' ||
+    typeof json.total !== 'number' ||
+    typeof json.used !== 'number' ||
+    typeof json.free !== 'number'
   ) {
     throw new Error('Format JSON monitoring invalide')
   }
 
   return {
-    ...json,
+    ...(json as ProductionDiskUsage),
     source: 'production',
   }
 }
@@ -56,8 +67,16 @@ async function getDiskUsage() {
   try {
     return await getProductionDiskUsage()
   } catch (error) {
-    console.error('Erreur lecture disque production, fallback local:', error)
-    return getLocalDiskUsage()
+    // Important: en production (ex: Vercel), `df -h /` reflète le runtime Next.js, pas le serveur 57.130.47.254.
+    // On évite donc d'afficher un "fallback" trompeur.
+    const isDev = process.env.NODE_ENV !== 'production'
+    if (isDev) {
+      console.error('Erreur lecture disque production, fallback local (dev uniquement):', error)
+      return getLocalDiskUsage()
+    }
+
+    console.error('Erreur lecture disque production (pas de fallback en prod):', error)
+    return null
   }
 }
 
