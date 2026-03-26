@@ -17,13 +17,13 @@ export default function TrustLogos() {
         </p>
         <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 lg:gap-16">
           {logos.map((logo) => (
-            <div key={logo.alt} className="flex-shrink-0">
+            <div key={logo.alt} className="relative flex-shrink-0 w-[120px] h-10 md:h-12">
               <Image
                 src={logo.src}
                 alt={logo.alt}
-                width={120}
-                height={48}
-                className="h-10 md:h-12 w-auto object-contain grayscale opacity-50 hover:opacity-90 hover:grayscale-0 transition-all duration-300"
+                fill
+                sizes="120px"
+                className="object-contain grayscale opacity-50 hover:opacity-90 hover:grayscale-0 transition-all duration-300"
               />
             </div>
           ))}

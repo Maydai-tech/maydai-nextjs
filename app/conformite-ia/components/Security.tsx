@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { Lock, ShieldCheck, Server } from 'lucide-react'
 
 const points = [
@@ -63,11 +64,15 @@ export default function Security() {
           <h3 className="text-lg font-semibold text-gray-800 mb-6">
             Nos garanties de sécurité
           </h3>
-          <img
-            src="/images/security-badges.png"
-            alt="ISO 27001, SOC 2 Type II, RGPD, OVHcloud, France - certifications de sécurité"
-            className="w-full max-w-[640px] h-auto object-contain mx-auto"
-          />
+          <div className="relative w-full max-w-[640px] h-[80px] mx-auto">
+            <Image
+              src="/images/security-badges.png"
+              alt="Certifications de sécurité : ISO 27001, SOC 2 Type II, RGPD, OVHcloud, hébergement France"
+              fill
+              sizes="(max-width: 768px) 100vw, 640px"
+              className="object-contain"
+            />
+          </div>
           <p className="mt-6 text-gray-600 text-sm sm:text-base italic max-w-2xl mx-auto">
             MaydAI repose sur l&apos;infrastructure OVHcloud certifiée selon les
             normes internationales les plus strictes.

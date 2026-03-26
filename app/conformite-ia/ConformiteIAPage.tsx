@@ -19,14 +19,16 @@ export default function ConformiteIAPage() {
             href="/"
             className="flex items-center hover:opacity-80 transition-opacity"
           >
-            <Image
-              src="/logos/logo-maydai/logo-maydai-complet.png"
-              alt="MaydAI Logo"
-              width={134}
-              height={32}
-              className="h-8 w-auto"
-              priority
-            />
+            <div className="relative w-[134px] h-8">
+              <Image
+                src="/logos/logo-maydai/logo-maydai-complet.png"
+                alt="MaydAI Logo"
+                fill
+                sizes="134px"
+                className="object-contain"
+                priority
+              />
+            </div>
           </Link>
           <Link
             href="/signup"

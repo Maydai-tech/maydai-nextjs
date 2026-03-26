@@ -42,13 +42,15 @@ export default function LandingFooter() {
       <div className="border-t border-gray-100 py-6 px-5 sm:px-6">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <Link href="/" className="hover:opacity-80 transition-opacity">
-            <Image
-              src="/logos/logo-maydai/logo-maydai-complet.png"
-              alt="MaydAI"
-              width={100}
-              height={24}
-              className="h-6 w-auto"
-            />
+            <div className="relative w-[100px] h-6">
+              <Image
+                src="/logos/logo-maydai/logo-maydai-complet.png"
+                alt="MaydAI"
+                fill
+                sizes="100px"
+                className="object-contain object-left"
+              />
+            </div>
           </Link>
           <nav className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
             <Link

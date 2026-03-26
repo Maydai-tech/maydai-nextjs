@@ -21,7 +21,7 @@ export default function HeroSection() {
         alt="Logo conformité IA" 
         width={256}
         height={256}
-        className="absolute right-8 bottom-0 w-40 md:w-64 opacity-30 pointer-events-none select-none"
+        className="absolute right-8 bottom-0 w-40 md:w-64 h-auto opacity-30 pointer-events-none select-none"
         priority
         sizes="(max-width: 768px) 160px, 256px"
       />
