@@ -345,7 +345,7 @@
     },
     "E4.N8.Q12": {
       "code": "E4.N8.Q12",
-      "question_text": "Avez-vous suivi ou mis en place des formations liées à l'IA Act ?",
+      "question_text": "Avez-vous suivi ou mis en place des formations sur l'IA Act ?",
       "type": "radio",
       "status": "minimal",
       "possible_answers": ["Oui", "Non"],
@@ -393,7 +393,7 @@
     },
     "E5.N9.Q3": {
       "code": "E5.N9.Q3",
-      "question_text": "Des mesures d'atténuation des risques sont-elles mises en œuvre et leur efficacité testée ?",
+      "question_text": "Des mesures d'atténuation des risques sont-elles mises en œuvre dans les instructions système (prompt) garantissant que le risque résiduel est acceptable ?",
       "type": "radio",
       "status": "limited",
       "possible_answers": ["Oui", "Non"],
