@@ -28,15 +28,16 @@ export default function SmartLoader({ children }: SmartLoaderProps) {
 
   const isPublicPage = publicPages.some(page => pathname === page || pathname.startsWith(page))
 
-  // Force l'affichage après 2 secondes pour éviter un blocage infini
   useEffect(() => {
+    if (!loading) return
+
     const timer = setTimeout(() => {
       setForceShow(true)
-      console.warn('SmartLoader: Force affichage après timeout')
-    }, 2000)
+      console.log('SmartLoader: Force affichage après timeout')
+    }, 3000)
 
     return () => clearTimeout(timer)
-  }, [])
+  }, [loading])
 
   // Pour les pages publiques, ne pas bloquer l'affichage
   if (isPublicPage) {

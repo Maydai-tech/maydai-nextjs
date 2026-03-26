@@ -84,7 +84,7 @@ export default function TechnologiesSection() {
             alt="Technologie à visage humain - Vision européenne de l'IA éthique"
             width={600}
             height={400}
-            className="rounded-lg shadow-lg object-cover max-w-full h-auto"
+            className="rounded-lg shadow-lg object-cover w-auto max-w-full h-auto"
             priority
           />
         </div>
@@ -106,7 +106,8 @@ export default function TechnologiesSection() {
                   alt={logo.alt}
                   width={logo.width || 140}
                   height={logo.height || 64}
-                  className="h-12 md:h-16 w-auto max-w-[120px] md:max-w-[140px] object-contain filter grayscale opacity-60 hover:opacity-90 hover:grayscale-0 transition-all duration-300"
+                  style={{ width: 'auto', height: 'auto' }}
+                  className="h-12 md:h-16 max-w-[120px] md:max-w-[140px] object-contain filter grayscale opacity-60 hover:opacity-90 hover:grayscale-0 transition-all duration-300"
                 />
               </div>
             ))}
@@ -118,7 +119,8 @@ export default function TechnologiesSection() {
                   alt={logo.alt}
                   width={logo.width || 140}
                   height={logo.height || 64}
-                  className="h-12 md:h-16 w-auto max-w-[120px] md:max-w-[140px] object-contain filter grayscale opacity-60 hover:opacity-90 hover:grayscale-0 transition-all duration-300"
+                  style={{ width: 'auto', height: 'auto' }}
+                  className="h-12 md:h-16 max-w-[120px] md:max-w-[140px] object-contain filter grayscale opacity-60 hover:opacity-90 hover:grayscale-0 transition-all duration-300"
                 />
               </div>
             ))}

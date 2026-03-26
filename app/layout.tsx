@@ -4,7 +4,6 @@ import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import ConditionalLayout from "@/components/ConditionalLayout";
-import GlobalLoader from "@/components/GlobalLoader";
 import SmartLoader from "@/components/SmartLoader";
 import { getNonce } from "@/lib/csp-nonce";
 import GTMPageViewTracker from "@/components/GTMPageViewTracker";
