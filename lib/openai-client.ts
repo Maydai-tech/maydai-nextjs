@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import { buildStandardizedPrompt } from './formatting-template'
+import type { RiskLevelCode } from '@/lib/risk-level'
 
 /**
  * Structure des données d'entrée pour l'analyse OpenAI (ancien format)
@@ -53,6 +54,8 @@ interface OpenAIAnalysisInputComplete {
       deployment_date: string
       status: string
       risk_level: string
+      risk_level_code: RiskLevelCode
+      risk_level_label_fr: string
       ai_category: string
       system_type: string
       responsible_service: string
@@ -460,7 +463,7 @@ ${conditionalDetails}`
 - Description : ${cas_usage.description}
 - Date de déploiement : ${cas_usage.deployment_date}
 - Statut : ${cas_usage.status}
-- Niveau de risque : ${cas_usage.risk_level}
+- Niveau de risque (libellé rapport) : ${cas_usage.risk_level_label_fr}
 - Catégorie d'IA : ${cas_usage.ai_category}
 - Type de système : ${cas_usage.system_type}
 - Service responsable : ${cas_usage.responsible_service}
@@ -487,6 +490,18 @@ ${conditionalDetails}`
     // Construire la section du questionnaire
     const questionnaireSection = this.buildQuestionnaireSection(questionnaire_questions)
 
+    const authoritativeRiskBlock = `
+**NIVEAU DE RISQUE ÉTABLI PAR LE SYSTÈME (AUTORITATIF, NON NÉGOCIABLE)**
+
+Niveau de risque calculé par l'application et fourni au modèle : **${cas_usage.risk_level_label_fr}** (code interne : \`${cas_usage.risk_level_code}\`).
+
+Règles obligatoires :
+- Tu ne dois pas modifier, augmenter ni réduire ce niveau sur la base de ton interprétation.
+- Le champ JSON \`evaluation_risque.niveau\` doit reprendre **exactement** la chaîne suivante, caractère pour caractère : \`${cas_usage.risk_level_label_fr}\`
+- Tu rédiges uniquement la **justification juridique** dans \`evaluation_risque.justification\`, en t'appuyant sur les réponses du questionnaire et le contexte réglementaire.
+- Les 9 actions (quick_win_*, priorite_*, action_*) restent distinctes et spécifiques au cas, comme demandé ci-dessous.
+`
+
     // Instructions de formatage JSON strict avec les 9 clés d'action
     const formattingInstructions = `
 **FORMAT DE SORTIE OBLIGATOIRE — JSON STRICT**
@@ -497,8 +512,8 @@ Aucun texte avant ou après le JSON. Aucun bloc Markdown. Juste le JSON.
 {
   "introduction_contextuelle": "<Paragraphe narratif décrivant le contexte de l'entreprise ${entreprise.name} et du système d'IA ${cas_usage.name} au regard de l'AI Act. 3 à 5 phrases.>",
   "evaluation_risque": {
-    "niveau": "<Risque minimal | Risque limité | Risque élevé | Risque inacceptable>",
-    "justification": "<Justification détaillée du niveau de risque. 2 à 4 phrases.>"
+    "niveau": "<Exactement une des quatre valeurs : Risque minimal | Risque limité | Risque élevé | Interdit — ici obligatoirement : ${cas_usage.risk_level_label_fr}>",
+    "justification": "<Justification juridique du niveau de risque **${cas_usage.risk_level_label_fr}**. 2 à 4 phrases, sans contester ni modifier le niveau.>"
   },
   "quick_win_1": "<Action immédiate sur le REGISTRE CENTRALISÉ IA : initialiser et tenir à jour un registre des systèmes d'IA conformément à l'article 49 de l'AI Act. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
   "quick_win_2": "<Action immédiate sur la SURVEILLANCE HUMAINE : désigner le(s) responsable(s) de la surveillance humaine du système d'IA. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
@@ -520,9 +535,10 @@ Aucun texte avant ou après le JSON. Aucun bloc Markdown. Juste le JSON.
 - Chaque action doit être AUTONOME : compréhensible sans lire les autres
 - Adapte chaque recommandation au contexte spécifique de "${entreprise.name}" et "${cas_usage.name}"
 - N'invente pas de données : base-toi sur les informations du questionnaire ci-dessus
-- Utilise un ton professionnel, précis et actionnable`
+- Utilise un ton professionnel, précis et actionnable
+- Ne jamais utiliser le libellé « Risque inacceptable » dans \`evaluation_risque.niveau\` : pour le niveau le plus sévère, la valeur attendue est **Interdit**`
 
-    return `${baseInfo}\n\n${questionnaireSection}\n\n${formattingInstructions}`.trim()
+    return `${baseInfo}\n\n${authoritativeRiskBlock}\n\n${questionnaireSection}\n\n${formattingInstructions}`.trim()
   }
 
   /**

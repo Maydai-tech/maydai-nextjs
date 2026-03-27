@@ -28,7 +28,7 @@ import {
 } from '@/lib/score-calculator-simple';
 import { recordUseCaseHistory } from '@/lib/usecase-history';
 
-import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json';
+import { deriveRiskLevelFromResponses } from '@/lib/risk-level';
 
 /**
  * Fonction utilitaire pour créer une réponse d'erreur standardisée
@@ -36,74 +36,6 @@ import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json';
 function createErrorResponse(message: string, status: number) {
   console.error(`❌ Erreur API: ${message}`);
   return NextResponse.json({ error: message }, { status });
-}
-
-/**
- * Calcule le niveau de risque basé sur les réponses de l'utilisateur
- * @param responses - Toutes les réponses de l'utilisateur
- * @returns Le niveau de risque le plus élevé
- */
-function calculateRiskLevel(responses: any[]): string {
-  let highestRiskLevel = 'minimal';
-  const riskHierarchy = ['minimal', 'limited', 'high', 'unacceptable'];
-
-  for (const response of responses) {
-    const questionCode = response.question_code;
-    const question = questionsData[questionCode as keyof typeof questionsData];
-    
-    if (!question) continue;
-
-    let selectedRiskLevel: string = 'minimal';
-
-    // Déterminer le niveau de risque basé sur la réponse
-    if (response.single_value) {
-      // Pour les questions radio ou avec une seule valeur
-      const option = question.options?.find((opt: any) => 
-        opt.code === response.single_value || opt.label === response.single_value
-      );
-      
-      if (option && 'risk' in option && option.risk) {
-        selectedRiskLevel = option.risk;
-      }
-    } else if (response.multiple_codes && Array.isArray(response.multiple_codes)) {
-      // Pour les questions multiples, prendre le risque le plus élevé parmi les options sélectionnées
-      for (const code of response.multiple_codes) {
-        const option = question.options?.find((opt: any) => opt.code === code);
-        if (option && 'risk' in option && option.risk) {
-          const optionRisk = option.risk;
-          if (riskHierarchy.indexOf(optionRisk) > riskHierarchy.indexOf(selectedRiskLevel)) {
-            selectedRiskLevel = optionRisk;
-          }
-        }
-      }
-    } else if (response.conditional_main) {
-      // Pour les questions conditionnelles
-      const option = question.options?.find((opt: any) => 
-        opt.code === response.conditional_main || opt.label === response.conditional_main
-      );
-      
-      if (option && 'risk' in option && option.risk) {
-        selectedRiskLevel = option.risk;
-      }
-    }
-
-    // Mettre à jour le niveau de risque le plus élevé
-    if (selectedRiskLevel) {
-      const currentIndex = riskHierarchy.indexOf(highestRiskLevel);
-      const selectedIndex = riskHierarchy.indexOf(selectedRiskLevel);
-      
-      if (selectedIndex > currentIndex) {
-        highestRiskLevel = selectedRiskLevel;
-      }
-
-      // Si on a trouvé "unacceptable", on peut arrêter la recherche
-      if (highestRiskLevel === 'unacceptable') {
-        break;
-      }
-    }
-  }
-
-  return highestRiskLevel;
 }
 
 /**
@@ -381,7 +313,7 @@ export async function POST(
     
     // ===== ÉTAPE 7.5: CALCULER LE NIVEAU DE RISQUE =====
     console.log('🛡️ Calcul du niveau de risque...');
-    const riskLevel = calculateRiskLevel(responses);
+    const riskLevel = deriveRiskLevelFromResponses(responses);
     console.log(`🛡️ Niveau de risque calculé: ${riskLevel}`);
     
     // ===== ÉTAPE 8: MISE À JOUR EN BASE DE DONNÉES =====
