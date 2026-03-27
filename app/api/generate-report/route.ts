@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { transformToOpenAIFormatComplete, validateOpenAIInput } from '@/lib/openai-data-transformer'
+import { transformToOpenAIFormatComplete } from '@/lib/openai-data-transformer'
 import { openAIClient } from '@/lib/openai-client'
 import { extractNextStepsFromReport, validateNextStepsData, logExtractionResults } from '@/lib/nextsteps-parser'
 import { errorMonitor, createErrorReport, createPerformanceMetrics } from '@/lib/error-monitor'
+import {
+  deriveRiskLevelFromResponses,
+  normalizeEvaluationRisqueInReportText,
+  riskLevelCodeToReportLabel,
+  type RiskLevelCode,
+} from '@/lib/risk-level'
 
 // Fonction de retry automatique pour la génération d'analyse avec timeout
 async function generateAnalysisWithRetry(transformedData: any, usecaseId: string, maxRetries: number = 3): Promise<string> {
@@ -193,6 +199,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch questionnaire responses' }, { status: 500 })
     }
 
+    const authoritativeRiskCode: RiskLevelCode = deriveRiskLevelFromResponses(responses || [])
+
+    const { error: riskLevelUpdateError } = await supabase
+      .from('usecases')
+      .update({ risk_level: authoritativeRiskCode })
+      .eq('id', usecase_id)
+
+    if (riskLevelUpdateError) {
+      console.error('[generate-report] Échec mise à jour usecases.risk_level:', riskLevelUpdateError)
+      return NextResponse.json(
+        {
+          error: 'Failed to persist recalculated risk level',
+          details: riskLevelUpdateError.message,
+        },
+        { status: 500 }
+      )
+    }
+
+    const usecaseWithAuthoritativeRisk = {
+      ...usecase,
+      risk_level: authoritativeRiskCode,
+    }
+
     // Extraire les informations d'entreprise
     const company = Array.isArray(usecase.companies) ? usecase.companies[0] : usecase.companies
     const companyName = company?.name || 'MaydAI'
@@ -215,7 +244,7 @@ export async function POST(req: NextRequest) {
     const respondentEmail = responses?.[0]?.answered_by || 'Non disponible'
 
     const transformedData = transformToOpenAIFormatComplete(
-      usecase as any,
+      usecaseWithAuthoritativeRisk as any,
       company,
       model,
       responses || [],
@@ -264,6 +293,15 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       throw error
     }
+
+    const normalizedReport = normalizeEvaluationRisqueInReportText(analysis, authoritativeRiskCode)
+    if (normalizedReport.corrected) {
+      const expected = riskLevelCodeToReportLabel(authoritativeRiskCode)
+      console.warn(
+        `[generate-report] Écart evaluation_risque.niveau (usecase_id=${usecase_id}): modèle="${normalizedReport.previousNiveau ?? '(vide)'}" → corrigé en "${expected}"`
+      )
+    }
+    analysis = normalizedReport.report
 
     const processingTime = Date.now() - startTime
 

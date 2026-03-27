@@ -1,4 +1,10 @@
 import { QUESTIONS_DATA } from './questions-data'
+import {
+  isRiskLevelCode,
+  normalizeToRiskLevelCode,
+  riskLevelCodeToReportLabel,
+  type RiskLevelCode,
+} from '@/lib/risk-level'
 
 interface UseCaseResponse {
   question_code: string
@@ -233,7 +239,12 @@ interface OpenAIAnalysisInputComplete {
       description: string
       deployment_date: string
       status: string
+      /** Libellé français officiel du rapport (ex. « Risque élevé ») */
       risk_level: string
+      /** Code interne : minimal | limited | high | unacceptable */
+      risk_level_code: RiskLevelCode
+      /** Identique à risk_level — champ explicite pour le prompt */
+      risk_level_label_fr: string
       ai_category: string
       system_type: string
       responsible_service: string
@@ -277,7 +288,14 @@ export function transformToOpenAIFormatComplete(
   
   // Construire le questionnaire avec toutes les questions et réponses
   const questionnaireQuestions = buildQuestionnaireQuestions(responses)
-  
+
+  const rawRisk = usecase.risk_level
+  const riskLevelCode: RiskLevelCode =
+    rawRisk && isRiskLevelCode(rawRisk)
+      ? rawRisk
+      : normalizeToRiskLevelCode(rawRisk || '') ?? 'minimal'
+  const riskLevelLabelFr = riskLevelCodeToReportLabel(riskLevelCode)
+
   // Construire les champs de contexte
   const usecaseContextFields = {
     entreprise: {
@@ -293,7 +311,9 @@ export function transformToOpenAIFormatComplete(
       description: usecase.description || 'Non spécifié',
       deployment_date: usecase.deployment_date || 'Non spécifié',
       status: usecase.status,
-      risk_level: usecase.risk_level || 'Non évalué',
+      risk_level: riskLevelLabelFr,
+      risk_level_code: riskLevelCode,
+      risk_level_label_fr: riskLevelLabelFr,
       ai_category: usecase.ai_category || 'Non spécifié',
       system_type: usecase.system_type || 'Non spécifié',
       responsible_service: usecase.responsible_service || 'Non spécifié',
@@ -344,7 +364,7 @@ export function transformToOpenAIFormatComplete(
       "minimal": "Risque minimal - Aucune obligation supplémentaire",
       "limited": "Risque limité - Obligations de transparence",
       "high": "Risque élevé - Obligations complètes de conformité",
-      "unacceptable": "Risque inacceptable - Interdiction d'utilisation"
+      "unacceptable": "Interdit - Interdiction d'utilisation"
     }
   }
 }
