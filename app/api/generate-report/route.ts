@@ -10,6 +10,7 @@ import {
   riskLevelCodeToReportLabel,
   type RiskLevelCode,
 } from '@/lib/risk-level'
+import { computeSlotStatuses, enforceStatusPrefix, SLOT_KEYS } from '@/lib/slot-statuses'
 
 // Fonction de retry automatique pour la génération d'analyse avec timeout
 async function generateAnalysisWithRetry(transformedData: any, usecaseId: string, maxRetries: number = 3): Promise<string> {
@@ -243,6 +244,9 @@ export async function POST(req: NextRequest) {
     // Extraire le profil du répondant
     const respondentEmail = responses?.[0]?.answered_by || 'Non disponible'
 
+    const slotStatuses = computeSlotStatuses(responses || [])
+    console.log(`[generate-report] Slot statuses (code) pour ${usecase_id}:`, slotStatuses)
+
     const transformedData = transformToOpenAIFormatComplete(
       usecaseWithAuthoritativeRisk as any,
       company,
@@ -250,6 +254,7 @@ export async function POST(req: NextRequest) {
       responses || [],
       respondentEmail
     )
+    transformedData.slot_statuses = slotStatuses
 
     // Valider les données transformées (validation simplifiée pour le nouveau format)
     if (!transformedData.usecase_context_fields?.cas_usage?.id) {
@@ -364,6 +369,20 @@ export async function POST(req: NextRequest) {
 
     // Extraire les prochaines étapes structurées du rapport
     const extractedNextSteps = extractNextStepsFromReport(analysis)
+
+    // Post-correction : forcer les préfixes OUI/NON/Information insuffisante
+    // d'après les statuts calculés par le code (filet de sécurité si le LLM désobéit)
+    for (const key of SLOT_KEYS) {
+      const expected = slotStatuses[key]
+      const raw = extractedNextSteps[key]
+      const corrected = enforceStatusPrefix(raw, expected)
+      if (raw !== corrected) {
+        console.warn(
+          `[generate-report] Post-correction ${key}: LLM="${raw?.substring(0, 40)}" → forcé="${corrected.substring(0, 40)}"`
+        )
+      }
+      extractedNextSteps[key] = corrected
+    }
 
     // Ajouter l'usecase_id et les métadonnées aux données extraites
     const nextStepsData = {
