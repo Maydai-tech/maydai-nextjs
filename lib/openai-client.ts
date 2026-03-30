@@ -491,7 +491,9 @@ Préfixe par slot parmi quick_win_* / priorite_* / action_* : « OUI : », « NO
   • system_name n'est pas le nom du cas d'usage ni le nom commercial du produit d'évaluation lorsqu'il désigne l'outil-registre.
 
 - quick_win_2 ← E5.N9.Q8 (surveillance humaine)
-  • « OUI » seulement si supervisor_name ET supervisor_role sont tous deux présents et non vides ; sinon « Information insuffisante : » (ou « NON : » si la réponse principale est clairement négative sans détails).
+  • Réponse principale explicitement « Non » → préfixe « NON : » (obligatoire), y compris sans supervisor_name / supervisor_role ; ne jamais utiliser « Information insuffisante : » à la place.
+  • « OUI : » seulement si la réponse principale est explicitement positive ET supervisor_name ET supervisor_role sont tous deux présents et non vides.
+  • « Information insuffisante : » uniquement si la réponse est absente, vide, ambiguë (impossible de trancher Oui / Non) ou non binaire — pas pour un « Non » explicite faute de détails conditionnels.
 
 - quick_win_3 ← E5.N9.Q3 (prompts / atténuation)
   • Réponse clairement Oui → préfixe OUI :
@@ -507,7 +509,9 @@ Préfixe par slot parmi quick_win_* / priorite_* / action_* : « OUI : », « NO
   • Oui/Non ou Non/Oui → NON :
 
 - priorite_3 ← E5.N9.Q6 (qualité données / procédures)
-  • OUI seulement si procedures_details est renseigné et non vide ; sinon « Information insuffisante : »
+  • Réponse principale explicitement « Non » → préfixe « NON : » (obligatoire), y compris sans procedures_details ; ne jamais utiliser « Information insuffisante : » à la place.
+  • « OUI : » seulement si la réponse principale est positive ET procedures_details est renseigné et non vide.
+  • « Information insuffisante : » uniquement si la réponse est absente, vide, ambiguë ou non binaire — pas pour un « Non » explicite faute de procedures_details.
 
 - action_1 ← E5.N9.Q1 (système de gestion des risques)
   • Réponse vague ou non binaire → « Information insuffisante : »
@@ -516,7 +520,8 @@ Préfixe par slot parmi quick_win_* / priorite_* / action_* : « OUI : », « NO
   • OUI seulement si security_details est renseigné et non vide ; sinon « Information insuffisante : »
 
 - action_3 ← E4.N8.Q12 (formations AI Act)
-  • Non répondu ou vide → « Information insuffisante : »`
+  • Réponse principale explicitement « Non » → préfixe « NON : » (obligatoire).
+  • « Information insuffisante : » uniquement si non répondu, vide, ambiguë ou non binaire — jamais pour un « Non » explicite.`
 
     const formatBlock = `
 SORTIE JSON
