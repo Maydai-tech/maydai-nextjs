@@ -539,6 +539,7 @@ SORTIE JSON
         t += `[${q.code}] ${q.question_text}\n`
         if (q.user_response?.answered) {
           if (q.user_response.single_label) t += `  Choix: ${q.user_response.single_label}\n`
+          if (q.user_response.conditional_label) t += `  Choix: ${q.user_response.conditional_label}\n`
           if (q.user_response.multiple_labels?.length) {
             t += `  Choix: ${q.user_response.multiple_labels.join('; ')}\n`
           }
