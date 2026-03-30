@@ -440,155 +440,142 @@ ${conditionalDetails}`
   }
 
   /**
-   * Construit le prompt d'analyse complet pour le nouveau format
+   * Construit le prompt d'analyse complet pour le nouveau format (PHASE 1 — slots canoniques, ton factuel).
    * @param data - Données complètes du cas d'usage et réponses au questionnaire
    * @returns string - Prompt formaté prêt à être envoyé à l'assistant
    */
   private buildCompleteAnalysisPrompt(data: OpenAIAnalysisInputComplete): string {
     const { usecase_context_fields, questionnaire_questions } = data
     const { entreprise, cas_usage, technologie, repondant, scores } = usecase_context_fields
+    const scoreFinal = scores.score_final
 
-    // Construire la section des informations de base
-    const baseInfo = `**ANALYSE DE CONFORMITÉ IA ACT - SECTION 3**
+    const factsBlock = `DONNÉES CONTEXTUELLES (factuelles — ne pas inventer au-delà de ce bloc et du questionnaire ci-dessous)
 
-**Informations de l'entreprise :**
-- Nom de l'entreprise : ${entreprise.name}
-- Secteur d'activité : ${entreprise.industry}
-- Localisation : ${entreprise.city}, ${entreprise.country}
-- Statut dans la chaîne de valeur IA : ${entreprise.company_status}
+Entreprise: ${entreprise.name} | Secteur: ${entreprise.industry} | ${entreprise.city}, ${entreprise.country} | Rôle chaîne de valeur: ${entreprise.company_status}
 
-**Informations du système d'IA :**
-- Nom du système : ${cas_usage.name}
-- ID : ${cas_usage.id}
-- Description : ${cas_usage.description}
-- Date de déploiement : ${cas_usage.deployment_date}
-- Statut : ${cas_usage.status}
-- Niveau de risque (libellé rapport) : ${cas_usage.risk_level_label_fr}
-- Catégorie d'IA : ${cas_usage.ai_category}
-- Type de système : ${cas_usage.system_type}
-- Service responsable : ${cas_usage.responsible_service}
-- Pays de déploiement : ${cas_usage.deployment_countries.join(', ')}
+Système d'IA: ${cas_usage.name} (id: ${cas_usage.id})
+Description: ${cas_usage.description}
+Déploiement: ${cas_usage.deployment_date} | Statut cas: ${cas_usage.status}
+Pays: ${cas_usage.deployment_countries.join(', ')} | Service: ${cas_usage.responsible_service}
+Catégorie / type: ${cas_usage.ai_category} | ${cas_usage.system_type}
 
-**Informations technologiques :**
-- Partenaire technologique : ${technologie.technology_partner}
-- Version du modèle LLM : ${technologie.llm_model_version}
-- Nom du modèle : ${technologie.model_name}
-- Fournisseur du modèle : ${technologie.model_provider}
-- Type de modèle : ${technologie.model_type}
+Technologie: ${technologie.technology_partner} | LLM: ${technologie.llm_model_version} | Modèle: ${technologie.model_name} (${technologie.model_provider}, ${technologie.model_type})
 
-**Profil du répondant :**
-- Profil : ${repondant.profile}
-- Situation : ${repondant.situation}
+Répondant: ${repondant.profile} | ${repondant.situation}
 
-**Scores de conformité :**
-- Score de base : ${scores.score_base}
-- Score du modèle : ${scores.score_model || 'Non calculé'}
-- Score final : ${scores.score_final || 'Non calculé'}
-- Système éliminé : ${scores.is_eliminated ? 'Oui' : 'Non'}
-- Raison d'élimination : ${scores.elimination_reason || 'N/A'}`
+Scores (indicatifs — ne déterminent pas le niveau): base ${scores.score_base} | modèle ${scores.score_model ?? 'N/A'} | final ${scoreFinal ?? 'N/A'}
+Éliminé: ${scores.is_eliminated ? 'oui' : 'non'} | Motif: ${scores.elimination_reason || 'N/A'}`
 
-    // Construire la section du questionnaire
-    const questionnaireSection = this.buildQuestionnaireSection(questionnaire_questions)
+    const questionnaireSection = this.buildQuestionnaireSectionForPhase1(questionnaire_questions)
 
     const authoritativeRiskBlock = `
-**NIVEAU DE RISQUE ÉTABLI PAR LE SYSTÈME (AUTORITATIF, NON NÉGOCIABLE)**
+NIVEAU DE RISQUE (PHASE 1 — AUTORITATIF)
+- Le niveau est fourni exclusivement par l'application. Tu ne le recalcules jamais et tu ne le modifies pas.
+- JSON evaluation_risque.niveau doit être EXACTEMENT cette chaîne, caractère pour caractère : "${cas_usage.risk_level_label_fr}"
+- evaluation_risque.justification : explique pourquoi ce niveau est cohérent avec les réponses de **qualification du risque** (domaines d'usage, exclusions, contexte du cas) déjà présentes dans le questionnaire — sans jamais les utiliser pour **changer** le niveau.
+- INTERDIT d'utiliser les réponses des questions E5.N9.* ou E6.N10.* pour conclure ou inférer le niveau de risque (ces questions alimentent des slots d'action, pas la classification).
+- INTERDIT d'inventer des éléments qui imposeraient un « Risque limité » (ou autre) si le questionnaire de qualification ne les contient pas : pas de triggers ou scénarios absents des réponses.
+- Le score final affiché (${scoreFinal ?? 'N/A'}/100) est purement informatif dans ce message ; il ne constitue pas une preuve à invoquer pour « prouver » le niveau, et ne remplace pas les faits de qualification.`
 
-Niveau de risque calculé par l'application et fourni au modèle : **${cas_usage.risk_level_label_fr}** (code interne : \`${cas_usage.risk_level_code}\`).
+    const slotMappingBlock = `
+CARTOGRAPHIE CANONIQUE DES 9 SLOTS (PHASE 1)
+Remplis chaque slot UNIQUEMENT à partir des réponses indiquées ; si la condition d'un « OUI » n'est pas remplie, utilise « Information insuffisante » ou « NON » selon les règles.
 
-Règles obligatoires :
-- Tu ne dois pas modifier, augmenter ni réduire ce niveau sur la base de ton interprétation.
-- Le champ JSON \`evaluation_risque.niveau\` doit reprendre **exactement** la chaîne suivante, caractère pour caractère : \`${cas_usage.risk_level_label_fr}\`
-- Tu rédiges uniquement la **justification juridique** dans \`evaluation_risque.justification\`, en t'appuyant sur les réponses du questionnaire et le contexte réglementaire.
-- Les 9 actions (quick_win_*, priorite_*, action_*) restent distinctes et spécifiques au cas, comme demandé ci-dessous.
-`
+- quick_win_1 ← question E5.N9.Q7 (registre)
+  • Réponse principale « Non » (Q7 = Non) → préfixe « NON : ».
+  • Réponse principale « Oui » (Q7 = Oui) :
+    – « OUI : » si au moins un des champs conditionnels suivants est renseigné et non vide : registry_type (type du registre) OU system_name (nom de l'outil / système utilisé comme registre). L'un ou l'autre suffit ; ne jamais exiger les deux.
+    – « Information insuffisante : » si Q7 = Oui mais que registry_type ET system_name sont tous deux absents ou vides.
+  • Réponse principale absente ou ambiguë (impossible de trancher Oui / Non) → « Information insuffisante : ».
+  • system_name n'est pas le nom du cas d'usage ni le nom commercial du produit d'évaluation lorsqu'il désigne l'outil-registre.
 
-    // Instructions de formatage JSON strict avec les 9 clés d'action
-    const formattingInstructions = `
-**FORMAT DE SORTIE OBLIGATOIRE — JSON STRICT**
+- quick_win_2 ← E5.N9.Q8 (surveillance humaine)
+  • « OUI » seulement si supervisor_name ET supervisor_role sont tous deux présents et non vides ; sinon « Information insuffisante : » (ou « NON : » si la réponse principale est clairement négative sans détails).
 
-Tu DOIS répondre UNIQUEMENT avec un objet JSON valide respectant EXACTEMENT cette structure.
-Aucun texte avant ou après le JSON. Aucun bloc Markdown. Juste le JSON.
+- quick_win_3 ← E5.N9.Q3 (prompts / atténuation)
+  • Réponse clairement Oui → préfixe OUI :
+  • Réponse clairement Non → préfixe NON :
+  • Partiellement, Prompts dispersés, En cours, ou toute réponse non binaire → « Information insuffisante : »
 
-{
-  "introduction_contextuelle": "<Paragraphe narratif décrivant le contexte de l'entreprise ${entreprise.name} et du système d'IA ${cas_usage.name} au regard de l'AI Act. 3 à 5 phrases.>",
-  "evaluation_risque": {
-    "niveau": "<Exactement une des quatre valeurs : Risque minimal | Risque limité | Risque élevé | Interdit — ici obligatoirement : ${cas_usage.risk_level_label_fr}>",
-    "justification": "<Justification juridique du niveau de risque **${cas_usage.risk_level_label_fr}**. 2 à 4 phrases, sans contester ni modifier le niveau.>"
-  },
-  "quick_win_1": "<Action immédiate sur le REGISTRE CENTRALISÉ IA : initialiser et tenir à jour un registre des systèmes d'IA conformément à l'article 49 de l'AI Act. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
-  "quick_win_2": "<Action immédiate sur la SURVEILLANCE HUMAINE : désigner le(s) responsable(s) de la surveillance humaine du système d'IA. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
-  "quick_win_3": "<Action immédiate sur les INSTRUCTIONS SYSTÈME / PROMPTS : définir et documenter les instructions système, les prompts et les garde-fous du système d'IA. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
-  "priorite_1": "<Action réglementaire sur la DOCUMENTATION TECHNIQUE : constituer ou compléter la documentation technique exigée par l'AI Act. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
-  "priorite_2": "<Action réglementaire sur le MARQUAGE DE TRANSPARENCE : mettre en place les marquages et obligations de transparence envers les utilisateurs. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
-  "priorite_3": "<Action réglementaire sur la QUALITÉ DES DONNÉES : évaluer et documenter la qualité, la pertinence et la gouvernance des données d'entraînement et d'exploitation. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
-  "action_1": "<Action moyen terme sur la GESTION DES RISQUES : élaborer un plan de gestion des risques couvrant les risques identifiés et les mesures d'atténuation. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
-  "action_2": "<Action moyen terme sur la SURVEILLANCE CONTINUE : établir un plan de surveillance continue des performances et de la conformité du système d'IA. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
-  "action_3": "<Action moyen terme sur les FORMATIONS AI ACT : recenser et planifier les formations nécessaires pour les équipes impliquées dans le déploiement et l'utilisation du système. Texte autonome, spécifique au cas analysé. 2 à 4 phrases.>",
-  "impact_attendu": "<Paragraphe décrivant l'impact attendu de la mise en œuvre de ces 9 actions sur la conformité et la performance de l'entreprise. 2 à 4 phrases.>",
-  "conclusion": "<Paragraphe de conclusion résumant les priorités et les prochaines étapes. 2 à 4 phrases.>"
-}
+- priorite_1 ← E5.N9.Q4 (documentation technique)
+  • Si la réponse correspond à « Documentation en cours » ou « Documentation non formalisée » (ou équivalent) → « Information insuffisante : »
 
-**RÈGLES ABSOLUES :**
-- Réponds UNIQUEMENT en JSON valide, sans texte autour
-- Chaque clé d'action (quick_win_*, priorite_*, action_*) doit contenir un texte UNIQUE et DISTINCT
-- Deux actions ne doivent JAMAIS contenir le même contenu ou des paragraphes similaires
-- Chaque action doit être AUTONOME : compréhensible sans lire les autres
-- Adapte chaque recommandation au contexte spécifique de "${entreprise.name}" et "${cas_usage.name}"
-- N'invente pas de données : base-toi sur les informations du questionnaire ci-dessus
-- Utilise un ton professionnel, précis et actionnable
-- Ne jamais utiliser le libellé « Risque inacceptable » dans \`evaluation_risque.niveau\` : pour le niveau le plus sévère, la valeur attendue est **Interdit**`
+- priorite_2 ← combinaison E6.N10.Q1 et E6.N10.Q2 (information utilisateurs + marquage contenu)
+  • Oui/Oui → OUI :
+  • Non/Non → NON :
+  • Oui/Non ou Non/Oui → NON :
 
-    return `${baseInfo}\n\n${authoritativeRiskBlock}\n\n${questionnaireSection}\n\n${formattingInstructions}`.trim()
+- priorite_3 ← E5.N9.Q6 (qualité données / procédures)
+  • OUI seulement si procedures_details est renseigné et non vide ; sinon « Information insuffisante : »
+
+- action_1 ← E5.N9.Q1 (système de gestion des risques)
+  • Réponse vague ou non binaire → « Information insuffisante : »
+
+- action_2 ← E5.N9.Q9 (exactitude / robustesse / cybersécurité)
+  • OUI seulement si security_details est renseigné et non vide ; sinon « Information insuffisante : »
+
+- action_3 ← E4.N8.Q12 (formations AI Act)
+  • Non répondu ou vide → « Information insuffisante : »`
+
+    const formatBlock = `
+SORTIE : un seul objet JSON UTF-8 valide, sans texte avant ou après, sans markdown, sans commentaires.
+
+Clés obligatoires (exactement ces noms) :
+introduction_contextuelle, evaluation_risque { niveau, justification }, quick_win_1 … quick_win_3, priorite_1 … priorite_3, action_1 … action_3, impact_attendu, conclusion
+
+Aucune de ces clés ne doit être une chaîne vide.
+
+Obligation spécifique — impact_attendu et conclusion :
+- impact_attendu et conclusion sont OBLIGATOIRES.
+- Ils ne doivent JAMAIS être des chaînes vides (pas même "" ou uniquement des espaces).
+- Tu dois les produire systématiquement, y compris lorsque plusieurs ou tous les slots parmi les 9 sont « Information insuffisante : » (résumer alors l'état global des preuves / prochaines vérifications sans inventer de faits).
+
+introduction_contextuelle : 1 à 2 phrases maximum, faits utiles uniquement, pas d'introduction de rapport (« Ce rapport », « Dans le cadre », « L'objectif de cet audit » interdits).
+
+evaluation_risque.justification : 2 à 4 phrases, ton sobre, sans reclasser le risque, sans s'appuyer sur E5.N9.* ni E6.N10.* pour établir le niveau.
+
+Pour chacun des 9 slots (quick_win_*, priorite_*, action_*) :
+- Commence EXACTEMENT par un des trois préfixes : « OUI : », « NON : », ou « Information insuffisante : » (avec espace après les deux-points).
+- Enchaîne avec une explication concrète basée sur les réponses du questionnaire (pas de recommandations prescriptives si la réponse est déjà positive et suffisante — dans ce cas OUI : confirmer l'état et ce qui manque éventuellement pour la preuve).
+- Termine TOUJOURS par une ligne ou segment « Références : … » listant les codes de questions et champs utilisés (ex. E5.N9.Q7, system_name).
+
+impact_attendu : 1 à 3 phrases, perspective effet des états décrits dans les 9 slots (pas de liste générique de bonnes pratiques).
+
+conclusion : 1 à 3 phrases, prochaine étape factuelle, sans ton rapport d'audit.
+
+Règles JSON :
+- evaluation_risque.niveau = "${cas_usage.risk_level_label_fr}" exactement.
+- Ne jamais utiliser « Risque inacceptable » dans niveau : utiliser « Interdit » pour le cas le plus sévère.
+- Les 9 slots doivent avoir des contenus distincts (pas de copier-coller entre champs).`
+
+    return `${factsBlock}\n\n${questionnaireSection}\n\n${authoritativeRiskBlock}\n\n${slotMappingBlock}\n\n${formatBlock}`.trim()
   }
 
   /**
-   * Construit la section du questionnaire complet
-   * @param questionnaireQuestions - Toutes les questions et réponses du questionnaire
-   * @returns string - Section formatée
+   * Questionnaire réduit pour PHASE 1 : réponses déclarées uniquement (pas d'interprétation métier ni d'articles injectés).
    */
-  private buildQuestionnaireSection(questionnaireQuestions: Record<string, any>): string {
-    let questionnaireText = "**DONNÉES DU QUESTIONNAIRE COMPLET :**\n\n"
-    
-    // Grouper les questions par catégorie de risque
-    const questionsByCategory = this.groupQuestionsByCategory(questionnaireQuestions)
-    
-    Object.entries(questionsByCategory).forEach(([category, questions]) => {
-      questionnaireText += `**${category} :**\n`
-      
-      questions.forEach((question: any) => {
-        questionnaireText += `\n**${question.code} - ${question.question_text}**\n`
-        questionnaireText += `Type : ${question.type} | Statut : ${question.status} | Priorité : ${question.priority}\n`
-        questionnaireText += `Interprétation : ${question.interpretation}\n`
-        
-        if (question.user_response && question.user_response.answered) {
-          questionnaireText += `Réponse de l'utilisateur :\n`
-          
-          if (question.user_response.single_value) {
-            questionnaireText += `- ${question.user_response.single_label}\n`
+  private buildQuestionnaireSectionForPhase1(questionnaireQuestions: Record<string, any>): string {
+    let t = 'QUESTIONNAIRE — RÉPONSES DÉCLARÉES (seule source pour appliquer les règles des slots)\n\n'
+    const byCat = this.groupQuestionsByCategory(questionnaireQuestions)
+    for (const [, questions] of Object.entries(byCat)) {
+      for (const q of questions as any[]) {
+        t += `[${q.code}] ${q.question_text}\n`
+        if (q.user_response?.answered) {
+          if (q.user_response.single_label) t += `  Choix: ${q.user_response.single_label}\n`
+          if (q.user_response.multiple_labels?.length) {
+            t += `  Choix: ${q.user_response.multiple_labels.join('; ')}\n`
           }
-          
-          if (question.user_response.multiple_labels && question.user_response.multiple_labels.length > 0) {
-            questionnaireText += `- ${question.user_response.multiple_labels.join(', ')}\n`
-          }
-          
-          if (question.user_response.conditional_data && Object.keys(question.user_response.conditional_data).length > 0) {
-            questionnaireText += `- Détails : ${Object.entries(question.user_response.conditional_data).map(([key, value]) => `${key}: ${value}`).join(', ')}\n`
+          const cd = q.user_response.conditional_data
+          if (cd && Object.keys(cd).length) {
+            t += `  Champs: ${Object.entries(cd).map(([k, v]) => `${k}=${v}`).join('; ')}\n`
           }
         } else {
-          questionnaireText += `- Aucune réponse fournie\n`
+          t += `  (non répondu)\n`
         }
-        
-        if (question.quick_wins && question.quick_wins.length > 0) {
-          questionnaireText += `Quick wins : ${question.quick_wins.join(', ')}\n`
-        }
-        
-        questionnaireText += `Article concerné : ${question.article_concerne}\n`
-        questionnaireText += `Impact conformité : ${question.impact_conformite}\n`
-        questionnaireText += `---\n`
-      })
-    })
-    
-    return questionnaireText
+        t += '\n'
+      }
+    }
+    return t.trimEnd()
   }
 
   /**
