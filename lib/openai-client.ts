@@ -440,7 +440,8 @@ ${conditionalDetails}`
   }
 
   /**
-   * Construit le prompt d'analyse complet pour le nouveau format (PHASE 1 — slots canoniques, ton factuel).
+   * Construit le prompt d'analyse complet pour le nouveau format (PHASE 1 — faits, questionnaire, règles métier, schéma JSON).
+   * La formulation des champs texte est supposée être guidée par les instructions système de l'assistant.
    * @param data - Données complètes du cas d'usage et réponses au questionnaire
    * @returns string - Prompt formaté prêt à être envoyé à l'assistant
    */
@@ -449,7 +450,7 @@ ${conditionalDetails}`
     const { entreprise, cas_usage, technologie, repondant, scores } = usecase_context_fields
     const scoreFinal = scores.score_final
 
-    const factsBlock = `DONNÉES CONTEXTUELLES (factuelles — ne pas inventer au-delà de ce bloc et du questionnaire ci-dessous)
+    const factsBlock = `DONNÉES CONTEXTUELLES (ne pas extrapoler hors de ce bloc ni du questionnaire)
 
 Entreprise: ${entreprise.name} | Secteur: ${entreprise.industry} | ${entreprise.city}, ${entreprise.country} | Rôle chaîne de valeur: ${entreprise.company_status}
 
@@ -463,23 +464,23 @@ Technologie: ${technologie.technology_partner} | LLM: ${technologie.llm_model_ve
 
 Répondant: ${repondant.profile} | ${repondant.situation}
 
-Scores (indicatifs — ne déterminent pas le niveau): base ${scores.score_base} | modèle ${scores.score_model ?? 'N/A'} | final ${scoreFinal ?? 'N/A'}
+Scores (indicatifs, ne fixent pas le niveau): base ${scores.score_base} | modèle ${scores.score_model ?? 'N/A'} | final ${scoreFinal ?? 'N/A'}
 Éliminé: ${scores.is_eliminated ? 'oui' : 'non'} | Motif: ${scores.elimination_reason || 'N/A'}`
 
     const questionnaireSection = this.buildQuestionnaireSectionForPhase1(questionnaire_questions)
 
     const authoritativeRiskBlock = `
-NIVEAU DE RISQUE (PHASE 1 — AUTORITATIF)
-- Le niveau est fourni exclusivement par l'application. Tu ne le recalcules jamais et tu ne le modifies pas.
-- JSON evaluation_risque.niveau doit être EXACTEMENT cette chaîne, caractère pour caractère : "${cas_usage.risk_level_label_fr}"
-- evaluation_risque.justification : explique pourquoi ce niveau est cohérent avec les réponses de **qualification du risque** (domaines d'usage, exclusions, contexte du cas) déjà présentes dans le questionnaire — sans jamais les utiliser pour **changer** le niveau.
-- INTERDIT d'utiliser les réponses des questions E5.N9.* ou E6.N10.* pour conclure ou inférer le niveau de risque (ces questions alimentent des slots d'action, pas la classification).
-- INTERDIT d'inventer des éléments qui imposeraient un « Risque limité » (ou autre) si le questionnaire de qualification ne les contient pas : pas de triggers ou scénarios absents des réponses.
-- Le score final affiché (${scoreFinal ?? 'N/A'}/100) est purement informatif dans ce message ; il ne constitue pas une preuve à invoquer pour « prouver » le niveau, et ne remplace pas les faits de qualification.`
+NIVEAU DE RISQUE (AUTORITATIF — APPLICATION)
+- Niveau fourni par l'application : ne pas le recalculer ni le modifier.
+- evaluation_risque.niveau = chaîne exacte : "${cas_usage.risk_level_label_fr}"
+- evaluation_risque.justification : s'appuyer uniquement sur la qualification du risque déjà dans le questionnaire ; ne pas inférer un autre niveau à partir de cette justification.
+- Ne pas utiliser E5.N9.* ni E6.N10.* pour déduire ou justifier le niveau de risque (slots d'action uniquement).
+- Ne pas inventer des faits de qualification absents du questionnaire.
+- Score final ${scoreFinal ?? 'N/A'}/100 : informatif seul, pas substitut aux faits de qualification.`
 
     const slotMappingBlock = `
-CARTOGRAPHIE CANONIQUE DES 9 SLOTS (PHASE 1)
-Remplis chaque slot UNIQUEMENT à partir des réponses indiquées ; si la condition d'un « OUI » n'est pas remplie, utilise « Information insuffisante » ou « NON » selon les règles.
+MAPPING DES 9 SLOTS (règles métier — source = questionnaire ci-dessus)
+Préfixe par slot parmi quick_win_* / priorite_* / action_* : « OUI : », « NON : » ou « Information insuffisante : » (espace après ':'), conformément aux critères suivants.
 
 - quick_win_1 ← question E5.N9.Q7 (registre)
   • Réponse principale « Non » (Q7 = Non) → préfixe « NON : ».
@@ -518,44 +519,20 @@ Remplis chaque slot UNIQUEMENT à partir des réponses indiquées ; si la condit
   • Non répondu ou vide → « Information insuffisante : »`
 
     const formatBlock = `
-SORTIE : un seul objet JSON UTF-8 valide, sans texte avant ou après, sans markdown, sans commentaires.
-
-Clés obligatoires (exactement ces noms) :
-introduction_contextuelle, evaluation_risque { niveau, justification }, quick_win_1 … quick_win_3, priorite_1 … priorite_3, action_1 … action_3, impact_attendu, conclusion
-
-Aucune de ces clés ne doit être une chaîne vide.
-
-Obligation spécifique — impact_attendu et conclusion :
-- impact_attendu et conclusion sont OBLIGATOIRES.
-- Ils ne doivent JAMAIS être des chaînes vides (pas même "" ou uniquement des espaces).
-- Tu dois les produire systématiquement, y compris lorsque plusieurs ou tous les slots parmi les 9 sont « Information insuffisante : » (résumer alors l'état global des preuves / prochaines vérifications sans inventer de faits).
-
-introduction_contextuelle : 1 à 2 phrases maximum, faits utiles uniquement, pas d'introduction de rapport (« Ce rapport », « Dans le cadre », « L'objectif de cet audit » interdits).
-
-evaluation_risque.justification : 2 à 4 phrases, ton sobre, sans reclasser le risque, sans s'appuyer sur E5.N9.* ni E6.N10.* pour établir le niveau.
-
-Pour chacun des 9 slots (quick_win_*, priorite_*, action_*) :
-- Commence EXACTEMENT par un des trois préfixes : « OUI : », « NON : », ou « Information insuffisante : » (avec espace après les deux-points).
-- Enchaîne avec une explication concrète basée sur les réponses du questionnaire (pas de recommandations prescriptives si la réponse est déjà positive et suffisante — dans ce cas OUI : confirmer l'état et ce qui manque éventuellement pour la preuve).
-- Termine TOUJOURS par une ligne ou segment « Références : … » listant les codes de questions et champs utilisés (ex. E5.N9.Q7, system_name).
-
-impact_attendu : 1 à 3 phrases, perspective effet des états décrits dans les 9 slots (pas de liste générique de bonnes pratiques).
-
-conclusion : 1 à 3 phrases, prochaine étape factuelle, sans ton rapport d'audit.
-
-Règles JSON :
-- evaluation_risque.niveau = "${cas_usage.risk_level_label_fr}" exactement.
-- Ne jamais utiliser « Risque inacceptable » dans niveau : utiliser « Interdit » pour le cas le plus sévère.
-- Les 9 slots doivent avoir des contenus distincts (pas de copier-coller entre champs).`
+SORTIE JSON
+- Un seul objet JSON UTF-8, parsable ; pas de markdown ni de texte hors de l'objet.
+- Clés obligatoires (noms inchangés) : introduction_contextuelle, evaluation_risque { niveau, justification }, quick_win_1, quick_win_2, quick_win_3, priorite_1, priorite_2, priorite_3, action_1, action_2, action_3, impact_attendu, conclusion
+- Toutes les valeurs chaîne non vides (espaces seuls interdits). impact_attendu et conclusion obligatoires même si plusieurs des 9 slots sont « Information insuffisante : ».
+- evaluation_risque.niveau : "${cas_usage.risk_level_label_fr}" exactement ; ne pas utiliser la formulation « Risque inacceptable » dans niveau (utiliser « Interdit » si cas maximal).`
 
     return `${factsBlock}\n\n${questionnaireSection}\n\n${authoritativeRiskBlock}\n\n${slotMappingBlock}\n\n${formatBlock}`.trim()
   }
 
   /**
-   * Questionnaire réduit pour PHASE 1 : réponses déclarées uniquement (pas d'interprétation métier ni d'articles injectés).
+   * Questionnaire réduit pour PHASE 1 : réponses déclarées brutes pour application des règles des slots.
    */
   private buildQuestionnaireSectionForPhase1(questionnaireQuestions: Record<string, any>): string {
-    let t = 'QUESTIONNAIRE — RÉPONSES DÉCLARÉES (seule source pour appliquer les règles des slots)\n\n'
+    let t = 'QUESTIONNAIRE — RÉPONSES DÉCLARÉES (source des règles slots)\n\n'
     const byCat = this.groupQuestionsByCategory(questionnaireQuestions)
     for (const [, questions] of Object.entries(byCat)) {
       for (const q of questions as any[]) {
