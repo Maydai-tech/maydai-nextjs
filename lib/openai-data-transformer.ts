@@ -5,6 +5,7 @@ import {
   riskLevelCodeToReportLabel,
   type RiskLevelCode,
 } from '@/lib/risk-level'
+import type { SlotStatusMap } from '@/lib/slot-statuses'
 
 interface UseCaseResponse {
   question_code: string
@@ -273,6 +274,7 @@ interface OpenAIAnalysisInputComplete {
   risk_categories: Record<string, string>
   priority_levels: Record<string, string>
   status_levels: Record<string, string>
+  slot_statuses?: SlotStatusMap
 }
 
 /**

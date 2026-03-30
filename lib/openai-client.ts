@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import { buildStandardizedPrompt } from './formatting-template'
 import type { RiskLevelCode } from '@/lib/risk-level'
+import type { SlotStatusMap } from '@/lib/slot-statuses'
 
 /**
  * Structure des données d'entrée pour l'analyse OpenAI (ancien format)
@@ -84,6 +85,7 @@ interface OpenAIAnalysisInputComplete {
   risk_categories: Record<string, string>
   priority_levels: Record<string, string>
   status_levels: Record<string, string>
+  slot_statuses?: SlotStatusMap
 }
 
 /**
@@ -478,50 +480,40 @@ NIVEAU DE RISQUE (AUTORITATIF — APPLICATION)
 - Ne pas inventer des faits de qualification absents du questionnaire.
 - Score final ${scoreFinal ?? 'N/A'}/100 : informatif seul, pas substitut aux faits de qualification.`
 
-    const slotMappingBlock = `
-MAPPING DES 9 SLOTS (règles métier — source = questionnaire ci-dessus)
-Préfixe par slot parmi quick_win_* / priorite_* / action_* : « OUI : », « NON : » ou « Information insuffisante : » (espace après ':'), conformément aux critères suivants.
+    const statuses = data.slot_statuses
+    const slotMappingBlock = statuses
+      ? `
+STATUTS DES 9 SLOTS (AUTORITATIFS — calculés par l'application, NE PAS MODIFIER)
+Chaque slot DOIT commencer par le préfixe exact indiqué ci-dessous, suivi de " : " (espace-deux-points-espace), puis d'un texte explicatif contextualisé (2-4 phrases).
+Ne pas changer le préfixe. Ne pas ajouter de nuance sur le statut. Ne pas contredire le statut dans le texte.
 
-- quick_win_1 ← question E5.N9.Q7 (registre)
-  • Réponse principale « Non » (Q7 = Non) → préfixe « NON : ».
-  • Réponse principale « Oui » (Q7 = Oui) :
-    – « OUI : » si au moins un des champs conditionnels suivants est renseigné et non vide : registry_type (type du registre) OU system_name (nom de l'outil / système utilisé comme registre). L'un ou l'autre suffit ; ne jamais exiger les deux.
-    – « Information insuffisante : » si Q7 = Oui mais que registry_type ET system_name sont tous deux absents ou vides.
-  • Réponse principale absente ou ambiguë (impossible de trancher Oui / Non) → « Information insuffisante : ».
-  • system_name n'est pas le nom du cas d'usage ni le nom commercial du produit d'évaluation lorsqu'il désigne l'outil-registre.
+quick_win_1 → ${statuses.quick_win_1}
+quick_win_2 → ${statuses.quick_win_2}
+quick_win_3 → ${statuses.quick_win_3}
+priorite_1 → ${statuses.priorite_1}
+priorite_2 → ${statuses.priorite_2}
+priorite_3 → ${statuses.priorite_3}
+action_1 → ${statuses.action_1}
+action_2 → ${statuses.action_2}
+action_3 → ${statuses.action_3}
 
-- quick_win_2 ← E5.N9.Q8 (surveillance humaine)
-  • Réponse principale explicitement « Non » → préfixe « NON : » (obligatoire), y compris sans supervisor_name / supervisor_role ; ne jamais utiliser « Information insuffisante : » à la place.
-  • « OUI : » seulement si la réponse principale est explicitement positive ET supervisor_name ET supervisor_role sont tous deux présents et non vides.
-  • « Information insuffisante : » uniquement si la réponse est absente, vide, ambiguë (impossible de trancher Oui / Non) ou non binaire — pas pour un « Non » explicite faute de détails conditionnels.
+Contexte des slots :
+- quick_win_1 : registre centralisé IA (E5.N9.Q7)
+- quick_win_2 : surveillance humaine (E5.N9.Q8)
+- quick_win_3 : instructions système / prompts (E5.N9.Q3)
+- priorite_1 : documentation technique (E5.N9.Q4)
+- priorite_2 : information utilisateurs + marquage contenu (E6.N10.Q1 + Q2)
+- priorite_3 : qualité des données / procédures (E5.N9.Q6)
+- action_1 : système de gestion des risques (E5.N9.Q1)
+- action_2 : exactitude, robustesse, cybersécurité (E5.N9.Q9)
+- action_3 : formations AI Act (E4.N8.Q12)
 
-- quick_win_3 ← E5.N9.Q3 (prompts / atténuation)
-  • Réponse clairement Oui → préfixe OUI :
-  • Réponse clairement Non → préfixe NON :
-  • Partiellement, Prompts dispersés, En cours, ou toute réponse non binaire → « Information insuffisante : »
-
-- priorite_1 ← E5.N9.Q4 (documentation technique)
-  • Si la réponse correspond à « Documentation en cours » ou « Documentation non formalisée » (ou équivalent) → « Information insuffisante : »
-
-- priorite_2 ← combinaison E6.N10.Q1 et E6.N10.Q2 (information utilisateurs + marquage contenu)
-  • Oui/Oui → OUI :
-  • Non/Non → NON :
-  • Oui/Non ou Non/Oui → NON :
-
-- priorite_3 ← E5.N9.Q6 (qualité données / procédures)
-  • Réponse principale explicitement « Non » → préfixe « NON : » (obligatoire), y compris sans procedures_details ; ne jamais utiliser « Information insuffisante : » à la place.
-  • « OUI : » seulement si la réponse principale est positive ET procedures_details est renseigné et non vide.
-  • « Information insuffisante : » uniquement si la réponse est absente, vide, ambiguë ou non binaire — pas pour un « Non » explicite faute de procedures_details.
-
-- action_1 ← E5.N9.Q1 (système de gestion des risques)
-  • Réponse vague ou non binaire → « Information insuffisante : »
-
-- action_2 ← E5.N9.Q9 (exactitude / robustesse / cybersécurité)
-  • OUI seulement si security_details est renseigné et non vide ; sinon « Information insuffisante : »
-
-- action_3 ← E4.N8.Q12 (formations AI Act)
-  • Réponse principale explicitement « Non » → préfixe « NON : » (obligatoire).
-  • « Information insuffisante : » uniquement si non répondu, vide, ambiguë ou non binaire — jamais pour un « Non » explicite.`
+Pour chaque slot, rédiger un texte explicatif basé sur les réponses du questionnaire ci-dessus.
+Exemple de format attendu pour un slot dont le statut est NON :
+"NON : L'organisation n'a pas encore mis en place de mécanisme de surveillance humaine. Il est recommandé de désigner un responsable dédié."`
+      : `
+MAPPING DES 9 SLOTS — statuts non fournis, déduire des réponses.
+Préfixe par slot : « OUI : », « NON : » ou « Information insuffisante : ».`
 
     const formatBlock = `
 SORTIE JSON
