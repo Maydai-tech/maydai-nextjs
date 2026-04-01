@@ -212,7 +212,7 @@ const KNOWN_PREFIXES = ['OUI : ', 'NON : ', 'Information insuffisante : ']
  * Force le préfixe d'un texte de slot à correspondre au statut attendu.
  * Retire tout préfixe existant et remet le bon.
  */
-export function enforceStatusPrefix(text: string | undefined, expectedStatus: SlotStatus): string {
+export function enforceStatusPrefix(text: string | null | undefined, expectedStatus: SlotStatus): string {
   if (!text) return `${expectedStatus} : `
 
   let cleaned = text

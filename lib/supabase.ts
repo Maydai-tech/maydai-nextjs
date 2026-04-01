@@ -273,20 +273,20 @@ export interface UseCaseNextSteps {
   interdit_2?: string | null
   interdit_3?: string | null
   
-  // Actions réglementaires et documents techniques
-  priorite_1?: string
-  priorite_2?: string
-  priorite_3?: string
+  // Actions réglementaires et documents techniques (null en base pour risque inacceptable)
+  priorite_1?: string | null
+  priorite_2?: string | null
+  priorite_3?: string | null
   
   // Quick wins & actions immédiates
-  quick_win_1?: string
-  quick_win_2?: string
-  quick_win_3?: string
+  quick_win_1?: string | null
+  quick_win_2?: string | null
+  quick_win_3?: string | null
   
   // Actions à moyen terme
-  action_1?: string
-  action_2?: string
-  action_3?: string
+  action_1?: string | null
+  action_2?: string | null
+  action_3?: string | null
   
   // Métadonnées
   generated_at: string
@@ -308,15 +308,15 @@ export interface UseCaseNextStepsInput {
   interdit_1?: string | null
   interdit_2?: string | null
   interdit_3?: string | null
-  priorite_1?: string
-  priorite_2?: string
-  priorite_3?: string
-  quick_win_1?: string
-  quick_win_2?: string
-  quick_win_3?: string
-  action_1?: string
-  action_2?: string
-  action_3?: string
+  priorite_1?: string | null
+  priorite_2?: string | null
+  priorite_3?: string | null
+  quick_win_1?: string | null
+  quick_win_2?: string | null
+  quick_win_3?: string | null
+  action_1?: string | null
+  action_2?: string | null
+  action_3?: string | null
   model_version?: string
   processing_time_ms?: number
 }
