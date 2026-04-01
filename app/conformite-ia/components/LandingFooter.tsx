@@ -3,6 +3,28 @@ import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 
 export default function LandingFooter() {
+  const handleFooterFreeTrialClick = () => {
+    if (typeof window !== 'undefined') {
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({
+        event: 'click_button',
+        button_intent: 'essai_gratuit',
+        button_location: 'footer',
+      })
+    }
+  }
+
+  const handleFooterDemoClick = () => {
+    if (typeof window !== 'undefined') {
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({
+        event: 'click_button',
+        button_intent: 'demande_demo',
+        button_location: 'footer',
+      })
+    }
+  }
+
   return (
     <footer className="bg-white">
       {/* Final CTA */}
@@ -20,6 +42,7 @@ export default function LandingFooter() {
               <Link
                 href="/signup"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0080a3] text-white font-semibold text-lg px-8 py-4 rounded-full shadow-lg hover:bg-[#006280] hover:shadow-xl transition-all duration-300"
+                onClick={handleFooterFreeTrialClick}
               >
                 Démarrer l&apos;essai gratuit
                 <ArrowRight className="w-5 h-5" />
@@ -27,6 +50,7 @@ export default function LandingFooter() {
               <Link
                 href="/contact"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-gray-700 font-semibold text-lg px-8 py-4 rounded-full border border-gray-300 shadow-md hover:bg-gray-50 hover:shadow-lg transition-all duration-300"
+                onClick={handleFooterDemoClick}
               >
                 Demander une démo
               </Link>

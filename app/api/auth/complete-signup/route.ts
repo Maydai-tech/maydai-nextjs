@@ -103,20 +103,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate phone (required)
-    if (!phone || typeof phone !== 'string' || phone.trim() === '') {
-      return NextResponse.json(
-        { error: 'Le numéro de téléphone est obligatoire' },
-        { status: 400 }
-      )
-    }
+    // Validate phone (optional)
+    let cleanedPhone: string | null = null
+    if (phone !== undefined && phone !== null && phone !== '') {
+      if (typeof phone !== 'string') {
+        return NextResponse.json(
+          { error: 'Le numéro de téléphone doit être une chaîne de caractères' },
+          { status: 400 }
+        )
+      }
 
-    const cleanedPhone = phone.replace(/[\s.-]/g, '')
-    if (cleanedPhone.length < 10) {
-      return NextResponse.json(
-        { error: 'Le numéro de téléphone doit contenir au moins 10 chiffres' },
-        { status: 400 }
-      )
+      cleanedPhone = phone.replace(/[\s.-]/g, '')
+      if (cleanedPhone.length > 0 && cleanedPhone.length < 10) {
+        return NextResponse.json(
+          { error: 'Le numéro de téléphone doit contenir au moins 10 chiffres' },
+          { status: 400 }
+        )
+      }
     }
 
     // Create/update profile with all signup data

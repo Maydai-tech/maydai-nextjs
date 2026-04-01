@@ -10,6 +10,17 @@ import Security from './components/Security'
 import LandingFooter from './components/LandingFooter'
 
 export default function ConformiteIAPage() {
+  const handleHeaderCtaClick = () => {
+    if (typeof window !== 'undefined') {
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({
+        event: 'click_button',
+        button_intent: 'essai_gratuit',
+        button_location: 'header',
+      })
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Minimal landing header — logo only, no nav leak */}
@@ -33,6 +44,7 @@ export default function ConformiteIAPage() {
           <Link
             href="/signup"
             className="text-sm font-semibold text-white bg-[#0080a3] px-5 py-2 rounded-full hover:bg-[#006280] transition-colors"
+            onClick={handleHeaderCtaClick}
           >
             Essai gratuit
           </Link>

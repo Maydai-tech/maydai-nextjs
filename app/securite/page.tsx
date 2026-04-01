@@ -5,17 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Header from '@/components/site-vitrine/Header';
 import Footer from '@/components/site-vitrine/Footer';
+import SecurityLogosGrid from '@/components/ui/SecurityLogosGrid';
 import { Server, Lock, Shield, ChevronDown } from 'lucide-react';
-
-// Données des certifications
-const certifications = [
-  { src: '/icons_sec/ISOIEC_27001.webp', alt: 'ISO/IEC 27001 - Sécurité de l\'information', label: 'ISO 27001' },
-  { src: '/icons_sec/Soc_1.webp', alt: 'SOC 1 Type II - Contrôles financiers', label: 'SOC 1' },
-  { src: '/icons_sec/Soc_2.webp', alt: 'SOC 2 Type II - Contrôles de sécurité', label: 'SOC 2' },
-  { src: '/icons_sec/RGPD_Certif.webp', alt: 'RGPD - Conformité européenne', label: 'RGPD' },
-  { src: '/icons_sec/Webcloud_1.webp', alt: 'OVHcloud - Hébergeur européen', label: 'OVHcloud' },
-  { src: '/icons_sec/FR_Hosting.webp', alt: 'Hébergé en France - Souveraineté des données', label: 'France' },
-];
 
 // Données des blocs principaux
 const securityBlocks = [
@@ -103,24 +94,7 @@ export default function SecuritePage() {
             <h2 className="text-center text-sm font-semibold text-gray-500 uppercase tracking-wider mb-8">
               Nos Garanties de Sécurité
             </h2>
-            <div className="flex flex-wrap justify-center items-center gap-6 md:gap-10 lg:gap-14">
-              {certifications.map((cert, index) => (
-                <div 
-                  key={index} 
-                  className="flex flex-col items-center group transition-transform hover:scale-105"
-                >
-                  <div className="w-16 h-16 md:w-20 md:h-20 relative mb-2 grayscale hover:grayscale-0 transition-all duration-300">
-                    <Image
-                      src={cert.src}
-                      alt={cert.alt}
-                      fill
-                      className="object-contain"
-                    />
-                  </div>
-                  <span className="text-xs text-gray-500 font-medium">{cert.label}</span>
-                </div>
-              ))}
-            </div>
+            <SecurityLogosGrid />
             <p className="text-center text-sm text-gray-500 mt-8 max-w-2xl mx-auto">
               <em>MaydAI repose sur l&apos;infrastructure OVHcloud certifiée selon les normes internationales les plus strictes.</em>
             </p>
