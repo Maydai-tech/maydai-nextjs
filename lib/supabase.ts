@@ -268,6 +268,11 @@ export interface UseCaseNextSteps {
   impact?: string
   conclusion?: string
   
+  // Cas de risque inacceptable (AI Act)
+  interdit_1?: string | null
+  interdit_2?: string | null
+  interdit_3?: string | null
+  
   // Actions réglementaires et documents techniques
   priorite_1?: string
   priorite_2?: string
@@ -300,6 +305,9 @@ export interface UseCaseNextStepsInput {
   evaluation?: string
   impact?: string
   conclusion?: string
+  interdit_1?: string | null
+  interdit_2?: string | null
+  interdit_3?: string | null
   priorite_1?: string
   priorite_2?: string
   priorite_3?: string

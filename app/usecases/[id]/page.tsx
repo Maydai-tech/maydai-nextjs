@@ -591,6 +591,33 @@ export default function UseCaseDetailPage() {
 
             {nextSteps && (
               <div className="space-y-6">
+                {/* Cas de risque inacceptable */}
+                {isUnacceptableCase && (nextSteps.interdit_1 || nextSteps.interdit_2 || nextSteps.interdit_3) && (
+                  <div className="mb-8">
+                    <div className="flex items-center gap-3 mb-4">
+                      <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
+                      <h3 className="text-xl font-semibold text-gray-900">Cas de risque inacceptable</h3>
+                    </div>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <p className="text-sm text-red-800 mb-4">
+                        Ce système est classé comme présentant un risque inacceptable. Les pratiques suivantes sont interdites.
+                      </p>
+                      <ul className="space-y-3 ml-4">
+                        {[nextSteps.interdit_1, nextSteps.interdit_2, nextSteps.interdit_3]
+                          .filter(Boolean)
+                          .map((item, index) => (
+                            <li key={index} className="text-base leading-relaxed text-gray-800">
+                              <div className="flex items-start gap-2">
+                                <span className="text-red-600 text-6xl leading-none mt-[-0.3em]">•</span>
+                                <span className="flex-1 whitespace-pre-line">{item as string}</span>
+                              </div>
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
                 {/* Évaluation du niveau de risque AI Act */}
                 {nextSteps.evaluation && (
                   <div className="mb-8">
@@ -613,7 +640,7 @@ export default function UseCaseDetailPage() {
                 )}
 
                 {/* Quick wins */}
-                {nextSteps.quick_win_1 && (
+                {!isUnacceptableCase && nextSteps.quick_win_1 && (
                   <div>
                     <div className="flex items-center gap-3 mb-4">
                       <img
@@ -683,7 +710,7 @@ export default function UseCaseDetailPage() {
                 )}
 
                 {/* Priorités d'actions réglementaires */}
-                {nextSteps.priorite_1 && (
+                {!isUnacceptableCase && nextSteps.priorite_1 && (
                   <div>
                     <div className="flex items-center gap-3 mb-4">
                       <img
@@ -753,7 +780,7 @@ export default function UseCaseDetailPage() {
                 )}
 
                 {/* Actions moyen terme */}
-                {nextSteps.action_1 && (
+                {!isUnacceptableCase && nextSteps.action_1 && (
                   <div>
                     <div className="flex items-center gap-3 mb-4">
                       <img

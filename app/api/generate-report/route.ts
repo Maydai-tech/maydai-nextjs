@@ -385,15 +385,39 @@ export async function POST(req: NextRequest) {
     }
 
     // Ajouter l'usecase_id et les métadonnées aux données extraites
-    const nextStepsData = {
+    const baseNextStepsData = {
       ...extractedNextSteps,
       usecase_id: usecase_id,
       model_version: model?.version || 'openai-gpt-4',
       processing_time_ms: processingTime
     }
 
+    const isUnacceptable = authoritativeRiskCode === 'unacceptable'
+
+    // Cas particulier : risque inacceptable
+    // - On sauvegarde seulement les champs interdit_1..3 (et on garde les sections narratives)
+    // - On force quick_win_*, priorite_*, action_* à NULL pour ne pas afficher de plan d'action
+    const nextStepsData = isUnacceptable
+      ? {
+          ...baseNextStepsData,
+          quick_win_1: null,
+          quick_win_2: null,
+          quick_win_3: null,
+          priorite_1: null,
+          priorite_2: null,
+          priorite_3: null,
+          action_1: null,
+          action_2: null,
+          action_3: null,
+        }
+      : baseNextStepsData
+
     // Valider les données extraites (validation stricte : 9 actions + pas de doublons)
-    const validation = validateNextStepsData(nextStepsData)
+    // Sauf pour le cas "unacceptable" où les 9 slots sont volontairement null.
+    const validation = isUnacceptable
+      ? { isValid: true, missingFields: [], warnings: [], hasDuplicates: false, duplicateDetails: [] }
+      : validateNextStepsData(nextStepsData)
+
     logExtractionResults(analysis, nextStepsData, validation)
 
     let nextStepsSaved = false
