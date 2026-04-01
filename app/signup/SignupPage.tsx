@@ -6,11 +6,10 @@ import Link from 'next/link'
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
-import { validateSIREN, cleanSIREN, formatSIREN } from '@/lib/validation/siren'
 import { sendSignUpEvent } from '@/lib/gtm'
 import OTPVerification from '@/components/auth/OTPVerification'
 import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
-import { User, Building2, Phone, FileText, ArrowRight, CheckCircle, Mail } from 'lucide-react'
+import { User, Building2, ArrowRight, Mail, Info } from 'lucide-react'
 
 type SignupStep = 'form' | 'otp' | 'processing'
 
@@ -21,8 +20,6 @@ interface SignupFormData {
   companyName: string
   mainIndustryId: string
   subCategoryId: string
-  phone: string
-  siren: string
 }
 
 export default function SignupPage() {
@@ -31,7 +28,10 @@ export default function SignupPage() {
   const { signInWithOtp, verifyOtp, user, loading } = useAuth()
 
   // Wizard steps
-  const [step, setStep] = useState<SignupStep>('form')
+  const [signupStep, setSignupStep] = useState<SignupStep>('form')
+
+  // Progressive form steps
+  const [step, setStep] = useState(1)
 
   // Form data
   const [formData, setFormData] = useState<SignupFormData>({
@@ -41,8 +41,6 @@ export default function SignupPage() {
     companyName: '',
     mainIndustryId: '',
     subCategoryId: '',
-    phone: '',
-    siren: '',
   })
 
   // Industry selection state
@@ -55,7 +53,6 @@ export default function SignupPage() {
   // UI state
   const [error, setError] = useState('')
   const [emailError, setEmailError] = useState('')
-  const [sirenError, setSirenError] = useState('')
   const [formLoading, setFormLoading] = useState(false)
   const [checkingEmail, setCheckingEmail] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
@@ -142,22 +139,27 @@ export default function SignupPage() {
     }
   }
 
-  const handleSirenChange = (value: string) => {
-    const cleaned = cleanSIREN(value)
-    setFormData(prev => ({ ...prev, siren: cleaned }))
+  const handleNextStep = () => {
+    setError('')
 
-    // Validate SIREN in real-time
-    if (cleaned && cleaned.length === 9) {
-      if (!validateSIREN(cleaned)) {
-        setSirenError('Numéro SIREN invalide')
-      } else {
-        setSirenError('')
-      }
-    } else if (cleaned.length > 0 && cleaned.length < 9) {
-      setSirenError('Le SIREN doit contenir exactement 9 chiffres')
-    } else {
-      setSirenError('')
+    const firstName = formData.firstName.trim()
+    const lastName = formData.lastName.trim()
+    const email = formData.email.trim()
+
+    if (!firstName || !lastName || !email) {
+      setError('Veuillez remplir tous les champs obligatoires')
+      return
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setEmailError('Format d\'email invalide')
+      return
+    }
+
+    if (emailError) return
+
+    setStep(2)
   }
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -166,10 +168,8 @@ export default function SignupPage() {
     setFormLoading(true)
 
     // Validate required fields
-    const phoneTrimmed = formData.phone.replace(/[\s.-]/g, '')
     if (!formData.email || !formData.firstName || !formData.lastName ||
-      !formData.companyName || !formData.mainIndustryId || !formData.subCategoryId ||
-      !formData.phone.trim()) {
+      !formData.companyName || !formData.mainIndustryId || !formData.subCategoryId) {
       setError('Veuillez remplir tous les champs obligatoires')
       if (!formData.mainIndustryId || !formData.subCategoryId) {
         setIndustryError('Veuillez sélectionner un secteur d\'activité et une sous-catégorie')
@@ -177,22 +177,10 @@ export default function SignupPage() {
       setFormLoading(false)
       return
     }
-    if (phoneTrimmed.length < 10) {
-      setError('Le numéro de téléphone doit contenir au moins 10 chiffres')
-      setFormLoading(false)
-      return
-    }
 
     // Validate terms acceptance
     if (!acceptTerms) {
       setError('Vous devez accepter les Conditions Générales d\'Utilisation')
-      setFormLoading(false)
-      return
-    }
-
-    // Validate SIREN if provided
-    if (formData.siren && !validateSIREN(formData.siren)) {
-      setError('Numéro SIREN invalide')
       setFormLoading(false)
       return
     }
@@ -213,7 +201,7 @@ export default function SignupPage() {
       }
 
       // Move to OTP step
-      setStep('otp')
+      setSignupStep('otp')
       setFormLoading(false)
     } catch (err) {
       console.error('Signup error:', err)
@@ -226,7 +214,7 @@ export default function SignupPage() {
 
   const handleOtpSuccess = async () => {
     // OTP verified, move to processing step
-    setStep('processing')
+    setSignupStep('processing')
     // Complete signup with profile data
     await completeSignup()
   }
@@ -240,7 +228,7 @@ export default function SignupPage() {
       if (sessionError || !session?.access_token) {
         console.error('Session error:', sessionError)
         setError('Erreur de session. Veuillez réessayer.')
-        setStep('form')
+        setSignupStep('form')
         return
       }
 
@@ -252,19 +240,23 @@ export default function SignupPage() {
           'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
+          email: formData.email,
           firstName: formData.firstName,
           lastName: formData.lastName,
           companyName: formData.companyName,
           mainIndustryId: formData.mainIndustryId,
           subCategoryId: formData.subCategoryId,
-          phone: formData.phone || null,
-          siren: formData.siren || null,
         }),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || 'Erreur lors de la création du profil')
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dataLayer = window.dataLayer || []
+        window.dataLayer.push({ event: 'sign_up', method: 'formulaire_landing' })
       }
 
       sendSignUpEvent('email', {
@@ -277,14 +269,14 @@ export default function SignupPage() {
     } catch (err) {
       console.error('Complete signup error:', err)
       setError(err instanceof Error ? err.message : 'Erreur lors de la création du profil')
-      setStep('form')
+      setSignupStep('form')
     }
   }
 
 
   // ========== RENDER STEPS ==========
 
-  if (step === 'processing') {
+  if (signupStep === 'processing') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -296,13 +288,13 @@ export default function SignupPage() {
     )
   }
 
-  if (step === 'otp') {
+  if (signupStep === 'otp') {
     return (
       <OTPVerification
         email={formData.email}
         onVerify={(code) => verifyOtp(formData.email, code)}
         onSuccess={handleOtpSuccess}
-        onBack={() => setStep('form')}
+        onBack={() => setSignupStep('form')}
         onResend={() => signInWithOtp(formData.email, true)}
       />
     )
@@ -332,241 +324,222 @@ export default function SignupPage() {
 
         {/* Form */}
         <div className="bg-white rounded-xl shadow-lg p-8">
-          <form className="space-y-6" onSubmit={handleFormSubmit}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-600 text-sm">{error}</p>
-              </div>
-            )}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
 
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  onBlur={handleEmailBlur}
-                  className={`w-full px-4 py-3 pl-10 pr-10 border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none transition-colors ${emailError
-                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 focus:border-[#0080A3] focus:ring-[#0080A3]'
-                    }`}
-                  placeholder="votre@email.com"
-                />
-                {checkingEmail && (
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#0080A3]"></div>
+          {step === 1 ? (
+            <form
+              className="space-y-6"
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleNextStep()
+              }}
+            >
+              {/* First Name & Last Name */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
+                    Prénom <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="firstName"
+                      name="firstName"
+                      type="text"
+                      autoComplete="given-name"
+                      required
+                      value={formData.firstName}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+                      placeholder="Jean"
+                    />
                   </div>
+                </div>
+
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      autoComplete="family-name"
+                      required
+                      value={formData.lastName}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+                      placeholder="Dupont"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 text-sm text-gray-500">
+                <Info className="h-4 w-4 mt-0.5 text-gray-400 flex-shrink-0" />
+                <p>
+                  L'adresse email permet de créer le compte et de recevoir votre code d'activation.
+                </p>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    onBlur={handleEmailBlur}
+                    className={`w-full px-4 py-3 pl-10 pr-10 border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none transition-colors ${emailError
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:border-[#0080A3] focus:ring-[#0080A3]'
+                      }`}
+                    placeholder="votre@email.com"
+                  />
+                  {checkingEmail && (
+                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#0080A3]"></div>
+                    </div>
+                  )}
+                </div>
+                {emailError && (
+                  <p className="mt-1 text-sm text-red-600">{emailError}</p>
                 )}
               </div>
-              {emailError && (
-                <p className="mt-1 text-sm text-red-600">{emailError}</p>
-              )}
-            </div>
 
-            {/* First Name & Last Name */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={handleNextStep}
+                disabled={checkingEmail || !!emailError}
+                className="w-full bg-[#0080A3] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#006280] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0080A3] flex items-center justify-center gap-2"
+              >
+                Suivant
+                <ArrowRight className="h-5 w-5" />
+              </button>
+            </form>
+          ) : (
+            <form className="space-y-6" onSubmit={handleFormSubmit}>
+              <p className="text-sm text-gray-600">
+                Ces informations permettent de créer des rapports de conformité plus précis et adaptés à votre secteur vis-à-vis de l'IA Act.
+              </p>
+
+              {/* Company Name */}
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Prénom <span className="text-red-500">*</span>
+                <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Entreprise <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
+                    <Building2 className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
-                    id="firstName"
-                    name="firstName"
+                    id="companyName"
+                    name="companyName"
                     type="text"
-                    autoComplete="given-name"
+                    autoComplete="organization"
                     required
-                    value={formData.firstName}
-                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    value={formData.companyName}
+                    onChange={(e) => handleInputChange('companyName', e.target.value)}
                     className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
-                    placeholder="Jean"
+                    placeholder="Nom de votre entreprise"
                   />
                 </div>
               </div>
 
+              {/* Industry */}
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom <span className="text-red-500">*</span>
+                <CompanySectorSelector
+                  value={industrySelection}
+                  onChange={(selection) => {
+                    setIndustrySelection(selection)
+                    setFormData(prev => ({
+                      ...prev,
+                      mainIndustryId: selection.mainIndustryId,
+                      subCategoryId: selection.subCategoryId
+                    }))
+                    setIndustryError('')
+                    setError('')
+                  }}
+                  error={industryError}
+                  required
+                />
+              </div>
+
+              {/* Terms and Conditions */}
+              <div className="flex items-start gap-3">
+                <input
+                  id="acceptTerms"
+                  name="acceptTerms"
+                  type="checkbox"
+                  checked={acceptTerms}
+                  onChange={(e) => setAcceptTerms(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-[#0080A3] focus:ring-[#0080A3] cursor-pointer"
+                  required
+                />
+                <label htmlFor="acceptTerms" className="text-sm text-gray-700">
+                  J'accepte les{' '}
+                  <Link
+                    href="/conditions-generales"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-[#0080A3] hover:text-[#006280] underline transition-colors"
+                  >
+                    Conditions Générales d'Utilisation
+                  </Link>
+                  {' '}<span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    autoComplete="family-name"
-                    required
-                    value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
-                    placeholder="Dupont"
-                  />
-                </div>
               </div>
-            </div>
 
-            {/* Company Name */}
-            <div>
-              <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-2">
-                Entreprise <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Building2 className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="companyName"
-                  name="companyName"
-                  type="text"
-                  autoComplete="organization"
-                  required
-                  value={formData.companyName}
-                  onChange={(e) => handleInputChange('companyName', e.target.value)}
-                  className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
-                  placeholder="Nom de votre entreprise"
-                />
-              </div>
-            </div>
-
-            {/* Industry */}
-            <div>
-              <CompanySectorSelector
-                value={industrySelection}
-                onChange={(selection) => {
-                  setIndustrySelection(selection)
-                  setFormData(prev => ({
-                    ...prev,
-                    mainIndustryId: selection.mainIndustryId,
-                    subCategoryId: selection.subCategoryId
-                  }))
-                  setIndustryError('')
-                  setError('')
-                }}
-                error={industryError}
-                required
-              />
-            </div>
-
-            {/* Phone (required) */}
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                Téléphone <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Phone className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  required
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
-                  placeholder="06 12 34 56 78"
-                />
-              </div>
-            </div>
-
-            {/* SIREN (optional) */}
-            <div>
-              <label htmlFor="siren" className="block text-sm font-medium text-gray-700 mb-2">
-                SIREN <span className="text-gray-500 text-xs">(optionnel)</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FileText className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="siren"
-                  name="siren"
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={9}
-                  value={formData.siren}
-                  onChange={(e) => handleSirenChange(e.target.value)}
-                  className={`w-full px-4 py-3 pl-10 border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:outline-none transition-colors ${sirenError
-                    ? 'border-red-300 focus:border-red-500'
-                    : formData.siren && !sirenError
-                      ? 'border-green-300 focus:border-green-500'
-                      : 'border-gray-300 focus:border-[#0080A3]'
-                    }`}
-                  placeholder="123 456 789"
-                />
-              </div>
-              {sirenError && (
-                <p className="mt-1 text-sm text-red-600">{sirenError}</p>
-              )}
-              {formData.siren && !sirenError && formData.siren.length === 9 && (
-                <p className="mt-1 text-sm text-green-600 flex items-center gap-1">
-                  <CheckCircle className="h-4 w-4" />
-                  SIREN valide : {formatSIREN(formData.siren)}
-                </p>
-              )}
-            </div>
-
-            {/* Terms and Conditions */}
-            <div className="flex items-start gap-3">
-              <input
-                id="acceptTerms"
-                name="acceptTerms"
-                type="checkbox"
-                checked={acceptTerms}
-                onChange={(e) => setAcceptTerms(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-[#0080A3] focus:ring-[#0080A3] cursor-pointer"
-                required
-              />
-              <label htmlFor="acceptTerms" className="text-sm text-gray-700">
-                J'accepte les{' '}
-                <Link
-                  href="/conditions-generales"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-[#0080A3] hover:text-[#006280] underline transition-colors"
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  disabled={formLoading}
+                  className="w-full sm:w-auto px-5 py-3 rounded-lg font-medium border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Conditions Générales d'Utilisation
-                </Link>
-                {' '}<span className="text-red-500">*</span>
-              </label>
-            </div>
+                  Retour
+                </button>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={formLoading || !!sirenError || !!emailError || !!industryError || checkingEmail || !acceptTerms}
-              className="w-full bg-[#0080A3] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#006280] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0080A3] flex items-center justify-center gap-2"
-            >
-              {formLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  Envoi en cours...
-                </>
-              ) : (
-                <>
-                  Continuer
-                  <ArrowRight className="h-5 w-5" />
-                </>
-              )}
-            </button>
-          </form>
+                <button
+                  type="submit"
+                  disabled={formLoading || !!emailError || !!industryError || checkingEmail || !acceptTerms}
+                  className="w-full bg-[#0080A3] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#006280] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0080A3] flex items-center justify-center gap-2"
+                >
+                  {formLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Envoi en cours...
+                    </>
+                  ) : (
+                    <>
+                      Créer mon compte
+                      <ArrowRight className="h-5 w-5" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Footer */}
           <div className="mt-6 text-center">

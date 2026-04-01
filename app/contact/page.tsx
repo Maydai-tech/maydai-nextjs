@@ -60,6 +60,10 @@ export default function ContactPage() {
         },
         onFormSubmitted: function() {
           console.log('Formulaire Hubspot soumis avec succès');
+          if (typeof window !== 'undefined') {
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({ event: 'generate_lead', lead_type: 'demande_demo', method: 'hubspot_form' });
+          }
         },
       });
     } catch (error) {
