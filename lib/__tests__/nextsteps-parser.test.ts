@@ -52,6 +52,19 @@ describe('extractNextStepsFromJSON', () => {
     expect(result.conclusion).toBeTruthy()
   })
 
+  test('extrait interdit_1..3 si présents dans le JSON', () => {
+    const input = makeFullJSON({
+      interdit_1: 'Interdiction 1 (test)',
+      interdit_2: 'Interdiction 2 (test)',
+      interdit_3: 'Interdiction 3 (test)',
+    })
+
+    const result = extractNextStepsFromJSON(input)
+    expect(result.interdit_1).toBe('Interdiction 1 (test)')
+    expect(result.interdit_2).toBe('Interdiction 2 (test)')
+    expect(result.interdit_3).toBe('Interdiction 3 (test)')
+  })
+
   test('fallback tableaux : ancien format avec arrays', () => {
     const input = JSON.stringify({
       introduction_contextuelle: 'Intro test.',

@@ -10,6 +10,9 @@ type ActionKey = typeof ACTION_KEYS[number]
 
 const SECTION_KEYS = ['introduction', 'evaluation', 'impact', 'conclusion'] as const
 
+const INTERDIT_KEYS = ['interdit_1', 'interdit_2', 'interdit_3'] as const
+type InterditKey = typeof INTERDIT_KEYS[number]
+
 export interface ValidationResult {
   isValid: boolean
   missingFields: string[]
@@ -117,6 +120,14 @@ export function extractNextStepsFromJSON(reportText: string): Partial<UseCaseNex
 
     // --- 9 actions : priorité aux clés directes ---
     for (const key of ACTION_KEYS) {
+      const val = extractString(json[key])
+      if (val) {
+        result[key] = val
+      }
+    }
+
+    // --- Cas inacceptable : 3 champs dédiés ---
+    for (const key of INTERDIT_KEYS) {
       const val = extractString(json[key])
       if (val) {
         result[key] = val

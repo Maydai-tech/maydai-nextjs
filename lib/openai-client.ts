@@ -451,6 +451,7 @@ ${conditionalDetails}`
     const { usecase_context_fields, questionnaire_questions } = data
     const { entreprise, cas_usage, technologie, repondant, scores } = usecase_context_fields
     const scoreFinal = scores.score_final
+    const isUnacceptable = cas_usage.risk_level_code === 'unacceptable'
 
     const factsBlock = `DONNÉES CONTEXTUELLES (ne pas extrapoler hors de ce bloc ni du questionnaire)
 
@@ -481,7 +482,7 @@ NIVEAU DE RISQUE (AUTORITATIF — APPLICATION)
 - Score final ${scoreFinal ?? 'N/A'}/100 : informatif seul, pas substitut aux faits de qualification.`
 
     const statuses = data.slot_statuses
-    const slotMappingBlock = statuses
+    const slotMappingBlock = (!isUnacceptable && statuses)
       ? `
 STATUTS DES 9 SLOTS (AUTORITATIFS — calculés par l'application, NE PAS MODIFIER)
 Chaque slot DOIT commencer par le préfixe exact indiqué ci-dessous, suivi de " : " (espace-deux-points-espace), puis d'un texte explicatif contextualisé (2-4 phrases).
@@ -511,11 +512,26 @@ Contexte des slots :
 Pour chaque slot, rédiger un texte explicatif basé sur les réponses du questionnaire ci-dessus.
 Exemple de format attendu pour un slot dont le statut est NON :
 "NON : L'organisation n'a pas encore mis en place de mécanisme de surveillance humaine. Il est recommandé de désigner un responsable dédié."`
-      : `
+      : (!isUnacceptable
+          ? `
 MAPPING DES 9 SLOTS — statuts non fournis, déduire des réponses.
 Préfixe par slot : « OUI : », « NON : » ou « Information insuffisante : ».`
+          : `
+CAS RISQUE INACCEPTABLE (INTERDIT)
+- Ne PAS produire quick_win_1..3, priorite_1..3, action_1..3.
+- Produire uniquement les champs interdit_1, interdit_2, interdit_3 (obligatoires) décrivant les pratiques/finalités interdites applicables au cas.
+- Chaque interdit_* doit être un texte UNIQUE, AUTONOME et SPÉCIFIQUE (2 à 4 phrases), sans redondance entre les 3.
+`)
 
-    const formatBlock = `
+    const formatBlock = isUnacceptable
+      ? `
+SORTIE JSON — CAS RISQUE INACCEPTABLE
+- Un seul objet JSON UTF-8, parsable ; pas de markdown ni de texte hors de l'objet.
+- Clés obligatoires (noms inchangés) : introduction_contextuelle, evaluation_risque { niveau, justification }, interdit_1, interdit_2, interdit_3, impact_attendu, conclusion
+- Toutes les valeurs chaîne non vides (espaces seuls interdits).
+- evaluation_risque.niveau : "${cas_usage.risk_level_label_fr}" exactement.
+- interdit_1, interdit_2, interdit_3 : obligatoires, chacune doit décrire une pratique/finalité interdite pertinente pour ce cas (2 à 4 phrases), et elles doivent être distinctes entre elles.`
+      : `
 SORTIE JSON
 - Un seul objet JSON UTF-8, parsable ; pas de markdown ni de texte hors de l'objet.
 - Clés obligatoires (noms inchangés) : introduction_contextuelle, evaluation_risque { niveau, justification }, quick_win_1, quick_win_2, quick_win_3, priorite_1, priorite_2, priorite_3, action_1, action_2, action_3, impact_attendu, conclusion
