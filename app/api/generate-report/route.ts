@@ -385,11 +385,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Ajouter l'usecase_id et les métadonnées aux données extraites
-    const baseNextStepsData = {
+    // IMPORTANT: cette structure doit rester compatible avec validateNextStepsData(...)
+    const baseNextStepsData: Parameters<typeof validateNextStepsData>[0] = {
       ...extractedNextSteps,
       usecase_id: usecase_id,
       model_version: model?.version || 'openai-gpt-4',
-      processing_time_ms: processingTime
+      processing_time_ms: processingTime,
     }
 
     const isUnacceptable = authoritativeRiskCode === 'unacceptable'
@@ -416,7 +417,7 @@ export async function POST(req: NextRequest) {
     // Sauf pour le cas "unacceptable" où les 9 slots sont volontairement null.
     const validation = isUnacceptable
       ? { isValid: true, missingFields: [], warnings: [], hasDuplicates: false, duplicateDetails: [] }
-      : validateNextStepsData(nextStepsData)
+      : validateNextStepsData(baseNextStepsData)
 
     logExtractionResults(analysis, nextStepsData, validation)
 
