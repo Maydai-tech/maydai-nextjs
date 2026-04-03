@@ -214,11 +214,28 @@ export default function GuidedChat({ companyId, company }: GuidedChatProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ formData: dataToSend }),
       })
-      if (!response.ok) throw new Error('Erreur de génération')
+      if (!response.ok) {
+        let payload: { error?: string; details?: string } = {}
+        try {
+          payload = await response.json()
+        } catch {
+          /* ignore */
+        }
+        throw new Error(
+          payload.details ||
+            payload.error ||
+            `Erreur serveur (${response.status})`
+        )
+      }
       const data = await response.json()
       actions.setFieldValue('description', data.description)
-    } catch {
-      setStepError('Impossible de générer la description. Saisissez-la manuellement.')
+    } catch (error) {
+      const technical = error instanceof Error ? error.message : ''
+      setStepError(
+        process.env.NODE_ENV === 'development' && technical
+          ? technical
+          : 'Impossible de générer la description. Saisissez-la manuellement.'
+      )
     } finally {
       actions.setGeneratingDescription(false)
     }

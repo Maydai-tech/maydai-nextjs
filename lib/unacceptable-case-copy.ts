@@ -52,6 +52,13 @@ export function getUnacceptablePriorityHint(urgency: DeploymentUrgency): string 
   return 'Les deux actions ci-dessous sont requises ; la date de déploiement permet d’en hiérarchiser l’urgence.'
 }
 
+/**
+ * Texte sous le titre « Motif principal d'interdiction » (UnacceptableInterditsPanel).
+ * interdit_1 reste déterministe ; pas de doublon avec le titre de carte.
+ */
+export const UNACCEPTABLE_INTERDIT1_INTRO =
+  "D'après votre questionnaire, ce cas d'usage relève d'une pratique interdite par l'AI Act."
+
 /** Titres de section pour le motif (interdit_1) — uniquement questions E4.N7.* */
 export const UNACCEPTABLE_INTERDIT1_SECTION_LABELS: Record<
   'E4.N7.Q2.1' | 'E4.N7.Q3' | 'E4.N7.Q3.1',

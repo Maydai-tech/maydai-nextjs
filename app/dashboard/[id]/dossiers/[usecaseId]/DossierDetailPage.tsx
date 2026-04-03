@@ -5,13 +5,23 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { useApiCall } from '@/lib/api-client-legacy'
-import { ArrowLeft, FileText, Check, Loader2, Info, ChevronDown, X, AlertTriangle, RotateCcw, Pencil } from 'lucide-react'
+import { ArrowLeft, FileText, Check, Loader2, Info, ChevronDown, X, AlertTriangle, RotateCcw, Pencil, Edit } from 'lucide-react'
 import ComplianceFileUpload from '@/components/ComplianceFileUpload'
 import UploadedFileDisplay from '@/components/UploadedFileDisplay'
 import ScoreEvolutionPopup from '@/components/ScoreEvolutionPopup'
-import { useUnacceptableCaseWorkflow } from '@/hooks/useUnacceptableCaseWorkflow'
-import UnacceptableCaseWorkflowSteps from '@/components/UnacceptableCase/UnacceptableCaseWorkflowSteps'
+import DateEditStep from '@/components/UnacceptableCase/DateEditStep'
+import ContactHelpCard from '@/components/UnacceptableCase/ContactHelpCard'
+import MarkdownText from '@/components/Shared/MarkdownText'
 import RegistreMaydaiBadge from '@/app/dashboard/[id]/components/RegistreMaydaiBadge'
+import { formatDate, formatDateForInput } from '@/lib/utils/dateFormatters'
+import {
+  getDeploymentUrgency,
+  getUnacceptablePriorityHint
+} from '@/lib/unacceptable-case-copy'
+import {
+  getUnacceptableActionDocTypesOrdered,
+  getUnacceptablePrimaryDocumentType
+} from '@/app/dashboard/[id]/todo-list/utils/todo-helpers'
 
 const SYSTEM_PROMPT_DOC = {
   key: 'system_prompt',
@@ -126,6 +136,13 @@ interface UseCase {
   deployment_date?: string | null
 }
 
+interface UseCaseNextStepsPayload {
+  evaluation?: string
+  introduction?: string
+  impact?: string
+  conclusion?: string
+}
+
 export default function DossierDetailPage() {
   const { user, loading: authLoading, getAccessToken } = useAuth()
   const { plan } = useUserPlan()
@@ -172,7 +189,12 @@ export default function DossierDetailPage() {
     reason: string
   } | null>(null)
 
-  // Hook pour le workflow "cas inacceptable"
+  const [editingDeploymentDate, setEditingDeploymentDate] = useState(false)
+  const [deploymentDateDraft, setDeploymentDateDraft] = useState('')
+  const [savingDeploymentDate, setSavingDeploymentDate] = useState(false)
+  const [nextSteps, setNextSteps] = useState<UseCaseNextStepsPayload | null>(null)
+  const [loadingNextSteps, setLoadingNextSteps] = useState(false)
+
   const isUnacceptableCase = useCase?.risk_level?.toLowerCase() === 'unacceptable'
 
   const updateDeploymentDate = async (date: string) => {
@@ -182,6 +204,19 @@ export default function DossierDetailPage() {
     })
     if (result.data) {
       setUseCase({ ...useCase, deployment_date: date })
+    }
+  }
+
+  const handleSaveDeploymentDate = async () => {
+    if (!deploymentDateDraft.trim()) return
+    try {
+      setSavingDeploymentDate(true)
+      await updateDeploymentDate(deploymentDateDraft)
+      setEditingDeploymentDate(false)
+    } catch (e) {
+      console.error('Error saving deployment date:', e)
+    } finally {
+      setSavingDeploymentDate(false)
     }
   }
 
@@ -209,133 +244,36 @@ export default function DossierDetailPage() {
     }
   }
 
-  const getInitialProofUploaded = () => {
-    if (!useCase?.deployment_date) return false
-
-    const deploymentDate = new Date(useCase.deployment_date)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    // Date dans le passé → vérifier stopping_proof
-    if (deploymentDate < today) {
-      return documents['stopping_proof']?.status === 'complete' ||
-             documents['stopping_proof']?.status === 'validated'
-    }
-
-    // Date dans le futur → vérifier system_prompt (texte OU fichier)
-    return (documents['system_prompt']?.status === 'complete' ||
-            documents['system_prompt']?.status === 'validated') ||
-           !!documents['system_prompt']?.fileUrl
-  }
-
-  const workflow = useUnacceptableCaseWorkflow({
-    useCase,
-    isOpen: isUnacceptableCase,
-    onUpdateDeploymentDate: updateDeploymentDate,
-    initialProofUploaded: getInitialProofUploaded(),
-    onReloadDocument: reloadDocument
-  })
-
-  // Synchroniser proofUploaded avec les documents chargés
   useEffect(() => {
-    console.log('[SYNC] useEffect triggered', {
-      hasUseCase: !!useCase,
-      hasDeploymentDate: !!useCase?.deployment_date,
-      documents: documents
-    })
+    if (!isUnacceptableCase || !useCase || !user) return
 
-    if (!useCase?.deployment_date) return
-
-    const deploymentDate = new Date(useCase.deployment_date)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    console.log('[SYNC] Dates comparison', {
-      deploymentDate: deploymentDate.toISOString(),
-      today: today.toISOString(),
-      isInPast: deploymentDate < today
-    })
-
-    let shouldBeUploaded = false
-
-    if (deploymentDate < today) {
-      shouldBeUploaded = documents['stopping_proof']?.status === 'complete' ||
-                        documents['stopping_proof']?.status === 'validated'
-      console.log('[SYNC] Past deployment - checking stopping_proof', {
-        status: documents['stopping_proof']?.status,
-        shouldBeUploaded
-      })
-    } else {
-      shouldBeUploaded = (documents['system_prompt']?.status === 'complete' ||
-                         documents['system_prompt']?.status === 'validated') ||
-                        !!documents['system_prompt']?.fileUrl
-      console.log('[SYNC] Future deployment - checking system_prompt', {
-        status: documents['system_prompt']?.status,
-        fileUrl: documents['system_prompt']?.fileUrl,
-        shouldBeUploaded
-      })
-    }
-
-    console.log('[SYNC] Final decision', {
-      shouldBeUploaded,
-      currentProofUploaded: workflow.proofUploaded,
-      willUpdate: shouldBeUploaded !== workflow.proofUploaded
-    })
-
-    if (shouldBeUploaded !== workflow.proofUploaded) {
-      console.log('[SYNC] Setting proofUploaded to:', shouldBeUploaded)
-      workflow.setProofUploaded(shouldBeUploaded)
-
-      // Also set the correct workflow step based on deployment date
-      if (shouldBeUploaded) {
-        const correctStep = deploymentDate < today ? 'upload-proof' : 'future-deployment-warning'
-        console.log('[SYNC] Setting workflow step to:', correctStep)
-        workflow.setStep(correctStep)
+    const loadNextSteps = async () => {
+      const token = getAccessToken()
+      if (!token) return
+      try {
+        setLoadingNextSteps(true)
+        const res = await fetch(`/api/usecases/${usecaseId}/nextsteps`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setNextSteps(data || null)
+        }
+      } catch (e) {
+        console.error('Error loading next steps:', e)
+      } finally {
+        setLoadingNextSteps(false)
       }
     }
-  }, [useCase, documents, workflow])
+
+    loadNextSteps()
+  }, [isUnacceptableCase, useCase?.id, usecaseId, user, getAccessToken])
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login')
     }
   }, [user, authLoading, router])
-
-  // Recharger le document stopping_proof OU system_prompt quand uploadé et auto-expand la section
-  useEffect(() => {
-    const refetchDocument = async () => {
-      if (!workflow.proofUploaded || !user) return
-
-      const token = getAccessToken()
-      if (!token) return
-
-      try {
-        // Déterminer quel document recharger selon le step du workflow
-        const docKey = workflow.step === 'future-deployment-warning' ? 'system_prompt' : 'stopping_proof'
-
-        const res = await fetch(`/api/dossiers/${usecaseId}/${docKey}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        if (res.ok) {
-          const data = await res.json()
-          setDocuments(prev => ({ ...prev, [docKey]: data }))
-
-          // Extraire le contenu textuel si c'est system_prompt avec formData
-          if (docKey === 'system_prompt' && data.formData?.system_instructions) {
-            setTextContents(prev => ({ ...prev, [docKey]: data.formData.system_instructions }))
-            setInitialTextContents(prev => ({ ...prev, [docKey]: data.formData.system_instructions }))
-          }
-
-          // Auto-expand la section du document
-          setExpandedSections(prev => ({ ...prev, [docKey]: true }))
-        }
-      } catch (error) {
-        console.error('Error fetching document:', error)
-      }
-    }
-
-    refetchDocument()
-  }, [workflow.proofUploaded, workflow.step, user, usecaseId, getAccessToken])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -448,11 +386,12 @@ export default function DossierDetailPage() {
   }, [user, usecaseId, getAccessToken])
 
   // Auto-expand document section based on URL query parameter
+  // `doc` (Todo / registry) est prioritaire ; `highlight` (Synthèse, Rapport, UnacceptableInterditsPanel) est alias.
   useEffect(() => {
     // Only run after data is loaded
     if (loading) return
 
-    const docToExpand = searchParams.get('doc')
+    const docToExpand = searchParams.get('doc') || searchParams.get('highlight')
     if (docToExpand) {
       // Auto-expand the section
       setExpandedSections(prev => ({
@@ -691,11 +630,6 @@ export default function DossierDetailPage() {
           const data = await getRes.json()
           setDocuments({ ...documents, [docType]: data })
 
-          // Si c'est un cas inacceptable et qu'on supprime system_prompt/stopping_proof,
-          // revenir au workflow en réinitialisant proofUploaded
-          if (isUnacceptableCase && (docType === 'system_prompt' || docType === 'stopping_proof')) {
-            workflow.reset()
-          }
         }
       } else {
         alert('Erreur lors de la suppression du fichier')
@@ -887,11 +821,22 @@ export default function DossierDetailPage() {
     )
   }
 
-  // Si c'est un cas inacceptable, afficher toujours le workflow dédié (avant ET après upload)
   if (isUnacceptableCase && useCase) {
+    const urgency = getDeploymentUrgency(useCase.deployment_date)
+    const priorityHint = getUnacceptablePriorityHint(urgency)
+    const orderedKeys = getUnacceptableActionDocTypesOrdered(useCase)
+    const hasDatePriority = getUnacceptablePrimaryDocumentType(useCase) !== null
+
+    const docMeta = (key: string) => (key === 'stopping_proof' ? STOPPING_PROOF_DOC : SYSTEM_PROMPT_DOC)
+
+    const statusLabel = (status: string) => {
+      if (status === 'complete') return 'Déposé (complété)'
+      if (status === 'validated') return 'Validé'
+      return 'Manquant ou à compléter'
+    }
+
     return (
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <button
@@ -907,107 +852,141 @@ export default function DossierDetailPage() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">{usecaseName}</h1>
+                <p className="text-gray-600 mt-1">Dossier — cas à risque inacceptable</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-          {/* Warning Message */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           <div className="bg-red-50 p-4 rounded-lg border border-red-200">
             <div className="flex items-start space-x-2">
               <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-red-800">
-                Ce cas d'usage présente un niveau de risque inacceptable selon l'AI Act.
-                Vous devez procéder à une analyse approfondie de la conformité de ce cas d'usage.
+                Ce cas d&apos;usage présente un niveau de risque inacceptable selon l&apos;AI Act.
+                Les deux actions ci-dessous sont requises ; la date de déploiement sert uniquement à
+                prioriser l&apos;urgence affichée.
               </div>
             </div>
           </div>
 
-          {/* Workflow Steps */}
-          <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6 mt-6">
-            <UnacceptableCaseWorkflowSteps
-              workflow={workflow}
-              deploymentDate={useCase.deployment_date}
-              usecaseId={usecaseId}
-              companyId={companyId}
-              uploadedDocument={
-                workflow.step === 'future-deployment-warning'
-                  ? documents['system_prompt']
-                  : documents['stopping_proof']
-              }
-              userProfile={userProfile}
-              onReloadDocument={reloadDocument}
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <p className="font-medium text-amber-900 mb-1">Priorité et urgence</p>
+            <p>{priorityHint}</p>
+          </div>
+
+          {editingDeploymentDate ? (
+            <DateEditStep
+              value={deploymentDateDraft}
+              onChange={setDeploymentDateDraft}
+              onSave={handleSaveDeploymentDate}
+              onCancel={() => setEditingDeploymentDate(false)}
+              saving={savingDeploymentDate}
             />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Désactivé : ne plus afficher la vue simplifiée quand proofUploaded = true
-  // Maintenant le document s'affiche dans le workflow lui-même
-  if (false && isUnacceptableCase && useCase && workflow.proofUploaded) {
-    // Déterminer quel document afficher selon le workflow step
-    console.log('[RENDER] Displaying document - step:', workflow.step, 'proofUploaded:', workflow.proofUploaded)
-    const docToDisplay = workflow.step === 'future-deployment-warning'
-      ? SYSTEM_PROMPT_DOC
-      : STOPPING_PROOF_DOC
-    console.log('[RENDER] Document to display:', docToDisplay.key, docToDisplay.label)
-
-    return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <button
-              onClick={() => router.push(`/dashboard/${companyId}/dossiers`)}
-              className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Retour aux dossiers
-            </button>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">{usecaseName}</h1>
-                <p className="text-gray-600">Dossier de conformité - Cas inacceptable</p>
+          ) : (
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-blue-900">Date de déploiement enregistrée</p>
+                  <p className="text-base font-semibold text-gray-900 mt-1">
+                    {formatDate(useCase.deployment_date)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeploymentDateDraft(formatDateForInput(useCase.deployment_date))
+                    setEditingDeploymentDate(true)
+                  }}
+                  className="px-4 py-2 bg-white text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 font-medium text-sm self-start"
+                >
+                  Modifier la date
+                </button>
               </div>
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="space-y-6">
-            {[docToDisplay].map((docType) => {
-              const doc = documents[docType.key] || { status: 'incomplete', formData: null, fileUrl: null, updatedAt: null }
+          {loadingNextSteps && (
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-center">
+              <Loader2 className="w-5 h-5 animate-spin text-[#0080A3] mr-3" />
+              <p className="text-sm text-gray-600">Chargement de la synthèse du risque…</p>
+            </div>
+          )}
+
+          {!loadingNextSteps && nextSteps?.evaluation && (
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <div className="flex items-start space-x-2 mb-3">
+                <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <h4 className="font-semibold text-red-900">Justification du niveau de risque</h4>
+              </div>
+              <MarkdownText text={nextSteps.evaluation} className="text-sm text-red-800 pl-7 mb-4" />
+              <div className="pl-7 pt-3 border-t border-red-200">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/usecases/${usecaseId}/evaluation`)}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  <Edit className="w-4 h-4" />
+                  Modifier l&apos;évaluation
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {orderedKeys.map((docKey, index) => {
+              const docType = docMeta(docKey)
+              const doc =
+                documents[docType.key] || {
+                  status: 'incomplete' as const,
+                  formData: null,
+                  fileUrl: null,
+                  updatedAt: null
+                }
+              const isPrimary = hasDatePriority && index === 0
+              const isSaving = saving[docType.key]
               const isUploading = uploading[docType.key]
 
               return (
                 <div
                   key={docType.key}
                   id={`section-${docType.key}`}
-                  className={`bg-white rounded-xl shadow-sm border ${getStatusColor(doc.status)}`}
+                  className={`bg-white rounded-xl shadow-sm border ${
+                    isPrimary
+                      ? 'ring-2 ring-orange-300 border-orange-200'
+                      : 'border-gray-200'
+                  } ${getStatusColor(doc.status)}`}
                 >
                   <div
                     className="flex items-start justify-between p-6 cursor-pointer"
                     onClick={() => toggleSection(docType.key)}
                   >
-                    <div className="flex items-start gap-3 flex-1">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
                       {getStatusIcon(doc.status)}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-lg font-semibold text-gray-900">{docType.label}</h3>
+                          {hasDatePriority ? (
+                            isPrimary ? (
+                              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-900 border border-orange-200">
+                                Action prioritaire
+                              </span>
+                            ) : (
+                              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                                Également requis
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                              Action requise
+                            </span>
+                          )}
                           <div className="relative">
                             <button
+                              type="button"
                               onMouseEnter={() => setShowInfoTooltip(docType.key)}
                               onMouseLeave={() => setShowInfoTooltip(null)}
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={e => e.stopPropagation()}
                               className="text-gray-400 hover:text-[#0080A3] transition-colors"
                             >
                               <Info className="w-4 h-4" />
@@ -1020,25 +999,31 @@ export default function DossierDetailPage() {
                           </div>
                         </div>
                         <p className="text-sm text-gray-600 mt-1">{docType.description}</p>
+                        <p className="text-xs text-gray-500 mt-2">{statusLabel(doc.status)}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-shrink-0">
                       <ChevronDown
                         className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${
                           expandedSections[docType.key] ? 'rotate-180' : ''
                         }`}
                       />
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                        doc.status === 'complete' || doc.status === 'validated'
-                          ? 'bg-green-100 text-green-800 border border-green-300'
-                          : 'bg-red-100 text-red-800 border border-red-300'
-                      }`}>
-                        {doc.status === 'complete' ? '✓ Complété' : doc.status === 'validated' ? '✓ Validé' : '✗ Incomplet'}
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                          doc.status === 'complete' || doc.status === 'validated'
+                            ? 'bg-green-100 text-green-800 border border-green-300'
+                            : 'bg-red-100 text-red-800 border border-red-300'
+                        }`}
+                      >
+                        {doc.status === 'complete'
+                          ? '✓ Complété'
+                          : doc.status === 'validated'
+                            ? '✓ Validé'
+                            : '✗ Incomplet'}
                       </span>
                     </div>
                   </div>
 
-                  {/* Section for Textarea (system_prompt) */}
                   {docType.type === 'textarea' && (
                     <div
                       className="overflow-hidden transition-all duration-300 ease-in-out"
@@ -1048,72 +1033,85 @@ export default function DossierDetailPage() {
                       }}
                     >
                       <div className="space-y-3 px-6 pb-6">
-                        {doc.fileUrl ? (
-                          <UploadedFileDisplay
-                            fileUrl={doc.fileUrl}
-                            onDelete={() => handleFileDelete(docType.key)}
-                            isDeleting={deleting[docType.key] || false}
-                          />
-                        ) : (
-                          <>
-                            <label className="block text-sm font-medium text-gray-700">
-                              Instructions système
-                            </label>
-                            <textarea
-                              value={textContents[docType.key] || ''}
-                              onChange={(e) => setTextContents({ ...textContents, [docType.key]: e.target.value })}
-                              placeholder="Collez ici l'intégralité du prompt système..."
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent font-mono text-sm"
-                              rows={8}
+                        <label className="block text-sm font-medium text-gray-700">Instructions système</label>
+                        <textarea
+                          value={textContents[docType.key] || ''}
+                          onChange={e =>
+                            setTextContents({ ...textContents, [docType.key]: e.target.value })
+                          }
+                          placeholder="Collez ici l'intégralité du prompt système..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent font-mono text-sm"
+                          rows={8}
+                        />
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleTextSave(docType.key)}
+                            disabled={isSaving || !canSave(docType)}
+                            className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {isSaving ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Enregistrement...
+                              </>
+                            ) : (
+                              <>
+                                {getSaveButtonIcon(docType.key)}
+                                {getSaveButtonLabel(docType.key)}
+                              </>
+                            )}
+                          </button>
+                          {isDocumentCompleted(docType.key) && (
+                            <button
+                              type="button"
+                              onClick={() => handleReset(docType.key)}
+                              disabled={resetting[docType.key] || false}
+                              className="inline-flex items-center px-4 py-2 bg-white text-red-600 font-medium rounded-lg border border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {resetting[docType.key] ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Réinitialisation...
+                                </>
+                              ) : (
+                                <>
+                                  <RotateCcw className="w-4 h-4 mr-2" />
+                                  Réinitialiser
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="mt-6 pt-6 border-t border-gray-200">
+                          {doc.fileUrl ? (
+                            <UploadedFileDisplay
+                              fileUrl={doc.fileUrl}
+                              onDelete={() => handleFileDelete(docType.key)}
+                              isDeleting={deleting[docType.key] || false}
                             />
-                            <div className="flex gap-3">
-                              <button
-                                onClick={() => handleTextSave(docType.key)}
-                                disabled={saving[docType.key] || !canSave(docType)}
-                                className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                {saving[docType.key] ? (
-                                  <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Enregistrement...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Check className="w-4 h-4 mr-2" />
-                                    Enregistrer
-                                  </>
-                                )}
-                              </button>
-                            </div>
-
-                            {/* Séparateur OU */}
-                            <div className="mt-6 pt-6 border-t border-gray-200">
-                              <div className="flex items-center gap-3 mb-4">
-                                <div className="flex-1 border-t border-gray-300"></div>
-                                <span className="text-sm text-gray-500 font-medium">OU</span>
-                                <div className="flex-1 border-t border-gray-300"></div>
-                              </div>
-
+                          ) : (
+                            <>
                               <ComplianceFileUpload
-                                label="Importer un fichier"
+                                label="Ou importer un fichier"
                                 helpText={`Formats acceptés: ${docType.acceptedFormats}`}
                                 acceptedFormats={docType.acceptedFormats}
-                                onFileSelected={(file) => handleFileUpload(docType.key, file)}
+                                onFileSelected={file => handleFileUpload(docType.key, file)}
                               />
-                              {uploading[docType.key] && (
+                              {isUploading && (
                                 <div className="mt-3 flex items-center text-sm text-gray-600">
                                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                   Upload en cours...
                                 </div>
                               )}
-                            </div>
-                          </>
-                        )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Section for File Upload (stopping_proof) */}
                   {docType.type === 'file' && (
                     <div
                       className="overflow-hidden transition-all duration-300 ease-in-out"
@@ -1135,7 +1133,7 @@ export default function DossierDetailPage() {
                               label="Importer un document"
                               helpText={`Formats acceptés: ${docType.acceptedFormats} (max 10MB)`}
                               acceptedFormats={docType.acceptedFormats}
-                              onFileSelected={(file) => handleFileUpload(docType.key, file)}
+                              onFileSelected={file => handleFileUpload(docType.key, file)}
                             />
                             {isUploading && (
                               <div className="mt-3 flex items-center text-sm text-gray-600">
@@ -1152,7 +1150,21 @@ export default function DossierDetailPage() {
               )
             })}
           </div>
+
+          <ContactHelpCard usecaseId={usecaseId} companyId={companyId} userProfile={userProfile} />
         </div>
+
+        {scoreChangePopup && (
+          <ScoreEvolutionPopup
+            previousScore={scoreChangePopup.previousScore}
+            newScore={scoreChangePopup.newScore}
+            pointsGained={scoreChangePopup.pointsGained}
+            reason={scoreChangePopup.reason}
+            onClose={() => setScoreChangePopup(null)}
+            todoListUrl={`/dashboard/${companyId}/dossiers`}
+            usecaseDossierUrl={`/dashboard/${companyId}/dossiers/${usecaseId}`}
+          />
+        )}
       </div>
     )
   }

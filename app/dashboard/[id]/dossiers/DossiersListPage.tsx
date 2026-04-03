@@ -6,7 +6,10 @@ import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
 import { FileText, ChevronRight, Check, AlertTriangle } from 'lucide-react'
 import { getCompactScoreStyle } from '@/lib/score-styles'
-import UnacceptableCaseModal from '@/components/Shared/UnacceptableCaseModal'
+import {
+  getUnacceptableActionDocTypesOrdered,
+  isUnacceptableCase
+} from '@/app/dashboard/[id]/todo-list/utils/todo-helpers'
 
 interface UseCase {
   id: string
@@ -32,6 +35,27 @@ interface DocumentStatus {
   status: 'incomplete' | 'complete' | 'validated'
 }
 
+type UnacceptableDocKey = 'stopping_proof' | 'system_prompt'
+
+interface UnacceptableRow {
+  key: UnacceptableDocKey
+  doneLabel: string
+  todoLabel: string
+}
+
+const UNACCEPTABLE_STATUS_ROWS: UnacceptableRow[] = [
+  {
+    key: 'stopping_proof',
+    doneLabel: 'Preuve d\'arrêt complétée',
+    todoLabel: 'Preuve d\'arrêt à compléter'
+  },
+  {
+    key: 'system_prompt',
+    doneLabel: 'Instructions système enregistrées',
+    todoLabel: 'Instructions système à compléter'
+  }
+]
+
 export default function DossiersComplianceView() {
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -40,37 +64,13 @@ export default function DossiersComplianceView() {
   const api = useApiCall()
   const [useCases, setUseCases] = useState<UseCase[]>([])
   const [completions, setCompletions] = useState<Record<string, CompletionData>>({})
-  const [documentStatuses, setDocumentStatuses] = useState<Record<string, DocumentStatus>>({})
+  const [unacceptableDocStatuses, setUnacceptableDocStatuses] = useState<
+    Record<string, Record<UnacceptableDocKey, DocumentStatus>>
+  >({})
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hasFetched, setHasFetched] = useState(false)
-  const [showUnacceptableModal, setShowUnacceptableModal] = useState(false)
-  const [selectedUseCase, setSelectedUseCase] = useState<UseCase | null>(null)
-  const [updatingDate, setUpdatingDate] = useState(false)
 
-  // Fonction pour déterminer le type de document requis pour un cas inacceptable
-  const getRequiredDocumentType = (useCase: UseCase): 'stopping_proof' | 'system_prompt' | null => {
-    if (!useCase.risk_level || useCase.risk_level.toLowerCase() !== 'unacceptable') {
-      return null
-    }
-
-    if (!useCase.deployment_date) {
-      return null
-    }
-
-    const deploymentDate = new Date(useCase.deployment_date)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0) // Normaliser à minuit
-
-    return deploymentDate < today ? 'stopping_proof' : 'system_prompt'
-  }
-
-  // Fonction pour vérifier si un cas est inacceptable (pour affichage du badge au lieu de la progression)
-  const isUnacceptableCase = (useCase: UseCase): boolean => {
-    return useCase.risk_level?.toLowerCase() === 'unacceptable' && !!useCase.deployment_date
-  }
-
-  // Fonction pour obtenir les configurations de style selon le niveau de risque
   const getRiskLevelConfig = (riskLevel: string) => {
     switch (riskLevel?.toLowerCase()) {
       case 'minimal':
@@ -124,15 +124,12 @@ export default function DossiersComplianceView() {
       try {
         setLoadingData(true)
 
-        // Récupérer les use cases
         const result = await api.get('/api/usecases')
 
         if (result.data) {
-          // Filtrer uniquement les use cases du registre actuel
           const filteredUseCases = result.data.filter((uc: UseCase) => uc.company_id === companyId)
           setUseCases(filteredUseCases)
 
-          // Récupérer les taux de complétion pour chaque use case filtré
           const completionPromises = filteredUseCases.map(async (uc: UseCase) => {
             try {
               const completionResult = await api.get(`/api/dossiers/${uc.id}/completion`)
@@ -145,42 +142,44 @@ export default function DossiersComplianceView() {
 
           const completionResults = await Promise.all(completionPromises)
           const completionMap: Record<string, CompletionData> = {}
-          completionResults.forEach(result => {
-            completionMap[result.id] = result.data
+          completionResults.forEach(r => {
+            completionMap[r.id] = r.data
           })
           setCompletions(completionMap)
 
-          // Récupérer les statuts de documents pour les cas inacceptables
-          const documentStatusPromises = filteredUseCases
+          const unacceptablePromises = filteredUseCases
             .filter((uc: UseCase) => isUnacceptableCase(uc))
             .map(async (uc: UseCase) => {
-              const docType = getRequiredDocumentType(uc)
-              if (!docType) return null
-
-              try {
-                const docResult = await api.get(`/api/dossiers/${uc.id}/${docType}`)
-                return {
-                  id: uc.id,
-                  data: {
-                    hasDocument: !!(docResult.data?.fileUrl || docResult.data?.formData?.system_instructions),
-                    status: docResult.data?.status || 'incomplete'
+              const keys: UnacceptableDocKey[] = ['stopping_proof', 'system_prompt']
+              const pair = await Promise.all(
+                keys.map(async key => {
+                  try {
+                    const docResult = await api.get(`/api/dossiers/${uc.id}/${key}`)
+                    const status: DocumentStatus = {
+                      hasDocument: !!(
+                        docResult.data?.fileUrl || docResult.data?.formData?.system_instructions
+                      ),
+                      status: docResult.data?.status || 'incomplete'
+                    }
+                    return [key, status] as const
+                  } catch (err) {
+                    console.error(`Error fetching ${key} for ${uc.id}:`, err)
+                    return [key, { hasDocument: false, status: 'incomplete' as const }] as const
                   }
-                }
-              } catch (err) {
-                console.error(`Error fetching ${docType} for ${uc.id}:`, err)
-                return {
-                  id: uc.id,
-                  data: { hasDocument: false, status: 'incomplete' as const }
-                }
+                })
+              )
+              return {
+                id: uc.id,
+                data: Object.fromEntries(pair) as Record<UnacceptableDocKey, DocumentStatus>
               }
             })
 
-          const docResults = await Promise.all(documentStatusPromises)
-          const docMap: Record<string, DocumentStatus> = {}
-          docResults.forEach(result => {
-            if (result) docMap[result.id] = result.data
+          const unacceptableResults = await Promise.all(unacceptablePromises)
+          const unacceptableMap: Record<string, Record<UnacceptableDocKey, DocumentStatus>> = {}
+          unacceptableResults.forEach(r => {
+            unacceptableMap[r.id] = r.data
           })
-          setDocumentStatuses(docMap)
+          setUnacceptableDocStatuses(unacceptableMap)
 
           setHasFetched(true)
         }
@@ -196,36 +195,7 @@ export default function DossiersComplianceView() {
   }, [user, api, hasFetched, companyId])
 
   const handleUseCaseClick = (useCase: UseCase) => {
-    // Toujours naviguer vers la page de détail (qui gère maintenant les cas inacceptables)
     router.push(`/dashboard/${companyId}/dossiers/${useCase.id}`)
-  }
-
-  const handleUpdateDeploymentDate = async (date: string) => {
-    if (!selectedUseCase) return
-
-    try {
-      setUpdatingDate(true)
-      const result = await api.put(`/api/usecases/${selectedUseCase.id}`, {
-        deployment_date: date
-      })
-
-      if (result.data) {
-        // Mettre à jour le useCase local
-        setUseCases(prevUseCases =>
-          prevUseCases.map(uc =>
-            uc.id === selectedUseCase.id
-              ? { ...uc, deployment_date: date }
-              : uc
-          )
-        )
-        setSelectedUseCase({ ...selectedUseCase, deployment_date: date })
-      }
-    } catch (error) {
-      console.error('Error updating deployment date:', error)
-      throw error
-    } finally {
-      setUpdatingDate(false)
-    }
   }
 
   if (loading || loadingData) {
@@ -258,7 +228,6 @@ export default function DossiersComplianceView() {
 
   return (
     <div>
-      {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div>
@@ -271,7 +240,6 @@ export default function DossiersComplianceView() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Liste des dossiers */}
         <div className="space-y-4">
           {useCases.length === 0 ? (
             <div className="text-center py-12">
@@ -280,7 +248,7 @@ export default function DossiersComplianceView() {
               <p className="text-gray-600">Commencez par créer votre premier cas d'usage.</p>
             </div>
           ) : (
-            useCases.map((useCase) => {
+            useCases.map(useCase => {
               const completion = completions[useCase.id] || { completed: 0, total: 8, percentage: 0 }
 
               return (
@@ -298,21 +266,22 @@ export default function DossiersComplianceView() {
                             <h3 className="text-xl font-semibold text-gray-900">{useCase.name}</h3>
                           </div>
 
-                          {/* Badges Niveau de Risque et Score - alignés à droite */}
                           <div className="flex flex-wrap gap-2">
-                            {/* Badge Niveau de Risque */}
-                            <div className={`px-3 py-2 rounded-lg border ${getRiskLevelConfig(useCase.risk_level || '').bg} ${getRiskLevelConfig(useCase.risk_level || '').border}`}>
+                            <div
+                              className={`px-3 py-2 rounded-lg border ${getRiskLevelConfig(useCase.risk_level || '').bg} ${getRiskLevelConfig(useCase.risk_level || '').border}`}
+                            >
                               <div className="flex flex-col gap-0.5">
                                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">
                                   Niveau de risque
                                 </span>
-                                <span className={`text-xs font-semibold ${getRiskLevelConfig(useCase.risk_level || '').text}`}>
+                                <span
+                                  className={`text-xs font-semibold ${getRiskLevelConfig(useCase.risk_level || '').text}`}
+                                >
                                   {getRiskLevelConfig(useCase.risk_level || '').label}
                                 </span>
                               </div>
                             </div>
 
-                            {/* Badge Score de conformité */}
                             {useCase.score_final !== null && useCase.score_final !== undefined ? (
                               <div className={`px-3 py-2 rounded-lg ${getCompactScoreStyle(useCase.score_final).bg}`}>
                                 <div className="flex flex-col gap-0.5">
@@ -320,8 +289,12 @@ export default function DossiersComplianceView() {
                                     Score de conformité
                                   </span>
                                   <div className="flex items-center gap-2">
-                                    <div className={`w-2 h-2 rounded-full ${getCompactScoreStyle(useCase.score_final).indicator}`}></div>
-                                    <span className={`text-xs font-semibold ${getCompactScoreStyle(useCase.score_final).accent}`}>
+                                    <div
+                                      className={`w-2 h-2 rounded-full ${getCompactScoreStyle(useCase.score_final).indicator}`}
+                                    ></div>
+                                    <span
+                                      className={`text-xs font-semibold ${getCompactScoreStyle(useCase.score_final).accent}`}
+                                    >
                                       {Math.round(useCase.score_final)}
                                     </span>
                                   </div>
@@ -335,9 +308,7 @@ export default function DossiersComplianceView() {
                                   </span>
                                   <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-                                    <span className="text-xs font-semibold text-gray-600">
-                                      N/A
-                                    </span>
+                                    <span className="text-xs font-semibold text-gray-600">N/A</span>
                                   </div>
                                 </div>
                               </div>
@@ -346,52 +317,44 @@ export default function DossiersComplianceView() {
                         </div>
                         <p className="text-gray-600 mb-4 line-clamp-2">{useCase.description}</p>
 
-                        {/* Badge de statut pour les cas inacceptables, sinon barre de progression */}
                         {isUnacceptableCase(useCase) ? (
                           <div className="space-y-2">
                             <div className="flex items-center justify-between text-sm mb-2">
                               <span className="text-gray-600">Statut de conformité</span>
                             </div>
-                            {(() => {
-                              const docType = getRequiredDocumentType(useCase)
-                              const docStatus = documentStatuses[useCase.id]
-                              const isComplete = docStatus?.status === 'complete' || docStatus?.status === 'validated'
+                            <div className="flex flex-col gap-2">
+                              {(() => {
+                                const byKey = unacceptableDocStatuses[useCase.id]
+                                const order = getUnacceptableActionDocTypesOrdered(useCase)
+                                const orderedRows = order
+                                  .map(k => UNACCEPTABLE_STATUS_ROWS.find(r => r.key === k))
+                                  .filter((r): r is UnacceptableRow => !!r)
 
-                              if (docType === 'stopping_proof') {
-                                return isComplete ? (
-                                  <div className="inline-flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-300 rounded-lg">
-                                    <Check className="w-5 h-5 text-green-600" />
-                                    <span className="text-sm font-semibold text-green-800">
-                                      Preuve d'arrêt complétée
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <div className="inline-flex items-center gap-2 px-4 py-3 bg-orange-50 border border-orange-300 rounded-lg">
-                                    <AlertTriangle className="w-5 h-5 text-orange-600" />
-                                    <span className="text-sm font-semibold text-orange-800">
-                                      Preuve d'arrêt à compléter
-                                    </span>
-                                  </div>
-                                )
-                              } else if (docType === 'system_prompt') {
-                                return isComplete ? (
-                                  <div className="inline-flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-300 rounded-lg">
-                                    <Check className="w-5 h-5 text-green-600" />
-                                    <span className="text-sm font-semibold text-green-800">
-                                      Instructions système enregistrées
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <div className="inline-flex items-center gap-2 px-4 py-3 bg-orange-50 border border-orange-300 rounded-lg">
-                                    <AlertTriangle className="w-5 h-5 text-orange-600" />
-                                    <span className="text-sm font-semibold text-orange-800">
-                                      Instructions système à compléter
-                                    </span>
-                                  </div>
-                                )
-                              }
-                              return null
-                            })()}
+                                return orderedRows.map(row => {
+                                  const docStatus = byKey?.[row.key]
+                                  const isComplete =
+                                    docStatus?.status === 'complete' || docStatus?.status === 'validated'
+
+                                  return isComplete ? (
+                                    <div
+                                      key={row.key}
+                                      className="inline-flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-300 rounded-lg w-full sm:w-auto"
+                                    >
+                                      <Check className="w-5 h-5 text-green-600 flex-shrink-0" />
+                                      <span className="text-sm font-semibold text-green-800">{row.doneLabel}</span>
+                                    </div>
+                                  ) : (
+                                    <div
+                                      key={row.key}
+                                      className="inline-flex items-center gap-2 px-4 py-3 bg-orange-50 border border-orange-300 rounded-lg w-full sm:w-auto"
+                                    >
+                                      <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0" />
+                                      <span className="text-sm font-semibold text-orange-800">{row.todoLabel}</span>
+                                    </div>
+                                  )
+                                })
+                              })()}
+                            </div>
                           </div>
                         ) : (
                           <div className="space-y-2">
@@ -422,19 +385,6 @@ export default function DossiersComplianceView() {
           )}
         </div>
       </div>
-
-      {/* Modal pour les cas inacceptables */}
-      <UnacceptableCaseModal
-        isOpen={showUnacceptableModal}
-        onClose={() => {
-          setShowUnacceptableModal(false)
-          setSelectedUseCase(null)
-        }}
-        useCase={selectedUseCase}
-        companyId={companyId}
-        onUpdateDeploymentDate={handleUpdateDeploymentDate}
-        updating={updatingDate}
-      />
     </div>
   )
 }

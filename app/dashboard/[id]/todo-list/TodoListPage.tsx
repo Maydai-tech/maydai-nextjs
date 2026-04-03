@@ -10,13 +10,13 @@ import ToDoAction from './components/ToDoAction'
 import RegistryToDoAction from './components/RegistryToDoAction'
 import {
   isUnacceptableCase,
-  getRequiredDocumentType,
   getDocumentTodoText,
   isTodoCompleted,
   getRiskLevelConfig,
   getPotentialPoints,
   getEarnedPoints,
   COMPLIANCE_DOCUMENT_TYPES,
+  getUnacceptableActionDocTypesOrdered,
   type DocumentType
 } from './utils/todo-helpers'
 
@@ -50,6 +50,8 @@ interface TodoItem {
   potentialPoints?: number // Points that can be gained by completing this action
   earnedPoints?: number // Points that were earned by completing this action
   actionNumber?: number // Optional numbering for ordered actions (1-8)
+  /** Cas inacceptable : true = action prioritaire selon la date, false = seconde action (toujours requise) */
+  isUnacceptablePrimary?: boolean
 }
 
 interface TodoListPageProps {
@@ -66,7 +68,9 @@ export default function TodoListPage({ params }: TodoListPageProps) {
   const [useCases, setUseCases] = useState<UseCase[]>([])
   const [company, setCompany] = useState<any>(null) // Company data with maydai_as_registry
   const [useCaseResponses, setUseCaseResponses] = useState<Record<string, any[]>>({}) // E5.N9.Q7 responses by usecase ID
-  const [documentStatuses, setDocumentStatuses] = useState<Record<string, DocumentStatus>>({})
+  const [unacceptableDocByType, setUnacceptableDocByType] = useState<
+    Record<string, Record<'stopping_proof' | 'system_prompt', DocumentStatus>>
+  >({})
   const [complianceDocStatuses, setComplianceDocStatuses] = useState<Record<string, Record<string, DocumentStatus>>>({}) // Compliance documents by usecase ID and docType
   const [registryProofStatuses, setRegistryProofStatuses] = useState<Record<string, DocumentStatus>>({}) // Registry proof documents by usecase ID
   const [loadingData, setLoadingData] = useState(true)
@@ -112,39 +116,52 @@ export default function TodoListPage({ params }: TodoListPageProps) {
           const filteredUseCases = result.data.filter((uc: UseCase) => uc.company_id === companyId)
           setUseCases(filteredUseCases)
 
-          // Fetch document statuses for unacceptable cases
-          const documentStatusPromises = filteredUseCases
+          const unacceptableDocPromises = filteredUseCases
             .filter((uc: UseCase) => isUnacceptableCase(uc))
             .map(async (uc: UseCase) => {
-              const docType = getRequiredDocumentType(uc)
-              if (!docType) return null
-
-              try {
-                const docResult = await api.get(`/api/dossiers/${uc.id}/${docType}`)
-                return {
-                  id: uc.id,
-                  data: {
-                    hasDocument: !!(docResult.data?.fileUrl || docResult.data?.formData?.system_instructions),
-                    status: docResult.data?.status || 'incomplete',
-                    fileUrl: docResult.data?.fileUrl,
-                    fileName: docResult.data?.fileName
+              const keys = ['stopping_proof', 'system_prompt'] as const
+              const entries = await Promise.all(
+                keys.map(async docType => {
+                  try {
+                    const docResult = await api.get(`/api/dossiers/${uc.id}/${docType}`)
+                    return [
+                      docType,
+                      {
+                        hasDocument: !!(
+                          docResult.data?.fileUrl || docResult.data?.formData?.system_instructions
+                        ),
+                        status: docResult.data?.status || 'incomplete',
+                        fileUrl: docResult.data?.fileUrl,
+                        fileName: docResult.data?.fileName
+                      }
+                    ] as const
+                  } catch (err) {
+                    console.error(`Error fetching ${docType} for ${uc.id}:`, err)
+                    return [
+                      docType,
+                      { hasDocument: false, status: 'incomplete' as const }
+                    ] as const
                   }
-                }
-              } catch (err) {
-                console.error(`Error fetching ${docType} for ${uc.id}:`, err)
-                return {
-                  id: uc.id,
-                  data: { hasDocument: false, status: 'incomplete' as const }
-                }
+                })
+              )
+              return {
+                id: uc.id,
+                data: Object.fromEntries(entries) as Record<
+                  'stopping_proof' | 'system_prompt',
+                  DocumentStatus
+                >
               }
             })
 
-          const docResults = await Promise.all(documentStatusPromises)
-          const docMap: Record<string, DocumentStatus> = {}
-          docResults.forEach(result => {
-            if (result) docMap[result.id] = result.data
+          const unacceptableDocResults = await Promise.all(unacceptableDocPromises)
+          const unacceptableDocMap: Record<
+            string,
+            Record<'stopping_proof' | 'system_prompt', DocumentStatus>
+          > = {}
+          unacceptableDocResults.forEach(r => {
+            unacceptableDocMap[r.id] = r.data
           })
-          setDocumentStatuses(docMap)
+          setUnacceptableDocByType(unacceptableDocMap)
 
           // Fetch E5.N9.Q7 responses for completed, non-unacceptable use cases
           const responsesMap: Record<string, any[]> = {}
@@ -364,17 +381,20 @@ export default function TodoListPage({ params }: TodoListPageProps) {
 
     // Check if this is an unacceptable case
     if (isUnacceptableCase(useCase)) {
-      const docType = getRequiredDocumentType(useCase)
-      if (docType) {
-        const docStatus = documentStatuses[useCase.id]
+      const ordered = getUnacceptableActionDocTypesOrdered(useCase)
+      const byType = unacceptableDocByType[useCase.id] || {}
+      ordered.forEach((docType, index) => {
+        const docStatus = byType[docType]
         todos.push({
           id: `${useCase.id}-${docType}`,
           text: getDocumentTodoText(docType),
           completed: isTodoCompleted(docStatus),
           useCaseId: useCase.id,
-          docType
+          docType,
+          actionNumber: index + 1,
+          isUnacceptablePrimary: index === 0
         })
-      }
+      })
     }
 
     // Add compliance document todos for completed, non-unacceptable cases
@@ -679,7 +699,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                                     todo={todo as any}
                                     isExpanded={expandedTodos[todo.id] || false}
                                     onToggle={toggleTodo}
-                                    onActionClick={(useCaseId) => handleTodoClick(useCaseId, todo.docType)}
+                                    onActionClick={useCaseId => handleTodoClick(useCaseId, todo.docType)}
                                     potentialPoints={todo.potentialPoints}
                                     earnedPoints={todo.earnedPoints}
                                   />

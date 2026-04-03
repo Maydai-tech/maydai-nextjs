@@ -1,6 +1,7 @@
 import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
 import {
   UNACCEPTABLE_INTERDIT1_FALLBACK,
+  UNACCEPTABLE_INTERDIT1_INTRO,
   UNACCEPTABLE_INTERDIT1_SECTION_LABELS,
 } from '@/lib/unacceptable-case-copy'
 
@@ -151,9 +152,5 @@ export function buildUnacceptableInterdit1(rows: UsecaseResponseRow[]): string {
     return UNACCEPTABLE_INTERDIT1_FALLBACK
   }
 
-  return [
-    "Motif principal d'interdiction (d'après votre questionnaire) :",
-    '',
-    ...blocks,
-  ].join('\n\n')
+  return [UNACCEPTABLE_INTERDIT1_INTRO, ...blocks].join('\n\n')
 }
