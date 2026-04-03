@@ -12,12 +12,12 @@ import { UseCaseSidebar } from './components/overview/UseCaseSidebar'
 import { useNextSteps } from './hooks/useNextSteps'
 import { useRiskLevel } from './hooks/useRiskLevel'
 import { useUseCaseScore } from './hooks/useUseCaseScore'
-import { AlertTriangle, RefreshCcw, ArrowRight } from 'lucide-react'
+import { RefreshCcw, ArrowRight } from 'lucide-react'
 import { getScoreStyle } from '@/lib/score-styles'
 import { RiskLevelBadge } from './components/overview/RiskLevelBadge'
 import { getCompanyStatusLabel, getCompanyStatusDefinition } from './utils/company-status'
-import UnacceptableCaseModal from '@/components/Shared/UnacceptableCaseModal'
-import { useUnacceptableCaseWorkflow } from '@/hooks/useUnacceptableCaseWorkflow'
+import UnacceptableInterditsPanel from '@/components/UnacceptableCase/UnacceptableInterditsPanel'
+import { useUnacceptableInterdit1Source } from '@/hooks/useUnacceptableInterdit1Source'
 import { supabase } from '@/lib/supabase'
 import { ACTION_TO_DOCTYPE, getActionMetadata, isActionCompleted } from './config/actions-config'
 import { useDocumentStatuses } from './hooks/useDocumentStatuses'
@@ -47,102 +47,18 @@ export default function UseCaseDetailPage() {
   const { statuses: documentStatuses, loading: documentStatusesLoading } = useDocumentStatuses(useCase?.id || null)
   const { maydaiAsRegistry } = useCompanyInfo(useCase?.company_id || null)
 
-  // État pour la modal cas inacceptable
-  const [documents, setDocuments] = useState<Record<string, any>>({})
-  const [loadingDocuments, setLoadingDocuments] = useState(false)
-  const [showUnacceptableModal, setShowUnacceptableModal] = useState(false)
-
   // État pour la vérification admin et génération de rapport
   const [isAdmin, setIsAdmin] = useState(false)
   const [generatingReport, setGeneratingReport] = useState(false)
 
   const isUnacceptableCase = riskLevel === 'unacceptable'
 
-  // Fonction pour mettre à jour la date de déploiement
-  const updateDeploymentDate = async (newDate: string) => {
-    if (!useCase) return
-    await updateUseCase({ deployment_date: newDate })
-  }
-
-  // Fonction pour recharger un document
-  const reloadDocument = async (docKey: string) => {
-    const token = session?.access_token
-    if (!token || !useCase) return
-
-    try {
-      const res = await fetch(`/api/dossiers/${useCase.id}/${docKey}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (res.ok) {
-        const doc = await res.json()
-        setDocuments(prev => ({ ...prev, [docKey]: doc }))
-      }
-    } catch (error) {
-      console.error(`Error reloading ${docKey}:`, error)
-    }
-  }
-
-  // Fonction pour supprimer un document
-  const deleteDocument = async () => {
-    // Reload after deletion
-    await reloadDocument('stopping_proof')
-  }
-
-  // Calculer initialProofUploaded basé sur le state documents
-  const getInitialProofUploaded = () => {
-    if (!useCase?.deployment_date) {
-      console.log('[getInitialProofUploaded] No deployment date')
-      return false
-    }
-
-    const deploymentDate = new Date(useCase.deployment_date)
-    deploymentDate.setHours(0, 0, 0, 0)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    // Date dans le passé → vérifier stopping_proof
-    if (deploymentDate < today) {
-      const hasProof = documents['stopping_proof']?.status === 'complete' ||
-                       documents['stopping_proof']?.status === 'validated'
-      console.log('[getInitialProofUploaded] Past date - stopping_proof status:', documents['stopping_proof']?.status, 'hasProof:', hasProof)
-      return hasProof
-    }
-
-    // Date dans le futur → vérifier system_prompt
-    const hasPrompt = (documents['system_prompt']?.status === 'complete' ||
-                       documents['system_prompt']?.status === 'validated') ||
-                      !!documents['system_prompt']?.fileUrl
-    console.log('[getInitialProofUploaded] Future date - system_prompt status:', documents['system_prompt']?.status, 'hasPrompt:', hasPrompt)
-    return hasPrompt
-  }
-
-  // Calculer initialProofUploaded pour le workflow
-  const initialProofUploaded = getInitialProofUploaded()
-
-  const workflow = useUnacceptableCaseWorkflow({
-    useCase: useCase ? {
-      id: useCase.id,
-      name: useCase.name,
-      risk_level: riskLevel ?? undefined,
-      score_final: score?.score ?? null,
-      deployment_date: useCase.deployment_date ?? null
-    } : null,
-    isOpen: isUnacceptableCase && showUnacceptableModal,
-    onUpdateDeploymentDate: updateDeploymentDate,
-    initialProofUploaded
+  const unacceptableInterdit = useUnacceptableInterdit1Source({
+    useCaseId: useCase?.id ?? null,
+    authToken: session?.access_token,
+    enabled:
+      isUnacceptableCase && !!useCase?.id && !!session?.access_token,
   })
-
-  // Log pour debug
-  useEffect(() => {
-    console.log('[page] State changed:', {
-      isUnacceptableCase,
-      showUnacceptableModal,
-      hasStoppingProof: documents['stopping_proof']?.status,
-      hasSystemPrompt: documents['system_prompt']?.status,
-      initialProofUploaded,
-      workflowProofUploaded: workflow.proofUploaded
-    })
-  }, [isUnacceptableCase, showUnacceptableModal, documents, initialProofUploaded, workflow.proofUploaded])
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -205,111 +121,6 @@ export default function UseCaseDetailPage() {
       setGeneratingReport(false)
     }
   }
-
-  // Charger les documents pour les cas inacceptables
-  useEffect(() => {
-    const loadDocuments = async () => {
-      console.log('[loadDocuments] Starting document load check:', {
-        mounted,
-        hasUser: !!user,
-        loadingData,
-        riskLoading,
-        isUnacceptableCase,
-        hasUseCase: !!useCase,
-        useCaseId: useCase?.id
-      })
-
-      // Attendre que tout soit prêt (mounted, user, useCase, riskLevel)
-      if (!mounted || !user || loadingData || riskLoading) {
-        console.log('[loadDocuments] Waiting for prerequisites')
-        return
-      }
-
-      // Si pas un cas inacceptable, pas besoin de charger les documents
-      if (!isUnacceptableCase) {
-        console.log('[loadDocuments] Not an unacceptable case, skipping')
-        setLoadingDocuments(false)
-        return
-      }
-
-      // Si pas encore de useCase, on attend
-      if (!useCase) {
-        console.log('[loadDocuments] No useCase yet')
-        return
-      }
-
-      const token = session?.access_token
-      if (!token) {
-        console.log('[loadDocuments] No token available')
-        setLoadingDocuments(false)
-        return
-      }
-
-      console.log('[loadDocuments] Starting to fetch documents for useCase:', useCaseId, 'with token:', !!token)
-
-      try {
-        // Charger stopping_proof et system_prompt
-        const [stoppingProofRes, systemPromptRes] = await Promise.all([
-          fetch(`/api/dossiers/${useCaseId}/stopping_proof`, {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          fetch(`/api/dossiers/${useCaseId}/system_prompt`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-        ])
-
-        const docs: Record<string, any> = {}
-        if (stoppingProofRes.ok) {
-          docs['stopping_proof'] = await stoppingProofRes.json()
-        }
-        if (systemPromptRes.ok) {
-          docs['system_prompt'] = await systemPromptRes.json()
-        }
-        setDocuments(docs)
-
-        // Déterminer immédiatement si on doit montrer la modal
-        const deploymentDate = new Date(useCase.deployment_date || '')
-        deploymentDate.setHours(0, 0, 0, 0)
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-
-        console.log('[loadDocuments] Date comparison:', {
-          deploymentDate: deploymentDate.toISOString(),
-          today: today.toISOString(),
-          isPast: deploymentDate < today
-        })
-
-        let shouldShowModal = false
-        if (useCase.deployment_date) {
-          if (deploymentDate < today) {
-            // Date dans le passé → vérifier stopping_proof
-            shouldShowModal = !(docs['stopping_proof']?.status === 'complete' ||
-                               docs['stopping_proof']?.status === 'validated')
-            console.log('[loadDocuments] Past deployment - stopping_proof status:', docs['stopping_proof']?.status, 'shouldShowModal:', shouldShowModal)
-          } else {
-            // Date dans le futur → vérifier system_prompt
-            shouldShowModal = !((docs['system_prompt']?.status === 'complete' ||
-                                docs['system_prompt']?.status === 'validated') ||
-                               !!docs['system_prompt']?.fileUrl)
-            console.log('[loadDocuments] Future deployment - system_prompt status:', docs['system_prompt']?.status, 'fileUrl:', docs['system_prompt']?.fileUrl, 'shouldShowModal:', shouldShowModal)
-          }
-        } else {
-          console.log('[loadDocuments] No deployment date defined')
-        }
-
-        console.log('[loadDocuments] Final shouldShowModal:', shouldShowModal)
-        setShowUnacceptableModal(shouldShowModal)
-      } catch (error) {
-        console.error('Error loading documents:', error)
-      } finally {
-        setLoadingDocuments(false)
-      }
-    }
-
-    loadDocuments()
-  }, [mounted, user, loadingData, riskLoading, isUnacceptableCase, useCase, useCaseId, session?.access_token])
-
-  // Auto-redirect logic removed - now handled in dashboard click
 
   // Show loading state during SSR and initial client load
   if (!mounted || loading) {
@@ -589,35 +400,19 @@ export default function UseCaseDetailPage() {
               </div>
             )}
 
+            {isUnacceptableCase && (
+              <UnacceptableInterditsPanel
+                useCaseId={useCaseId}
+                companyId={useCase.company_id}
+                deploymentDateIso={useCase.deployment_date ?? null}
+                interdit1Text={unacceptableInterdit.interdit1Text}
+                interdit1Loading={unacceptableInterdit.loading}
+                interdit1Error={unacceptableInterdit.error}
+              />
+            )}
+
             {nextSteps && (
               <div className="space-y-6">
-                {/* Cas de risque inacceptable */}
-                {isUnacceptableCase && (nextSteps.interdit_1 || nextSteps.interdit_2 || nextSteps.interdit_3) && (
-                  <div className="mb-8">
-                    <div className="flex items-center gap-3 mb-4">
-                      <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
-                      <h3 className="text-xl font-semibold text-gray-900">Cas de risque inacceptable</h3>
-                    </div>
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <p className="text-sm text-red-800 mb-4">
-                        Ce système est classé comme présentant un risque inacceptable. Les pratiques suivantes sont interdites.
-                      </p>
-                      <ul className="space-y-3 ml-4">
-                        {[nextSteps.interdit_1, nextSteps.interdit_2, nextSteps.interdit_3]
-                          .filter(Boolean)
-                          .map((item, index) => (
-                            <li key={index} className="text-base leading-relaxed text-gray-800">
-                              <div className="flex items-start gap-2">
-                                <span className="text-red-600 text-6xl leading-none mt-[-0.3em]">•</span>
-                                <span className="flex-1 whitespace-pre-line">{item as string}</span>
-                              </div>
-                            </li>
-                          ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-
                 {/* Évaluation du niveau de risque AI Act */}
                 {nextSteps.evaluation && (
                   <div className="mb-8">
@@ -871,24 +666,6 @@ export default function UseCaseDetailPage() {
         </div>
       </div>
 
-      {/* Modal cas inacceptable */}
-      <UnacceptableCaseModal
-        isOpen={isUnacceptableCase && showUnacceptableModal}
-        onClose={() => setShowUnacceptableModal(false)}
-        useCase={useCase ? {
-          id: useCase.id,
-          name: useCase.name,
-          risk_level: riskLevel ?? undefined,
-          score_final: score?.score ?? null,
-          deployment_date: useCase.deployment_date ?? null
-        } : null}
-        companyId={useCase?.company_id ?? ''}
-        onUpdateDeploymentDate={updateDeploymentDate}
-        updating={updating}
-        blockClosing={false}
-        onReloadDocument={reloadDocument}
-        uploadedDocument={documents['stopping_proof'] || documents['system_prompt']}
-      />
     </UseCaseLayout>
   )
 } 

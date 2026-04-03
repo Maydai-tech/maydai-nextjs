@@ -62,23 +62,25 @@ export default function UnacceptableCaseModal({
             scrollbarWidth: 'thin'
           }}
         >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">Cas Inacceptable</h3>
-          </div>
+        {/* Header — croix à gauche pour fermer quand autorisé */}
+        <div className="flex items-center gap-3 mb-6">
           {!blockClosing && (
             <button
+              type="button"
               onClick={handleClose}
               disabled={updating || workflow.updatingDate}
-              className="p-2 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Fermer"
+              className="shrink-0 p-2 -ml-2 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
           )}
+          <div className="flex items-center space-x-3 min-w-0 flex-1">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900">Cas Inacceptable</h3>
+          </div>
         </div>
 
         {/* Content */}
