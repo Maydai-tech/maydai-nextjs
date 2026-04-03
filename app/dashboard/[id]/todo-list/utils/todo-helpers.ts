@@ -1,5 +1,9 @@
 import { getTodoActionMapping } from '@/lib/todo-action-sync'
 import { normalizeScoreTo100 } from '@/lib/score-calculator-simple'
+import {
+  UNACCEPTABLE_CTA_STOPPING_PROOF,
+  UNACCEPTABLE_CTA_SYSTEM_PROMPT
+} from '@/lib/unacceptable-case-copy'
 
 interface UseCase {
   id: string
@@ -14,6 +18,9 @@ interface UseCase {
   deployment_date?: string | null
 }
 
+/** Champs suffisants pour la logique date / risque inacceptable (écrans dossier, todo, liste). */
+export type UseCaseUnacceptableFields = Pick<UseCase, 'risk_level' | 'deployment_date'>
+
 interface DocumentStatus {
   hasDocument: boolean
   status: 'incomplete' | 'complete' | 'validated'
@@ -23,17 +30,18 @@ interface DocumentStatus {
  * Determines if a use case is classified as unacceptable
  * An unacceptable case must have risk_level='unacceptable' AND a deployment_date set
  */
-export const isUnacceptableCase = (useCase: UseCase): boolean => {
+export const isUnacceptableCase = (useCase: UseCaseUnacceptableFields): boolean => {
   return useCase.risk_level?.toLowerCase() === 'unacceptable' && !!useCase.deployment_date
 }
 
 /**
- * Determines which document type is required for an unacceptable case
- * - If deployment_date is in the PAST: requires 'stopping_proof' (evidence system was stopped)
- * - If deployment_date is in the FUTURE: requires 'system_prompt' (system instructions)
- * - Returns null if case is not unacceptable or has no deployment_date
+ * Action **prioritaire** pour un cas inacceptable (urgence, ordre d’affichage, badges).
+ * Les deux documents (preuve d’arrêt + instructions système) restent toujours requis ;
+ * ne pas utiliser ce résultat pour masquer l’une des deux actions.
  */
-export const getRequiredDocumentType = (useCase: UseCase): 'stopping_proof' | 'system_prompt' | null => {
+export const getRequiredDocumentType = (
+  useCase: UseCaseUnacceptableFields
+): 'stopping_proof' | 'system_prompt' | null => {
   if (!useCase.risk_level || useCase.risk_level.toLowerCase() !== 'unacceptable') {
     return null
   }
@@ -47,6 +55,28 @@ export const getRequiredDocumentType = (useCase: UseCase): 'stopping_proof' | 's
   today.setHours(0, 0, 0, 0) // Normalize to midnight
 
   return deploymentDate < today ? 'stopping_proof' : 'system_prompt'
+}
+
+/** Types d’action dossier pour un cas inacceptable (les deux coexistent toujours). */
+export const UNACCEPTABLE_ACTION_DOC_TYPES = ['stopping_proof', 'system_prompt'] as const
+export type UnacceptableActionDocType = (typeof UNACCEPTABLE_ACTION_DOC_TYPES)[number]
+
+/** Alias explicite pour la priorité / l’urgence (même logique que getRequiredDocumentType). */
+export const getUnacceptablePrimaryDocumentType = getRequiredDocumentType
+
+/**
+ * Les deux actions, avec l’action prioritaire en premier (date passée → preuve d’arrêt d’abord).
+ */
+export function getUnacceptableActionDocTypesOrdered(
+  useCase: UseCaseUnacceptableFields
+): UnacceptableActionDocType[] {
+  const primary = getUnacceptablePrimaryDocumentType(useCase)
+  if (!primary) {
+    return [...UNACCEPTABLE_ACTION_DOC_TYPES]
+  }
+  const secondary: UnacceptableActionDocType =
+    primary === 'stopping_proof' ? 'system_prompt' : 'stopping_proof'
+  return [primary, secondary]
 }
 
 /**
@@ -101,9 +131,9 @@ export const getDocumentLabel = (docType: DocumentType): string => {
 export const getDocumentTodoText = (docType: DocumentType): string => {
   switch (docType) {
     case 'stopping_proof':
-      return 'Compléter la preuve d\'arrêt du système'
+      return UNACCEPTABLE_CTA_STOPPING_PROOF
     case 'system_prompt':
-      return 'Définir les instructions système & prompts'
+      return UNACCEPTABLE_CTA_SYSTEM_PROMPT
     case 'technical_documentation':
       return 'Importer la documentation technique'
     case 'human_oversight':

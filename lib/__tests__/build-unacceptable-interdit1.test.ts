@@ -4,7 +4,10 @@ import {
   resolveOptionLabels,
   type UsecaseResponseRow,
 } from '@/lib/build-unacceptable-interdit1'
-import { UNACCEPTABLE_INTERDIT1_FALLBACK } from '@/lib/unacceptable-case-copy'
+import {
+  UNACCEPTABLE_INTERDIT1_FALLBACK,
+  UNACCEPTABLE_INTERDIT1_INTRO,
+} from '@/lib/unacceptable-case-copy'
 
 describe('buildUnacceptableInterdit1', () => {
   test('retourne le fallback si aucune réponse prohibée', () => {
@@ -20,7 +23,7 @@ describe('buildUnacceptableInterdit1', () => {
       },
     ]
     const text = buildUnacceptableInterdit1(rows)
-    expect(text).toContain("Motif principal d'interdiction")
+    expect(text).toContain(UNACCEPTABLE_INTERDIT1_INTRO)
     expect(text).toContain('Finalités interdites identifiées')
     expect(text).toContain('Identification biométrique et catégorisation des personnes physiques')
     expect(text).not.toContain('E4.N7.Q3.E')

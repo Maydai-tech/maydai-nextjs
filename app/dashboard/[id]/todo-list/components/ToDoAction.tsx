@@ -10,6 +10,7 @@ interface TodoItem {
   useCaseId: string
   docType: DocumentType
   actionNumber?: number // Optional numbering for ordered actions (1-8)
+  isUnacceptablePrimary?: boolean
 }
 
 interface ToDoActionProps {
@@ -56,6 +57,17 @@ export default function ToDoAction({
         <span className={`flex-1 text-sm ${todo.completed ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
           {todo.actionNumber ? `${todo.actionNumber}. ${todo.text}` : todo.text}
         </span>
+
+        {todo.isUnacceptablePrimary === true && (
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200 flex-shrink-0">
+            Prioritaire
+          </span>
+        )}
+        {todo.isUnacceptablePrimary === false && (
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200 flex-shrink-0">
+            Également requis
+          </span>
+        )}
 
         {/* Points badges - different styles for earned vs potential */}
         {earnedPoints && earnedPoints > 0 ? (

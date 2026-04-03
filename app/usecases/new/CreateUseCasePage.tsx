@@ -440,8 +440,17 @@ function CreateUseCasePageContent() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Erreur lors de la génération')
+        let payload: { error?: string; details?: string } = {}
+        try {
+          payload = await response.json()
+        } catch {
+          /* réponse non-JSON */
+        }
+        const message =
+          payload.details ||
+          payload.error ||
+          `Erreur serveur (${response.status})`
+        throw new Error(message)
       }
 
       const data = await response.json()
@@ -455,7 +464,15 @@ function CreateUseCasePageContent() {
       }))
     } catch (error) {
       console.error('Erreur génération:', error)
-      setError('Impossible de générer la description automatiquement. Veuillez la saisir manuellement.')
+      const technical =
+        error instanceof Error ? error.message : ''
+      const showTechnical =
+        process.env.NODE_ENV === 'development' && Boolean(technical)
+      setError(
+        showTechnical
+          ? technical
+          : 'Impossible de générer la description automatiquement. Veuillez la saisir manuellement.'
+      )
     } finally {
       setIsGeneratingDescription(false)
     }
