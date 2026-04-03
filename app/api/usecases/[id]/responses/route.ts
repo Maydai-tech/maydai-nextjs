@@ -61,12 +61,33 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    // Récupérer les réponses
-    const { data: responses, error: responsesError } = await supabase
+    // Filtre optionnel par question_code (réduit la charge pour interdit_1, etc.)
+    const rawCodes = request.nextUrl.searchParams.get('question_codes')
+    let codesFilter: string[] | null = null
+    if (rawCodes) {
+      const parts = rawCodes
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean)
+      const safe = parts.filter((c) => /^[A-Za-z0-9._]+$/.test(c))
+      if (safe.length > 0 && safe.length <= 50) {
+        codesFilter = safe
+      }
+    }
+
+    let responsesQuery = supabase
       .from('usecase_responses')
       .select('*')
       .eq('usecase_id', usecaseId)
-      .order('created_at', { ascending: false })
+
+    if (codesFilter) {
+      responsesQuery = responsesQuery.in('question_code', codesFilter)
+    }
+
+    const { data: responses, error: responsesError } = await responsesQuery.order(
+      'created_at',
+      { ascending: false },
+    )
 
     if (responsesError) {
       return NextResponse.json({ error: 'Error fetching responses' }, { status: 500 })
