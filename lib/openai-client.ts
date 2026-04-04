@@ -472,20 +472,33 @@ Scores (indicatifs, ne fixent pas le niveau): base ${scores.score_base} | modèl
 
     const questionnaireSection = this.buildQuestionnaireSectionForPhase1(questionnaire_questions)
 
+    const highRiskJustificationRules =
+      cas_usage.risk_level_code === 'high'
+        ? `
+- evaluation_risque.justification (obligatoire si niveau = Risque élevé) :
+  - Rappeler explicitement que le niveau retenu est celui fourni par l'application (« ${cas_usage.risk_level_label_fr} »), sans le contredire.
+  - Citer au moins UN déclencheur de qualification réel, issu des réponses du questionnaire (domaine / usage / catégorie : privilégier les questions de qualification du risque, ex. E4.N7.Q2 et filière associée, pas E5.N9.* ni E6.N10.*).
+  - Ajouter une phrase d'ancrage juridique cohérente avec ce déclencheur (Article 6 AI Act et point pertinent d'Annexe III, ou Annexe I si le questionnaire l'établit clairement).
+  - Interdit comme fondement principal de cette justification : l'absence de surveillance humaine, l'absence de mesures d'atténuation, l'absence de documentation seule, le seul traitement de données personnelles sans rattachement à un cas d'Annexe III, ou toute question E5.N9.* / E6.N10.* (réservées aux 9 slots d'action).`
+        : ''
+
     const authoritativeRiskBlock = `
 NIVEAU DE RISQUE (AUTORITATIF — APPLICATION)
 - Niveau fourni par l'application : ne pas le recalculer ni le modifier.
 - evaluation_risque.niveau = chaîne exacte : "${cas_usage.risk_level_label_fr}"
-- evaluation_risque.justification : s'appuyer uniquement sur la qualification du risque déjà dans le questionnaire ; ne pas inférer un autre niveau à partir de cette justification.
+- evaluation_risque.justification : reprendre le niveau autoritatif ; s'appuyer sur les faits de qualification du risque déclarés dans le questionnaire (déclencheurs), pas sur la maturité de conformité opérationnelle ; ne pas inférer un autre niveau à partir de cette justification.
 - Ne pas utiliser E5.N9.* ni E6.N10.* pour déduire ou justifier le niveau de risque (slots d'action uniquement).
 - Ne pas inventer des faits de qualification absents du questionnaire.
-- Score final ${scoreFinal ?? 'N/A'}/100 : informatif seul, pas substitut aux faits de qualification.`
+- Score final ${scoreFinal ?? 'N/A'}/100 : informatif seul, pas substitut aux faits de qualification.${highRiskJustificationRules}`
 
     const statuses = data.slot_statuses
     const slotMappingBlock = (!isUnacceptable && statuses)
       ? `
 STATUTS DES 9 SLOTS (AUTORITATIFS — calculés par l'application, NE PAS MODIFIER)
-Chaque slot DOIT commencer par le préfixe exact indiqué ci-dessous, suivi de " : " (espace-deux-points-espace), puis d'un texte explicatif contextualisé (2-4 phrases).
+Chaque slot DOIT :
+1) commencer par le préfixe exact indiqué ci-dessous, suivi de " : " (espace-deux-points-espace) ;
+2) contenir au moins 2 phrases d'explication contextualisée (hors préfixe et hors la partie Références) ;
+3) se terminer obligatoirement dans la MÊME chaîne par une phrase commençant exactement : Références : (puis références AI Act ou principes pertinentes, alignées sur le thème du slot).
 Ne pas changer le préfixe. Ne pas ajouter de nuance sur le statut. Ne pas contredire le statut dans le texte.
 
 quick_win_1 → ${statuses.quick_win_1}
@@ -510,12 +523,13 @@ Contexte des slots :
 - action_3 : formations AI Act (E4.N8.Q12)
 
 Pour chaque slot, rédiger un texte explicatif basé sur les réponses du questionnaire ci-dessus.
-Exemple de format attendu pour un slot dont le statut est NON :
-"NON : L'organisation n'a pas encore mis en place de mécanisme de surveillance humaine. Il est recommandé de désigner un responsable dédié."`
+Exemple complet (statut NON — ne pas copier textuellement ; respecter préfixe + 2 phrases + Références) :
+"NON : Les réponses ne permettent pas d'identifier un responsable ou une fonction de surveillance humaine clairement désigné pour ce système. Il convient de formaliser ce rôle et de le documenter pour assurer une supervision effective. Références : Article 14 du règlement (UE) 2024/1689 (surveillance humaine pour les systèmes d'IA à haut risque)."`
       : (!isUnacceptable
           ? `
 MAPPING DES 9 SLOTS — statuts non fournis, déduire des réponses.
-Préfixe par slot : « OUI : », « NON : » ou « Information insuffisante : ».`
+Préfixe par slot : « OUI : », « NON : » ou « Information insuffisante : ».
+Chaque slot : au moins 2 phrases d'explication puis fin obligatoire par « Références : ... » dans la même chaîne.`
           : `
 CAS RISQUE INACCEPTABLE (INTERDIT)
 - Ne PAS produire quick_win_1..3, priorite_1..3, action_1..3 (aucun plan d'action type cas standard).
@@ -556,7 +570,9 @@ SORTIE JSON
 - Un seul objet JSON UTF-8, parsable ; pas de markdown ni de texte hors de l'objet.
 - Clés obligatoires (noms inchangés) : introduction_contextuelle, evaluation_risque { niveau, justification }, quick_win_1, quick_win_2, quick_win_3, priorite_1, priorite_2, priorite_3, action_1, action_2, action_3, impact_attendu, conclusion
 - Toutes les valeurs chaîne non vides (espaces seuls interdits). impact_attendu et conclusion obligatoires même si plusieurs des 9 slots sont « Information insuffisante : ».
-- evaluation_risque.niveau : "${cas_usage.risk_level_label_fr}" exactement ; ne pas utiliser la formulation « Risque inacceptable » dans niveau (utiliser « Interdit » si cas maximal).`
+- evaluation_risque.niveau : "${cas_usage.risk_level_label_fr}" exactement ; ne pas utiliser la formulation « Risque inacceptable » dans niveau (utiliser « Interdit » si cas maximal).
+- evaluation_risque.justification : respecter intégralement le bloc NIVEAU DE RISQUE ci-dessus (y compris les règles spécifiques « Risque élevé » si applicables).
+- quick_win_1, quick_win_2, quick_win_3, priorite_1, priorite_2, priorite_3, action_1, action_2, action_3 : chaque valeur doit commencer par le préfixe imposé (OUI / NON / Information insuffisante), contenir au moins 2 phrases explicatives, et se terminer obligatoirement par « Références : ... » (même pour Information insuffisante).`
 
     return `${factsBlock}\n\n${questionnaireSection}\n\n${authoritativeRiskBlock}\n\n${slotMappingBlock}\n\n${formatBlock}`.trim()
   }
