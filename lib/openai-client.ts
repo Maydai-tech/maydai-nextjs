@@ -518,9 +518,25 @@ MAPPING DES 9 SLOTS — statuts non fournis, déduire des réponses.
 Préfixe par slot : « OUI : », « NON : » ou « Information insuffisante : ».`
           : `
 CAS RISQUE INACCEPTABLE (INTERDIT)
-- Ne PAS produire quick_win_1..3, priorite_1..3, action_1..3.
-- Produire uniquement les champs interdit_1, interdit_2, interdit_3 (obligatoires) décrivant les pratiques/finalités interdites applicables au cas.
-- Chaque interdit_* doit être un texte UNIQUE, AUTONOME et SPÉCIFIQUE (2 à 4 phrases), sans redondance entre les 3.
+- Ne PAS produire quick_win_1..3, priorite_1..3, action_1..3 (aucun plan d'action type cas standard).
+- Produire obligatoirement interdit_1, interdit_2, interdit_3 — ce ne sont PAS trois « pratiques ou finalités interdites » homogènes et parallèles ; chaque clé a un rôle différent.
+
+interdit_1 — MOTIF PRINCIPAL D'INTERDICTION
+- Exposer le motif principal qui rend ce cas interdit, en s'appuyant STRICTEMENT sur les réponses déclarées du questionnaire, en priorité sur les codes E4.N7.Q2.1, E4.N7.Q3 et E4.N7.Q3.1 (contexte d'usage, finalités interdites, situations d'intervention).
+- Ne pas inventer des motifs ou faits absents du questionnaire ; ne pas décliner artificiellement trois fois le même constat dans les trois champs.
+
+interdit_2 — EXIGENCE DE PREUVE D'ARRÊT / TRAÇABILITÉ
+- Décrire l'exigence pour l'organisation de pouvoir DÉMONTRER l'arrêt effectif ou l'absence de déploiement du système et de CONSERVER une traçabilité vérifiable (documents, preuves, attestations, éléments auditables).
+- Ce n'est PAS une « deuxième interdiction » juridique au même titre que le motif principal ; c'est une exigence opérationnelle et probatoire liée à l'interdiction.
+
+interdit_3 — EXIGENCE DE SÉCURISATION (INSTRUCTIONS SYSTÈME, PROMPTS, GARDE-FOUS)
+- Décrire l'exigence de DOCUMENTER et de FIXER les instructions système, les prompts et les garde-fous encadrant le comportement du système (reproductibilité, contrôle, réduction des risques de remise en service non maîtrisée).
+- Ce n'est PAS une « troisième pratique interdite » parallèle à interdit_1 ; c'est une exigence technique et d'auditabilité complémentaire au motif.
+
+Règles transverses
+- Distinction par le RÔLE : constat d'interdiction (interdit_1) vs exigences de preuve/traçabilité (interdit_2) vs exigences de sécurisation documentaire et technique (interdit_3).
+- Interdiction de traiter interdit_2 et interdit_3 comme de nouvelles finalités prohibées distinctes de la même nature que le motif synthétisé en interdit_1.
+- Interdiction de produire trois variantes cosmétiquement différentes d'un seul et même paragraphe ; pas de simple copier-coller entre les champs.
 `)
 
     const formatBlock = isUnacceptable
@@ -529,8 +545,12 @@ SORTIE JSON — CAS RISQUE INACCEPTABLE
 - Un seul objet JSON UTF-8, parsable ; pas de markdown ni de texte hors de l'objet.
 - Clés obligatoires (noms inchangés) : introduction_contextuelle, evaluation_risque { niveau, justification }, interdit_1, interdit_2, interdit_3, impact_attendu, conclusion
 - Toutes les valeurs chaîne non vides (espaces seuls interdits).
-- evaluation_risque.niveau : "${cas_usage.risk_level_label_fr}" exactement.
-- interdit_1, interdit_2, interdit_3 : obligatoires, chacune doit décrire une pratique/finalité interdite pertinente pour ce cas (2 à 4 phrases), et elles doivent être distinctes entre elles.`
+- evaluation_risque.niveau : "${cas_usage.risk_level_label_fr}" exactement (niveau fourni par l'application, ne pas le modifier).
+
+Champs interdit_1, interdit_2, interdit_3 : obligatoires, 2 à 4 phrases chacun, distincts par leur objet (pas trois « interdictions » équivalentes).
+- interdit_1 : motif principal d'interdiction du cas, fondé sur les réponses questionnaire pertinentes — priorité aux faits déclarés sous E4.N7.Q2.1, E4.N7.Q3 et E4.N7.Q3.1 ; ne pas extrapoler hors de ces éléments et du reste du questionnaire utile à ce motif.
+- interdit_2 : exigence de preuve et de traçabilité de l'arrêt ou du non-déploiement (contrôle, audit) — ne pas présenter comme une nouvelle « pratique interdite » parallèle au motif.
+- interdit_3 : exigence de sécurisation et de documentation des instructions système, prompts et garde-fous — ne pas présenter comme une troisième « pratique interdite » parallèle au motif.`
       : `
 SORTIE JSON
 - Un seul objet JSON UTF-8, parsable ; pas de markdown ni de texte hors de l'objet.
