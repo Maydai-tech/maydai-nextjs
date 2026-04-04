@@ -544,18 +544,26 @@ export default function UseCaseRapportPage() {
                 </div>
               )}
 
-              {/* Évaluation du niveau de risque AI Act */}
+              {/* Évaluation du niveau de risque (standard) / Justification juridique (cas inacceptable) */}
               {nextSteps.evaluation && (
                 <div className="mb-8">
                   <div className="flex items-center gap-3 mb-4">
                     <img 
                       src="/icons/low-performance.png" 
-                      alt="Évaluation du risque" 
+                      alt={
+                        isUnacceptableCase
+                          ? 'Justification juridique du classement'
+                          : 'Évaluation du risque'
+                      }
                       width={24} 
                       height={24} 
                       className="flex-shrink-0"
                     />
-                    <h3 className="text-xl font-semibold text-gray-900">Évaluation du niveau de risque AI Act</h3>
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      {isUnacceptableCase
+                        ? 'Justification juridique du classement'
+                        : 'Évaluation du niveau de risque AI Act'}
+                    </h3>
                   </div>
                   <div className="prose prose-gray max-w-none">
                     <p className="text-base leading-relaxed text-gray-700 whitespace-pre-line">
@@ -775,8 +783,8 @@ export default function UseCaseRapportPage() {
                 </div>
               )}
 
-              {/* Impact attendu */}
-              {nextSteps.impact && (
+              {/* Impact attendu — non affiché pour risque inacceptable (hors plan d'action 9 slots) */}
+              {!isUnacceptableCase && nextSteps.impact && (
                 <div>
                   <div className="flex items-center gap-3 mb-4">
                     <img 
