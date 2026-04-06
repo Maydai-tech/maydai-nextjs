@@ -477,9 +477,9 @@ Scores (indicatifs, ne fixent pas le niveau): base ${scores.score_base} | modèl
         ? `
 - evaluation_risque.justification (obligatoire si niveau = Risque élevé) :
   - Rappeler explicitement que le niveau retenu est celui fourni par l'application (« ${cas_usage.risk_level_label_fr} »), sans le contredire.
-  - Citer au moins UN déclencheur de qualification réel, issu des réponses du questionnaire (domaine / usage / catégorie : privilégier les questions de qualification du risque, ex. E4.N7.Q2 et filière associée, pas E5.N9.* ni E6.N10.*).
-  - Ajouter une phrase d'ancrage juridique cohérente avec ce déclencheur (Article 6 AI Act et point pertinent d'Annexe III, ou Annexe I si le questionnaire l'établit clairement).
-  - Interdit comme fondement principal de cette justification : l'absence de surveillance humaine, l'absence de mesures d'atténuation, l'absence de documentation seule, le seul traitement de données personnelles sans rattachement à un cas d'Annexe III, ou toute question E5.N9.* / E6.N10.* (réservées aux 9 slots d'action).`
+  - Citer au moins UN déclencheur de qualification réel, issu des réponses du questionnaire (privilégier E4.N7.* et la filière de qualification du haut risque, pas E5.N9.* ni E6.N10.*).
+  - La justification DOIT contenir explicitement les mentions « Article 6 » et « Annexe III » du règlement (UE) 2024/1689 et expliquer le lien entre ce déclencheur et cette qualification (point ou logique d'Annexe III), sans se limiter à une généralité sur un domaine, un secteur ou l'emploi. Si le questionnaire établit clairement une qualification par Annexe I sans cas d'Annexe III, remplacer l'exigence « Annexe III » par « Annexe I » tout en conservant « Article 6 ».
+  - Interdit comme fondement principal : formulations vagues du type « domaine à risque », simple évocation de l'emploi ou du secteur sans ce rattachement juridique, le seul traitement de données personnelles sans lien explicite à un cas d'Annexe III, l'absence de surveillance humaine, l'absence de mesures d'atténuation, l'absence de documentation seule, ou toute question E5.N9.* / E6.N10.* (réservées aux 9 slots d'action).`
         : ''
 
     const authoritativeRiskBlock = `
@@ -522,8 +522,13 @@ Contexte des slots :
 - action_2 : exactitude, robustesse, cybersécurité (E5.N9.Q9)
 - action_3 : formations AI Act (E4.N8.Q12)
 
+Références — règle spécifique quick_win_1 (registre centralisé IA, E5.N9.Q7 uniquement) :
+- Ce slot porte exclusivement sur le registre ; aucune tournure centrée sur la surveillance humaine ; interdiction stricte de citer l'article 14 dans quick_win_1 (réservé à quick_win_2).
+- Références alignées sur la doctrine : traçabilité et documentation selon la qualification du système ; article 16 ou 26 du règlement (UE) 2024/1689 selon le rôle ; si aucune référence plus certaine n'est possible : Références : Information insuffisante — article ou annexe non précisé.
+
 Pour chaque slot, rédiger un texte explicatif basé sur les réponses du questionnaire ci-dessus.
-Exemple complet (statut NON — ne pas copier textuellement ; respecter préfixe + 2 phrases + Références) :
+
+Exemple réservé à quick_win_2 uniquement (surveillance humaine — ne PAS appliquer cet exemple ni sa référence à quick_win_1 ni aux autres slots ; statut NON — ne pas copier textuellement ; respecter préfixe + 2 phrases + Références) :
 "NON : Les réponses ne permettent pas d'identifier un responsable ou une fonction de surveillance humaine clairement désigné pour ce système. Il convient de formaliser ce rôle et de le documenter pour assurer une supervision effective. Références : Article 14 du règlement (UE) 2024/1689 (surveillance humaine pour les systèmes d'IA à haut risque)."`
       : (!isUnacceptable
           ? `

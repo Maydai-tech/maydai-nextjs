@@ -65,10 +65,13 @@ describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
     { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.A', multiple_codes: null, conditional_main: null },
     // E4.N8.Q9 - Interactions personnes (NON)
     { question_code: 'E4.N8.Q9', single_value: 'E4.N8.Q9.B', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q9.1', single_value: 'E4.N8.Q9.1.B', multiple_codes: null, conditional_main: null },
     // E4.N8.Q10 - Nombre personnes (< 100)
-    { question_code: 'E4.N8.Q10', single_value: null, multiple_codes: null, conditional_main: 'E4.N8.Q10.A' },
-    // E4.N8.Q11 - Type contenu (Texte)
-    { question_code: 'E4.N8.Q11', single_value: null, multiple_codes: ['E4.N8.Q11.A'], conditional_main: null },
+    { question_code: 'E4.N8.Q10', single_value: 'E4.N8.Q10.A', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q11.0', single_value: 'E4.N8.Q11.0.A', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q11.1', single_value: null, multiple_codes: ['E4.N8.Q11.1.A'], conditional_main: null },
+    { question_code: 'E4.N8.Q11.T1', single_value: 'E4.N8.Q11.T1.B', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q11.T2', single_value: 'E4.N8.Q11.T2.B', multiple_codes: null, conditional_main: null },
     // E6.N10.Q1 - Utilisateurs informés (OUI)
     { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.A', multiple_codes: null, conditional_main: null },
     // E6.N10.Q2 - Label IA (OUI)
@@ -112,10 +115,12 @@ describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
     { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.B', multiple_codes: null, conditional_main: null },
     // E4.N8.Q9 - Interactions personnes (OUI) → -3 human_oversight
     { question_code: 'E4.N8.Q9', single_value: 'E4.N8.Q9.A', multiple_codes: null, conditional_main: null },
-    // E4.N8.Q10 - Nombre personnes (> 100) → -3 human_oversight
-    { question_code: 'E4.N8.Q10', single_value: null, multiple_codes: null, conditional_main: 'E4.N8.Q10.B' },
-    // E4.N8.Q11 - Type contenu (Image/Audio/Vidéo) → -3 social_environmental
-    { question_code: 'E4.N8.Q11', single_value: null, multiple_codes: ['E4.N8.Q11.B'], conditional_main: null },
+    { question_code: 'E4.N8.Q9.1', single_value: 'E4.N8.Q9.1.B', multiple_codes: null, conditional_main: null },
+    // E4.N8.Q10 - Nombre personnes (100–999) → -1 human_oversight (plus de qualification risk)
+    { question_code: 'E4.N8.Q10', single_value: 'E4.N8.Q10.B', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q11.0', single_value: 'E4.N8.Q11.0.A', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q11.1', single_value: null, multiple_codes: ['E4.N8.Q11.1.B'], conditional_main: null },
+    { question_code: 'E4.N8.Q11.M1', single_value: 'E4.N8.Q11.M1.A', multiple_codes: null, conditional_main: null },
     // E6.N10.Q1 - Utilisateurs informés (NON) → -3 transparency
     { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.B', multiple_codes: null, conditional_main: null },
     // E6.N10.Q2 - Label IA (NON) → -3 transparency
@@ -205,18 +210,17 @@ describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
       // E5.N9.Q8 NON: -3
       // E4.N8.Q12 NON: -0.8
       // E4.N8.Q9 OUI: -3
-      // E4.N8.Q10 >100: -3
-      // E4.N8.Q11 Image: -3
+      // E4.N8.Q10 tranche B: -1 (conformité / volumétrie, plus -3)
+      // E4.N8.Q11.M1 synthétique/manipulé: -3
       // E6.N10.Q1 NON: -3
       // E6.N10.Q2 NON: -3
-      // Total penalties: -44.8
-      // Expected score: 90 - 44.8 = 45.2
+      // Total penalties: -42.8 → score 47.2 (vérifié par le calculateur)
 
-      expect(result.score).toBeCloseTo(45.2, 1)
+      expect(result.score).toBeCloseTo(47.2, 1)
       expect(result.is_eliminated).toBe(false)
     })
 
-    test('should have 0% for Human Agency category (all negative answers)', async () => {
+    test('should have reduced Human Agency percentage (negative answers)', async () => {
       const result = await calculateScore(mockUsecaseId, traducteur2Responses)
 
       const humanAgency = result.category_scores.find(
@@ -224,10 +228,7 @@ describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
       )
 
       expect(humanAgency).toBeDefined()
-      // Human Agency pénalités: -5 (Q7) -3 (Q4) -3 (Q8) -3 (Q9) -3 (Q10) = -17
-      // Max Human Agency: 17 (selon CSV)
-      // Score: 0%, car toutes les questions sont mal répondues
-      expect(humanAgency!.percentage).toBe(0)
+      expect(humanAgency!.percentage).toBe(12)
     })
 
     test('should have low percentage for Technical Robustness', async () => {
@@ -268,10 +269,9 @@ describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
       )
 
       expect(transparency).toBeDefined()
-      // Transparency pénalités: -3 (Q1) -3 (Q2) = -6
-      // Max Transparency questionnaire: 6
-      // Score questionnaire: 0%
-      expect(transparency!.percentage).toBe(0)
+      // Transparence : le JSON inclut d’autres questions pondérées (ex. E4.N8.Q11.T1) ;
+      // avec le jeu de réponses « média + M1 », le % n’est plus nul.
+      expect(transparency!.percentage).toBe(40)
     })
 
     test('should have low percentage for Social & Environmental', async () => {
@@ -282,10 +282,8 @@ describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
       )
 
       expect(social).toBeDefined()
-      // Social pénalités du test: -3 (Q11 Image)
-      // Mais le max inclut TOUTES les questions du JSON (pas seulement celles du test)
-      // Donc le pourcentage n'est pas 0% mais inférieur à 100%
-      expect(social!.percentage).toBeLessThan(100)
+      // Social : pénalité M1.A épuise le sous-ensemble des questions E4.8 liées dans ce cas → 0 %
+      expect(social!.percentage).toBe(0)
       expect(social!.percentage).toBeGreaterThanOrEqual(0)
     })
 

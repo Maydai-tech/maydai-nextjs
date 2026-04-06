@@ -82,8 +82,11 @@ export function transformToOpenAIFormat(
       // Question checkbox
       if (response.multiple_codes && response.multiple_codes.length > 0) {
         result.responses.E4_N7_Q2.selected_options = response.multiple_codes
-        result.responses.E4_N7_Q2.selected_labels = response.multiple_labels || 
-          response.multiple_codes.map((code: string) => getOptionLabel('E4.N7.Q2', code))
+        const providedLabels = response.multiple_labels
+        result.responses.E4_N7_Q2.selected_labels =
+          Array.isArray(providedLabels) && providedLabels.length > 0
+            ? providedLabels
+            : response.multiple_codes.map((code: string) => getOptionLabel('E4.N7.Q2', code))
       }
     } else if (response.question_code === 'E5.N9.Q7') {
       // Question conditionnelle

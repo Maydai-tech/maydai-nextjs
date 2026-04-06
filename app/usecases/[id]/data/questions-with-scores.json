@@ -609,13 +609,12 @@
   },
   "E4.N8.Q9": {
     "id": "E4.N8.Q9",
-    "question": "Votre système d'IA interagit-il avec des personnes physiques ?",
+    "question": "Le système d'IA interagit-il directement avec des personnes physiques ?",
     "type": "radio",
     "required": true,
-    "risk": "limited",
     "tooltip": {
-      "title": "Interaction personnes physiques",
-      "shortContent": "L'interaction désigne le fait que l'IA touche directement ou indirectement des individus. Les systèmes interagit avec des personnes doivent les informer de cette interaction.",
+      "title": "Interaction directe",
+      "shortContent": "Répondez « Oui » si le système échange directement avec une personne via une interface, un agent conversationnel, un assistant vocal, une messagerie, un appel ou un accompagnement en temps réel.",
       "icon": "💡"
     },
     "options": [
@@ -635,89 +634,212 @@
       }
     ]
   },
+  "E4.N8.Q9.1": {
+    "id": "E4.N8.Q9.1",
+    "question": "Le système utilise-t-il la reconnaissance ou l'inférence d'émotions, ou la catégorisation biométrique de personnes physiques, dans un cadre autorisé et hors des cas déjà qualifiés à risque élevé ou inacceptable ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Émotions et biométrie",
+      "shortContent": "Répondez « Oui » uniquement si ces fonctionnalités sont réellement utilisées et ne relèvent pas déjà des cas interdits ou à haut risque identifiés plus haut dans le questionnaire.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E4.N8.Q9.1.A",
+        "label": "Oui",
+        "score_impact": -2,
+        "risk": "limited",
+        "category_impacts": {
+          "privacy_data": -2
+        }
+      },
+      {
+        "code": "E4.N8.Q9.1.B",
+        "label": "Non",
+        "score_impact": 0
+      }
+    ]
+  },
   "E4.N8.Q10": {
     "id": "E4.N8.Q10",
-    "question": "Utilisé par combien de personnes physiques par mois ?",
-    "type": "conditional",
+    "question": "À titre indicatif, combien de personnes physiques utilisent ce système chaque mois ?",
+    "type": "radio",
     "required": true,
-    "risk": "limited",
-    "conditionalFields": [
-      {
-        "key": "other_count",
-        "label": "Autre nombre",
-        "placeholder": "Précisez..."
-      }
-    ],
+    "tooltip": {
+      "title": "Volumétrie",
+      "shortContent": "Cette question sert à apprécier l'exposition et la maturité du dispositif. Elle ne qualifie pas, à elle seule, le niveau de risque AI Act.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N8.Q10.A",
-        "label": "< à 100",
+        "label": "Moins de 100",
         "score_impact": 0
       },
       {
         "code": "E4.N8.Q10.B",
-        "label": "> à 100",
-        "score_impact": -3,
-        "risk": "limited",
+        "label": "De 100 à 999",
+        "score_impact": -1,
         "category_impacts": {
-          "human_oversight": -3
+          "human_oversight": -1
         }
       },
       {
         "code": "E4.N8.Q10.C",
-        "label": "> à 1000",
-        "score_impact": -3,
-        "risk": "limited",
+        "label": "De 1 000 à 9 999",
+        "score_impact": -2,
         "category_impacts": {
-          "human_oversight": -3
+          "human_oversight": -2
         }
       },
       {
         "code": "E4.N8.Q10.D",
-        "label": "> à 10 000",
+        "label": "De 10 000 à 99 999",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "human_oversight": -3
         }
       },
       {
         "code": "E4.N8.Q10.E",
-        "label": "> à 100 000",
+        "label": "De 100 000 à 999 999",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "human_oversight": -3
         }
       },
       {
         "code": "E4.N8.Q10.F",
-        "label": "> à 1 M",
+        "label": "1 million ou plus",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "human_oversight": -3
         }
       }
     ]
   },
-  "E4.N8.Q11": {
-    "id": "E4.N8.Q11",
-    "question": "Utilisé pour générer ou manipuler du contenu ?",
-    "type": "tags",
+  "E4.N8.Q11.0": {
+    "id": "E4.N8.Q11.0",
+    "question": "Le système d'IA produit-il ou modifie-t-il des contenus numériques (texte, image, son ou vidéo) au moyen de l'IA ?",
+    "type": "radio",
     "required": true,
-    "risk": "limited",
-    "impact_mode": "any",
+    "tooltip": {
+      "title": "Contenus numériques",
+      "shortContent": "Incluez les contenus générés ou sensiblement modifiés par l'IA, y compris en assistance à la rédaction, à la traduction ou à la production de contenus.",
+      "icon": "💡"
+    },
     "options": [
       {
-        "code": "E4.N8.Q11.A",
+        "code": "E4.N8.Q11.0.A",
+        "label": "Oui",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.0.B",
+        "label": "Non",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E4.N8.Q11.1": {
+    "id": "E4.N8.Q11.1",
+    "question": "Quels types de contenu sont concernés ?",
+    "type": "checkbox",
+    "required": true,
+    "tooltip": {
+      "title": "Types de contenu",
+      "shortContent": "Plusieurs réponses peuvent être sélectionnées si le système traite plusieurs types de contenu.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E4.N8.Q11.1.A",
         "label": "Texte",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.1.B",
+        "label": "Image, audio ou vidéo",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E4.N8.Q11.T1": {
+    "id": "E4.N8.Q11.T1",
+    "question": "Pour la partie texte, ce contenu est-il principalement destiné à une diffusion au public visant à informer sur des questions d'intérêt public, à l'exclusion des communications purement commerciales, promotionnelles ou internes ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Texte et intérêt public",
+      "shortContent": "Répondez « Oui » si l'objectif principal est d'informer le public sur des sujets d'intérêt général, comme l'actualité, l'information citoyenne, le débat public ou une information institutionnelle d'intérêt général.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E4.N8.Q11.T1.A",
+        "label": "Oui",
+        "score_impact": -2,
+        "risk": "limited",
+        "category_impacts": {
+          "transparency": -2
+        }
+      },
+      {
+        "code": "E4.N8.Q11.T1.B",
+        "label": "Non",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E4.N8.Q11.T2": {
+    "id": "E4.N8.Q11.T2",
+    "question": "Si la réponse précédente est « Non », laquelle de ces situations décrit le mieux l'usage du texte ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Usage du texte",
+      "shortContent": "Choisissez la réponse qui décrit le mieux l'usage dominant du système pour la partie texte.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E4.N8.Q11.T2.A",
+        "label": "Contrôle éditorial humain avant diffusion, avec responsabilité éditoriale clairement identifiée",
         "score_impact": 0,
-        "risk": "limited"
+        "category_impacts": {
+          "transparency": -1
+        }
       },
       {
-        "code": "E4.N8.Q11.B",
-        "label": "Image",
+        "code": "E4.N8.Q11.T2.B",
+        "label": "Mise en forme standard, traduction, correction ou harmonisation linguistique sans modification substantielle du sens",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.T2.C",
+        "label": "Usage interne, communication privée ou communication commerciale ne visant pas principalement à informer le public sur des questions d'intérêt public",
+        "score_impact": -1,
+        "category_impacts": {
+          "transparency": -1
+        }
+      }
+    ]
+  },
+  "E4.N8.Q11.M1": {
+    "id": "E4.N8.Q11.M1",
+    "question": "Pour les contenus image, audio ou vidéo, s'agit-il de contenus synthétiques ou manipulés de nature à pouvoir être pris pour authentiques, par exemple un hypertrucage ou un deepfake ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Hypertrucage et deepfake",
+      "shortContent": "Répondez « Oui » si le contenu peut raisonnablement être perçu comme réel ou authentique, par exemple s'il imite une personne, une voix, une scène ou un événement existant.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E4.N8.Q11.M1.A",
+        "label": "Oui",
         "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
@@ -725,21 +847,37 @@
         }
       },
       {
-        "code": "E4.N8.Q11.C",
-        "label": "audio",
-        "score_impact": -3,
-        "risk": "limited",
+        "code": "E4.N8.Q11.M1.B",
+        "label": "Non",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E4.N8.Q11.M2": {
+    "id": "E4.N8.Q11.M2",
+    "question": "Si la réponse précédente est « Oui », ce contenu relève-t-il d'une œuvre ou d'un programme manifestement artistique, créatif, satirique ou de fiction, clairement présenté comme tel ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Création et fiction",
+      "shortContent": "Même dans ce cas, le système reste classé dans le périmètre du risque limité pour ce volet. Les obligations de transparence peuvent toutefois être adaptées.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E4.N8.Q11.M2.A",
+        "label": "Oui",
+        "score_impact": 0,
         "category_impacts": {
-          "social_environmental": -3
+          "transparency": -1
         }
       },
       {
-        "code": "E4.N8.Q11.D",
-        "label": "Vidéo",
-        "score_impact": -3,
-        "risk": "limited",
+        "code": "E4.N8.Q11.M2.B",
+        "label": "Non",
+        "score_impact": -1,
         "category_impacts": {
-          "social_environmental": -3
+          "transparency": -1
         }
       }
     ]
@@ -749,7 +887,6 @@
     "question": "Avez-vous suivi ou mis en place des formations sur l'IA Act ?",
     "type": "radio",
     "required": true,
-    "risk": "minimal",
     "options": [
       {
         "code": "E4.N8.Q12.A",
@@ -771,7 +908,6 @@
     "question": "Avez-vous établi et maintenez-vous un système de gestion des risques ?",
     "type": "radio",
     "required": true,
-    "risk": "limited",
     "todo_action": "risk_management",
     "tooltip": {
       "title": "Système de gestion des risques",
@@ -788,7 +924,6 @@
         "code": "E5.N9.Q1.B",
         "label": "Non",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "technical_robustness": -3
         }
@@ -800,7 +935,6 @@
     "question": "Votre système de gestion des risques comprend-il l'identification et l'analyse des risques et des utilisations abusives ?",
     "type": "radio",
     "required": true,
-    "risk": "limited",
     "todo_action": "risk_management",
     "tooltip": {
       "title": "Identification et analyse des risques",
@@ -817,7 +951,6 @@
         "code": "E5.N9.Q2.B",
         "label": "Non",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "technical_robustness": -3
         }
@@ -829,7 +962,6 @@
     "question": "Des mesures d'atténuation des risques sont-elles mises en œuvre dans les instructions système (prompt) garantissant que le risque résiduel est acceptable ?",
     "type": "radio",
     "required": true,
-    "risk": "limited",
     "todo_action": "risk_management",
     "tooltip": {
       "title": "Mesures d'atténuation",
@@ -846,7 +978,6 @@
         "code": "E5.N9.Q3.B",
         "label": "Non",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "technical_robustness": -3
         }
@@ -858,7 +989,6 @@
     "question": "Avez-vous établi une documentation technique complète pour votre système d'IA ?",
     "type": "radio",
     "required": true,
-    "risk": "limited",
     "todo_action": "technical_documentation",
     "tooltip": {
       "title": "Documentation technique",
@@ -875,7 +1005,6 @@
         "code": "E5.N9.Q4.B",
         "label": "Non",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "human_oversight": -3
         }
@@ -887,7 +1016,6 @@
     "question": "Quelles sont les types de données traitées en entrée ?",
     "type": "tags",
     "required": true,
-    "risk": "limited",
     "impact_mode": "any",
     "options": [
       {
@@ -899,7 +1027,6 @@
         "code": "E5.N9.Q5.B",
         "label": "Personnelles",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "privacy_data": -3
         }
@@ -908,7 +1035,6 @@
         "code": "E5.N9.Q5.C",
         "label": "Stratégiques",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "privacy_data": -3
         }
@@ -917,7 +1043,6 @@
         "code": "E5.N9.Q5.D",
         "label": "sensibles",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "privacy_data": -3
         }
@@ -929,7 +1054,6 @@
     "question": "Avez vous des procédures de vérification de la qualité des données ?",
     "type": "conditional",
     "required": true,
-    "risk": "limited",
     "todo_action": "data_quality",
     "tooltip": {
       "title": "Procédures qualité données",
@@ -958,7 +1082,6 @@
         "code": "E5.N9.Q6.A",
         "label": "Non",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "privacy_data": -3
         }
@@ -970,7 +1093,6 @@
     "question": "Tenez vous un registre centralisé de vos systèmes d'IA ?",
     "type": "conditional",
     "required": true,
-    "risk": "minimal",
     "todo_action": "registry_proof",
     "tooltip": {
       "title": "Registre centralisé",
@@ -1004,7 +1126,6 @@
         "code": "E5.N9.Q7.A",
         "label": "Non",
         "score_impact": -5,
-        "risk": "minimal",
         "category_impacts": {
           "human_oversight": -5
         }
@@ -1016,7 +1137,6 @@
     "question": "Avez vous une étape de surveillance humaine dans votre système d'IA ?",
     "type": "conditional",
     "required": true,
-    "risk": "limited",
     "todo_action": "human_oversight",
     "tooltip": {
       "title": "Surveillance humaine",
@@ -1050,7 +1170,6 @@
         "code": "E5.N9.Q8.A",
         "label": "Non",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "human_oversight": -3
         }
@@ -1062,7 +1181,6 @@
     "question": "Vérifiez vous l'exactitude, la robustesse et la cybersécurité de votre système d'IA ?",
     "type": "conditional",
     "required": true,
-    "risk": "limited",
     "todo_action": "continuous_monitoring",
     "tooltip": {
       "title": "Exactitude et cybersécurité",
@@ -1091,7 +1209,6 @@
         "code": "E5.N9.Q9.A",
         "label": "Non",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "technical_robustness": -3
         }
@@ -1100,13 +1217,12 @@
   },
   "E6.N10.Q1": {
     "id": "E6.N10.Q1",
-    "question": "Lorsque votre système d'IA interagit avec des personnes, sont elles informées ?",
+    "question": "Si le système interagit directement avec des personnes physiques, celles-ci sont-elles informées qu'elles interagissent avec une IA ?",
     "type": "radio",
     "required": true,
-    "risk": "limited",
     "tooltip": {
       "title": "Information utilisateurs",
-      "shortContent": "L'entreprise doit veiller à ce que les personnes interagissant directement avec une IA (ex: chatbot) soient informées qu'elles sont en contact avec une machine, afin de garantir la transparence (Article 50(1)).",
+      "shortContent": "Cette question permet d'évaluer la conformité aux obligations de transparence. Elle ne sert pas, à elle seule, à qualifier le niveau de risque.",
       "icon": "💡"
     },
     "options": [
@@ -1119,7 +1235,6 @@
         "code": "E6.N10.Q1.B",
         "label": "Non",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "transparency": -3
         }
@@ -1128,14 +1243,13 @@
   },
   "E6.N10.Q2": {
     "id": "E6.N10.Q2",
-    "question": "Lorsque votre système d'IA génère ou manipule du contenu, est ce que ce dernier est marqué par un format lisible et reconnaissable ?",
+    "question": "Si le système génère ou manipule du contenu relevant d'une obligation de transparence, ce contenu est-il signalé de manière appropriée ?",
     "type": "radio",
     "required": true,
-    "risk": "limited",
     "todo_action": "transparency_marking",
     "tooltip": {
       "title": "Marquage contenu",
-      "shortContent": "Les fournisseurs d'IA générative doivent marquer le contenu généré/manipulé (texte, image, vidéo) dans un format lisible par machine. Les utilisateurs doivent étiqueter visiblement les hypertrucages et les contenus générés par l'IA.",
+      "shortContent": "Cette question mesure le respect des obligations de transparence applicables. Elle n'a pas vocation à créer, à elle seule, le niveau de risque.",
       "icon": "💡"
     },
     "options": [
@@ -1148,7 +1262,6 @@
         "code": "E6.N10.Q2.B",
         "label": "Non",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "transparency": -3
         }

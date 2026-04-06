@@ -143,8 +143,12 @@ describe('Score Calculator', () => {
           single_value: 'E4.N7.Q1.A', // 0 impact
         },
         {
-          question_code: 'E4.N8.Q11',
-          multiple_codes: ['E4.N8.Q11.B', 'E4.N8.Q11.C'], // -6 total impact
+          question_code: 'E4.N8.Q9',
+          single_value: 'E4.N8.Q9.A', // -3 human_oversight
+        },
+        {
+          question_code: 'E4.N8.Q11.M1',
+          single_value: 'E4.N8.Q11.M1.A', // -3 social_environmental
         },
         {
           question_code: 'E5.N9.Q6',

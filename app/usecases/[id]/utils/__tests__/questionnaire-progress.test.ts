@@ -9,7 +9,8 @@ describe('Questionnaire Progress', () => {
   describe('getAbsoluteQuestionProgress', () => {
     it('should return 0% for the first question', () => {
       const progress = getAbsoluteQuestionProgress('E4.N7.Q1')
-      expect(progress.percentage).toBe(5) // First question = 1/20 = 5%
+      // Chemin maximal allongé (bloc E4.N8.Q9 … Q11.M2) → total > 20
+      expect(progress.percentage).toBe(4) // ex. 1/25 = 4 % arrondi
       expect(progress.current).toBe(1)
     })
 
@@ -37,8 +38,14 @@ describe('Questionnaire Progress', () => {
         'E5.N9.Q8': { selected: 'E5.N9.Q8.B' },
         'E4.N8.Q12': 'E4.N8.Q12.B',
         'E4.N8.Q9': 'E4.N8.Q9.A',
+        'E4.N8.Q9.1': 'E4.N8.Q9.1.B',
         'E4.N8.Q10': 'E4.N8.Q10.A',
-        'E4.N8.Q11': ['E4.N8.Q11.A'],
+        'E4.N8.Q11.0': 'E4.N8.Q11.0.A',
+        'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'],
+        'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B',
+        'E4.N8.Q11.T2': 'E4.N8.Q11.T2.A',
+        'E4.N8.Q11.M1': 'E4.N8.Q11.M1.A',
+        'E4.N8.Q11.M2': 'E4.N8.Q11.M2.B',
         'E6.N10.Q1': 'E6.N10.Q1.A'
       }
 
@@ -83,8 +90,14 @@ describe('Questionnaire Progress', () => {
         'E5.N9.Q8': { selected: 'E5.N9.Q8.B' },
         'E4.N8.Q12': 'E4.N8.Q12.B',
         'E4.N8.Q9': 'E4.N8.Q9.A',
+        'E4.N8.Q9.1': 'E4.N8.Q9.1.B',
         'E4.N8.Q10': 'E4.N8.Q10.A',
-        'E4.N8.Q11': ['E4.N8.Q11.A'],
+        'E4.N8.Q11.0': 'E4.N8.Q11.0.A',
+        'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'],
+        'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B',
+        'E4.N8.Q11.T2': 'E4.N8.Q11.T2.A',
+        'E4.N8.Q11.M1': 'E4.N8.Q11.M1.A',
+        'E4.N8.Q11.M2': 'E4.N8.Q11.M2.B',
         'E6.N10.Q1': 'E6.N10.Q1.A'
       }
 
@@ -125,10 +138,20 @@ describe('Questionnaire Progress', () => {
       const questions = [
         'E4.N7.Q1', 'E4.N7.Q1.1', 'E4.N7.Q1.2',
         'E4.N7.Q2', 'E4.N7.Q2.1', 'E4.N7.Q3', 'E4.N7.Q3.1',
-        'E5.N9.Q4', 'E5.N9.Q1', 'E5.N9.Q2', 'E5.N9.Q3',
+        'E5.N9.Q4', 'E5.N9.Q1', 'E5.N9.Q2', 'E5.N9.Q3', 'E5.N9.Q9',
         'E5.N9.Q5', 'E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8',
-        'E4.N8.Q12', 'E4.N8.Q9', 'E4.N8.Q10', 'E4.N8.Q11',
-        'E6.N10.Q1', 'E6.N10.Q2'
+        'E4.N8.Q12',
+        'E4.N8.Q9',
+        'E4.N8.Q9.1',
+        'E4.N8.Q10',
+        'E4.N8.Q11.0',
+        'E4.N8.Q11.1',
+        'E4.N8.Q11.T1',
+        'E4.N8.Q11.T2',
+        'E4.N8.Q11.M1',
+        'E4.N8.Q11.M2',
+        'E6.N10.Q1',
+        'E6.N10.Q2'
       ]
 
       let firstTotal: number | null = null
@@ -158,9 +181,10 @@ describe('Questionnaire Progress', () => {
         'E5.N9.Q7': { selected: 'E5.N9.Q7.B' },
         'E5.N9.Q8': { selected: 'E5.N9.Q8.B' },
         'E4.N8.Q12': 'E4.N8.Q12.B',
-        'E4.N8.Q9': 'E4.N8.Q9.A',
+        'E4.N8.Q9': 'E4.N8.Q9.B',
+        'E4.N8.Q9.1': 'E4.N8.Q9.1.B',
         'E4.N8.Q10': 'E4.N8.Q10.A',
-        'E4.N8.Q11': ['E4.N8.Q11.A'],
+        'E4.N8.Q11.0': 'E4.N8.Q11.0.B',
         'E6.N10.Q1': 'E6.N10.Q1.A'
       }
 
