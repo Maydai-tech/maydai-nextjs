@@ -429,10 +429,9 @@
   },
   "E4.N8.Q9": {
     "id": "E4.N8.Q9",
-    "question": "Votre système d'IA interagit-il avec des personnes physiques ?",
+    "question": "Le système d'IA interagit-il directement avec des personnes physiques ?",
     "type": "radio",
     "required": true,
-    "risk": "limited",
     "options": [
       {
         "code": "E4.N8.Q9.A",
@@ -450,88 +449,177 @@
       }
     ]
   },
+  "E4.N8.Q9.1": {
+    "id": "E4.N8.Q9.1",
+    "question": "Le système utilise-t-il la reconnaissance ou l'inférence d'émotions, ou la catégorisation biométrique de personnes physiques, dans un cadre autorisé et hors des cas déjà qualifiés à risque élevé ou inacceptable ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q9.1.A",
+        "label": "Oui",
+        "score_impact": -2,
+        "risk": "limited",
+        "category_impacts": {
+          "privacy_data": -2
+        }
+      },
+      {
+        "code": "E4.N8.Q9.1.B",
+        "label": "Non",
+        "score_impact": 0
+      }
+    ]
+  },
   "E4.N8.Q10": {
     "id": "E4.N8.Q10",
-    "question": "Utilisé par combien de personnes physiques par mois ?",
-    "type": "conditional",
+    "question": "À titre indicatif, combien de personnes physiques utilisent ce système chaque mois ?",
+    "type": "radio",
     "required": true,
-    "risk": "limited",
-    "conditionalFields": [
-      {
-        "key": "other_count",
-        "label": "Autre nombre",
-        "placeholder": "Précisez..."
-      }
-    ],
     "options": [
       {
         "code": "E4.N8.Q10.A",
-        "label": "< à 100",
+        "label": "Moins de 100",
         "score_impact": 0
       },
       {
         "code": "E4.N8.Q10.B",
-        "label": "> à 100",
-        "score_impact": -3,
-        "risk": "limited",
+        "label": "De 100 à 999",
+        "score_impact": -1,
         "category_impacts": {
-          "human_oversight": -3
+          "human_oversight": -1
         }
       },
       {
         "code": "E4.N8.Q10.C",
-        "label": "> à 1000",
-        "score_impact": -3,
-        "risk": "limited",
+        "label": "De 1 000 à 9 999",
+        "score_impact": -2,
         "category_impacts": {
-          "human_oversight": -3
+          "human_oversight": -2
         }
       },
       {
         "code": "E4.N8.Q10.D",
-        "label": "> à 10 000",
+        "label": "De 10 000 à 99 999",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "human_oversight": -3
         }
       },
       {
         "code": "E4.N8.Q10.E",
-        "label": "> à 100 000",
+        "label": "De 100 000 à 999 999",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "human_oversight": -3
         }
       },
       {
         "code": "E4.N8.Q10.F",
-        "label": "> à 1 M",
+        "label": "1 million ou plus",
         "score_impact": -3,
-        "risk": "limited",
         "category_impacts": {
           "human_oversight": -3
         }
       }
     ]
   },
-  "E4.N8.Q11": {
-    "id": "E4.N8.Q11",
-    "question": "Utilisé pour générer ou manipuler du contenu ?",
-    "type": "tags",
+  "E4.N8.Q11.0": {
+    "id": "E4.N8.Q11.0",
+    "question": "Le système d'IA produit-il ou modifie-t-il des contenus numériques (texte, image, son ou vidéo) au moyen de l'IA ?",
+    "type": "radio",
     "required": true,
-    "risk": "limited",
     "options": [
       {
-        "code": "E4.N8.Q11.A",
+        "code": "E4.N8.Q11.0.A",
+        "label": "Oui",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.0.B",
+        "label": "Non",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E4.N8.Q11.1": {
+    "id": "E4.N8.Q11.1",
+    "question": "Quels types de contenu sont concernés ?",
+    "type": "checkbox",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q11.1.A",
         "label": "Texte",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.1.B",
+        "label": "Image, audio ou vidéo",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E4.N8.Q11.T1": {
+    "id": "E4.N8.Q11.T1",
+    "question": "Pour la partie texte, ce contenu est-il principalement destiné à une diffusion au public visant à informer sur des questions d'intérêt public, à l'exclusion des communications purement commerciales, promotionnelles ou internes ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q11.T1.A",
+        "label": "Oui",
+        "score_impact": -2,
+        "risk": "limited",
+        "category_impacts": {
+          "transparency": -2
+        }
+      },
+      {
+        "code": "E4.N8.Q11.T1.B",
+        "label": "Non",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E4.N8.Q11.T2": {
+    "id": "E4.N8.Q11.T2",
+    "question": "Si la réponse précédente est « Non », laquelle de ces situations décrit le mieux l'usage du texte ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q11.T2.A",
+        "label": "Contrôle éditorial humain avant diffusion, avec responsabilité éditoriale clairement identifiée",
         "score_impact": 0,
-        "risk": "limited"
+        "category_impacts": {
+          "transparency": -1
+        }
       },
       {
-        "code": "E4.N8.Q11.B",
-        "label": "Image",
+        "code": "E4.N8.Q11.T2.B",
+        "label": "Mise en forme standard, traduction, correction ou harmonisation linguistique sans modification substantielle du sens",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.T2.C",
+        "label": "Usage interne, communication privée ou communication commerciale ne visant pas principalement à informer le public sur des questions d'intérêt public",
+        "score_impact": -1,
+        "category_impacts": {
+          "transparency": -1
+        }
+      }
+    ]
+  },
+  "E4.N8.Q11.M1": {
+    "id": "E4.N8.Q11.M1",
+    "question": "Pour les contenus image, audio ou vidéo, s'agit-il de contenus synthétiques ou manipulés de nature à pouvoir être pris pour authentiques, par exemple un hypertrucage ou un deepfake ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q11.M1.A",
+        "label": "Oui",
         "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
@@ -539,21 +627,32 @@
         }
       },
       {
-        "code": "E4.N8.Q11.C",
-        "label": "audio",
-        "score_impact": -3,
-        "risk": "limited",
+        "code": "E4.N8.Q11.M1.B",
+        "label": "Non",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E4.N8.Q11.M2": {
+    "id": "E4.N8.Q11.M2",
+    "question": "Si la réponse précédente est « Oui », ce contenu relève-t-il d'une œuvre ou d'un programme manifestement artistique, créatif, satirique ou de fiction, clairement présenté comme tel ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q11.M2.A",
+        "label": "Oui",
+        "score_impact": 0,
         "category_impacts": {
-          "social_environmental": -3
+          "transparency": -1
         }
       },
       {
-        "code": "E4.N8.Q11.D",
-        "label": "Vidéo",
-        "score_impact": -3,
-        "risk": "limited",
+        "code": "E4.N8.Q11.M2.B",
+        "label": "Non",
+        "score_impact": -1,
         "category_impacts": {
-          "social_environmental": -3
+          "transparency": -1
         }
       }
     ]
@@ -563,7 +662,6 @@
     "question": "Avez-vous suivi ou mis en place des formations sur l'IA Act ?",
     "type": "radio",
     "required": true,
-    "risk": "minimal",
     "options": [
       {
         "code": "E4.N8.Q12.A",

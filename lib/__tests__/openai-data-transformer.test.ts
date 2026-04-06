@@ -44,6 +44,10 @@ describe('OpenAI Data Transformer', () => {
       expect(result).toEqual({
         usecase_id: 'uuid-du-cas-dusage',
         usecase_name: 'Assistant RH IA – sélection de candidats',
+        company_name: 'Test Company',
+        company_industry: undefined,
+        company_city: undefined,
+        company_country: undefined,
         responses: {
           E4_N7_Q2: {
             question: 'Votre système d\'IA est utilisé dans un ou des domaines suivants ?',
@@ -206,8 +210,8 @@ describe('OpenAI Data Transformer', () => {
       expect(result.errors).toContain('usecase_id is required')
     })
 
-    it('should detect missing E4.N7.Q2 options', () => {
-      const invalidData = {
+    it('should accept payload with minimal required fields (validation allégée)', () => {
+      const data = {
         usecase_id: 'uuid-test',
         usecase_name: 'Test Use Case',
         company_name: 'Test Company',
@@ -219,43 +223,17 @@ describe('OpenAI Data Transformer', () => {
           },
           E5_N9_Q7: {
             question: 'Test question',
-            selected_option: 'E5.N9.Q7.B',
-            selected_label: 'Oui',
-            conditional_data: {}
-          }
-        }
-      }
-      
-      const result = validateOpenAIInput(invalidData)
-      
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain('E4.N7.Q2 must have at least one selected option')
-    })
-
-    it('should detect missing E5.N9.Q7 option', () => {
-      const invalidData = {
-        usecase_id: 'uuid-test',
-        usecase_name: 'Test Use Case',
-        company_name: 'Test Company',
-        responses: {
-          E4_N7_Q2: {
-            question: 'Test question',
-            selected_options: ['E4.N7.Q2.A'],
-            selected_labels: ['Test label']
-          },
-          E5_N9_Q7: {
-            question: 'Test question',
             selected_option: '',
             selected_label: '',
             conditional_data: {}
           }
         }
       }
-      
-      const result = validateOpenAIInput(invalidData)
-      
-      expect(result.isValid).toBe(false)
-      expect(result.errors).toContain('E5.N9.Q7 must have a selected option')
+
+      const result = validateOpenAIInput(data as any)
+
+      expect(result.isValid).toBe(true)
+      expect(result.errors).toEqual([])
     })
   })
 })

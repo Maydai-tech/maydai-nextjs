@@ -4,6 +4,18 @@ import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
 // Note: Ce fichier sera mis à jour dans une future étape pour utiliser loadQuestions()
 // import { loadQuestions } from './questions-loader'
 
+/** « Texte » coché en E4.N8.Q11.1 */
+export const hasQ111Text = (answers: Record<string, any>): boolean => {
+  const v = answers['E4.N8.Q11.1']
+  return Array.isArray(v) && v.includes('E4.N8.Q11.1.A')
+}
+
+/** « Image, audio ou vidéo » coché en E4.N8.Q11.1 */
+export const hasQ111Media = (answers: Record<string, any>): boolean => {
+  const v = answers['E4.N8.Q11.1']
+  return Array.isArray(v) && v.includes('E4.N8.Q11.1.B')
+}
+
 // Navigation logic
 export const getNextQuestion = (currentQuestionId: string, answers: Record<string, any>): string | null => {
   switch (currentQuestionId) {
@@ -68,16 +80,48 @@ export const getNextQuestion = (currentQuestionId: string, answers: Record<strin
     
     case 'E4.N8.Q12':
       return 'E4.N8.Q9'
-    
+
     case 'E4.N8.Q9':
+      return 'E4.N8.Q9.1'
+
+    case 'E4.N8.Q9.1':
       return 'E4.N8.Q10'
 
     case 'E4.N8.Q10':
-      return 'E4.N8.Q11'
-    
-    case 'E4.N8.Q11':
+      return 'E4.N8.Q11.0'
+
+    case 'E4.N8.Q11.0': {
+      const y = answers['E4.N8.Q11.0']
+      if (y === 'E4.N8.Q11.0.A') return 'E4.N8.Q11.1'
+      if (y === 'E4.N8.Q11.0.B') return 'E6.N10.Q1'
+      return null
+    }
+
+    case 'E4.N8.Q11.1': {
+      if (hasQ111Text(answers)) return 'E4.N8.Q11.T1'
+      if (hasQ111Media(answers)) return 'E4.N8.Q11.M1'
       return 'E6.N10.Q1'
-    
+    }
+
+    case 'E4.N8.Q11.T1': {
+      if (answers['E4.N8.Q11.T1'] === 'E4.N8.Q11.T1.B') return 'E4.N8.Q11.T2'
+      if (hasQ111Media(answers)) return 'E4.N8.Q11.M1'
+      return 'E6.N10.Q1'
+    }
+
+    case 'E4.N8.Q11.T2': {
+      if (hasQ111Media(answers)) return 'E4.N8.Q11.M1'
+      return 'E6.N10.Q1'
+    }
+
+    case 'E4.N8.Q11.M1': {
+      if (answers['E4.N8.Q11.M1'] === 'E4.N8.Q11.M1.A') return 'E4.N8.Q11.M2'
+      return 'E6.N10.Q1'
+    }
+
+    case 'E4.N8.Q11.M2':
+      return 'E6.N10.Q1'
+
     case 'E6.N10.Q1':
       return 'E6.N10.Q2'
     
@@ -228,9 +272,8 @@ export const checkCanProceed = (question: Question, answer: any): boolean => {
       if (typeof answer === 'object' && answer.selected) {
         // Check if it's a "Oui" option (ends with .B) with conditional fields or "Other" option (E4.N8.Q10.G)
         const isYesWithConditional = answer.selected.endsWith('.B') && question.conditionalFields && question.conditionalFields.length > 0
-        const isOtherOption = answer.selected === 'E4.N8.Q10.G'
-        
-        if (isYesWithConditional || isOtherOption) {
+
+        if (isYesWithConditional) {
           return answer.conditionalValues && Object.values(answer.conditionalValues).some((v: any) => v && v.length > 0)
         }
         return true
@@ -359,6 +402,39 @@ const generateAnswerContexts = (questionId: string): Record<string, any>[] => {
       return [
         { 'E5.N9.Q4': 'E5.N9.Q4.A' },
         { 'E5.N9.Q4': 'E5.N9.Q4.B' }
+      ]
+
+    case 'E4.N8.Q11.0':
+      return [
+        { 'E4.N8.Q11.0': 'E4.N8.Q11.0.A' },
+        { 'E4.N8.Q11.0': 'E4.N8.Q11.0.B' },
+      ]
+
+    case 'E4.N8.Q11.1':
+      return [
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'] },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.B'] },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'] },
+      ]
+
+    case 'E4.N8.Q11.T1':
+      return [
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B' },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.A' },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.A' },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B' },
+      ]
+
+    case 'E4.N8.Q11.M1':
+      return [
+        { 'E4.N8.Q11.M1': 'E4.N8.Q11.M1.A' },
+        { 'E4.N8.Q11.M1': 'E4.N8.Q11.M1.B' },
+      ]
+
+    case 'E4.N8.Q11.T2':
+      return [
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T2': 'E4.N8.Q11.T2.A' },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T2': 'E4.N8.Q11.T2.A' },
       ]
 
     default:

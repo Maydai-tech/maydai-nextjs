@@ -88,8 +88,12 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
     { question_code: 'E5.N9.Q8', single_value: null, multiple_codes: null, conditional_main: 'E5.N9.Q8.B' },
     { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q9', single_value: 'E4.N8.Q9.B', multiple_codes: null, conditional_main: null },
-    { question_code: 'E4.N8.Q10', single_value: null, multiple_codes: null, conditional_main: 'E4.N8.Q10.A' },
-    { question_code: 'E4.N8.Q11', single_value: null, multiple_codes: ['E4.N8.Q11.A'], conditional_main: null },
+    { question_code: 'E4.N8.Q9.1', single_value: 'E4.N8.Q9.1.B', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q10', single_value: 'E4.N8.Q10.A', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q11.0', single_value: 'E4.N8.Q11.0.A', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q11.1', single_value: null, multiple_codes: ['E4.N8.Q11.1.A'], conditional_main: null },
+    { question_code: 'E4.N8.Q11.T1', single_value: 'E4.N8.Q11.T1.B', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q11.T2', single_value: 'E4.N8.Q11.T2.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E6.N10.Q2', single_value: 'E6.N10.Q2.A', multiple_codes: null, conditional_main: null },
   ]
@@ -114,8 +118,11 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
     { question_code: 'E5.N9.Q8', single_value: null, multiple_codes: null, conditional_main: 'E5.N9.Q8.A' },
     { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q9', single_value: 'E4.N8.Q9.A', multiple_codes: null, conditional_main: null },
-    { question_code: 'E4.N8.Q10', single_value: null, multiple_codes: null, conditional_main: 'E4.N8.Q10.B' },
-    { question_code: 'E4.N8.Q11', single_value: null, multiple_codes: ['E4.N8.Q11.B'], conditional_main: null },
+    { question_code: 'E4.N8.Q9.1', single_value: 'E4.N8.Q9.1.B', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q10', single_value: 'E4.N8.Q10.B', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q11.0', single_value: 'E4.N8.Q11.0.A', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q11.1', single_value: null, multiple_codes: ['E4.N8.Q11.1.B'], conditional_main: null },
+    { question_code: 'E4.N8.Q11.M1', single_value: 'E4.N8.Q11.M1.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E6.N10.Q2', single_value: 'E6.N10.Q2.B', multiple_codes: null, conditional_main: null },
   ]
@@ -243,24 +250,22 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
       printComparisonTable('Traducteur HTML 2 (réponses négatives)', result, csvExpectedTraducteur2)
 
       // Score attendu avec pénalités (voir calcul dans traducteur tests)
-      expect(result.score).toBeCloseTo(45.2, 1)
+      expect(result.score).toBeCloseTo(47.2, 1)
       expect(result.is_eliminated).toBe(false)
     })
 
     test('should have correct category percentages for negative answers', async () => {
       const result = await calculateScore(mockUsecaseId, traducteur2Responses)
 
-      // Human Agency: Toutes les mauvaises réponses = 0%
       const humanAgency = result.category_scores.find(c => c.category_id === 'human_agency')
-      expect(humanAgency?.percentage).toBe(0)
+      expect(humanAgency?.percentage).toBe(12)
 
       // Technical Robustness: Toutes les mauvaises réponses = 0%
       const technical = result.category_scores.find(c => c.category_id === 'technical_robustness')
       expect(technical?.percentage).toBe(0)
 
-      // Transparency: Toutes les mauvaises réponses = 0%
       const transparency = result.category_scores.find(c => c.category_id === 'transparency')
-      expect(transparency?.percentage).toBe(0)
+      expect(transparency?.percentage).toBe(40)
     })
 
     test('should have correct penalty breakdown', async () => {
@@ -279,8 +284,8 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
         { id: 'E5.N9.Q8', expected: -3 },
         { id: 'E4.N8.Q12', expected: -0.8 },
         { id: 'E4.N8.Q9', expected: -3 },
-        { id: 'E4.N8.Q10', expected: -3 },
-        { id: 'E4.N8.Q11', expected: -3 },
+        { id: 'E4.N8.Q10', expected: -1 },
+        { id: 'E4.N8.Q11.M1', expected: -3 },
         { id: 'E6.N10.Q1', expected: -3 },
         { id: 'E6.N10.Q2', expected: -3 }
       ]
