@@ -413,7 +413,13 @@ export default function UseCaseResponsesPage() {
                       </h3>
                       {(() => {
                         const question = questionsData[response.question_code as keyof typeof questionsData]
-                        const questionRisk = question?.risk
+                        const questionRisk =
+                          question &&
+                          typeof question === 'object' &&
+                          'risk' in question &&
+                          typeof (question as { risk?: string }).risk === 'string'
+                            ? (question as { risk: string }).risk
+                            : undefined
                         return questionRisk && (
                           <div className="flex items-center gap-1 ml-4">
                             {getRiskIcon(questionRisk)}
