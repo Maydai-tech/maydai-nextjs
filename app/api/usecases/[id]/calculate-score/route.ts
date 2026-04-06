@@ -27,6 +27,12 @@ import {
   type UserResponse
 } from '@/lib/score-calculator-simple';
 import { recordUseCaseHistory } from '@/lib/usecase-history';
+import {
+  resolveCanonicalDocType,
+  getDossierDirectBonusSupabaseQueryDocTypes,
+  getDossierDirectBonusRawPointsAmount,
+  getDirectBonusCanonicalDocTypes,
+} from '@/lib/canonical-actions';
 
 import { deriveRiskLevelFromResponses } from '@/lib/risk-level';
 
@@ -257,13 +263,14 @@ export async function POST(
     }
     
     // ===== ÉTAPE 6.5: CALCUL DU BONUS DIRECT (DOSSIERS) =====
-    // system_prompt and training_census give +3 raw points each when their dossier is completed
+    // system_prompt and training_plan give +3 raw points each when their dossier is completed
     // This bonus is separate from questionnaire impacts
-    console.log('📁 Vérification des bonus dossiers (system_prompt, training_census)...');
+    console.log('📁 Vérification des bonus dossiers (catalogue canonique)...');
     
     let todoBonus = 0;
-    const DIRECT_BONUS_RAW_POINTS = 3;
-    const DIRECT_BONUS_DOC_TYPES = ['system_prompt', 'training_census'];
+    const DIRECT_BONUS_RAW_POINTS = getDossierDirectBonusRawPointsAmount();
+    const DIRECT_BONUS_QUERY_TYPES = getDossierDirectBonusSupabaseQueryDocTypes();
+    const DIRECT_BONUS_CANONICAL = new Set(getDirectBonusCanonicalDocTypes());
     
     try {
       // Get the dossier for this use case
@@ -274,20 +281,26 @@ export async function POST(
         .maybeSingle();
       
       if (dossier?.id) {
-        // Check which direct bonus documents are completed
         const { data: bonusDocs } = await supabase
           .from('dossier_documents')
           .select('doc_type, status')
           .eq('dossier_id', dossier.id)
-          .in('doc_type', DIRECT_BONUS_DOC_TYPES);
-        
+          .in('doc_type', DIRECT_BONUS_QUERY_TYPES);
+
+        const completedCanonical = new Set<string>();
         if (bonusDocs) {
           for (const doc of bonusDocs) {
             if (doc.status === 'complete' || doc.status === 'validated') {
-              todoBonus += DIRECT_BONUS_RAW_POINTS;
-              console.log(`📁 Bonus direct +${DIRECT_BONUS_RAW_POINTS} pts bruts pour ${doc.doc_type}`);
+              const c = resolveCanonicalDocType(doc.doc_type);
+              if (DIRECT_BONUS_CANONICAL.has(c)) {
+                completedCanonical.add(c);
+              }
             }
           }
+        }
+        for (const c of completedCanonical) {
+          todoBonus += DIRECT_BONUS_RAW_POINTS;
+          console.log(`📁 Bonus direct +${DIRECT_BONUS_RAW_POINTS} pts bruts pour ${c}`);
         }
       }
       

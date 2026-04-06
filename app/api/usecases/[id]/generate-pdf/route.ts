@@ -4,7 +4,37 @@ import { renderToBuffer, Document } from '@react-pdf/renderer'
 import React from 'react'
 import { PDFDocument } from '@/app/usecases/[id]/components/pdf/PDFDocument'
 import { PDFReportData } from '@/app/usecases/[id]/components/pdf/types'
+import { REPORT_STANDARD_SLOT_KEYS_ORDERED, resolveCanonicalDocType } from '@/lib/canonical-actions'
+import { buildAllStandardPlanCanonicalItems } from '@/lib/report-canonical-items'
+import type { RiskLevelCode } from '@/lib/risk-level'
+import { normalizeToRiskLevelCode } from '@/lib/risk-level'
 import { logger, createRequestContext } from '@/lib/secure-logger'
+import { computeSlotStatuses } from '@/lib/slot-statuses'
+
+function rankDocStatus(status: string | null | undefined): number {
+  if (status === 'validated') return 3
+  if (status === 'complete') return 2
+  return 1
+}
+
+function mergeDossierRowsToDocumentStatuses(
+  rows: { doc_type: string; status: string | null }[] | null | undefined
+): Record<string, { status: string }> {
+  const acc = new Map<string, { status: string; rank: number }>()
+  for (const row of rows || []) {
+    const canon = resolveCanonicalDocType(row.doc_type)
+    const rank = rankDocStatus(row.status)
+    const prev = acc.get(canon)
+    if (!prev || rank > prev.rank) {
+      acc.set(canon, { status: row.status || 'incomplete', rank })
+    }
+  }
+  const out: Record<string, { status: string }> = {}
+  acc.forEach((v, k) => {
+    out[k] = { status: v.status }
+  })
+  return out
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -164,7 +194,62 @@ export async function GET(
       quick_win_3: '',
       action_1: '',
       action_2: '',
-      action_3: ''
+      action_3: '',
+    }
+
+    const riskNormalized: RiskLevelCode =
+      normalizeToRiskLevelCode(useCase.risk_level) ?? ('limited' as RiskLevelCode)
+    const isUnacceptableCase = riskNormalized === 'unacceptable'
+
+    let canonicalPlanItems: PDFReportData['canonicalPlanItems'] = []
+    const pdfCtaBaseUrl = (
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      process.env.NEXT_PUBLIC_APP_URL ||
+      ''
+    ).replace(/\/$/, '')
+
+    if (!isUnacceptableCase) {
+      const slotStatuses = computeSlotStatuses((responses || []) as Parameters<typeof computeSlotStatuses>[0])
+
+      let documentStatuses: Record<string, { status: string }> = {}
+      const { data: dossierRow } = await supabase
+        .from('dossiers')
+        .select('id')
+        .eq('usecase_id', useCaseId)
+        .maybeSingle()
+
+      if (dossierRow?.id) {
+        const { data: docRows } = await supabase
+          .from('dossier_documents')
+          .select('doc_type, status')
+          .eq('dossier_id', dossierRow.id)
+        documentStatuses = mergeDossierRowsToDocumentStatuses(docRows)
+      }
+
+      const { data: companyRow } = await supabase
+        .from('companies')
+        .select('maydai_as_registry')
+        .eq('id', useCase.company_id)
+        .maybeSingle()
+
+      canonicalPlanItems = buildAllStandardPlanCanonicalItems({
+        slotKeysOrdered: [...REPORT_STANDARD_SLOT_KEYS_ORDERED],
+        riskLevel: riskNormalized,
+        nextSteps: nextStepsData,
+        slotStatuses,
+        documentStatuses,
+        maydaiAsRegistry: companyRow?.maydai_as_registry === true,
+        companyId: useCase.company_id,
+        useCaseId,
+      })
+
+      if (canonicalPlanItems.length !== REPORT_STANDARD_SLOT_KEYS_ORDERED.length) {
+        logger.warn('PDF: nombre d’items plan canonique inattendu', {
+          useCaseId,
+          expected: REPORT_STANDARD_SLOT_KEYS_ORDERED.length,
+          actual: canonicalPlanItems.length,
+        })
+      }
     }
 
     // Use user data directly since profile table structure may have changed
@@ -214,23 +299,25 @@ export async function GET(
 
     // Prepare PDF data
     const pdfData: PDFReportData = {
+      pdfCtaBaseUrl: pdfCtaBaseUrl || undefined,
+      canonicalPlanItems,
       useCase: safeUseCase,
       riskLevel: {
         risk_level: riskLevelData.risk_level,
-        justification: riskLevelData.justification
+        justification: riskLevelData.justification,
       },
       score: {
         score: scoreData.score,
         is_eliminated: scoreData.is_eliminated,
-        category_scores: scoreData.category_scores
+        category_scores: scoreData.category_scores,
       },
       nextSteps: nextStepsData,
       profile: {
         email: profileData.email || 'thomas@mayday-consulting.ai',
         first_name: profileData.first_name,
-        last_name: profileData.last_name
+        last_name: profileData.last_name,
       },
-      generatedDate: new Date().toISOString()
+      generatedDate: new Date().toISOString(),
     }
 
     // Generate PDF

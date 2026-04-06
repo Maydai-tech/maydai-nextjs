@@ -6,23 +6,18 @@ import {
   reverseTodoActionResponse,
 } from '@/lib/todo-action-sync'
 import { recordUseCaseHistory } from '@/lib/usecase-history'
+import {
+  coalesceTrainingDocumentRows,
+  getAcceptedDossierApiDocTypeParams,
+  normalizeHumanOversightFormData,
+  resolveCanonicalDocType,
+  trainingDocTypesForQuery,
+} from '@/lib/canonical-actions'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-const allowedDocTypes = new Set([
-  'system_prompt',
-  'technical_documentation',
-  'human_oversight',
-  'transparency_marking',
-  'risk_management',
-  'data_quality',
-  'continuous_monitoring',
-  'training_census',
-  'stopping_proof',
-  'registry_proof',
-  'training_plan',
-])
+const allowedDocTypes = getAcceptedDossierApiDocTypeParams()
 
 async function getClientFromAuth(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -71,15 +66,28 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    const { data: doc } = await supabase
+    const storageDocType = resolveCanonicalDocType(docType)
+    const queryTypes =
+      storageDocType === 'training_plan' ? [...trainingDocTypesForQuery()] : [storageDocType]
+
+    const { data: docRows } = await supabase
       .from('dossier_documents')
-      .select('form_data, file_url, status, updated_at')
+      .select('form_data, file_url, status, updated_at, doc_type')
       .eq('dossier_id', dossierRow.id)
-      .eq('doc_type', docType)
-      .maybeSingle()
+      .in('doc_type', queryTypes)
+
+    let doc = docRows?.[0] ?? null
+    if (storageDocType === 'training_plan' && docRows && docRows.length > 0) {
+      doc = coalesceTrainingDocumentRows(docRows)
+    }
+
+    let formData = doc?.form_data ?? null
+    if (storageDocType === 'human_oversight' && formData && typeof formData === 'object') {
+      formData = normalizeHumanOversightFormData(formData as Record<string, unknown>)
+    }
 
     return NextResponse.json({
-      formData: doc?.form_data ?? null,
+      formData,
       fileUrl: doc?.file_url ?? null,
       status: doc?.status ?? 'incomplete',
       updatedAt: doc?.updated_at ?? null,
@@ -102,8 +110,13 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid docType' }, { status: 400 })
     }
 
+    const storageDocType = resolveCanonicalDocType(docType)
+
     const body = await request.json()
-    const formData: Record<string, any> | undefined = body?.formData
+    let formData: Record<string, any> | undefined = body?.formData
+    if (storageDocType === 'human_oversight' && formData && typeof formData === 'object') {
+      formData = normalizeHumanOversightFormData(formData) as Record<string, any>
+    }
     const status: 'incomplete' | 'complete' | 'validated' | undefined = body?.status
 
     // Find or create dossier
@@ -162,23 +175,29 @@ export async function POST(
       }
     }
 
-    // Upsert doc
+    // Upsert doc (clé de stockage canonique ; training_census → training_plan)
     const payload: any = {
       dossier_id: dossierId,
-      doc_type: docType,
+      doc_type: storageDocType,
       updated_by: user.id,
       updated_at: new Date().toISOString(),
     }
     if (formData !== undefined) payload.form_data = formData
     if (status) payload.status = status
 
-    // Check if document already exists and get its previous status BEFORE updating
-    const { data: existingDoc } = await supabase
+    const trainingQueryTypes =
+      storageDocType === 'training_plan' ? [...trainingDocTypesForQuery()] : null
+
+    const { data: existingRows } = await supabase
       .from('dossier_documents')
-      .select('id, status')
+      .select('id, status, doc_type, updated_at')
       .eq('dossier_id', dossierId)
-      .eq('doc_type', docType)
-      .maybeSingle()
+      .in('doc_type', trainingQueryTypes ?? [storageDocType])
+
+    const existingDoc =
+      trainingQueryTypes && existingRows && existingRows.length > 0
+        ? coalesceTrainingDocumentRows(existingRows)
+        : existingRows?.[0] ?? null
 
     const previousStatus: string | null = existingDoc?.status || null
 
@@ -198,8 +217,8 @@ export async function POST(
 
     // Metadata for history events
     let historyMetadata: Record<string, unknown> = {
-      doc_type: docType,
-      document_name: docType.replace(/_/g, ' ')
+      doc_type: storageDocType,
+      document_name: storageDocType.replace(/_/g, ' ')
     }
 
     let scoreChange = null
@@ -211,14 +230,14 @@ export async function POST(
 
       // Sync questionnaire response and update score (only on first completion)
       if (isFirstCompletion) {
-        const todoMapping = getTodoActionMapping(docType)
+        const todoMapping = getTodoActionMapping(storageDocType)
         if (todoMapping) {
-          console.log('[POST /dossiers] Found todo_action mapping for docType:', docType)
+          console.log('[POST /dossiers] Found todo_action mapping for docType:', storageDocType)
 
           const syncResult = await syncTodoActionToResponse(
             supabase,
             usecaseId,
-            docType,
+            storageDocType,
             user.email || user.id
           )
 
@@ -296,15 +315,15 @@ export async function POST(
     if (status === 'incomplete' && (previousStatus === 'complete' || previousStatus === 'validated')) {
       console.log('[POST /dossiers] Document being reset from', previousStatus, 'to incomplete')
 
-      const todoMapping = getTodoActionMapping(docType)
+      const todoMapping = getTodoActionMapping(storageDocType)
       if (todoMapping) {
-        console.log('[POST /dossiers] Found todo_action mapping for reset, docType:', docType)
+        console.log('[POST /dossiers] Found todo_action mapping for reset, docType:', storageDocType)
 
         // Reverse the questionnaire response (set back to "Non")
         const reverseResult = await reverseTodoActionResponse(
           supabase,
           usecaseId,
-          docType,
+          storageDocType,
           user.email || user.id
         )
 

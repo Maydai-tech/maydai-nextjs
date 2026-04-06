@@ -1,4 +1,5 @@
 import { UseCase } from '@/lib/supabase'
+import type { ReportCanonicalItem } from '@/lib/report-canonical-items'
 
 // Interface pour les prochaines étapes
 export interface UseCaseNextSteps {
@@ -6,6 +7,11 @@ export interface UseCaseNextSteps {
   timeline: string
   introduction?: string
   evaluation?: string
+  impact?: string
+  conclusion?: string
+  interdit_1?: string | null
+  interdit_2?: string | null
+  interdit_3?: string | null
   priorite_1?: string
   priorite_2?: string
   priorite_3?: string
@@ -43,6 +49,10 @@ export interface UserProfile {
 
 // Interface principale pour les données du rapport PDF
 export interface PDFReportData {
+  /** Préfixe optionnel pour absolufiger les liens To-do / Dossier (ex. https://app.example.com). */
+  pdfCtaBaseUrl?: string
+  /** Plan d’action standard (9 items) — même logique que le rapport web (phase 5). Vide si cas inacceptable. */
+  canonicalPlanItems?: ReportCanonicalItem[]
   useCase: UseCase & {
     companies?: {
       id: string

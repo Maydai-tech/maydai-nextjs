@@ -116,7 +116,13 @@ function computeQuickWin2(responsesMap: Map<string, ResponseInput>): SlotStatus 
   if (isNon('E5.N9.Q8', main)) return 'NON'
   if (isOui('E5.N9.Q8', main) && r) {
     const cd = buildConditionalData(r)
-    if (isNonEmpty(cd.supervisor_name) && isNonEmpty(cd.supervisor_role)) return 'OUI'
+    const nameOk =
+      isNonEmpty(cd.supervisor_name) ||
+      isNonEmpty(cd.supervisorName)
+    const roleOk =
+      isNonEmpty(cd.supervisor_role) ||
+      isNonEmpty(cd.supervisorRole)
+    if (nameOk && roleOk) return 'OUI'
   }
   return 'Information insuffisante'
 }

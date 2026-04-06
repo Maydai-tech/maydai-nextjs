@@ -1,10 +1,14 @@
 import { getTodoActionMapping } from '@/lib/todo-action-sync'
 import { normalizeScoreTo100 } from '@/lib/score-calculator-simple'
 import {
-  UNACCEPTABLE_CTA_STOPPING_PROOF,
-  UNACCEPTABLE_CTA_SYSTEM_PROMPT
-} from '@/lib/unacceptable-case-copy'
-
+  resolveCanonicalDocType,
+  getCanonicalActionByDocType,
+  getStandardComplianceDocTypesExcludingRegistry,
+  getDirectBonusCanonicalDocTypes,
+  getDossierDirectBonusRawPointsAmount,
+  getComplianceNormalizedPointsForDocType,
+  getRegistryNormalizedPointsFromCatalog,
+} from '@/lib/canonical-actions'
 interface UseCase {
   id: string
   name: string
@@ -80,77 +84,33 @@ export function getUnacceptableActionDocTypesOrdered(
 }
 
 /**
- * List of compliance document types for non-unacceptable use cases
- * Ordered by priority (1 to 8)
+ * Types doc conformité standard hors registre, ordre = catalogue canonique (positions 2–9).
  */
-export const COMPLIANCE_DOCUMENT_TYPES = [
-  'system_prompt',          // 1. Définir les instructions système & prompts
-  'human_oversight',        // 2. Désigner le(s) responsable(s) de surveillance
-  'technical_documentation',// 3. Importer la documentation technique
-  'transparency_marking',   // 4. Renseigner le marquage de transparence
-  'data_quality',           // 5. Justifier la qualité des données (Procédure)
-  'risk_management',        // 6. Joindre le plan de gestion des risques
-  'continuous_monitoring',  // 7. Établir le plan de surveillance continue
-  'training_census'         // 8. Recenser les formations AI Act
-] as const
+export const COMPLIANCE_DOCUMENT_TYPES = getStandardComplianceDocTypesExcludingRegistry()
 
-export type ComplianceDocumentType = typeof COMPLIANCE_DOCUMENT_TYPES[number]
-export type DocumentType = 'stopping_proof' | 'system_prompt' | ComplianceDocumentType
+export type ComplianceDocumentType = (typeof COMPLIANCE_DOCUMENT_TYPES)[number]
+export type DocumentType =
+  | 'stopping_proof'
+  | 'system_prompt'
+  | 'registry_proof'
+  | ComplianceDocumentType
 
 /**
- * Returns the French label for a document type
+ * Libellé d’affichage — source : catalogue canonique.
  */
-export const getDocumentLabel = (docType: DocumentType): string => {
-  switch (docType) {
-    case 'stopping_proof':
-      return 'Preuve d\'arrêt du système'
-    case 'system_prompt':
-      return 'Instructions système'
-    case 'technical_documentation':
-      return 'Documentation technique du système'
-    case 'human_oversight':
-      return 'Responsable de la surveillance humaine'
-    case 'transparency_marking':
-      return 'Marquage de transparence IA'
-    case 'risk_management':
-      return 'Plan de gestion des risques'
-    case 'data_quality':
-      return 'Procédure de qualité des données'
-    case 'continuous_monitoring':
-      return 'Plan de surveillance continue'
-    case 'training_census':
-      return 'Recensement des formations AI Act'
-    default:
-      return 'Document requis'
-  }
+export const getDocumentLabel = (docType: DocumentType | string): string => {
+  const a = getCanonicalActionByDocType(String(docType))
+  if (a) return a.label
+  return 'Document requis'
 }
 
 /**
- * Returns the French action text for a document todo item
+ * Texte d’action todo — aligné sur le catalogue (standard et inacceptable).
  */
-export const getDocumentTodoText = (docType: DocumentType): string => {
-  switch (docType) {
-    case 'stopping_proof':
-      return UNACCEPTABLE_CTA_STOPPING_PROOF
-    case 'system_prompt':
-      return UNACCEPTABLE_CTA_SYSTEM_PROMPT
-    case 'technical_documentation':
-      return 'Importer la documentation technique'
-    case 'human_oversight':
-      return 'Désigner le(s) responsable(s) de surveillance'
-    case 'transparency_marking':
-      return 'Renseigner le marquage de transparence'
-    case 'risk_management':
-      return 'Joindre le plan de gestion des risques'
-    case 'data_quality':
-      return 'Justifier la qualité des données (Procédure)'
-    case 'continuous_monitoring':
-      return 'Établir le plan de surveillance continue'
-    case 'training_census':
-      return 'Recenser les formations AI Act'
-    default:
-      return 'Compléter le document requis'
-  }
+export const getDocumentTodoText = (docType: DocumentType | string): string => {
+  const a = getCanonicalActionByDocType(String(docType))
+  if (a) return a.todo_action_label
+  return 'Compléter le document requis'
 }
 
 /**
@@ -163,31 +123,12 @@ export const isTodoCompleted = (documentStatus: DocumentStatus | null | undefine
 }
 
 /**
- * Returns the explanatory text for a document type
+ * Texte d’aide sous la todo — catalogue canonique.
  */
-export const getDocumentExplanation = (docType: DocumentType): string => {
-  switch (docType) {
-    case 'stopping_proof':
-      return "Ce cas d'usage IA a été identifié comme inacceptable selon l'AI Act. Vous devez fournir une preuve que le système a bien été arrêté (email, capture d'écran, attestation, etc.)."
-    case 'system_prompt':
-      return "Ce cas d'usage IA sera déployé prochainement et a été identifié comme inacceptable. Vous devez documenter les instructions système qui seront utilisées."
-    case 'technical_documentation':
-      return "Décrivez le(s) modèle(s) d'IA utilisé(s), l'architecture générale, les capacités prévues et surtout les limitations connues (risques d'hallucination, biais potentiels, etc.)."
-    case 'human_oversight':
-      return "Désignez une personne physique claire, responsable de la supervision \"human-in-the-loop\" ou de l'audit a posteriori. Cela garantit l'accountability (responsabilité) du système."
-    case 'transparency_marking':
-      return "Décrivez comment le contenu généré par l'IA est marqué comme tel (ex: \"Généré par IA\", watermark, disclaimer). L'utilisateur final doit être informé qu'il interagit avec une IA."
-    case 'risk_management':
-      return "Documentez que les risques potentiels (biais, sécurité, confidentialité, mauvais usage) ont été identifiés et que des mesures sont en place pour les atténuer."
-    case 'data_quality':
-      return "Démontrez que les données utilisées (pour l'entraînement, le fine-tuning, ou le RAG) sont de bonne qualité, non biaisées et gérées correctement."
-    case 'continuous_monitoring':
-      return "Détaillez les métriques (KPIs) de performance suivies, la fréquence des audits, et la procédure en cas de détection d'anomalie ou de risque émergent."
-    case 'training_census':
-      return "Recensez les formations AI Act suivies par vos équipes. Documentez les participants, dates, contenus et certificats obtenus pour démontrer la compétence de votre organisation en matière de conformité."
-    default:
-      return "Veuillez fournir le document requis pour ce cas d'usage."
-  }
+export const getDocumentExplanation = (docType: DocumentType | string): string => {
+  const a = getCanonicalActionByDocType(String(docType))
+  if (a) return a.todo_explanation
+  return "Veuillez fournir le document requis pour ce cas d'usage."
 }
 
 /**
@@ -196,12 +137,13 @@ export const getDocumentExplanation = (docType: DocumentType): string => {
  * directly to score_base when the dossier is completed.
  * Each gives +3 raw points = 2 normalized points.
  */
-export const DIRECT_BONUS_DOC_TYPES = ['system_prompt', 'training_census'] as const
+/** Types bonus dossier — source : `dossier_direct_bonus_raw_points` du catalogue. */
+export const DIRECT_BONUS_DOC_TYPES: readonly string[] = getDirectBonusCanonicalDocTypes()
 
 /**
  * Raw bonus points given per direct bonus document type
  */
-export const DIRECT_BONUS_RAW_POINTS = 3
+export const DIRECT_BONUS_RAW_POINTS = getDossierDirectBonusRawPointsAmount()
 
 /**
  * Gets the potential score points that can be gained by completing a document action.
@@ -212,21 +154,22 @@ export const DIRECT_BONUS_RAW_POINTS = 3
  * Handles 3 types of actions:
  * 1. Standard questionnaire-linked actions (e.g., technical_documentation)
  * 2. Conditional question actions (e.g., data_quality, continuous_monitoring)
- * 3. Direct bonus actions (system_prompt, training_census) - no questionnaire link
+ * 3. Direct bonus actions (system_prompt, training_plan) - no questionnaire link
  *
  * @param docType - The document type (e.g., 'technical_documentation')
  * @param responses - Array of questionnaire responses for the use case
  * @returns The potential normalized points to gain (0 if no points can be gained)
  */
 export const getPotentialPoints = (docType: string, responses: any[]): number => {
+  const canonical = resolveCanonicalDocType(docType)
   // Direct bonus types: always return 2 normalized points as potential
   // (the actual check for completion is done by the caller via earnedPoints)
-  if ((DIRECT_BONUS_DOC_TYPES as readonly string[]).includes(docType)) {
+  if ((DIRECT_BONUS_DOC_TYPES as readonly string[]).includes(canonical)) {
     return normalizeScoreTo100(DIRECT_BONUS_RAW_POINTS)
   }
 
   // Get the mapping dynamically from questions-with-scores.json
-  const mapping = getTodoActionMapping(docType)
+  const mapping = getTodoActionMapping(canonical)
   if (!mapping) return 0
 
   // Find the current response for this question
@@ -263,7 +206,7 @@ export const getPotentialPoints = (docType: string, responses: any[]): number =>
  * Handles 3 types of actions:
  * 1. Standard questionnaire-linked: checks if response is positive (single_value)
  * 2. Conditional question actions: checks both single_value AND conditional_main
- * 3. Direct bonus actions (system_prompt, training_census): returns points if completed
+ * 3. Direct bonus actions (system_prompt, training_plan): returns points if completed
  *
  * @param docType - The document type (e.g., 'technical_documentation')
  * @param responses - Array of questionnaire responses for the use case
@@ -273,13 +216,14 @@ export const getPotentialPoints = (docType: string, responses: any[]): number =>
 export const getEarnedPoints = (docType: string, responses: any[], isCompleted: boolean): number => {
   if (!isCompleted) return 0
 
+  const canonical = resolveCanonicalDocType(docType)
   // Direct bonus types: if dossier is completed, points are earned
-  if ((DIRECT_BONUS_DOC_TYPES as readonly string[]).includes(docType)) {
+  if ((DIRECT_BONUS_DOC_TYPES as readonly string[]).includes(canonical)) {
     return normalizeScoreTo100(DIRECT_BONUS_RAW_POINTS)
   }
 
   // Get the mapping dynamically from questions-with-scores.json
-  const mapping = getTodoActionMapping(docType)
+  const mapping = getTodoActionMapping(canonical)
   if (!mapping) return 0
   if (!mapping.negativeAnswerCode) return 0 // No negative answer = no points to earn
 
@@ -311,22 +255,7 @@ export const getEarnedPoints = (docType: string, responses: any[], isCompleted: 
  * @returns The normalized points for this action (0 if no points defined)
  */
 export const getFixedActionPoints = (docType: string): number => {
-  switch (docType) {
-    // 8 standard compliance actions: 2 normalized points each
-    case 'system_prompt':
-    case 'human_oversight':
-    case 'technical_documentation':
-    case 'transparency_marking':
-    case 'risk_management':
-    case 'data_quality':
-    case 'continuous_monitoring':
-    case 'training_census':
-      return 2
-    // stopping_proof has no points
-    case 'stopping_proof':
-    default:
-      return 0
-  }
+  return getComplianceNormalizedPointsForDocType(resolveCanonicalDocType(docType))
 }
 
 /**
@@ -334,7 +263,7 @@ export const getFixedActionPoints = (docType: string): number => {
  * @returns 3 normalized points
  */
 export const getRegistryActionPoints = (): number => {
-  return 3
+  return getRegistryNormalizedPointsFromCatalog()
 }
 
 /**

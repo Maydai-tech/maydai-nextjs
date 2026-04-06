@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth'
+import { getDocumentTypesForStatusHook } from '@/lib/canonical-actions'
 
 export interface DocumentStatus {
   status: 'incomplete' | 'complete' | 'validated'
@@ -14,20 +15,8 @@ export interface DocumentStatus {
 
 export type DocumentStatuses = Record<string, DocumentStatus>
 
-// Types de documents réels dans la table dossier_documents
-// Note : registry_action n'est PAS un type de document, c'est un alias qui utilise registry_proof
-const DOCUMENT_TYPES = [
-  'system_prompt',
-  'human_oversight',
-  'technical_documentation',
-  'transparency_marking',
-  'data_quality',
-  'risk_management',
-  'continuous_monitoring',
-  'training_census',
-  'stopping_proof',
-  'registry_proof'
-] as const
+// Types interrogés pour les statuts (aligné sur le catalogue canonique)
+const DOCUMENT_TYPES = getDocumentTypesForStatusHook()
 
 export function useDocumentStatuses(usecaseId: string | null) {
   const { session } = useAuth()

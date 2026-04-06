@@ -6,23 +6,17 @@ import {
   reverseTodoActionResponse,
 } from "@/lib/todo-action-sync";
 import { recordUseCaseHistory } from "@/lib/usecase-history";
+import {
+  coalesceTrainingDocumentRows,
+  getAcceptedDossierApiDocTypeParams,
+  resolveCanonicalDocType,
+  trainingDocTypesForQuery,
+} from "@/lib/canonical-actions";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-const allowedDocTypes = new Set([
-  "system_prompt",
-  "technical_documentation",
-  "human_oversight",
-  "transparency_marking",
-  "risk_management",
-  "data_quality",
-  "continuous_monitoring",
-  "training_census",
-  "stopping_proof",
-  "registry_proof",
-  "training_plan",
-]);
+const allowedDocTypes = getAcceptedDossierApiDocTypeParams();
 
 // Formats acceptés par type de document
 const allowedFormats: Record<
@@ -108,6 +102,8 @@ export async function PUT(
       return NextResponse.json({ error: "Invalid docType" }, { status: 400 });
     }
 
+    const storageDocType = resolveCanonicalDocType(docType);
+
     const formData = await request.formData();
     const file = formData.get("file") as unknown as File | null;
 
@@ -154,17 +150,18 @@ export async function PUT(
       );
     }
 
-    // Validate file extension for this doc type
-    if (allowedFormats[docType]) {
+    // Validate file extension (règles du type canonique, ex. training_census → training_plan)
+    const formatKey = allowedFormats[docType] ? docType : storageDocType;
+    if (allowedFormats[formatKey]) {
       const fileExtension = filename
         .substring(filename.lastIndexOf("."))
         .toLowerCase();
-      const allowedExts = allowedFormats[docType].extensions;
+      const allowedExts = allowedFormats[formatKey].extensions;
 
       if (!allowedExts.includes(fileExtension)) {
         return NextResponse.json(
           {
-            error: `Format de fichier non accepté. Formats autorisés : ${allowedFormats[docType].description}`,
+            error: `Format de fichier non accepté. Formats autorisés : ${allowedFormats[formatKey].description}`,
           },
           { status: 400 },
         );
@@ -256,8 +253,8 @@ export async function PUT(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Upload to storage bucket 'dossiers'
-    const path = `${companyId}/${usecaseId}/${docType}/${filename}`;
+    // Upload to storage bucket 'dossiers' (chemin = type canonique)
+    const path = `${companyId}/${usecaseId}/${storageDocType}/${filename}`;
     console.log("[PUT /upload] Uploading to storage path:", path);
 
     const { error: upErr } = await (supabase as any).storage
@@ -287,15 +284,16 @@ export async function PUT(
     console.log(
       "[PUT /upload] Upserting dossier_document for dossier:",
       dossierId,
-      "docType:",
-      docType,
+      "storageDocType:",
+      storageDocType,
     );
-    const { data: existingDoc, error: existingDocError } = await supabase
+    const trainingQ =
+      storageDocType === "training_plan" ? [...trainingDocTypesForQuery()] : null;
+    const { data: existingRows, error: existingDocError } = await supabase
       .from("dossier_documents")
-      .select("id, status")
+      .select("id, status, doc_type, updated_at")
       .eq("dossier_id", dossierId)
-      .eq("doc_type", docType)
-      .maybeSingle();
+      .in("doc_type", trainingQ ?? [storageDocType]);
 
     if (existingDocError) {
       console.error(
@@ -303,6 +301,11 @@ export async function PUT(
         existingDocError,
       );
     }
+    const existingDoc =
+      trainingQ && existingRows && existingRows.length > 0
+        ? coalesceTrainingDocumentRows(existingRows)
+        : existingRows?.[0] ?? null;
+
     console.log("[PUT /upload] Existing document:", existingDoc);
 
     if (existingDoc?.id) {
@@ -310,6 +313,7 @@ export async function PUT(
       const { error: updErr } = await supabase
         .from("dossier_documents")
         .update({
+          doc_type: storageDocType,
           file_url: fileUrl,
           status: "complete",
           updated_by: user.id,
@@ -331,7 +335,7 @@ export async function PUT(
         .from("dossier_documents")
         .insert({
           dossier_id: dossierId,
-          doc_type: docType,
+          doc_type: storageDocType,
           file_url: fileUrl,
           status: "complete",
           updated_by: user.id,
@@ -350,13 +354,12 @@ export async function PUT(
     // Check if this docType has a todo_action mapping and sync the response
     let scoreChange = null;
     
-    // Direct bonus document types: system_prompt and training_census
-    // These don't have questionnaire questions - bonus is added directly to score
-    const DIRECT_BONUS_DOC_TYPES = ["system_prompt", "training_census"];
+    // Direct bonus document types (formation = training_plan canonique)
+    const DIRECT_BONUS_DOC_TYPES = ["system_prompt", "training_plan"];
     const DIRECT_BONUS_RAW_POINTS = 3;
     
-    if (DIRECT_BONUS_DOC_TYPES.includes(docType)) {
-      console.log("[PUT /upload] Direct bonus docType:", docType, "+", DIRECT_BONUS_RAW_POINTS, "raw points");
+    if (DIRECT_BONUS_DOC_TYPES.includes(storageDocType)) {
+      console.log("[PUT /upload] Direct bonus docType:", storageDocType, "+", DIRECT_BONUS_RAW_POINTS, "raw points");
       
       // Only add bonus if this is a NEW completion (document was not already complete)
       // existingDoc was fetched BEFORE our update, so its status reflects the previous state
@@ -398,7 +401,7 @@ export async function PUT(
               previousScore,
               newScore: newFinalScore,
               pointsGained: pointsGainedFinal,
-              reason: docType === "system_prompt" 
+              reason: storageDocType === "system_prompt" 
                 ? "Instructions systeme et prompts definis"
                 : "Formations AI Act recensees",
             };
@@ -410,15 +413,15 @@ export async function PUT(
       }
     } else {
       // Standard todo_action mapping (questionnaire-linked)
-      const todoMapping = getTodoActionMapping(docType);
+      const todoMapping = getTodoActionMapping(storageDocType);
       if (todoMapping) {
-        console.log("[PUT /upload] Found todo_action mapping for docType:", docType);
+        console.log("[PUT /upload] Found todo_action mapping for docType:", storageDocType);
 
         // Sync the questionnaire response
         const syncResult = await syncTodoActionToResponse(
           supabase,
           usecaseId,
-          docType,
+          storageDocType,
           user.email || user.id
         );
 
@@ -480,7 +483,7 @@ export async function PUT(
     // Enregistrer l'événement d'upload dans l'historique du use case avec les infos de score
     const historyMetadata: Record<string, unknown> = {
       document_name: filename,
-      doc_type: docType
+      doc_type: storageDocType
     };
 
     // Enrichir avec les infos de score si disponibles
@@ -518,6 +521,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Invalid docType" }, { status: 400 });
     }
 
+    const storageDocType = resolveCanonicalDocType(docType);
+
     // Get dossier and verify access
     const { data: dossier } = await supabase
       .from("dossiers")
@@ -540,13 +545,18 @@ export async function DELETE(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Get current document to find file path and previous status
-    const { data: doc } = await supabase
+    const trainingQ =
+      storageDocType === "training_plan" ? [...trainingDocTypesForQuery()] : null;
+    const { data: docRows } = await supabase
       .from("dossier_documents")
-      .select("id, file_url, form_data, status")
+      .select("id, file_url, form_data, status, doc_type")
       .eq("dossier_id", dossier.id)
-      .eq("doc_type", docType)
-      .maybeSingle();
+      .in("doc_type", trainingQ ?? [storageDocType]);
+
+    let doc = docRows?.[0] ?? null;
+    if (trainingQ && docRows && docRows.length > 0) {
+      doc = coalesceTrainingDocumentRows(docRows);
+    }
 
     if (!doc || (!doc.file_url && !doc.form_data)) {
       return NextResponse.json(
@@ -604,13 +614,13 @@ export async function DELETE(
     let scoreChange = null;
     
     // Direct bonus document types
-    const DIRECT_BONUS_DOC_TYPES = ["system_prompt", "training_census"];
+    const DIRECT_BONUS_DOC_TYPES = ["system_prompt", "training_plan"];
     const DIRECT_BONUS_RAW_POINTS = 3;
     
     if (previousStatus === "complete" || previousStatus === "validated") {
-      console.log("[DELETE /upload] Document was", previousStatus, "- reversing score for docType:", docType);
+      console.log("[DELETE /upload] Document was", previousStatus, "- reversing score for docType:", storageDocType);
 
-      if (DIRECT_BONUS_DOC_TYPES.includes(docType)) {
+      if (DIRECT_BONUS_DOC_TYPES.includes(storageDocType)) {
         // Direct bonus type: subtract the bonus from score_base
         console.log("[DELETE /upload] Direct bonus docType, removing", DIRECT_BONUS_RAW_POINTS, "raw points");
         
@@ -646,7 +656,7 @@ export async function DELETE(
               previousScore,
               newScore: newFinalScore,
               pointsGained: pointsLostFinal,
-              reason: docType === "system_prompt"
+              reason: storageDocType === "system_prompt"
                 ? "Instructions systeme reintialisees"
                 : "Formations AI Act reintialisees",
             };
@@ -655,13 +665,13 @@ export async function DELETE(
         }
       } else {
         // Standard todo_action mapping (questionnaire-linked)
-        const todoMapping = getTodoActionMapping(docType);
+        const todoMapping = getTodoActionMapping(storageDocType);
         if (todoMapping) {
           // Reverse the questionnaire response (set back to "Non")
           const reverseResult = await reverseTodoActionResponse(
             supabase,
             usecaseId,
-            docType,
+            storageDocType,
             user.email || user.id,
           );
 
@@ -711,8 +721,8 @@ export async function DELETE(
 
       // Record history: document_reset
       const historyMetadata: Record<string, unknown> = {
-        doc_type: docType,
-        document_name: docType.replace(/_/g, " "),
+        doc_type: storageDocType,
+        document_name: storageDocType.replace(/_/g, " "),
       };
       if (scoreChange) {
         historyMetadata.previous_score = scoreChange.previousScore;

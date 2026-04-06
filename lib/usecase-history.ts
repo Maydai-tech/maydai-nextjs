@@ -171,9 +171,10 @@ export const DOC_TYPE_LABELS: Record<string, string> = {
   data_quality: 'Qualité des données',
   continuous_monitoring: 'Surveillance continue',
   training_census: 'Recensement des formations',
+  training_plan: 'Plan de formation',
   stopping_proof: 'Preuve d\'arrêt',
   registry_proof: 'Preuve de registre',
-  training_plan: 'Plan de formation'
+  registry_action: 'Preuve de registre',
 }
 
 /**
