@@ -19,6 +19,7 @@ import {
   getUnacceptableActionDocTypesOrdered,
   type DocumentType
 } from './utils/todo-helpers'
+import { getRegistryTodoTitleForCase, resolveCanonicalDocType } from '@/lib/canonical-actions'
 
 interface UseCase {
   id: string
@@ -45,7 +46,7 @@ interface TodoItem {
   text: string
   completed: boolean
   useCaseId: string
-  docType: DocumentType | 'registry_action'
+  docType: DocumentType | 'registry_proof'
   registryCase?: 'A' | 'B' | 'C' // For registry-related todos
   potentialPoints?: number // Points that can be gained by completing this action
   earnedPoints?: number // Points that were earned by completing this action
@@ -280,17 +281,20 @@ export default function TodoListPage({ params }: TodoListPageProps) {
   // Auto-expand use case and action from URL parameters
   const highlightUseCase = searchParams.get('usecase')
   const highlightAction = searchParams.get('action')
+  const highlightActionCanonical = highlightAction
+    ? resolveCanonicalDocType(highlightAction)
+    : null
 
   useEffect(() => {
-    if (highlightUseCase && highlightAction && !loadingData && useCases.length > 0) {
+    if (highlightUseCase && highlightActionCanonical && !loadingData && useCases.length > 0) {
       // Expand the use case
       setExpandedUseCases(prev => ({
         ...prev,
         [highlightUseCase]: true
       }))
 
-      // Expand the action
-      const todoId = `${highlightUseCase}-${highlightAction}`
+      // Expand the action (id todo = useCaseId + docType canonique)
+      const todoId = `${highlightUseCase}-${highlightActionCanonical}`
       setExpandedTodos(prev => ({
         ...prev,
         [todoId]: true
@@ -302,7 +306,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
         element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }, 300)
     }
-  }, [highlightUseCase, highlightAction, loadingData, useCases.length])
+  }, [highlightUseCase, highlightActionCanonical, loadingData, useCases.length])
 
   // Get E5.N9.Q7 response for a use case
   const getE5N9Q7Response = (useCaseId: string) => {
@@ -328,20 +332,6 @@ export default function TodoListPage({ params }: TodoListPageProps) {
     }
 
     return null
-  }
-
-  // Get registry todo text based on case
-  const getRegistryTodoText = (registryCase: 'A' | 'B' | 'C'): string => {
-    switch (registryCase) {
-      case 'A':
-        return 'Initialiser le registre centralisé pour vos systèmes d\'IA'
-      case 'B':
-        return 'Initialiser le registre centralisé pour vos systèmes d\'IA'
-      case 'C':
-        return 'Prouver l\'usage de votre registre centralisé'
-      default:
-        return 'Action requise pour le registre centralisé'
-    }
   }
 
   // Check if registry todo is completed
@@ -410,10 +400,10 @@ export default function TodoListPage({ params }: TodoListPageProps) {
       const registryEarnedPoints = getEarnedPoints('registry_proof', responses, registryCompleted)
       todos.push({
         id: `${useCase.id}-registry`,
-        text: getRegistryTodoText(effectiveRegistryCase),
+        text: getRegistryTodoTitleForCase(effectiveRegistryCase),
         completed: registryCompleted,
         useCaseId: useCase.id,
-        docType: 'registry_action',
+        docType: 'registry_proof',
         registryCase: effectiveRegistryCase,
         actionNumber: 1,
         potentialPoints: registryPotentialPoints > 0 ? registryPotentialPoints : undefined,
@@ -463,7 +453,8 @@ export default function TodoListPage({ params }: TodoListPageProps) {
   // Navigate to dossier page with optional document query parameter
   const handleTodoClick = useCallback((useCaseId: string, docType?: string) => {
     const baseUrl = `/dashboard/${companyId}/dossiers/${useCaseId}`
-    const url = docType ? `${baseUrl}?doc=${docType}` : baseUrl
+    const canonical = docType ? resolveCanonicalDocType(docType) : undefined
+    const url = canonical ? `${baseUrl}?doc=${canonical}` : baseUrl
     router.push(url)
   }, [companyId, router])
 
@@ -682,9 +673,9 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                               <div
                                 key={todo.id}
                                 id={`todo-${todo.id}`}
-                                className={highlightUseCase === todo.useCaseId && highlightAction === todo.docType ? 'ring-2 ring-[#0080A3] ring-offset-2 rounded-lg' : ''}
+                                className={highlightUseCase === todo.useCaseId && highlightActionCanonical === todo.docType ? 'ring-2 ring-[#0080A3] ring-offset-2 rounded-lg' : ''}
                               >
-                                {todo.docType === 'registry_action' ? (
+                                {todo.docType === 'registry_proof' ? (
                                   <RegistryToDoAction
                                     todo={todo as any}
                                     isExpanded={expandedTodos[todo.id] || false}

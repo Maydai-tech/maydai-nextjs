@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import {
+  coalesceTrainingDocumentRows,
+  getAcceptedDossierApiDocTypeParams,
+  resolveCanonicalDocType,
+  trainingDocTypesForQuery,
+} from '@/lib/canonical-actions'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-const allowedDocTypes = new Set([
-  'system_prompt',
-  'technical_documentation',
-  'human_oversight',
-  'transparency_marking',
-  'risk_management',
-  'data_quality',
-  'continuous_monitoring',
-  'training_census',
-  'stopping_proof',
-  'registry_proof',
-  'training_plan',
-])
+const allowedDocTypes = getAcceptedDossierApiDocTypeParams()
 
 async function getClientFromAuth(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -121,12 +115,23 @@ export async function GET(request: NextRequest) {
     // Get all dossier IDs
     const dossierIds = accessibleDossiers.map((d: any) => d.id)
 
+    const expandedDocTypeSet = new Set<string>()
+    for (const dt of docTypes) {
+      const c = resolveCanonicalDocType(dt)
+      if (c === 'training_plan') {
+        trainingDocTypesForQuery().forEach(t => expandedDocTypeSet.add(t))
+      } else {
+        expandedDocTypeSet.add(c)
+      }
+    }
+    const expandedDocTypes = [...expandedDocTypeSet]
+
     // Fetch all documents in one query
     const { data: documents } = await supabase
       .from('dossier_documents')
       .select('dossier_id, doc_type, form_data, file_url, status, updated_at')
       .in('dossier_id', dossierIds)
-      .in('doc_type', docTypes)
+      .in('doc_type', expandedDocTypes)
 
     // Create a map of dossier_id -> usecase_id for quick lookup
     const dossierToUseCaseMap = new Map(
@@ -151,15 +156,26 @@ export async function GET(request: NextRequest) {
       if (!dossier) continue
 
       for (const docType of docTypes) {
-        const key = `${usecaseId}:${docType}`
-        const doc = documentMap.get(key)
+        const canonical = resolveCanonicalDocType(docType)
+        let doc: any = null
+        if (canonical === 'training_plan') {
+          const a = documentMap.get(`${usecaseId}:training_plan`)
+          const b = documentMap.get(`${usecaseId}:training_census`)
+          doc = coalesceTrainingDocumentRows([a, b].filter(Boolean))
+        } else {
+          doc = documentMap.get(`${usecaseId}:${canonical}`) ?? null
+        }
+
+        const st = doc?.status ?? 'incomplete'
+        const status: 'incomplete' | 'complete' | 'validated' =
+          st === 'complete' || st === 'validated' ? st : 'incomplete'
 
         results.push({
           usecaseId,
           docType,
           formData: doc?.form_data ?? null,
           fileUrl: doc?.file_url ?? null,
-          status: doc?.status ?? 'incomplete',
+          status,
           updatedAt: doc?.updated_at ?? null
         })
       }

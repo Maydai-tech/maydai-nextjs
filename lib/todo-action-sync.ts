@@ -8,6 +8,7 @@
 
 import { SupabaseClient } from '@supabase/supabase-js'
 import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
+import { resolveCanonicalDocType } from '@/lib/canonical-actions'
 
 interface TodoActionMapping {
   questionCode: string
@@ -26,12 +27,13 @@ interface TodoActionMapping {
  * The negative answer is the one with negative score_impact (typically "Non")
  */
 export function getTodoActionMapping(todoAction: string): TodoActionMapping | null {
+  const canonicalTodo = resolveCanonicalDocType(todoAction)
   // Scan all questions to find the one with this todo_action at question level
   for (const [questionCode, question] of Object.entries(questionsData)) {
     const questionObj = question as any
 
     // Check if this question has the todo_action we're looking for
-    if (questionObj.todo_action !== todoAction) continue
+    if (questionObj.todo_action !== canonicalTodo) continue
     if (!questionObj.options) continue
 
     // Find the positive answer (score_impact = 0 or undefined, typically "Oui")
@@ -81,7 +83,7 @@ export function getTodoActionMapping(todoAction: string): TodoActionMapping | nu
       positiveAnswerCode,
       negativeAnswerCode,
       expectedPointsGained,
-      reason: getReasonForTodoAction(todoAction)
+      reason: getReasonForTodoAction(canonicalTodo)
     }
   }
 
@@ -99,7 +101,10 @@ function getReasonForTodoAction(todoAction: string): string {
     risk_management: 'Systeme de gestion des risques etabli',
     data_quality: 'Procedures qualite des donnees ajoutees',
     registry_proof: 'Preuve de registre ajoutee',
-    human_oversight: 'Surveillance humaine mise en place'
+    registry_action: 'Preuve de registre ajoutee',
+    human_oversight: 'Surveillance humaine mise en place',
+    training_plan: 'Formations AI Act documentees',
+    training_census: 'Formations AI Act documentees',
   }
   return reasons[todoAction] || 'Document de conformite ajoute'
 }
@@ -115,7 +120,10 @@ function getReasonForTodoActionReset(todoAction: string): string {
     risk_management: 'Systeme de gestion des risques reinitialise',
     data_quality: 'Procedures qualite des donnees reintialisees',
     registry_proof: 'Preuve de registre reintialisee',
-    human_oversight: 'Surveillance humaine reintialisee'
+    registry_action: 'Preuve de registre reintialisee',
+    human_oversight: 'Surveillance humaine reintialisee',
+    training_plan: 'Formations AI Act reintialisees',
+    training_census: 'Formations AI Act reintialisees',
   }
   return reasons[todoAction] || 'Document de conformite reinitialise'
 }

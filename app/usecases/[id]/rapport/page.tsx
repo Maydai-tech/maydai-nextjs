@@ -13,14 +13,14 @@ import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { useNextSteps } from '../hooks/useNextSteps'
 import { usePDFExport } from '../hooks/usePDFExport'
 import { getScoreStyle } from '@/lib/score-styles'
-import { AlertTriangle, RefreshCcw, Download, ArrowRight } from 'lucide-react'
+import { AlertTriangle, RefreshCcw, Download } from 'lucide-react'
 import { getCompanyStatusLabel, getCompanyStatusDefinition, getRiskLevelJustification } from '../utils/company-status'
 import UnacceptableInterditsPanel from '@/components/UnacceptableCase/UnacceptableInterditsPanel'
 import { useUnacceptableInterdit1Source } from '@/hooks/useUnacceptableInterdit1Source'
-import { ACTION_TO_DOCTYPE, getActionMetadata, isActionCompleted } from '../config/actions-config'
 import { useDocumentStatuses } from '../hooks/useDocumentStatuses'
 import { useCompanyInfo } from '../hooks/useCompanyInfo'
-import { CompletedAction } from '../components/report/CompletedAction'
+import { useQuestionnaireSlotStatuses } from '../hooks/useQuestionnaireSlotStatuses'
+import { ReportStandardPlanBlocks } from '../components/report/ReportStandardPlanBlocks'
 
 // Hook pour récupérer les informations de profil de l'utilisateur
 function useUserProfile() {
@@ -85,6 +85,11 @@ export default function UseCaseRapportPage() {
 
   // Logique pour cas inacceptable
   const isUnacceptableCase = riskLevel === 'unacceptable'
+
+  const { slotStatuses } = useQuestionnaireSlotStatuses(
+    useCaseId,
+    Boolean(useCase?.id && nextSteps && !isUnacceptableCase)
+  )
 
   const unacceptableInterdit = useUnacceptableInterdit1Source({
     useCaseId: useCase?.id ?? null,
@@ -573,214 +578,16 @@ export default function UseCaseRapportPage() {
                 </div>
               )}
 
-              {/* Quick wins */}
-              {!isUnacceptableCase && nextSteps.quick_win_1 && (
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <img
-                      src="/icons/work-in-progress.png"
-                      alt="Actions rapides"
-                      width={24}
-                      height={24}
-                      className="flex-shrink-0"
-                    />
-                    <h3 className="text-xl font-semibold text-gray-900">Actions rapides et concrètes à mettre en œuvre :</h3>
-                  </div>
-                  <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Actions immédiates recommandées</h4>
-                  <ul className="space-y-3 mb-4 ml-4">
-                    {[
-                      { key: 'quick_win_1', value: nextSteps.quick_win_1 },
-                      { key: 'quick_win_2', value: nextSteps.quick_win_2 },
-                      { key: 'quick_win_3', value: nextSteps.quick_win_3 }
-                    ]
-                        .filter(item => Boolean(item.value))
-                        .map((item, index) => {
-                          const metadata = getActionMetadata(item.key)
-                          const isCompleted = isActionCompleted(metadata.docType, documentStatuses, maydaiAsRegistry)
-                          const dossierUrl = useCase?.company_id
-                          ? `/dashboard/${useCase.company_id}/dossiers/${useCaseId}?highlight=${metadata.docType}`
-                          : null
-                        const todoUrl = metadata.docType && useCase?.company_id
-                          ? `/dashboard/${useCase.company_id}/todo-list?usecase=${useCaseId}&action=${metadata.docType}`
-                          : null
-                        
-                        return (
-                          <li key={index} className="text-base leading-relaxed text-gray-800">
-                            <div className="flex items-start gap-2">
-                              <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
-                              <span className="flex-1">{item.value}</span>
-                            </div>
-                            {isCompleted ? (
-                              dossierUrl && (
-                                <CompletedAction
-                                  title={metadata.title}
-                                  points={metadata.points}
-                                  onClick={() => router.push(dossierUrl)}
-                                />
-                              )
-                            ) : (
-                              todoUrl && (
-                                <button
-                                  onClick={() => router.push(todoUrl)}
-                                  className="mt-2 ml-8 inline-flex items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors"
-                                >
-                                  <span>{metadata.title}</span>
-                                  <div className="flex items-center gap-2">
-                                    {metadata.points > 0 && (
-                                      <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-semibold">
-                                        +{metadata.points} pts
-                                      </span>
-                                    )}
-                                    <ArrowRight className="w-4 h-4" />
-                                  </div>
-                                </button>
-                              )
-                            )}
-                          </li>
-                        )
-                      })}
-                  </ul>
-                </div>
-              )}
-
-              {/* Priorités d'actions réglementaires */}
-              {!isUnacceptableCase && nextSteps.priorite_1 && (
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <img
-                      src="/icons/attention.png"
-                      alt="Actions prioritaires"
-                      width={24}
-                      height={24}
-                      className="flex-shrink-0"
-                    />
-                    <h3 className="text-xl font-semibold text-gray-900">Mesures importantes de conformité à renseigner :</h3>
-                  </div>
-                  <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Actions réglementaires et documents techniques</h4>
-                  <ul className="space-y-3 mb-4 ml-4">
-                    {[
-                      { key: 'priorite_1', value: nextSteps.priorite_1 },
-                      { key: 'priorite_2', value: nextSteps.priorite_2 },
-                      { key: 'priorite_3', value: nextSteps.priorite_3 }
-                    ]
-                        .filter(item => Boolean(item.value))
-                        .map((item, index) => {
-                          const metadata = getActionMetadata(item.key)
-                          const isCompleted = isActionCompleted(metadata.docType, documentStatuses, maydaiAsRegistry)
-                          const dossierUrl = useCase?.company_id
-                          ? `/dashboard/${useCase.company_id}/dossiers/${useCaseId}?highlight=${metadata.docType}`
-                          : null
-                        const todoUrl = metadata.docType && useCase?.company_id
-                          ? `/dashboard/${useCase.company_id}/todo-list?usecase=${useCaseId}&action=${metadata.docType}`
-                          : null
-                        
-                        return (
-                          <li key={index} className="text-base leading-relaxed text-gray-800">
-                            <div className="flex items-start gap-2">
-                              <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
-                              <span className="flex-1">{item.value}</span>
-                            </div>
-                            {isCompleted ? (
-                              dossierUrl && (
-                                <CompletedAction
-                                  title={metadata.title}
-                                  points={metadata.points}
-                                  onClick={() => router.push(dossierUrl)}
-                                />
-                              )
-                            ) : (
-                              todoUrl && (
-                                <button
-                                  onClick={() => router.push(todoUrl)}
-                                  className="mt-2 ml-8 inline-flex items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors"
-                                >
-                                  <span>{metadata.title}</span>
-                                  <div className="flex items-center gap-2">
-                                    {metadata.points > 0 && (
-                                      <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-semibold">
-                                        +{metadata.points} pts
-                                      </span>
-                                    )}
-                                    <ArrowRight className="w-4 h-4" />
-                                  </div>
-                                </button>
-                              )
-                            )}
-                          </li>
-                        )
-                      })}
-                  </ul>
-                </div>
-              )}
-
-              {/* Actions moyen terme */}
-              {!isUnacceptableCase && nextSteps.action_1 && (
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <img
-                      src="/icons/schedule.png"
-                      alt="Actions à moyen terme"
-                      width={24}
-                      height={24}
-                      className="flex-shrink-0"
-                    />
-                    <h3 className="text-xl font-semibold text-gray-900">Trois actions structurantes à mener dans les 3 à 6 mois :</h3>
-                  </div>
-                  <h4 className="text-lg font-medium text-gray-700 mb-3 italic">Actions à moyen terme</h4>
-                  <ul className="space-y-3 mb-4 ml-4">
-                    {[
-                      { key: 'action_1', value: nextSteps.action_1 },
-                      { key: 'action_2', value: nextSteps.action_2 },
-                      { key: 'action_3', value: nextSteps.action_3 }
-                    ]
-                        .filter(item => Boolean(item.value))
-                        .map((item, index) => {
-                          const metadata = getActionMetadata(item.key)
-                          const isCompleted = isActionCompleted(metadata.docType, documentStatuses, maydaiAsRegistry)
-                          const dossierUrl = useCase?.company_id
-                          ? `/dashboard/${useCase.company_id}/dossiers/${useCaseId}?highlight=${metadata.docType}`
-                          : null
-                        const todoUrl = metadata.docType && useCase?.company_id
-                          ? `/dashboard/${useCase.company_id}/todo-list?usecase=${useCaseId}&action=${metadata.docType}`
-                          : null
-                        
-                        return (
-                          <li key={index} className="text-base leading-relaxed text-gray-800">
-                            <div className="flex items-start gap-2">
-                              <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
-                              <span className="flex-1">{item.value}</span>
-                            </div>
-                            {isCompleted ? (
-                              dossierUrl && (
-                                <CompletedAction
-                                  title={metadata.title}
-                                  points={metadata.points}
-                                  onClick={() => router.push(dossierUrl)}
-                                />
-                              )
-                            ) : (
-                              todoUrl && (
-                                <button
-                                  onClick={() => router.push(todoUrl)}
-                                  className="mt-2 ml-8 inline-flex items-center justify-between gap-3 px-4 py-2.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors"
-                                >
-                                  <span>{metadata.title}</span>
-                                  <div className="flex items-center gap-2">
-                                    {metadata.points > 0 && (
-                                      <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-semibold">
-                                        +{metadata.points} pts
-                                      </span>
-                                    )}
-                                    <ArrowRight className="w-4 h-4" />
-                                  </div>
-                                </button>
-                              )
-                            )}
-                          </li>
-                        )
-                      })}
-                  </ul>
-                </div>
+              {!isUnacceptableCase && useCase?.company_id && (
+                <ReportStandardPlanBlocks
+                  nextSteps={nextSteps}
+                  slotStatuses={slotStatuses}
+                  documentStatuses={documentStatuses}
+                  maydaiAsRegistry={maydaiAsRegistry}
+                  companyId={useCase.company_id}
+                  useCaseId={useCaseId}
+                  riskLevel={riskLevel}
+                />
               )}
 
               {/* Impact attendu — non affiché pour risque inacceptable (hors plan d'action 9 slots) */}

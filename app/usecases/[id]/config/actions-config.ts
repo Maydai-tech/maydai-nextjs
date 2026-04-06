@@ -1,34 +1,20 @@
 /**
- * Configuration centralisée pour les actions du rapport
- * Mapping des clés d'actions vers les types de documents et leurs métadonnées
+ * Configuration des actions du rapport — dérivée du catalogue canonique (phase 3).
+ * Les libellés CTA alignés sur la to-do utilisent `todo_action_label` du catalogue.
  */
 
 import { getFixedActionPoints, getRegistryActionPoints } from '@/app/dashboard/[id]/todo-list/utils/todo-helpers'
+import {
+  getCanonicalActionByReportSlot,
+  REPORT_STANDARD_SLOT_KEYS_ORDERED,
+  resolveCanonicalDocType,
+} from '@/lib/canonical-actions'
 
-// Mapping des actions du rapport vers les types de documents de la todo-list
-export const ACTION_TO_DOCTYPE: Record<string, string> = {
-  quick_win_1: 'registry_action',
-  quick_win_2: 'human_oversight',
-  quick_win_3: 'system_prompt',
-  priorite_1: 'technical_documentation',
-  priorite_2: 'transparency_marking',
-  priorite_3: 'data_quality',
-  action_1: 'risk_management',
-  action_2: 'continuous_monitoring',
-  action_3: 'training_census',
-}
-
-// Titres personnalisés pour chaque action
-export const ACTION_CUSTOM_TITLES: Record<string, string> = {
-  quick_win_1: 'Initialiser votre registre centralisé IA',
-  quick_win_2: 'Désigner le(s) responsable(s) de surveillance',
-  quick_win_3: 'Définir les instructions système & prompts',
-  priorite_1: 'Importer la documentation technique',
-  priorite_2: 'Renseigner le marquage de transparence',
-  priorite_3: 'Justifier la qualité des données',
-  action_1: 'Joindre le plan de gestion des risques',
-  action_2: 'Établir le plan de surveillance continue',
-  action_3: 'Recenser les formations AI Act',
+/** Mapping slot rapport → doc_type canonique (source : `report_slot_target` dans le catalogue). */
+export const ACTION_TO_DOCTYPE: Record<string, string> = {}
+for (const key of REPORT_STANDARD_SLOT_KEYS_ORDERED) {
+  const a = getCanonicalActionByReportSlot(key)
+  if (a) ACTION_TO_DOCTYPE[key] = a.doc_type_canonique
 }
 
 /**
@@ -38,24 +24,21 @@ export const ACTION_CUSTOM_TITLES: Record<string, string> = {
  */
 export function getActionPoints(actionKey: string): number {
   const docType = ACTION_TO_DOCTYPE[actionKey]
-  
+
   if (!docType) return 0
-  
-  // Cas spécial pour registry_action
-  if (docType === 'registry_action') {
+
+  if (docType === 'registry_proof') {
     return getRegistryActionPoints()
   }
-  
+
   return getFixedActionPoints(docType)
 }
 
 /**
- * Récupère le titre personnalisé pour une action
- * @param actionKey - La clé de l'action
- * @returns Le titre personnalisé ou une chaîne vide
+ * Titre CTA / carte — aligné sur la to-do catalogue (`todo_action_label`).
  */
 export function getActionTitle(actionKey: string): string {
-  return ACTION_CUSTOM_TITLES[actionKey] || ''
+  return getCanonicalActionByReportSlot(actionKey)?.todo_action_label ?? ''
 }
 
 /**
@@ -79,27 +62,23 @@ export function getActionMetadata(actionKey: string) {
  * @returns true si le document est complété ou validé, false sinon
  */
 export function isActionCompleted(
-  docType: string, 
+  docType: string,
   documentStatuses: Record<string, { status: string }>,
   companyMaydaiAsRegistry?: boolean
 ): boolean {
   if (!documentStatuses || !docType) return false
-  
-  // Cas spécial : registry_action
-  if (docType === 'registry_action') {
-    // Si MaydAI est déclaré comme registre, l'action est automatiquement complétée
+
+  const canonical = resolveCanonicalDocType(docType)
+
+  if (canonical === 'registry_proof') {
     if (companyMaydaiAsRegistry) return true
-    
-    // Sinon, vérifier le document registry_proof
     const docStatus = documentStatuses['registry_proof']
     if (!docStatus) return false
     return docStatus.status === 'complete' || docStatus.status === 'validated'
   }
-  
-  // Autres types de documents
-  const docStatus = documentStatuses[docType]
+
+  const docStatus = documentStatuses[canonical]
   if (!docStatus) return false
-  
+
   return docStatus.status === 'complete' || docStatus.status === 'validated'
 }
-

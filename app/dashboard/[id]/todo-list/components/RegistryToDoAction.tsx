@@ -16,13 +16,14 @@ import {
 } from 'lucide-react'
 import RegistryProofUpload from '@/components/RegistryProofUpload'
 import RegistreMaydaiBadge from '@/app/dashboard/[id]/components/RegistreMaydaiBadge'
+import { getRegistryTodoHelpExplanation } from '@/lib/canonical-actions'
 
 interface TodoItem {
   id: string
   text: string
   completed: boolean
   useCaseId: string
-  docType: 'registry_action'
+  docType: 'registry_proof'
   registryCase?: 'A' | 'B' | 'C'
   actionNumber?: number // Optional numbering for ordered actions
   potentialPoints?: number // Points that can be gained by completing this action
@@ -72,34 +73,11 @@ export default function RegistryToDoAction({
     onDocumentUploaded?.()
   }
 
-  // Get explanation text based on case
-  const getExplanation = () => {
-    switch (todo.registryCase) {
-      case 'A':
-        // If a document has been uploaded, show confirmation
-        if (hasRegistryProofDocument) {
-          return "Vous avez déclaré un autre registre que MaydAI pour vos systèmes IA Act."
-        }
-        // Otherwise, show action needed
-        return "Vous avez indiqué ne pas maintenir de registre centralisé pour vos systèmes IA. Conformément à l'AI Act, vous devez soit déclarer MaydAI comme votre registre centralisé, soit prouver l'utilisation d'un autre registre."
-      case 'B':
-        // If MaydAI is declared, show confirmation
-        if (maydaiAsRegistry) {
-          return "Vous avez déclaré MaydAI comme votre registre centralisé IA Act."
-        }
-        // Otherwise, show action needed
-        return "Vous avez indiqué utiliser MaydAI comme registre centralisé. Confirmez ce choix dans les paramètres de votre entreprise pour valider cette action."
-      case 'C':
-        // If a document has been uploaded, show confirmation
-        if (hasRegistryProofDocument) {
-          return "Vous avez déclaré un autre registre que MaydAI pour vos systèmes IA Act."
-        }
-        // Otherwise, show action needed
-        return "Vous avez indiqué utiliser un autre registre centralisé. Veuillez fournir une preuve de l'utilisation de ce registre (capture d'écran, document, etc.) ou déclarer MaydAI comme votre registre à la place."
-      default:
-        return "Action requise pour le registre centralisé de vos systèmes IA."
-    }
-  }
+  const getExplanation = () =>
+    getRegistryTodoHelpExplanation(todo.registryCase, {
+      hasRegistryProofDocument,
+      maydaiAsRegistry,
+    })
 
   // Render action buttons based on case
   const renderActionButtons = () => {
