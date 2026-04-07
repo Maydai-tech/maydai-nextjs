@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import Script from "next/script";
+import { GoogleTagManager } from "@next/third-parties/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import ConditionalLayout from "@/components/ConditionalLayout";
@@ -65,21 +67,52 @@ export const metadata: Metadata = {
   },
 };
 
+/** Conteneur GTM unique — Analytics / Ads sont chargés via ce conteneur uniquement. */
+const GTM_CONTAINER_ID = "GTM-KLSD6BXG";
+
+/** Hôtes considérés comme la prod « officielle » (hors Vercel). */
+const OFFICIAL_GTM_HOSTS = new Set(["maydai.io", "www.maydai.io"]);
+
+/**
+ * GTM uniquement sur la prod réelle : déploiement Vercel « Production » ou domaine canonique,
+ * pour exclure preview (.vercel.app), localhost et next start local.
+ */
+async function shouldLoadOfficialGTM(): Promise<boolean> {
+  if (process.env.NODE_ENV !== "production") return false;
+
+  if (process.env.VERCEL) {
+    return process.env.VERCEL_ENV === "production";
+  }
+
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "production") {
+    return true;
+  }
+
+  const headersList = await headers();
+  const rawHost =
+    headersList.get("x-forwarded-host")?.split(",")[0]?.trim() ??
+    headersList.get("host") ??
+    "";
+  const host = rawHost.split(":")[0]?.toLowerCase() ?? "";
+  if (!host) return false;
+  return OFFICIAL_GTM_HOSTS.has(host);
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const nonce = await getNonce()
-  const gtmId = process.env.NEXT_PUBLIC_GTM_ID
-  
+  const nonce = await getNonce();
+  const loadOfficialGTM = await shouldLoadOfficialGTM();
+
   return (
     <html lang="fr">
       <head>
         {/* Meta pour exposer le nonce au client */}
         {nonce && <meta name="csp-nonce" content={nonce} />}
-        {/* Google Consent Mode Script - Doit être chargé AVANT CookieYes et GTM */}
-        {process.env.NODE_ENV === 'production' && gtmId && (
+        {/* Google Consent Mode (dataLayer uniquement, sans gtag.js GA/Ads) — avant GTM et CookieYes */}
+        {loadOfficialGTM && (
           <Script
             id="google-consent-mode"
             strategy="beforeInteractive"
@@ -104,12 +137,12 @@ export default async function RootLayout({
             }}
           />
         )}
-        {/* CookieYes - Bandeau de consentement, appelle gtag('consent','update') quand l'utilisateur accepte */}
-        {process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_COOKIEYES_ID && (
+        {/* CookieYes — lazyOnload pour ne pas bloquer le LCP ; le consentement par défaut est déjà appliqué ci-dessus */}
+        {loadOfficialGTM && process.env.NEXT_PUBLIC_COOKIEYES_ID && (
           <Script
             id="cookieyes"
             src={`https://cdn-cookieyes.com/client_data/${process.env.NEXT_PUBLIC_COOKIEYES_ID}/script.js`}
-            strategy="beforeInteractive"
+            strategy="lazyOnload"
             nonce={nonce}
           />
         )}
@@ -119,35 +152,10 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
-        {/* Google Tag Manager - Seulement en production avec GTM_ID configuré */}
-        {process.env.NODE_ENV === 'production' && gtmId && (
-          <>
-            <Script
-              id="google-tag-manager"
-              strategy="afterInteractive"
-              nonce={nonce}
-              dangerouslySetInnerHTML={{
-                __html: `
-                  (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-                  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-                  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-                  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                  })(window,document,'script','dataLayer','${gtmId}');
-                `,
-              }}
-            />
-            <noscript>
-              <iframe
-                src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
-                height="0"
-                width="0"
-                style={{ display: "none", visibility: "hidden" }}
-                title="Google Tag Manager"
-              />
-            </noscript>
-          </>
+        {loadOfficialGTM && (
+          <GoogleTagManager gtmId={GTM_CONTAINER_ID} nonce={nonce} />
         )}
-        
+
         <AuthProvider>
           <GTMPageViewTracker />
           <HubSpotTrigger />
