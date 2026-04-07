@@ -79,19 +79,21 @@ type GTMEvent =
   | HubSpotFormSuccessEvent
   | CustomEvent
 
-declare global {
-  interface Window {
-    dataLayer: GTMEvent[]
-  }
+function getDataLayer(): GTMEvent[] | undefined {
+  if (typeof window === 'undefined') return undefined
+  const raw = (window as Window & { dataLayer?: unknown }).dataLayer
+  if (!Array.isArray(raw)) return undefined
+  return raw as GTMEvent[]
 }
 
 function isDataLayerAvailable(): boolean {
-  return typeof window !== 'undefined' && Array.isArray(window.dataLayer)
+  return getDataLayer() !== undefined
 }
 
 export function sendGTMEvent(event: GTMEvent): void {
-  if (!isDataLayerAvailable()) return
-  window.dataLayer.push(event)
+  const dataLayer = getDataLayer()
+  if (!dataLayer) return
+  dataLayer.push(event)
 }
 
 const CONSENT_DELAY_MS = 1000
@@ -104,7 +106,7 @@ const CONSENT_DELAY_MS = 1000
 function sendGTMEventAfterConsentDelay(event: GTMEvent): void {
   if (!isDataLayerAvailable()) return
   setTimeout(() => {
-    window.dataLayer.push(event)
+    getDataLayer()?.push(event)
   }, CONSENT_DELAY_MS)
 }
 
