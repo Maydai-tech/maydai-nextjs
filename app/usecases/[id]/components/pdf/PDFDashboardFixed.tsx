@@ -5,6 +5,7 @@ import { styles, colors, getScoreColor, getScoreStyle, riskLevelStyles } from '.
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { PDFFooter } from './PDFFooter'
+import { getPdfCanonicalDescription } from './pdf-content-utils'
 
 interface PDFDashboardFixedProps {
   data: PDFReportData
@@ -64,13 +65,14 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
   }
 
   const riskLevelStyle = riskLevelStyles[(data.riskLevel?.risk_level || 'limited') as keyof typeof riskLevelStyles] || riskLevelStyles.limited
+  const canonicalDescription = getPdfCanonicalDescription(data)
 
   return (
     <Page size="A4" style={styles.page}>
       {/* Header avec titre et statut */}
       <View style={{ marginBottom: 20 }}>
         <Text style={[styles.title, { fontSize: 18, marginBottom: 5 }]}>
-          {data.useCase.name || 'Application d\'automatisation LinkedIn'}
+          {data.useCase.name || "Nom du Cas d'usage IA"}
         </Text>
       </View>
 
@@ -144,16 +146,7 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
           Description
         </Text>
         <Text style={[styles.text, { lineHeight: 1.5 }]}>
-          {data.useCase.companies?.name || 'Addeus'} a prévu de déployer le{' '}
-          {data.useCase.deployment_date ? formatDateShort(data.useCase.deployment_date) : '1er janvier 2026'}{' '}
-          {data.useCase.name || 'une application d\'automatisation LinkedIn'}, un produit basé sur l'IA classé dans les logiciels métiers. 
-          Ce cas d'usage, géré par le service {data.useCase.responsible_service || 'Marketing'}, utilise différents modèles dont{' '}
-          <Text style={styles.bold}>
-            {data.useCase.compl_ai_models?.model_name || 'GPT-4'} d'{data.useCase.compl_ai_models?.model_provider || 'OpenAI'}
-          </Text>{' '}
-          pour automatiser des tâches sur LinkedIn, comme l'envoi de messages ou la gestion de connexions. 
-          Le déploiement concernera {data.useCase.deployment_countries?.join(', ') || 'la France'}, 
-          pays membre de l'Union européenne, ce qui soumet ce cas d'usage à l'AI Act.
+          {canonicalDescription}
         </Text>
       </View>
 
