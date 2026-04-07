@@ -2,9 +2,10 @@
 
 import type { RiskLevelCode } from '@/lib/risk-level'
 import type { UseCaseNextSteps } from '@/lib/supabase'
-import { buildReportCanonicalItemForSlot } from '@/lib/report-canonical-items'
-import { REPORT_STANDARD_PLAN_GROUPS } from '@/lib/report-standard-plan-ui'
+import { buildReportCanonicalItemForSlot, type ReportCanonicalItem } from '@/lib/report-canonical-items'
 import type { SlotStatusMap } from '@/lib/slot-statuses'
+import { REPORT_STANDARD_SLOT_KEYS_ORDERED } from '@/lib/canonical-actions'
+import { groupStandardPlanItemsByLegalCode } from '@/lib/report-plan-ors-ocru-bpgv'
 import { ReportCanonicalItemRow } from './ReportCanonicalItemRow'
 
 type DocumentStatuses = Record<string, { status: string }>
@@ -31,30 +32,35 @@ export function ReportStandardPlanBlocks({
 }: ReportStandardPlanBlocksProps) {
   const riskResolved: RiskLevelCode = riskLevel ?? 'minimal'
 
+  const isItem = (x: unknown): x is ReportCanonicalItem => !!x && typeof x === 'object'
+
+  const items = REPORT_STANDARD_SLOT_KEYS_ORDERED.map(slotKey =>
+    buildReportCanonicalItemForSlot({
+      reportSlotKey: slotKey,
+      riskLevel: riskResolved,
+      nextSteps,
+      slotStatuses,
+      documentStatuses,
+      maydaiAsRegistry,
+      companyId,
+      useCaseId,
+    })
+  ).filter(isItem)
+
+  const groups = groupStandardPlanItemsByLegalCode(items)
+
   return (
     <>
-      {REPORT_STANDARD_PLAN_GROUPS.map(group => (
-        <div key={group.heading}>
-          <div className="flex items-center gap-3 mb-4">
-            <img src={group.iconSrc} alt={group.iconAlt} width={24} height={24} className="flex-shrink-0" />
-            <h3 className="text-xl font-semibold text-gray-900">{group.heading}</h3>
+      {groups.map(group => (
+        <div key={group.code}>
+          <div className="flex items-center gap-3 mb-3">
+            <h3 className="text-xl font-semibold text-gray-900">{group.title}</h3>
           </div>
-          <h4 className="text-lg font-medium text-gray-700 mb-3 italic">{group.subheading}</h4>
-          <ul className="space-y-4 mb-4 ml-4">
-            {group.slotKeys.map(slotKey => {
-              const item = buildReportCanonicalItemForSlot({
-                reportSlotKey: slotKey,
-                riskLevel: riskResolved,
-                nextSteps,
-                slotStatuses,
-                documentStatuses,
-                maydaiAsRegistry,
-                companyId,
-                useCaseId,
-              })
-              if (!item) return null
-              return <ReportCanonicalItemRow key={slotKey} item={item} />
-            })}
+          <p className="text-sm text-gray-600 italic mb-4">{group.subtitle}</p>
+          <ul className="space-y-4 mb-6 ml-4">
+            {group.items.map(item => (
+              <ReportCanonicalItemRow key={item.identity.report_slot_key} item={item} />
+            ))}
           </ul>
         </div>
       ))}

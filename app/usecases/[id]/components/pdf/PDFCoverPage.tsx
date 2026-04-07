@@ -5,6 +5,7 @@ import { styles, colors } from './styles'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { PDFFooter } from './PDFFooter'
+import { getPdfReportDateIso } from './pdf-content-utils'
 
 interface PDFCoverPageProps {
   data: PDFReportData
@@ -52,9 +53,7 @@ export const PDFCoverPage: React.FC<PDFCoverPageProps> = ({ data }) => {
     }
   }
 
-  const reportDate = data.useCase.updated_at
-    ? formatDate(data.useCase.updated_at)
-    : formatDate(data.generatedDate)
+  const reportDate = formatDate(getPdfReportDateIso(data))
 
   return (
     <Page size="A4" style={styles.page}>

@@ -5,9 +5,8 @@ import {
   declarationStatusPdfLabel,
   evidenceStatusPdfLabel,
   LEGAL_TAXONOMY_SHORT,
-  partitionStandardPlanCanonicalItems,
 } from '@/lib/report-canonical-items'
-import { REPORT_STANDARD_PLAN_GROUPS } from '@/lib/report-standard-plan-ui'
+import { groupStandardPlanItemsByLegalCode } from '@/lib/report-plan-ors-ocru-bpgv'
 import { PDFReportData } from './types'
 import { styles } from './styles'
 import { PDFFooter } from './PDFFooter'
@@ -89,9 +88,9 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
   const risk = (data.riskLevel?.risk_level || '').toLowerCase()
   const isUnacceptable = risk === 'unacceptable'
   const items = data.canonicalPlanItems ?? []
-  const [qw, pr, act] = partitionStandardPlanCanonicalItems(items)
-  const [g0, g1, g2] = REPORT_STANDARD_PLAN_GROUPS
   const baseUrl = data.pdfCtaBaseUrl
+  const groups = groupStandardPlanItemsByLegalCode(items)
+  const [g0, g1, g2] = groups
 
   return (
     <>
@@ -170,7 +169,9 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
               ) : null}
             </View>
           ) : (
-            <PDFCanonicalPlanGroup title={g0.heading} subtitle={g0.subheading} items={qw} baseUrl={baseUrl} />
+            g0 ? (
+              <PDFCanonicalPlanGroup title={g0.title} subtitle={g0.subtitle} items={g0.items} baseUrl={baseUrl} />
+            ) : null
           )}
         </View>
 
@@ -184,10 +185,14 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
         </Text>
 
         <View style={[styles.card, { marginBottom: 20 }]}>
-          {!isUnacceptable && items.length > 0 ? (
+          {!isUnacceptable && groups.length > 0 ? (
             <>
-              <PDFCanonicalPlanGroup title={g1.heading} subtitle={g1.subheading} items={pr} baseUrl={baseUrl} />
-              <PDFCanonicalPlanGroup title={g2.heading} subtitle={g2.subheading} items={act} baseUrl={baseUrl} />
+              {g1 ? (
+                <PDFCanonicalPlanGroup title={g1.title} subtitle={g1.subtitle} items={g1.items} baseUrl={baseUrl} />
+              ) : null}
+              {g2 ? (
+                <PDFCanonicalPlanGroup title={g2.title} subtitle={g2.subtitle} items={g2.items} baseUrl={baseUrl} />
+              ) : null}
             </>
           ) : !isUnacceptable ? (
             <View style={[styles.cardWhite]}>
