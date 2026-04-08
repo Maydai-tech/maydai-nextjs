@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import Script from "next/script";
-import { GoogleTagManager } from "@next/third-parties/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import ConditionalLayout from "@/components/ConditionalLayout";
+import DeferredGoogleTagManager from "@/components/DeferredGoogleTagManager";
 import SmartLoader from "@/components/SmartLoader";
 import { getNonce } from "@/lib/csp-nonce";
 import GTMPageViewTracker from "@/components/GTMPageViewTracker";
@@ -153,7 +153,11 @@ export default async function RootLayout({
         suppressHydrationWarning={true}
       >
         {loadOfficialGTM && (
-          <GoogleTagManager gtmId={GTM_CONTAINER_ID} nonce={nonce} />
+          <DeferredGoogleTagManager
+            gtmId={GTM_CONTAINER_ID}
+            nonce={nonce}
+            safetyTimeoutMs={3000}
+          />
         )}
 
         <AuthProvider>

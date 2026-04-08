@@ -73,6 +73,8 @@ function PDFCanonicalPlanGroup({
   if (items.length === 0) return null
   return (
     <View style={[styles.cardWhite, { marginBottom: 15 }]}>
+      {/* Séparation visuelle au-dessus du bloc (aligné avec le web) */}
+      <View style={{ height: 2, backgroundColor: '#0080A3', marginBottom: 10 }} />
       <Text style={[styles.subsectionTitle, { marginBottom: 8, fontSize: 12 }]}>{title}</Text>
       <Text style={[styles.text, styles.italic, { marginBottom: 10, fontSize: 9 }]}>{subtitle}</Text>
       <View style={styles.list}>
