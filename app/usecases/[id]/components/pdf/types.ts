@@ -1,5 +1,6 @@
 import { UseCase } from '@/lib/supabase'
 import type { ReportCanonicalItem } from '@/lib/report-canonical-items'
+import type { CategoryScore } from '@/app/usecases/[id]/types/usecase'
 
 // Interface pour les prochaines étapes
 export interface UseCaseNextSteps {
@@ -23,16 +24,13 @@ export interface UseCaseNextSteps {
   action_3?: string
 }
 
-// Interface pour les données de score
+// Interface pour les données de score (champs PDF alignés sur CategoryScore du scoring V2)
 export interface ScoreData {
   score: number
   is_eliminated: boolean
-  category_scores: Array<{
-    category_id: string
-    category_name: string
-    percentage: number
-    evaluation_status?: 'not_evaluated'
-  }>
+  category_scores: Array<
+    Pick<CategoryScore, 'category_id' | 'category_name' | 'percentage' | 'evaluation_status'>
+  >
 }
 
 // Interface pour les données de niveau de risque
