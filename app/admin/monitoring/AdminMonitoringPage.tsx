@@ -12,6 +12,8 @@ interface DiskUsage {
   available?: string | number
   server?: string
   source?: string
+  /** Présent lorsque l’API a recalculé total / % pour cohérence */
+  coherenceNote?: string
 }
 
 interface EmailStatus {
@@ -22,6 +24,7 @@ interface EmailStatus {
 
 export default function AdminMonitoringPage() {
   const [diskUsage, setDiskUsage] = useState<DiskUsage | null>(null)
+  const [diskError, setDiskError] = useState<string | null>(null)
   const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null)
   const [loadingDiskUsage, setLoadingDiskUsage] = useState(true)
 
@@ -30,8 +33,13 @@ export default function AdminMonitoringPage() {
 
     async function loadDiskUsage() {
       try {
-        const response = await fetch('/api/admin/monitoring?action=disk')
+        const response = await fetch('/api/admin/monitoring?action=disk', {
+          cache: 'no-store',
+        })
         const data = await response.json()
+        if (!cancelled) {
+          setDiskError(typeof data?.diskError === 'string' ? data.diskError : null)
+        }
         if (!cancelled && data?.disk) {
           setDiskUsage(data.disk as DiskUsage)
         }
@@ -40,6 +48,9 @@ export default function AdminMonitoringPage() {
         }
       } catch (error) {
         console.error('Erreur chargement occupation disque:', error)
+        if (!cancelled) {
+          setDiskError('Impossible de joindre l’API de monitoring.')
+        }
       } finally {
         if (!cancelled) {
           setLoadingDiskUsage(false)
@@ -137,7 +148,19 @@ export default function AdminMonitoringPage() {
         </div>
         {loadingDiskUsage && <p className="mt-2 text-sm text-gray-600">Chargement...</p>}
         {!loadingDiskUsage && !diskUsage && (
-          <p className="mt-2 text-sm text-gray-600">Information indisponible pour le moment.</p>
+          <div className="mt-2 space-y-2">
+            <p className="text-sm text-gray-600">Information indisponible pour le moment.</p>
+            {diskError && (
+              <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                {diskError}
+              </p>
+            )}
+          </div>
+        )}
+        {!loadingDiskUsage && diskUsage?.coherenceNote && (
+          <p className="mt-3 text-xs text-gray-500 border-l-2 border-[#0080A3] pl-3">
+            {diskUsage.coherenceNote}
+          </p>
         )}
         {!loadingDiskUsage && diskUsage && (
           <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
