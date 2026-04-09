@@ -32,6 +32,11 @@ function declarationLabel(
     return { text: 'Déclaratif : OUI', className: 'bg-teal-50 text-teal-900 border-teal-200' }
   if (d === 'NON')
     return { text: 'Déclaratif : NON', className: 'bg-rose-50 text-rose-900 border-rose-200' }
+  if (d === 'Hors périmètre')
+    return {
+      text: 'Déclaratif : hors périmètre',
+      className: 'bg-slate-50 text-slate-800 border-slate-200',
+    }
   return {
     text: 'Déclaratif : insuffisant',
     className: 'bg-amber-50 text-amber-900 border-amber-200',
@@ -80,7 +85,11 @@ export function ReportCanonicalItemRow({ item }: { item: ReportCanonicalItem }) 
         <span className="text-[#0080a3] text-6xl leading-none mt-[-0.3em]">•</span>
         <span className="flex-1 whitespace-pre-line text-gray-800">{item.narrative.text}</span>
       </div>
-      {item.cta.completed ? (
+      {item.cta.ctaOmitted ? (
+        <p className="mt-2 ml-8 text-sm text-slate-600">
+          Hors périmètre du questionnaire pour ce cas — aucune action To-do n’est requise pour ce point.
+        </p>
+      ) : item.cta.completed ? (
         <CompletedAction
           title={item.cta.label}
           points={item.cta.points}

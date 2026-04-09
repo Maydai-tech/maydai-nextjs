@@ -65,7 +65,7 @@ export async function GET(
     // Récupérer d'abord le score_final stocké en base
     const { data: usecaseData, error: scoreDataError } = await supabase
       .from('usecases')
-      .select('score_final, score_base, score_model, is_eliminated, last_calculation_date')
+      .select('score_final, score_base, score_model, is_eliminated, last_calculation_date, questionnaire_version')
       .eq('id', usecaseId)
       .single()
 
@@ -86,7 +86,9 @@ export async function GET(
       }
 
       // Calculer le score complet pour obtenir les category_scores
-      const fullScoreData = await calculateScore(usecaseId, responses || [], supabase)
+      const fullScoreData = await calculateScore(usecaseId, responses || [], supabase, {
+        questionnaireVersion: usecaseData.questionnaire_version
+      })
       
       return NextResponse.json({
         usecase_id: usecaseId,
@@ -100,7 +102,11 @@ export async function GET(
         compl_ai_bonus: usecaseData.score_model || 0,
         compl_ai_score: fullScoreData.compl_ai_score,
         model_info: fullScoreData.model_info,
-        risk_use_case: fullScoreData.risk_use_case
+        risk_use_case: fullScoreData.risk_use_case,
+        questionnaire_version: fullScoreData.questionnaire_version,
+        bpgv_variant: fullScoreData.bpgv_variant,
+        ors_exit: fullScoreData.ors_exit,
+        active_question_codes: fullScoreData.active_question_codes
       })
     }
 
@@ -115,7 +121,9 @@ export async function GET(
     }
 
     // Calculer le score
-    const scoreData = await calculateScore(usecaseId, responses || [], supabase)
+    const scoreData = await calculateScore(usecaseId, responses || [], supabase, {
+      questionnaireVersion: usecaseData.questionnaire_version
+    })
 
     // Retourner le score calculé
     return NextResponse.json(scoreData)

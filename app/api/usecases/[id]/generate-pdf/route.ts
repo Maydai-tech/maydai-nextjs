@@ -10,6 +10,10 @@ import type { RiskLevelCode } from '@/lib/risk-level'
 import { normalizeToRiskLevelCode } from '@/lib/risk-level'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { computeSlotStatuses } from '@/lib/slot-statuses'
+import {
+  QUESTIONNAIRE_VERSION_V2,
+  normalizeQuestionnaireVersion,
+} from '@/lib/questionnaire-version'
 
 function rankDocStatus(status: string | null | undefined): number {
   if (status === 'validated') return 3
@@ -132,6 +136,21 @@ export async function GET(
       }, { status: 400 })
     }
 
+    const pdfQuestionnaireVersion = normalizeQuestionnaireVersion(useCase.questionnaire_version)
+    if (
+      pdfQuestionnaireVersion === QUESTIONNAIRE_VERSION_V2 &&
+      useCase.score_final == null
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Cas V2 complété sans score final : recalcul requis avant export PDF.',
+          code: 'V2_SCORE_MISSING',
+        },
+        { status: 409 }
+      )
+    }
+
     // Use data directly from useCase since separate tables don't exist
     const riskLevelData = {
       risk_level: useCase.risk_level || 'limited',
@@ -152,7 +171,9 @@ export async function GET(
     let fullScoreData
     try {
       const { calculateScore } = await import('@/app/usecases/[id]/utils/score-calculator')
-      fullScoreData = await calculateScore(useCaseId, responses || [], supabase)
+      fullScoreData = await calculateScore(useCaseId, responses || [], supabase, {
+        questionnaireVersion: useCase.questionnaire_version
+      })
       console.log('✅ Score calculé avec succès:', fullScoreData)
     } catch (scoreError) {
       console.error('⚠️ Erreur lors du calcul du score, utilisation des valeurs par défaut:', scoreError)
@@ -209,7 +230,17 @@ export async function GET(
     ).replace(/\/$/, '')
 
     if (!isUnacceptableCase) {
-      const slotStatuses = computeSlotStatuses((responses || []) as Parameters<typeof computeSlotStatuses>[0])
+      const activeCodesRaw = useCase.active_question_codes
+      const activeQuestionCodes = Array.isArray(activeCodesRaw)
+        ? activeCodesRaw.filter((c): c is string => typeof c === 'string')
+        : []
+      const slotStatuses = computeSlotStatuses(
+        (responses || []) as Parameters<typeof computeSlotStatuses>[0],
+        {
+          questionnaireVersion: pdfQuestionnaireVersion,
+          activeQuestionCodes,
+        }
+      )
 
       let documentStatuses: Record<string, { status: string }> = {}
       const { data: dossierRow } = await supabase

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordUseCaseHistory } from '@/lib/usecase-history'
 import { getRegistryOwnerPlan } from '@/lib/subscription/user-plan'
+import { QUESTIONNAIRE_VERSION_V2 } from '@/lib/questionnaire-version'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -220,10 +221,13 @@ export async function POST(request: NextRequest) {
       status: status || 'draft',
       risk_level,
       company_id,
+      questionnaire_version: QUESTIONNAIRE_VERSION_V2,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       updated_by: user.id
     }
+
+    console.log('🔍 Header Auth reçu par API:', request.headers.get('Authorization'));
 
     const { data: usecase, error: createError } = await supabase
       .from('usecases')
@@ -232,6 +236,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (createError) {
+      console.error('🚨 ERREUR EXACTE SUPABASE:', createError);
       return NextResponse.json({
         error: 'Error creating use case',
         details: createError.message,
@@ -242,13 +247,14 @@ export async function POST(request: NextRequest) {
     // Enregistrer l'événement de création dans l'historique
     await recordUseCaseHistory(supabase, usecase.id, user.id, 'created')
 
-    // Si la company a MaydAI comme registre par défaut, créer la réponse E5.N9.Q7 (Oui + MaydAI)
+    // V1 : si la company a MaydAI comme registre par défaut, préremplir E5.N9.Q7.
+    // V2 : le bloc E5 est après l’ORS — pas de réponse créée à la création du cas.
     const { data: company } = await supabase
       .from('companies')
       .select('maydai_as_registry')
       .eq('id', company_id)
       .single()
-    if (company?.maydai_as_registry === true) {
+    if (usecase.questionnaire_version !== QUESTIONNAIRE_VERSION_V2 && company?.maydai_as_registry === true) {
       const timestamp = new Date().toISOString()
       await supabase
         .from('usecase_responses')

@@ -182,6 +182,8 @@ export type EvidenceStatusValue =
 
 export interface ReportItemCta {
   completed: boolean
+  /** V2 : slot hors périmètre — pas de To-do / dossier pour combler une question non posée. */
+  ctaOmitted?: boolean
   todoUrl: string
   dossierUrl: string
   label: string
@@ -276,6 +278,7 @@ export function declarationStatusPdfLabel(d: DeclarationStatusValue | null): str
   if (d == null) return 'Déclaratif : —'
   if (d === 'OUI') return 'Déclaratif : OUI'
   if (d === 'NON') return 'Déclaratif : NON'
+  if (d === 'Hors périmètre') return 'Déclaratif : hors périmètre'
   return 'Déclaratif : information insuffisante'
 }
 
@@ -358,13 +361,16 @@ export function buildReportCanonicalItemForSlot(params: {
   const business_rationale = action.todo_explanation
 
   const docCompleted = isDocumentActionCompleted(metadata.docType, documentStatuses, maydaiAsRegistry)
-  const evidence_status = resolveEvidenceStatus(
-    legal_status,
-    metadata.docType,
-    documentStatuses,
-    maydaiAsRegistry,
-    docCompleted
-  )
+  const isHorsPerimetre = declaration_status === 'Hors périmètre'
+  const evidence_status: EvidenceStatusValue = isHorsPerimetre
+    ? 'not_applicable'
+    : resolveEvidenceStatus(
+        legal_status,
+        metadata.docType,
+        documentStatuses,
+        maydaiAsRegistry,
+        docCompleted
+      )
 
   const dossierUrl = buildDashboardDossierDeepLink(companyId, useCaseId, metadata.docType)
   const todoUrl = buildDashboardTodoListDeepLink(companyId, useCaseId, metadata.docType)
@@ -388,6 +394,7 @@ export function buildReportCanonicalItemForSlot(params: {
     narrative: { text: narrative_text, source_slot_key: reportSlotKey },
     cta: {
       completed: docCompleted,
+      ctaOmitted: isHorsPerimetre,
       dossierUrl,
       todoUrl,
       label: metadata.title,

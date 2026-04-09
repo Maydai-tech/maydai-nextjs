@@ -3,6 +3,13 @@ import { UseCaseScore, ScoreBreakdown, CategoryScore } from '../types/usecase'
 import { RISK_CATEGORIES } from './risk-categories'
 import { getUseCaseComplAiBonus, getMaydAiScoresByPrinciple } from './compl-ai-scoring'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { calculateMaxCategoryScoresForAllQuestions } from '@/lib/score-category-max'
+import { buildV2ScoringContextFromDbResponses } from '@/lib/scoring-v2-server'
+import {
+  QUESTIONNAIRE_VERSION_V1,
+  QUESTIONNAIRE_VERSION_V2,
+  normalizeQuestionnaireVersion
+} from '@/lib/questionnaire-version'
 
 const BASE_SCORE = 90
 const COMPL_AI_WEIGHT = 2.5           // Multiplicateur COMPL-AI (20 × 2.5 = 50 points max)
@@ -29,8 +36,34 @@ const SIX_PRINCIPLES_IDS = [
  */
 function calculateRiskUseCaseByReverseEngineering(
   globalScorePercent: number,
-  categoryScores: CategoryScore[]
+  categoryScores: CategoryScore[],
+  questionnaireVersion: typeof QUESTIONNAIRE_VERSION_V1 | typeof QUESTIONNAIRE_VERSION_V2
 ): { points: number; percentage: number; max_points: number } {
+  if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
+    const principleCats = categoryScores.filter(
+      cat =>
+        SIX_PRINCIPLES_IDS.includes(cat.category_id as (typeof SIX_PRINCIPLES_IDS)[number]) &&
+        cat.max_score > 0
+    )
+    const dynamicPrinciplesMax = principleCats.reduce((s, c) => s + c.max_score, 0)
+    if (dynamicPrinciplesMax <= 0) {
+      return { points: 0, percentage: 0, max_points: BASE_RISQUE_USE_CASE }
+    }
+    const dynamicBase = dynamicPrinciplesMax + BASE_RISQUE_USE_CASE
+    const targetPoints = dynamicBase * globalScorePercent
+    const principlesPoints = principleCats.reduce((sum, cat) => sum + cat.score, 0)
+    const riskUseCasePoints = targetPoints - principlesPoints
+    const riskUseCasePercentRaw = riskUseCasePoints / BASE_RISQUE_USE_CASE
+    const riskUseCasePercentClamped = Math.max(0, Math.min(1, riskUseCasePercentRaw))
+    const riskUseCasePercentage = Math.round(riskUseCasePercentClamped * 10000) / 100
+    const riskUseCasePointsClamped = Math.max(0, Math.min(BASE_RISQUE_USE_CASE, riskUseCasePoints))
+    return {
+      points: Math.round(riskUseCasePointsClamped * 100) / 100,
+      percentage: riskUseCasePercentage,
+      max_points: BASE_RISQUE_USE_CASE
+    }
+  }
+
   const targetPoints = BASE_GLOBALE_POINTS * globalScorePercent
   const principlesPoints = categoryScores
     .filter(cat => SIX_PRINCIPLES_IDS.includes(cat.category_id as typeof SIX_PRINCIPLES_IDS[number]))
@@ -56,94 +89,12 @@ function mapCategoryFromJson(jsonCategoryId: string): string {
   return jsonCategoryId
 }
 
-// Calcul des scores maximum par catégorie basé sur TOUTES les questions du JSON
-function calculateMaxCategoryScoresFromAllQuestions(): Record<string, number> {
-  const questions = loadQuestions()
-  const maxScores: Record<string, number> = {}
-  
-  // Initialiser toutes les catégories à 0
-  Object.keys(RISK_CATEGORIES).forEach(categoryId => {
-    maxScores[categoryId] = 0
-  })
-  
-  // Parcourir toutes les questions pour trouver les impacts maximum
-  Object.values(questions).forEach(question => {
-    // Pour les questions radio/conditional : seule UNE option peut être sélectionnée
-    if (question.type === 'radio' || question.type === 'conditional') {
-      const categoryMaxImpacts: Record<string, number> = {}
-      
-      question.options.forEach(option => {
-        if (option.category_impacts) {
-          Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]) => {
-            if (impact < 0) { // Seuls les impacts négatifs comptent pour le maximum
-              const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
-              if (maxScores[mappedCategoryId] !== undefined) {
-                // Prendre le maximum des impacts négatifs pour cette catégorie dans cette question
-                const absImpact = Math.abs(impact)
-                categoryMaxImpacts[mappedCategoryId] = Math.max(
-                  categoryMaxImpacts[mappedCategoryId] || 0,
-                  absImpact
-                )
-              }
-            }
-          })
-        }
-      })
-      
-      // Ajouter le maximum de chaque catégorie pour cette question
-      Object.entries(categoryMaxImpacts).forEach(([categoryId, maxImpact]) => {
-        maxScores[categoryId] += maxImpact
-      })
-    }
-    // Pour les questions checkbox/tags
-    else if (question.type === 'checkbox' || question.type === 'tags') {
-      const isAnyMode = question.impact_mode === 'any'
+// Constante des scores maximum par catégorie — questionnaire V1 (toutes les questions)
+const CATEGORY_MAX_SCORES = calculateMaxCategoryScoresForAllQuestions()
 
-      if (isAnyMode) {
-        // Mode "any" : prendre le max par catégorie (comme radio)
-        const categoryMaxImpacts: Record<string, number> = {}
-        question.options.forEach(option => {
-          if (option.category_impacts) {
-            Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]) => {
-              if (impact < 0) {
-                const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
-                if (maxScores[mappedCategoryId] !== undefined) {
-                  const absImpact = Math.abs(impact)
-                  categoryMaxImpacts[mappedCategoryId] = Math.max(
-                    categoryMaxImpacts[mappedCategoryId] || 0,
-                    absImpact
-                  )
-                }
-              }
-            })
-          }
-        })
-        Object.entries(categoryMaxImpacts).forEach(([categoryId, maxImpact]) => {
-          maxScores[categoryId] += maxImpact
-        })
-      } else {
-        // Mode cumulatif : TOUTES les options peuvent être sélectionnées
-        question.options.forEach(option => {
-          if (option.category_impacts) {
-            Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]) => {
-              if (impact < 0) {
-                const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
-                if (maxScores[mappedCategoryId] !== undefined) {
-                  maxScores[mappedCategoryId] += Math.abs(impact)
-                }
-              }
-            })
-          }
-        })
-      }
-    }
-  })
-  
-  return maxScores
+export type CalculateScoreOptions = {
+  questionnaireVersion?: number | null
 }
-
-// Constante des scores maximum par catégorie (calculée une seule fois)
-const CATEGORY_MAX_SCORES = calculateMaxCategoryScoresFromAllQuestions()
 
 // Interface pour les impacts d'une réponse
 interface AnswerImpacts {
@@ -331,7 +282,12 @@ function calculateQuestionCategoryPoints(questionCode: string, response: any, qu
   return { possiblePoints, earnedPoints }
 }
 
-export async function calculateScore(usecaseId: string, responses: any[], supabaseClient?: SupabaseClient): Promise<UseCaseScore> {
+export async function calculateScore(
+  usecaseId: string,
+  responses: any[],
+  supabaseClient?: SupabaseClient,
+  options?: CalculateScoreOptions
+): Promise<UseCaseScore> {
   try {
     // console.log('Starting score calculation for usecase:', usecaseId)
     // console.log('Number of responses to process:', responses?.length || 0)
@@ -339,6 +295,17 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
     if (!responses) {
       responses = []
     }
+
+    const questionnaireVersion = normalizeQuestionnaireVersion(options?.questionnaireVersion)
+    const v2Context =
+      questionnaireVersion === QUESTIONNAIRE_VERSION_V2
+        ? buildV2ScoringContextFromDbResponses(QUESTIONNAIRE_VERSION_V2, responses)
+        : null
+    const responsesForScoring = v2Context
+      ? responses.filter(r => v2Context.scoringActiveQuestionCodes.has(r.question_code))
+      : responses
+    const categoryMaxScores =
+      v2Context?.categoryMaxScores ?? CATEGORY_MAX_SCORES
     
     let currentScore = BASE_SCORE
     const breakdown: ScoreBreakdown[] = []
@@ -347,8 +314,8 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
     // Charger les questions une seule fois
     const questions = loadQuestions()
 
-    // PREMIÈRE PASSE : Détecter les réponses éliminatoires
-    for (const response of responses) {
+    // PREMIÈRE PASSE : Détecter les réponses éliminatoires (périmètre V1 = tout, V2 = questions actives répondues)
+    for (const response of responsesForScoring) {
       const question = questions[response.question_code]
       if (!question) continue
 
@@ -392,7 +359,7 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
     })
 
     // DEUXIÈME PASSE : Calculer les scores normalement (même si éliminé, pour le breakdown)
-    for (const response of responses) {
+    for (const response of responsesForScoring) {
       // console.log('Processing response for question:', response.question_code)
       
       const question = questions[response.question_code]
@@ -610,12 +577,12 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
       // SANS COMPL-AI : score questionnaire seul (currentScore reste inchangé, max = 90)
     }
 
-    // Calculer les scores par catégorie avec les constantes pré-calculées
+    // Calculer les scores par catégorie (V1 : max sur tout le JSON ; V2 : max sur sous-ensemble actif)
     const categoryScores: CategoryScore[] = Object.entries(RISK_CATEGORIES).map(([categoryId, category]) => {
       const data = categoryData[categoryId]
       
       // Calculer le score questionnaire : maximum - points perdus
-      let maxQuestionnaireScore = CATEGORY_MAX_SCORES[categoryId] || 0
+      let maxQuestionnaireScore = categoryMaxScores[categoryId] || 0
       let questionnaireScore = Math.max(0, maxQuestionnaireScore - data.lostPoints)
       let maydaiScore = 0
       let maxMaydaiScore = 0
@@ -630,19 +597,28 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
       const totalScore = questionnaireScore + maydaiScore
       const totalMaxScore = maxQuestionnaireScore + maxMaydaiScore
 
-      // Si aucune question n'impacte cette catégorie et pas de score MaydAI, score parfait (100%)
-      const percentage = totalMaxScore > 0 ? 
-        Math.round((totalScore / totalMaxScore) * 100) : 100
+      const isV2NotEvaluated =
+        questionnaireVersion === QUESTIONNAIRE_VERSION_V2 &&
+        maxQuestionnaireScore === 0 &&
+        maxMaydaiScore === 0
+
+      // V1 : aucune question sur la catégorie = 100 % historique. V2 : état explicite non évalué.
+      const percentage = isV2NotEvaluated
+        ? 0
+        : totalMaxScore > 0
+          ? Math.round((totalScore / totalMaxScore) * 100)
+          : 100
       
       return {
         category_id: categoryId,
         category_name: category.shortName,
-        score: totalScore,
-        max_score: totalMaxScore,
-        percentage: percentage,
+        score: isV2NotEvaluated ? 0 : totalScore,
+        max_score: isV2NotEvaluated ? 0 : totalMaxScore,
+        percentage,
         question_count: data.questionsImpacted.size, // Nombre de questions qui ont impacté cette catégorie
         color: category.color,
-        icon: category.icon || ''
+        icon: category.icon || '',
+        ...(isV2NotEvaluated ? { evaluation_status: 'not_evaluated' as const } : {})
       }
     })
 
@@ -654,7 +630,8 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
     const globalScorePercent = maxScore > 0 ? currentScore / maxScore : 0
     const riskUseCaseResult = calculateRiskUseCaseByReverseEngineering(
       globalScorePercent,
-      categoryScores
+      categoryScores,
+      questionnaireVersion
     )
 
     return {
@@ -669,7 +646,15 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
       compl_ai_bonus: complAiRawScore !== null ? complAiRawScore * COMPL_AI_WEIGHT : 0,
       compl_ai_score: complAiScore,
       model_info: modelInfo,
-      risk_use_case: riskUseCaseResult
+      risk_use_case: riskUseCaseResult,
+      ...(v2Context
+        ? {
+            questionnaire_version: QUESTIONNAIRE_VERSION_V2,
+            bpgv_variant: v2Context.bpgv_variant,
+            ors_exit: v2Context.ors_exit,
+            active_question_codes: v2Context.active_question_codes
+          }
+        : { questionnaire_version: questionnaireVersion })
     }
   } catch (error) {
     console.error('Error in calculateScore:', error)
@@ -690,7 +675,8 @@ export async function calculateScore(usecaseId: string, responses: any[], supaba
         points: 0,
         percentage: 0,
         max_points: BASE_RISQUE_USE_CASE
-      }
+      },
+      questionnaire_version: QUESTIONNAIRE_VERSION_V1
     }
   }
 } 

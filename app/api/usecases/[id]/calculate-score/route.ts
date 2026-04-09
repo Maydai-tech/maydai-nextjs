@@ -35,6 +35,11 @@ import {
 } from '@/lib/canonical-actions';
 
 import { deriveRiskLevelFromResponses } from '@/lib/risk-level';
+import {
+  normalizeQuestionnaireVersion,
+  QUESTIONNAIRE_VERSION_V2
+} from '@/lib/questionnaire-version';
+import { buildV2ScoringContextFromDbResponses } from '@/lib/scoring-v2-server';
 
 /**
  * Fonction utilitaire pour créer une réponse d'erreur standardisée
@@ -112,7 +117,7 @@ export async function POST(
     // Récupérer les informations du cas d'usage
     const { data: usecase, error: usecaseError } = await supabase
       .from('usecases')
-      .select('company_id')
+      .select('company_id, questionnaire_version')
       .eq('id', finalUsecaseId)
       .single();
 
@@ -180,8 +185,18 @@ export async function POST(
       conditional_values: response.conditional_values
     }));
     
-    // Calculer le score de base
-    const baseScoreResult = calculateBaseScore(userResponses);
+    const questionnaireVersion = normalizeQuestionnaireVersion(usecase.questionnaire_version);
+    const v2ScoringCtx =
+      questionnaireVersion === QUESTIONNAIRE_VERSION_V2
+        ? buildV2ScoringContextFromDbResponses(questionnaireVersion, responses)
+        : null;
+
+    // Calculer le score de base (V2 : sous-ensemble actif serveur uniquement)
+    const baseScoreResult = v2ScoringCtx
+      ? calculateBaseScore(userResponses, {
+          activeQuestionCodes: v2ScoringCtx.scoringActiveQuestionCodes
+        })
+      : calculateBaseScore(userResponses);
     console.log(`📈 Score de base calculé: ${baseScoreResult.score_base}`);
     
     if (baseScoreResult.is_eliminated) {
@@ -333,7 +348,7 @@ export async function POST(
     console.log('💾 Mise à jour en base de données...');
     
     // Préparer les données de mise à jour
-    const updateData = {
+    const updateData: Record<string, unknown> = {
       score_base: finalResult.scores.score_base,
       score_model: finalResult.scores.score_model,
       score_final: finalResult.scores.score_final,
@@ -345,6 +360,12 @@ export async function POST(
       updated_at: new Date().toISOString(),
       updated_by: user.id
     };
+
+    if (v2ScoringCtx) {
+      updateData.bpgv_variant = v2ScoringCtx.bpgv_variant;
+      updateData.ors_exit = v2ScoringCtx.ors_exit;
+      updateData.active_question_codes = v2ScoringCtx.active_question_codes;
+    }
     
     console.log('✅ Mise à jour avec le statut d\'entreprise:', companyStatus);
     

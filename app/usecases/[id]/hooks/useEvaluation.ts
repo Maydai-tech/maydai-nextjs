@@ -1,11 +1,23 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { QuestionnaireData } from '../types/usecase'
 import { loadQuestions } from '../utils/questions-loader'
-import { getNextQuestion, getQuestionProgress, getAbsoluteQuestionProgress, checkCanProceed, getPreviousQuestion, buildQuestionPath } from '../utils/questionnaire'
+import {
+  getNextQuestion,
+  getAbsoluteQuestionProgress,
+  checkCanProceed,
+  buildQuestionPath,
+  getResumeQuestionId
+} from '../utils/questionnaire'
+import { computeV2UsecaseQuestionnaireFields } from '../utils/questionnaire-v2-graph'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 import { supabase } from '@/lib/supabase'
 import { ScoreService } from '@/lib/score-service'
 import { useAuth } from '@/lib/auth'
+import {
+  QUESTIONNAIRE_VERSION_V2,
+  normalizeQuestionnaireVersion,
+  type QuestionnaireVersion
+} from '@/lib/questionnaire-version'
 
 interface UseEvaluationReturn {
   questionnaireData: QuestionnaireData
@@ -37,9 +49,20 @@ interface UseEvaluationProps {
   usecaseId: string
   companyId?: string
   onComplete: () => void
+  /** Défaut V1 si absent (cas d’usage créés avant V2). */
+  questionnaireVersion?: number | null
 }
 
-export function useEvaluation({ usecaseId, companyId, onComplete }: UseEvaluationProps): UseEvaluationReturn {
+export function useEvaluation({
+  usecaseId,
+  companyId,
+  onComplete,
+  questionnaireVersion: questionnaireVersionProp
+}: UseEvaluationProps): UseEvaluationReturn {
+  const questionnaireVersion: QuestionnaireVersion = useMemo(
+    () => normalizeQuestionnaireVersion(questionnaireVersionProp),
+    [questionnaireVersionProp]
+  )
   const { session } = useAuth()
   const [company, setCompany] = useState<{ maydai_as_registry?: boolean } | null>(null)
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData>({
@@ -80,41 +103,22 @@ export function useEvaluation({ usecaseId, companyId, onComplete }: UseEvaluatio
   useEffect(() => {
     if (!initialDataLoaded && !loadingResponses) {
       console.log('🔄 Loading initial data from saved responses:', savedAnswers)
-      
+
       if (savedAnswers && Object.keys(savedAnswers).length > 0) {
-        // Load saved answers
+        const currentQuestionId = getResumeQuestionId(savedAnswers, questionnaireVersion)
+
         setQuestionnaireData(prev => ({
           ...prev,
-          answers: { ...savedAnswers }
-        }))
-        
-        // Find the correct current question based on saved answers
-        const questionPath = buildQuestionPath('E4.N7.Q1', savedAnswers)
-        let currentQuestionId = 'E4.N7.Q1'
-        
-        // Find the first unanswered question
-        for (const questionId of questionPath) {
-          if (!savedAnswers[questionId] || 
-              (Array.isArray(savedAnswers[questionId]) && savedAnswers[questionId].length === 0)) {
-            currentQuestionId = questionId
-            break
-          }
-          currentQuestionId = getNextQuestion(questionId, savedAnswers) || questionId
-        }
-        
-        console.log('📍 Setting current question to:', currentQuestionId)
-        
-        setQuestionnaireData(prev => ({
-          ...prev,
+          answers: { ...savedAnswers },
           currentQuestionId
         }))
-        
-        // Build history up to current question
-        const historyPath = buildQuestionPath(currentQuestionId, savedAnswers)
-        setQuestionHistory(historyPath)
+
+        const historyPath = buildQuestionPath(currentQuestionId, savedAnswers, questionnaireVersion)
+        setQuestionHistory(historyPath.length > 0 ? historyPath : ['E4.N7.Q1'])
+
+        console.log('📍 Setting current question to:', currentQuestionId)
       } else {
         console.log('📍 No saved responses, starting from first question')
-        // No saved responses, start from the beginning
         setQuestionnaireData(prev => ({
           ...prev,
           currentQuestionId: 'E4.N7.Q1',
@@ -122,13 +126,14 @@ export function useEvaluation({ usecaseId, companyId, onComplete }: UseEvaluatio
         }))
         setQuestionHistory(['E4.N7.Q1'])
       }
-      
+
       setInitialDataLoaded(true)
     }
-  }, [savedAnswers, loadingResponses, initialDataLoaded])
+  }, [savedAnswers, loadingResponses, initialDataLoaded, questionnaireVersion])
 
-  // Pre-fill E5.N9.Q7 with "Oui + MaydAI" when company has MaydAI as registry and no saved response
+  // Pre-fill E5.N9.Q7 (V1 uniquement — en V2 l’E5 intervient après l’ORS)
   useEffect(() => {
+    if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) return
     if (!company?.maydai_as_registry || !initialDataLoaded) return
     setQuestionnaireData(prev => {
       if (prev.answers['E5.N9.Q7']) return prev
@@ -140,17 +145,20 @@ export function useEvaluation({ usecaseId, companyId, onComplete }: UseEvaluatio
         }
       }
     })
-  }, [company?.maydai_as_registry, initialDataLoaded])
+  }, [company?.maydai_as_registry, initialDataLoaded, questionnaireVersion])
 
   const questions = loadQuestions()
   const currentQuestion = questions[questionnaireData.currentQuestionId]
-  const nextQuestionId = getNextQuestion(questionnaireData.currentQuestionId, questionnaireData.answers)
+  const nextQuestionId = getNextQuestion(
+    questionnaireData.currentQuestionId,
+    questionnaireData.answers,
+    questionnaireVersion
+  )
   const isLastQuestion = nextQuestionId === null
   const canProceed = checkCanProceed(currentQuestion, questionnaireData.answers[questionnaireData.currentQuestionId])
   const canGoBack = questionHistory.length > 1
 
-  // Progress basé sur le parcours total absolu possible
-  const progress = getAbsoluteQuestionProgress(questionnaireData.currentQuestionId)
+  const progress = getAbsoluteQuestionProgress(questionnaireData.currentQuestionId, questionnaireVersion)
 
   const handleAnswerSelect = useCallback((answer: any) => {
     console.log(`📝 Answer selected for ${questionnaireData.currentQuestionId}:`, answer)
@@ -213,6 +221,26 @@ export function useEvaluation({ usecaseId, companyId, onComplete }: UseEvaluatio
       
       // Save current response
       await saveIndividualResponse(questionnaireData.currentQuestionId, currentAnswer)
+
+      if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
+        const mergedAnswers = {
+          ...questionnaireData.answers,
+          [questionnaireData.currentQuestionId]: currentAnswer
+        }
+        const fields = computeV2UsecaseQuestionnaireFields(mergedAnswers as Record<string, unknown>)
+        const { error: v2MetaError } = await supabase
+          .from('usecases')
+          .update({
+            bpgv_variant: fields.bpgv_variant,
+            ors_exit: fields.ors_exit,
+            active_question_codes: fields.active_question_codes,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', usecaseId)
+        if (v2MetaError) {
+          console.warn('Métadonnées questionnaire V2 non persistées:', v2MetaError.message)
+        }
+      }
 
       if (isLastQuestion) {
         // Complete questionnaire
@@ -285,8 +313,15 @@ export function useEvaluation({ usecaseId, companyId, onComplete }: UseEvaluatio
         // Note: L'animation se terminera automatiquement via handleProcessingComplete
         // qui sera appelé par le composant ProcessingAnimation
       } else {
-        // Move to next question
-        const nextId = getNextQuestion(questionnaireData.currentQuestionId, questionnaireData.answers)
+        const mergedForNav = {
+          ...questionnaireData.answers,
+          [questionnaireData.currentQuestionId]: currentAnswer
+        }
+        const nextId = getNextQuestion(
+          questionnaireData.currentQuestionId,
+          mergedForNav,
+          questionnaireVersion
+        )
         if (nextId) {
           console.log(`➡️ Moving to next question: ${nextId}`)
           
@@ -304,7 +339,17 @@ export function useEvaluation({ usecaseId, companyId, onComplete }: UseEvaluatio
     } finally {
       setIsSubmitting(false)
     }
-  }, [canProceed, isSubmitting, questionnaireData.currentQuestionId, questionnaireData.answers, isLastQuestion, usecaseId, onComplete, saveIndividualResponse])
+  }, [
+    canProceed,
+    isSubmitting,
+    questionnaireData.currentQuestionId,
+    questionnaireData.answers,
+    isLastQuestion,
+    usecaseId,
+    onComplete,
+    saveIndividualResponse,
+    questionnaireVersion
+  ])
 
   const handlePrevious = useCallback(() => {
     if (!canGoBack) return

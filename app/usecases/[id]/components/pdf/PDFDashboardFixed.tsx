@@ -52,6 +52,12 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
       return indexA - indexB
     })
 
+  const formatCategoryScoreCell = (categoryScore: { percentage: number; evaluation_status?: string } | undefined) => {
+    if (!categoryScore) return 'N/A'
+    if (categoryScore.evaluation_status === 'not_evaluated') return 'Non évalué'
+    return `${categoryScore.percentage}`
+  }
+
   const getCategoryName = (categoryId: string) => {
     const names: { [key: string]: string } = {
       'human_agency': 'Supervision Humaine',
@@ -197,7 +203,7 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
                       {getCategoryName(categoryId)}
                     </Text>
                     <Text style={[styles.tableCell, { flex: 1, fontSize: 6, textAlign: 'center', color: colors.primary, lineHeight: 1.1 }]}>
-                      {categoryScore ? `${categoryScore.percentage}` : 'N/A'}
+                      {formatCategoryScoreCell(categoryScore)}
                     </Text>
                   </View>
                 )
@@ -221,7 +227,7 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
                       {getCategoryName(categoryId)}
                     </Text>
                     <Text style={[styles.tableCell, { flex: 1, fontSize: 6, textAlign: 'center', color: colors.primary, lineHeight: 1.1 }]}>
-                      {categoryScore ? `${categoryScore.percentage}` : 'N/A'}
+                      {formatCategoryScoreCell(categoryScore)}
                     </Text>
                   </View>
                 )

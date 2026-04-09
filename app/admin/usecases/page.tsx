@@ -119,6 +119,11 @@ export default function UseCasesPage() {
     return matchesSearch && matchesStatus && matchesRisk && matchesEmail
   })
 
+  const getParcoursBadgeClass = (questionnaireVersion: unknown) =>
+    questionnaireVersion === 2
+      ? 'bg-indigo-50 text-indigo-900 border border-indigo-200'
+      : 'bg-gray-100 text-gray-800 border border-gray-200'
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'draft':
@@ -304,6 +309,9 @@ export default function UseCasesPage() {
                 Description
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Parcours
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Statut
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -346,6 +354,13 @@ export default function UseCasesPage() {
                   <div className="text-sm text-gray-900 max-w-xs truncate">
                     {usecase.description || 'Aucune description'}
                   </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getParcoursBadgeClass(usecase.questionnaire_version)}`}
+                  >
+                    {usecase.questionnaire_version === 2 ? 'Parcours V2' : 'Parcours V1'}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span 

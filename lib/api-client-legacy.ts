@@ -92,8 +92,22 @@ export async function apiCall<T = any>(
         status: response.status
       }
     } else {
+      let parsed: any = undefined
+      try {
+        const contentType = response.headers.get('content-type') || ''
+        if (contentType.includes('application/json')) {
+          parsed = await response.json()
+        } else {
+          const text = await response.text()
+          parsed = text ? { message: text } : undefined
+        }
+      } catch {
+        // ignore parse errors; fall back to generic message
+      }
+
       return {
-        error: `Request failed with status ${response.status}`,
+        data: parsed,
+        error: (parsed && (parsed.error || parsed.message)) || `Request failed with status ${response.status}`,
         status: response.status
       }
     }

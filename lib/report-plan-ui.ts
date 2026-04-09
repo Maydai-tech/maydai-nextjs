@@ -6,7 +6,16 @@
  */
 
 import type { CanonicalActionDefinition } from '@/lib/canonical-actions'
-import type { SlotStatus } from '@/lib/slot-statuses'
+import { enforceStatusPrefix, type SlotStatus } from '@/lib/slot-statuses'
+
+function isKnownSlotStatus(s: SlotStatus | null | undefined): s is SlotStatus {
+  return (
+    s === 'OUI' ||
+    s === 'NON' ||
+    s === 'Information insuffisante' ||
+    s === 'Hors périmètre'
+  )
+}
 
 export function getReportPlanNarrativeLine(
   llmText: string | null | undefined,
@@ -14,7 +23,12 @@ export function getReportPlanNarrativeLine(
   action: CanonicalActionDefinition
 ): string {
   const trimmed = (llmText ?? '').trim()
-  if (trimmed.length > 0) return trimmed
+  if (trimmed.length > 0) {
+    if (isKnownSlotStatus(slotStatus)) {
+      return enforceStatusPrefix(trimmed, slotStatus)
+    }
+    return trimmed
+  }
 
   if (slotStatus === 'OUI') {
     return `D’après le questionnaire, la mesure « ${action.label} » est déclarée comme en place. Consolidez la preuve dans le dossier de conformité si ce n’est pas déjà fait.`
@@ -24,6 +38,9 @@ export function getReportPlanNarrativeLine(
   }
   if (slotStatus === 'Information insuffisante') {
     return `Les réponses au questionnaire ne permettent pas de conclure sur « ${action.label} ». Complétez l’évaluation ou le dossier pour clarifier la situation.`
+  }
+  if (slotStatus === 'Hors périmètre') {
+    return `Cette mesure (« ${action.label} ») est hors périmètre du questionnaire parcouru pour ce cas (parcours V2) : la ou les questions liées n’ont pas été posées. Il ne s’agit pas d’une information manquante à compléter sur ce point.`
   }
 
   return action.todo_explanation

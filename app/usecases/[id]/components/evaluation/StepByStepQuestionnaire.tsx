@@ -96,7 +96,8 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
   } = useEvaluation({
     usecaseId: useCase.id,
     companyId: useCase.company_id,
-    onComplete
+    onComplete,
+    questionnaireVersion: useCase.questionnaire_version
   })
 
   // Afficher la popup "Registre MaydAI par défaut" une fois quand E5.N9.Q7 = Oui + MaydAI

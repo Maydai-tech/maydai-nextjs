@@ -86,9 +86,17 @@ export default function UseCaseRapportPage() {
   // Logique pour cas inacceptable
   const isUnacceptableCase = riskLevel === 'unacceptable'
 
+  const activeQuestionCodes = Array.isArray(useCase?.active_question_codes)
+    ? useCase.active_question_codes.filter((c): c is string => typeof c === 'string')
+    : []
+
   const { slotStatuses } = useQuestionnaireSlotStatuses(
     useCaseId,
-    Boolean(useCase?.id && nextSteps && !isUnacceptableCase)
+    Boolean(useCase?.id && nextSteps && !isUnacceptableCase),
+    {
+      questionnaireVersion: useCase?.questionnaire_version,
+      activeQuestionCodes,
+    }
   )
 
   const unacceptableInterdit = useUnacceptableInterdit1Source({

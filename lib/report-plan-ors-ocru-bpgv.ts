@@ -68,6 +68,8 @@ export function sortItemsWithinLegalGroup(
 }
 
 function rankItem(item: ReportCanonicalItem): number {
+  if (item.declaration.status === 'Hors périmètre') return 5
+
   if (isProofComplete(item)) return 4
 
   const decl = item.declaration.status
