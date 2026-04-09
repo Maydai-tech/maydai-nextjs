@@ -83,7 +83,7 @@ export async function GET(
     // Exclude unacceptable cases (score = 0 or is_eliminated = true)
     const { data: usecases, error: usecasesError } = await supabase
       .from('usecases')
-      .select('id, name, score_final, is_eliminated')
+      .select('id, name, score_final, is_eliminated, questionnaire_version')
       .eq('company_id', id)
       .not('score_final', 'is', null)
 
@@ -130,12 +130,15 @@ export async function GET(
         }
 
         // Calculate score to get category_scores
-        const scoreData = await calculateScore(usecase.id, responses || [], supabase)
+        const scoreData = await calculateScore(usecase.id, responses || [], supabase, {
+          questionnaireVersion: usecase.questionnaire_version
+        })
 
         // Collect percentages for each category
         if (scoreData.category_scores && scoreData.category_scores.length > 0) {
           scoreData.category_scores.forEach((categoryScore: CategoryScore) => {
             const categoryId = categoryScore.category_id
+            if (categoryScore.evaluation_status === 'not_evaluated') return
             // Only include categories that are not risk_level or prohibited_practices
             if (categoryId !== 'risk_level' && categoryId !== 'prohibited_practices') {
               if (!allCategoryScores[categoryId]) {

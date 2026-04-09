@@ -146,6 +146,7 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
         {sortedCategoryScores.map((category) => {
             const categoryInfo = RISK_CATEGORIES[category.category_id]
             const scoreColors = getScoreColor(category.percentage)
+            const isNotEvaluated = category.evaluation_status === 'not_evaluated'
             
             return (
               <div key={category.category_id} className="space-y-2">
@@ -168,25 +169,30 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className={`text-sm font-bold ${scoreColors.text}`}>
-                      {category.percentage}/100
+                    <span className={`text-sm font-bold ${isNotEvaluated ? 'text-gray-500' : scoreColors.text}`}>
+                      {isNotEvaluated ? 'Non évalué' : `${category.percentage}/100`}
                     </span>
                   </div>
                 </div>
                 
-                {/* Barre de progression avec couleur selon le score */}
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div
-                    className={`h-2.5 rounded-full transition-all duration-500 ${scoreColors.bg}`}
-                    style={{ width: `${Math.max(category.percentage, 2)}%` }}
-                  ></div>
-                </div>
-                
-                {/* Description optionnelle pour les scores faibles - sauf pour technical_robustness et privacy_data */}
-                {category.percentage < 60 && category.category_id !== 'technical_robustness' && category.category_id !== 'privacy_data' && (
-                  <p className="text-xs text-gray-600 italic">
-                    {categoryInfo?.description}
+                {isNotEvaluated ? (
+                  <p className="text-xs text-gray-500">
+                    Aucune question du parcours ne porte sur ce principe pour ce cas d&apos;usage.
                   </p>
+                ) : (
+                  <>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div
+                        className={`h-2.5 rounded-full transition-all duration-500 ${scoreColors.bg}`}
+                        style={{ width: `${Math.max(category.percentage, 2)}%` }}
+                      ></div>
+                    </div>
+                    {category.percentage < 60 && category.category_id !== 'technical_robustness' && category.category_id !== 'privacy_data' && (
+                      <p className="text-xs text-gray-600 italic">
+                        {categoryInfo?.description}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             )

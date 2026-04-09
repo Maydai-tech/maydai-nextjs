@@ -79,6 +79,11 @@ export interface UserResponse {
   conditional_values?: string[]; // Valeurs des champs conditionnels
 }
 
+/** Options scoring questionnaire V2 (sous-ensemble de questions actives, source serveur). */
+export interface CalculateBaseScoreOptions {
+  activeQuestionCodes?: Set<string>
+}
+
 /**
  * Résultat du calcul de score de base
  */
@@ -306,17 +311,26 @@ export function getCompanyStatusDefinition(status: CompanyStatus): string {
  * 4. Le score ne peut pas descendre en dessous de 0
  *
  * @param responses - Toutes les réponses de l'utilisateur
+ * @param options - Si `activeQuestionCodes` est défini (V2), seules ces questions comptent (hors périmètre ignoré).
  * @returns Résultat du calcul avec détails
  */
-export function calculateBaseScore(responses: UserResponse[]): BaseScoreResult {
-  console.log(`🔍 Début du calcul de score de base pour ${responses.length} réponses`);
-  
+export function calculateBaseScore(
+  responses: UserResponse[],
+  options?: CalculateBaseScoreOptions
+): BaseScoreResult {
+  const scoped =
+    options?.activeQuestionCodes !== undefined
+      ? responses.filter(r => options.activeQuestionCodes!.has(r.question_code))
+      : responses;
+
+  console.log(`🔍 Début du calcul de score de base pour ${scoped.length} réponses`);
+
   let totalImpact = 0;
   let isEliminated = false;
   let eliminationReason = '';
   
-  // ÉTAPE 1 : Parcourir toutes les réponses
-  for (const response of responses) {
+  // ÉTAPE 1 : Parcourir les réponses du périmètre (V1 = toutes)
+  for (const response of scoped) {
     console.log(`📝 Analyse de la réponse pour la question ${response.question_code}`);
     
     // Vérifier que la question existe dans nos données

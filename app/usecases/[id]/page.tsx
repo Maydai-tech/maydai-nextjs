@@ -47,9 +47,17 @@ export default function UseCaseDetailPage() {
   const { score, loading: scoreLoading, error: scoreError } = useUseCaseScore(useCase?.id || '')
   const { statuses: documentStatuses, loading: documentStatusesLoading } = useDocumentStatuses(useCase?.id || null)
   const { maydaiAsRegistry } = useCompanyInfo(useCase?.company_id || null)
+  const activeQuestionCodes = Array.isArray(useCase?.active_question_codes)
+    ? useCase.active_question_codes.filter((c): c is string => typeof c === 'string')
+    : []
+
   const { slotStatuses } = useQuestionnaireSlotStatuses(
     useCase?.id,
-    Boolean(useCase?.id && nextSteps && !isUnacceptableCase)
+    Boolean(useCase?.id && nextSteps && !isUnacceptableCase),
+    {
+      questionnaireVersion: useCase?.questionnaire_version,
+      activeQuestionCodes,
+    }
   )
 
   // État pour la vérification admin et génération de rapport

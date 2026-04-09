@@ -31,6 +31,7 @@ export interface ScoreData {
     category_id: string
     category_name: string
     percentage: number
+    evaluation_status?: 'not_evaluated'
   }>
 }
 

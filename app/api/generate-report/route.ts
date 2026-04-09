@@ -11,6 +11,11 @@ import {
   type RiskLevelCode,
 } from '@/lib/risk-level'
 import { computeSlotStatuses, enforceStatusPrefix, SLOT_KEYS } from '@/lib/slot-statuses'
+import {
+  QUESTIONNAIRE_VERSION_V2,
+  normalizeQuestionnaireVersion,
+} from '@/lib/questionnaire-version'
+import type { QuestionnaireParcoursMeta } from '@/lib/openai-data-transformer'
 
 // Fonction de retry automatique pour la génération d'analyse avec timeout
 async function generateAnalysisWithRetry(transformedData: any, usecaseId: string, maxRetries: number = 3): Promise<string> {
@@ -181,6 +186,7 @@ export async function POST(req: NextRequest) {
       system_type, responsible_service, deployment_countries, company_status,
       technology_partner, llm_model_version, primary_model_id,
       score_base, score_model, score_final, is_eliminated, elimination_reason,
+      questionnaire_version, bpgv_variant, active_question_codes, ors_exit,
       companies(name, industry, city, country)
     `)
     .eq('id', usecase_id)
@@ -188,6 +194,24 @@ export async function POST(req: NextRequest) {
 
     if (usecaseError || !usecase) {
       return NextResponse.json({ error: 'Usecase not found' }, { status: 404 })
+    }
+
+    const questionnaireVersion = normalizeQuestionnaireVersion(
+      (usecase as { questionnaire_version?: number | null }).questionnaire_version
+    )
+    if (
+      questionnaireVersion === QUESTIONNAIRE_VERSION_V2 &&
+      String(usecase.status || '').toLowerCase() === 'completed' &&
+      usecase.score_final == null
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Cas V2 marqué complété sans score final : recalcul ou complétion requise avant génération du rapport.',
+          code: 'V2_SCORE_MISSING',
+        },
+        { status: 409 }
+      )
     }
 
     // Récupérer TOUTES les réponses du questionnaire (pas seulement 2 questions)
@@ -244,17 +268,40 @@ export async function POST(req: NextRequest) {
     // Extraire le profil du répondant
     const respondentEmail = responses?.[0]?.answered_by || 'Non disponible'
 
-    const slotStatuses = computeSlotStatuses(responses || [])
+    const activeCodesRaw = (usecase as { active_question_codes?: unknown }).active_question_codes
+    const activeQuestionCodes = Array.isArray(activeCodesRaw)
+      ? activeCodesRaw.filter((c): c is string => typeof c === 'string')
+      : []
+
+    const slotStatuses = computeSlotStatuses(responses || [], {
+      questionnaireVersion: questionnaireVersion,
+      activeQuestionCodes,
+    })
     console.log(`[generate-report] Slot statuses (code) pour ${usecase_id}:`, slotStatuses)
+
+    const questionnaireParcours: QuestionnaireParcoursMeta | null =
+      questionnaireVersion === QUESTIONNAIRE_VERSION_V2
+        ? {
+            questionnaire_version: QUESTIONNAIRE_VERSION_V2,
+            bpgv_variant:
+              (usecase as { bpgv_variant?: string | null }).bpgv_variant ?? null,
+            ors_exit: (usecase as { ors_exit?: string | null }).ors_exit ?? null,
+            active_question_codes: activeQuestionCodes,
+          }
+        : null
 
     const transformedData = transformToOpenAIFormatComplete(
       usecaseWithAuthoritativeRisk as any,
       company,
       model,
       responses || [],
-      respondentEmail
+      respondentEmail,
+      questionnaireParcours
     )
     transformedData.slot_statuses = slotStatuses
+    if (questionnaireParcours) {
+      transformedData.questionnaire_parcours = questionnaireParcours
+    }
 
     // Valider les données transformées (validation simplifiée pour le nouveau format)
     if (!transformedData.usecase_context_fields?.cas_usage?.id) {

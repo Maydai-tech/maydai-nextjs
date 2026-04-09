@@ -13,6 +13,11 @@ export interface UseCase {
   system_type?: string
   deployment_countries?: string[]
   company_id: string
+  /** 1 = parcours historique, 2 = parcours long V2 */
+  questionnaire_version?: number
+  bpgv_variant?: string | null
+  active_question_codes?: string[] | null
+  ors_exit?: string | null
   company_status?: 'utilisateur' | 'fabriquant_produits' | 'distributeur' | 'importateur' | 'fournisseur' | 'mandataire' | 'unknown'  // NOUVEAU: Statut d'entreprise
   created_at: string
   updated_at: string
@@ -65,6 +70,8 @@ export interface QuestionOption {
   is_eliminatory?: boolean
   unique_answer?: boolean
   tooltip?: Tooltip
+  /** Niveau de risque issu du référentiel JSON (moteur juridique / V2 BPGV) */
+  risk?: string
 }
 
 export interface Question {
@@ -106,6 +113,8 @@ export interface CategoryScore {
   question_count: number
   color: string
   icon: string
+  /** Questionnaire V2 : aucune question active pour cette catégorie (pas de 100 % implicite). */
+  evaluation_status?: 'evaluated' | 'not_evaluated'
 }
 
 export interface UseCaseScore {
@@ -131,6 +140,11 @@ export interface UseCaseScore {
     percentage: number
     max_points: number
   }
+  /** Métadonnées questionnaire V2 (calcul serveur). */
+  questionnaire_version?: number
+  bpgv_variant?: string | null
+  ors_exit?: string | null
+  active_question_codes?: string[]
 }
 
 export interface ScoreBreakdown {

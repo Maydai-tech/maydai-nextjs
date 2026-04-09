@@ -1,8 +1,8 @@
 import { Question, QuestionAnswer, QuestionProgress } from '../types/usecase'
-import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
-
-// Note: Ce fichier sera mis à jour dans une future étape pour utiliser loadQuestions()
-// import { loadQuestions } from './questions-loader'
+import { QUESTIONNAIRE_VERSION_V1, QUESTIONNAIRE_VERSION_V2, type QuestionnaireVersion } from '@/lib/questionnaire-version'
+import { getNextQuestionV2, buildQuestionPathV2, getResumeQuestionIdV2 } from './questionnaire-v2-graph'
+import { getAbsoluteQuestionProgressV2, getCurrentQuestionPositionV2, resetProgressCacheV2 } from './questionnaire-v2-progress'
+import { loadQuestions } from './questions-loader'
 
 /** « Texte » coché en E4.N8.Q11.1 */
 export const hasQ111Text = (answers: Record<string, any>): boolean => {
@@ -16,8 +16,8 @@ export const hasQ111Media = (answers: Record<string, any>): boolean => {
   return Array.isArray(v) && v.includes('E4.N8.Q11.1.B')
 }
 
-// Navigation logic
-export const getNextQuestion = (currentQuestionId: string, answers: Record<string, any>): string | null => {
+/** Navigation V1 (inchangée). */
+export const getNextQuestionV1 = (currentQuestionId: string, answers: Record<string, any>): string | null => {
   switch (currentQuestionId) {
     case 'E4.N7.Q1':
       // Si A -> E4.N7.Q1.1, Si B -> E4.N7.Q1.2
@@ -132,6 +132,47 @@ export const getNextQuestion = (currentQuestionId: string, answers: Record<strin
   }
 }
 
+/**
+ * Navigation questionnaire : V1 = comportement historique ; V2 = ORS puis BPGV (voir questionnaire-v2-graph).
+ */
+export function getNextQuestion(
+  currentQuestionId: string,
+  answers: Record<string, any>,
+  questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1
+): string | null {
+  if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
+    return getNextQuestionV2(currentQuestionId, answers as Record<string, unknown>)
+  }
+  return getNextQuestionV1(currentQuestionId, answers)
+}
+
+/** Reprise : première question sans réponse complète. */
+export function getResumeQuestionId(
+  answers: Record<string, any>,
+  questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1
+): string {
+  const questions = loadQuestions()
+  const isComplete = (questionId: string, answer: unknown): boolean => {
+    const q = questions[questionId]
+    if (!q) return false
+    return checkCanProceed(q, answer as QuestionAnswer)
+  }
+
+  if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
+    return getResumeQuestionIdV2(answers as Record<string, unknown>, isComplete)
+  }
+
+  let q: string | null = 'E4.N7.Q1'
+  while (q) {
+    const ans = answers[q]
+    if (ans === undefined || ans === null || !isComplete(q, ans)) return q
+    const next = getNextQuestionV1(q, answers)
+    if (!next) return q
+    q = next
+  }
+  return 'E4.N7.Q1'
+}
+
 export const getQuestionProgress = (currentQuestionId: string, answers: Record<string, any>): QuestionProgress => {
   // Calculate estimated total questions based on current path
   let totalQuestions = 6 // Always Q1, Q1.1/Q1.2, Q2, Q2.1, Q3, Q3.1
@@ -196,23 +237,21 @@ let cachedMaxTotalQuestions: number | null = null
  * - Position actuelle = total max - restantes max + 1
  * - Pourcentage = position actuelle / total max * 100
  */
-export const getAbsoluteQuestionProgress = (currentQuestionId: string): QuestionProgress => {
-  // Calculer le nombre maximum total de questions une seule fois
+export function getAbsoluteQuestionProgress(
+  currentQuestionId: string,
+  questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1
+): QuestionProgress {
+  if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
+    return getAbsoluteQuestionProgressV2(currentQuestionId)
+  }
+
   if (cachedMaxTotalQuestions === null) {
     cachedMaxTotalQuestions = getMaxRemainingQuestions('E4.N7.Q1')
   }
 
   const maxTotalQuestions = cachedMaxTotalQuestions
-
-  // Calculer le nombre maximum de questions restantes depuis la position actuelle
   const maxRemainingFromHere = getMaxRemainingQuestions(currentQuestionId)
-
-  // Position actuelle = total - restantes + 1
-  // Cela garantit que la progression ne peut que augmenter car maxRemainingFromHere
-  // diminue ou reste identique à mesure que l'utilisateur avance
   const current = maxTotalQuestions - maxRemainingFromHere + 1
-
-  // Calculer le pourcentage
   const percentage = Math.round((current / maxTotalQuestions) * 100)
 
   return {
@@ -237,21 +276,27 @@ export const getPreviousQuestion = (currentQuestionId: string, questionHistory: 
 }
 
 // Helper function to build the question path based on current state
-export const buildQuestionPath = (currentQuestionId: string, answers: Record<string, any>): string[] => {
+export function buildQuestionPath(
+  targetQuestionId: string,
+  answers: Record<string, any>,
+  questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1
+): string[] {
+  if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
+    return buildQuestionPathV2(targetQuestionId, answers as Record<string, unknown>)
+  }
+
   const path: string[] = []
-  let questionId: string | null = 'E4.N7.Q1' // Start from the first question
-  
-  // Build the path by following the navigation logic
-  while (questionId && questionId !== currentQuestionId) {
+  let questionId: string | null = 'E4.N7.Q1'
+
+  while (questionId && questionId !== targetQuestionId) {
     path.push(questionId)
-    questionId = getNextQuestion(questionId, answers)
+    questionId = getNextQuestionV1(questionId, answers)
   }
-  
-  // Add the current question
-  if (questionId === currentQuestionId) {
-    path.push(currentQuestionId)
+
+  if (questionId === targetQuestionId) {
+    path.push(targetQuestionId)
   }
-  
+
   return path
 }
 
@@ -385,6 +430,7 @@ const getMaxRemainingQuestions = (questionId: string, visited: Set<string> = new
 export const resetProgressCache = (): void => {
   cachedMaxTotalQuestions = null
   maxRemainingCache.clear()
+  resetProgressCacheV2()
 }
 
 // Helper function to generate answer contexts for a given question to explore all possible paths
@@ -451,7 +497,7 @@ const getAllPossibleNextQuestions = (questionId: string): string[] => {
   const answerContexts = generateAnswerContexts(questionId)
 
   for (const answers of answerContexts) {
-    const next = getNextQuestion(questionId, answers)
+    const next = getNextQuestionV1(questionId, answers)
     if (next) {
       possibleNext.add(next)
     }
@@ -464,14 +510,18 @@ const getAllPossibleNextQuestions = (questionId: string): string[] => {
  * Retourne la position courante d'une question basée sur le nombre maximum de questions possibles.
  * Utilise le même calcul que getAbsoluteQuestionProgress pour la cohérence.
  */
-export const getCurrentQuestionPosition = (currentQuestionId: string): number => {
-  // Utiliser le cache ou calculer le total maximum
+export function getCurrentQuestionPosition(
+  currentQuestionId: string,
+  questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1
+): number {
+  if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
+    return getCurrentQuestionPositionV2(currentQuestionId)
+  }
+
   if (cachedMaxTotalQuestions === null) {
     cachedMaxTotalQuestions = getMaxRemainingQuestions('E4.N7.Q1')
   }
 
   const maxQuestionsRemaining = getMaxRemainingQuestions(currentQuestionId)
-
-  // Position = Total max - Questions restantes max + 1
   return cachedMaxTotalQuestions - maxQuestionsRemaining + 1
 } 

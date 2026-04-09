@@ -29,6 +29,10 @@ export function useUseCaseData(useCaseId: string): UseUseCaseDataReturn {
 
   // Fonction pour récupérer les données du cas d'usage
   const fetchUseCaseData = useCallback(async () => {
+    if (useCaseId === 'new') {
+      setLoading(false)
+      return
+    }
     if (!user || !session?.access_token || !useCaseId || isFetching.current) {
       if (!user || !session?.access_token || !useCaseId) {
         setLoading(false)

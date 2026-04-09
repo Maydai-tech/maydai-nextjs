@@ -18,14 +18,17 @@ export default function Sidebar() {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [useCaseRegistryId, setUseCaseRegistryId] = useState<string | null>(null);
   const [roleMap, setRoleMap] = useState<Map<string, string>>(new Map());
-  const api = useApiCall();
+  const { get } = useApiCall();
+
+  const isValidUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
   // Fetch company ID when user is available
   useEffect(() => {
     const fetchCompanyId = async () => {
       if (user) {
         try {
-          const result = await api.get('/api/companies');
+          const result = await get('/api/companies');
 
           if (result.data && result.data.length > 0) {
             // Since users currently have only one company, take the first one
@@ -45,7 +48,7 @@ export default function Sidebar() {
     };
 
     fetchCompanyId();
-  }, [user, api]);
+  }, [user, get]);
 
   // Fetch use case registry ID when on a use case page
   useEffect(() => {
@@ -54,8 +57,13 @@ export default function Sidebar() {
       const useCaseMatch = pathname.match(/^\/usecases\/([^\/]+)/);
       if (useCaseMatch && user) {
         const useCaseId = useCaseMatch[1];
+        // Guard: /usecases/new is a creation page, not a UUID. Also prevent calls for non-UUID ids.
+        if (!useCaseId || useCaseId === 'new' || !isValidUuid(useCaseId)) {
+          setUseCaseRegistryId(null);
+          return;
+        }
         try {
-          const result = await api.get(`/api/usecases/${useCaseId}`);
+          const result = await get(`/api/usecases/${useCaseId}`);
           if (result.data?.company_id) {
             setUseCaseRegistryId(result.data.company_id);
           }
@@ -71,7 +79,7 @@ export default function Sidebar() {
     };
 
     fetchUseCaseRegistryId();
-  }, [pathname, user, api]);
+  }, [pathname, user, get]);
 
   // Determine dashboard URL based on current context
   const getDashboardUrl = () => {

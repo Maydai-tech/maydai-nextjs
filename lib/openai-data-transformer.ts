@@ -6,6 +6,15 @@ import {
   type RiskLevelCode,
 } from '@/lib/risk-level'
 import type { SlotStatusMap } from '@/lib/slot-statuses'
+import { QUESTIONNAIRE_VERSION_V2 } from '@/lib/questionnaire-version'
+
+/** Métadonnées parcours V2 transmises au LLM (source serveur). */
+export interface QuestionnaireParcoursMeta {
+  questionnaire_version: number
+  bpgv_variant: string | null
+  ors_exit: string | null
+  active_question_codes: string[]
+}
 
 interface UseCaseResponse {
   question_code: string
@@ -278,6 +287,7 @@ interface OpenAIAnalysisInputComplete {
   priority_levels: Record<string, string>
   status_levels: Record<string, string>
   slot_statuses?: SlotStatusMap
+  questionnaire_parcours?: QuestionnaireParcoursMeta
 }
 
 /**
@@ -288,11 +298,17 @@ export function transformToOpenAIFormatComplete(
   company: Company | null,
   model: Model | null,
   responses: UseCaseResponseComplete[],
-  respondentEmail: string
+  respondentEmail: string,
+  questionnaireParcours?: QuestionnaireParcoursMeta | null
 ): OpenAIAnalysisInputComplete {
-  
+  const activeParcoursSet =
+    questionnaireParcours?.questionnaire_version === QUESTIONNAIRE_VERSION_V2 &&
+    questionnaireParcours.active_question_codes.length > 0
+      ? new Set(questionnaireParcours.active_question_codes)
+      : null
+
   // Construire le questionnaire avec toutes les questions et réponses
-  const questionnaireQuestions = buildQuestionnaireQuestions(responses)
+  const questionnaireQuestions = buildQuestionnaireQuestions(responses, activeParcoursSet)
 
   const rawRisk = usecase.risk_level
   const riskLevelCode: RiskLevelCode =
@@ -345,7 +361,7 @@ export function transformToOpenAIFormatComplete(
     }
   }
 
-  return {
+  const base: OpenAIAnalysisInputComplete = {
     questionnaire_questions: questionnaireQuestions,
     usecase_context_fields: usecaseContextFields,
     risk_categories: {
@@ -372,12 +388,20 @@ export function transformToOpenAIFormatComplete(
       "unacceptable": "Interdit - Interdiction d'utilisation"
     }
   }
+
+  if (questionnaireParcours) {
+    return { ...base, questionnaire_parcours: questionnaireParcours }
+  }
+  return base
 }
 
 /**
  * Construit le questionnaire complet avec toutes les questions et réponses
  */
-function buildQuestionnaireQuestions(responses: UseCaseResponseComplete[]): Record<string, any> {
+function buildQuestionnaireQuestions(
+  responses: UseCaseResponseComplete[],
+  activeParcoursCodes: Set<string> | null
+): Record<string, any> {
   const questionnaireQuestions: Record<string, any> = {}
   
   // Créer un map des réponses pour un accès rapide
@@ -389,7 +413,9 @@ function buildQuestionnaireQuestions(responses: UseCaseResponseComplete[]): Reco
   // Parcourir toutes les questions définies dans QUESTIONS_DATA
   Object.entries(QUESTIONS_DATA).forEach(([questionCode, questionData]) => {
     const response = responsesMap.get(questionCode)
-    
+    const horsParcoursV2 =
+      activeParcoursCodes !== null && !activeParcoursCodes.has(questionCode)
+
     // Construire la structure de la question avec métadonnées
     const questionStructure = {
       code: questionData.id,
@@ -403,7 +429,9 @@ function buildQuestionnaireQuestions(responses: UseCaseResponseComplete[]): Reco
       article_concerne: determineArticleConcerne(questionData),
       risk_category: determineRiskCategory(questionData),
       impact_conformite: generateImpactConformite(questionData),
-      user_response: response ? buildUserResponse(response, questionData) : null
+      hors_parcours_questionnaire_v2: horsParcoursV2,
+      user_response:
+        horsParcoursV2 ? null : response ? buildUserResponse(response, questionData) : null
     }
     
     questionnaireQuestions[questionCode] = questionStructure

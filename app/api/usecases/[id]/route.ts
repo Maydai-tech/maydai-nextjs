@@ -43,6 +43,14 @@ export async function GET(
     const resolvedParams = await params
     const useCaseId = resolvedParams.id
 
+    const isValidUuid = (value: string) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+
+    // Guard: reject non-UUID ids (e.g. "new") to avoid Postgres 22P02
+    if (!useCaseId || !isValidUuid(useCaseId)) {
+      return NextResponse.json({ error: 'Invalid use case id' }, { status: 400 })
+    }
+
     // Fetch the use case with company information
     // Note: We fetch the model separately to avoid schema cache issues with PostgREST
     const { data: useCase, error: useCaseError } = await supabase

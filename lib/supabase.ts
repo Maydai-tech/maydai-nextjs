@@ -71,6 +71,10 @@ export interface UseCase {
   company_status?: 'utilisateur' | 'fabriquant_produits' | 'distributeur' | 'importateur' | 'fournisseur' | 'mandataire' | 'unknown'  // NOUVEAU: Statut d'entreprise
   report_summary?: string  // NOUVEAU: Rapport d'analyse IA généré
   report_generated_at?: string  // NOUVEAU: Date de génération du rapport
+  questionnaire_version?: number
+  bpgv_variant?: string | null
+  active_question_codes?: string[]
+  ors_exit?: string | null
   created_at: string
   updated_at: string
   updated_by?: string

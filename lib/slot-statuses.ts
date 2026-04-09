@@ -4,9 +4,22 @@
  *
  * Ce module remplace la logique auparavant déléguée au LLM :
  * le code décide du statut, le LLM ne rédige que le texte explicatif.
+ *
+ * Questionnaire V2 : si une question liée au slot n’est pas dans `active_question_codes`,
+ * le statut est « Hors périmètre » (pas « Information insuffisante »).
+ * Exception `priorite_2` : en scope dès qu’au moins une des questions E6.N10.Q1 / E6.N10.Q2 est active.
  */
 
-export type SlotStatus = 'OUI' | 'NON' | 'Information insuffisante'
+import {
+  QUESTIONNAIRE_VERSION_V2,
+  normalizeQuestionnaireVersion
+} from '@/lib/questionnaire-version'
+
+export type SlotStatus =
+  | 'OUI'
+  | 'NON'
+  | 'Information insuffisante'
+  | 'Hors périmètre'
 
 export interface SlotStatusMap {
   quick_win_1: SlotStatus
@@ -27,6 +40,37 @@ export const SLOT_KEYS = [
 ] as const
 
 export type SlotKey = typeof SLOT_KEYS[number]
+
+/** Questions questionnaire servant à déterminer chaque slot (ordre = même logique que le catalogue). */
+export const SLOT_QUESTION_CODES: Record<SlotKey, readonly string[]> = {
+  quick_win_1: ['E5.N9.Q7'],
+  quick_win_2: ['E5.N9.Q8'],
+  quick_win_3: ['E5.N9.Q3'],
+  priorite_1: ['E5.N9.Q4'],
+  priorite_2: ['E6.N10.Q1', 'E6.N10.Q2'],
+  priorite_3: ['E5.N9.Q6'],
+  action_1: ['E5.N9.Q1'],
+  action_2: ['E5.N9.Q9'],
+  action_3: ['E4.N8.Q12'],
+}
+
+export type ComputeSlotStatusesOptions = {
+  /** Liste serveur `active_question_codes` (parcours V2 effectif). */
+  activeQuestionCodes?: string[] | null
+  questionnaireVersion?: number | null
+}
+
+function slotQuestionsAllInActiveSet(
+  activeSet: Set<string>,
+  questionCodes: readonly string[]
+): boolean {
+  return questionCodes.every(q => activeSet.has(q))
+}
+
+/** V2 : le slot transparence est en scope dès qu’au moins une des deux questions du couple est dans le parcours actif. */
+function priorite2InScopeV2(activeSet: Set<string>): boolean {
+  return activeSet.has('E6.N10.Q1') || activeSet.has('E6.N10.Q2')
+}
 
 // ─── Types d'entrée (alignés sur usecase_responses) ─────────────────────────
 
@@ -141,12 +185,47 @@ function computePriorite1(responsesMap: Map<string, ResponseInput>): SlotStatus 
   return 'Information insuffisante'
 }
 
-function computePriorite2(responsesMap: Map<string, ResponseInput>): SlotStatus {
+/** V1 (ou appel sans filtre actif) : les deux questions forment un couple obligatoire. */
+function computePriorite2Legacy(responsesMap: Map<string, ResponseInput>): SlotStatus {
   const mainQ1 = getMainAnswer(responsesMap.get('E6.N10.Q1'))
   const mainQ2 = getMainAnswer(responsesMap.get('E6.N10.Q2'))
 
   const q1Answered = isOui('E6.N10.Q1', mainQ1) || isNon('E6.N10.Q1', mainQ1)
   const q2Answered = isOui('E6.N10.Q2', mainQ2) || isNon('E6.N10.Q2', mainQ2)
+
+  if (!q1Answered || !q2Answered) return 'Information insuffisante'
+  if (isOui('E6.N10.Q1', mainQ1) && isOui('E6.N10.Q2', mainQ2)) return 'OUI'
+  return 'NON'
+}
+
+/**
+ * priorite_2 : si `activeSetV2` est fourni (parcours V2), une seule question peut être active ;
+ * sinon logique historique à deux questions obligatoires.
+ */
+function computePriorite2(
+  responsesMap: Map<string, ResponseInput>,
+  activeSetV2: Set<string> | null
+): SlotStatus {
+  if (!activeSetV2) {
+    return computePriorite2Legacy(responsesMap)
+  }
+
+  const q1In = activeSetV2.has('E6.N10.Q1')
+  const q2In = activeSetV2.has('E6.N10.Q2')
+
+  const mainQ1 = getMainAnswer(responsesMap.get('E6.N10.Q1'))
+  const mainQ2 = getMainAnswer(responsesMap.get('E6.N10.Q2'))
+  const q1Answered = isOui('E6.N10.Q1', mainQ1) || isNon('E6.N10.Q1', mainQ1)
+  const q2Answered = isOui('E6.N10.Q2', mainQ2) || isNon('E6.N10.Q2', mainQ2)
+
+  if (q1In && !q2In) {
+    if (!q1Answered) return 'Information insuffisante'
+    return isOui('E6.N10.Q1', mainQ1) ? 'OUI' : 'NON'
+  }
+  if (!q1In && q2In) {
+    if (!q2Answered) return 'Information insuffisante'
+    return isOui('E6.N10.Q2', mainQ2) ? 'OUI' : 'NON'
+  }
 
   if (!q1Answered || !q2Answered) return 'Information insuffisante'
   if (isOui('E6.N10.Q1', mainQ1) && isOui('E6.N10.Q2', mainQ2)) return 'OUI'
@@ -191,28 +270,57 @@ function computeAction3(responsesMap: Map<string, ResponseInput>): SlotStatus {
 
 // ─── Point d'entrée ─────────────────────────────────────────────────────────
 
-export function computeSlotStatuses(responses: ResponseInput[]): SlotStatusMap {
+export function computeSlotStatuses(
+  responses: ResponseInput[],
+  options?: ComputeSlotStatusesOptions
+): SlotStatusMap {
   const map = new Map<string, ResponseInput>()
   for (const r of responses) {
     map.set(r.question_code, r)
   }
 
+  const qv = normalizeQuestionnaireVersion(options?.questionnaireVersion)
+  const rawActive = options?.activeQuestionCodes
+  const useV2Scope =
+    qv === QUESTIONNAIRE_VERSION_V2 && Array.isArray(rawActive) && rawActive.length > 0
+  const activeSet = useV2Scope ? new Set(rawActive) : null
+
+  const run = (
+    slot: SlotKey,
+    compute: (m: Map<string, ResponseInput>) => SlotStatus
+  ): SlotStatus => {
+    if (activeSet && !slotQuestionsAllInActiveSet(activeSet, SLOT_QUESTION_CODES[slot])) {
+      return 'Hors périmètre'
+    }
+    return compute(map)
+  }
+
+  const priorite2 =
+    activeSet && !priorite2InScopeV2(activeSet)
+      ? ('Hors périmètre' as const)
+      : computePriorite2(map, activeSet)
+
   return {
-    quick_win_1: computeQuickWin1(map),
-    quick_win_2: computeQuickWin2(map),
-    quick_win_3: computeQuickWin3(map),
-    priorite_1: computePriorite1(map),
-    priorite_2: computePriorite2(map),
-    priorite_3: computePriorite3(map),
-    action_1: computeAction1(map),
-    action_2: computeAction2(map),
-    action_3: computeAction3(map),
+    quick_win_1: run('quick_win_1', computeQuickWin1),
+    quick_win_2: run('quick_win_2', computeQuickWin2),
+    quick_win_3: run('quick_win_3', computeQuickWin3),
+    priorite_1: run('priorite_1', computePriorite1),
+    priorite_2: priorite2,
+    priorite_3: run('priorite_3', computePriorite3),
+    action_1: run('action_1', computeAction1),
+    action_2: run('action_2', computeAction2),
+    action_3: run('action_3', computeAction3),
   }
 }
 
 // ─── Post-correction des préfixes ───────────────────────────────────────────
 
-const KNOWN_PREFIXES = ['OUI : ', 'NON : ', 'Information insuffisante : ']
+const KNOWN_PREFIXES = [
+  'OUI : ',
+  'NON : ',
+  'Information insuffisante : ',
+  'Hors périmètre : ',
+]
 
 /**
  * Force le préfixe d'un texte de slot à correspondre au statut attendu.

@@ -29,9 +29,11 @@ function PDFCanonicalItemBlock({
 }) {
   const todoLink = absUrl(baseUrl, item.cta.todoUrl)
   const dossierLink = absUrl(baseUrl, item.cta.dossierUrl)
-  const ctaLine = item.cta.completed
-    ? `Statut action : complétée dans le dossier — ouvrir : ${dossierLink}`
-    : `Action à mener : ${item.cta.label} — To-do : ${todoLink} — Dossier : ${dossierLink}`
+  const ctaLine = item.cta.ctaOmitted
+    ? 'Hors périmètre du questionnaire pour ce cas — aucune action To-do requise pour combler une question non posée.'
+    : item.cta.completed
+      ? `Statut action : complétée dans le dossier — ouvrir : ${dossierLink}`
+      : `Action à mener : ${item.cta.label} — To-do : ${todoLink} — Dossier : ${dossierLink}`
 
   return (
     <View style={{ marginBottom: 10 }} wrap>

@@ -2,6 +2,7 @@ import OpenAI from 'openai'
 import { buildStandardizedPrompt } from './formatting-template'
 import type { RiskLevelCode } from '@/lib/risk-level'
 import type { SlotStatusMap } from '@/lib/slot-statuses'
+import type { QuestionnaireParcoursMeta } from '@/lib/openai-data-transformer'
 
 /**
  * Structure des données d'entrée pour l'analyse OpenAI (ancien format)
@@ -86,6 +87,7 @@ interface OpenAIAnalysisInputComplete {
   priority_levels: Record<string, string>
   status_levels: Record<string, string>
   slot_statuses?: SlotStatusMap
+  questionnaire_parcours?: QuestionnaireParcoursMeta
 }
 
 /**
@@ -470,6 +472,17 @@ Répondant: ${repondant.profile} | ${repondant.situation}
 Scores (indicatifs, ne fixent pas le niveau): base ${scores.score_base} | modèle ${scores.score_model ?? 'N/A'} | final ${scoreFinal ?? 'N/A'}
 Éliminé: ${scores.is_eliminated ? 'oui' : 'non'} | Motif: ${scores.elimination_reason || 'N/A'}`
 
+    const parcoursMetaBlock = data.questionnaire_parcours
+      ? `
+PARCOURS QUESTIONNAIRE — MÉTADONNÉES SERVEUR (AUTORITATIVES)
+${JSON.stringify(data.questionnaire_parcours)}
+Règles :
+- questionnaire_version, bpgv_variant, ors_exit, active_question_codes : ne pas les contredire.
+- Toute question du JSON « questionnaire_questions » avec hors_parcours_questionnaire_v2 = true n'a PAS été posée dans ce parcours : ne pas inférer de réponse utilisateur, ne pas traiter comme un oubli.
+- Un code absent de active_question_codes n'a pas été posé volontairement (parcours V2) : idem.
+${data.questionnaire_parcours.ors_exit === 'unacceptable' ? `- Sortie ORS « unacceptable » : le bloc N8 (questions E4.N8.* du fil long) n'a pas été parcouru ; ne pas inventer de réponses ni de constats issus de N8.` : ''}`
+      : ''
+
     const questionnaireSection = this.buildQuestionnaireSectionForPhase1(questionnaire_questions)
 
     const highRiskJustificationRules =
@@ -491,6 +504,12 @@ NIVEAU DE RISQUE (AUTORITATIF — APPLICATION)
 - Ne pas inventer des faits de qualification absents du questionnaire.
 - Score final ${scoreFinal ?? 'N/A'}/100 : informatif seul, pas substitut aux faits de qualification.${highRiskJustificationRules}`
 
+    const unacceptableV2N8Rule =
+      data.questionnaire_parcours?.ors_exit === 'unacceptable'
+        ? `
+- Parcours V2 — sortie ORS « unacceptable » : le bloc N8 (questions E4.N8.*) n’a pas été parcouru ; ne pas citer de réponses ni de constats issus de N8 ; ne pas présenter interdit_3 comme fondé sur des faits déclarés en N8.`
+        : ''
+
     const statuses = data.slot_statuses
     const slotMappingBlock = (!isUnacceptable && statuses)
       ? `
@@ -499,6 +518,7 @@ Chaque slot DOIT :
 1) commencer par le préfixe exact indiqué ci-dessous, suivi de " : " (espace-deux-points-espace) ;
 2) contenir au moins 2 phrases d'explication contextualisée (hors préfixe et hors la partie Références) ;
 3) se terminer obligatoirement dans la MÊME chaîne par une phrase commençant exactement : Références : (puis références AI Act ou principes pertinentes, alignées sur le thème du slot).
+Préfixes possibles : OUI, NON, Information insuffisante, Hors périmètre (Hors périmètre = question(s) liée(s) au slot non posée(s) dans le parcours V2 — expliquer sans exiger une action pour compléter une question hors parcours).
 Ne pas changer le préfixe. Ne pas ajouter de nuance sur le statut. Ne pas contredire le statut dans le texte.
 
 quick_win_1 → ${statuses.quick_win_1}
@@ -533,7 +553,7 @@ Exemple réservé à quick_win_2 uniquement (surveillance humaine — ne PAS app
       : (!isUnacceptable
           ? `
 MAPPING DES 9 SLOTS — statuts non fournis, déduire des réponses.
-Préfixe par slot : « OUI : », « NON : » ou « Information insuffisante : ».
+Préfixe par slot : « OUI : », « NON : », « Information insuffisante : » ou si la question liée n'est pas dans le parcours V2 « Hors périmètre : ».
 Chaque slot : au moins 2 phrases d'explication puis fin obligatoire par « Références : ... » dans la même chaîne.`
           : `
 CAS RISQUE INACCEPTABLE (INTERDIT)
@@ -555,7 +575,7 @@ interdit_3 — EXIGENCE DE SÉCURISATION (INSTRUCTIONS SYSTÈME, PROMPTS, GARDE-
 Règles transverses
 - Distinction par le RÔLE : constat d'interdiction (interdit_1) vs exigences de preuve/traçabilité (interdit_2) vs exigences de sécurisation documentaire et technique (interdit_3).
 - Interdiction de traiter interdit_2 et interdit_3 comme de nouvelles finalités prohibées distinctes de la même nature que le motif synthétisé en interdit_1.
-- Interdiction de produire trois variantes cosmétiquement différentes d'un seul et même paragraphe ; pas de simple copier-coller entre les champs.
+- Interdiction de produire trois variantes cosmétiquement différentes d'un seul et même paragraphe ; pas de simple copier-coller entre les champs.${unacceptableV2N8Rule}
 `)
 
     const formatBlock = isUnacceptable
@@ -577,9 +597,9 @@ SORTIE JSON
 - Toutes les valeurs chaîne non vides (espaces seuls interdits). impact_attendu et conclusion obligatoires même si plusieurs des 9 slots sont « Information insuffisante : ».
 - evaluation_risque.niveau : "${cas_usage.risk_level_label_fr}" exactement ; ne pas utiliser la formulation « Risque inacceptable » dans niveau (utiliser « Interdit » si cas maximal).
 - evaluation_risque.justification : respecter intégralement le bloc NIVEAU DE RISQUE ci-dessus (y compris les règles spécifiques « Risque élevé » si applicables).
-- quick_win_1, quick_win_2, quick_win_3, priorite_1, priorite_2, priorite_3, action_1, action_2, action_3 : chaque valeur doit commencer par le préfixe imposé (OUI / NON / Information insuffisante), contenir au moins 2 phrases explicatives, et se terminer obligatoirement par « Références : ... » (même pour Information insuffisante).`
+- quick_win_1, quick_win_2, quick_win_3, priorite_1, priorite_2, priorite_3, action_1, action_2, action_3 : chaque valeur doit commencer par le préfixe imposé (OUI / NON / Information insuffisante / Hors périmètre), contenir au moins 2 phrases explicatives, et se terminer obligatoirement par « Références : ... » (y compris pour Information insuffisante et Hors périmètre).`
 
-    return `${factsBlock}\n\n${questionnaireSection}\n\n${authoritativeRiskBlock}\n\n${slotMappingBlock}\n\n${formatBlock}`.trim()
+    return `${factsBlock}${parcoursMetaBlock}\n\n${questionnaireSection}\n\n${authoritativeRiskBlock}\n\n${slotMappingBlock}\n\n${formatBlock}`.trim()
   }
 
   /**
@@ -591,7 +611,9 @@ SORTIE JSON
     for (const [, questions] of Object.entries(byCat)) {
       for (const q of questions as any[]) {
         t += `[${q.code}] ${q.question_text}\n`
-        if (q.user_response?.answered) {
+        if (q.hors_parcours_questionnaire_v2) {
+          t += `  (hors périmètre du parcours V2 — question non posée ; ne pas inférer de réponse.)\n`
+        } else if (q.user_response?.answered) {
           if (q.user_response.single_label) t += `  Choix: ${q.user_response.single_label}\n`
           if (q.user_response.conditional_label) t += `  Choix: ${q.user_response.conditional_label}\n`
           if (q.user_response.multiple_labels?.length) {
