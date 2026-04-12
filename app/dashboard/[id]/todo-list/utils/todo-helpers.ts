@@ -18,7 +18,7 @@ interface UseCase {
   created_at: string
   updated_at: string
   status: 'draft' | 'active' | 'archived' | 'completed'
-  risk_level?: string
+  risk_level?: string | null
   classification_status?: string | null
   score_final?: number | null
   deployment_date?: string | null

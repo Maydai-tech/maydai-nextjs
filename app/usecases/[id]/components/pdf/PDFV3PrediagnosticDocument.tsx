@@ -25,7 +25,7 @@ const s = {
     marginBottom: 8,
     borderRadius: 4,
   },
-  disclaimer: { fontSize: 7, color: colors.gray[600], fontStyle: 'italic', marginTop: 10 },
+  disclaimer: { fontSize: 7, color: colors.gray[600], fontStyle: 'italic' as const, marginTop: 10 },
   linkLine: { fontSize: 8, color: colors.primary, marginBottom: 2 },
 }
 
