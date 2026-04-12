@@ -1,3 +1,4 @@
+import { getListRiskBadgeStyle } from '@/lib/classification-risk-display'
 import { getTodoActionMapping } from '@/lib/todo-action-sync'
 import { normalizeScoreTo100 } from '@/lib/score-calculator-simple'
 import {
@@ -18,6 +19,7 @@ interface UseCase {
   updated_at: string
   status: 'draft' | 'active' | 'archived' | 'completed'
   risk_level?: string
+  classification_status?: string | null
   score_final?: number | null
   deployment_date?: string | null
 }
@@ -267,44 +269,13 @@ export const getRegistryActionPoints = (): number => {
 }
 
 /**
- * Returns CSS classes for risk level badge styling
+ * Badge liste (todo, dossiers) : tient compte de `classification_status` V3 si présent.
  */
+export const getRiskLevelDisplayConfig = (
+  useCase: Pick<UseCase, 'risk_level'> & { classification_status?: string | null }
+) => getListRiskBadgeStyle(useCase.classification_status, useCase.risk_level ?? null)
+
+/** @deprecated Préférer getRiskLevelDisplayConfig quand `classification_status` est disponible */
 export const getRiskLevelConfig = (riskLevel: string) => {
-  switch (riskLevel?.toLowerCase()) {
-    case 'minimal':
-      return {
-        bg: 'bg-[#f1fdfa]',
-        border: 'border-green-300',
-        text: 'text-green-800',
-        label: 'Minimal'
-      }
-    case 'limited':
-      return {
-        bg: 'bg-yellow-50',
-        border: 'border-yellow-300',
-        text: 'text-yellow-800',
-        label: 'Limité'
-      }
-    case 'high':
-      return {
-        bg: 'bg-orange-50',
-        border: 'border-orange-300',
-        text: 'text-orange-800',
-        label: 'Élevé'
-      }
-    case 'unacceptable':
-      return {
-        bg: 'bg-red-50',
-        border: 'border-red-300',
-        text: 'text-red-800',
-        label: 'Inacceptable'
-      }
-    default:
-      return {
-        bg: 'bg-gray-50',
-        border: 'border-gray-300',
-        text: 'text-gray-800',
-        label: 'Non évalué'
-      }
-  }
+  return getListRiskBadgeStyle(undefined, riskLevel || null)
 }

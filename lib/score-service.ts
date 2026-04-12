@@ -54,7 +54,10 @@ export class ScoreService {
    * @param usecaseId - ID du use case à calculer
    * @returns Promise avec le résultat du calcul
    */
-  async calculateUseCaseScore(usecaseId: string): Promise<ScoreCalculationResponse> {
+  async calculateUseCaseScore(
+    usecaseId: string,
+    options?: { path_mode?: 'short' }
+  ): Promise<ScoreCalculationResponse> {
     try {
       // Construire l'URL de l'API
       // Utiliser une URL relative pour fonctionner côté client et serveur
@@ -74,7 +77,8 @@ export class ScoreService {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          usecase_id: usecaseId
+          usecase_id: usecaseId,
+          ...(options?.path_mode === 'short' ? { path_mode: 'short' } : {}),
         })
       })
 
@@ -97,9 +101,13 @@ export class ScoreService {
   /**
    * Version statique pour utilisation côté serveur avec un token d'accès
    */
-  static async calculateScore(usecaseId: string, accessToken: string): Promise<ScoreCalculationResponse> {
+  static async calculateScore(
+    usecaseId: string,
+    accessToken: string,
+    options?: { path_mode?: 'short' }
+  ): Promise<ScoreCalculationResponse> {
     const service = new ScoreService(accessToken)
-    return service.calculateUseCaseScore(usecaseId)
+    return service.calculateUseCaseScore(usecaseId, options)
   }
 }
 
@@ -115,8 +123,9 @@ export const scoreService = new ScoreService()
  * @returns Promise avec le résultat du calcul
  */
 export async function calculateUseCaseScore(
-  usecaseId: string, 
-  accessToken: string
+  usecaseId: string,
+  accessToken: string,
+  options?: { path_mode?: 'short' }
 ): Promise<ScoreCalculationResponse> {
-  return ScoreService.calculateScore(usecaseId, accessToken)
+  return ScoreService.calculateScore(usecaseId, accessToken, options)
 }

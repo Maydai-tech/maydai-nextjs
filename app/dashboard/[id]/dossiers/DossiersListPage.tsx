@@ -7,9 +7,11 @@ import { useApiCall } from '@/lib/api-client-legacy'
 import { FileText, ChevronRight, Check, AlertTriangle } from 'lucide-react'
 import { getCompactScoreStyle } from '@/lib/score-styles'
 import {
+  getRiskLevelDisplayConfig,
   getUnacceptableActionDocTypesOrdered,
   isUnacceptableCase
 } from '@/app/dashboard/[id]/todo-list/utils/todo-helpers'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
 
 interface UseCase {
   id: string
@@ -20,6 +22,7 @@ interface UseCase {
   updated_at: string
   status: 'draft' | 'active' | 'archived'
   risk_level?: string
+  classification_status?: string | null
   score_final?: number | null
   deployment_date?: string | null
 }
@@ -46,8 +49,8 @@ interface UnacceptableRow {
 const UNACCEPTABLE_STATUS_ROWS: UnacceptableRow[] = [
   {
     key: 'stopping_proof',
-    doneLabel: 'Preuve d\'arrêt complétée',
-    todoLabel: 'Preuve d\'arrêt à compléter'
+    doneLabel: DECLARATION_PROOF_FLOW_COPY.unacceptableStoppingProofDone,
+    todoLabel: DECLARATION_PROOF_FLOW_COPY.unacceptableStoppingProofTodo
   },
   {
     key: 'system_prompt',
@@ -70,46 +73,6 @@ export default function DossiersComplianceView() {
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hasFetched, setHasFetched] = useState(false)
-
-  const getRiskLevelConfig = (riskLevel: string) => {
-    switch (riskLevel?.toLowerCase()) {
-      case 'minimal':
-        return {
-          bg: 'bg-[#f1fdfa]',
-          border: 'border-green-300',
-          text: 'text-green-800',
-          label: 'Minimal'
-        }
-      case 'limited':
-        return {
-          bg: 'bg-yellow-50',
-          border: 'border-yellow-300',
-          text: 'text-yellow-800',
-          label: 'Limité'
-        }
-      case 'high':
-        return {
-          bg: 'bg-orange-50',
-          border: 'border-orange-300',
-          text: 'text-orange-800',
-          label: 'Élevé'
-        }
-      case 'unacceptable':
-        return {
-          bg: 'bg-red-50',
-          border: 'border-red-300',
-          text: 'text-red-800',
-          label: 'Inacceptable'
-        }
-      default:
-        return {
-          bg: 'bg-gray-50',
-          border: 'border-gray-300',
-          text: 'text-gray-800',
-          label: 'Non évalué'
-        }
-    }
-  }
 
   useEffect(() => {
     if (!loading && !user) {
@@ -231,9 +194,12 @@ export default function DossiersComplianceView() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dossiers de Conformité</h1>
-            <p className="mt-2 text-gray-600">
-              Suivi de la conformité réglementaire pour tous vos cas d'usage IA
+            <h1 className="text-3xl font-bold text-gray-900">Dossiers de conformité</h1>
+            <p className="mt-2 text-gray-600 max-w-3xl leading-relaxed">
+              {DECLARATION_PROOF_FLOW_COPY.dossierListSubtitle}
+            </p>
+            <p className="mt-3 text-sm text-gray-700 max-w-3xl leading-relaxed border-l-4 border-[#0080A3]/40 pl-3">
+              {DECLARATION_PROOF_FLOW_COPY.globalDossierListEvalHint}
             </p>
           </div>
         </div>
@@ -250,6 +216,7 @@ export default function DossiersComplianceView() {
           ) : (
             useCases.map(useCase => {
               const completion = completions[useCase.id] || { completed: 0, total: 8, percentage: 0 }
+              const riskCfg = getRiskLevelDisplayConfig(useCase)
 
               return (
                 <div
@@ -268,16 +235,14 @@ export default function DossiersComplianceView() {
 
                           <div className="flex flex-wrap gap-2">
                             <div
-                              className={`px-3 py-2 rounded-lg border ${getRiskLevelConfig(useCase.risk_level || '').bg} ${getRiskLevelConfig(useCase.risk_level || '').border}`}
+                              className={`px-3 py-2 rounded-lg border ${riskCfg.bg} ${riskCfg.border}`}
                             >
                               <div className="flex flex-col gap-0.5">
                                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">
                                   Niveau de risque
                                 </span>
-                                <span
-                                  className={`text-xs font-semibold ${getRiskLevelConfig(useCase.risk_level || '').text}`}
-                                >
-                                  {getRiskLevelConfig(useCase.risk_level || '').label}
+                                <span className={`text-xs font-semibold ${riskCfg.text}`}>
+                                  {riskCfg.label}
                                 </span>
                               </div>
                             </div>

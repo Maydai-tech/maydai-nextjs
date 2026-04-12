@@ -5,19 +5,29 @@
 
 export const QUESTIONNAIRE_VERSION_V1 = 1 as const
 export const QUESTIONNAIRE_VERSION_V2 = 2 as const
+export const QUESTIONNAIRE_VERSION_V3 = 3 as const
 
-export type QuestionnaireVersion = typeof QUESTIONNAIRE_VERSION_V1 | typeof QUESTIONNAIRE_VERSION_V2
+export type QuestionnaireVersion =
+  | typeof QUESTIONNAIRE_VERSION_V1
+  | typeof QUESTIONNAIRE_VERSION_V2
+  | typeof QUESTIONNAIRE_VERSION_V3
 
 export const QUESTIONNAIRE_VERSIONS: readonly QuestionnaireVersion[] = [
   QUESTIONNAIRE_VERSION_V1,
-  QUESTIONNAIRE_VERSION_V2
+  QUESTIONNAIRE_VERSION_V2,
+  QUESTIONNAIRE_VERSION_V3,
 ]
 
 export function isQuestionnaireVersion(v: unknown): v is QuestionnaireVersion {
-  return v === QUESTIONNAIRE_VERSION_V1 || v === QUESTIONNAIRE_VERSION_V2
+  return (
+    v === QUESTIONNAIRE_VERSION_V1 ||
+    v === QUESTIONNAIRE_VERSION_V2 ||
+    v === QUESTIONNAIRE_VERSION_V3
+  )
 }
 
 export function normalizeQuestionnaireVersion(v: unknown): QuestionnaireVersion {
+  if (v === QUESTIONNAIRE_VERSION_V3) return QUESTIONNAIRE_VERSION_V3
   if (v === QUESTIONNAIRE_VERSION_V2) return QUESTIONNAIRE_VERSION_V2
   return QUESTIONNAIRE_VERSION_V1
 }

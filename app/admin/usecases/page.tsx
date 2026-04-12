@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase, UseCase } from '@/lib/supabase'
+import {
+  getClassificationRiskDisplayLabel,
+  matchesAdminRiskLevelFilter,
+} from '@/lib/classification-risk-display'
 import { Eye, Filter, Search, Calculator } from 'lucide-react'
 
 // Type étendu pour inclure user_email
@@ -113,16 +117,27 @@ export default function UseCasesPage() {
     const matchesSearch = usecase.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (usecase.description && usecase.description.toLowerCase().includes(searchTerm.toLowerCase()))
     const matchesStatus = !statusFilter || usecase.status === statusFilter
-    const matchesRisk = !riskFilter || usecase.risk_level === riskFilter
+    const matchesRisk =
+      !riskFilter ||
+      matchesAdminRiskLevelFilter(
+        riskFilter,
+        usecase.classification_status,
+        usecase.risk_level ?? null
+      )
     const matchesEmail = !emailFilter || (usecase.user_email && usecase.user_email.toLowerCase().includes(emailFilter.toLowerCase()))
     
     return matchesSearch && matchesStatus && matchesRisk && matchesEmail
   })
 
-  const getParcoursBadgeClass = (questionnaireVersion: unknown) =>
-    questionnaireVersion === 2
-      ? 'bg-indigo-50 text-indigo-900 border border-indigo-200'
-      : 'bg-gray-100 text-gray-800 border border-gray-200'
+  const getParcoursBadgeClass = (questionnaireVersion: unknown) => {
+    if (questionnaireVersion === 3) {
+      return 'bg-violet-50 text-violet-900 border border-violet-200'
+    }
+    if (questionnaireVersion === 2) {
+      return 'bg-indigo-50 text-indigo-900 border border-indigo-200'
+    }
+    return 'bg-gray-100 text-gray-800 border border-gray-200'
+  }
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -139,15 +154,24 @@ export default function UseCasesPage() {
     }
   }
 
-  const getRiskColor = (risk: string | null | undefined) => {
+  const getRiskBadgeClasses = (usecase: UseCaseWithEmail) => {
+    if (usecase.classification_status === 'impossible') {
+      return 'bg-violet-100 text-violet-900'
+    }
+    const label = getClassificationRiskDisplayLabel(
+      usecase.classification_status,
+      usecase.risk_level ?? null
+    )
+    if (label === 'Non évalué') return 'bg-gray-100 text-gray-800'
+    const risk = usecase.risk_level
     if (!risk) return 'bg-gray-100 text-gray-800'
-    
     switch (risk.toLowerCase()) {
       case 'minimal':
         return 'bg-green-100 text-green-800'
       case 'limited':
         return 'bg-yellow-100 text-yellow-800'
       case 'high':
+      case 'systemic':
         return 'bg-orange-100 text-orange-800'
       case 'unacceptable':
         return 'bg-red-100 text-red-800'
@@ -256,6 +280,8 @@ export default function UseCasesPage() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
             >
               <option value="">Tous les niveaux</option>
+              <option value="impossible">Classification impossible</option>
+              <option value="unevaluated">Non évalué</option>
               <option value="minimal">Minimal</option>
               <option value="limited">Limité</option>
               <option value="high">Élevé</option>
@@ -285,7 +311,13 @@ export default function UseCasesPage() {
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-2xl font-bold text-red-600">
-            {usecases.filter(u => u.risk_level === 'high' || u.risk_level === 'unacceptable').length}
+            {usecases.filter(
+              u =>
+                u.classification_status !== 'impossible' &&
+                (u.risk_level === 'high' ||
+                  u.risk_level === 'unacceptable' ||
+                  u.risk_level === 'systemic')
+            ).length}
           </div>
           <div className="text-sm text-gray-600">Risque élevé</div>
         </div>
@@ -359,7 +391,11 @@ export default function UseCasesPage() {
                   <span
                     className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getParcoursBadgeClass(usecase.questionnaire_version)}`}
                   >
-                    {usecase.questionnaire_version === 2 ? 'Parcours V2' : 'Parcours V1'}
+                    {usecase.questionnaire_version === 3
+                      ? 'Parcours V3'
+                      : usecase.questionnaire_version === 2
+                        ? 'Parcours V2'
+                        : 'Parcours V1'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -371,8 +407,13 @@ export default function UseCasesPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRiskColor(usecase.risk_level)}`}>
-                    {usecase.risk_level || 'Non évalué'}
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRiskBadgeClasses(usecase)}`}
+                  >
+                    {getClassificationRiskDisplayLabel(
+                      usecase.classification_status,
+                      usecase.risk_level ?? null
+                    )}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

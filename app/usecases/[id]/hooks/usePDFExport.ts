@@ -1,16 +1,30 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
 
 interface UsePDFExportReturn {
   isGenerating: boolean
   error: string | null
+  /** Message court après téléchargement lancé (disparaît après quelques secondes). */
+  successMessage: string | null
   generatePDF: () => Promise<void>
 }
+
+const SUCCESS_CLEAR_MS = 6000
 
 export function usePDFExport(useCaseId: string): UsePDFExportReturn {
   const { session } = useAuth()
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+      }
+    }
+  }, [])
 
   const generatePDF = useCallback(async () => {
     if (!session?.access_token) {
@@ -25,6 +39,11 @@ export function usePDFExport(useCaseId: string): UsePDFExportReturn {
 
     setIsGenerating(true)
     setError(null)
+    setSuccessMessage(null)
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current)
+      successTimerRef.current = null
+    }
 
     try {
       const response = await fetch(`/api/usecases/${useCaseId}/generate-pdf`, {
@@ -36,20 +55,26 @@ export function usePDFExport(useCaseId: string): UsePDFExportReturn {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `Erreur ${response.status}: ${response.statusText}`)
+        let message = `Erreur ${response.status}: ${response.statusText}`
+        try {
+          const errorData = await response.json()
+          if (errorData?.error && typeof errorData.error === 'string') {
+            message = errorData.error
+          }
+        } catch {
+          /* ignore */
+        }
+        throw new Error(message)
       }
 
-      // Vérifier que la réponse est bien un PDF
       const contentType = response.headers.get('content-type')
       if (!contentType || !contentType.includes('application/pdf')) {
         throw new Error('La réponse n\'est pas un fichier PDF valide')
       }
 
-      // Récupérer le nom du fichier depuis les headers
       const contentDisposition = response.headers.get('content-disposition')
       let filename = 'rapport-audit.pdf'
-      
+
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/)
         if (filenameMatch) {
@@ -57,26 +82,26 @@ export function usePDFExport(useCaseId: string): UsePDFExportReturn {
         }
       }
 
-      // Convertir la réponse en blob
       const blob = await response.blob()
-      
-      // Créer un URL temporaire pour le téléchargement
+
       const url = window.URL.createObjectURL(blob)
-      
-      // Créer un élément de lien temporaire pour déclencher le téléchargement
+
       const link = document.createElement('a')
       link.href = url
       link.download = filename
       link.style.display = 'none'
-      
-      // Ajouter au DOM, cliquer, puis supprimer
+
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      
-      // Nettoyer l'URL temporaire
+
       window.URL.revokeObjectURL(url)
 
+      setSuccessMessage('Téléchargement du PDF lancé. Vérifiez votre dossier de téléchargements.')
+      successTimerRef.current = setTimeout(() => {
+        setSuccessMessage(null)
+        successTimerRef.current = null
+      }, SUCCESS_CLEAR_MS)
     } catch (err) {
       console.error('Erreur lors de la génération du PDF:', err)
       setError(err instanceof Error ? err.message : 'Erreur inconnue lors de la génération du PDF')
@@ -88,13 +113,7 @@ export function usePDFExport(useCaseId: string): UsePDFExportReturn {
   return {
     isGenerating,
     error,
+    successMessage,
     generatePDF
   }
 }
-
-
-
-
-
-
-

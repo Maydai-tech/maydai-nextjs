@@ -77,7 +77,8 @@ export async function GET(
 
     if (nextStepsError) {
       if (nextStepsError.code === 'PGRST116') {
-        return NextResponse.json({ error: 'No next steps found' }, { status: 404 })
+        // 200 + null : absence de ligne = état normal (pas d’erreur réseau / pas de 404 transitoire)
+        return NextResponse.json(null)
       }
       const context = createRequestContext(request)
       logger.error('Failed to fetch next steps', nextStepsError, { ...context, useCaseId })

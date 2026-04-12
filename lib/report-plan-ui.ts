@@ -31,13 +31,13 @@ export function getReportPlanNarrativeLine(
   }
 
   if (slotStatus === 'OUI') {
-    return `D’après le questionnaire, la mesure « ${action.label} » est déclarée comme en place. Consolidez la preuve dans le dossier de conformité si ce n’est pas déjà fait.`
+    return `D’après le questionnaire, la mesure « ${action.label} » est déclarée comme en place. Documentez la preuve dans le dossier du cas si ce n’est pas déjà fait.`
   }
   if (slotStatus === 'NON') {
-    return `D’après le questionnaire, la mesure « ${action.label} » est déclarée comme absente ou insuffisante. Utilisez l’action ci-dessous pour renseigner la to-do et le dossier.`
+    return `D’après le questionnaire, la mesure « ${action.label} » est déclarée comme absente (ou non documentée à ce stade). Utilisez l’action ci-dessous pour renseigner la todo conformité et le dossier du cas.`
   }
   if (slotStatus === 'Information insuffisante') {
-    return `Les réponses au questionnaire ne permettent pas de conclure sur « ${action.label} ». Complétez l’évaluation ou le dossier pour clarifier la situation.`
+    return `Les réponses au questionnaire ne permettent pas encore de conclure sur « ${action.label} ». Complétez l’évaluation ou le dossier du cas pour documenter la situation.`
   }
   if (slotStatus === 'Hors périmètre') {
     return `Cette mesure (« ${action.label} ») est hors périmètre du questionnaire parcouru pour ce cas (parcours V2) : la ou les questions liées n’ont pas été posées. Il ne s’agit pas d’une information manquante à compléter sur ce point.`

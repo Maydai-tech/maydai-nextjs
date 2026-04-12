@@ -1,7 +1,8 @@
 import React from 'react'
 import { Page, Text, View, StyleSheet } from '@react-pdf/renderer'
 import { PDFReportData } from './types'
-import { styles, colors, getScoreColor, getScoreStyle, riskLevelStyles } from './styles'
+import { styles, colors, getScoreColor, pdfRiskLevelUnavailableStyle, riskLevelStyles } from './styles'
+import { resolvePdfRiskTierOrUnavailable } from './pdf-risk-logic'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { PDFFooter } from './PDFFooter'
@@ -70,7 +71,9 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
     return names[categoryId] || categoryId
   }
 
-  const riskLevelStyle = riskLevelStyles[(data.riskLevel?.risk_level || 'limited') as keyof typeof riskLevelStyles] || riskLevelStyles.limited
+  const riskTier = resolvePdfRiskTierOrUnavailable(data.riskLevel?.risk_level)
+  const riskLevelStyle =
+    riskTier === 'unavailable' ? pdfRiskLevelUnavailableStyle : riskLevelStyles[riskTier]
   const canonicalDescription = getPdfCanonicalDescription(data)
 
   return (

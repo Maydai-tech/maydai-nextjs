@@ -4,14 +4,14 @@ import { renderToBuffer, Document } from '@react-pdf/renderer'
 import React from 'react'
 import { PDFDocument } from '@/app/usecases/[id]/components/pdf/PDFDocument'
 import { PDFReportData } from '@/app/usecases/[id]/components/pdf/types'
+import { resolveAuthoritativeRiskCodeForPdf } from '@/app/usecases/[id]/components/pdf/pdf-risk-logic'
 import { REPORT_STANDARD_SLOT_KEYS_ORDERED, resolveCanonicalDocType } from '@/lib/canonical-actions'
 import { buildAllStandardPlanCanonicalItems } from '@/lib/report-canonical-items'
-import type { RiskLevelCode } from '@/lib/risk-level'
-import { normalizeToRiskLevelCode } from '@/lib/risk-level'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { computeSlotStatuses } from '@/lib/slot-statuses'
 import {
   QUESTIONNAIRE_VERSION_V2,
+  QUESTIONNAIRE_VERSION_V3,
   normalizeQuestionnaireVersion,
 } from '@/lib/questionnaire-version'
 
@@ -138,23 +138,50 @@ export async function GET(
 
     const pdfQuestionnaireVersion = normalizeQuestionnaireVersion(useCase.questionnaire_version)
     if (
-      pdfQuestionnaireVersion === QUESTIONNAIRE_VERSION_V2 &&
+      (pdfQuestionnaireVersion === QUESTIONNAIRE_VERSION_V2 ||
+        pdfQuestionnaireVersion === QUESTIONNAIRE_VERSION_V3) &&
       useCase.score_final == null
     ) {
       return NextResponse.json(
         {
           error:
-            'Cas V2 complété sans score final : recalcul requis avant export PDF.',
+            'Cas V2/V3 complété sans score final : recalcul requis avant export PDF.',
           code: 'V2_SCORE_MISSING',
         },
         { status: 409 }
       )
     }
 
-    // Use data directly from useCase since separate tables don't exist
+    if ((useCase as { classification_status?: string | null }).classification_status === 'impossible') {
+      return NextResponse.json(
+        {
+          error:
+            'Export PDF indisponible : classification réglementaire impossible (pivots non tranchés). Corrigez le questionnaire ou recalculez le score.',
+          code: 'CLASSIFICATION_IMPOSSIBLE',
+        },
+        { status: 409 }
+      )
+    }
+
+    /**
+     * Pas de fallback minimal / limited : sans code normalisable, le PDF ne doit pas inventer un palier.
+     * V3 qualified avec risk_level NULL : recalcul requis (aligné calculate-score).
+     */
+    const riskNormalized = resolveAuthoritativeRiskCodeForPdf(useCase.risk_level)
+    if (!riskNormalized) {
+      return NextResponse.json(
+        {
+          error:
+            'Export PDF indisponible : niveau de risque AI Act absent ou non exploitable. Recalculez le score du cas d’usage dans MaydAI.',
+          code: 'PDF_RISK_LEVEL_MISSING',
+        },
+        { status: 409 }
+      )
+    }
+
     const riskLevelData = {
-      risk_level: useCase.risk_level || 'limited',
-      justification: 'Classification basée sur les critères de l\'AI Act'
+      risk_level: riskNormalized,
+      justification: 'Classification basée sur les critères de l\'AI Act',
     }
 
     // Récupérer les réponses pour calculer les category_scores
@@ -172,7 +199,8 @@ export async function GET(
     try {
       const { calculateScore } = await import('@/app/usecases/[id]/utils/score-calculator')
       fullScoreData = await calculateScore(useCaseId, responses || [], supabase, {
-        questionnaireVersion: useCase.questionnaire_version
+        questionnaireVersion: useCase.questionnaire_version,
+        systemType: (useCase as { system_type?: string | null }).system_type ?? null
       })
       console.log('✅ Score calculé avec succès:', fullScoreData)
     } catch (scoreError) {
@@ -218,8 +246,6 @@ export async function GET(
       action_3: '',
     }
 
-    const riskNormalized: RiskLevelCode =
-      normalizeToRiskLevelCode(useCase.risk_level) ?? ('limited' as RiskLevelCode)
     const isUnacceptableCase = riskNormalized === 'unacceptable'
 
     let canonicalPlanItems: PDFReportData['canonicalPlanItems'] = []

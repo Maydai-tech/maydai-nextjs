@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase, UseCase, UseCaseResponse } from '@/lib/supabase'
+import { getClassificationRiskDisplayLabel } from '@/lib/classification-risk-display'
 import { ArrowLeft, Calendar, User, FileText, Eye, AlertTriangle, Shield } from 'lucide-react'
 import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
 
@@ -333,8 +334,11 @@ export default function UseCaseResponsesPage() {
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-500">Niveau de risque</div>
-                <div className="text-sm text-gray-900 mt-1 capitalize">
-                  {usecase.risk_level || 'Non évalué'}
+                <div className="text-sm text-gray-900 mt-1">
+                  {getClassificationRiskDisplayLabel(
+                    usecase.classification_status,
+                    usecase.risk_level ?? null
+                  )}
                 </div>
               </div>
               <div>

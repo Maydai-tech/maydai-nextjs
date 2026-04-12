@@ -1,0 +1,53 @@
+import { buildV3ScoringContextFromDbResponses } from '@/lib/scoring-v3-server'
+import { QUESTIONNAIRE_VERSION_V2, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
+
+describe('buildV3ScoringContextFromDbResponses', () => {
+  it('retourne null si ce n’est pas la version 3 (non-régression V2)', () => {
+    expect(buildV3ScoringContextFromDbResponses(QUESTIONNAIRE_VERSION_V2, [], null)).toBeNull()
+    expect(buildV3ScoringContextFromDbResponses(1, [], null)).toBeNull()
+  })
+
+  it('V3 sans réponses : chemin actif réduit à la première question', () => {
+    const ctx = buildV3ScoringContextFromDbResponses(QUESTIONNAIRE_VERSION_V3, [], null)
+    expect(ctx).not.toBeNull()
+    expect(ctx!.active_question_codes).toEqual(['E4.N7.Q1'])
+    expect(ctx!.bpgv_variant).toBeNull()
+    expect(ctx!.ors_exit).toBeNull()
+  })
+
+  it('V3 : scoringActiveQuestionCodes est inclus dans le chemin actif', () => {
+    const ctx = buildV3ScoringContextFromDbResponses(
+      QUESTIONNAIRE_VERSION_V3,
+      [{ question_code: 'E4.N7.Q1', single_value: 'E4.N7.Q1.B' }],
+      null
+    )
+    expect(ctx).not.toBeNull()
+    expect(ctx!.active_question_codes[0]).toBe('E4.N7.Q1')
+    expect(ctx!.scoringActiveQuestionCodes.has('E4.N7.Q1')).toBe(true)
+  })
+
+  it('V3 pathMode short : le chemin actif peut inclure le mini-pack E5 après le bloc ORS (réponses partielles)', () => {
+    const rows = [
+      { question_code: 'E4.N7.Q1', single_value: 'E4.N7.Q1.B' },
+      { question_code: 'E4.N7.Q1.2', single_value: 'E4.N7.Q1.2.A' },
+      { question_code: 'E4.N7.Q3', multiple_codes: ['E4.N7.Q3.E'] },
+      { question_code: 'E4.N7.Q3.1', multiple_codes: ['E4.N7.Q3.1.E'] },
+      { question_code: 'E4.N7.Q2.1', multiple_codes: ['E4.N7.Q2.1.E'] },
+      { question_code: 'E4.N7.Q2', multiple_codes: ['E4.N7.Q2.G'] },
+      { question_code: 'E4.N8.Q9', single_value: 'E4.N8.Q9.B' },
+      { question_code: 'E4.N8.Q9.1', single_value: 'E4.N8.Q9.1.B' },
+      { question_code: 'E4.N8.Q11.0', single_value: 'E4.N8.Q11.0.B' },
+      { question_code: 'E4.N8.Q10', single_value: 'E4.N8.Q10.A' },
+      { question_code: 'E5.N9.Q1', single_value: 'E5.N9.Q1.A' },
+    ]
+    const ctx = buildV3ScoringContextFromDbResponses(QUESTIONNAIRE_VERSION_V3, rows as never[], null, 'short')
+    expect(ctx).not.toBeNull()
+    expect(ctx!.active_question_codes).toContain('E5.N9.Q1')
+    expect(ctx!.active_question_codes).toContain('E4.N8.Q10')
+    const i10 = ctx!.active_question_codes.indexOf('E4.N8.Q10')
+    const iE5 = ctx!.active_question_codes.indexOf('E5.N9.Q1')
+    expect(i10).toBeGreaterThan(-1)
+    expect(iE5).toBeGreaterThan(-1)
+    expect(i10).toBeLessThan(iE5)
+  })
+})

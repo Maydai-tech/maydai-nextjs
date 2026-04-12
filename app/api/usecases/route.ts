@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordUseCaseHistory } from '@/lib/usecase-history'
 import { getRegistryOwnerPlan } from '@/lib/subscription/user-plan'
-import { QUESTIONNAIRE_VERSION_V2 } from '@/lib/questionnaire-version'
+import { QUESTIONNAIRE_VERSION_V1, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
       status: status || 'draft',
       risk_level,
       company_id,
-      questionnaire_version: QUESTIONNAIRE_VERSION_V2,
+      questionnaire_version: QUESTIONNAIRE_VERSION_V3,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       updated_by: user.id
@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
       .select('maydai_as_registry')
       .eq('id', company_id)
       .single()
-    if (usecase.questionnaire_version !== QUESTIONNAIRE_VERSION_V2 && company?.maydai_as_registry === true) {
+    if (usecase.questionnaire_version === QUESTIONNAIRE_VERSION_V1 && company?.maydai_as_registry === true) {
       const timestamp = new Date().toISOString()
       await supabase
         .from('usecase_responses')

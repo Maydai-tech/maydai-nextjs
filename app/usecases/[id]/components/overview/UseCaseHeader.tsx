@@ -4,20 +4,28 @@ import { useRouter } from 'next/navigation'
 import { UseCase, Progress } from '../../types/usecase'
 import { ComplAIModel } from '@/lib/supabase'
 import { getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
-import { useCaseRoutes } from '../../utils/routes'
+import { useCaseRoutes, withEvaluationEntree } from '../../utils/routes'
 import { useUseCaseNavigation } from '../../utils/navigation'
 import { ArrowLeft, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle, Trash2, Download, UserPlus, Calendar, History } from 'lucide-react'
 import Image from 'next/image'
 import ModelSelectorModal from '../ModelSelectorModal'
 import DeleteConfirmationModal from '../DeleteConfirmationModal'
 import { RiskLevelBadge } from './RiskLevelBadge'
-import { useRiskLevel } from '../../hooks/useRiskLevel'
+import { useUseCaseRisk } from '../../context/UseCaseRiskContext'
 import { CountryDeploymentDisplay } from './CountryDeploymentDisplay'
 import { useAuth } from '@/lib/auth'
 import WorldMap from '@/components/WorldMap'
 import { getProviderIcon } from '@/lib/provider-icons'
 import { getScoreStyle } from '@/lib/score-styles'
 import { usePDFExport } from '../../hooks/usePDFExport'
+import { V3_IMPOSSIBLE_MATURITY_SCORES_DISCLAIMER } from '@/lib/classification-risk-display'
+import { DECLARATION_PROOF_FLOW_COPY } from '../../utils/declaration-proof-flow-copy'
+import {
+  getV3ShortPathFunnelCopy,
+  resolveV3ShortPathFunnelOutcomeKey,
+} from '../../utils/v3-short-path-funnel-context'
+import { trackV3ShortPathCta, v3ShortPathSystemTypeBucket } from '@/lib/v3-short-path-analytics'
+import { showV3DualPathEntrypoints } from '../../utils/v3-dual-path-ui'
 import { useUseCaseScore } from '../../hooks/useUseCaseScore'
 import { useCompanyInfo } from '../../hooks/useCompanyInfo'
 import InviteScopeChoiceModal from '@/components/Collaboration/InviteScopeChoiceModal'
@@ -48,6 +56,7 @@ const getStatusIcon = (status: string) => {
 // Composant d'affichage du score dans le header
 // Utilise le hook useUseCaseScore pour garantir la synchronisation avec l'API (source de vérité unique)
 function HeaderScore({ useCaseId }: { useCaseId: string }) {
+  const { classificationStatus } = useUseCaseRisk()
   // Récupération du score via l'API (même source que le rapport)
   const { score, loading, error } = useUseCaseScore(useCaseId)
 
@@ -100,7 +109,7 @@ function HeaderScore({ useCaseId }: { useCaseId: string }) {
     <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">
       <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
         <div className={`w-2 h-2 rounded-full mr-2 ${scoreStyle.indicator}`}></div>
-        Score de conformité
+        {score.score_scope === 'short_initial' ? 'Score initial (parcours court)' : 'Score de conformité'}
       </h3>
 
       <div className={`${scoreStyle.bg} rounded-xl p-4 border ${scoreStyle.border} ${scoreStyle.shadow} shadow-sm hover:shadow-md transition-all duration-200`}>
@@ -127,6 +136,14 @@ function HeaderScore({ useCaseId }: { useCaseId: string }) {
       >
         Comment est calculé ce score ?
       </a>
+      {score.score_scope === 'short_initial' && score.score_display_hint ? (
+        <p className="mt-2 text-[11px] text-gray-600 leading-relaxed">{score.score_display_hint}</p>
+      ) : null}
+      {classificationStatus === 'impossible' && (
+        <p className="mt-3 text-xs text-violet-900 leading-relaxed p-2 rounded-lg border border-violet-200 bg-violet-50/90">
+          {V3_IMPOSSIBLE_MATURITY_SCORES_DISCLAIMER}
+        </p>
+      )}
     </div>
   )
 }
@@ -146,8 +163,29 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
   const [isSavingDeploymentDate, setIsSavingDeploymentDate] = useState(false)
   const { goToEvaluation } = useUseCaseNavigation(useCase.id, useCase.company_id)
-  const { riskLevel, loading: riskLoading, error: riskError } = useRiskLevel(useCase.id)
-  const { isGenerating, error: pdfError, generatePDF } = usePDFExport(useCase.id)
+  const showV3DualPath = showV3DualPathEntrypoints(useCase.questionnaire_version)
+  const isCaseCompleted = String(useCase.status || '').toLowerCase() === 'completed'
+  const { riskLevel, classificationStatus, loading: riskLoading, error: riskError } = useUseCaseRisk()
+  const headerFunnelKey = useMemo(
+    () =>
+      showV3DualPath
+        ? resolveV3ShortPathFunnelOutcomeKey(classificationStatus, riskLevel)
+        : null,
+    [showV3DualPath, classificationStatus, riskLevel]
+  )
+  const headerFunnelCopy = useMemo(
+    () => (headerFunnelKey ? getV3ShortPathFunnelCopy(headerFunnelKey) : null),
+    [headerFunnelKey]
+  )
+  const { isGenerating, error: pdfError, successMessage: pdfSuccessMessage, generatePDF } = usePDFExport(useCase.id)
+  const pdfBlocked =
+    useCase.status?.toLowerCase() !== 'completed' || classificationStatus === 'impossible'
+  const pdfButtonTitle =
+    useCase.status?.toLowerCase() !== 'completed'
+      ? 'Le cas d\'usage doit être complété pour générer le PDF'
+      : classificationStatus === 'impossible'
+        ? 'Export PDF indisponible : classification réglementaire impossible (pivots non tranchés).'
+        : 'Télécharger le rapport PDF'
   const { isOwner } = useCompanyInfo(useCase.company_id)
   const router = useRouter()
   const { session } = useAuth()
@@ -347,9 +385,9 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           {/* Bouton Télécharger PDF */}
           <button
             onClick={generatePDF}
-            disabled={isGenerating || useCase.status?.toLowerCase() !== 'completed'}
+            disabled={isGenerating || pdfBlocked}
             className="group inline-flex items-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-blue-50 rounded-lg px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            title={useCase.status?.toLowerCase() !== 'completed' ? 'Le cas d\'usage doit être complété pour générer le PDF' : 'Télécharger le rapport PDF'}
+            title={pdfButtonTitle}
           >
             {isGenerating ? (
               <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
@@ -357,7 +395,11 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
               <Download className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
             )}
             <span className="text-sm font-medium">
-              {isGenerating ? 'Génération...' : 'Télécharger PDF'}
+              {isGenerating
+                ? 'Génération PDF…'
+                : pdfBlocked && classificationStatus === 'impossible'
+                  ? 'PDF indisponible'
+                  : 'Télécharger PDF'}
             </span>
           </button>
 
@@ -394,6 +436,12 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         </div>
       )}
 
+      {pdfSuccessMessage && (
+        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <p className="text-sm text-emerald-900">{pdfSuccessMessage}</p>
+        </div>
+      )}
+
       <div className="space-y-6">
         {/* Ligne 1: Titre du cas d'usage (pleine largeur) */}
         <div className="flex items-start space-x-3">
@@ -410,6 +458,21 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               {useCase.name}
             </h1>
+            <div className="rounded-lg border border-gray-200 bg-slate-50/90 px-3 py-2.5 text-xs text-gray-700 leading-relaxed max-w-3xl">
+              <p className="font-semibold text-gray-900 mb-1">{DECLARATION_PROOF_FLOW_COPY.filRougeTitle}</p>
+              <p className="mb-2">{DECLARATION_PROOF_FLOW_COPY.filRougeBody}</p>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 font-medium text-[#0080A3]">
+                <Link href={`/dashboard/${useCase.company_id}/dossiers/${useCase.id}`} className="hover:underline underline-offset-2">
+                  {DECLARATION_PROOF_FLOW_COPY.linkLabelDossierCase}
+                </Link>
+                <span className="text-gray-300 hidden sm:inline" aria-hidden>
+                  |
+                </span>
+                <Link href={`/dashboard/${useCase.company_id}/todo-list`} className="hover:underline underline-offset-2">
+                  {DECLARATION_PROOF_FLOW_COPY.linkLabelTodo}
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -538,12 +601,13 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                 <div className="flex items-center space-x-2">
                   <AlertTriangle className="h-5 w-5 text-red-500" />
                   <span className="text-sm text-red-600 font-medium">
-                    Risque Inacceptable
+                    Risque inacceptable
                   </span>
                 </div>
               ) : (
                 <RiskLevelBadge
                   riskLevel={riskLevel}
+                  classificationStatus={classificationStatus}
                   loading={riskLoading}
                   error={riskError}
                   className="w-full"
@@ -556,16 +620,58 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
               <HeaderScore useCaseId={useCase.id} />
             </div>
 
-            {/* Ligne 4: Bouton réévaluer */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4 w-full">
-              <button
-                onClick={goToEvaluation}
-                disabled={updating}
-                className="w-full bg-[#0080a3] text-white px-4 py-2 rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-              >
-                <RefreshCcw className="h-4 w-4" />
-                <span>Réévaluer le cas d'usage</span>
-              </button>
+            {/* Ligne 4 : parcours V3 non terminé — affiner (long) / réévaluer (court) ; sinon réévaluation classique */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 w-full space-y-2">
+              {showV3DualPath ? (
+                <>
+                  <Link
+                    href={withEvaluationEntree(useCaseRoutes.evaluation(useCase.id), 'header_v3_refine_long')}
+                    onClick={() =>
+                      trackV3ShortPathCta({
+                        usecase_id: useCase.id,
+                        system_type_bucket: v3ShortPathSystemTypeBucket(useCase.system_type),
+                        cta: 'evaluation_long',
+                        cta_placement: 'header_v3_refine_long',
+                        ...(headerFunnelKey && { outcome_funnel_key: headerFunnelKey }),
+                      })
+                    }
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#0080a3] text-white px-4 py-2.5 rounded-lg hover:bg-[#006280] text-sm font-semibold shadow-sm"
+                  >
+                    <RefreshCcw className="h-4 w-4 shrink-0" aria-hidden />
+                    Affiner avec le parcours long
+                  </Link>
+                  <Link
+                    href={withEvaluationEntree(useCaseRoutes.evaluationShort(useCase.id), 'header_v3_reeval_short')}
+                    onClick={() =>
+                      trackV3ShortPathCta({
+                        usecase_id: useCase.id,
+                        system_type_bucket: v3ShortPathSystemTypeBucket(useCase.system_type),
+                        cta: 'evaluation_short',
+                        cta_placement: 'header_v3_reeval_short',
+                        ...(headerFunnelKey && { outcome_funnel_key: headerFunnelKey }),
+                      })
+                    }
+                    className="w-full inline-flex items-center justify-center gap-2 border border-gray-300 bg-white text-gray-800 px-4 py-2.5 rounded-lg hover:bg-gray-50 text-sm font-medium"
+                  >
+                    Réévaluer sur parcours court
+                  </Link>
+                  <p className="text-xs text-gray-600 leading-relaxed pt-1">
+                    {headerFunnelCopy?.headerResumeHint ??
+                      (isCaseCompleted
+                        ? DECLARATION_PROOF_FLOW_COPY.headerV3CompletedResumeHint
+                        : DECLARATION_PROOF_FLOW_COPY.headerV3ResumeEvaluationHint)}
+                  </p>
+                </>
+              ) : (
+                <button
+                  onClick={() => goToEvaluation()}
+                  disabled={updating}
+                  className="w-full bg-[#0080a3] text-white px-4 py-2 rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                  <span>Réévaluer le cas d&apos;usage</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

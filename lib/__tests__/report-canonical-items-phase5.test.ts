@@ -1,4 +1,5 @@
 import { resolveCanonicalDocType } from '@/lib/canonical-actions'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/lib/declaration-proof-flow-copy'
 import {
   buildReportCanonicalItemForSlot,
   declarationStatusPdfLabel,
@@ -72,15 +73,17 @@ describe('report-canonical-items (phase 5)', () => {
 
   describe('Libellés PDF', () => {
     it('declarationStatusPdfLabel couvre les cas principaux', () => {
-      expect(declarationStatusPdfLabel('OUI')).toMatch(/OUI/)
-      expect(declarationStatusPdfLabel('NON')).toMatch(/NON/)
-      expect(declarationStatusPdfLabel('Information insuffisante')).toMatch(/insuffisante/i)
-      expect(declarationStatusPdfLabel(null)).toMatch(/—/)
+      expect(declarationStatusPdfLabel('OUI')).toBe(DECLARATION_PROOF_FLOW_COPY.declarativeYes)
+      expect(declarationStatusPdfLabel('NON')).toBe(DECLARATION_PROOF_FLOW_COPY.declarativeNo)
+      expect(declarationStatusPdfLabel('Information insuffisante')).toBe(
+        DECLARATION_PROOF_FLOW_COPY.declarativeInsufficient
+      )
+      expect(declarationStatusPdfLabel(null)).toBe(DECLARATION_PROOF_FLOW_COPY.declarativePdfNull)
     })
 
     it('evidenceStatusPdfLabel couvre les statuts de preuve', () => {
-      expect(evidenceStatusPdfLabel('complete')).toMatch(/complétée/)
-      expect(evidenceStatusPdfLabel('not_applicable')).toMatch(/N\/A/)
+      expect(evidenceStatusPdfLabel('complete')).toBe(DECLARATION_PROOF_FLOW_COPY.evidenceShortComplete)
+      expect(evidenceStatusPdfLabel('not_applicable')).toBe(DECLARATION_PROOF_FLOW_COPY.evidenceShortNa)
     })
   })
 })

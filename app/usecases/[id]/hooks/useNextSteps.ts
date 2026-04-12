@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { UseCaseNextSteps } from '@/lib/supabase'
 import { createClient } from '@supabase/supabase-js'
+import { shouldPollForNextSteps } from '../utils/nextsteps-ux-state'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,154 +12,172 @@ interface UseNextStepsProps {
   usecaseId: string
   useCaseStatus?: string
   useCaseUpdatedAt?: string
+  /** usecases.report_generated_at — présent dès que le rapport IA a été persisté */
+  reportGeneratedAt?: string | null
+  /** Pendant POST /api/generate-report côté parent */
+  parentReportGenerating?: boolean
+  classificationStatus?: string | null
 }
 
 interface UseNextStepsReturn {
   nextSteps: UseCaseNextSteps | null
+  /** True uniquement pendant le tout premier chargement pour ce use case (pas les polls). */
   loading: boolean
   error: string | null
   refetch: () => Promise<void>
+  /**
+   * @deprecated Préférer la phase côté UI via getNextStepsRecommendationsPhase.
+   * True si on attend encore la ligne usecase_nextsteps alors qu’un rapport est en cours / déjà persisté.
+   */
   isGenerating: boolean
 }
 
-export function useNextSteps({ usecaseId, useCaseStatus, useCaseUpdatedAt }: UseNextStepsProps): UseNextStepsReturn {
+export function useNextSteps({
+  usecaseId,
+  useCaseStatus,
+  useCaseUpdatedAt,
+  reportGeneratedAt,
+  parentReportGenerating = false,
+  classificationStatus,
+}: UseNextStepsProps): UseNextStepsReturn {
   const [nextSteps, setNextSteps] = useState<UseCaseNextSteps | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const pollingStartTime = useRef<number | null>(null)
   const lastFetchedId = useRef<string | null>(null)
 
-  // Store status in ref to avoid callback recreation
   const statusRef = useRef(useCaseStatus)
   statusRef.current = useCaseStatus
+  const reportAtRef = useRef(reportGeneratedAt)
+  reportAtRef.current = reportGeneratedAt
+  const classRef = useRef(classificationStatus)
+  classRef.current = classificationStatus
+  const parentGenRef = useRef(parentReportGenerating)
+  parentGenRef.current = parentReportGenerating
 
-  // Récupérer les next steps existants
-  const fetchNextSteps = useCallback(async () => {
-    if (!usecaseId || usecaseId === '') return
+  const fetchNextSteps = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!usecaseId || usecaseId === '') return
 
-    setLoading(true)
-    setError(null)
-
-    try {
-      // Récupérer le token d'authentification
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session?.access_token) {
-        setError('Non authentifié')
-        return
+      const silent = Boolean(options?.silent)
+      if (!silent) {
+        setLoading(true)
       }
+      setError(null)
 
-      const response = await fetch(`/api/usecases/${usecaseId}/nextsteps`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!session?.access_token) {
+          setError('Non authentifié')
+          return
         }
-      })
 
-      const data = await response.json()
+        const response = await fetch(`/api/usecases/${usecaseId}/nextsteps`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        })
 
-      if (response.ok) {
-        setNextSteps(data)
-        setIsGenerating(false) // Données reçues, génération terminée
-        pollingStartTime.current = null // Arrêter le polling intensif
-      } else if (response.status === 404) {
-        // Pas de next steps existants, probablement en cours de génération
-        setNextSteps(null)
-        // Only start generating state if status is completed and we haven't started yet
-        if (statusRef.current === 'completed' && !pollingStartTime.current) {
-          setIsGenerating(true)
-          pollingStartTime.current = Date.now()
+        let data: unknown = null
+        try {
+          data = await response.json()
+        } catch {
+          data = null
         }
-      } else {
-        setError(data.error || 'Erreur lors de la récupération des prochaines étapes')
-        setIsGenerating(false)
+
+        if (response.ok) {
+          setNextSteps((data as UseCaseNextSteps | null) ?? null)
+        } else if (response.status === 404) {
+          // Rétrocompat : ancienne API « pas de ligne » en 404
+          setNextSteps(null)
+        } else {
+          const msg =
+            typeof data === 'object' &&
+            data !== null &&
+            'error' in data &&
+            typeof (data as { error: unknown }).error === 'string'
+              ? (data as { error: string }).error
+              : 'Erreur lors de la récupération des prochaines étapes'
+          setError(msg)
+        }
+      } catch (err) {
+        setError('Erreur de connexion')
+        console.error('Erreur fetchNextSteps:', err)
+      } finally {
+        if (!silent) {
+          setLoading(false)
+        }
       }
-    } catch (err) {
-      setError('Erreur de connexion')
-      console.error('Erreur fetchNextSteps:', err)
-      setIsGenerating(false)
-    } finally {
-      setLoading(false)
-    }
-  }, [usecaseId]) // Only depend on usecaseId, use ref for status
+    },
+    [usecaseId]
+  )
 
-  // Charger les next steps au montage du composant (une seule fois par usecaseId)
   useEffect(() => {
     if (!usecaseId || usecaseId === '') return
-    // Only fetch if we haven't fetched this ID yet
     if (lastFetchedId.current !== usecaseId) {
       lastFetchedId.current = usecaseId
-      fetchNextSteps()
+      void fetchNextSteps({ silent: false })
     }
   }, [fetchNextSteps, usecaseId])
 
-  // Track the last updatedAt we've handled to prevent duplicate fetches
   const lastHandledUpdatedAt = useRef<string | null>(null)
 
-  // Recharger automatiquement quand le statut du use case change vers 'completed'
   useEffect(() => {
     if (useCaseStatus === 'completed' && useCaseUpdatedAt) {
-      // Only trigger if this is a new update we haven't handled
       if (lastHandledUpdatedAt.current === useCaseUpdatedAt) return
       lastHandledUpdatedAt.current = useCaseUpdatedAt
-
-      console.log('🔄 Use case completed, reloading next steps...')
-      // Délai de 2 secondes pour laisser le temps au rapport de se générer
       const timeout = setTimeout(() => {
-        fetchNextSteps()
+        void fetchNextSteps({ silent: true })
       }, 2000)
-
       return () => clearTimeout(timeout)
     }
   }, [useCaseStatus, useCaseUpdatedAt, fetchNextSteps])
 
-  // Polling adaptatif : intensif pendant 60 secondes, puis standard
   useEffect(() => {
-    // Don't poll if no usecaseId
     if (!usecaseId || usecaseId === '') return
+    if (nextSteps) return
 
-    // Si on a déjà les données, pas besoin de polling - les données sont stables
-    if (nextSteps) {
-      return // No polling needed when we have data
-    }
+    const poll = shouldPollForNextSteps({
+      useCaseStatus: statusRef.current,
+      classificationStatus: classRef.current ?? null,
+      reportGeneratedAt: reportAtRef.current ?? null,
+      parentReportGenerating: parentGenRef.current,
+      hasNextSteps: false,
+    })
 
-    // Only poll if status is 'completed' and we're waiting for generation
-    if (statusRef.current !== 'completed') {
-      return // Don't poll if case is not completed
-    }
+    if (!poll) return
 
-    // Si génération en cours et dans les 60 premières secondes
-    if (isGenerating && pollingStartTime.current) {
-      const elapsedTime = Date.now() - pollingStartTime.current
+    const intensiveInterval = setInterval(() => {
+      void fetchNextSteps({ silent: true })
+    }, 5000)
 
-      if (elapsedTime < 60000) {
-        // Polling intensif toutes les 5 secondes pendant les 60 premières secondes
-        console.log('🚀 Polling intensif activé (5s)')
-        const intensiveInterval = setInterval(() => {
-          fetchNextSteps()
-        }, 5000)
+    return () => clearInterval(intensiveInterval)
+  }, [
+    fetchNextSteps,
+    nextSteps,
+    usecaseId,
+    useCaseStatus,
+    reportGeneratedAt,
+    parentReportGenerating,
+    classificationStatus,
+  ])
 
-        return () => clearInterval(intensiveInterval)
-      } else {
-        // Après 60 secondes, passer au polling standard (moins fréquent)
-        console.log('🔄 Passage au polling standard (30s)')
-        const standardInterval = setInterval(() => {
-          fetchNextSteps()
-        }, 30000)
-
-        return () => clearInterval(standardInterval)
-      }
-    }
-
-    // No fallback polling - only poll when explicitly generating
-  }, [fetchNextSteps, nextSteps, isGenerating, usecaseId])
+  const isGenerating = shouldPollForNextSteps({
+    useCaseStatus,
+    classificationStatus: classificationStatus ?? null,
+    reportGeneratedAt: reportGeneratedAt ?? null,
+    parentReportGenerating,
+    hasNextSteps: Boolean(nextSteps),
+  })
 
   return {
     nextSteps,
     loading,
     error,
-    refetch: fetchNextSteps,
-    isGenerating
+    refetch: () => fetchNextSteps({ silent: false }),
+    isGenerating,
   }
 }

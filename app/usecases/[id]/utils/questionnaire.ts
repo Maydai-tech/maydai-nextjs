@@ -1,8 +1,28 @@
 import { Question, QuestionAnswer, QuestionProgress } from '../types/usecase'
-import { QUESTIONNAIRE_VERSION_V1, QUESTIONNAIRE_VERSION_V2, type QuestionnaireVersion } from '@/lib/questionnaire-version'
+import {
+  QUESTIONNAIRE_VERSION_V1,
+  QUESTIONNAIRE_VERSION_V2,
+  QUESTIONNAIRE_VERSION_V3,
+  type QuestionnaireVersion,
+} from '@/lib/questionnaire-version'
 import { getNextQuestionV2, buildQuestionPathV2, getResumeQuestionIdV2 } from './questionnaire-v2-graph'
+import { getNextQuestionV3, buildQuestionPathV3, getResumeQuestionIdV3 } from './questionnaire-v3-graph'
 import { getAbsoluteQuestionProgressV2, getCurrentQuestionPositionV2, resetProgressCacheV2 } from './questionnaire-v2-progress'
+import {
+  getAbsoluteQuestionProgressV3,
+  getCurrentQuestionPositionV3,
+  resetProgressCacheV3,
+} from './questionnaire-v3-progress'
 import { loadQuestions } from './questions-loader'
+
+/** Parcours long (défaut) vs coque courte V3 (qualification sans enchaînement E5). */
+export type QuestionnairePathMode = 'long' | 'short'
+
+/** Optionnel : `systemType` requis pour la navigation V3 (usecases.system_type). */
+export type QuestionnaireNavOptions = {
+  systemType?: string | null
+  pathMode?: QuestionnairePathMode
+}
 
 /** « Texte » coché en E4.N8.Q11.1 */
 export const hasQ111Text = (answers: Record<string, any>): boolean => {
@@ -138,8 +158,17 @@ export const getNextQuestionV1 = (currentQuestionId: string, answers: Record<str
 export function getNextQuestion(
   currentQuestionId: string,
   answers: Record<string, any>,
-  questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1
+  questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1,
+  navOptions?: QuestionnaireNavOptions
 ): string | null {
+  if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3) {
+    return getNextQuestionV3(
+      currentQuestionId,
+      answers as Record<string, unknown>,
+      navOptions?.systemType,
+      navOptions?.pathMode ?? 'long'
+    )
+  }
   if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
     return getNextQuestionV2(currentQuestionId, answers as Record<string, unknown>)
   }
@@ -149,13 +178,23 @@ export function getNextQuestion(
 /** Reprise : première question sans réponse complète. */
 export function getResumeQuestionId(
   answers: Record<string, any>,
-  questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1
+  questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1,
+  navOptions?: QuestionnaireNavOptions
 ): string {
   const questions = loadQuestions()
   const isComplete = (questionId: string, answer: unknown): boolean => {
     const q = questions[questionId]
     if (!q) return false
     return checkCanProceed(q, answer as QuestionAnswer)
+  }
+
+  if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3) {
+    return getResumeQuestionIdV3(
+      answers as Record<string, unknown>,
+      navOptions?.systemType,
+      isComplete,
+      navOptions?.pathMode ?? 'long'
+    )
   }
 
   if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
@@ -241,6 +280,9 @@ export function getAbsoluteQuestionProgress(
   currentQuestionId: string,
   questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1
 ): QuestionProgress {
+  if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3) {
+    return getAbsoluteQuestionProgressV3(currentQuestionId)
+  }
   if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
     return getAbsoluteQuestionProgressV2(currentQuestionId)
   }
@@ -279,8 +321,17 @@ export const getPreviousQuestion = (currentQuestionId: string, questionHistory: 
 export function buildQuestionPath(
   targetQuestionId: string,
   answers: Record<string, any>,
-  questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1
+  questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1,
+  navOptions?: QuestionnaireNavOptions
 ): string[] {
+  if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3) {
+    return buildQuestionPathV3(
+      targetQuestionId,
+      answers as Record<string, unknown>,
+      navOptions?.systemType,
+      navOptions?.pathMode ?? 'long'
+    )
+  }
   if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
     return buildQuestionPathV2(targetQuestionId, answers as Record<string, unknown>)
   }
@@ -319,6 +370,9 @@ export const checkCanProceed = (question: Question, answer: any): boolean => {
         const isYesWithConditional = answer.selected.endsWith('.B') && question.conditionalFields && question.conditionalFields.length > 0
 
         if (isYesWithConditional) {
+          if (question.conditional_detail_optional) {
+            return true
+          }
           return answer.conditionalValues && Object.values(answer.conditionalValues).some((v: any) => v && v.length > 0)
         }
         return true
@@ -431,6 +485,7 @@ export const resetProgressCache = (): void => {
   cachedMaxTotalQuestions = null
   maxRemainingCache.clear()
   resetProgressCacheV2()
+  resetProgressCacheV3()
 }
 
 // Helper function to generate answer contexts for a given question to explore all possible paths
@@ -514,6 +569,9 @@ export function getCurrentQuestionPosition(
   currentQuestionId: string,
   questionnaireVersion: QuestionnaireVersion = QUESTIONNAIRE_VERSION_V1
 ): number {
+  if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3) {
+    return getCurrentQuestionPositionV3(currentQuestionId)
+  }
   if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
     return getCurrentQuestionPositionV2(currentQuestionId)
   }

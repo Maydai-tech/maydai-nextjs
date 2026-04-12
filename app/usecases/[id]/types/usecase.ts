@@ -13,8 +13,10 @@ export interface UseCase {
   system_type?: string
   deployment_countries?: string[]
   company_id: string
-  /** 1 = parcours historique, 2 = parcours long V2 */
+  /** 1 = parcours historique, 2 = parcours long V2, 3 = parcours long V3 */
   questionnaire_version?: number
+  /** V3 : qualified | impossible (pivots JNS) — ne remplace pas risk_level sémantiquement */
+  classification_status?: string | null
   bpgv_variant?: string | null
   active_question_codes?: string[] | null
   ors_exit?: string | null
@@ -32,6 +34,13 @@ export interface UseCase {
   is_eliminated?: boolean
   elimination_reason?: string
   last_calculation_date?: string
+  /** Présent quand le rapport d’analyse IA a été généré (colonne usecases) */
+  report_generated_at?: string | null
+  report_summary?: string | null
+  /** V3 : fin du parcours court (≠ statut completed du parcours long). */
+  short_path_completed_at?: string | null
+  /** V3 : score final % sur le périmètre actif court (distinct de score_final long). */
+  short_path_initial_score?: number | null
   companies?: {
     name: string
     industry: string
@@ -81,6 +90,11 @@ export interface Question {
   options: QuestionOption[]
   required: boolean
   conditionalFields?: { key: string, label: string, placeholder?: string }[]
+  /**
+   * Si true : pour l’option « Oui » (.B) avec champs conditionnels, une valeur dans les champs
+   * n’est plus requise pour passer à la suite (déclaratif ; preuves ailleurs).
+   */
+  conditional_detail_optional?: boolean
   tooltip?: Tooltip
   /** Mode d'impact pour les questions checkbox/tags: 'any' = impact unique si au moins une option sélectionnée */
   impact_mode?: 'any' | 'cumulative'
@@ -145,6 +159,10 @@ export interface UseCaseScore {
   bpgv_variant?: string | null
   ors_exit?: string | null
   active_question_codes?: string[]
+  /** V3 : `short_initial` = score initial parcours court persisté ; `full` = score long / complet. */
+  score_scope?: 'full' | 'short_initial'
+  /** Libellé pédagogique optionnel (API score). */
+  score_display_hint?: string
 }
 
 export interface ScoreBreakdown {

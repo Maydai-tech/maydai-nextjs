@@ -37,9 +37,12 @@ import {
 import { deriveRiskLevelFromResponses } from '@/lib/risk-level';
 import {
   normalizeQuestionnaireVersion,
-  QUESTIONNAIRE_VERSION_V2
+  QUESTIONNAIRE_VERSION_V2,
+  QUESTIONNAIRE_VERSION_V3
 } from '@/lib/questionnaire-version';
-import { buildV2ScoringContextFromDbResponses } from '@/lib/scoring-v2-server';
+import { buildV2ScoringContextFromDbResponses, dbResponsesToQuestionnaireAnswers } from '@/lib/scoring-v2-server';
+import { buildV3ScoringContextFromDbResponses } from '@/lib/scoring-v3-server';
+import { resolveQualificationOutcomeV3 } from '@/lib/qualification-v3-decision';
 
 /**
  * Fonction utilitaire pour créer une réponse d'erreur standardisée
@@ -93,11 +96,13 @@ export async function POST(
     // ===== ÉTAPE 2: VALIDATION DES PARAMÈTRES =====
     const { id: usecaseId } = await params;
     
-    // Optionnel : récupérer usecase_id depuis le body (compatibilité avec l'edge function)
+    // Optionnel : body JSON (usecase_id, path_mode court V3)
     let bodyUsecaseId: string | undefined;
+    let requestPathMode: 'short' | undefined;
     try {
-      const body = await request.json();
+      const body = (await request.json()) as { usecase_id?: string; path_mode?: string };
       bodyUsecaseId = body.usecase_id;
+      if (body.path_mode === 'short') requestPathMode = 'short';
     } catch {
       // Pas de body JSON, ce n'est pas grave
     }
@@ -117,12 +122,16 @@ export async function POST(
     // Récupérer les informations du cas d'usage
     const { data: usecase, error: usecaseError } = await supabase
       .from('usecases')
-      .select('company_id, questionnaire_version')
+      .select('company_id, questionnaire_version, system_type')
       .eq('id', finalUsecaseId)
       .single();
 
     if (usecaseError) {
       return createErrorResponse('Cas d\'usage non trouvé', 404);
+    }
+
+    if (requestPathMode === 'short' && normalizeQuestionnaireVersion(usecase.questionnaire_version) !== QUESTIONNAIRE_VERSION_V3) {
+      return createErrorResponse('path_mode=short réservé au questionnaire V3', 400);
     }
 
     // Vérifier que l'utilisateur a accès à ce cas d'usage via user_companies
@@ -186,13 +195,28 @@ export async function POST(
     }));
     
     const questionnaireVersion = normalizeQuestionnaireVersion(usecase.questionnaire_version);
+    const v3QuestionnairePathMode: 'long' | 'short' =
+      questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && requestPathMode === 'short' ? 'short' : 'long';
     const v2ScoringCtx =
       questionnaireVersion === QUESTIONNAIRE_VERSION_V2
         ? buildV2ScoringContextFromDbResponses(questionnaireVersion, responses)
         : null;
+    const v3ScoringCtx =
+      questionnaireVersion === QUESTIONNAIRE_VERSION_V3
+        ? buildV3ScoringContextFromDbResponses(
+            questionnaireVersion,
+            responses,
+            (usecase as { system_type?: string | null }).system_type,
+            v3QuestionnairePathMode
+          )
+        : null;
 
-    // Calculer le score de base (V2 : sous-ensemble actif serveur uniquement)
-    const baseScoreResult = v2ScoringCtx
+    // Calculer le score de base (V2/V3 : sous-ensemble actif serveur uniquement)
+    const baseScoreResult = v3ScoringCtx
+      ? calculateBaseScore(userResponses, {
+          activeQuestionCodes: v3ScoringCtx.scoringActiveQuestionCodes
+        })
+      : v2ScoringCtx
       ? calculateBaseScore(userResponses, {
           activeQuestionCodes: v2ScoringCtx.scoringActiveQuestionCodes
         })
@@ -341,30 +365,77 @@ export async function POST(
     
     // ===== ÉTAPE 7.5: CALCULER LE NIVEAU DE RISQUE =====
     console.log('🛡️ Calcul du niveau de risque...');
-    const riskLevel = deriveRiskLevelFromResponses(responses);
-    console.log(`🛡️ Niveau de risque calculé: ${riskLevel}`);
+    let riskLevel: string | null;
+    let classificationStatusForDb: string | null = null;
+
+    if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3) {
+      const answers = dbResponsesToQuestionnaireAnswers(responses);
+      const v3Outcome = resolveQualificationOutcomeV3(
+        answers,
+        (usecase as { system_type?: string | null }).system_type
+      );
+      if (v3Outcome.classification_status === 'impossible') {
+        riskLevel = null;
+        classificationStatusForDb = 'impossible';
+        console.log('🛡️ V3 : classification impossible (pivot JNS)');
+      } else {
+        riskLevel = v3Outcome.risk_level ?? 'minimal';
+        classificationStatusForDb = 'qualified';
+        console.log(`🛡️ Niveau de risque V3: ${riskLevel}`);
+      }
+    } else {
+      riskLevel = deriveRiskLevelFromResponses(responses);
+      console.log(`🛡️ Niveau de risque calculé: ${riskLevel}`);
+    }
     
     // ===== ÉTAPE 8: MISE À JOUR EN BASE DE DONNÉES =====
     console.log('💾 Mise à jour en base de données...');
     
-    // Préparer les données de mise à jour
-    const updateData: Record<string, unknown> = {
-      score_base: finalResult.scores.score_base,
-      score_model: finalResult.scores.score_model,
-      score_final: finalResult.scores.score_final,
-      is_eliminated: finalResult.scores.is_eliminated,
-      elimination_reason: finalResult.scores.elimination_reason,
-      risk_level: riskLevel, // ← AJOUT DU RISK_LEVEL
-      company_status: companyStatus,
-      last_calculation_date: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      updated_by: user.id
-    };
+    const nowIso = new Date().toISOString();
 
-    if (v2ScoringCtx) {
-      updateData.bpgv_variant = v2ScoringCtx.bpgv_variant;
-      updateData.ors_exit = v2ScoringCtx.ors_exit;
-      updateData.active_question_codes = v2ScoringCtx.active_question_codes;
+    // Parcours court V3 : score initial distinct, sans marquer le cas comme « complété » long ni écraser score_final.
+    const updateData: Record<string, unknown> =
+      questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && requestPathMode === 'short'
+        ? {
+            short_path_initial_score: finalResult.scores.score_final,
+            short_path_completed_at: nowIso,
+            risk_level: riskLevel,
+            company_status: companyStatus,
+            last_calculation_date: nowIso,
+            updated_at: nowIso,
+            updated_by: user.id,
+            ...(v3ScoringCtx && {
+              bpgv_variant: v3ScoringCtx.bpgv_variant,
+              ors_exit: v3ScoringCtx.ors_exit,
+              active_question_codes: v3ScoringCtx.active_question_codes,
+              classification_status: classificationStatusForDb,
+            }),
+          }
+        : {
+            score_base: finalResult.scores.score_base,
+            score_model: finalResult.scores.score_model,
+            score_final: finalResult.scores.score_final,
+            is_eliminated: finalResult.scores.is_eliminated,
+            elimination_reason: finalResult.scores.elimination_reason,
+            risk_level: riskLevel,
+            company_status: companyStatus,
+            last_calculation_date: nowIso,
+            updated_at: nowIso,
+            updated_by: user.id,
+          };
+
+    if (!(questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && requestPathMode === 'short')) {
+      if (v3ScoringCtx) {
+        updateData.bpgv_variant = v3ScoringCtx.bpgv_variant;
+        updateData.ors_exit = v3ScoringCtx.ors_exit;
+        updateData.active_question_codes = v3ScoringCtx.active_question_codes;
+        updateData.classification_status = classificationStatusForDb;
+      } else if (v2ScoringCtx) {
+        updateData.bpgv_variant = v2ScoringCtx.bpgv_variant;
+        updateData.ors_exit = v2ScoringCtx.ors_exit;
+        updateData.active_question_codes = v2ScoringCtx.active_question_codes;
+        updateData.classification_status = null;
+      }
     }
     
     console.log('✅ Mise à jour avec le statut d\'entreprise:', companyStatus);
@@ -383,13 +454,24 @@ export async function POST(
 
     // Enregistrer l'événement de réévaluation dans l'historique avec l'évolution du score
     await recordUseCaseHistory(supabase, finalUsecaseId, user.id, 'reevaluated', {
-      metadata: {
-        previous_score: previousScore,
-        new_score: finalResult.scores.score_final,
-        score_change: previousScore !== null ? Math.round((finalResult.scores.score_final - previousScore) * 100) / 100 : null,
-        previous_risk_level: previousRiskLevel,
-        new_risk_level: riskLevel
-      }
+      metadata:
+        questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && requestPathMode === 'short'
+          ? {
+              path_mode: 'short',
+              short_path_initial_score: finalResult.scores.score_final,
+              previous_risk_level: previousRiskLevel,
+              new_risk_level: riskLevel,
+            }
+          : {
+              previous_score: previousScore,
+              new_score: finalResult.scores.score_final,
+              score_change:
+                previousScore !== null
+                  ? Math.round((finalResult.scores.score_final - previousScore) * 100) / 100
+                  : null,
+              previous_risk_level: previousRiskLevel,
+              new_risk_level: riskLevel,
+            },
     });
 
     // ===== ÉTAPE 9: RETOURNER LE RÉSULTAT =====

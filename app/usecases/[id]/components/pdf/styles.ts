@@ -451,3 +451,10 @@ export const riskLevelStyles = {
     label: 'Minimal'
   }
 }
+
+/** Badge neutre quand aucun palier AI Act fiable n’est disponible (pas de substitution minimal/limité). */
+export const pdfRiskLevelUnavailableStyle = {
+  color: colors.gray[700],
+  backgroundColor: colors.gray[100],
+  label: 'Niveau IA Act non disponible',
+}

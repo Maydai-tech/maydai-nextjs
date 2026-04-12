@@ -7,7 +7,8 @@ import {
   LEGAL_TAXONOMY_SHORT,
 } from '@/lib/report-canonical-items'
 import { groupStandardPlanItemsByLegalCode } from '@/lib/report-plan-ors-ocru-bpgv'
-import { PDFReportData } from './types'
+import { PDFReportData, getRiskLevelLabel } from './types'
+import { resolveAuthoritativeRiskCodeForPdf } from './pdf-risk-logic'
 import { styles } from './styles'
 import { PDFFooter } from './PDFFooter'
 
@@ -30,10 +31,10 @@ function PDFCanonicalItemBlock({
   const todoLink = absUrl(baseUrl, item.cta.todoUrl)
   const dossierLink = absUrl(baseUrl, item.cta.dossierUrl)
   const ctaLine = item.cta.ctaOmitted
-    ? 'Hors périmètre du questionnaire pour ce cas — aucune action To-do requise pour combler une question non posée.'
+    ? 'Hors périmètre du questionnaire pour ce cas — aucune action en todo conformité n’est requise pour une question non posée.'
     : item.cta.completed
-      ? `Statut action : complétée dans le dossier — ouvrir : ${dossierLink}`
-      : `Action à mener : ${item.cta.label} — To-do : ${todoLink} — Dossier : ${dossierLink}`
+      ? `Mesure documentée dans le dossier du cas — ouvrir : ${dossierLink}`
+      : `Action à mener : ${item.cta.label} — Todo conformité : ${todoLink} — Dossier du cas : ${dossierLink}`
 
   return (
     <View style={{ marginBottom: 10 }} wrap>
@@ -89,8 +90,8 @@ function PDFCanonicalPlanGroup({
 }
 
 export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = ({ data }) => {
-  const risk = (data.riskLevel?.risk_level || '').toLowerCase()
-  const isUnacceptable = risk === 'unacceptable'
+  const riskNorm = resolveAuthoritativeRiskCodeForPdf(data.riskLevel?.risk_level ?? undefined)
+  const isUnacceptable = riskNorm === 'unacceptable'
   const items = data.canonicalPlanItems ?? []
   const baseUrl = data.pdfCtaBaseUrl
   const groups = groupStandardPlanItemsByLegalCode(items)
@@ -116,23 +117,29 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
             <Text style={[styles.subsectionTitle, { marginBottom: 8, fontSize: 12 }]}>Introduction</Text>
             <Text style={[styles.text, { lineHeight: 1.4, fontSize: 9 }]}>
               {data.nextSteps?.introduction ||
-                `${data.useCase.companies?.name || "L'entreprise"} a prévu de déployer le ${
-                  data.useCase.deployment_date
-                    ? new Date(data.useCase.deployment_date).toLocaleDateString('fr-FR')
-                    : 'prochainement'
-                } ${data.useCase.name}, un produit basé sur l'IA classé dans les ${
-                  data.useCase.ai_category || "systèmes d'IA"
-                }. Ce cas d'usage, géré par le service ${
-                  data.useCase.responsible_service || 'le service concerné'
-                }, utilise différents modèles dont ${
-                  data.useCase.compl_ai_models?.model_name || "un modèle d'IA"
-                } de ${
-                  data.useCase.compl_ai_models?.model_provider || 'un fournisseur'
-                } pour ${data.useCase.description || 'automatiser diverses tâches'}. Le déploiement concernera ${
-                  data.useCase.deployment_countries?.join(', ') || 'la France'
-                }, pays membre de l'Union européenne, ce qui soumet ce cas d'usage à l'AI Act. L'évaluation de conformité indique un niveau de risque ${
-                  data.riskLevel?.risk_level || 'limited'
-                }, impliquant des obligations spécifiques en matière de transparence et de gestion des risques.`}
+                (() => {
+                  const introBase = `${data.useCase.companies?.name || "L'entreprise"} a prévu de déployer le ${
+                    data.useCase.deployment_date
+                      ? new Date(data.useCase.deployment_date).toLocaleDateString('fr-FR')
+                      : 'prochainement'
+                  } ${data.useCase.name}, un produit basé sur l'IA classé dans les ${
+                    data.useCase.ai_category || "systèmes d'IA"
+                  }. Ce cas d'usage, géré par le service ${
+                    data.useCase.responsible_service || 'le service concerné'
+                  }, utilise différents modèles dont ${
+                    data.useCase.compl_ai_models?.model_name || "un modèle d'IA"
+                  } de ${
+                    data.useCase.compl_ai_models?.model_provider || 'un fournisseur'
+                  } pour ${data.useCase.description || 'automatiser diverses tâches'}. Le déploiement concernera ${
+                    data.useCase.deployment_countries?.join(', ') || 'la France'
+                  }, pays membre de l'Union européenne, ce qui soumet ce cas d'usage à l'AI Act.`
+                  if (!riskNorm) {
+                    return `${introBase} Aucun niveau de risque AI Act qualifié n'est indiqué dans ce document PDF (donnée absente). Consultez MaydAI après recalcul du score pour une classification fiable.`
+                  }
+                  return `${introBase} L'évaluation de conformité indique un niveau de risque ${getRiskLevelLabel(
+                    riskNorm
+                  )}, impliquant des obligations spécifiques en matière de transparence et de gestion des risques.`
+                })()}
             </Text>
           </View>
 
@@ -143,9 +150,11 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
             </Text>
             <Text style={[styles.text, { lineHeight: 1.4, fontSize: 9 }]}>
               {data.nextSteps?.evaluation ||
-                `Le niveau de risque de ${data.useCase.name} est classé comme ${
-                  data.riskLevel?.risk_level || 'limited'
-                }. Cette évaluation repose sur l'analyse des réponses au questionnaire et des caractéristiques spécifiques du système d'IA. Les obligations réglementaires applicables dépendent de ce niveau de risque et des articles pertinents de l'AI Act.`}
+                (!riskNorm
+                  ? `Le niveau de risque AI Act de ${data.useCase.name} ne peut pas être présenté dans ce rapport PDF faute de donnée qualifiée. Utilisez MaydAI après recalcul du score pour connaître la classification.`
+                  : `Le niveau de risque de ${data.useCase.name} est classé comme ${getRiskLevelLabel(
+                      riskNorm
+                    )}. Cette évaluation repose sur l'analyse des réponses au questionnaire et des caractéristiques spécifiques du système d'IA. Les obligations réglementaires applicables dépendent de ce niveau de risque et des articles pertinents de l'AI Act.`)}
             </Text>
           </View>
 

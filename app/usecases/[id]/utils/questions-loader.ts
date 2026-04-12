@@ -33,6 +33,7 @@ export function loadQuestions(): Record<string, Question> {
       })),
       required: data.required,
       conditionalFields: data.conditionalFields || undefined,
+      conditional_detail_optional: data.conditional_detail_optional === true || undefined,
       tooltip: data.tooltip || undefined,
       impact_mode: data.impact_mode || undefined
     }
