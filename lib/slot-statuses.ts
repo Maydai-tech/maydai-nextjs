@@ -12,6 +12,7 @@
 
 import {
   QUESTIONNAIRE_VERSION_V2,
+  QUESTIONNAIRE_VERSION_V3,
   normalizeQuestionnaireVersion
 } from '@/lib/questionnaire-version'
 
@@ -282,7 +283,9 @@ export function computeSlotStatuses(
   const qv = normalizeQuestionnaireVersion(options?.questionnaireVersion)
   const rawActive = options?.activeQuestionCodes
   const useV2Scope =
-    qv === QUESTIONNAIRE_VERSION_V2 && Array.isArray(rawActive) && rawActive.length > 0
+    (qv === QUESTIONNAIRE_VERSION_V2 || qv === QUESTIONNAIRE_VERSION_V3) &&
+    Array.isArray(rawActive) &&
+    rawActive.length > 0
   const activeSet = useV2Scope ? new Set(rawActive) : null
 
   const run = (

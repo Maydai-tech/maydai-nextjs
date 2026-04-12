@@ -5,9 +5,12 @@ import { getUseCaseComplAiBonus, getMaydAiScoresByPrinciple } from './compl-ai-s
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { calculateMaxCategoryScoresForAllQuestions } from '@/lib/score-category-max'
 import { buildV2ScoringContextFromDbResponses } from '@/lib/scoring-v2-server'
+import { buildV3ScoringContextFromDbResponses } from '@/lib/scoring-v3-server'
 import {
   QUESTIONNAIRE_VERSION_V1,
   QUESTIONNAIRE_VERSION_V2,
+  QUESTIONNAIRE_VERSION_V3,
+  type QuestionnaireVersion,
   normalizeQuestionnaireVersion
 } from '@/lib/questionnaire-version'
 
@@ -37,9 +40,12 @@ const SIX_PRINCIPLES_IDS = [
 function calculateRiskUseCaseByReverseEngineering(
   globalScorePercent: number,
   categoryScores: CategoryScore[],
-  questionnaireVersion: typeof QUESTIONNAIRE_VERSION_V1 | typeof QUESTIONNAIRE_VERSION_V2
+  questionnaireVersion: QuestionnaireVersion
 ): { points: number; percentage: number; max_points: number } {
-  if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
+  if (
+    questionnaireVersion === QUESTIONNAIRE_VERSION_V2 ||
+    questionnaireVersion === QUESTIONNAIRE_VERSION_V3
+  ) {
     const principleCats = categoryScores.filter(
       cat =>
         SIX_PRINCIPLES_IDS.includes(cat.category_id as (typeof SIX_PRINCIPLES_IDS)[number]) &&
@@ -94,6 +100,10 @@ const CATEGORY_MAX_SCORES = calculateMaxCategoryScoresForAllQuestions()
 
 export type CalculateScoreOptions = {
   questionnaireVersion?: number | null
+  /** V3 : aligné sur usecases.system_type pour le graphe actif */
+  systemType?: string | null
+  /** V3 : sous-ensemble actif court vs long (scoring + métadonnées actives). */
+  questionnairePathMode?: 'long' | 'short'
 }
 
 // Interface pour les impacts d'une réponse
@@ -301,11 +311,20 @@ export async function calculateScore(
       questionnaireVersion === QUESTIONNAIRE_VERSION_V2
         ? buildV2ScoringContextFromDbResponses(QUESTIONNAIRE_VERSION_V2, responses)
         : null
-    const responsesForScoring = v2Context
-      ? responses.filter(r => v2Context.scoringActiveQuestionCodes.has(r.question_code))
+    const v3Context =
+      questionnaireVersion === QUESTIONNAIRE_VERSION_V3
+        ? buildV3ScoringContextFromDbResponses(
+            QUESTIONNAIRE_VERSION_V3,
+            responses,
+            options?.systemType ?? null,
+            options?.questionnairePathMode ?? 'long'
+          )
+        : null
+    const pathContext = v3Context ?? v2Context
+    const responsesForScoring = pathContext
+      ? responses.filter(r => pathContext.scoringActiveQuestionCodes.has(r.question_code))
       : responses
-    const categoryMaxScores =
-      v2Context?.categoryMaxScores ?? CATEGORY_MAX_SCORES
+    const categoryMaxScores = pathContext?.categoryMaxScores ?? CATEGORY_MAX_SCORES
     
     let currentScore = BASE_SCORE
     const breakdown: ScoreBreakdown[] = []
@@ -598,7 +617,8 @@ export async function calculateScore(
       const totalMaxScore = maxQuestionnaireScore + maxMaydaiScore
 
       const isV2NotEvaluated =
-        questionnaireVersion === QUESTIONNAIRE_VERSION_V2 &&
+        (questionnaireVersion === QUESTIONNAIRE_VERSION_V2 ||
+          questionnaireVersion === QUESTIONNAIRE_VERSION_V3) &&
         maxQuestionnaireScore === 0 &&
         maxMaydaiScore === 0
 
@@ -647,14 +667,21 @@ export async function calculateScore(
       compl_ai_score: complAiScore,
       model_info: modelInfo,
       risk_use_case: riskUseCaseResult,
-      ...(v2Context
+      ...(v3Context
         ? {
-            questionnaire_version: QUESTIONNAIRE_VERSION_V2,
-            bpgv_variant: v2Context.bpgv_variant,
-            ors_exit: v2Context.ors_exit,
-            active_question_codes: v2Context.active_question_codes
+            questionnaire_version: QUESTIONNAIRE_VERSION_V3,
+            bpgv_variant: v3Context.bpgv_variant,
+            ors_exit: v3Context.ors_exit,
+            active_question_codes: v3Context.active_question_codes
           }
-        : { questionnaire_version: questionnaireVersion })
+        : v2Context
+          ? {
+              questionnaire_version: QUESTIONNAIRE_VERSION_V2,
+              bpgv_variant: v2Context.bpgv_variant,
+              ors_exit: v2Context.ors_exit,
+              active_question_codes: v2Context.active_question_codes
+            }
+          : { questionnaire_version: questionnaireVersion })
     }
   } catch (error) {
     console.error('Error in calculateScore:', error)

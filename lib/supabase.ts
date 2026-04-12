@@ -72,6 +72,8 @@ export interface UseCase {
   report_summary?: string  // NOUVEAU: Rapport d'analyse IA généré
   report_generated_at?: string  // NOUVEAU: Date de génération du rapport
   questionnaire_version?: number
+  /** V3 : qualified = risk_level fiable ; impossible = pivots JNS (risk_level souvent NULL). */
+  classification_status?: string | null
   bpgv_variant?: string | null
   active_question_codes?: string[]
   ors_exit?: string | null
@@ -346,19 +348,14 @@ export async function getUseCaseNextSteps(usecaseId: string): Promise<UseCaseNex
       }
     })
 
-    if (response.status === 404) {
-      // Aucun enregistrement trouvé
-      return null
-    }
-
-    if (!response.ok) {
+        if (!response.ok) {
       const errorData = await response.json()
       console.error('Erreur API nextsteps:', errorData)
       return null
     }
 
     const data = await response.json()
-    return data
+    return data ?? null
   } catch (error) {
     console.error('Erreur lors de la récupération des nextsteps:', error)
     return null
@@ -391,8 +388,10 @@ export async function getMultipleUseCaseNextSteps(usecaseIds: string[]): Promise
 
         if (response.ok) {
           const data = await response.json()
-          nextStepsMap[usecaseId] = data
-        } else if (response.status !== 404) {
+          if (data) {
+            nextStepsMap[usecaseId] = data
+          }
+        } else {
           console.error(`Erreur API nextsteps pour ${usecaseId}:`, response.status)
         }
       } catch (err) {

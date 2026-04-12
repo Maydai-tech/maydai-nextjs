@@ -1,11 +1,13 @@
 'use client'
 
-import { useMemo, useEffect } from 'react'
-import { AlertTriangle, Flame, Settings, ShieldCheck, HelpCircle } from 'lucide-react'
+import { useMemo } from 'react'
+import { AlertTriangle, Flame, Settings, ShieldCheck, HelpCircle, ShieldOff } from 'lucide-react'
+import { computeRiskPyramidCounts, type RiskPyramidBucket } from '@/lib/classification-risk-display'
 
 interface UseCase {
   id: string
   risk_level?: string
+  classification_status?: string | null
   name: string
 }
 
@@ -15,7 +17,7 @@ interface RiskPyramidProps {
 }
 
 interface RiskCategory {
-  level: 'unacceptable' | 'high' | 'limited' | 'minimal' | 'undefined'
+  level: RiskPyramidBucket
   label: string
   color: string
   icon: typeof AlertTriangle
@@ -27,40 +29,7 @@ export default function RiskPyramid({
   className = '' 
 }: RiskPyramidProps) {
   
-  // Calculer le nombre de cas par catégorie de risque
-  const counts = useMemo(() => {
-    if (!useCases || useCases.length === 0) {
-      return {
-        minimal: 0,
-        limited: 0,
-        high: 0,
-        unacceptable: 0,
-        undefined: 0
-      }
-    }
-
-    return {
-      minimal: useCases.filter(uc => uc.risk_level?.toLowerCase() === 'minimal').length,
-      limited: useCases.filter(uc => uc.risk_level?.toLowerCase() === 'limited').length,
-      high: useCases.filter(uc => uc.risk_level?.toLowerCase() === 'high').length,
-      unacceptable: useCases.filter(uc => uc.risk_level?.toLowerCase() === 'unacceptable').length,
-      undefined: useCases.filter(uc => !uc.risk_level || uc.risk_level.trim() === '').length
-    }
-  }, [useCases])
-
-  // Logging debug pour identifier les problèmes
-  useEffect(() => {
-    console.log('🔍 RiskPyramid Debug:', {
-      totalUseCases: useCases.length,
-      counts,
-      undefinedRiskLevel: counts.undefined,
-      allRiskLevels: useCases.map(uc => ({
-        id: uc.id,
-        name: uc.name,
-        risk_level: uc.risk_level
-      }))
-    })
-  }, [useCases, counts])
+  const counts = useMemo(() => computeRiskPyramidCounts(useCases || []), [useCases])
 
   // Configuration des catégories de risque
   const riskCategories: RiskCategory[] = useMemo(() => [
@@ -94,22 +63,42 @@ export default function RiskPyramid({
     }
   ], [])
 
-  // Catégorie pour les cas non évalués
-  const unevaluatedCategory: RiskCategory = useMemo(() => ({
-    level: 'undefined',
-    label: 'Non évalué',
-    color: '#9ca3af',
-    icon: HelpCircle,
-    badgeColor: 'bg-gray-400'
-  }), [])
+  const impossibleCategory: RiskCategory = useMemo(
+    () => ({
+      level: 'impossible',
+      label: 'Classification impossible',
+      color: '#7c3aed',
+      icon: ShieldOff,
+      badgeColor: 'bg-violet-600',
+    }),
+    []
+  )
 
-  // Total incluant les cas non évalués
-  const total = counts.unacceptable + counts.high + counts.limited + counts.minimal + counts.undefined
+  const unevaluatedCategory: RiskCategory = useMemo(
+    () => ({
+      level: 'unevaluated',
+      label: 'Non évalué',
+      color: '#9ca3af',
+      icon: HelpCircle,
+      badgeColor: 'bg-gray-400',
+    }),
+    []
+  )
 
-  // Tous les niveaux à afficher (incluant non évalué si nécessaire)
+  const total =
+    counts.unacceptable +
+    counts.high +
+    counts.limited +
+    counts.minimal +
+    counts.impossible +
+    counts.unevaluated
+
   const allLevels = useMemo(() => {
-    return [...riskCategories, ...(counts.undefined > 0 ? [unevaluatedCategory] : [])]
-  }, [riskCategories, unevaluatedCategory, counts.undefined])
+    const extra: RiskCategory[] = []
+    if (counts.impossible > 0) extra.push(impossibleCategory)
+    if (counts.unevaluated > 0) extra.push(unevaluatedCategory)
+    return [...riskCategories, ...extra]
+  }, [riskCategories, impossibleCategory, unevaluatedCategory, counts.impossible, counts.unevaluated])
 
   // Fonction helper pour convertir hex en rgba
   const hexToRgba = (hex: string, alpha: number) => {
@@ -121,11 +110,12 @@ export default function RiskPyramid({
 
   // Mapping des largeurs pour l'effet pyramide en escalier
   const widthMap: Record<string, string> = {
-    'unacceptable': '40%',
-    'high': '60%',
-    'limited': '80%',
-    'minimal': '100%',
-    'undefined': '100%' // Même largeur que minimal
+    unacceptable: '40%',
+    high: '60%',
+    limited: '80%',
+    minimal: '100%',
+    impossible: '100%',
+    unevaluated: '100%',
   }
 
   return (

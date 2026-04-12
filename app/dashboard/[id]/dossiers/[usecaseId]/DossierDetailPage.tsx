@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
@@ -30,6 +31,13 @@ import {
   getUnacceptableActionDocTypesOrdered,
   getUnacceptablePrimaryDocumentType
 } from '@/app/dashboard/[id]/todo-list/utils/todo-helpers'
+import {
+  getClassificationRiskDisplayLabel,
+  getClassificationRiskPillClasses,
+} from '@/lib/classification-risk-display'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
+import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
+import { withEvaluationEntree } from '@/app/usecases/[id]/utils/routes'
 
 /** Sections dossier flux standard — ordre, libellés, modes preuve et formats = `getStandardDossierSectionsOrdered()` (catalogue). */
 const STANDARD_DOSSIER_SECTIONS: DossierSectionUiDefinition[] = getStandardDossierSectionsOrdered()
@@ -44,9 +52,12 @@ interface DocumentData {
 interface UseCase {
   id: string
   name: string
-  risk_level: string
+  risk_level?: string | null
+  classification_status?: string | null
   score_final?: number | null
   deployment_date?: string | null
+  questionnaire_version?: string | number | null
+  status?: string | null
 }
 
 interface UseCaseNextStepsPayload {
@@ -746,6 +757,16 @@ export default function DossierDetailPage() {
     )
   }
 
+  const dossierEvalLongHref = withEvaluationEntree(`/usecases/${usecaseId}/evaluation`, 'dossier_detail_long')
+  const dossierEvalShortHref = withEvaluationEntree(
+    `/usecases/${usecaseId}/evaluation?parcours=court`,
+    'dossier_detail_short'
+  )
+  const dossierV3EvalOrientation =
+    useCase != null &&
+    normalizeQuestionnaireVersion(useCase.questionnaire_version) === QUESTIONNAIRE_VERSION_V3 &&
+    String(useCase.status || '').toLowerCase() !== 'completed'
+
   if (isUnacceptableCase && useCase) {
     const urgency = getDeploymentUrgency(useCase.deployment_date)
     const priorityHint = getUnacceptablePriorityHint(urgency)
@@ -785,6 +806,30 @@ export default function DossierDetailPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          {dossierV3EvalOrientation && (
+            <div className="rounded-xl border border-teal-200 bg-teal-50/90 p-4 text-sm text-gray-800">
+              <p className="font-semibold text-gray-900 mb-1">
+                {DECLARATION_PROOF_FLOW_COPY.globalDossierDetailV3OrientationTitle}
+              </p>
+              <p className="text-gray-700 leading-relaxed mb-3">
+                {DECLARATION_PROOF_FLOW_COPY.globalDossierDetailV3OrientationLead}
+              </p>
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                <Link
+                  href={dossierEvalLongHref}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#0080A3] text-white font-medium text-sm hover:bg-[#006280]"
+                >
+                  {DECLARATION_PROOF_FLOW_COPY.globalDossierDetailV3CtaLong}
+                </Link>
+                <Link
+                  href={dossierEvalShortHref}
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 font-medium text-sm hover:bg-gray-50"
+                >
+                  {DECLARATION_PROOF_FLOW_COPY.globalDossierDetailV3CtaShort}
+                </Link>
+              </div>
+            </div>
+          )}
           <div className="bg-red-50 p-4 rounded-lg border border-red-200">
             <div className="flex items-start space-x-2">
               <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
@@ -849,7 +894,7 @@ export default function DossierDetailPage() {
               <div className="pl-7 pt-3 border-t border-red-200">
                 <button
                   type="button"
-                  onClick={() => router.push(`/usecases/${usecaseId}/evaluation`)}
+                  onClick={() => router.push(dossierEvalLongHref)}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                 >
                   <Edit className="w-4 h-4" />
@@ -1112,7 +1157,32 @@ export default function DossierDetailPage() {
             <FileText className="w-8 h-8 text-[#0080A3]" />
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{usecaseName}</h1>
-              <p className="text-gray-600">Dossier de conformité réglementaire</p>
+              <p className="text-gray-600">{DECLARATION_PROOF_FLOW_COPY.dossierDetailSubtitle}</p>
+              <p className="mt-2 text-sm text-gray-600 max-w-3xl leading-relaxed">
+                {DECLARATION_PROOF_FLOW_COPY.filRougeBody}{' '}
+                <a
+                  href={`/dashboard/${companyId}/todo-list`}
+                  className="text-[#0080A3] font-medium hover:underline underline-offset-2"
+                >
+                  {DECLARATION_PROOF_FLOW_COPY.linkLabelTodo}
+                </a>
+                .
+              </p>
+              {useCase && (
+                <p className="mt-2">
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getClassificationRiskPillClasses(
+                      useCase.classification_status,
+                      useCase.risk_level ?? null
+                    )}`}
+                  >
+                    {getClassificationRiskDisplayLabel(
+                      useCase.classification_status,
+                      useCase.risk_level ?? null
+                    )}
+                  </span>
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -1120,6 +1190,30 @@ export default function DossierDetailPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {dossierV3EvalOrientation && (
+          <div className="rounded-xl border border-teal-200 bg-teal-50/90 p-4 text-sm text-gray-800 mb-6">
+            <p className="font-semibold text-gray-900 mb-1">
+              {DECLARATION_PROOF_FLOW_COPY.globalDossierDetailV3OrientationTitle}
+            </p>
+            <p className="text-gray-700 leading-relaxed mb-3">
+              {DECLARATION_PROOF_FLOW_COPY.globalDossierDetailV3OrientationLead}
+            </p>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+              <Link
+                href={dossierEvalLongHref}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#0080A3] text-white font-medium text-sm hover:bg-[#006280]"
+              >
+                {DECLARATION_PROOF_FLOW_COPY.globalDossierDetailV3CtaLong}
+              </Link>
+              <Link
+                href={dossierEvalShortHref}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 font-medium text-sm hover:bg-gray-50"
+              >
+                {DECLARATION_PROOF_FLOW_COPY.globalDossierDetailV3CtaShort}
+              </Link>
+            </div>
+          </div>
+        )}
         <div className="space-y-6">
           {STANDARD_DOSSIER_SECTIONS.map((docType) => {
             const doc = documents[docType.key] || { status: 'incomplete', formData: null, fileUrl: null, updatedAt: null }

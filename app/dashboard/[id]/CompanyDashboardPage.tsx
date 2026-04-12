@@ -28,10 +28,17 @@ import DeleteConfirmationModal from '@/app/usecases/[id]/components/DeleteConfir
 import Toast from '@/components/Toast'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import { trackLimitReached } from '@/lib/gtm'
+import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 import Image from 'next/image'
 import { getCompactScoreStyle, getSpecialScoreStyles } from '@/lib/score-styles'
+import {
+  getClassificationRiskDisplayLabel,
+  getClassificationRiskPillClasses,
+  getListRiskBadgeStyle,
+} from '@/lib/classification-risk-display'
 import { CategoryScoresRegistry } from './components/CategoryScoresRegistry'
 import RegistreMaydaiBadge from './components/RegistreMaydaiBadge'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
 
 interface Company {
   id: string
@@ -49,6 +56,7 @@ interface UseCase {
   description: string
   status: string
   risk_level: string
+  classification_status?: string | null
   ai_category: string
   company_id: string
   created_at: string
@@ -74,6 +82,8 @@ interface UseCase {
     model_type?: string
     version?: string
   }
+  questionnaire_version?: string | number | null
+  system_type?: string | null
 }
 
 interface DashboardProps {
@@ -850,14 +860,20 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                   {currentUseCases.map((useCase) => {
                     // Détermine l'URL de destination selon le statut
                     const getUseCaseUrl = (useCase: UseCase) => {
+                      const st = String(useCase.status || '').toLowerCase()
                       const isToComplete =
-                        useCase.status?.toLowerCase() === 'draft' ||
-                        useCase.status?.toLowerCase() === 'not_started' ||
-                        !useCase.status
+                        st === 'draft' || st === 'not_started' || !useCase.status
 
-                      return isToComplete
-                        ? `/usecases/${useCase.id}/evaluation`
-                        : `/usecases/${useCase.id}`
+                      if (!isToComplete) {
+                        return `/usecases/${useCase.id}`
+                      }
+
+                      const isV3 =
+                        normalizeQuestionnaireVersion(useCase.questionnaire_version) === QUESTIONNAIRE_VERSION_V3
+                      if (isV3) {
+                        return `/usecases/${useCase.id}?entree=dashboard_card`
+                      }
+                      return `/usecases/${useCase.id}/evaluation?entree=dashboard_card_legacy`
                     }
 
                     return (
@@ -934,11 +950,17 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                                       </span>
                                     )
                                   })()}
-                                  {useCase.risk_level && (
-                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRiskLevelColor(useCase.risk_level)}`}>
-                                      {getRiskLevelInFrench(useCase.risk_level)}
-                                    </span>
-                                  )}
+                                  <span
+                                    className={`px-2 py-1 text-xs font-medium rounded-full ${getClassificationRiskPillClasses(
+                                      useCase.classification_status,
+                                      useCase.risk_level
+                                    )}`}
+                                  >
+                                    {getClassificationRiskDisplayLabel(
+                                      useCase.classification_status,
+                                      useCase.risk_level
+                                    )}
+                                  </span>
                                 </div>
                               </div>
 
@@ -946,6 +968,20 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                               <div className="flex flex-col xl:flex-row xl:items-start space-y-3 xl:space-y-0 xl:space-x-4">
                                 <div className="flex-1">
                                   <p className="text-sm text-gray-600 mb-3 line-clamp-2">{useCase.description}</p>
+                                  {(() => {
+                                    const st = String(useCase.status || '').toLowerCase()
+                                    const incomplete =
+                                      st === 'draft' || st === 'not_started' || !useCase.status
+                                    const isV3Card =
+                                      normalizeQuestionnaireVersion(useCase.questionnaire_version) ===
+                                      QUESTIONNAIRE_VERSION_V3
+                                    if (!incomplete || !isV3Card) return null
+                                    return (
+                                      <p className="mb-3 text-xs text-teal-900/90 bg-teal-50/90 border border-teal-100 rounded-md px-2.5 py-1.5 leading-relaxed max-w-2xl">
+                                        {DECLARATION_PROOF_FLOW_COPY.globalDashboardV3IncompleteHint}
+                                      </p>
+                                    )
+                                  })()}
                                   <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
                                     {useCase.ai_category && <span>{useCase.ai_category}</span>}
                                     {useCase.technology_partner && <span className="hidden sm:inline">• {useCase.technology_partner}</span>}
@@ -1026,6 +1062,38 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                                           </div>
                                         </div>
                                       </div>
+                                    ) : useCase.classification_status === 'impossible' ? (
+                                      (() => {
+                                        const st = getListRiskBadgeStyle(
+                                          useCase.classification_status,
+                                          useCase.risk_level
+                                        )
+                                        return (
+                                          <div
+                                            className={`${st.bg} ${st.border} border rounded-lg p-2 flex items-center space-x-2`}
+                                          >
+                                            <svg
+                                              className={`w-4 h-4 flex-shrink-0 ${st.text}`}
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z"
+                                              />
+                                            </svg>
+                                            <div>
+                                              <div className={`text-xs ${st.text} opacity-75`}>Statut</div>
+                                              <div className={`text-sm font-semibold ${st.text}`}>
+                                                Classification impossible
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      })()
                                     ) : useCase.risk_level ? (
                                       (() => {
                                         const config = getRiskLevelConfig(useCase.risk_level);

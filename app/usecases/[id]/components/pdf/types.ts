@@ -35,7 +35,8 @@ export interface ScoreData {
 
 // Interface pour les données de niveau de risque
 export interface RiskLevelData {
-  risk_level: string
+  /** Code canonique minimal | limited | high | unacceptable — null si non fiable (la route PDF renvoie 409 en production). */
+  risk_level: string | null
   justification?: string
 }
 
@@ -48,7 +49,7 @@ export interface UserProfile {
 
 // Interface principale pour les données du rapport PDF
 export interface PDFReportData {
-  /** Préfixe optionnel pour absolufiger les liens To-do / Dossier (ex. https://app.example.com). */
+  /** Préfixe optionnel pour absolufiger les liens todo conformité / dossier du cas (ex. https://app.example.com). */
   pdfCtaBaseUrl?: string
   /** Plan d’action standard (9 items) — même logique que le rapport web (phase 5). Vide si cas inacceptable. */
   canonicalPlanItems?: ReportCanonicalItem[]
@@ -85,6 +86,7 @@ export interface ReportMetadata {
   deploymentCountries: string[]
   modelName: string
   modelProvider: string
+  /** Libellé affiché ; peut être « non disponible » selon le contexte. */
   riskLevel: string
   complianceScore: number
 }

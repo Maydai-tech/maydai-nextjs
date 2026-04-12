@@ -181,6 +181,28 @@ export default function AdminDashboard() {
               </p>
             </Link>
 
+            <Link
+              href="/admin/analytics/v3-short-path"
+              className="block p-4 border border-teal-200 rounded-lg hover:border-[#0080A3] hover:shadow-md transition-colors bg-teal-50/40"
+            >
+              <LineChart className="h-6 w-6 text-teal-700 mb-2" />
+              <h3 className="font-medium text-gray-900">Parcours court V3 (pilotage)</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Lecture produit des événements GTM / GA4 : entrées, funnel, conversion, partages
+              </p>
+            </Link>
+
+            <Link
+              href="/admin/evaluation-path-runs"
+              className="block p-4 border border-cyan-200 rounded-lg hover:border-[#0080A3] hover:shadow-md transition-colors bg-cyan-50/50"
+            >
+              <Activity className="h-6 w-6 text-cyan-800 mb-2" />
+              <h3 className="font-medium text-gray-900">Parcours court / long (Supabase)</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Démarrages, complétions, durées et résultats — mesure métier first-party
+              </p>
+            </Link>
+
             <a
               href="/admin/usecase-scores"
               className="block p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:shadow-md transition-colors"

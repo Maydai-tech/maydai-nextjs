@@ -1,6 +1,38 @@
 import React from 'react'
-import { Question } from '../../types/usecase'
+import { Question, QuestionOption } from '../../types/usecase'
 import Tooltip from '@/components/Tooltip'
+import { getE4N7CheckboxGroups, getE4N7VisualSegment } from '../../utils/e4n7-qualification-ui'
+
+function computeCheckboxNextAnswers(
+  checkboxAnswers: string[],
+  allOptions: QuestionOption[],
+  option: QuestionOption,
+  checked: boolean
+): string[] {
+  let newAnswers: string[]
+  if (checked) {
+    if (option.unique_answer) {
+      newAnswers = [option.code]
+    } else {
+      const uniqueOptions = allOptions.filter((opt) => opt.unique_answer)
+      const hasUniqueSelected = checkboxAnswers.some((answer) =>
+        uniqueOptions.some((unique) => unique.code === answer)
+      )
+
+      if (hasUniqueSelected) {
+        const filteredAnswers = checkboxAnswers.filter(
+          (answer) => !uniqueOptions.some((unique) => unique.code === answer)
+        )
+        newAnswers = [...filteredAnswers, option.code]
+      } else {
+        newAnswers = [...checkboxAnswers, option.code]
+      }
+    }
+  } else {
+    newAnswers = checkboxAnswers.filter((item: string) => item !== option.code)
+  }
+  return newAnswers
+}
 
 interface QuestionRendererProps {
   question: Question
@@ -72,101 +104,122 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
   )
 
   const renderCheckboxQuestion = () => {
-    // S'assurer que currentAnswer est toujours un tableau
     const checkboxAnswers = Array.isArray(currentAnswer) ? currentAnswer : []
-    
+
     console.log('Checkbox render:', {
       currentAnswer,
       checkboxAnswers,
-      options: question.options.map(opt => opt.code),
-      isReadOnly
+      options: question.options.map((opt) => opt.code),
+      isReadOnly,
     })
-    
+
+    const renderCheckboxRow = (option: QuestionOption, index: number) => {
+      const isChecked = checkboxAnswers.includes(option.code)
+      const isExclusive = Boolean(option.unique_answer)
+
+      return (
+        <label
+          key={`${question.id}-${option.code}-${index}`}
+          className={`flex items-start p-3 sm:p-4 border rounded-lg transition-all ${
+            isReadOnly ? 'cursor-default' : 'cursor-pointer hover:bg-gray-50'
+          } ${
+            isChecked
+              ? isExclusive
+                ? 'border-gray-700 bg-gray-100/80'
+                : 'border-[#0080A3] bg-[#0080A3]/5'
+              : 'border-gray-200'
+          }`}
+        >
+          <input
+            type="checkbox"
+            name={`${question.id}-${option.code}`}
+            value={option.code}
+            checked={isChecked}
+            disabled={isReadOnly}
+            onChange={(e) => {
+              if (!isReadOnly) {
+                const newAnswers = computeCheckboxNextAnswers(
+                  checkboxAnswers,
+                  question.options,
+                  option,
+                  e.target.checked
+                )
+                console.log('New checkbox answers:', newAnswers)
+                onAnswerChange(newAnswers)
+              }
+            }}
+            className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3] disabled:opacity-50"
+          />
+          <div className="flex items-start flex-1 min-w-0 gap-2">
+            <span className={`leading-relaxed flex-1 min-w-0 ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
+              {option.label}
+            </span>
+            {(option as any).tooltip && (
+              <Tooltip
+                title={(option as any).tooltip.title}
+                shortContent={(option as any).tooltip.shortContent}
+                fullContent={(option as any).tooltip.fullContent}
+                icon={(option as any).tooltip.icon}
+                type="answer"
+                position="auto"
+              />
+            )}
+          </div>
+        </label>
+      )
+    }
+
+    const groups = getE4N7CheckboxGroups(question.id)
+    if (groups) {
+      const seg = getE4N7VisualSegment(question.id)
+      const segmentShell =
+        seg === 'annex-iii'
+          ? 'rounded-xl border-l-4 border-sky-600 bg-sky-50/40 pl-3 sm:pl-5 py-4 pr-2 sm:pr-4'
+          : seg === 'ors-narrowing'
+            ? 'rounded-xl border-l-4 border-amber-500 bg-amber-50/35 pl-3 sm:pl-5 py-4 pr-2 sm:pr-4'
+            : 'rounded-xl border-l-4 border-red-700 bg-red-50/25 pl-3 sm:pl-5 py-4 pr-2 sm:pr-4'
+
+      return (
+        <div
+          className={`space-y-8 ${segmentShell}`}
+          data-e4n7-segment={seg ?? undefined}
+          data-e4n7-grouped="true"
+        >
+          {groups.map((group) => (
+            <section key={group.key} className="space-y-3" aria-labelledby={`${question.id}-${group.key}-title`}>
+              <div className="space-y-1">
+                <h3
+                  id={`${question.id}-${group.key}-title`}
+                  className="text-base font-semibold text-gray-900 tracking-tight"
+                >
+                  {group.title}
+                </h3>
+                {group.description ? (
+                  <p className="text-sm text-gray-600 leading-relaxed">{group.description}</p>
+                ) : null}
+              </div>
+              <div
+                className={
+                  group.codes.length > 1
+                    ? 'grid grid-cols-1 gap-3 md:grid-cols-2'
+                    : 'grid grid-cols-1 gap-3'
+                }
+              >
+                {group.codes.map((code, idx) => {
+                  const option = question.options.find((o) => o.code === code)
+                  if (!option) return null
+                  return renderCheckboxRow(option, idx)
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      )
+    }
+
     return (
       <div className="space-y-3">
-        {question.options.map((option, index) => {
-          const isChecked = checkboxAnswers.includes(option.code)
-          
-          return (
-            <label
-              key={`${question.id}-${option.code}-${index}`}
-              className={`flex items-start p-4 border rounded-lg transition-all ${
-                isReadOnly 
-                  ? 'cursor-default' 
-                  : 'cursor-pointer hover:bg-gray-50'
-              } ${
-                isChecked
-                  ? 'border-[#0080A3] bg-[#0080A3]/5'
-                  : 'border-gray-200'
-              }`}
-            >
-              <input
-                type="checkbox"
-                name={`${question.id}-${option.code}`}
-                value={option.code}
-                checked={isChecked}
-                disabled={isReadOnly}
-                onChange={(e) => {
-                  if (!isReadOnly) {
-                    console.log('Checkbox change:', {
-                      option: option.code,
-                      checked: e.target.checked,
-                      currentAnswers: checkboxAnswers,
-                      isUniqueAnswer: option.unique_answer
-                    })
-                    
-                    let newAnswers: string[]
-                    if (e.target.checked) {
-                      if (option.unique_answer) {
-                        // Si cette option est une réponse unique, désélectionner toutes les autres
-                        newAnswers = [option.code]
-                      } else {
-                        // Vérifier s'il y a déjà une réponse unique sélectionnée
-                        const uniqueOptions = question.options.filter(opt => opt.unique_answer)
-                        const hasUniqueSelected = checkboxAnswers.some(answer => 
-                          uniqueOptions.some(unique => unique.code === answer)
-                        )
-                        
-                        if (hasUniqueSelected) {
-                          // Retirer les réponses uniques et ajouter la nouvelle
-                          const filteredAnswers = checkboxAnswers.filter(answer =>
-                            !uniqueOptions.some(unique => unique.code === answer)
-                          )
-                          newAnswers = [...filteredAnswers, option.code]
-                        } else {
-                          // Ajouter normalement
-                          newAnswers = [...checkboxAnswers, option.code]
-                        }
-                      }
-                    } else {
-                      // Retirer l'option
-                      newAnswers = checkboxAnswers.filter((item: string) => item !== option.code)
-                    }
-                    
-                    console.log('New checkbox answers:', newAnswers)
-                    onAnswerChange(newAnswers)
-                  }
-                }}
-                className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3] disabled:opacity-50"
-              />
-              <div className="flex items-center flex-1">
-                <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
-                  {option.label}
-                </span>
-                {(option as any).tooltip && (
-                  <Tooltip
-                    title={(option as any).tooltip.title}
-                    shortContent={(option as any).tooltip.shortContent}
-                    fullContent={(option as any).tooltip.fullContent}
-                    icon={(option as any).tooltip.icon}
-                    type="answer"
-                    position="auto"
-                  />
-                )}
-              </div>
-            </label>
-          )
-        })}
+        {question.options.map((option, index) => renderCheckboxRow(option, index))}
       </div>
     )
   }
@@ -366,14 +419,34 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
 
         {/* Conditional fields - Affichés quand "Oui" est sélectionné (.B) ou "Other" (E4.N8.Q10.G) */}
         {((currentSelection?.endsWith('.B') && question.conditionalFields) || currentSelection === 'E4.N8.Q10.G') && question.conditionalFields && (
-          <div className="ml-6 space-y-3 border-l-2 border-gray-200 pl-4">
-            <div className="text-sm font-medium text-gray-700 mb-2">
-              Veuillez préciser :
+          <div
+            className={`ml-4 sm:ml-6 space-y-3 border-l-2 pl-3 sm:pl-4 ${
+              question.conditional_detail_optional
+                ? 'border-dashed border-[#0080A3]/35 bg-[#0080A3]/[0.04] rounded-r-lg py-3 pr-2'
+                : 'border-gray-200'
+            }`}
+          >
+            <div className="text-sm font-medium text-gray-800 mb-1">
+              {question.conditional_detail_optional
+                ? 'Précisions (optionnel ici)'
+                : 'Veuillez préciser :'}
             </div>
+            {question.conditional_detail_optional ? (
+              <p className="text-xs text-gray-600 leading-relaxed mb-2">
+                Vous pouvez avancer avec un simple <strong className="font-medium text-gray-800">Oui</strong> déclaratif.
+                Les preuves et le détail opérationnel se complètent ensuite dans le{' '}
+                <strong className="font-medium text-gray-800">dossier du cas</strong> et la{' '}
+                <strong className="font-medium text-gray-800">todo conformité</strong> (y compris les actions liées à
+                cette question).
+              </p>
+            ) : null}
             {question.conditionalFields.map((field) => (
               <div key={`${question.id}-${field.key}`}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {field.label}
+                  {question.conditional_detail_optional ? (
+                    <span className="text-xs font-normal text-gray-500 ml-1">(optionnel)</span>
+                  ) : null}
                 </label>
                 <input
                   type="text"

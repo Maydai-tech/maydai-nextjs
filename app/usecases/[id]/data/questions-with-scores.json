@@ -1,7 +1,7 @@
 {
   "E4.N7.Q1": {
     "id": "E4.N7.Q1",
-    "question": "Dans cette situation, votre cas d'usage concerne :",
+    "question": "Dans la chaîne de valeur de ce système d'IA, vous êtes plutôt :",
     "type": "radio",
     "required": true,
     "risk": "minimal",
@@ -12,7 +12,8 @@
         "score_impact": 0,
         "tooltip": {
           "title": "Fournisseur, importateur ou distributeur d'IA",
-          "shortContent": "Soit un Fournisseur qui développe l'IA et la met sur le marché, soit un importateur qui introduit l'IA d'un pays tiers dans l'UE, soit un distributeur qui la met à disposition, soit un mandataire qui représente le fournisseur non-UE pour la conformité.",
+          "shortContent": "Vous êtes du côté de la mise sur le marché ou de la distribution de systèmes d'IA (y compris logiciel ou produit embarquant de l'IA).",
+          "fullContent": "Soit un Fournisseur qui développe l'IA et la met sur le marché, soit un importateur qui introduit l'IA d'un pays tiers dans l'UE, soit un distributeur qui la met à disposition, soit un mandataire qui représente le fournisseur non-UE pour la conformité.",
           "icon": "💡"
         }
       },
@@ -22,26 +23,29 @@
         "score_impact": 0,
         "tooltip": {
           "title": "Déployeur (utilisateur) d'IA",
-          "shortContent": "Un déployeur (utilisateur) est une personne physique ou morale, une autorité publique, une entreprise ou un autre organisme qui utilise un système d'IA sous sa propre autorité. Il doit s'assurer d'utiliser les systèmes d'IA conformément à l'AI Act et de garantir un contrôle humain approprié.",
+          "shortContent": "Vous utilisez un système d'IA sous votre responsabilité (même si un prestataire l'héberge pour vous).",
+          "fullContent": "Un déployeur (utilisateur) est une personne physique ou morale, une autorité publique, une entreprise ou un autre organisme qui utilise un système d'IA sous sa propre autorité. Il doit s'assurer d'utiliser les systèmes d'IA conformément à l'AI Act et de garantir un contrôle humain approprié.",
           "icon": "💡"
         }
       }
     ],
     "tooltip": {
-      "title": "Dans cette situation, votre cas d'usage concerne :",
-      "shortContent": "Cette question permet de distinguer les entreprises qui utilisent un système d'IA externe et les entreprises qui produisent ou distribuent des systèmes d'IA.",
+      "title": "Rôle dans la chaîne de valeur",
+      "shortContent": "Premier choix simple : vous positionnez-vous comme acteur de l'offre (mise sur le marché, intégration, distribution) ou comme utilisateur d'une IA existante ?",
+      "fullContent": "Cette question sépare les opérateurs qui mettent un système d'IA sur le marché ou le font circuler (fournisseur, importateur, distributeur, mandataire, etc.) des opérateurs qui l'utilisent pour leur propre activité. Les libellés juridiques détaillés (AI Act) sont rappelés dans l'aide de chaque réponse.",
       "icon": "💡"
     }
   },
   "E4.N7.Q1.1": {
     "id": "E4.N7.Q1.1",
-    "question": "Quelle phrase décrit le mieux votre situation ?",
+    "question": "Quel rôle correspond le mieux à votre organisation (côté offre / marché) ?",
     "type": "radio",
     "required": true,
     "risk": "minimal",
     "tooltip": {
-      "title": "Comprendre vos attentes",
-      "shortContent": "Cette question permet de mieux comprendre vos attentes en termes de rédaction d'audit et de rapport.",
+      "title": "Affiner votre rôle « offre »",
+      "shortContent": "Choisissez la situation la plus proche : fabricant, éditeur, importateur, distributeur, fournisseur direct ou mandataire d'un fournisseur hors UE.",
+      "fullContent": "Cette étape affine le positionnement pour la suite du questionnaire et le rapport ; les catégories correspondent aux notions de l'AI Act (fournisseur, importateur, distributeur, représentant autorisé, etc.).",
       "icon": "💡"
     },
     "options": [
@@ -109,13 +113,14 @@
   },
   "E4.N7.Q1.2": {
     "id": "E4.N7.Q1.2",
-    "question": "Quelle phrase décrit le mieux votre situation ?",
+    "question": "Quelle situation correspond le mieux à la vôtre (côté usage ou accompagnement) ?",
     "type": "radio",
     "required": true,
     "risk": "minimal",
     "tooltip": {
-      "title": "Comprendre vos attentes",
-      "shortContent": "Cette question permet de mieux comprendre vos attentes en termes de rédaction d'audit et de rapport.",
+      "title": "Affiner votre profil « usage »",
+      "shortContent": "Utilisateur interne, test d'idée, DPO, conseil, direction, recherche : cela adapte le ton du rapport sans changer la qualification juridique.",
+      "fullContent": "Cette question permet de calibrer la rédaction d'audit et de rapport selon votre fonction (utilisateur métier, conformité, juriste, direction, etc.).",
       "icon": "💡"
     },
     "options": [
@@ -157,6 +162,12 @@
     "type": "checkbox",
     "required": true,
     "risk": "high",
+    "tooltip": {
+      "title": "Annexe III — domaines à haut risque",
+      "shortContent": "Les réponses sont regroupées par thèmes pour faciliter la lecture. Vous pouvez cocher plusieurs domaines ; « Aucun de ces domaines » remplace les autres cases.",
+      "fullContent": "L’Annexe III de l’AI Act liste des domaines où un système d’IA est présumé à haut risque lorsque les conditions matérielles sont réunies. Les précisions juridiques restent dans l’aide de chaque ligne.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N7.Q2.A",
@@ -256,6 +267,12 @@
     "type": "checkbox",
     "required": true,
     "risk": "unacceptable",
+    "tooltip": {
+      "title": "Cas ORS particulièrement sensibles",
+      "shortContent": "Étape distincte des interdictions strictes (question précédente) et des domaines Annexe III (question suivante). Cochez ce qui correspond au fonctionnement réel.",
+      "fullContent": "Ces cas peuvent déclencher une sortie « inacceptable » ou à haut risque selon le graphe et vos autres réponses. Utilisez les infobulles pour le détail juridique de chaque ligne.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N7.Q2.1.A",
@@ -327,6 +344,12 @@
     "type": "checkbox",
     "required": true,
     "risk": "unacceptable",
+    "tooltip": {
+      "title": "Pratiques interdites (art. 5)",
+      "shortContent": "Liste des finalités prohibées lorsqu’elles s’appliquent telles quelles. Une seule case cochée hors « Aucune » peut rendre le cas inacceptable.",
+      "fullContent": "L’article 5 de l’AI Act interdit certaines pratiques d’IA considérées comme inacceptables. La qualification dépend du moteur et des réponses suivantes ; en cas de doute, privilégiez l’aide contextuelle et un avis juridique.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N7.Q3.A",
@@ -386,6 +409,12 @@
     "type": "checkbox",
     "required": true,
     "risk": "unacceptable",
+    "tooltip": {
+      "title": "Situations prohibées ou à risque extrême",
+      "shortContent": "Complète la question précédente : manipulation, vulnérabilités, notation sociale, risque criminel… Cochez « Aucune » si rien ne correspond.",
+      "fullContent": "Ces situations relèvent des pratiques inacceptables ou assimilées selon le cadre AI Act. Chaque ligne dispose d’une aide ; ne cochez que ce qui correspond objectivement au système décrit.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N7.Q3.1.A",
@@ -436,6 +465,71 @@
         "label": "Aucune de ces situations",
         "score_impact": 0,
         "unique_answer": true
+      }
+    ]
+  },
+  "E4.N7.Q4": {
+    "id": "E4.N7.Q4",
+    "question": "L'IA est-elle intégrée dans un produit déjà réglementé au niveau européen, et joue-t-elle un rôle dans sa sécurité ou sa conformité ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Annexe I — produit harmonisé",
+      "shortContent": "Visée : IA comme composant de sécurité ou impact sur la conformité d'un produit déjà couvert par la législation d'harmonisation UE. Réponse « Je ne sais pas » : la qualification réglementaire ne peut pas être conclue.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E4.N7.Q4.A",
+        "label": "Oui",
+        "score_impact": -10,
+        "risk": "high",
+        "category_impacts": {
+          "risk_level": -30
+        }
+      },
+      {
+        "code": "E4.N7.Q4.B",
+        "label": "Non",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N7.Q4.C",
+        "label": "Je ne sais pas",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E4.N7.Q5": {
+    "id": "E4.N7.Q5",
+    "question": "Dans ce domaine sensible, l'IA se limite-t-elle à vous aider ou préparer le dossier, sans peser directement sur la décision finale ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Article 6.3 AI Act (garde-fou)",
+      "shortContent": "Répondez « Oui » seulement si l'humain reste clairement maître de la décision et que l'IA n'a pas d'influence décisionnelle directe. « Je ne sais pas » mène à une qualification impossible.",
+      "fullContent": "L'article 6.3 de l'AI Act prévoit un garde-fou : un système ne doit pas être qualifié à haut risque uniquement parce qu'il opère dans un domaine Annexe III s'il ne fait qu'assister sans influence décisionnelle directe sur le résultat. En cas de doute réel, utilisez « Je ne sais pas » plutôt qu'une réponse approximative.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E4.N7.Q5.A",
+        "label": "Oui",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N7.Q5.B",
+        "label": "Non",
+        "score_impact": -10,
+        "risk": "high",
+        "category_impacts": {
+          "risk_level": -30
+        }
+      },
+      {
+        "code": "E4.N7.Q5.C",
+        "label": "Je ne sais pas",
+        "score_impact": 0
       }
     ]
   },
@@ -636,12 +730,13 @@
   },
   "E4.N8.Q9.1": {
     "id": "E4.N8.Q9.1",
-    "question": "Le système utilise-t-il la reconnaissance ou l'inférence d'émotions, ou la catégorisation biométrique de personnes physiques, dans un cadre autorisé et hors des cas déjà qualifiés à risque élevé ou inacceptable ?",
+    "question": "En dehors des cas déjà exclus (interdit ou haut risque), le système analyse-t-il des émotions ou des données biométriques sur des personnes ?",
     "type": "radio",
     "required": true,
     "tooltip": {
-      "title": "Émotions et biométrie",
-      "shortContent": "Répondez « Oui » uniquement si ces fonctionnalités sont réellement utilisées et ne relèvent pas déjà des cas interdits ou à haut risque identifiés plus haut dans le questionnaire.",
+      "title": "Émotions et biométrie (complément)",
+      "shortContent": "« Oui » seulement si c'est réellement dans le périmètre fonctionnel du système — pas pour des usages théoriques ou futurs.",
+      "fullContent": "Cette question complète les réponses précédentes : elle ne concerne que ce qui n'a pas déjà été traité comme usage interdit ou comme système à haut risque dans le questionnaire. S'applique notamment à la reconnaissance ou l'inférence d'émotions et à la catégorisation biométrique de personnes physiques, lorsque le cadre reste autorisé au regard des réponses déjà données.",
       "icon": "💡"
     },
     "options": [
@@ -663,12 +758,13 @@
   },
   "E4.N8.Q10": {
     "id": "E4.N8.Q10",
-    "question": "À titre indicatif, combien de personnes physiques utilisent ce système chaque mois ?",
+    "question": "Combien de personnes utilisent ce système chaque mois ? (réponse indicative)",
     "type": "radio",
     "required": true,
     "tooltip": {
-      "title": "Volumétrie",
-      "shortContent": "Cette question sert à apprécier l'exposition et la maturité du dispositif. Elle ne qualifie pas, à elle seule, le niveau de risque AI Act.",
+      "title": "Indicateur d'exposition — pas un palier juridique à lui seul",
+      "shortContent": "Ordre de grandeur pour le contexte (supervision, diffusion). Elle n'apparaît pas sur tous les parcours ; le niveau AI Act reste piloté par les questions précédentes.",
+      "fullContent": "La volumétrie aide à situer l'exposition et la maturité opérationnelle ; elle peut influencer des scores de maturité ou de supervision dans le barème, mais ne remplace pas la qualification issue des pivots réglementaires (Annexes, interdictions, contenus, etc.).",
       "icon": "💡"
     },
     "options": [
@@ -721,12 +817,13 @@
   },
   "E4.N8.Q11.0": {
     "id": "E4.N8.Q11.0",
-    "question": "Le système d'IA produit-il ou modifie-t-il des contenus numériques (texte, image, son ou vidéo) au moyen de l'IA ?",
+    "question": "L'IA génère-t-elle ou modifie-t-elle fortement des contenus numériques (texte, image, son, vidéo) ?",
     "type": "radio",
     "required": true,
     "tooltip": {
       "title": "Contenus numériques",
-      "shortContent": "Incluez les contenus générés ou sensiblement modifiés par l'IA, y compris en assistance à la rédaction, à la traduction ou à la production de contenus.",
+      "shortContent": "Incluez génération et modifications substantielles (rédaction assistée, traduction, synthèse multimédia, etc.).",
+      "fullContent": "Comptez tout contenu généré ou sensiblement modifié par l'IA dans le flux du cas d'usage, y compris lorsque l'humain valide ou retouche ensuite le résultat.",
       "icon": "💡"
     },
     "options": [
@@ -744,12 +841,13 @@
   },
   "E4.N8.Q11.1": {
     "id": "E4.N8.Q11.1",
-    "question": "Quels types de contenu sont concernés ?",
+    "question": "Quels types de contenus sont concernés ? (vous pouvez cocher les deux)",
     "type": "checkbox",
     "required": true,
     "tooltip": {
-      "title": "Types de contenu",
-      "shortContent": "Plusieurs réponses peuvent être sélectionnées si le système traite plusieurs types de contenu.",
+      "title": "Texte et/ou médias",
+      "shortContent": "Texte seul, médias seuls (image, audio, vidéo), ou les deux : les questions suivantes s'adapteront à votre combinaison.",
+      "fullContent": "Les branches « texte » (T1, T1E, T2) et « média » (M1, M2) du questionnaire s'affichent selon les cases cochées ; le graphe et les codes de réponse restent inchangés.",
       "icon": "💡"
     },
     "options": [
@@ -788,6 +886,34 @@
       {
         "code": "E4.N8.Q11.T1.B",
         "label": "Non",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E4.N8.Q11.T1E": {
+    "id": "E4.N8.Q11.T1E",
+    "question": "Ce texte fait-il l'objet d'une relecture et d'une validation par un humain qui en assume la responsabilité éditoriale ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Contrôle éditorial humain",
+      "shortContent": "Si un humain identifié valide le contenu avant diffusion et en assume la responsabilité, le niveau « risque limité » lié à ce volet texte peut être évité. « Je ne sais pas » : qualification impossible.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E4.N8.Q11.T1E.A",
+        "label": "Oui",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.T1E.B",
+        "label": "Non",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.T1E.C",
+        "label": "Je ne sais pas",
         "score_impact": 0
       }
     ]
@@ -1053,6 +1179,7 @@
     "id": "E5.N9.Q6",
     "question": "Avez vous des procédures de vérification de la qualité des données ?",
     "type": "conditional",
+    "conditional_detail_optional": true,
     "required": true,
     "todo_action": "data_quality",
     "tooltip": {
@@ -1092,6 +1219,7 @@
     "id": "E5.N9.Q7",
     "question": "Tenez vous un registre centralisé de vos systèmes d'IA ?",
     "type": "conditional",
+    "conditional_detail_optional": true,
     "required": true,
     "todo_action": "registry_proof",
     "tooltip": {
@@ -1136,6 +1264,7 @@
     "id": "E5.N9.Q8",
     "question": "Avez vous une étape de surveillance humaine dans votre système d'IA ?",
     "type": "conditional",
+    "conditional_detail_optional": true,
     "required": true,
     "todo_action": "human_oversight",
     "tooltip": {
@@ -1180,6 +1309,7 @@
     "id": "E5.N9.Q9",
     "question": "Vérifiez vous l'exactitude, la robustesse et la cybersécurité de votre système d'IA ?",
     "type": "conditional",
+    "conditional_detail_optional": true,
     "required": true,
     "todo_action": "continuous_monitoring",
     "tooltip": {

@@ -66,7 +66,7 @@ interface CustomEvent {
   [key: string]: unknown
 }
 
-type GTMEvent =
+export type GTMEvent =
   | SignUpEvent
   | LoginEvent
   | PageViewEvent

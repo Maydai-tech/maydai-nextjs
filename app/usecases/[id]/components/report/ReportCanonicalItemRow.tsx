@@ -4,17 +4,18 @@ import { useRouter } from 'next/navigation'
 import { ArrowRight } from 'lucide-react'
 import type { EvidenceStatusValue, ReportCanonicalItem } from '@/lib/report-canonical-items'
 import { LEGAL_TAXONOMY_SHORT } from '@/lib/report-canonical-items'
+import { DECLARATION_PROOF_FLOW_COPY } from '../../utils/declaration-proof-flow-copy'
 import { CompletedAction } from './CompletedAction'
 
 const EVIDENCE_UI: Record<
   EvidenceStatusValue,
   { short: string; className: string }
 > = {
-  complete: { short: 'Preuve complétée', className: 'bg-emerald-50 text-emerald-900 border-emerald-200' },
-  validated: { short: 'Preuve validée', className: 'bg-green-50 text-green-900 border-green-200' },
-  incomplete: { short: 'Preuve à fournir', className: 'bg-amber-50 text-amber-900 border-amber-200' },
-  not_tracked: { short: 'Preuve non suivie', className: 'bg-gray-50 text-gray-700 border-gray-200' },
-  not_applicable: { short: 'Preuve N/A', className: 'bg-slate-50 text-slate-600 border-slate-200' },
+  complete: { short: DECLARATION_PROOF_FLOW_COPY.evidenceShortComplete, className: 'bg-emerald-50 text-emerald-900 border-emerald-200' },
+  validated: { short: DECLARATION_PROOF_FLOW_COPY.evidenceShortValidated, className: 'bg-green-50 text-green-900 border-green-200' },
+  incomplete: { short: DECLARATION_PROOF_FLOW_COPY.evidenceShortIncomplete, className: 'bg-amber-50 text-amber-900 border-amber-200' },
+  not_tracked: { short: DECLARATION_PROOF_FLOW_COPY.evidenceShortNotTracked, className: 'bg-gray-50 text-gray-700 border-gray-200' },
+  not_applicable: { short: DECLARATION_PROOF_FLOW_COPY.evidenceShortNa, className: 'bg-slate-50 text-slate-600 border-slate-200' },
 }
 
 const LEGAL_BADGE: Record<string, string> = {
@@ -29,16 +30,16 @@ function declarationLabel(
 ): { text: string; className: string } | null {
   if (d == null) return null
   if (d === 'OUI')
-    return { text: 'Déclaratif : OUI', className: 'bg-teal-50 text-teal-900 border-teal-200' }
+    return { text: DECLARATION_PROOF_FLOW_COPY.declarativeYes, className: 'bg-teal-50 text-teal-900 border-teal-200' }
   if (d === 'NON')
-    return { text: 'Déclaratif : NON', className: 'bg-rose-50 text-rose-900 border-rose-200' }
+    return { text: DECLARATION_PROOF_FLOW_COPY.declarativeNo, className: 'bg-rose-50 text-rose-900 border-rose-200' }
   if (d === 'Hors périmètre')
     return {
-      text: 'Déclaratif : hors périmètre',
+      text: DECLARATION_PROOF_FLOW_COPY.declarativeOut,
       className: 'bg-slate-50 text-slate-800 border-slate-200',
     }
   return {
-    text: 'Déclaratif : insuffisant',
+    text: DECLARATION_PROOF_FLOW_COPY.declarativeInsufficient,
     className: 'bg-amber-50 text-amber-900 border-amber-200',
   }
 }
@@ -63,11 +64,19 @@ export function ReportCanonicalItemRow({ item }: { item: ReportCanonicalItem }) 
           {LEGAL_TAXONOMY_SHORT[item.legal.code]}
         </span>
         {decl && (
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${decl.className}`}>
+          <span
+            className={`text-xs font-medium px-2 py-0.5 rounded-full border ${decl.className}`}
+            title={DECLARATION_PROOF_FLOW_COPY.ouiSansPreuve}
+          >
             {decl.text}
           </span>
         )}
-        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${ev.className}`}>{ev.short}</span>
+        <span
+          className={`text-xs font-medium px-2 py-0.5 rounded-full border ${ev.className}`}
+          title={DECLARATION_PROOF_FLOW_COPY.ouiSansPreuve}
+        >
+          {ev.short}
+        </span>
       </div>
       <p className="text-xs text-gray-500 mb-1 leading-snug">
         <span className="font-medium text-gray-600">Mesure (catalogue) : </span>
@@ -87,7 +96,7 @@ export function ReportCanonicalItemRow({ item }: { item: ReportCanonicalItem }) 
       </div>
       {item.cta.ctaOmitted ? (
         <p className="mt-2 ml-8 text-sm text-slate-600">
-          Hors périmètre du questionnaire pour ce cas — aucune action To-do n’est requise pour ce point.
+          Hors périmètre du questionnaire pour ce cas — aucune entrée todo conformité n’est requise pour ce point.
         </p>
       ) : item.cta.completed ? (
         <CompletedAction

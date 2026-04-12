@@ -56,12 +56,15 @@ interface OpenAIAnalysisInputComplete {
       deployment_date: string
       status: string
       risk_level: string
-      risk_level_code: RiskLevelCode
+      /** null si qualification réglementaire impossible (V3) — jamais un palier fictif */
+      risk_level_code: RiskLevelCode | null
       risk_level_label_fr: string
       ai_category: string
       system_type: string
       responsible_service: string
       deployment_countries: string[]
+      /** V3 : qualified | impossible */
+      classification_status?: string | null
     }
     technologie: {
       technology_partner: string
@@ -88,6 +91,8 @@ interface OpenAIAnalysisInputComplete {
   status_levels: Record<string, string>
   slot_statuses?: SlotStatusMap
   questionnaire_parcours?: QuestionnaireParcoursMeta
+  /** Bloc d’ancrage structuré (Lot A) — prioritaire sur la description libre */
+  report_grounding_block?: string
 }
 
 /**
@@ -453,17 +458,20 @@ ${conditionalDetails}`
     const { usecase_context_fields, questionnaire_questions } = data
     const { entreprise, cas_usage, technologie, repondant, scores } = usecase_context_fields
     const scoreFinal = scores.score_final
-    const isUnacceptable = cas_usage.risk_level_code === 'unacceptable'
+    const isClassificationImpossible = cas_usage.classification_status === 'impossible'
+    const isUnacceptable =
+      !isClassificationImpossible && cas_usage.risk_level_code === 'unacceptable'
 
     const factsBlock = `DONNÉES CONTEXTUELLES (ne pas extrapoler hors de ce bloc ni du questionnaire)
 
 Entreprise: ${entreprise.name} | Secteur: ${entreprise.industry} | ${entreprise.city}, ${entreprise.country} | Rôle chaîne de valeur: ${entreprise.company_status}
 
 Système d'IA: ${cas_usage.name} (id: ${cas_usage.id})
-Description: ${cas_usage.description}
+Description (contexte narratif secondaire — ne pas en déduire de motif juridique ni de niveau si non confirmé par le questionnaire structuré ci-dessous) : ${cas_usage.description}
 Déploiement: ${cas_usage.deployment_date} | Statut cas: ${cas_usage.status}
 Pays: ${cas_usage.deployment_countries.join(', ')} | Service: ${cas_usage.responsible_service}
 Catégorie / type: ${cas_usage.ai_category} | ${cas_usage.system_type}
+${isClassificationImpossible ? `Qualification réglementaire (application) : IMPOSSIBLE — ne pas conclure un palier AI Act définitif (minimal, limité, élevé, interdit) à partir du questionnaire ou du score seul.` : ''}
 
 Technologie: ${technologie.technology_partner} | LLM: ${technologie.llm_model_version} | Modèle: ${technologie.model_name} (${technologie.model_provider}, ${technologie.model_type})
 
@@ -483,10 +491,27 @@ Règles :
 ${data.questionnaire_parcours.ors_exit === 'unacceptable' ? `- Sortie ORS « unacceptable » : le bloc N8 (questions E4.N8.* du fil long) n'a pas été parcouru ; ne pas inventer de réponses ni de constats issus de N8.` : ''}`
       : ''
 
+    const structuredGroundingBlock =
+      data.report_grounding_block && data.report_grounding_block.trim().length > 0
+        ? `
+ANCRAGE STRUCTURÉ — FAITS COCHÉS (AUTORITATIF, PRIORITAIRE SUR LA DESCRIPTION LIBRE ET LES SCORES)
+${data.report_grounding_block.trim()}
+
+Règles Lot A (grounding) :
+- Ce bloc est produit mécaniquement par l'application : il prime sur le champ Description du cas, sur les scores et sur toute généralisation sectorielle.
+- introduction_contextuelle : ne pas y introduire de motif d'interdiction ou de risque limité absent du questionnaire ni de ce bloc.
+- evaluation_risque.justification : appliquer les « INSTRUCTIONS » figurant en fin de bloc ; première phrase stable selon ces instructions ; développement ensuite uniquement avec des faits listés dans ce bloc ou dans « QUESTIONNAIRE — RÉPONSES DÉCLARÉES ».
+- Cas inacceptable : interdit_1 doit refléter exclusivement les motifs E4.N7.Q3 / E4.N7.Q3.1 listés dans le bloc « Motifs d'interdiction cochés » lorsqu'ils sont présents ; sinon s'appuyer sur les seules réponses déclarées utiles sans inventer une finalité Art. 5.
+- Cas inacceptable (suite) : introduction_contextuelle, conclusion, impact_attendu et tout le corps narratif hors interdit_2 / interdit_3 ne doivent mentionner aucune pratique prohibée à l'article 5 si elle n'apparaît pas dans la liste « Motifs d'interdiction » du bloc d'ancrage ; ne pas enrichir par un « motif parasite » (ex. biométrie ou autre interdit) alors que seuls d'autres libellés sont listés.
+- Cas Risque minimal avec texte d'intérêt public + contrôle éditorial humain déclaré (voir lignes T1 / T1E du bloc) : introduction_contextuelle et justification doivent expliquer le parcours (questions texte posées pour le volet transparence), le public informé, la validation éditoriale humaine, et pourquoi cela évite le scénario Risque limité lié à l'absence de ce contrôle — pas seulement une phrase générique sur un risque faible.
+- Cas deepfake (E4.N8.Q11.M1 = Oui) : utiliser les termes média réaliste / pris pour authentique / deepfake ou hypertrucage ; éviter un discours vague sur « transparence » ou « contenus synthétiques » sans ce lien.
+- Recommandations 9 slots : adapter le vocabulaire (utilisateur final, B2C, diffusion publique) aux réponses E4.N8.Q9 et E4.N8.Q11.* — pas de scénario grand public si le questionnaire indique absence d'interaction directe ou usage interne ; en Risque limité, suivre les sous-instructions « Recommandations (9 slots) » du bloc pour deepfake et interaction directe lorsqu'elles figurent.`
+        : ''
+
     const questionnaireSection = this.buildQuestionnaireSectionForPhase1(questionnaire_questions)
 
     const highRiskJustificationRules =
-      cas_usage.risk_level_code === 'high'
+      !isClassificationImpossible && cas_usage.risk_level_code === 'high'
         ? `
 - evaluation_risque.justification (obligatoire si niveau = Risque élevé) :
   - Rappeler explicitement que le niveau retenu est celui fourni par l'application (« ${cas_usage.risk_level_label_fr} »), sans le contredire.
@@ -495,7 +520,17 @@ ${data.questionnaire_parcours.ors_exit === 'unacceptable' ? `- Sortie ORS « una
   - Interdit comme fondement principal : formulations vagues du type « domaine à risque », simple évocation de l'emploi ou du secteur sans ce rattachement juridique, le seul traitement de données personnelles sans lien explicite à un cas d'Annexe III, l'absence de surveillance humaine, l'absence de mesures d'atténuation, l'absence de documentation seule, ou toute question E5.N9.* / E6.N10.* (réservées aux 9 slots d'action).`
         : ''
 
-    const authoritativeRiskBlock = `
+    const authoritativeRiskBlock = isClassificationImpossible
+      ? `
+QUALIFICATION — ÉTAT IMPOSSIBLE (AUTORITATIF — APPLICATION)
+- L'application enregistre classification_status = impossible : des pivots juridiques non tranchés (ex. réponses « Je ne sais pas ») empêchent une conclusion de niveau AI Act fiable.
+- INTERDICTION absolue : ne pas attribuer, suggérer ou laisser entendre un niveau définitif du barème « Risque minimal », « Risque limité », « Risque élevé », « Interdit » / « Risque inacceptable ».
+- evaluation_risque.niveau : chaîne EXACTE et SEULE autorisée : "${cas_usage.risk_level_label_fr}" — c'est l'état métier « non conclu », pas un palier du règlement (UE) 2024/1689.
+- evaluation_risque.justification : expliquer uniquement l'impossibilité de conclure ; ne pas inférer un palier depuis le score final, depuis des réponses partielles ni depuis une analogie sectorielle.
+- Ne pas utiliser le score ni E5.N9.* / E6.N10.* pour « deviner » un niveau de risque réglementaire.
+- Score final ${scoreFinal ?? 'N/A'}/100 et réponses questionnaire : contexte uniquement ; ils ne valident pas une qualification lorsque l'état est impossible.
+- introduction_contextuelle, impact_attendu, conclusion : ne pas y affirmer un palier AI Act acquis ; formuler en termes d'incertitude réglementaire, d'informations à confirmer ou de points juridiques à clarifier avant toute conclusion.`
+      : `
 NIVEAU DE RISQUE (AUTORITATIF — APPLICATION)
 - Niveau fourni par l'application : ne pas le recalculer ni le modifier.
 - evaluation_risque.niveau = chaîne exacte : "${cas_usage.risk_level_label_fr}"
@@ -578,7 +613,17 @@ Règles transverses
 - Interdiction de produire trois variantes cosmétiquement différentes d'un seul et même paragraphe ; pas de simple copier-coller entre les champs.${unacceptableV2N8Rule}
 `)
 
-    const formatBlock = isUnacceptable
+    const formatBlock = isClassificationImpossible
+      ? `
+SORTIE JSON — QUALIFICATION RÉGLEMENTAIRE IMPOSSIBLE
+- Un seul objet JSON UTF-8, parsable ; pas de markdown ni de texte hors de l'objet.
+- Clés obligatoires (noms inchangés) : introduction_contextuelle, evaluation_risque { niveau, justification }, quick_win_1, quick_win_2, quick_win_3, priorite_1, priorite_2, priorite_3, action_1, action_2, action_3, impact_attendu, conclusion
+- Toutes les valeurs chaîne non vides (espaces seuls interdits).
+- evaluation_risque.niveau : "${cas_usage.risk_level_label_fr}" EXACTEMENT — ne pas remplacer par « Risque minimal », « Risque limité », « Risque élevé », « Interdit » ni aucune variante de palier AI Act.
+- evaluation_risque.justification : doit expliciter l'impossibilité de conclure ; interdiction d'y présenter un palier du barème comme acquis.
+- introduction_contextuelle, impact_attendu, conclusion : même discipline — pas de « le système est à risque minimal/limité/élevé » ni équivalent ; orienter vers clarification et collecte d'informations.
+- Les 9 slots : préfixes et structure comme pour le cas standard ; ils peuvent refléter l'incertitude réglementaire sans contredire l'état impossible du niveau.`
+      : isUnacceptable
       ? `
 SORTIE JSON — CAS RISQUE INACCEPTABLE
 - Un seul objet JSON UTF-8, parsable ; pas de markdown ni de texte hors de l'objet.
@@ -587,6 +632,7 @@ SORTIE JSON — CAS RISQUE INACCEPTABLE
 - evaluation_risque.niveau : "${cas_usage.risk_level_label_fr}" exactement (niveau fourni par l'application, ne pas le modifier).
 
 Champs interdit_1, interdit_2, interdit_3 : obligatoires, 2 à 4 phrases chacun, distincts par leur objet (pas trois « interdictions » équivalentes).
+- introduction_contextuelle, conclusion, impact_attendu : mêmes contraintes que le bloc d'ancrage sur les motifs Art. 5 — aucune pratique prohibée supplémentaire non listée dans « Motifs d'interdiction cochés » du bloc ANCRAGE STRUCTURÉ.
 - interdit_1 : motif principal d'interdiction du cas, fondé sur les réponses questionnaire pertinentes — priorité aux faits déclarés sous E4.N7.Q2.1, E4.N7.Q3 et E4.N7.Q3.1 ; ne pas extrapoler hors de ces éléments et du reste du questionnaire utile à ce motif.
 - interdit_2 : exigence de preuve et de traçabilité de l'arrêt ou du non-déploiement (contrôle, audit) — ne pas présenter comme une nouvelle « pratique interdite » parallèle au motif.
 - interdit_3 : exigence de sécurisation et de documentation des instructions système, prompts et garde-fous — ne pas présenter comme une troisième « pratique interdite » parallèle au motif.`
@@ -599,7 +645,7 @@ SORTIE JSON
 - evaluation_risque.justification : respecter intégralement le bloc NIVEAU DE RISQUE ci-dessus (y compris les règles spécifiques « Risque élevé » si applicables).
 - quick_win_1, quick_win_2, quick_win_3, priorite_1, priorite_2, priorite_3, action_1, action_2, action_3 : chaque valeur doit commencer par le préfixe imposé (OUI / NON / Information insuffisante / Hors périmètre), contenir au moins 2 phrases explicatives, et se terminer obligatoirement par « Références : ... » (y compris pour Information insuffisante et Hors périmètre).`
 
-    return `${factsBlock}${parcoursMetaBlock}\n\n${questionnaireSection}\n\n${authoritativeRiskBlock}\n\n${slotMappingBlock}\n\n${formatBlock}`.trim()
+    return `${factsBlock}${parcoursMetaBlock}${structuredGroundingBlock}\n\n${questionnaireSection}\n\n${authoritativeRiskBlock}\n\n${slotMappingBlock}\n\n${formatBlock}`.trim()
   }
 
   /**

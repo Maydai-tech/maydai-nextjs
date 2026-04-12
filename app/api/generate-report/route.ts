@@ -6,13 +6,17 @@ import { extractNextStepsFromReport, validateNextStepsData, logExtractionResults
 import { errorMonitor, createErrorReport, createPerformanceMetrics } from '@/lib/error-monitor'
 import {
   deriveRiskLevelFromResponses,
+  normalizeEvaluationRisqueForImpossibleClassification,
   normalizeEvaluationRisqueInReportText,
   riskLevelCodeToReportLabel,
   type RiskLevelCode,
 } from '@/lib/risk-level'
+import { dbResponsesToQuestionnaireAnswers } from '@/lib/scoring-v2-server'
+import { resolveQualificationOutcomeV3 } from '@/lib/qualification-v3-decision'
 import { computeSlotStatuses, enforceStatusPrefix, SLOT_KEYS } from '@/lib/slot-statuses'
 import {
   QUESTIONNAIRE_VERSION_V2,
+  QUESTIONNAIRE_VERSION_V3,
   normalizeQuestionnaireVersion,
 } from '@/lib/questionnaire-version'
 import type { QuestionnaireParcoursMeta } from '@/lib/openai-data-transformer'
@@ -186,7 +190,7 @@ export async function POST(req: NextRequest) {
       system_type, responsible_service, deployment_countries, company_status,
       technology_partner, llm_model_version, primary_model_id,
       score_base, score_model, score_final, is_eliminated, elimination_reason,
-      questionnaire_version, bpgv_variant, active_question_codes, ors_exit,
+      questionnaire_version, bpgv_variant, active_question_codes, ors_exit, classification_status,
       companies(name, industry, city, country)
     `)
     .eq('id', usecase_id)
@@ -200,14 +204,15 @@ export async function POST(req: NextRequest) {
       (usecase as { questionnaire_version?: number | null }).questionnaire_version
     )
     if (
-      questionnaireVersion === QUESTIONNAIRE_VERSION_V2 &&
+      (questionnaireVersion === QUESTIONNAIRE_VERSION_V2 ||
+        questionnaireVersion === QUESTIONNAIRE_VERSION_V3) &&
       String(usecase.status || '').toLowerCase() === 'completed' &&
       usecase.score_final == null
     ) {
       return NextResponse.json(
         {
           error:
-            'Cas V2 marqué complété sans score final : recalcul ou complétion requise avant génération du rapport.',
+            'Cas V2/V3 marqué complété sans score final : recalcul ou complétion requise avant génération du rapport.',
           code: 'V2_SCORE_MISSING',
         },
         { status: 409 }
@@ -224,11 +229,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch questionnaire responses' }, { status: 500 })
     }
 
-    const authoritativeRiskCode: RiskLevelCode = deriveRiskLevelFromResponses(responses || [])
+    let authoritativeRiskCode: RiskLevelCode | null
+    let classificationStatusUpdate: string | null = null
+
+    if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3) {
+      const answers = dbResponsesToQuestionnaireAnswers(responses || [])
+      const v3Out = resolveQualificationOutcomeV3(
+        answers,
+        (usecase as { system_type?: string | null }).system_type
+      )
+      if (v3Out.classification_status === 'impossible') {
+        return NextResponse.json(
+          {
+            error:
+              'Classification réglementaire impossible : les réponses « Je ne sais pas » sur un pivot critique empêchent de conclure un niveau de risque fiable. Corrigez le questionnaire avant de générer le rapport.',
+            code: 'CLASSIFICATION_IMPOSSIBLE',
+          },
+          { status: 409 }
+        )
+      }
+      authoritativeRiskCode = v3Out.risk_level ?? 'minimal'
+      classificationStatusUpdate = 'qualified'
+    } else {
+      authoritativeRiskCode = deriveRiskLevelFromResponses(responses || [])
+    }
 
     const { error: riskLevelUpdateError } = await supabase
       .from('usecases')
-      .update({ risk_level: authoritativeRiskCode })
+      .update({
+        risk_level: authoritativeRiskCode,
+        ...(questionnaireVersion === QUESTIONNAIRE_VERSION_V3
+          ? { classification_status: classificationStatusUpdate }
+          : {}),
+      })
       .eq('id', usecase_id)
 
     if (riskLevelUpdateError) {
@@ -280,9 +313,10 @@ export async function POST(req: NextRequest) {
     console.log(`[generate-report] Slot statuses (code) pour ${usecase_id}:`, slotStatuses)
 
     const questionnaireParcours: QuestionnaireParcoursMeta | null =
-      questionnaireVersion === QUESTIONNAIRE_VERSION_V2
+      questionnaireVersion === QUESTIONNAIRE_VERSION_V2 ||
+      questionnaireVersion === QUESTIONNAIRE_VERSION_V3
         ? {
-            questionnaire_version: QUESTIONNAIRE_VERSION_V2,
+            questionnaire_version: questionnaireVersion,
             bpgv_variant:
               (usecase as { bpgv_variant?: string | null }).bpgv_variant ?? null,
             ors_exit: (usecase as { ors_exit?: string | null }).ors_exit ?? null,
@@ -346,9 +380,18 @@ export async function POST(req: NextRequest) {
       throw error
     }
 
-    const normalizedReport = normalizeEvaluationRisqueInReportText(analysis, authoritativeRiskCode)
+    const reportClassificationImpossible =
+      String((usecase as { classification_status?: string | null }).classification_status) ===
+      'impossible'
+
+    const normalizedReport = reportClassificationImpossible
+      ? normalizeEvaluationRisqueForImpossibleClassification(analysis)
+      : normalizeEvaluationRisqueInReportText(analysis, authoritativeRiskCode)
+
     if (normalizedReport.corrected) {
-      const expected = riskLevelCodeToReportLabel(authoritativeRiskCode)
+      const expected = reportClassificationImpossible
+        ? '(libellé qualification impossible)'
+        : riskLevelCodeToReportLabel(authoritativeRiskCode)
       console.warn(
         `[generate-report] Écart evaluation_risque.niveau (usecase_id=${usecase_id}): modèle="${normalizedReport.previousNiveau ?? '(vide)'}" → corrigé en "${expected}"`
       )

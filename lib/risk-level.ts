@@ -142,14 +142,19 @@ export interface NormalizeReportRiskResult {
 }
 
 /**
- * Si le rapport est un JSON (ou contient un JSON) avec `evaluation_risque.niveau`,
- * force ce champ au libellé autoritatif. Sinon renvoie le texte inchangé.
+ * Libellé unique pour `evaluation_risque.niveau` quand la qualification réglementaire est impossible (V3).
+ * Ce n’est pas un palier AI Act — aligné prompt / transformer / post-traitement.
  */
-export function normalizeEvaluationRisqueInReportText(
+export const CLASSIFICATION_IMPOSSIBLE_EVALUATION_NIVEAU =
+  'Classification réglementaire impossible — aucun niveau AI Act ne peut être conclu'
+
+/**
+ * Force `evaluation_risque.niveau` dans un JSON rapport au libellé attendu (garde-fou post-LLM).
+ */
+function applyAuthoritativeNiveauToReportJson(
   rawReport: string,
-  authoritativeCode: RiskLevelCode
+  expectedLabel: string
 ): NormalizeReportRiskResult {
-  const expectedLabel = riskLevelCodeToReportLabel(authoritativeCode)
   const trimmed = rawReport.trim()
 
   let parsed: Record<string, unknown>
@@ -193,4 +198,26 @@ export function normalizeEvaluationRisqueInReportText(
     corrected: true,
     previousNiveau: current || undefined,
   }
+}
+
+/**
+ * Si le rapport est un JSON (ou contient un JSON) avec `evaluation_risque.niveau`,
+ * force ce champ au libellé autoritatif. Sinon renvoie le texte inchangé.
+ */
+export function normalizeEvaluationRisqueInReportText(
+  rawReport: string,
+  authoritativeCode: RiskLevelCode
+): NormalizeReportRiskResult {
+  return applyAuthoritativeNiveauToReportJson(rawReport, riskLevelCodeToReportLabel(authoritativeCode))
+}
+
+/**
+ * Même mécanisme que {@link normalizeEvaluationRisqueInReportText} pour les cas
+ * `classification_status === 'impossible'` : aucun palier « Risque minimal » etc. ne doit rester si le JSON est structuré.
+ */
+export function normalizeEvaluationRisqueForImpossibleClassification(
+  rawReport: string,
+  expectedNiveau: string = CLASSIFICATION_IMPOSSIBLE_EVALUATION_NIVEAU
+): NormalizeReportRiskResult {
+  return applyAuthoritativeNiveauToReportJson(rawReport, expectedNiveau)
 }

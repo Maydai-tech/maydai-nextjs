@@ -2,6 +2,8 @@ import React from 'react'
 import { UseCase } from '../../types/usecase'
 import { UseCaseNavigation } from './UseCaseNavigation'
 import { UseCaseHeader } from '../overview/UseCaseHeader'
+import { useRiskLevel } from '../../hooks/useRiskLevel'
+import { UseCaseRiskProvider } from '../../context/UseCaseRiskContext'
 
 interface UseCaseLayoutProps {
   useCase: UseCase
@@ -13,33 +15,34 @@ interface UseCaseLayoutProps {
 
 export function UseCaseLayout({ useCase, children, showNavigation = true, onUpdateUseCase, updating }: UseCaseLayoutProps) {
   const isDraft = useCase.status?.toLowerCase() === 'draft'
+  const riskAssessment = useRiskLevel(useCase.id, useCase)
 
   return (
-    <div className="space-y-0">
-      {/* Header */}
-      <div className="bg-white shadow-sm -m-6 mb-0 p-6">
-        <UseCaseHeader 
-          useCase={useCase} 
-          onUpdateUseCase={onUpdateUseCase}
-          updating={updating}
-        />
-      </div>
-
-      {/* Navigation */}
-      {showNavigation && (
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-10 -mx-6 px-6">
-          <UseCaseNavigation 
-            useCaseId={useCase.id} 
-            companyId={useCase.company_id}
-            isDraft={isDraft}
+    <UseCaseRiskProvider value={riskAssessment}>
+      <div className="space-y-0">
+        {/* Header */}
+        <div className="bg-white shadow-sm -m-6 mb-0 p-6">
+          <UseCaseHeader
+            useCase={useCase}
+            onUpdateUseCase={onUpdateUseCase}
+            updating={updating}
           />
         </div>
-      )}
 
-      {/* Content */}
-      <div className="pt-6">
-        {children}
+        {/* Navigation */}
+        {showNavigation && (
+          <div className="bg-white border-b border-gray-200 sticky top-0 z-10 -mx-6 px-6">
+            <UseCaseNavigation
+              useCaseId={useCase.id}
+              companyId={useCase.company_id}
+              isDraft={isDraft}
+            />
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="pt-6">{children}</div>
       </div>
-    </div>
+    </UseCaseRiskProvider>
   )
 } 

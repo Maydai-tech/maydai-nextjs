@@ -1,6 +1,14 @@
+/** Ajoute `entree=` (analytics GTM) sans impact sur le moteur ni les scores. */
+export function withEvaluationEntree(href: string, entree: string): string {
+  const q = encodeURIComponent(entree)
+  return href.includes('?') ? `${href}&entree=${q}` : `${href}?entree=${q}`
+}
+
 export const useCaseRoutes = {
   overview: (id: string) => `/usecases/${id}`,
   evaluation: (id: string) => `/usecases/${id}/evaluation`,
+  /** V3 — coque parcours court (sans E5 ; Q12 + E6 si applicable) ; même graphe, saut de navigation côté UI. */
+  evaluationShort: (id: string) => `/usecases/${id}/evaluation?parcours=court`,
   rapport: (id: string) => `/usecases/${id}/rapport`,
   conformite: (id: string) => `/usecases/${id}/conformite`,
   annexes: (id: string) => `/usecases/${id}/annexes`,

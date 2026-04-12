@@ -34,6 +34,7 @@ describe('getReportPlanNarrativeLine', () => {
   test('texte LLM vide : fallback catalogue inchangé (NON)', () => {
     const out = getReportPlanNarrativeLine('', 'NON', action)
     expect(out).toContain(action.label)
-    expect(out).toContain('absente ou insuffisante')
+    expect(out).toContain('non documentée')
+    expect(out).toContain('todo conformité')
   })
 })

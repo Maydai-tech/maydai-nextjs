@@ -1,12 +1,14 @@
 import { QUESTIONS_DATA } from './questions-data'
 import {
+  CLASSIFICATION_IMPOSSIBLE_EVALUATION_NIVEAU,
   isRiskLevelCode,
   normalizeToRiskLevelCode,
   riskLevelCodeToReportLabel,
   type RiskLevelCode,
 } from '@/lib/risk-level'
 import type { SlotStatusMap } from '@/lib/slot-statuses'
-import { QUESTIONNAIRE_VERSION_V2 } from '@/lib/questionnaire-version'
+import { QUESTIONNAIRE_VERSION_V2, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
+import { formatReportGroundingForPrompt } from '@/lib/report-llm-grounding'
 
 /** Métadonnées parcours V2 transmises au LLM (source serveur). */
 export interface QuestionnaireParcoursMeta {
@@ -171,6 +173,9 @@ export function validateOpenAIInput(data: OpenAIAnalysisInput): { isValid: boole
 
 // ===== NOUVELLE FONCTION DE TRANSFORMATION COMPLÈTE =====
 
+/** @deprecated utiliser `CLASSIFICATION_IMPOSSIBLE_EVALUATION_NIVEAU` depuis `@/lib/risk-level` */
+export const CLASSIFICATION_IMPOSSIBLE_RISK_LABEL_FR = CLASSIFICATION_IMPOSSIBLE_EVALUATION_NIVEAU
+
 interface UseCaseComplete {
   id: string
   name: string
@@ -191,6 +196,7 @@ interface UseCaseComplete {
   score_final?: number | null
   is_eliminated?: boolean
   elimination_reason?: string
+  classification_status?: string | null
   companies?: {
     name: string
     industry: string
@@ -252,16 +258,18 @@ interface OpenAIAnalysisInputComplete {
       description: string
       deployment_date: string
       status: string
-      /** Libellé français officiel du rapport (ex. « Risque élevé ») */
+      /** Libellé affiché / prompt : palier AI Act ou texte d’état « impossible » */
       risk_level: string
-      /** Code interne : minimal | limited | high | unacceptable */
-      risk_level_code: RiskLevelCode
+      /** Code interne : minimal | limited | high | unacceptable — null si qualification impossible */
+      risk_level_code: RiskLevelCode | null
       /** Identique à risk_level — champ explicite pour le prompt */
       risk_level_label_fr: string
       ai_category: string
       system_type: string
       responsible_service: string
       deployment_countries: string[]
+      /** V3 : qualified | impossible */
+      classification_status?: string | null
     }
     technologie: {
       technology_partner: string
@@ -288,6 +296,8 @@ interface OpenAIAnalysisInputComplete {
   status_levels: Record<string, string>
   slot_statuses?: SlotStatusMap
   questionnaire_parcours?: QuestionnaireParcoursMeta
+  /** Résumé structuré des faits cochés pour ancrage LLM (Lot A) */
+  report_grounding_block?: string
 }
 
 /**
@@ -302,7 +312,8 @@ export function transformToOpenAIFormatComplete(
   questionnaireParcours?: QuestionnaireParcoursMeta | null
 ): OpenAIAnalysisInputComplete {
   const activeParcoursSet =
-    questionnaireParcours?.questionnaire_version === QUESTIONNAIRE_VERSION_V2 &&
+    (questionnaireParcours?.questionnaire_version === QUESTIONNAIRE_VERSION_V2 ||
+      questionnaireParcours?.questionnaire_version === QUESTIONNAIRE_VERSION_V3) &&
     questionnaireParcours.active_question_codes.length > 0
       ? new Set(questionnaireParcours.active_question_codes)
       : null
@@ -310,12 +321,22 @@ export function transformToOpenAIFormatComplete(
   // Construire le questionnaire avec toutes les questions et réponses
   const questionnaireQuestions = buildQuestionnaireQuestions(responses, activeParcoursSet)
 
-  const rawRisk = usecase.risk_level
-  const riskLevelCode: RiskLevelCode =
-    rawRisk && isRiskLevelCode(rawRisk)
-      ? rawRisk
-      : normalizeToRiskLevelCode(rawRisk || '') ?? 'minimal'
-  const riskLevelLabelFr = riskLevelCodeToReportLabel(riskLevelCode)
+  const classificationImpossible = usecase.classification_status === 'impossible'
+
+  let riskLevelCode: RiskLevelCode | null
+  let riskLevelLabelFr: string
+
+  if (classificationImpossible) {
+    riskLevelCode = null
+    riskLevelLabelFr = CLASSIFICATION_IMPOSSIBLE_EVALUATION_NIVEAU
+  } else {
+    const rawRisk = usecase.risk_level
+    riskLevelCode =
+      rawRisk && isRiskLevelCode(rawRisk)
+        ? rawRisk
+        : normalizeToRiskLevelCode(rawRisk || '') ?? 'minimal'
+    riskLevelLabelFr = riskLevelCodeToReportLabel(riskLevelCode)
+  }
 
   // Construire les champs de contexte
   const usecaseContextFields = {
@@ -338,7 +359,8 @@ export function transformToOpenAIFormatComplete(
       ai_category: usecase.ai_category || 'Non spécifié',
       system_type: usecase.system_type || 'Non spécifié',
       responsible_service: usecase.responsible_service || 'Non spécifié',
-      deployment_countries: usecase.deployment_countries || []
+      deployment_countries: usecase.deployment_countries || [],
+      classification_status: usecase.classification_status ?? null,
     },
     technologie: {
       technology_partner: usecase.technology_partner || 'Non spécifié',
@@ -361,9 +383,17 @@ export function transformToOpenAIFormatComplete(
     }
   }
 
+  const report_grounding_block = formatReportGroundingForPrompt({
+    responses,
+    riskLevelCode,
+    classificationImpossible,
+    questionnaireParcours: questionnaireParcours ?? null,
+  })
+
   const base: OpenAIAnalysisInputComplete = {
     questionnaire_questions: questionnaireQuestions,
     usecase_context_fields: usecaseContextFields,
+    report_grounding_block,
     risk_categories: {
       "Acteurs IA": "Définit le rôle de l'entreprise dans l'écosystème IA",
       "Niveau de risque": "Détermine le niveau de risque global du système",

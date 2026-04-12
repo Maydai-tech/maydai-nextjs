@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { calculateScore } from '../../../../usecases/[id]/utils/score-calculator'
-import { UseCaseScore } from '../../../../usecases/[id]/types/usecase'
 import { logger, createRequestContext } from '@/lib/secure-logger'
+import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 
 
 export async function GET(
@@ -65,7 +65,9 @@ export async function GET(
     // Récupérer d'abord le score_final stocké en base
     const { data: usecaseData, error: scoreDataError } = await supabase
       .from('usecases')
-      .select('score_final, score_base, score_model, is_eliminated, last_calculation_date, questionnaire_version')
+      .select(
+        'score_final, score_base, score_model, is_eliminated, last_calculation_date, questionnaire_version, system_type, short_path_initial_score, short_path_completed_at'
+      )
       .eq('id', usecaseId)
       .single()
 
@@ -73,23 +75,25 @@ export async function GET(
       return NextResponse.json({ error: 'Error fetching use case data' }, { status: 500 })
     }
 
-    // Si un score_final existe, le retourner avec les category_scores calculés
+    const qv = normalizeQuestionnaireVersion(usecaseData.questionnaire_version)
+    const systemType = (usecaseData as { system_type?: string | null }).system_type ?? null
+
+    const { data: responses, error: responsesError } = await supabase
+      .from('usecase_responses')
+      .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
+      .eq('usecase_id', usecaseId)
+
+    if (responsesError) {
+      return NextResponse.json({ error: 'Error fetching responses' }, { status: 500 })
+    }
+
+    // Si un score_final existe, le retourner avec les category_scores calculés (parcours long terminé ou score complet).
     if (usecaseData.score_final !== null && usecaseData.score_final !== undefined) {
-      // Récupérer les réponses pour calculer les category_scores
-      const { data: responses, error: responsesError } = await supabase
-        .from('usecase_responses')
-        .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
-        .eq('usecase_id', usecaseId)
-
-      if (responsesError) {
-        return NextResponse.json({ error: 'Error fetching responses' }, { status: 500 })
-      }
-
-      // Calculer le score complet pour obtenir les category_scores
       const fullScoreData = await calculateScore(usecaseId, responses || [], supabase, {
-        questionnaireVersion: usecaseData.questionnaire_version
+        questionnaireVersion: usecaseData.questionnaire_version,
+        systemType,
       })
-      
+
       return NextResponse.json({
         usecase_id: usecaseId,
         score: usecaseData.score_final,
@@ -106,27 +110,42 @@ export async function GET(
         questionnaire_version: fullScoreData.questionnaire_version,
         bpgv_variant: fullScoreData.bpgv_variant,
         ors_exit: fullScoreData.ors_exit,
-        active_question_codes: fullScoreData.active_question_codes
+        active_question_codes: fullScoreData.active_question_codes,
+        score_scope: 'full' as const,
       })
     }
 
-    // Fallback : calculer le score dynamiquement si pas de score_final
-    const { data: responses, error: responsesError } = await supabase
-      .from('usecase_responses')
-      .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
-      .eq('usecase_id', usecaseId)
+    // V3 : score initial parcours court persisté (sans score_final long).
+    const shortInitial = (usecaseData as { short_path_initial_score?: number | null }).short_path_initial_score
+    if (qv === QUESTIONNAIRE_VERSION_V3 && shortInitial != null && shortInitial !== undefined) {
+      const shortScoreData = await calculateScore(usecaseId, responses || [], supabase, {
+        questionnaireVersion: usecaseData.questionnaire_version,
+        systemType,
+        questionnairePathMode: 'short',
+      })
 
-    if (responsesError) {
-      return NextResponse.json({ error: 'Error fetching responses' }, { status: 500 })
+      return NextResponse.json({
+        ...shortScoreData,
+        score: shortInitial,
+        calculated_at:
+          (usecaseData as { short_path_completed_at?: string | null }).short_path_completed_at ||
+          usecaseData.last_calculation_date ||
+          new Date().toISOString(),
+        score_scope: 'short_initial' as const,
+        score_display_hint:
+          'Score initial du parcours court (périmètre réduit : qualification, mini-pack E5, Q12, E6). Le score complet s’affiche après le parcours long.',
+      })
     }
 
-    // Calculer le score
     const scoreData = await calculateScore(usecaseId, responses || [], supabase, {
-      questionnaireVersion: usecaseData.questionnaire_version
+      questionnaireVersion: usecaseData.questionnaire_version,
+      systemType,
     })
 
-    // Retourner le score calculé
-    return NextResponse.json(scoreData)
+    return NextResponse.json({
+      ...scoreData,
+      score_scope: 'full' as const,
+    })
 
   } catch (error) {
     const context = createRequestContext(request)

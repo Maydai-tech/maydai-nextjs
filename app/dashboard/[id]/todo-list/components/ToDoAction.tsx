@@ -2,6 +2,7 @@
 
 import { CheckSquare, Square, ChevronRight, ChevronDown, AlertTriangle, CheckCircle2, TrendingUp, Check } from 'lucide-react'
 import { getDocumentExplanation, type DocumentType } from '../utils/todo-helpers'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
 
 interface TodoItem {
   id: string
@@ -105,6 +106,9 @@ export default function ToDoAction({
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-900">
               {getDocumentExplanation(todo.docType)}
+            </p>
+            <p className="text-xs text-blue-900/85 mt-3 leading-relaxed border-t border-blue-200/80 pt-3">
+              {DECLARATION_PROOF_FLOW_COPY.todoActionHint}
             </p>
           </div>
 

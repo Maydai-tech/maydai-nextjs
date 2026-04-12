@@ -17,6 +17,7 @@ import { getReportPlanNarrativeLine } from '@/lib/report-plan-ui'
 import type { RiskLevelCode } from '@/lib/risk-level'
 import type { SlotStatus, SlotStatusMap } from '@/lib/slot-statuses'
 import type { UseCaseNextSteps } from '@/lib/supabase'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/lib/declaration-proof-flow-copy'
 
 /** Réexport — ordre des 9 slots = `REPORT_STANDARD_SLOT_KEYS_ORDERED` (catalogue). */
 export const STANDARD_PLAN_SLOT_KEYS_ORDERED: readonly string[] = [...REPORT_STANDARD_SLOT_KEYS_ORDERED]
@@ -273,29 +274,29 @@ export function flattenReportCanonicalItem(item: ReportCanonicalItem): Record<st
   }
 }
 
-/** Libellés compacts pour export PDF (cohérents avec le web). */
+/** Libellés compacts pour export PDF (alignés sur l’UI / `DECLARATION_PROOF_FLOW_COPY`). */
 export function declarationStatusPdfLabel(d: DeclarationStatusValue | null): string {
-  if (d == null) return 'Déclaratif : —'
-  if (d === 'OUI') return 'Déclaratif : OUI'
-  if (d === 'NON') return 'Déclaratif : NON'
-  if (d === 'Hors périmètre') return 'Déclaratif : hors périmètre'
-  return 'Déclaratif : information insuffisante'
+  if (d == null) return DECLARATION_PROOF_FLOW_COPY.declarativePdfNull
+  if (d === 'OUI') return DECLARATION_PROOF_FLOW_COPY.declarativeYes
+  if (d === 'NON') return DECLARATION_PROOF_FLOW_COPY.declarativeNo
+  if (d === 'Hors périmètre') return DECLARATION_PROOF_FLOW_COPY.declarativeOut
+  return DECLARATION_PROOF_FLOW_COPY.declarativeInsufficient
 }
 
 export function evidenceStatusPdfLabel(e: EvidenceStatusValue): string {
   switch (e) {
     case 'complete':
-      return 'Preuve : complétée'
+      return DECLARATION_PROOF_FLOW_COPY.evidenceShortComplete
     case 'validated':
-      return 'Preuve : validée'
+      return DECLARATION_PROOF_FLOW_COPY.evidenceShortValidated
     case 'incomplete':
-      return 'Preuve : à fournir'
+      return DECLARATION_PROOF_FLOW_COPY.evidenceShortIncomplete
     case 'not_tracked':
-      return 'Preuve : non suivie'
+      return DECLARATION_PROOF_FLOW_COPY.evidenceShortNotTracked
     case 'not_applicable':
-      return 'Preuve : N/A'
+      return DECLARATION_PROOF_FLOW_COPY.evidenceShortNa
     default:
-      return 'Preuve : —'
+      return '—'
   }
 }
 

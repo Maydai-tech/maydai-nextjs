@@ -12,7 +12,7 @@ import {
   isUnacceptableCase,
   getDocumentTodoText,
   isTodoCompleted,
-  getRiskLevelConfig,
+  getRiskLevelDisplayConfig,
   getPotentialPoints,
   getEarnedPoints,
   COMPLIANCE_DOCUMENT_TYPES,
@@ -20,6 +20,8 @@ import {
   type DocumentType
 } from './utils/todo-helpers'
 import { getRegistryTodoTitleForCase, resolveCanonicalDocType } from '@/lib/canonical-actions'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
+import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 
 interface UseCase {
   id: string
@@ -30,8 +32,10 @@ interface UseCase {
   updated_at: string
   status: 'draft' | 'active' | 'archived' | 'completed'
   risk_level?: string
+  classification_status?: string | null
   score_final?: number | null
   deployment_date?: string | null
+  questionnaire_version?: string | number | null
 }
 
 interface DocumentStatus {
@@ -508,6 +512,16 @@ export default function TodoListPage({ params }: TodoListPageProps) {
     }
   }, [api, companyId])
 
+  const showTodoV3Orientation = useMemo(
+    () =>
+      useCases.some(
+        (uc) =>
+          normalizeQuestionnaireVersion(uc.questionnaire_version) === QUESTIONNAIRE_VERSION_V3 &&
+          String(uc.status || '').toLowerCase() !== 'completed'
+      ),
+    [useCases]
+  )
+
   // Calculate stats
   const totalTodos = useCases.reduce((acc, uc) => acc + getTodosForUseCase(uc).length, 0)
   const completedTodos = useCases.reduce((acc, uc) => {
@@ -552,10 +566,15 @@ export default function TodoListPage({ params }: TodoListPageProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">To-do List</h1>
-              <p className="mt-2 text-gray-600">
-                Actions à mener pour vos cas d&apos;usage IA
+              <h1 className="text-3xl font-bold text-gray-900">{DECLARATION_PROOF_FLOW_COPY.todoPageTitle}</h1>
+              <p className="mt-2 text-gray-600 max-w-3xl leading-relaxed">
+                {DECLARATION_PROOF_FLOW_COPY.todoPageSubtitle}
               </p>
+              {showTodoV3Orientation && (
+                <p className="mt-4 text-sm text-teal-950/90 max-w-3xl leading-relaxed rounded-lg border border-teal-200 bg-teal-50/80 px-4 py-3">
+                  {DECLARATION_PROOF_FLOW_COPY.globalTodoV3OrientationBanner}
+                </p>
+              )}
             </div>
             {totalTodos > 0 && (
               <div className="flex items-center gap-4 text-sm">
@@ -603,18 +622,23 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                       {/* Badges */}
                       <div className="flex flex-wrap gap-2 flex-shrink-0">
                         {/* Risk level badge */}
-                        {useCase.risk_level && (
-                          <div className={`px-3 py-2 rounded-lg border ${getRiskLevelConfig(useCase.risk_level).bg} ${getRiskLevelConfig(useCase.risk_level).border}`}>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">
-                                Niveau de risque
-                              </span>
-                              <span className={`text-xs font-semibold ${getRiskLevelConfig(useCase.risk_level).text}`}>
-                                {getRiskLevelConfig(useCase.risk_level).label}
-                              </span>
+                        {(() => {
+                          const riskCfg = getRiskLevelDisplayConfig(useCase)
+                          return (
+                            <div
+                              className={`px-3 py-2 rounded-lg border ${riskCfg.bg} ${riskCfg.border}`}
+                            >
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">
+                                  Niveau de risque
+                                </span>
+                                <span className={`text-xs font-semibold ${riskCfg.text}`}>
+                                  {riskCfg.label}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )
+                        })()}
 
                         {/* Score badge */}
                         {useCase.score_final !== null && useCase.score_final !== undefined && (

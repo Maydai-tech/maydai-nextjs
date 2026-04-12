@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/lib/auth'
-import { CalendarRange, LineChart, Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { CalendarRange, LineChart, Loader2, Route } from 'lucide-react'
 
 type Granularity = 'day' | 'week' | 'month' | 'quarter'
 
@@ -223,6 +224,20 @@ export default function AdminAnalyticsPage() {
             Inscriptions et cas d’usage — agrégation{' '}
             <strong>Europe/Paris</strong>, semaines ISO, trimestres calendaires.
           </p>
+          <div className="mt-4">
+            <Link
+              href="/admin/analytics/v3-short-path"
+              className="inline-flex items-center gap-2 rounded-lg border-2 border-teal-200 bg-teal-50/90 px-4 py-3 text-sm font-medium text-teal-950 hover:bg-teal-100/90 transition-colors max-w-xl"
+            >
+              <Route className="h-5 w-5 shrink-0 text-[#0080A3]" aria-hidden />
+              <span>
+                <span className="block font-semibold">Pilotage parcours court V3 (GA4 / GTM)</span>
+                <span className="block text-xs font-normal text-gray-700 mt-0.5">
+                  Catalogue d’événements, entrées, funnel, recettes d’exploration — pas de chiffres live ici.
+                </span>
+              </span>
+            </Link>
+          </div>
         </div>
       </div>
 

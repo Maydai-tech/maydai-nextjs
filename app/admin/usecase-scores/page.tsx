@@ -17,6 +17,11 @@ import {
   Download
 } from 'lucide-react'
 import type { UseCaseScore } from '@/app/usecases/[id]/types/usecase'
+import {
+  getClassificationRiskDisplayLabel,
+  getListRiskBadgeStyle,
+  matchesAdminRiskLevelFilter,
+} from '@/lib/classification-risk-display'
 
 interface CategoryScore {
   category: string
@@ -38,6 +43,7 @@ interface UseCaseWithScore {
   company_id: string
   company_name: string
   risk_level: string | null
+  classification_status?: string | null
   ai_category: string | null
   system_type: string | null
   status: string
@@ -66,16 +72,6 @@ function getScoreBgColor(score: number): string {
   if (score >= 50) return 'bg-[#c6eef8]'
   if (score >= 30) return 'bg-orange-100'
   return 'bg-red-100'
-}
-
-function getRiskLevelLabel(level: string | null): string {
-  switch (level) {
-    case 'minimal': return 'Risque minimal'
-    case 'limited': return 'Risque limité'
-    case 'high': return 'Risque élevé'
-    case 'systemic': return 'Risque systémique'
-    default: return 'Non défini'
-  }
 }
 
 function getAICategoryLabel(category: string | null): string {
@@ -144,6 +140,7 @@ export default function UseCaseScoresPage() {
           description,
           company_id,
           risk_level,
+          classification_status,
           ai_category,
           system_type,
           status,
@@ -162,6 +159,7 @@ export default function UseCaseScoresPage() {
         company_id: uc.company_id,
         company_name: uc.companies?.[0]?.name || 'Unknown',
         risk_level: uc.risk_level,
+        classification_status: uc.classification_status ?? null,
         ai_category: uc.ai_category,
         system_type: uc.system_type,
         status: uc.status,
@@ -257,7 +255,7 @@ export default function UseCaseScoresPage() {
       uc.company_name,
       uc.name,
       getAICategoryLabel(uc.ai_category),
-      getRiskLevelLabel(uc.risk_level),
+      getClassificationRiskDisplayLabel(uc.classification_status, uc.risk_level),
       uc.score !== null ? uc.score.toString() : 'Non calculé',
       getStatusLabel(uc.status),
       uc.response_count.toString()
@@ -274,7 +272,16 @@ export default function UseCaseScoresPage() {
 
   const filteredUsecases = usecases.filter(uc => {
     if (selectedCompany !== 'all' && uc.company_id !== selectedCompany) return false
-    if (selectedRiskLevel !== 'all' && uc.risk_level !== selectedRiskLevel) return false
+    if (
+      selectedRiskLevel !== 'all' &&
+      !matchesAdminRiskLevelFilter(
+        selectedRiskLevel,
+        uc.classification_status ?? null,
+        uc.risk_level
+      )
+    ) {
+      return false
+    }
     return true
   })
 
@@ -364,9 +371,12 @@ export default function UseCaseScoresPage() {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">Tous les niveaux de risque</option>
+                <option value="impossible">Classification impossible</option>
+                <option value="unevaluated">Non évalué</option>
                 <option value="minimal">Risque minimal</option>
                 <option value="limited">Risque limité</option>
                 <option value="high">Risque élevé</option>
+                <option value="unacceptable">Risque inacceptable</option>
                 <option value="systemic">Risque systémique</option>
               </select>
 
@@ -455,9 +465,22 @@ export default function UseCaseScoresPage() {
                           {getAICategoryLabel(usecase.ai_category)}
                         </td>
                         <td className="px-6 py-4">
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                            {getRiskLevelLabel(usecase.risk_level)}
-                          </span>
+                          {(() => {
+                            const st = getListRiskBadgeStyle(
+                              usecase.classification_status,
+                              usecase.risk_level
+                            )
+                            return (
+                              <span
+                                className={`px-2 py-1 text-xs font-medium rounded-full ${st.bg} ${st.text}`}
+                              >
+                                {getClassificationRiskDisplayLabel(
+                                  usecase.classification_status,
+                                  usecase.risk_level
+                                )}
+                              </span>
+                            )
+                          })()}
                         </td>
                         <td className="px-6 py-4 text-center">
                           {loadingScores.has(usecase.id) ? (

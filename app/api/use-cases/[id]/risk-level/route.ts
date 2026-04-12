@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { deriveRiskLevelFromResponses, type RiskLevelCode } from '@/lib/risk-level'
+import {
+  normalizeQuestionnaireVersion,
+  QUESTIONNAIRE_VERSION_V3,
+} from '@/lib/questionnaire-version'
+import { dbResponsesToQuestionnaireAnswers } from '@/lib/scoring-v2-server'
+import { resolveQualificationOutcomeV3 } from '@/lib/qualification-v3-decision'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -40,7 +46,7 @@ export async function GET(
     // Vérifier que l'utilisateur a accès à ce use case
     const { data: usecase, error: usecaseError } = await supabase
       .from('usecases')
-      .select('company_id')
+      .select('company_id, questionnaire_version, system_type')
       .eq('id', usecaseId)
       .single()
 
@@ -71,13 +77,34 @@ export async function GET(
     }
 
     if (!responses || responses.length === 0) {
-      // Si aucune réponse, retourner minimal par défaut
-      return NextResponse.json({ risk_level: 'minimal' })
+      return NextResponse.json({
+        risk_level: 'minimal' as RiskLevelCode,
+        classification_status: 'qualified' as const,
+      })
+    }
+
+    const qv = normalizeQuestionnaireVersion(
+      (usecase as { questionnaire_version?: number | null }).questionnaire_version
+    )
+
+    if (qv === QUESTIONNAIRE_VERSION_V3) {
+      const answers = dbResponsesToQuestionnaireAnswers(responses)
+      const out = resolveQualificationOutcomeV3(
+        answers,
+        (usecase as { system_type?: string | null }).system_type
+      )
+      return NextResponse.json({
+        risk_level: out.risk_level,
+        classification_status: out.classification_status,
+      })
     }
 
     const highestRiskLevel: RiskLevelCode = deriveRiskLevelFromResponses(responses)
 
-    return NextResponse.json({ risk_level: highestRiskLevel })
+    return NextResponse.json({
+      risk_level: highestRiskLevel,
+      classification_status: 'qualified' as const,
+    })
   } catch (error) {
     console.error('Error in GET /api/use-cases/[id]/risk-level:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

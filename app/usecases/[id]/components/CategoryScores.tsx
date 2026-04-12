@@ -6,12 +6,21 @@ import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { RISK_CATEGORIES } from '../utils/risk-categories'
 import { AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import { getScoreStyle } from '@/lib/score-styles'
+import {
+  isClassificationImpossible,
+  V3_IMPOSSIBLE_MATURITY_SCORES_DISCLAIMER,
+} from '@/lib/classification-risk-display'
 
 interface CategoryScoresProps {
   usecaseId: string
+  /** Depuis le use case (DB) : recadrage scores si qualification V3 impossible */
+  classificationStatus?: string | null
 }
 
-export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: CategoryScoresProps) {
+export const CategoryScores = React.memo(function CategoryScores({
+  usecaseId,
+  classificationStatus = null,
+}: CategoryScoresProps) {
   const { score, loading, error } = useUseCaseScore(usecaseId)
 
   // Utilise les styles unifiés de l'application
@@ -71,8 +80,10 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
     )
   }
 
-  // Vérifier si le cas d'usage est en risque inacceptable (score global = 0)
-  const isUnacceptableRisk = score.score === 0
+  const impossible = isClassificationImpossible(classificationStatus)
+
+  // Score 0 = éliminatoire affiché comme tel, sauf si la qualification réglementaire est « impossible »
+  const isUnacceptableRisk = score.score === 0 && !impossible
 
   if (isUnacceptableRisk) {
     return (
@@ -141,6 +152,15 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Scores par principes</h3>
+
+      {impossible && (
+        <div
+          className="mb-4 p-3 rounded-lg border border-violet-200 bg-violet-50 text-sm text-violet-900 leading-relaxed"
+          role="status"
+        >
+          {V3_IMPOSSIBLE_MATURITY_SCORES_DISCLAIMER}
+        </div>
+      )}
       
       <div className="space-y-4">
         {sortedCategoryScores.map((category) => {
@@ -202,7 +222,14 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
       {/* Section Score risques (Risque Cas d'Usage) */}
       {riskUseCase != null && (
         <div className="mt-6 pt-4 border-t border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Score risques</h3>
+          <h3 className={`text-lg font-semibold text-gray-900 ${impossible ? 'mb-1' : 'mb-4'}`}>
+            Indicateur risque (questionnaire)
+          </h3>
+          {impossible && (
+            <p className="text-xs text-gray-600 mb-3">
+              Synthèse des risques déclarés au questionnaire — distinct du niveau IA Act juridiquement qualifié.
+            </p>
+          )}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -214,7 +241,7 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
                   className="w-5 h-5"
                 />
                 <span className="text-sm font-medium text-gray-900">
-                  Score risque du cas d&apos;usage
+                  Score risque du cas d&apos;usage (réponses)
                 </span>
               </div>
               <span className={`text-sm font-bold ${getScoreColor(riskUseCase.percentage).text}`}>
@@ -228,7 +255,7 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
               ></div>
             </div>
             <p className="text-xs text-gray-600 italic">
-              Risques identifiés dans le questionnaire
+              Agrégat des risques identifiés dans le questionnaire (pas un niveau AI Act)
             </p>
           </div>
         </div>
@@ -248,7 +275,9 @@ export const CategoryScores = React.memo(function CategoryScores({ usecaseId }: 
         </h3>
         <div className="flex items-baseline justify-between gap-3 mb-2">
           <p className="text-xs text-gray-600 italic flex-1">
-            Ensemble Scores principes + Score risques + Model LLM
+            {impossible
+              ? 'Total indicatif (maturité / conformité) — sans qualification réglementaire AI Act tant que la classification est impossible.'
+              : 'Ensemble Scores principes + Score risques + Model LLM'}
           </p>
           <span className={`text-xl font-bold shrink-0 ${getScoreColor(globalScorePercent).text}`}>
             {globalScorePercent}/100

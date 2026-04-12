@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { trackV3ShortPathSegmentView } from '@/lib/v3-short-path-analytics'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -6,13 +7,39 @@ import { UseCase } from '../../types/usecase'
 import { useEvaluation } from '../../hooks/useEvaluation'
 import { QuestionRenderer } from './QuestionRenderer'
 import { ProcessingAnimation } from '../ProcessingAnimation'
-import { ChevronLeft, ChevronRight, CheckCircle, AlertCircle, UserPlus, ArrowLeft, BookMarked, X } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
+  AlertCircle,
+  UserPlus,
+  ArrowLeft,
+  BookMarked,
+  X,
+  ShieldAlert,
+} from 'lucide-react'
 import Tooltip from '@/components/Tooltip'
 import { useAuth } from '@/lib/auth'
 import { useCompanyInfo } from '../../hooks/useCompanyInfo'
-import { useCaseRoutes } from '../../utils/routes'
+import { useCaseRoutes, withEvaluationEntree } from '../../utils/routes'
 import InviteScopeChoiceModal from '@/components/Collaboration/InviteScopeChoiceModal'
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
+import {
+  QUESTIONNAIRE_VERSION_V3,
+  normalizeQuestionnaireVersion,
+} from '@/lib/questionnaire-version'
+import { loadQuestions } from '../../utils/questions-loader'
+import { getV3CompositeKind } from '../../utils/questionnaire-v3-ui'
+import { getE4N7StepCallout } from '../../utils/e4n7-qualification-ui'
+import type { QuestionnairePathMode } from '../../utils/questionnaire'
+import {
+  getV3ShortPathSegmentForQuestion,
+  getV3ShortPathSegmentOrder,
+} from '../../utils/questionnaire-v3-short-path-ux'
+import { V3ShortPathOutcome } from './V3ShortPathOutcome'
+import { V3ShortPathIntro } from './V3ShortPathIntro'
+import { V3ShortPathStepper } from './V3ShortPathStepper'
+import { DECLARATION_PROOF_FLOW_COPY } from '../../utils/declaration-proof-flow-copy'
 
 /**
  * Interface définissant les props du composant StepByStepQuestionnaire
@@ -22,6 +49,10 @@ interface StepByStepQuestionnaireProps {
   useCase: UseCase
   /** Fonction appelée quand le questionnaire est terminé */
   onComplete: () => void
+  /** V3 : parcours court métier (mini-pack E5 + Q12 + E6). */
+  questionnairePathMode?: QuestionnairePathMode
+  /** Run first-party (Supabase) pour mesurer fin parcours long. */
+  evaluationRunId?: string | null
 }
 
 /**
@@ -31,7 +62,12 @@ interface StepByStepQuestionnaireProps {
  * @param useCase - Le cas d'usage à évaluer
  * @param onComplete - Callback appelé à la fin du questionnaire
  */
-export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuestionnaireProps) {
+export function StepByStepQuestionnaire({
+  useCase,
+  onComplete,
+  questionnairePathMode = 'long',
+  evaluationRunId = null,
+}: StepByStepQuestionnaireProps) {
   // Auth et informations de la company pour la collaboration
   const { session } = useAuth()
   const { isOwner } = useCompanyInfo(useCase.company_id)
@@ -49,6 +85,8 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
   // Popup "Registre MaydAI par défaut" (question E5.N9.Q7)
   const [showRegistreMaydaiPopup, setShowRegistreMaydaiPopup] = useState(false)
   const hasShownRegistrePopup = useRef(false)
+  const shortPathSegmentsSeen = useRef<Set<number>>(new Set())
+  const longPathRunCompletedSent = useRef(false)
   const router = useRouter()
 
   // Récupérer le nom de la company si non disponible dans useCase.companies
@@ -87,8 +125,10 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
     isCalculatingScore,  // Indique si le calcul du score est en cours
     isGeneratingReport,  // Indique si la génération du rapport est en cours
     showProcessingAnimation, // Contrôle l'affichage de l'animation de traitement
+    showShortPathOutcome,
     error,               // Message d'erreur éventuel
     handleAnswerSelect,  // Fonction pour sélectionner une réponse
+    setAnswerForQuestion,
     handleNext,          // Fonction pour passer à la question suivante
     handlePrevious,      // Fonction pour revenir à la question précédente
     handleSubmit,        // Fonction pour soumettre le questionnaire complet
@@ -97,8 +137,56 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
     usecaseId: useCase.id,
     companyId: useCase.company_id,
     onComplete,
-    questionnaireVersion: useCase.questionnaire_version
+    questionnaireVersion: useCase.questionnaire_version,
+    systemType: useCase.system_type,
+    questionnairePathMode: questionnairePathMode,
+    onShortPathOutcomeReady:
+      questionnairePathMode === 'short' ? () => router.refresh() : undefined,
   })
+
+  const questionnaireVersionNorm = useMemo(
+    () => normalizeQuestionnaireVersion(useCase.questionnaire_version),
+    [useCase.questionnaire_version]
+  )
+
+  useEffect(() => {
+    if (questionnairePathMode !== 'short' || questionnaireVersionNorm !== QUESTIONNAIRE_VERSION_V3) return
+    if (showShortPathOutcome) return
+    if (!currentQuestion?.id) return
+    const order = getV3ShortPathSegmentOrder(currentQuestion.id)
+    if (shortPathSegmentsSeen.current.has(order)) return
+    shortPathSegmentsSeen.current.add(order)
+    const seg = getV3ShortPathSegmentForQuestion(currentQuestion.id)
+    trackV3ShortPathSegmentView({
+      usecase_id: useCase.id,
+      segment_order: order,
+      segment_key: seg.key,
+      question_id: currentQuestion.id,
+    })
+  }, [
+    questionnairePathMode,
+    questionnaireVersionNorm,
+    showShortPathOutcome,
+    currentQuestion?.id,
+    useCase.id,
+  ])
+  const allQuestions = useMemo(() => loadQuestions(), [])
+  const v3CompositeKind =
+    questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3 && currentQuestion
+      ? getV3CompositeKind(currentQuestion.id)
+      : null
+
+  const e4N7Callout = currentQuestion ? getE4N7StepCallout(currentQuestion.id) : null
+  const e4N7CalloutStyles =
+    e4N7Callout?.variant === 'danger'
+      ? 'border-red-200 bg-red-50/90 text-red-950'
+      : e4N7Callout?.variant === 'caution'
+        ? 'border-amber-200 bg-amber-50/90 text-amber-950'
+        : e4N7Callout?.variant === 'domains'
+          ? 'border-sky-200 bg-sky-50/90 text-sky-950'
+          : e4N7Callout?.variant === 'safeguard'
+            ? 'border-emerald-200 bg-emerald-50/90 text-emerald-950'
+            : ''
 
   // Afficher la popup "Registre MaydAI par défaut" une fois quand E5.N9.Q7 = Oui + MaydAI
   useEffect(() => {
@@ -157,6 +245,74 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
     }
   }, [isCompleted, router, useCase.id])
 
+  useEffect(() => {
+    if (!isCompleted || questionnairePathMode !== 'long') return
+    if (!evaluationRunId || !session?.access_token) return
+    if (longPathRunCompletedSent.current) return
+    longPathRunCompletedSent.current = true
+    const body: Record<string, string | null> = {}
+    if (useCase.classification_status != null) {
+      body.classification_status = useCase.classification_status
+    }
+    if (useCase.risk_level != null) {
+      body.risk_level = useCase.risk_level
+    }
+    void fetch(`/api/usecases/${useCase.id}/evaluation-runs/${evaluationRunId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(body),
+    }).catch(() => {
+      /* best-effort */
+    })
+  }, [
+    isCompleted,
+    questionnairePathMode,
+    evaluationRunId,
+    session?.access_token,
+    useCase.id,
+    useCase.classification_status,
+    useCase.risk_level,
+  ])
+
+  if (showShortPathOutcome && questionnairePathMode === 'short') {
+    return (
+      <>
+        <div className="mb-4 text-center">
+          <Link
+            href={useCaseRoutes.overview(useCase.id)}
+            className="text-sm text-gray-600 hover:text-[#0080A3] inline-flex items-center gap-1"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Retour à la synthèse du cas
+          </Link>
+        </div>
+        <V3ShortPathOutcome
+          useCaseId={useCase.id}
+          companyId={useCase.company_id}
+          accessToken={session?.access_token}
+          answers={questionnaireData.answers as Record<string, unknown>}
+          useCaseName={useCase.name}
+          systemType={useCase.system_type}
+          evaluationRunId={evaluationRunId}
+        />
+        <InviteScopeChoiceModal
+          isOpen={isScopeChoiceModalOpen}
+          onClose={() => setIsScopeChoiceModalOpen(false)}
+          onSelectScope={handleScopeSelect}
+        />
+        <InviteCollaboratorModal
+          isOpen={isInviteModalOpen}
+          onClose={() => setIsInviteModalOpen(false)}
+          onInvite={handleInvite}
+          scope={inviteScope}
+        />
+      </>
+    )
+  }
+
   // État de fin : questionnaire terminé avec succès
   if (isCompleted) {
     return (
@@ -204,6 +360,13 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+        {questionnairePathMode === 'short' && questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3 && (
+          <V3ShortPathIntro
+            useCaseId={useCase.id}
+            longEvaluationHref={withEvaluationEntree(useCaseRoutes.evaluation(useCase.id), 'short_path_intro_long')}
+            systemType={useCase.system_type}
+          />
+        )}
         {/* Header avec navigation et informations du cas d'usage */}
         <div className="text-center mb-8">
           <Link
@@ -232,22 +395,33 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
           <p className="text-gray-600">
             Registre : {companyName || 'Chargement...'}
           </p>
+          {questionnairePathMode === 'short' && questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3 && (
+            <p className="mt-3 text-sm text-teal-900/90 font-medium max-w-xl mx-auto leading-relaxed">
+              {DECLARATION_PROOF_FLOW_COPY.synthesisV3ShortCtaLead}
+            </p>
+          )}
         </div>
 
-        {/* Barre de progression */}
-        <div className="mb-8">
-          <div className="flex justify-between text-sm text-gray-600 mb-2">
-            <span className="text-gray-700 font-medium">Progression</span>
-            <span className="text-[#0080A3] font-medium">{progress.percentage}%</span>
+        {/* Progression : dédiée au parcours court V3, sinon barre historique */}
+        {questionnairePathMode === 'short' && questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3 && currentQuestion ? (
+          <V3ShortPathStepper
+            currentQuestionId={currentQuestion.id}
+            isLastQuestion={isLastQuestion}
+          />
+        ) : (
+          <div className="mb-8">
+            <div className="flex justify-between text-sm text-gray-600 mb-2">
+              <span className="text-gray-700 font-medium">Progression</span>
+              <span className="text-[#0080A3] font-medium">{progress.percentage}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-[#0080A3] h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progress.percentage}%` }}
+              />
+            </div>
           </div>
-          {/* Barre de progression visuelle avec animation */}
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-[#0080A3] h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress.percentage}%` }}
-            ></div>
-          </div>
-        </div>
+        )}
 
         {/* Message d'erreur (affiché conditionnellement) */}
         {error && (
@@ -261,29 +435,245 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
 
         {/* Section question principale */}
         <div className="mb-8">
-          {/* Titre de la question avec infobulle */}
-          <div className="flex items-center gap-2 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {currentQuestion.question}
-            </h2>
-            {currentQuestion.tooltip && (
-              <Tooltip 
-                title={currentQuestion.tooltip.title}
-                shortContent={currentQuestion.tooltip.shortContent}
-                fullContent={currentQuestion.tooltip.fullContent}
-                icon={currentQuestion.tooltip.icon}
-                type="question"
-              />
+          {questionnairePathMode === 'short' &&
+            questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3 &&
+            currentQuestion && (
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 rounded-lg border border-gray-200 bg-gray-50/90 px-3 py-2.5 text-sm text-gray-800">
+                <span className="text-xs font-semibold uppercase tracking-wide text-[#0080A3] shrink-0">
+                  Segment en cours
+                </span>
+                <span className="text-gray-900 font-medium">
+                  {getV3ShortPathSegmentForQuestion(currentQuestion.id).title}
+                </span>
+                <span className="hidden sm:inline text-gray-400" aria-hidden>
+                  ·
+                </span>
+                <span className="text-gray-600 text-xs sm:text-sm leading-snug">
+                  {getV3ShortPathSegmentForQuestion(currentQuestion.id).tagline}
+                </span>
+              </div>
             )}
-          </div>
-          
-          {/* Composant de rendu de la question (gère différents types de questions) */}
-          <QuestionRenderer
-            question={currentQuestion}
-            currentAnswer={questionnaireData.answers[currentQuestion.id]}
-            onAnswerChange={handleAnswerSelect}
-            isReadOnly={false}
-          />
+          {currentQuestion.id.startsWith('E5.N9.') && (
+              <div className="mb-6 rounded-lg border border-[#0080A3]/25 bg-[#0080A3]/5 px-4 py-3 text-sm text-gray-700 leading-relaxed">
+                <p className="font-medium text-gray-900 mb-1">Bloc E5 — réponses déclaratives</p>
+                <p className="mb-2">
+                  Ici, on vous demande d’abord <strong className="text-gray-900">si la pratique existe</strong> dans
+                  l’état actuel que vous déclarez (qualité des données, registre, surveillance humaine, robustesse /
+                  cybersécurité). Ce n’est <strong className="text-gray-900">pas un audit documentaire</strong> au
+                  milieu du questionnaire : <strong className="text-gray-900">aucune pièce jointe</strong> n’est requise
+                  à cette étape.
+                </p>
+                <p className="mb-2">
+                  Un <strong className="text-gray-900">« Oui »</strong> reste une déclaration : il peut être honnête
+                  sans que tous les détails soient déjà saisis. Les <strong className="text-gray-900">preuves</strong>,
+                  identités précises, exports ou documents se complètent ensuite dans le{' '}
+                  <strong className="text-gray-900">dossier du cas</strong>, la <strong className="text-gray-900">todo
+                  conformité</strong> et les fiches de preuve associées — ce qui alimente aussi les indicateurs «
+                  information suffisante » côté suivi.
+                </p>
+                <p className="text-xs text-gray-600 leading-relaxed mb-2 border-t border-[#0080A3]/15 pt-2">
+                  {DECLARATION_PROOF_FLOW_COPY.ouiSansPreuve}
+                </p>
+                <p className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-x-4 text-[#0080A3] font-medium text-sm">
+                  <Link
+                    href={`/dashboard/${useCase.company_id}/dossiers/${useCase.id}`}
+                    className="underline-offset-2 hover:underline"
+                  >
+                    {DECLARATION_PROOF_FLOW_COPY.linkLabelDossierCase}
+                  </Link>
+                  <Link
+                    href={`/dashboard/${useCase.company_id}/todo-list`}
+                    className="underline-offset-2 hover:underline"
+                  >
+                    {DECLARATION_PROOF_FLOW_COPY.linkLabelTodo}
+                  </Link>
+                  <Link
+                    href={useCaseRoutes.overview(useCase.id)}
+                    className="underline-offset-2 hover:underline"
+                  >
+                    Synthèse du cas
+                  </Link>
+                </p>
+              </div>
+            )}
+
+          {v3CompositeKind === 'entry-q1' ? (
+            <>
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                  Votre organisation et ce cas d’usage
+                </h2>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Deux étapes en un écran : d’abord le <strong>rôle principal</strong> (chaîne de valeur IA), puis la
+                  situation la plus proche de la vôtre. Les libellés juridiques détaillés restent disponibles via les
+                  icônes d’aide à côté de chaque réponse.
+                </p>
+              </div>
+              <div className="space-y-8">
+                <section>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h3 className="text-lg font-medium text-gray-900">{allQuestions['E4.N7.Q1'].question}</h3>
+                    {allQuestions['E4.N7.Q1'].tooltip && (
+                      <Tooltip
+                        title={allQuestions['E4.N7.Q1'].tooltip!.title}
+                        shortContent={allQuestions['E4.N7.Q1'].tooltip!.shortContent}
+                        fullContent={allQuestions['E4.N7.Q1'].tooltip!.fullContent}
+                        icon={allQuestions['E4.N7.Q1'].tooltip!.icon}
+                        type="question"
+                      />
+                    )}
+                  </div>
+                  <QuestionRenderer
+                    question={allQuestions['E4.N7.Q1']}
+                    currentAnswer={questionnaireData.answers['E4.N7.Q1']}
+                    onAnswerChange={(a) => setAnswerForQuestion('E4.N7.Q1', a)}
+                    isReadOnly={false}
+                  />
+                </section>
+                {questionnaireData.answers['E4.N7.Q1'] === 'E4.N7.Q1.A' && (
+                  <section>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-lg font-medium text-gray-900">{allQuestions['E4.N7.Q1.1'].question}</h3>
+                      {allQuestions['E4.N7.Q1.1'].tooltip && (
+                        <Tooltip
+                          title={allQuestions['E4.N7.Q1.1'].tooltip!.title}
+                          shortContent={allQuestions['E4.N7.Q1.1'].tooltip!.shortContent}
+                          fullContent={allQuestions['E4.N7.Q1.1'].tooltip!.fullContent}
+                          icon={allQuestions['E4.N7.Q1.1'].tooltip!.icon}
+                          type="question"
+                        />
+                      )}
+                    </div>
+                    <QuestionRenderer
+                      question={allQuestions['E4.N7.Q1.1']}
+                      currentAnswer={questionnaireData.answers['E4.N7.Q1.1']}
+                      onAnswerChange={(a) => setAnswerForQuestion('E4.N7.Q1.1', a)}
+                      isReadOnly={false}
+                    />
+                  </section>
+                )}
+                {questionnaireData.answers['E4.N7.Q1'] === 'E4.N7.Q1.B' && (
+                  <section>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-lg font-medium text-gray-900">{allQuestions['E4.N7.Q1.2'].question}</h3>
+                      {allQuestions['E4.N7.Q1.2'].tooltip && (
+                        <Tooltip
+                          title={allQuestions['E4.N7.Q1.2'].tooltip!.title}
+                          shortContent={allQuestions['E4.N7.Q1.2'].tooltip!.shortContent}
+                          fullContent={allQuestions['E4.N7.Q1.2'].tooltip!.fullContent}
+                          icon={allQuestions['E4.N7.Q1.2'].tooltip!.icon}
+                          type="question"
+                        />
+                      )}
+                    </div>
+                    <QuestionRenderer
+                      question={allQuestions['E4.N7.Q1.2']}
+                      currentAnswer={questionnaireData.answers['E4.N7.Q1.2']}
+                      onAnswerChange={(a) => setAnswerForQuestion('E4.N7.Q1.2', a)}
+                      isReadOnly={false}
+                    />
+                  </section>
+                )}
+              </div>
+            </>
+          ) : v3CompositeKind === 'content-q11' ? (
+            <>
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Contenus numériques et types</h2>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Indiquez si l’IA <strong>produit ou modifie</strong> des contenus (texte, image, son, vidéo). Si oui,
+                  précisez les <strong>types concernés</strong> — vous pouvez cocher texte et média si les deux
+                  s’appliquent. Les questions suivantes sur le texte ou les médias s’afficheront ensuite selon vos
+                  choix.
+                </p>
+              </div>
+              <div className="space-y-8">
+                <section>
+                  <div className="flex items-center gap-2 mb-3">
+                    <h3 className="text-lg font-medium text-gray-900">{allQuestions['E4.N8.Q11.0'].question}</h3>
+                    {allQuestions['E4.N8.Q11.0'].tooltip && (
+                      <Tooltip
+                        title={allQuestions['E4.N8.Q11.0'].tooltip!.title}
+                        shortContent={allQuestions['E4.N8.Q11.0'].tooltip!.shortContent}
+                        fullContent={allQuestions['E4.N8.Q11.0'].tooltip!.fullContent}
+                        icon={allQuestions['E4.N8.Q11.0'].tooltip!.icon}
+                        type="question"
+                      />
+                    )}
+                  </div>
+                  <QuestionRenderer
+                    question={allQuestions['E4.N8.Q11.0']}
+                    currentAnswer={questionnaireData.answers['E4.N8.Q11.0']}
+                    onAnswerChange={(a) => setAnswerForQuestion('E4.N8.Q11.0', a)}
+                    isReadOnly={false}
+                  />
+                </section>
+                {questionnaireData.answers['E4.N8.Q11.0'] === 'E4.N8.Q11.0.A' && (
+                  <section>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="text-lg font-medium text-gray-900">{allQuestions['E4.N8.Q11.1'].question}</h3>
+                      {allQuestions['E4.N8.Q11.1'].tooltip && (
+                        <Tooltip
+                          title={allQuestions['E4.N8.Q11.1'].tooltip!.title}
+                          shortContent={allQuestions['E4.N8.Q11.1'].tooltip!.shortContent}
+                          fullContent={allQuestions['E4.N8.Q11.1'].tooltip!.fullContent}
+                          icon={allQuestions['E4.N8.Q11.1'].tooltip!.icon}
+                          type="question"
+                        />
+                      )}
+                    </div>
+                    <QuestionRenderer
+                      question={allQuestions['E4.N8.Q11.1']}
+                      currentAnswer={questionnaireData.answers['E4.N8.Q11.1']}
+                      onAnswerChange={(a) => setAnswerForQuestion('E4.N8.Q11.1', a)}
+                      isReadOnly={false}
+                    />
+                  </section>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {e4N7Callout && (
+                <div
+                  className={`mb-5 flex gap-3 rounded-lg border px-4 py-3 text-sm leading-relaxed ${e4N7CalloutStyles}`}
+                  data-e4n7-callout={e4N7Callout.variant}
+                >
+                  <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5 opacity-90" aria-hidden />
+                  <div>
+                    <p className="font-semibold text-gray-900">{e4N7Callout.title}</p>
+                    <p className="mt-1 text-gray-700">{e4N7Callout.description}</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-2 mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">{currentQuestion.question}</h2>
+                {currentQuestion.tooltip && (
+                  <Tooltip
+                    title={currentQuestion.tooltip.title}
+                    shortContent={currentQuestion.tooltip.shortContent}
+                    fullContent={currentQuestion.tooltip.fullContent}
+                    icon={currentQuestion.tooltip.icon}
+                    type="question"
+                  />
+                )}
+              </div>
+              {currentQuestion.id === 'E4.N8.Q10' && questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3 && (
+                <p className="mb-4 text-sm text-gray-600 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 leading-relaxed">
+                  <span className="font-medium text-gray-800">Indicateur facultatif</span> — cette question ne définit
+                  pas à elle seule le niveau AI Act. Elle aide à situer l’exposition (nombre d’utilisateurs par mois) et
+                  n’apparaît pas sur tous les parcours ; si elle s’affiche ici, c’est cohérent avec vos réponses
+                  précédentes.
+                </p>
+              )}
+              <QuestionRenderer
+                question={currentQuestion}
+                currentAnswer={questionnaireData.answers[currentQuestion.id]}
+                onAnswerChange={handleAnswerSelect}
+                isReadOnly={false}
+              />
+            </>
+          )}
         </div>
 
         {/* Barre de navigation avec boutons Précédent/Inviter/Suivant */}
@@ -337,7 +727,9 @@ export function StepByStepQuestionnaire({ useCase, onComplete }: StepByStepQuest
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Terminer l'évaluation
+                    {questionnairePathMode === 'short' && questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3
+                      ? 'Obtenir mon résultat'
+                      : "Terminer l'évaluation"}
                   </>
                 )}
               </button>

@@ -1,7 +1,8 @@
 import React from 'react'
 import { Page, Text, View } from '@react-pdf/renderer'
-import { PDFReportData, getRiskLevelJustification, getCompanyStatusLabel, getCompanyStatusDefinition } from './types'
-import { styles, colors, getScoreColor, riskLevelStyles } from './styles'
+import { PDFReportData, getCompanyStatusLabel, getCompanyStatusDefinition } from './types'
+import { styles, colors, getScoreColor, pdfRiskLevelUnavailableStyle, riskLevelStyles } from './styles'
+import { pdfRiskJustificationText, resolvePdfRiskTierOrUnavailable } from './pdf-risk-logic'
 import { PDFFooter } from './PDFFooter'
 
 interface PDFSyntheseFixedProps {
@@ -9,7 +10,9 @@ interface PDFSyntheseFixedProps {
 }
 
 export const PDFSyntheseFixed: React.FC<PDFSyntheseFixedProps> = ({ data }) => {
-  const riskLevelStyle = riskLevelStyles[(data.riskLevel?.risk_level || 'limited') as keyof typeof riskLevelStyles] || riskLevelStyles.limited
+  const riskTier = resolvePdfRiskTierOrUnavailable(data.riskLevel?.risk_level)
+  const riskLevelStyle =
+    riskTier === 'unavailable' ? pdfRiskLevelUnavailableStyle : riskLevelStyles[riskTier]
 
   return (
     <>
@@ -95,7 +98,7 @@ export const PDFSyntheseFixed: React.FC<PDFSyntheseFixedProps> = ({ data }) => {
           <View style={[styles.cardWhite, { marginTop: 20 }]}>
             <Text style={[styles.text, styles.bold, { marginBottom: 12 }]}>Justification du niveau de risque</Text>
             <Text style={[styles.text, { lineHeight: 1.4 }]}>
-              {getRiskLevelJustification(data.riskLevel?.risk_level || 'limited')}
+              {pdfRiskJustificationText(data.riskLevel?.risk_level)}
             </Text>
           </View>
         </View>
