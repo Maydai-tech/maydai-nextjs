@@ -6,9 +6,30 @@ import {
   riskLevelCodeToReportLabel,
   type RiskLevelCode,
 } from '@/lib/risk-level'
-import type { SlotStatusMap } from '@/lib/slot-statuses'
+import {
+  applyChecklistKeyOverlayToResponses,
+  type SlotStatusMap,
+} from '@/lib/slot-statuses'
 import { QUESTIONNAIRE_VERSION_V2, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 import { formatReportGroundingForPrompt } from '@/lib/report-llm-grounding'
+import {
+  BPGV_CHECKLIST_RESPONSE_CODE,
+  TRANSPARENCY_CHECKLIST_RESPONSE_CODE,
+  type UseCaseChecklistResponseFields,
+} from '@/types/questions'
+
+/** Aligné sur `lib/slot-statuses` : code d’option = « oui / conforme » pour le prompt (pas de champs conditionnels texte). */
+const E5_E6_OUI_OPTION_BY_QUESTION: Record<string, string> = {
+  'E5.N9.Q7': 'E5.N9.Q7.B',
+  'E5.N9.Q8': 'E5.N9.Q8.B',
+  'E5.N9.Q3': 'E5.N9.Q3.A',
+  'E5.N9.Q4': 'E5.N9.Q4.A',
+  'E5.N9.Q6': 'E5.N9.Q6.B',
+  'E5.N9.Q1': 'E5.N9.Q1.A',
+  'E5.N9.Q9': 'E5.N9.Q9.B',
+  'E6.N10.Q1': 'E6.N10.Q1.A',
+  'E6.N10.Q2': 'E6.N10.Q2.A',
+}
 
 /** Métadonnées parcours V2 transmises au LLM (source serveur). */
 export interface QuestionnaireParcoursMeta {
@@ -18,7 +39,7 @@ export interface QuestionnaireParcoursMeta {
   active_question_codes: string[]
 }
 
-interface UseCaseResponse {
+interface UseCaseResponse extends UseCaseChecklistResponseFields {
   question_code: string
   single_value?: string
   multiple_codes?: string[]
@@ -45,10 +66,6 @@ interface OpenAIAnalysisInput {
       question: string
       selected_option: string
       selected_label: string
-      conditional_data: {
-        registry_type?: string
-        system_name?: string
-      }
     }
   }
 }
@@ -82,7 +99,6 @@ export function transformToOpenAIFormat(
         question: getQuestionText('E5.N9.Q7'),
         selected_option: '',
         selected_label: '',
-        conditional_data: {}
       }
     }
   }
@@ -100,22 +116,10 @@ export function transformToOpenAIFormat(
             : response.multiple_codes.map((code: string) => getOptionLabel('E4.N7.Q2', code))
       }
     } else if (response.question_code === 'E5.N9.Q7') {
-      // Question conditionnelle
-      if (response.conditional_main) {
-        result.responses.E5_N9_Q7.selected_option = response.conditional_main
-        result.responses.E5_N9_Q7.selected_label = getOptionLabel('E5.N9.Q7', response.conditional_main)
-        
-        // Construire les données conditionnelles
-        if (response.conditional_keys && response.conditional_values) {
-          const conditionalData: Record<string, string> = {}
-          response.conditional_keys.forEach((key, index) => {
-            const value = response.conditional_values?.[index] || ''
-            if (value) {
-              conditionalData[key] = value
-            }
-          })
-          result.responses.E5_N9_Q7.conditional_data = conditionalData
-        }
+      const code = response.single_value || response.multiple_codes?.[0]
+      if (code) {
+        result.responses.E5_N9_Q7.selected_option = code
+        result.responses.E5_N9_Q7.selected_label = getOptionLabel('E5.N9.Q7', code)
       }
     }
   })
@@ -318,8 +322,10 @@ export function transformToOpenAIFormatComplete(
       ? new Set(questionnaireParcours.active_question_codes)
       : null
 
+  const responsesForLlm = applyChecklistKeyOverlayToResponses(responses)
+
   // Construire le questionnaire avec toutes les questions et réponses
-  const questionnaireQuestions = buildQuestionnaireQuestions(responses, activeParcoursSet)
+  const questionnaireQuestions = buildQuestionnaireQuestions(responsesForLlm, activeParcoursSet)
 
   const classificationImpossible = usecase.classification_status === 'impossible'
 
@@ -384,7 +390,7 @@ export function transformToOpenAIFormatComplete(
   }
 
   const report_grounding_block = formatReportGroundingForPrompt({
-    responses,
+    responses: responsesForLlm,
     riskLevelCode,
     classificationImpossible,
     questionnaireParcours: questionnaireParcours ?? null,
@@ -473,10 +479,20 @@ function buildQuestionnaireQuestions(
 /**
  * Construit la réponse de l'utilisateur pour une question
  */
-function buildUserResponse(response: UseCaseResponseComplete, questionData: any): any {
+function buildUserResponse(response: UseCaseResponseComplete, _questionData: any): any {
   const userResponse: any = {
     answered: true,
     question_code: response.question_code
+  }
+
+  const qc = response.question_code
+  if (qc === BPGV_CHECKLIST_RESPONSE_CODE || qc === TRANSPARENCY_CHECKLIST_RESPONSE_CODE) {
+    const codes = response.multiple_codes ?? []
+    userResponse.checklist_selected_option_codes = [...codes]
+    userResponse.checklist_selected_labels = (response.multiple_labels?.length
+      ? response.multiple_labels
+      : codes.map((c: string) => getOptionLabel(qc, c))) as string[]
+    return userResponse
   }
   
   if (response.single_value) {
@@ -490,10 +506,22 @@ function buildUserResponse(response: UseCaseResponseComplete, questionData: any)
       response.multiple_codes.map((code: string) => getOptionLabel(response.question_code, code))
   }
   
-  if (response.conditional_main) {
+  const isE5E6 = qc.startsWith('E5.N9') || qc.startsWith('E6.N10')
+
+  if (isE5E6) {
+    const ouiCode = E5_E6_OUI_OPTION_BY_QUESTION[qc]
+    const declared =
+      (typeof response.single_value === 'string' && response.single_value) ||
+      (response.multiple_codes?.length === 1 ? response.multiple_codes[0] : null)
+    if (ouiCode && typeof declared === 'string') {
+      userResponse.checklist_affirmative_option_declared = declared === ouiCode
+    }
+  }
+
+  if (!isE5E6 && response.conditional_main) {
     userResponse.conditional_main = response.conditional_main
     userResponse.conditional_label = getOptionLabel(response.question_code, response.conditional_main)
-    
+
     if (response.conditional_keys && response.conditional_values) {
       userResponse.conditional_data = {}
       response.conditional_keys.forEach((key, index) => {
@@ -504,7 +532,7 @@ function buildUserResponse(response: UseCaseResponseComplete, questionData: any)
       })
     }
   }
-  
+
   return userResponse
 }
 

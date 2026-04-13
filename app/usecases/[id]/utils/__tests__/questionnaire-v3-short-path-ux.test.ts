@@ -12,6 +12,7 @@ describe('questionnaire-v3-short-path-ux', () => {
     expect(getV3ShortPathSegmentOrder('E4.N7.Q2')).toBe(3)
     expect(getV3ShortPathSegmentOrder('E4.N8.Q11.T1E')).toBe(4)
     expect(getV3ShortPathSegmentOrder('E4.N8.Q10')).toBe(4)
+    expect(getV3ShortPathSegmentOrder('V3._SHORT_CONSOLIDATED')).toBe(5)
     expect(getV3ShortPathSegmentOrder('E5.N9.Q1')).toBe(5)
     expect(getV3ShortPathSegmentOrder('E4.N8.Q12')).toBe(6)
     expect(getV3ShortPathSegmentOrder('E6.N10.Q1')).toBe(6)

@@ -133,7 +133,7 @@ export async function GET(
           new Date().toISOString(),
         score_scope: 'short_initial' as const,
         score_display_hint:
-          'Score initial du parcours court (périmètre réduit : qualification, mini-pack E5, Q12, E6). Le score complet s’affiche après le parcours long.',
+          'Score initial du parcours court (périmètre réduit : qualification et bloc Usage & transparence / ORS, sans E5, Q12 ni E6). Le score complet s’affiche après le parcours long.',
       })
     }
 

@@ -82,8 +82,8 @@
 | E4.N8.Q11.0 | Produit ou modifie contenus numériques par IA ? | Pivot contenu | **Garder** |
 | E4.N8.Q11.1 | Quels types de contenu concernés ? | Texte / média | **Fusionner UX** avec Q11.0 (une grille « rien / texte / média / les deux ») |
 | E4.N8.Q11.T1 | Texte intérêt public | Limited texte | **Garder** |
-| E4.N8.Q11.T1E | Relecture / validation humaine responsabilité | Minimal vs limited | **Garder** |
-| E4.N8.Q11.T2 | Précision usage texte si T1 non | Précision | **Garder** |
+| E4.N8.Q11.T1E | (Historique) Relecture / validation — **hors parcours V3** | — | **Orphelin graphe** ; données anciennes possibles |
+| E4.N8.Q11.T2 | (Historique) Précision usage texte — **hors parcours V3** | — | **Orphelin graphe** |
 | E4.N8.Q11.M1 | Synthétique / manipulé pris pour authentique (deepfake) | Limited média | **Garder** |
 | E4.N8.Q11.M2 | Exception artistique / fiction | Contexte deepfake | **Garder** |
 | E4.N8.Q10 | Volumétrie personnes / mois | Contexte / bande | **Sortir du flow** perçu (optionnel post-palier) ou **Garder** avec label « indicatif » — **Rediscuter** produit |

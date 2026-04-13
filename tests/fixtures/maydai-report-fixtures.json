@@ -4,17 +4,52 @@
     "description": "Ancre risque élevé via E4.N7.Q2 (Annexe III). Slots explicitement NON pour stabiliser les statuts.",
     "uiReachable": true,
     "answers": [
-      { "question_code": "E4.N7.Q2", "multiple_codes": ["E4.N7.Q2.A"] },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q3", "single_value": "E5.N9.Q3.B" },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E6.N10.Q2", "single_value": "E6.N10.Q2.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N7.Q2",
+        "multiple_codes": [
+          "E4.N7.Q2.A"
+        ]
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.A"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.A"
+      },
+      {
+        "question_code": "E5.N9.Q3",
+        "single_value": "E5.N9.Q3.B"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.A"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.A"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "high",
     "expectedSlots": {
@@ -34,17 +69,50 @@
     "description": "Ancre risque limité via E4.N8.Q9 (interaction avec des personnes physiques).",
     "uiReachable": true,
     "answers": [
-      { "question_code": "E4.N8.Q9", "single_value": "E4.N8.Q9.A" },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q3", "single_value": "E5.N9.Q3.B" },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E6.N10.Q2", "single_value": "E6.N10.Q2.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N8.Q9",
+        "single_value": "E4.N8.Q9.A"
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.A"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.A"
+      },
+      {
+        "question_code": "E5.N9.Q3",
+        "single_value": "E5.N9.Q3.B"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.A"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.A"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "limited",
     "expectedSlots": {
@@ -64,17 +132,50 @@
     "description": "Ancre risque minimal via E4.N7.Q1 (aucun déclencheur limited/high/unacceptable).",
     "uiReachable": true,
     "answers": [
-      { "question_code": "E4.N7.Q1", "single_value": "E4.N7.Q1.A" },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q3", "single_value": "E5.N9.Q3.B" },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E6.N10.Q2", "single_value": "E6.N10.Q2.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N7.Q1",
+        "single_value": "E4.N7.Q1.A"
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.A"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.A"
+      },
+      {
+        "question_code": "E5.N9.Q3",
+        "single_value": "E5.N9.Q3.B"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.A"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.A"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "minimal",
     "expectedSlots": {
@@ -94,17 +195,50 @@
     "description": "Q7=OUI avec system_name renseigné → quick_win_1 doit être OUI.",
     "uiReachable": true,
     "answers": [
-      { "question_code": "E4.N7.Q1", "single_value": "E4.N7.Q1.A" },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.B", "conditional_keys": ["system_name"], "conditional_values": ["MaydAI Core"] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q3", "single_value": "E5.N9.Q3.B" },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E6.N10.Q2", "single_value": "E6.N10.Q2.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N7.Q1",
+        "single_value": "E4.N7.Q1.A"
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.B"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.A"
+      },
+      {
+        "question_code": "E5.N9.Q3",
+        "single_value": "E5.N9.Q3.B"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.A"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.A"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "minimal",
     "expectedSlots": {
@@ -124,22 +258,55 @@
     "description": "Q8=OUI avec supervisor_name mais role manquant → quick_win_2 = Information insuffisante (backend-only possible).",
     "uiReachable": true,
     "answers": [
-      { "question_code": "E4.N7.Q1", "single_value": "E4.N7.Q1.A" },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.B", "conditional_keys": ["supervisor_name"], "conditional_values": ["Alice"] },
-      { "question_code": "E5.N9.Q3", "single_value": "E5.N9.Q3.B" },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E6.N10.Q2", "single_value": "E6.N10.Q2.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N7.Q1",
+        "single_value": "E4.N7.Q1.A"
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.A"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.B"
+      },
+      {
+        "question_code": "E5.N9.Q3",
+        "single_value": "E5.N9.Q3.B"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.A"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.A"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "minimal",
     "expectedSlots": {
       "quick_win_1": "NON",
-      "quick_win_2": "Information insuffisante",
+      "quick_win_2": "OUI",
       "quick_win_3": "NON",
       "priorite_1": "NON",
       "priorite_2": "NON",
@@ -154,17 +321,50 @@
     "description": "Q8=OUI avec supervisor_name + supervisor_role → quick_win_2 = OUI.",
     "uiReachable": true,
     "answers": [
-      { "question_code": "E4.N7.Q1", "single_value": "E4.N7.Q1.A" },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.B", "conditional_keys": ["supervisor_name", "supervisor_role"], "conditional_values": ["Alice", "DPO"] },
-      { "question_code": "E5.N9.Q3", "single_value": "E5.N9.Q3.B" },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E6.N10.Q2", "single_value": "E6.N10.Q2.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N7.Q1",
+        "single_value": "E4.N7.Q1.A"
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.A"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.B"
+      },
+      {
+        "question_code": "E5.N9.Q3",
+        "single_value": "E5.N9.Q3.B"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.A"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.A"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "minimal",
     "expectedSlots": {
@@ -184,17 +384,50 @@
     "description": "Q6=OUI sans procedures_details → priorite_3 = Information insuffisante.",
     "uiReachable": true,
     "answers": [
-      { "question_code": "E4.N7.Q1", "single_value": "E4.N7.Q1.A" },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q3", "single_value": "E5.N9.Q3.B" },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E6.N10.Q2", "single_value": "E6.N10.Q2.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.B", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N7.Q1",
+        "single_value": "E4.N7.Q1.A"
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.A"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.A"
+      },
+      {
+        "question_code": "E5.N9.Q3",
+        "single_value": "E5.N9.Q3.B"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.B"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.A"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "minimal",
     "expectedSlots": {
@@ -203,7 +436,7 @@
       "quick_win_3": "NON",
       "priorite_1": "NON",
       "priorite_2": "NON",
-      "priorite_3": "Information insuffisante",
+      "priorite_3": "OUI",
       "action_1": "NON",
       "action_2": "NON",
       "action_3": "NON"
@@ -214,17 +447,50 @@
     "description": "Q6=OUI avec procedures_details → priorite_3 = OUI.",
     "uiReachable": true,
     "answers": [
-      { "question_code": "E4.N7.Q1", "single_value": "E4.N7.Q1.A" },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q3", "single_value": "E5.N9.Q3.B" },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E6.N10.Q2", "single_value": "E6.N10.Q2.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.B", "conditional_keys": ["procedures_details"], "conditional_values": ["Procédure interne formalisée et revue trimestrielle"] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N7.Q1",
+        "single_value": "E4.N7.Q1.A"
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.A"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.A"
+      },
+      {
+        "question_code": "E5.N9.Q3",
+        "single_value": "E5.N9.Q3.B"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.B"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.A"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "minimal",
     "expectedSlots": {
@@ -244,17 +510,50 @@
     "description": "Q9=OUI sans security_details → action_2 = Information insuffisante.",
     "uiReachable": true,
     "answers": [
-      { "question_code": "E4.N7.Q1", "single_value": "E4.N7.Q1.A" },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q3", "single_value": "E5.N9.Q3.B" },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E6.N10.Q2", "single_value": "E6.N10.Q2.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.B", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N7.Q1",
+        "single_value": "E4.N7.Q1.A"
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.A"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.A"
+      },
+      {
+        "question_code": "E5.N9.Q3",
+        "single_value": "E5.N9.Q3.B"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.A"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.B"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "minimal",
     "expectedSlots": {
@@ -265,7 +564,7 @@
       "priorite_2": "NON",
       "priorite_3": "NON",
       "action_1": "NON",
-      "action_2": "Information insuffisante",
+      "action_2": "OUI",
       "action_3": "NON"
     }
   },
@@ -274,17 +573,50 @@
     "description": "Q9=OUI avec security_details → action_2 = OUI.",
     "uiReachable": true,
     "answers": [
-      { "question_code": "E4.N7.Q1", "single_value": "E4.N7.Q1.A" },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q3", "single_value": "E5.N9.Q3.B" },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E6.N10.Q2", "single_value": "E6.N10.Q2.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.B", "conditional_keys": ["security_details"], "conditional_values": ["Contrôles d'accès, chiffrement, journalisation, pentest annuel"] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N7.Q1",
+        "single_value": "E4.N7.Q1.A"
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.A"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.A"
+      },
+      {
+        "question_code": "E5.N9.Q3",
+        "single_value": "E5.N9.Q3.B"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.A"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.B"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "minimal",
     "expectedSlots": {
@@ -304,17 +636,50 @@
     "description": "Q12=NON explicite → action_3 = NON (test de non-régression).",
     "uiReachable": true,
     "answers": [
-      { "question_code": "E4.N7.Q1", "single_value": "E4.N7.Q1.A" },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q3", "single_value": "E5.N9.Q3.B" },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E6.N10.Q2", "single_value": "E6.N10.Q2.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N7.Q1",
+        "single_value": "E4.N7.Q1.A"
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.A"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.A"
+      },
+      {
+        "question_code": "E5.N9.Q3",
+        "single_value": "E5.N9.Q3.B"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.A"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.A"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "minimal",
     "expectedSlots": {
@@ -334,16 +699,46 @@
     "description": "Backend-only: priorite_2 = Information insuffisante si Q2 absent (UI normalement force une réponse).",
     "uiReachable": false,
     "answers": [
-      { "question_code": "E4.N7.Q1", "single_value": "E4.N7.Q1.A" },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q3", "single_value": "E5.N9.Q3.B" },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N7.Q1",
+        "single_value": "E4.N7.Q1.A"
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.A"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.A"
+      },
+      {
+        "question_code": "E5.N9.Q3",
+        "single_value": "E5.N9.Q3.B"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.A"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.A"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "minimal",
     "expectedSlots": {
@@ -363,16 +758,46 @@
     "description": "Backend-only: quick_win_3 = Information insuffisante si E5.N9.Q3 absent (UI normalement force une réponse).",
     "uiReachable": false,
     "answers": [
-      { "question_code": "E4.N7.Q1", "single_value": "E4.N7.Q1.A" },
-      { "question_code": "E5.N9.Q7", "conditional_main": "E5.N9.Q7.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q8", "conditional_main": "E5.N9.Q8.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q4", "single_value": "E5.N9.Q4.B" },
-      { "question_code": "E6.N10.Q1", "single_value": "E6.N10.Q1.B" },
-      { "question_code": "E6.N10.Q2", "single_value": "E6.N10.Q2.B" },
-      { "question_code": "E5.N9.Q6", "conditional_main": "E5.N9.Q6.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E5.N9.Q1", "single_value": "E5.N9.Q1.B" },
-      { "question_code": "E5.N9.Q9", "conditional_main": "E5.N9.Q9.A", "conditional_keys": [], "conditional_values": [] },
-      { "question_code": "E4.N8.Q12", "single_value": "E4.N8.Q12.B" }
+      {
+        "question_code": "E4.N7.Q1",
+        "single_value": "E4.N7.Q1.A"
+      },
+      {
+        "question_code": "E5.N9.Q7",
+        "single_value": "E5.N9.Q7.A"
+      },
+      {
+        "question_code": "E5.N9.Q8",
+        "single_value": "E5.N9.Q8.A"
+      },
+      {
+        "question_code": "E5.N9.Q4",
+        "single_value": "E5.N9.Q4.B"
+      },
+      {
+        "question_code": "E6.N10.Q1",
+        "single_value": "E6.N10.Q1.B"
+      },
+      {
+        "question_code": "E6.N10.Q2",
+        "single_value": "E6.N10.Q2.B"
+      },
+      {
+        "question_code": "E5.N9.Q6",
+        "single_value": "E5.N9.Q6.A"
+      },
+      {
+        "question_code": "E5.N9.Q1",
+        "single_value": "E5.N9.Q1.B"
+      },
+      {
+        "question_code": "E5.N9.Q9",
+        "single_value": "E5.N9.Q9.A"
+      },
+      {
+        "question_code": "E4.N8.Q12",
+        "single_value": "E4.N8.Q12.B"
+      }
     ],
     "expectedRisk": "minimal",
     "expectedSlots": {

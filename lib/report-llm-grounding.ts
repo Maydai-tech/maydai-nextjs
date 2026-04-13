@@ -6,6 +6,10 @@
 import { QUESTIONS_DATA } from '@/lib/questions-data'
 import type { RiskLevelCode } from '@/lib/risk-level'
 import { QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
+import {
+  applyChecklistKeyOverlayToResponses,
+  type ResponseInput,
+} from '@/lib/slot-statuses'
 
 /** Même forme que QuestionnaireParcoursMeta — évite import circulaire avec openai-data-transformer. */
 export interface ReportGroundingParcoursMeta {
@@ -21,6 +25,8 @@ export interface ReportGroundingDbResponse {
   multiple_codes?: string[]
   multiple_labels?: string[]
   conditional_main?: string
+  bpgv_keys?: string[] | null
+  transparency_keys?: string[] | null
 }
 
 export interface ReportGroundingInput {
@@ -88,7 +94,8 @@ export function collectAnnexIiiDomains(map: Map<string, ReportGroundingDbRespons
  */
 export function formatReportGroundingForPrompt(input: ReportGroundingInput): string {
   const { responses, riskLevelCode, classificationImpossible, questionnaireParcours } = input
-  const map = buildMap(responses)
+  const enriched = applyChecklistKeyOverlayToResponses(responses as ResponseInput[])
+  const map = buildMap(enriched as ReportGroundingDbResponse[])
   const lines: string[] = []
 
   const v3 =
@@ -151,22 +158,26 @@ export function formatReportGroundingForPrompt(input: ReportGroundingInput): str
 
   if (t1 === 'E4.N8.Q11.T1.A') {
     lines.push(
-      `Volet texte : diffusion au public sur questions d'intérêt public déclarée (E4.N8.Q11.T1 = Oui).`
+      `Volet texte (E4.N8.Q11.T1 = A) : information d'intérêt public sans validation humaine déclarée avant diffusion — profil transparence aligné sur le risque limité pour ce volet.`
     )
   } else if (t1 === 'E4.N8.Q11.T1.B') {
-    lines.push(`Volet texte : pas de cible « intérêt public » déclarée pour le texte (E4.N8.Q11.T1 = Non).`)
+    lines.push(
+      `Volet texte (E4.N8.Q11.T1 = B) : information d'intérêt public avec contrôle éditorial humain et responsabilité déclarée.`
+    )
+  } else if (t1 === 'E4.N8.Q11.T1.C' || t1 === 'E4.N8.Q11.T1.D' || t1 === 'E4.N8.Q11.T1.E') {
+    lines.push(`Volet texte (E4.N8.Q11.T1) : ${optionLabel('E4.N8.Q11.T1', t1)}`)
   }
   if (t1e === 'E4.N8.Q11.T1E.A') {
     lines.push(
-      `Contrôle éditorial humain déclaré avec responsabilité identifiée (E4.N8.Q11.T1E = Oui) — facteur explicitement retenu pour éviter le profil risque limité lié au seul volet transparence texte.`
+      `Réponse historique E4.N8.Q11.T1E = Oui (ancien parcours) — contrôle éditorial humain déclaré.`
     )
   } else if (t1e === 'E4.N8.Q11.T1E.B') {
-    lines.push(`E4.N8.Q11.T1E = Non — pas de contrôle éditorial humain déclaré sur ce volet.`)
+    lines.push(`Réponse historique E4.N8.Q11.T1E = Non (ancien parcours).`)
   } else if (t1e === 'E4.N8.Q11.T1E.C') {
     lines.push(`E4.N8.Q11.T1E = Je ne sais pas — pivot non tranché (cohérent avec une qualification impossible si l'application l'indique).`)
   }
   if (t2) {
-    lines.push(`Précision usage texte (E4.N8.Q11.T2) : ${optionLabel('E4.N8.Q11.T2', t2)}`)
+    lines.push(`Réponse historique E4.N8.Q11.T2 (ancien parcours) : ${optionLabel('E4.N8.Q11.T2', t2)}`)
   }
 
   if (m1 === 'E4.N8.Q11.M1.A') {
@@ -223,7 +234,9 @@ export function formatReportGroundingForPrompt(input: ReportGroundingInput): str
     if (q9 === 'E4.N8.Q9.A') causes.push('interaction directe avec personnes physiques (E4.N8.Q9)')
     if (q91 === 'E4.N8.Q9.1.A') causes.push('émotions / biométrie complémentaire en cadre autorisé (E4.N8.Q9.1)')
     if (t1 === 'E4.N8.Q11.T1.A' && t1e === 'E4.N8.Q11.T1E.B') {
-      causes.push("texte d'intérêt public sans contrôle éditorial humain déclaré (E4.N8.Q11.T1 + T1E = Non)")
+      causes.push("texte d'intérêt public sans contrôle éditorial humain déclaré (ancien couple E4.N8.Q11.T1 + T1E)")
+    } else if (t1 === 'E4.N8.Q11.T1.A') {
+      causes.push("texte d'intérêt public sans validation humaine déclaré (E4.N8.Q11.T1 = A)")
     }
     if (causes.length) {
       lines.push(
@@ -239,23 +252,23 @@ export function formatReportGroundingForPrompt(input: ReportGroundingInput): str
     }
   } else if (riskLevelCode === 'minimal') {
     lines.push(
-      `- Si le volet texte + intérêt public + contrôle éditorial s'applique (T1 = Oui et T1E = Oui, ou parcours équivalent déclaré), commencer par : « Le niveau Risque minimal est cohérent avec un volet texte d'intérêt public assorti d'un contrôle éditorial humain déclaré, » puis résumer sans suggérer un risque limité latent.`
+      `- Si le volet texte + intérêt public + contrôle éditorial s'applique (E4.N8.Q11.T1 = B, ou ancien couple T1 + T1E = Oui), commencer par : « Le niveau Risque minimal est cohérent avec un volet texte d'intérêt public assorti d'un contrôle éditorial humain déclaré, » puis résumer sans suggérer un risque limité latent.`
     )
     lines.push(
       `- Éviter « utilisateur final » ou scénario B2C si E4.N8.Q9 = Non ou si le questionnaire indique usage interne / non orienté interaction directe.`
     )
-    if (t1 === 'E4.N8.Q11.T1.A' && t1e === 'E4.N8.Q11.T1E.A') {
+    if (t1 === 'E4.N8.Q11.T1.B' || (t1 === 'E4.N8.Q11.T1.A' && t1e === 'E4.N8.Q11.T1E.A')) {
       lines.push(
         `- Volet texte public + contrôle éditorial (à développer dans introduction_contextuelle et dans evaluation_risque.justification, pas seulement une formule « risque minimal ») :`
       )
       lines.push(
-        `  - Expliciter pourquoi les questions texte (E4.N8.Q11.T1, T1E, T2) ont été posées : le parcours teste le volet transparence lorsque des textes peuvent informer le public sur des sujets d'intérêt public.`
+        `  - Expliciter pourquoi la question E4.N8.Q11.T1 a été posée : le parcours teste le volet transparence (Art. 50.4) lorsque des textes peuvent informer le public sur des sujets d'intérêt public ; mentionner la validation ou relecture éditoriale humaine lorsque déclarée.`
       )
       lines.push(
-        `  - Citer factuellement que le texte vise à informer le public (T1 = Oui) et qu'une validation ou relecture éditoriale humaine avec responsabilité identifiée est déclarée (T1E = Oui).`
+        `  - Citer factuellement la réponse déclarée : E4.N8.Q11.T1 = B (intérêt public avec contrôle éditorial), ou ancien parcours avec T1 + T1E = Oui.`
       )
       lines.push(
-        `  - Expliquer le lien : le profil « risque limité » lié au seul couple texte d'intérêt public + absence de contrôle éditorial humain déclaré ne s'applique pas ici parce que T1E = Oui — d'où la cohérence du Risque minimal sur ce pivot plutôt qu'un Risque limité fondé sur ce volet.`
+        `  - Expliquer le lien : le profil « risque limité » lié à l'information d'intérêt public sans validation humaine (T1 = A) ne s'applique pas ici — d'où la cohérence du Risque minimal sur ce pivot.`
       )
     }
   } else if (riskLevelCode === 'high') {

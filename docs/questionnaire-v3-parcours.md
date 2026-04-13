@@ -7,8 +7,8 @@ Référence unique pour aligner **spec**, **graphe** (`questionnaire-v3-graph.ts
 ### Ordre logique (hors sorties anticipées « interdit »)
 
 1. **Bloc contexte / risque** : `E4.N7.Q1` → `Q1.1` ou `Q1.2` → `Q3` → `Q3.1` → (`Q2.1`) → [ **`Q4` si `system_type = Produit`** ] → `Q2` → [ **`Q5` si Annexe III sensible** ] → `N8`.
-2. **Bloc N8 (usage, contenus)** : `Q9` → `Q9.1` → `Q11.0` → branche **texte / média / ni l’un ni l’autre** → éventuellement **`Q10` (volumétrie)** → **E5 (BPGV)** → `Q12` → éventuellement **E6**.
-3. **E6** : transparence utilisateur / marquage contenu, **uniquement après `Q12`**, selon des conditions sur `Q9` et `Q11.0`.
+2. **Bloc N8 (usage, contenus)** : `Q9` → `Q9.1` → `Q11.0` → branche **texte / média / ni l’un ni l’autre** → éventuellement **`Q10` (volumétrie)** → **E5 (BPGV)** → `Q12` → éventuellement **E6** — **uniquement en parcours long** (`questionnairePathMode !== 'short'`).
+3. **E6** : transparence utilisateur / marquage contenu, **uniquement après `Q12`**, selon des conditions sur `Q9` et `Q11.0` (parcours long uniquement).
 
 ### Produit vs non-produit
 
@@ -17,12 +17,16 @@ Référence unique pour aligner **spec**, **graphe** (`questionnaire-v3-graph.ts
 | **`Produit`** (constante `V3_PRODUCT_SYSTEM_TYPE`) | `E4.N7.Q4` (Annexe I) | Puis `E4.N7.Q2` ; la qualification peut dépendre de Q4 (y compris JNS → impossible côté moteur). |
 | **Autre ou vide** | `E4.N7.Q2` direct | Pas de Q4 dans le parcours ni dans `active_question_codes`. |
 
-### Sorties ORS « courtes »
+### Sorties ORS « courtes » (interdit avant N8)
 
-- **`E4.N7.Q3.1`** : si filtre ORS = interdit (même logique V2 `isOrsUnacceptableAtQ31`) → **`E5.N9.Q7`** (parcours raccourci, pas N8 complet).
-- **`E4.N7.Q2.1`** : si réponses = interdiction `unacceptable` (dérivé comme dans le graphe) → **`E5.N9.Q7`**.
+- **`E4.N7.Q3.1`** : si filtre ORS = interdit → **long** : **`E5.N9.Q7`** ; **short** : **`null`** (fin du questionnaire côté graphe).
+- **`E4.N7.Q2.1`** : si interdiction `unacceptable` → **long** : **`E5.N9.Q7`** ; **short** : **`null`**.
 
-Ces chemins **court-circuitent** N8 / Q10 / E6 pour les cas déjà qualifiés interdits au niveau ORS.
+En **long**, ces chemins **court-circuitent** N8 / Q10 / E6 pour les cas déjà qualifiés interdits au niveau ORS. En **short**, l’évaluation s’arrête sans entrée E5 / E6.
+
+### Parcours métier court V3 (`questionnairePathMode === 'short'`)
+
+Après la dernière question du **bloc Usage & transparence** (ORS : `Q11.*`, `T1`, `M1`, `M2`, `Q10` selon la branche), le graphe retourne **`null`** : **pas** de bloc **E5**, **pas** de **`Q12`**, **pas** de **E6**. Le parcours long reste inchangé.
 
 ---
 
@@ -50,9 +54,7 @@ Ces chemins **court-circuitent** N8 / Q10 / E6 pour les cas déjà qualifiés in
 | `E4.N8.Q9.1` | Émotions / biométrie « complémentaire » | `Q11.0` |
 | `E4.N8.Q11.0` | Système produit / modifie contenus numériques ? | `A` → `Q11.1` ; `B` → **`Q10`** |
 | `E4.N8.Q11.1` | Types texte / image-audio-vidéo | `T1` si texte ; `M1` si média ; les deux si les deux ; **ni texte ni média** → **`Q10`** |
-| `E4.N8.Q11.T1` | Texte & intérêt public | `T1E` si oui ; `T2` si non |
-| `E4.N8.Q11.T1E` | Contrôle éditorial humain | Si média aussi coché → `M1` ; sinon **première question E5** (`E5.N9.Q7` si bande ORS encore **minimal**, sinon `E5.N9.Q1`) — **sans Q10** |
-| `E4.N8.Q11.T2` | Précision si pas T1 « oui » | Idem : média → `M1`, sinon première E5 selon bande — **sans Q10** |
+| `E4.N8.Q11.T1` | Finalité / validation du texte (Art. 50.4, choix unique A–E) | Si média aussi coché → `M1` ; sinon **première question E5** (`E5.N9.Q7` si bande ORS encore **minimal**, sinon `E5.N9.Q1`) — **sans Q10**. Les IDs `T1E` et `T2` ne sont plus utilisés dans le parcours V3. |
 | `E4.N8.Q11.M1` | Deepfake / pris pour authentique | `A` → `M2` ; `B` → E5 (**sans Q10**) |
 | `E4.N8.Q11.M2` | Exception artistique / fiction | **`Q10`** puis E5 |
 | `E4.N8.Q10` | Volumétrie | Première question **E5** (`E5.N9.Q1` ou `E5.N9.Q7` selon bande ORS) |
@@ -70,7 +72,7 @@ Ces chemins **court-circuitent** N8 / Q10 / E6 pour les cas déjà qualifiés in
 |----------|----------------------|
 | `Q11.0 = Non` (pas de production / modification de contenus numériques par l’IA) | **Oui** (directement après `Q11.0`) |
 | `Q11.0 = Oui`, `Q11.1` sans texte ni média coché | **Oui** |
-| `Q11.0 = Oui`, branche **texte seule** jusqu’à `T1E` ou `T2`, **sans** volet média | **Non** — enchaînement direct vers **E5** (`Q7` ou `Q1` selon `getFirstE5AfterOrsV3`, ex. `Q1` si la bande ORS n’est plus minimale après `T1` / pivots N8) |
+| `Q11.0 = Oui`, branche **texte seule** après `T1`, **sans** volet média | **Non** — enchaînement direct vers **E5** (`Q7` ou `Q1` selon `getFirstE5AfterOrsV3`, ex. `Q1` si la bande ORS n’est plus minimale après `T1` / pivots N8) |
 | `Q11.0 = Oui`, `M1 = Non` (pas de deepfake déclaré) | **Non** — E5 direct |
 | `M1 = Oui` puis **`M2`** | **Oui** (Q10 après M2) |
 
@@ -112,9 +114,9 @@ Implémentation : `getNextAfterQ12` / `getNextE6` dans `questionnaire-v3-graph.t
 Q9 → Q9.1 → Q11.0
   ├─ Q11.0.B → Q10 → E5…
   └─ Q11.0.A → Q11.1
-        ├─ texte seul → T1 → (T1E ou T2) → [M1 si média aussi] → E5 ou M1…
+        ├─ texte seul → T1 → [M1 si média aussi] → E5 ou M1…
         ├─ média seul → M1 → (M2 si M1.A) → Q10 si M2, sinon E5
-        └─ texte + média → T1 → … → M1 → …
+        └─ texte + média → T1 → M1 → …
 ```
 
 ---
@@ -134,7 +136,8 @@ Q9 → Q9.1 → Q11.0
 | Annexe III + 6.3 non / autre | Q5.B etc. | Bande peut monter avec Q2 |
 | Limited interaction | Q9.A | `limited` (si autres pivots OK) |
 | Limited biométrie | Q9.1.A (hors interdit) | `limited` |
-| Texte intérêt public + contrôle éditorial | T1.A + T1E.A | Souvent **minimal** sur ce volet |
+| Texte intérêt public + contrôle éditorial | `T1.B` (ou ancien couple T1.A + T1E.A) | Souvent **minimal** sur ce volet |
+| Texte intérêt public sans validation humaine | `T1.A` | **Limited** sur le volet transparence (hors combinaisons historiques avec T1E) |
 | Deepfake | M1.A (+ M2 selon cas) | `limited` + Q10 après M2 |
 
 ---

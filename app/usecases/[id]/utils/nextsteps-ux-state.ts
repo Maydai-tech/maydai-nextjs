@@ -59,11 +59,9 @@ export function getNextStepsRecommendationsPhase(params: {
 }
 
 export function canRequestAiReportGeneration(params: {
-  isAdmin: boolean
   classificationStatus?: string | null
   useCaseStatus?: string
 }): boolean {
-  if (!params.isAdmin) return false
   if (params.classificationStatus === 'impossible') return false
   return String(params.useCaseStatus || '').toLowerCase() === 'completed'
 }

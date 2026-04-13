@@ -19,6 +19,9 @@ import { isOrsUnacceptableAtQ31 } from './questionnaire-v2-graph'
 import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
 import { V3_PRODUCT_SYSTEM_TYPE } from '@/lib/qualification-v3-decision'
 
+/** Noeud synthétique parcours court V3 : mini-pack BPGV / transparence avant Q12 (hors préfixe E5/E6). */
+export const V3_SHORT_MINIPACK_ID = 'V3._SHORT_CONSOLIDATED' as const
+
 type RawQuestion = {
   type?: string
   risk?: string
@@ -129,58 +132,33 @@ export function deriveBpgvBandFromOrsAnswersV3(answers: Record<string, unknown>)
   return m
 }
 
-export function getFirstE5AfterOrsV3(answers: Record<string, unknown>): string {
-  const band = deriveBpgvBandFromOrsAnswersV3(answers)
-  if (band === BPGV_VARIANT_MINIMAL) return 'E5.N9.Q7'
+/** Entrée BPGV après ORS : toujours Q1 (pas de raccourci « bande minimale → Q7 »). */
+export function getFirstE5AfterOrsV3(_answers: Record<string, unknown>): string {
   return 'E5.N9.Q1'
 }
 
 /**
- * Après le bloc ORS (Q10 / T1E / T2 / M1) : en long → entrée E5 complète ; en court → mini-pack E5 (N9 Q1,Q4,Q6,Q7,Q8,Q9) puis Q12.
+ * Après le bloc ORS (Q10 / T1 / M1) : en long → entrée E5 (Q1) ; en court → mini-pack `V3._SHORT_CONSOLIDATED`.
  */
 function nextAfterOrsV3(answers: Record<string, unknown>, pathMode: 'long' | 'short'): string | null {
-  if (pathMode === 'short') return 'E5.N9.Q1'
+  if (pathMode === 'short') return V3_SHORT_MINIPACK_ID
   return getFirstE5AfterOrsV3(answers)
 }
 
-function getNextAfterQ12(answers: Record<string, unknown>): string | null {
-  if (isOrsUnacceptableAtQ31(answers)) return null
-  if (answers['E4.N8.Q9'] === 'E4.N8.Q9.A') return 'E6.N10.Q1'
-  if (answers['E4.N8.Q11.0'] === 'E4.N8.Q11.0.A') return 'E6.N10.Q2'
-  return null
+function getNextAfterQ12(_answers: Record<string, unknown>, pathMode: 'long' | 'short'): string | null {
+  if (pathMode === 'short') return null
+  return 'E6.N10.Q1'
 }
 
-function getNextE6(current: string, answers: Record<string, unknown>): string | null {
-  if (current === 'E6.N10.Q1') {
-    if (answers['E4.N8.Q11.0'] === 'E4.N8.Q11.0.A') return 'E6.N10.Q2'
-    return null
-  }
+function getNextE6(
+  current: string,
+  _answers: Record<string, unknown>,
+  pathMode: 'long' | 'short'
+): string | null {
+  if (pathMode === 'short') return null
+  if (current === 'E6.N10.Q1') return 'E6.N10.Q2'
   if (current === 'E6.N10.Q2') return null
   return null
-}
-
-/**
- * Parcours court V3 : sous-ensemble E5 sans Q2/Q3/Q5 (détails réservés au long).
- * Ordre figé produit : Q1 → Q4 → Q6 → Q7 → Q8 → Q9 → Q12.
- */
-export function getNextE5ShortV3(currentQuestionId: string, answers: Record<string, unknown>): string | null {
-  switch (currentQuestionId) {
-    case 'E5.N9.Q1':
-      return 'E5.N9.Q4'
-    case 'E5.N9.Q4':
-      return 'E5.N9.Q6'
-    case 'E5.N9.Q6':
-      return 'E5.N9.Q7'
-    case 'E5.N9.Q7':
-      if (!answers['E5.N9.Q6']) return 'E4.N8.Q12'
-      return 'E5.N9.Q8'
-    case 'E5.N9.Q8':
-      return 'E5.N9.Q9'
-    case 'E5.N9.Q9':
-      return 'E4.N8.Q12'
-    default:
-      return null
-  }
 }
 
 function getNextE5V3(currentQuestionId: string, answers: Record<string, unknown>): string | null {
@@ -221,7 +199,7 @@ export function getNextQuestionV3(
   switch (currentQuestionId) {
     case 'E4.N7.Q1': {
       const q1 = answers['E4.N7.Q1']
-      if (q1 === 'E4.N7.Q1.A') return 'E4.N7.Q1.1'
+      if (q1 === 'E4.N7.Q1.A' || q1 === 'E4.N7.Q1.C') return 'E4.N7.Q1.1'
       if (q1 === 'E4.N7.Q1.B') return 'E4.N7.Q1.2'
       return null
     }
@@ -231,10 +209,10 @@ export function getNextQuestionV3(
     case 'E4.N7.Q3':
       return 'E4.N7.Q3.1'
     case 'E4.N7.Q3.1':
-      if (isOrsUnacceptableAtQ31(answers)) return pathMode === 'short' ? null : 'E5.N9.Q7'
+      if (isOrsUnacceptableAtQ31(answers)) return pathMode === 'short' ? null : 'E5.N9.Q1'
       return 'E4.N7.Q2.1'
     case 'E4.N7.Q2.1':
-      if (hasInterdictionUnacceptable(answers)) return pathMode === 'short' ? null : 'E5.N9.Q7'
+      if (hasInterdictionUnacceptable(answers)) return pathMode === 'short' ? null : 'E5.N9.Q1'
       if (isProductSystemType(systemType)) return 'E4.N7.Q4'
       return 'E4.N7.Q2'
     case 'E4.N7.Q4':
@@ -264,17 +242,6 @@ export function getNextQuestionV3(
     }
 
     case 'E4.N8.Q11.T1': {
-      if (answers['E4.N8.Q11.T1'] === 'E4.N8.Q11.T1.A') return 'E4.N8.Q11.T1E'
-      if (answers['E4.N8.Q11.T1'] === 'E4.N8.Q11.T1.B') return 'E4.N8.Q11.T2'
-      return null
-    }
-
-    case 'E4.N8.Q11.T1E': {
-      if (hasQ111Media(answers)) return 'E4.N8.Q11.M1'
-      return nextAfterOrsV3(answers, pathMode)
-    }
-
-    case 'E4.N8.Q11.T2': {
       if (hasQ111Media(answers)) return 'E4.N8.Q11.M1'
       return nextAfterOrsV3(answers, pathMode)
     }
@@ -299,16 +266,18 @@ export function getNextQuestionV3(
     case 'E5.N9.Q6':
     case 'E5.N9.Q7':
     case 'E5.N9.Q8':
-      return pathMode === 'short'
-        ? getNextE5ShortV3(currentQuestionId, answers)
-        : getNextE5V3(currentQuestionId, answers)
+      if (pathMode === 'short') return null
+      return getNextE5V3(currentQuestionId, answers)
 
     case 'E4.N8.Q12':
-      return getNextAfterQ12(answers)
+      return getNextAfterQ12(answers, pathMode)
+
+    case V3_SHORT_MINIPACK_ID:
+      return 'E4.N8.Q12'
 
     case 'E6.N10.Q1':
     case 'E6.N10.Q2':
-      return getNextE6(currentQuestionId, answers)
+      return getNextE6(currentQuestionId, answers, pathMode)
 
     default:
       return null
@@ -327,7 +296,8 @@ export function collectV3ActiveQuestionCodes(
     seen.add(q)
     codes.push(q)
     const ans = answers[q]
-    if (ans === undefined || ans === null) break
+    const shortMinipackPending = pathMode === 'short' && q === V3_SHORT_MINIPACK_ID
+    if ((ans === undefined || ans === null) && !shortMinipackPending) break
     const next = getNextQuestionV3(q, answers, systemType, pathMode)
     if (!next) break
     q = next
@@ -384,7 +354,7 @@ export function computeV3UsecaseQuestionnaireFields(
   const hasN8 = Object.keys(answers).some(
     k => /^E4\.N8\.(?!Q12$)(?!Q10$)/.test(k) && !isN8ExcludedFromV2OrsBand(k)
   )
-  const touchedBpgv = Object.keys(answers).some(k => k.startsWith('E5.N9.'))
+  const touchedBpgv = Object.keys(answers).some(k => /^E5\.N9\.Q/.test(k))
 
   let ors_exit: OrsExit | null = null
   if (isOrsUnacceptableAtQ31(answers) || hasInterdictionUnacceptable(answers)) {

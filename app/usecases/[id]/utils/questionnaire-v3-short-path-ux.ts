@@ -73,7 +73,7 @@ export function getV3ShortPathSegmentOrder(questionId: string): number {
   if (questionId.startsWith('E4.N8.Q11') || questionId === 'E4.N8.Q10') {
     return 4
   }
-  if (questionId.startsWith('E5.N9.')) {
+  if (questionId === 'V3._SHORT_CONSOLIDATED' || questionId.startsWith('E5.N9.')) {
     return 5
   }
   if (questionId === 'E4.N8.Q12' || questionId.startsWith('E6.N10.')) {

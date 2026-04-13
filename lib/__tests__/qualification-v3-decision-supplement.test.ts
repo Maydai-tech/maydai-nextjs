@@ -11,7 +11,7 @@ describe('resolveQualificationOutcomeV3 — chemins limited & médias', () => {
     })
   })
 
-  it('texte intérêt public (T1.A) sans contrôle éditorial (T1E.B) → limited', () => {
+  it('ancien couple texte (T1.A + T1E.B) → limited', () => {
     const out = resolveQualificationOutcomeV3(
       {
         'E4.N8.Q11.1': ['E4.N8.Q11.1.A'],
@@ -23,7 +23,7 @@ describe('resolveQualificationOutcomeV3 — chemins limited & médias', () => {
     expect(out).toEqual({ classification_status: 'qualified', risk_level: 'limited' })
   })
 
-  it('contrôle éditorial humain (T1.A + T1E.A) : ne pas retenir le limited du volet texte T1', () => {
+  it('ancien contrôle éditorial (T1.A + T1E.A) : ne pas retenir le limited du volet texte T1', () => {
     const out = resolveQualificationOutcomeV3(
       {
         'E4.N8.Q11.1': ['E4.N8.Q11.1.A'],
@@ -34,6 +34,28 @@ describe('resolveQualificationOutcomeV3 — chemins limited & médias', () => {
     )
     expect(out.classification_status).toBe('qualified')
     expect(out.risk_level).toBe('minimal')
+  })
+
+  it('nouveau parcours : T1.A seul (intérêt public sans validation) → limited', () => {
+    const out = resolveQualificationOutcomeV3(
+      {
+        'E4.N8.Q11.1': ['E4.N8.Q11.1.A'],
+        'E4.N8.Q11.T1': 'E4.N8.Q11.T1.A',
+      },
+      null
+    )
+    expect(out).toEqual({ classification_status: 'qualified', risk_level: 'limited' })
+  })
+
+  it('nouveau parcours : T1.B (intérêt public avec contrôle éditorial) → minimal', () => {
+    const out = resolveQualificationOutcomeV3(
+      {
+        'E4.N8.Q11.1': ['E4.N8.Q11.1.A'],
+        'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B',
+      },
+      null
+    )
+    expect(out).toEqual({ classification_status: 'qualified', risk_level: 'minimal' })
   })
 
   it('contenu média réaliste / deepfake (M1.A) → limited', () => {

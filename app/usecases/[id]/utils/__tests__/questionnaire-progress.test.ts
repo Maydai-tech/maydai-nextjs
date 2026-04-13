@@ -42,8 +42,7 @@ describe('Questionnaire Progress', () => {
         'E4.N8.Q10': 'E4.N8.Q10.A',
         'E4.N8.Q11.0': 'E4.N8.Q11.0.A',
         'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'],
-        'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B',
-        'E4.N8.Q11.T2': 'E4.N8.Q11.T2.A',
+        'E4.N8.Q11.T1': 'E4.N8.Q11.T1.C',
         'E4.N8.Q11.M1': 'E4.N8.Q11.M1.A',
         'E4.N8.Q11.M2': 'E4.N8.Q11.M2.B',
         'E6.N10.Q1': 'E6.N10.Q1.A'
@@ -94,8 +93,7 @@ describe('Questionnaire Progress', () => {
         'E4.N8.Q10': 'E4.N8.Q10.A',
         'E4.N8.Q11.0': 'E4.N8.Q11.0.A',
         'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'],
-        'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B',
-        'E4.N8.Q11.T2': 'E4.N8.Q11.T2.A',
+        'E4.N8.Q11.T1': 'E4.N8.Q11.T1.C',
         'E4.N8.Q11.M1': 'E4.N8.Q11.M1.A',
         'E4.N8.Q11.M2': 'E4.N8.Q11.M2.B',
         'E6.N10.Q1': 'E6.N10.Q1.A'

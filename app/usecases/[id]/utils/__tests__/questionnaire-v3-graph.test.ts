@@ -8,7 +8,12 @@ import {
   getResumeQuestionIdV3,
   V3_PRODUCT_SYSTEM_TYPE,
 } from '../questionnaire-v3-graph'
-import { BPGV_VARIANT_HIGH, BPGV_VARIANT_MINIMAL, ORS_EXIT_N8_COMPLETED } from '@/lib/questionnaire-version'
+import {
+  BPGV_VARIANT_HIGH,
+  BPGV_VARIANT_LIMITED,
+  BPGV_VARIANT_MINIMAL,
+  ORS_EXIT_N8_COMPLETED,
+} from '@/lib/questionnaire-version'
 import { V3_ANNEX1_JNS } from '@/lib/qualification-v3-decision'
 
 /** Contexte ORS minimal (aucune interdiction, Q3.1 « aucune situation »). */
@@ -60,7 +65,7 @@ describe('questionnaire-v3-graph — séquence N8 (Q9.1, Q10, Q12)', () => {
     expect(getNextQuestionV3('E4.N8.Q9', {}, null)).toBe('E4.N8.Q9.1')
   })
 
-  it('Q10 absente sur branche texte seule (T1 → T1E) sans média : saut vers E5', () => {
+  it('Q10 absente sur branche texte seule (après T1) sans média : saut direct vers E5', () => {
     const a = {
       ...ctxOrsMinimal,
       'E4.N7.Q2': ['E4.N7.Q2.G'],
@@ -69,12 +74,21 @@ describe('questionnaire-v3-graph — séquence N8 (Q9.1, Q10, Q12)', () => {
       'E4.N8.Q11.0': 'E4.N8.Q11.0.A',
       'E4.N8.Q11.1': ['E4.N8.Q11.1.A'],
       'E4.N8.Q11.T1': 'E4.N8.Q11.T1.A',
-      'E4.N8.Q11.T1E': 'E4.N8.Q11.T1E.A',
     }
     /** T1.A élève la bande ORS → première E5 = Q1 (pas Q7 minimal). */
-    expect(getNextQuestionV3('E4.N8.Q11.T1E', a, null)).toBe('E5.N9.Q1')
+    expect(getNextQuestionV3('E4.N8.Q11.T1', a, null)).toBe('E5.N9.Q1')
     const codes = collectV3ActiveQuestionCodes(a, null)
     expect(codes).not.toContain('E4.N8.Q10')
+    expect(codes).not.toContain('E4.N8.Q11.T1E')
+    expect(codes).not.toContain('E4.N8.Q11.T2')
+  })
+
+  it('T1.A : bande ORS au moins limited (transparence texte)', () => {
+    const a = {
+      ...ctxOrsMinimal,
+      'E4.N8.Q11.T1': 'E4.N8.Q11.T1.A',
+    }
+    expect(deriveBpgvBandFromOrsAnswersV3(a)).toBe(BPGV_VARIANT_LIMITED)
   })
 
   it('Q10 présente après M2 (deepfake oui puis sous-branche M2)', () => {
@@ -106,8 +120,8 @@ describe('questionnaire-v3-graph — séquence N8 (Q9.1, Q10, Q12)', () => {
     expect(path.indexOf('E4.N8.Q9.1')).toBeLessThan(path.indexOf('E4.N8.Q10'))
   })
 
-  it('première question E5 dépend de la bande ORS V3 (minimal → Q7)', () => {
-    expect(getFirstE5AfterOrsV3({})).toBe('E5.N9.Q7')
+  it('première question E5 : toujours E5.N9.Q1 après ORS (parcours long)', () => {
+    expect(getFirstE5AfterOrsV3({})).toBe('E5.N9.Q1')
     expect(getFirstE5AfterOrsV3({ 'E4.N8.Q9': 'E4.N8.Q9.A' })).toBe('E5.N9.Q1')
   })
 })
@@ -123,6 +137,15 @@ describe('questionnaire-v3-graph — E6 après Q12', () => {
     'E5.N9.Q7': { selected: 'E5.N9.Q7.B', conditionalValues: {} },
   }
 
+  it('parcours court : après Q12 → null (pas E6)', () => {
+    const a = {
+      ...baseN8toE5,
+      'E4.N8.Q9': 'E4.N8.Q9.A',
+      'E4.N8.Q12': 'E4.N8.Q12.A',
+    }
+    expect(getNextQuestionV3('E4.N8.Q12', a, null, 'short')).toBeNull()
+  })
+
   it('Q9 = interaction oui : après Q12 → E6.N10.Q1', () => {
     const a = {
       ...baseN8toE5,
@@ -131,22 +154,22 @@ describe('questionnaire-v3-graph — E6 après Q12', () => {
     expect(getNextQuestionV3('E4.N8.Q12', a, null)).toBe('E6.N10.Q1')
   })
 
-  it('Q9 = non, Q11.0 = oui : après Q12 → E6.N10.Q2 seul (sans Q1)', () => {
+  it('Q9 = non, Q11.0 = oui : après Q12 → E6.N10.Q1 puis Q2', () => {
     const a = {
       ...baseN8toE5,
       'E4.N8.Q9': 'E4.N8.Q9.B',
       'E4.N8.Q11.0': 'E4.N8.Q11.0.A',
       'E4.N8.Q11.1': ['E4.N8.Q11.1.A'],
-      'E4.N8.Q11.T1': 'E4.N8.Q11.T1.A',
-      'E4.N8.Q11.T1E': 'E4.N8.Q11.T1E.A',
+      'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B',
       'E4.N8.Q10': 'E4.N8.Q10.A',
       'E5.N9.Q7': { selected: 'E5.N9.Q7.B', conditionalValues: {} },
     }
-    expect(getNextQuestionV3('E4.N8.Q12', a, null)).toBe('E6.N10.Q2')
+    expect(getNextQuestionV3('E4.N8.Q12', a, null)).toBe('E6.N10.Q1')
+    expect(getNextQuestionV3('E6.N10.Q1', a, null)).toBe('E6.N10.Q2')
   })
 
-  it('Q9 = non, Q11.0 = non : après Q12 → fin E6 (null)', () => {
-    expect(getNextQuestionV3('E4.N8.Q12', baseN8toE5, null)).toBeNull()
+  it('Q9 = non, Q11.0 = non : après Q12 → E6.N10.Q1 (bloc transparence obligatoire)', () => {
+    expect(getNextQuestionV3('E4.N8.Q12', baseN8toE5, null)).toBe('E6.N10.Q1')
   })
 })
 

@@ -2,6 +2,89 @@ import React from 'react'
 import { Question, QuestionOption } from '../../types/usecase'
 import Tooltip from '@/components/Tooltip'
 import { getE4N7CheckboxGroups, getE4N7VisualSegment } from '../../utils/e4n7-qualification-ui'
+import type { QuestionnairePathMode } from '../../utils/questionnaire'
+import { V3_SHORT_MINIPACK_ID } from '../../utils/questionnaire-v3-graph'
+
+/** Réponse locale du mini-pack court (persistée dans `answers` jusqu’au « Suivant »). */
+export type V3ShortMinipackAnswer = {
+  governanceEnterprise: 'pending' | 'skipped'
+  governanceUseCase: 'pending' | 'skipped'
+  transparency: 'pending' | 'skipped'
+}
+
+function parseV3ShortMinipackAnswer(raw: unknown): V3ShortMinipackAnswer {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    const o = raw as Record<string, unknown>
+    return {
+      governanceEnterprise: o.governanceEnterprise === 'skipped' ? 'skipped' : 'pending',
+      governanceUseCase: o.governanceUseCase === 'skipped' ? 'skipped' : 'pending',
+      transparency: o.transparency === 'skipped' ? 'skipped' : 'pending',
+    }
+  }
+  return {
+    governanceEnterprise: 'pending',
+    governanceUseCase: 'pending',
+    transparency: 'pending',
+  }
+}
+
+function V3ShortMinipackQuestionStub({
+  currentAnswer,
+  onAnswerChange,
+  isReadOnly,
+}: {
+  currentAnswer: unknown
+  onAnswerChange: (answer: unknown) => void
+  isReadOnly: boolean
+}) {
+  const [blocks, setBlocks] = React.useState<V3ShortMinipackAnswer>(() =>
+    parseV3ShortMinipackAnswer(currentAnswer)
+  )
+
+  const skipBlock = (key: keyof V3ShortMinipackAnswer) => {
+    if (isReadOnly) return
+    setBlocks((prev) => {
+      const next = { ...prev, [key]: 'skipped' as const }
+      onAnswerChange(next)
+      return next
+    })
+  }
+
+  return (
+    <div data-v3-short-minipack-stub>
+      <div>
+        <h3>Gouvernance Entreprise</h3>
+        <button
+          type="button"
+          disabled={isReadOnly || blocks.governanceEnterprise === 'skipped'}
+          onClick={() => skipBlock('governanceEnterprise')}
+        >
+          Je ne sais pas / Passer
+        </button>
+      </div>
+      <div>
+        <h3>Gouvernance Cas d&apos;Usage</h3>
+        <button
+          type="button"
+          disabled={isReadOnly || blocks.governanceUseCase === 'skipped'}
+          onClick={() => skipBlock('governanceUseCase')}
+        >
+          Je ne sais pas / Passer
+        </button>
+      </div>
+      <div>
+        <h3>Transparence</h3>
+        <button
+          type="button"
+          disabled={isReadOnly || blocks.transparency === 'skipped'}
+          onClick={() => skipBlock('transparency')}
+        >
+          Je ne sais pas / Passer
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function computeCheckboxNextAnswers(
   checkboxAnswers: string[],
@@ -39,19 +122,50 @@ interface QuestionRendererProps {
   currentAnswer: any
   onAnswerChange: (answer: any) => void
   isReadOnly?: boolean
+  /** Parcours court : enveloppes colorées E4.N7 allégées */
+  questionnairePathMode?: QuestionnairePathMode
 }
 
-export const QuestionRenderer = React.memo(function QuestionRenderer({ question, currentAnswer, onAnswerChange, isReadOnly = false }: QuestionRendererProps) {
-  console.log('QuestionRenderer render:', {
-    questionId: question.id,
-    currentAnswer,
-    answerType: typeof currentAnswer,
-    isArray: Array.isArray(currentAnswer),
-    isReadOnly
-  })
+const checkboxFocusClass =
+  'mt-1 mr-3 shrink-0 rounded border-gray-300 text-[#0080A3] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3] disabled:opacity-50'
+
+export const QuestionRenderer = React.memo(function QuestionRenderer({
+  question,
+  currentAnswer,
+  onAnswerChange,
+  isReadOnly = false,
+  questionnairePathMode,
+}: QuestionRendererProps) {
+  if (question.id === V3_SHORT_MINIPACK_ID) {
+    return (
+      <V3ShortMinipackQuestionStub
+        currentAnswer={currentAnswer}
+        onAnswerChange={onAnswerChange}
+        isReadOnly={isReadOnly}
+      />
+    )
+  }
+
+  const questionDescriptionToneClass = (id: string) => {
+    if (id === 'E4.N7.Q3' || id === 'E4.N7.Q3.1') {
+      return 'mb-4 text-sm leading-relaxed font-medium text-red-600'
+    }
+    if (id === 'E4.N7.Q2' || id === 'E4.N7.Q2.1' || id === 'E4.N7.Q5') {
+      return 'mb-4 text-sm leading-relaxed font-medium text-orange-600'
+    }
+    return 'mb-4 text-sm leading-relaxed text-gray-600'
+  }
+
+  const renderQuestionDescription = () => {
+    const text = question.description?.trim()
+    if (!text) return null
+    return <p className={questionDescriptionToneClass(question.id)}>{text}</p>
+  }
 
   const renderRadioQuestion = () => (
-    <div className="space-y-3">
+    <>
+      {renderQuestionDescription()}
+      <div className="space-y-3">
       {question.options.map((option, index) => {
         const isChecked = currentAnswer === option.code
         
@@ -76,42 +190,42 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
               disabled={isReadOnly}
               onChange={() => {
                 if (!isReadOnly) {
-                  console.log('Radio change:', option.code)
                   onAnswerChange(option.code)
                 }
               }}
               className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3] disabled:opacity-50"
             />
-            <div className="flex items-center flex-1">
-              <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
-                {option.label}
-              </span>
-              {(option as any).tooltip && (
-                <Tooltip
-                  title={(option as any).tooltip.title}
-                  shortContent={(option as any).tooltip.shortContent}
-                  fullContent={(option as any).tooltip.fullContent}
-                  icon={(option as any).tooltip.icon}
-                  type="answer"
-                  position="auto"
-                />
-              )}
+            <div className="flex flex-1 flex-col min-w-0">
+              <div className="flex items-start gap-2">
+                <span
+                  className={`font-medium leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}
+                >
+                  {option.label}
+                </span>
+                {(option as QuestionOption).tooltip && (
+                  <Tooltip
+                    title={(option as QuestionOption).tooltip!.title}
+                    shortContent={(option as QuestionOption).tooltip!.shortContent}
+                    fullContent={(option as QuestionOption).tooltip!.fullContent}
+                    icon={(option as QuestionOption).tooltip!.icon}
+                    type="answer"
+                    position="auto"
+                  />
+                )}
+              </div>
+              {option.description ? (
+                <span className="mt-1 text-sm leading-relaxed text-gray-600">{option.description}</span>
+              ) : null}
             </div>
           </label>
         )
       })}
     </div>
+    </>
   )
 
   const renderCheckboxQuestion = () => {
     const checkboxAnswers = Array.isArray(currentAnswer) ? currentAnswer : []
-
-    console.log('Checkbox render:', {
-      currentAnswer,
-      checkboxAnswers,
-      options: question.options.map((opt) => opt.code),
-      isReadOnly,
-    })
 
     const renderCheckboxRow = (option: QuestionOption, index: number) => {
       const isChecked = checkboxAnswers.includes(option.code)
@@ -135,6 +249,7 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
             name={`${question.id}-${option.code}`}
             value={option.code}
             checked={isChecked}
+            aria-checked={isChecked}
             disabled={isReadOnly}
             onChange={(e) => {
               if (!isReadOnly) {
@@ -144,11 +259,10 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
                   option,
                   e.target.checked
                 )
-                console.log('New checkbox answers:', newAnswers)
                 onAnswerChange(newAnswers)
               }
             }}
-            className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3] disabled:opacity-50"
+            className={checkboxFocusClass}
           />
           <div className="flex items-start flex-1 min-w-0 gap-2">
             <span className={`leading-relaxed flex-1 min-w-0 ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
@@ -172,55 +286,74 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
     const groups = getE4N7CheckboxGroups(question.id)
     if (groups) {
       const seg = getE4N7VisualSegment(question.id)
-      const segmentShell =
-        seg === 'annex-iii'
+      const usePlainShell = questionnairePathMode === 'short'
+      const segmentShell = usePlainShell
+        ? ''
+        : seg === 'annex-iii'
           ? 'rounded-xl border-l-4 border-sky-600 bg-sky-50/40 pl-3 sm:pl-5 py-4 pr-2 sm:pr-4'
           : seg === 'ors-narrowing'
             ? 'rounded-xl border-l-4 border-amber-500 bg-amber-50/35 pl-3 sm:pl-5 py-4 pr-2 sm:pr-4'
             : 'rounded-xl border-l-4 border-red-700 bg-red-50/25 pl-3 sm:pl-5 py-4 pr-2 sm:pr-4'
 
       return (
-        <div
-          className={`space-y-8 ${segmentShell}`}
-          data-e4n7-segment={seg ?? undefined}
-          data-e4n7-grouped="true"
-        >
-          {groups.map((group) => (
-            <section key={group.key} className="space-y-3" aria-labelledby={`${question.id}-${group.key}-title`}>
-              <div className="space-y-1">
-                <h3
-                  id={`${question.id}-${group.key}-title`}
-                  className="text-base font-semibold text-gray-900 tracking-tight"
+        <>
+          {renderQuestionDescription()}
+          <div
+            className={`space-y-8 ${segmentShell}`}
+            data-e4n7-segment={seg ?? undefined}
+            data-e4n7-grouped="true"
+          >
+            {groups.map((group) => {
+              const hideHeading = Boolean(group.hideHeading)
+              return (
+                <section
+                  key={group.key}
+                  className={`space-y-3 ${hideHeading ? 'mt-4 border-t border-gray-200 pt-4' : ''}`}
+                  {...(hideHeading
+                    ? { 'aria-label': 'Option sans autre choix' }
+                    : { 'aria-labelledby': `${question.id}-${group.key}-title` })}
                 >
-                  {group.title}
-                </h3>
-                {group.description ? (
-                  <p className="text-sm text-gray-600 leading-relaxed">{group.description}</p>
-                ) : null}
-              </div>
-              <div
-                className={
-                  group.codes.length > 1
-                    ? 'grid grid-cols-1 gap-3 md:grid-cols-2'
-                    : 'grid grid-cols-1 gap-3'
-                }
-              >
-                {group.codes.map((code, idx) => {
-                  const option = question.options.find((o) => o.code === code)
-                  if (!option) return null
-                  return renderCheckboxRow(option, idx)
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
+                  {!hideHeading && group.title ? (
+                    <div className="space-y-1">
+                      <h3
+                        id={`${question.id}-${group.key}-title`}
+                        className="text-base font-semibold text-gray-900 tracking-tight"
+                      >
+                        {group.title}
+                      </h3>
+                      {group.description ? (
+                        <p className="text-sm text-gray-600 leading-relaxed">{group.description}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <div
+                    className={
+                      group.codes.length > 1
+                        ? 'grid grid-cols-1 gap-3 md:grid-cols-2'
+                        : 'grid grid-cols-1 gap-3'
+                    }
+                  >
+                    {group.codes.map((code, idx) => {
+                      const option = question.options.find((o) => o.code === code)
+                      if (!option) return null
+                      return renderCheckboxRow(option, idx)
+                    })}
+                  </div>
+                </section>
+              )
+            })}
+          </div>
+        </>
       )
     }
 
     return (
-      <div className="space-y-3">
-        {question.options.map((option, index) => renderCheckboxRow(option, index))}
-      </div>
+      <>
+        {renderQuestionDescription()}
+        <div className="space-y-3">
+          {question.options.map((option, index) => renderCheckboxRow(option, index))}
+        </div>
+      </>
     )
   }
 
@@ -228,15 +361,9 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
     // S'assurer que currentAnswer est toujours un tableau
     const tagAnswers = Array.isArray(currentAnswer) ? currentAnswer : []
     
-    console.log('Tags render:', {
-      currentAnswer,
-      tagAnswers,
-      options: question.options.map(opt => opt.code),
-      isReadOnly
-    })
-    
     return (
       <div className="space-y-4">
+        {renderQuestionDescription()}
         <div className="flex flex-wrap gap-2">
           {question.options.map((option, index) => {
             const isSelected = tagAnswers.includes(option.code)
@@ -248,13 +375,6 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
                   disabled={isReadOnly}
                   onClick={() => {
                     if (!isReadOnly) {
-                      console.log('Tag click:', {
-                        option: option.code,
-                        isSelected,
-                        currentTags: tagAnswers,
-                        isUniqueAnswer: option.unique_answer
-                      })
-                      
                       let newAnswers: string[]
                       if (isSelected) {
                         // Retirer le tag
@@ -283,7 +403,6 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
                         }
                       }
                       
-                      console.log('New tag answers:', newAnswers)
                       onAnswerChange(newAnswers)
                     }
                   }}
@@ -320,12 +439,6 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
     const handleConditionalChange = (selectedOption: string, conditionalValues?: Record<string, string>) => {
       if (isReadOnly) return
       
-      console.log('Conditional change:', {
-        selectedOption,
-        conditionalValues,
-        currentAnswer
-      })
-      
       // Pour les questions avec des champs conditionnels, on vérifie si c'est "Oui" (code .B)
       const hasConditionalFields = question.conditionalFields && question.conditionalFields.length > 0
       const isYesOption = selectedOption.endsWith('.B') && hasConditionalFields
@@ -336,10 +449,8 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
           selected: selectedOption,
           conditionalValues: conditionalValues || {}
         }
-        console.log('Setting conditional answer:', newAnswer)
         onAnswerChange(newAnswer)
       } else {
-        console.log('Setting simple answer:', selectedOption)
         onAnswerChange(selectedOption)
       }
     }
@@ -355,17 +466,12 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
       ? currentAnswer.conditionalValues
       : {}
 
-    console.log('Conditional render:', {
-      currentAnswer,
-      currentSelection,
-      currentConditionalValues
-    })
-
     // Filtrer les options pour ne pas afficher "Si oui préciser" (code .C)
     const visibleOptions = question.options.filter(option => !option.code.endsWith('.C'))
 
     return (
       <div className="space-y-4">
+        {renderQuestionDescription()}
         <div className="space-y-3">
           {visibleOptions.map((option, index) => {
             const isChecked = currentSelection === option.code
@@ -391,7 +497,6 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
                   disabled={isReadOnly}
                   onChange={() => {
                     if (!isReadOnly) {
-                      console.log('Conditional radio change:', option.code)
                       handleConditionalChange(option.code)
                     }
                   }}
@@ -455,11 +560,6 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({ question,
                   disabled={isReadOnly}
                   onChange={(e) => {
                     if (!isReadOnly) {
-                      console.log('Conditional field change:', {
-                        field: field.key,
-                        value: e.target.value
-                      })
-                      
                       const newConditionalValues = {
                         ...currentConditionalValues,
                         [field.key]: e.target.value

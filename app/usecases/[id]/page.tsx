@@ -21,12 +21,10 @@ import { V3_IMPOSSIBLE_MATURITY_SCORES_DISCLAIMER } from '@/lib/classification-r
 import { getCompanyStatusLabel, getCompanyStatusDefinition } from './utils/company-status'
 import UnacceptableInterditsPanel from '@/components/UnacceptableCase/UnacceptableInterditsPanel'
 import { useUnacceptableInterdit1Source } from '@/hooks/useUnacceptableInterdit1Source'
-import { supabase } from '@/lib/supabase'
 import { useDocumentStatuses } from './hooks/useDocumentStatuses'
 import { useCompanyInfo } from './hooks/useCompanyInfo'
 import { useQuestionnaireSlotStatuses } from './hooks/useQuestionnaireSlotStatuses'
 import { ReportStandardPlanBlocks } from './components/report/ReportStandardPlanBlocks'
-import { hasAdminRole, type UserRole } from '@/lib/admin-auth'
 import {
   getNextStepsRecommendationsPhase,
   canRequestAiReportGeneration,
@@ -47,7 +45,6 @@ interface UseCaseOverviewSectionsProps {
   updating: boolean
   isRecalculating: boolean
   session: { access_token?: string } | null
-  isAdmin: boolean
   generatingReport: boolean
   handleGenerateReport: () => void | Promise<void>
   /** Valeur brute du paramètre d’URL `entree` (analytics / message d’orientation). */
@@ -61,7 +58,6 @@ function UseCaseOverviewSections({
   updating,
   isRecalculating,
   session,
-  isAdmin,
   generatingReport,
   handleGenerateReport,
   urlEntrySurface,
@@ -110,7 +106,6 @@ function UseCaseOverviewSections({
   })
 
   const canClickGenerateReport = canRequestAiReportGeneration({
-    isAdmin,
     classificationStatus: classificationForNextSteps,
     useCaseStatus: useCase.status,
   })
@@ -119,7 +114,7 @@ function UseCaseOverviewSections({
     classificationForNextSteps === 'impossible'
       ? 'Génération indisponible : qualification réglementaire impossible (pivots à trancher dans le questionnaire).'
       : String(useCase.status || '').toLowerCase() !== 'completed'
-        ? 'Le cas d’usage doit être complété avant de générer le rapport d’analyse.'
+        ? "L'évaluation doit être terminée avant de pouvoir générer le plan d'action."
         : undefined
 
   const showV3DualPath = showV3DualPathEntrypoints(useCase.questionnaire_version)
@@ -453,32 +448,30 @@ function UseCaseOverviewSections({
                   </Link>
                 </>
               )}
-              {isAdmin && (
-                <button
-                  onClick={handleGenerateReport}
-                  disabled={generatingReport || !canClickGenerateReport}
-                  title={
-                    generatingReport
-                      ? 'Génération du rapport en cours…'
-                      : !canClickGenerateReport
-                        ? generateReportDisabledTitle
-                        : undefined
-                  }
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-[#006280] rounded-lg hover:bg-[#004d63] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-                >
-                  {generatingReport ? (
-                    <>
-                      <RefreshCcw className="w-4 h-4 animate-spin" />
-                      Génération...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCcw className="w-4 h-4" />
-                      Générer rapport
-                    </>
-                  )}
-                </button>
-              )}
+              <button
+                onClick={handleGenerateReport}
+                disabled={generatingReport || !canClickGenerateReport}
+                title={
+                  generatingReport
+                    ? 'Génération du rapport en cours…'
+                    : !canClickGenerateReport
+                      ? generateReportDisabledTitle
+                      : undefined
+                }
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-[#006280] rounded-lg hover:bg-[#004d63] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+              >
+                {generatingReport ? (
+                  <>
+                    <RefreshCcw className="w-4 h-4 animate-spin" />
+                    Génération...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="w-4 h-4" />
+                    Générer le plan d&apos;action (IA)
+                  </>
+                )}
+              </button>
             </div>
           </div>
 
@@ -553,10 +546,11 @@ function UseCaseOverviewSections({
 
           {recommendationsPhase === 'empty_not_generated' && (
             <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-              <h3 className="text-sm font-semibold text-slate-900 mb-2">Rapport d&apos;analyse non généré</h3>
+              <h3 className="text-sm font-semibold text-slate-900 mb-2">Plan d&apos;action non généré</h3>
               <p className="text-sm text-slate-700 leading-relaxed">
-                Les recommandations détaillées et le plan d&apos;action structuré apparaissent après génération du
-                rapport d&apos;analyse par un administrateur MaydAI.
+                Générez votre plan d&apos;action de base basé sur vos réponses actuelles. Note : les modules de
+                Maturité et de Documentation approfondie seront marqués &apos;Hors périmètre&apos; tant que le
+                Parcours Long n&apos;aura pas été complété.
               </p>
             </div>
           )}
@@ -670,7 +664,6 @@ export default function UseCaseDetailPage() {
   const { useCase, progress, loading: loadingData, error, updateUseCase, updating, isRecalculating } = useUseCaseData(useCaseId)
   const { goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
 
-  const [isAdmin, setIsAdmin] = useState(false)
   const [generatingReport, setGeneratingReport] = useState(false)
 
   // Prevent hydration mismatch
@@ -684,30 +677,8 @@ export default function UseCaseDetailPage() {
     }
   }, [user, loading, router, mounted])
 
-  // Vérifier si l'utilisateur est admin
-  useEffect(() => {
-    const checkAdminRole = async () => {
-      if (!user) return
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-      if (profile?.role) {
-        setIsAdmin(hasAdminRole(profile.role as UserRole))
-      }
-    }
-
-    if (mounted && user) {
-      checkAdminRole()
-    }
-  }, [user, mounted])
-
-  // Fonction pour générer le rapport (admin uniquement)
   const handleGenerateReport = async () => {
-    if (!isAdmin || !useCase || !session?.access_token) return
+    if (!useCase || !session?.access_token) return
 
     setGeneratingReport(true)
     try {
@@ -753,7 +724,7 @@ export default function UseCaseDetailPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Cas d'usage non trouvé</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Cas d&apos;usage non trouvé</h1>
           <p className="text-gray-600 mb-4">
             {error || "Le cas d'usage que vous recherchez n'existe pas ou vous n'y avez pas accès."}
           </p>
@@ -761,7 +732,7 @@ export default function UseCaseDetailPage() {
             onClick={goToCompanies}
             className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors"
           >
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </button>
         </div>
       </div>
@@ -781,7 +752,6 @@ export default function UseCaseDetailPage() {
         updating={updating}
         isRecalculating={isRecalculating}
         session={session}
-        isAdmin={isAdmin}
         generatingReport={generatingReport}
         handleGenerateReport={handleGenerateReport}
         urlEntrySurface={urlEntrySurface}

@@ -26,7 +26,7 @@ describe('buildV3ScoringContextFromDbResponses', () => {
     expect(ctx!.scoringActiveQuestionCodes.has('E4.N7.Q1')).toBe(true)
   })
 
-  it('V3 pathMode short : le chemin actif peut inclure le mini-pack E5 après le bloc ORS (réponses partielles)', () => {
+  it('V3 pathMode short : le chemin actif s’arrête après le bloc ORS (pas de mini-pack E5 ; E5 hors chemin même si réponse orpheline)', () => {
     const rows = [
       { question_code: 'E4.N7.Q1', single_value: 'E4.N7.Q1.B' },
       { question_code: 'E4.N7.Q1.2', single_value: 'E4.N7.Q1.2.A' },
@@ -42,12 +42,8 @@ describe('buildV3ScoringContextFromDbResponses', () => {
     ]
     const ctx = buildV3ScoringContextFromDbResponses(QUESTIONNAIRE_VERSION_V3, rows as never[], null, 'short')
     expect(ctx).not.toBeNull()
-    expect(ctx!.active_question_codes).toContain('E5.N9.Q1')
+    expect(ctx!.active_question_codes).not.toContain('E5.N9.Q1')
     expect(ctx!.active_question_codes).toContain('E4.N8.Q10')
-    const i10 = ctx!.active_question_codes.indexOf('E4.N8.Q10')
-    const iE5 = ctx!.active_question_codes.indexOf('E5.N9.Q1')
-    expect(i10).toBeGreaterThan(-1)
-    expect(iE5).toBeGreaterThan(-1)
-    expect(i10).toBeLessThan(iE5)
+    expect(ctx!.scoringActiveQuestionCodes.has('E5.N9.Q1')).toBe(false)
   })
 })

@@ -8,12 +8,12 @@ export const V3_SHORT_PATH_RISK_LABELS: Record<string, string> = {
   unacceptable: 'Interdiction / cas inacceptable (AI Act)',
 }
 
-/** Éléments couverts par le court — hors signaux Q12/E6 (déjà listés à part). */
+/** Éléments couverts par le court — le bloc E5, Q12 et E6 sont réservés au parcours long. */
 export const V3_SHORT_PATH_ESTABLISHED_CORE_BULLETS: readonly string[] = [
   'Le positionnement du système et les garde-fous « lignes rouges » sur les questions parcourues ici.',
   'Les domaines sensibles et le contexte de déploiement, dans la mesure où le graphe du court les aborde.',
-  'La partie usage & transparence incluse dans ce parcours (mêmes codes questionnaire que le parcours complet).',
-  'Un socle maturité ciblé (mini-pack E5 réglementaire) pour un premier signal, sans l’exhaustivité du bloc E5 du parcours long.',
+  'La partie usage & transparence incluse dans ce parcours (mêmes codes questionnaire que le parcours complet sur ce segment).',
+  'Pas de bloc maturité déclarative (E5), ni d’étapes sensibilisation (Q12) ni transparence E6 dans ce parcours court — ils restent dans le parcours long.',
 ]
 
 /** Ce que le court ne fait pas — pour éviter toute confusion avec maturité, preuves ou plan détaillé. */
@@ -21,7 +21,7 @@ export const V3_SHORT_PATH_REMAINING_ITEMS: readonly { title: string; detail: st
   {
     title: 'Maturité opérationnelle complète (E5 étendu)',
     detail:
-      'Le court couvre un mini-pack E5 ; l’approfondissement déclaratif, les questions annexes et le score de maturité complet restent dans le parcours long.',
+      'Le parcours court s’arrête avant le bloc E5 (BPGV). L’approfondissement déclaratif, les questions annexes, le score de maturité, Q12 et E6 restent dans le parcours long.',
   },
   {
     title: 'Preuves dans le dossier du cas',

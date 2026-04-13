@@ -6,6 +6,8 @@ export function withEvaluationEntree(href: string, entree: string): string {
 
 export const useCaseRoutes = {
   overview: (id: string) => `/usecases/${id}`,
+  /** Après création : choix parcours court / long avant l’évaluation. */
+  selectPath: (id: string) => `/usecases/${id}/select-path`,
   evaluation: (id: string) => `/usecases/${id}/evaluation`,
   /** V3 — coque parcours court (sans E5 ; Q12 + E6 si applicable) ; même graphe, saut de navigation côté UI. */
   evaluationShort: (id: string) => `/usecases/${id}/evaluation?parcours=court`,

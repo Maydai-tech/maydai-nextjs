@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import {
+  BPGV_CHECKLIST_RESPONSE_CODE,
+  TRANSPARENCY_CHECKLIST_RESPONSE_CODE,
+} from '@/types/questions'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -127,8 +131,19 @@ export async function POST(
     }
 
     const { id: usecaseId } = await params
-    const body = await request.json()
-    const { question_code, response_value, response_data } = body
+    let body: Record<string, unknown>
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+    const { question_code, response_value, response_data, bpgv_keys, transparency_keys } = body as {
+      question_code?: string
+      response_value?: string
+      response_data?: Record<string, unknown>
+      bpgv_keys?: string[]
+      transparency_keys?: string[]
+    }
 
     if (!question_code) {
       return NextResponse.json({ error: 'question_code is required' }, { status: 400 })
@@ -172,7 +187,46 @@ export async function POST(
       conditional_values: null
     }
 
-    if (response_data?.selected_codes) {
+    /** Batch BPGV / transparence : lignes sentinelles, tableaux stockés dans `multiple_codes`. */
+    if (question_code === BPGV_CHECKLIST_RESPONSE_CODE) {
+      const keys: string[] | null = Array.isArray(bpgv_keys)
+        ? bpgv_keys
+        : Array.isArray(response_data?.bpgv_keys)
+          ? response_data.bpgv_keys
+          : Array.isArray(response_data?.selected_codes)
+            ? response_data.selected_codes
+            : null
+      if (keys === null) {
+        return NextResponse.json(
+          { error: 'Fournir bpgv_keys ou response_data.selected_codes (tableau) pour E5.N9._CHECKLIST' },
+          { status: 400 }
+        )
+      }
+      updateData.multiple_codes = keys
+      updateData.multiple_labels =
+        Array.isArray(response_data?.selected_labels) && response_data.selected_labels.length === keys.length
+          ? response_data.selected_labels
+          : keys
+    } else if (question_code === TRANSPARENCY_CHECKLIST_RESPONSE_CODE) {
+      const keys: string[] | null = Array.isArray(transparency_keys)
+        ? transparency_keys
+        : Array.isArray(response_data?.transparency_keys)
+          ? response_data.transparency_keys
+          : Array.isArray(response_data?.selected_codes)
+            ? response_data.selected_codes
+            : null
+      if (keys === null) {
+        return NextResponse.json(
+          { error: 'Fournir transparency_keys ou response_data.selected_codes (tableau) pour E6.N10._CHECKLIST' },
+          { status: 400 }
+        )
+      }
+      updateData.multiple_codes = keys
+      updateData.multiple_labels =
+        Array.isArray(response_data?.selected_labels) && response_data.selected_labels.length === keys.length
+          ? response_data.selected_labels
+          : keys
+    } else if (response_data?.selected_codes) {
       // Réponse multiple
       updateData.multiple_codes = response_data.selected_codes
       updateData.multiple_labels = response_data.selected_labels || response_data.selected_codes
@@ -277,8 +331,13 @@ export async function PUT(
     }
 
     const { id: usecaseId } = await params
-    const body = await request.json()
-    const { responses } = body
+    let body: Record<string, unknown>
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+    const { responses } = body as { responses?: unknown }
 
     if (!Array.isArray(responses)) {
       return NextResponse.json({ error: 'responses must be an array' }, { status: 400 })
@@ -311,7 +370,7 @@ export async function PUT(
 
     // Traiter chaque réponse
     for (const response of responses) {
-      const { question_code, response_value, response_data } = response
+      const { question_code, response_value, response_data, bpgv_keys, transparency_keys } = response
 
       if (!question_code) {
         continue // Skip invalid responses
@@ -332,7 +391,41 @@ export async function PUT(
         conditional_values: null
       }
 
-      if (response_data?.selected_codes) {
+      if (question_code === BPGV_CHECKLIST_RESPONSE_CODE) {
+        const keys: string[] | null = Array.isArray(bpgv_keys)
+          ? bpgv_keys
+          : Array.isArray(response_data?.bpgv_keys)
+            ? response_data.bpgv_keys
+            : Array.isArray(response_data?.selected_codes)
+              ? response_data.selected_codes
+              : null
+        if (keys === null) {
+          console.log('Skipping E5.N9._CHECKLIST without keys array', { question_code, response_data, bpgv_keys })
+          continue
+        }
+        updateData.multiple_codes = keys
+        updateData.multiple_labels =
+          Array.isArray(response_data?.selected_labels) && response_data.selected_labels.length === keys.length
+            ? response_data.selected_labels
+            : keys
+      } else if (question_code === TRANSPARENCY_CHECKLIST_RESPONSE_CODE) {
+        const keys: string[] | null = Array.isArray(transparency_keys)
+          ? transparency_keys
+          : Array.isArray(response_data?.transparency_keys)
+            ? response_data.transparency_keys
+            : Array.isArray(response_data?.selected_codes)
+              ? response_data.selected_codes
+              : null
+        if (keys === null) {
+          console.log('Skipping E6.N10._CHECKLIST without keys array', { question_code, response_data, transparency_keys })
+          continue
+        }
+        updateData.multiple_codes = keys
+        updateData.multiple_labels =
+          Array.isArray(response_data?.selected_labels) && response_data.selected_labels.length === keys.length
+            ? response_data.selected_labels
+            : keys
+      } else if (response_data?.selected_codes) {
         // Réponse multiple
         updateData.multiple_codes = response_data.selected_codes
         updateData.multiple_labels = response_data.selected_labels || response_data.selected_codes

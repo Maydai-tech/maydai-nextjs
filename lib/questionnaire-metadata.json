@@ -2,12 +2,13 @@
   "questionnaire_questions": {
     "E4.N7.Q1": {
       "code": "E4.N7.Q1",
-      "question_text": "Dans cette situation, votre cas d'usage concerne :",
+      "question_text": "Quel est le rôle de votre organisation par rapport à ce système d'IA ?",
       "type": "radio",
       "status": "minimal",
       "possible_answers": [
-        "Mon entreprise travaille dans le domaine de l'informatique et de l'IA",
-        "Mon entreprise utilise des systèmes d'IA tiers"
+        "Fournisseur (Provider)",
+        "Déployeur (Deployer)",
+        "Intégrateur / Marque blanche (Bascule Fournisseur)"
       ],
       "interpretation": "Détermine le statut de l'entreprise dans la chaîne de valeur IA (fabricant vs utilisateur)",
       "quick_wins": [
@@ -289,19 +290,41 @@
     },
     "E4.N8.Q9": {
       "code": "E4.N8.Q9",
-      "question_text": "Votre système d'IA interagit-il avec des personnes physiques ?",
+      "question_text": "Le système d'IA interagit-il directement avec des personnes physiques sous la forme d'un interlocuteur (ex: chatbot, assistant vocal) ?",
       "type": "radio",
       "status": "limited",
-      "possible_answers": ["Oui", "Non"],
-      "interpretation": "Détermine si le système nécessite des mesures de transparence et de supervision humaine",
+      "possible_answers": [
+        "Oui (Interlocuteur direct)",
+        "Non (Outil logiciel évident)"
+      ],
+      "interpretation": "Détermine si le système relève des obligations d’information Art. 50.1 (interlocuteur IA pouvant tromper un humain) ou s’il s’agit d’un outil logiciel évident sans cette obligation.",
       "quick_wins": [
         "Mettre en place des mécanismes de transparence",
         "Informer les utilisateurs de l'utilisation d'IA"
       ],
       "priority": 4,
-      "article_concerne": "Article 52 (Obligations de transparence pour certains systèmes d'IA)",
+      "article_concerne": "Article 50.1 (Transparence — interaction avec des personnes physiques)",
       "risk_category": "Human Agency & Oversight",
-      "impact_conformite": "Une réponse 'Oui' suggère un risque limité en raison des obligations de transparence (Article 52)"
+      "impact_conformite": "Une réponse « Oui (Interlocuteur direct) » active le volet transparence / supervision associé au risque limité pour cette dimension ; « Non (Outil logiciel évident) » reflète l’absence d’obligation d’information dans ce cadre."
+    },
+    "E4.N8.Q9.1": {
+      "code": "E4.N8.Q9.1",
+      "question_text": "Le système analyse-t-il physiquement les personnes (visage, corps, voix) pour déduire des caractéristiques comme leur âge, leur genre ou leurs émotions ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "Oui (Catégorisation ou émotions)",
+        "Non (Aucune analyse de ce type)"
+      ],
+      "interpretation": "Détecte les usages visés par l’art. 50.3 (catégorisation ou émotions) hors cas déjà traités comme interdits ou haut risque.",
+      "quick_wins": [
+        "Informer les personnes concernées lorsque l’obligation s’applique",
+        "Documenter le périmètre d’analyse dans le dossier du cas"
+      ],
+      "priority": 4,
+      "article_concerne": "Article 50.3 (Émotions / catégorisation — information)",
+      "risk_category": "Transparency & User Information",
+      "impact_conformite": "Une réponse « Oui » indique un volet transparence additionnel (risque limité sur cette dimension) ; « Non » exclut ce type d’analyse déclaré."
     },
     "E4.N8.Q10": {
       "code": "E4.N8.Q10",
@@ -342,6 +365,28 @@
       "article_concerne": "Article 52 (Obligations de transparence pour certains systèmes d'IA), Article 50 (Obligations de transparence pour les fournisseurs de modèles d'IA à usage général)",
       "risk_category": "Transparency",
       "impact_conformite": "Une réponse 'Oui' suggère un risque limité en raison des obligations de transparence (Article 52)"
+    },
+    "E4.N8.Q11.T1": {
+      "code": "E4.N8.Q11.T1",
+      "question_text": "Quelle est la finalité principale du texte généré par l'IA et comment est-il validé ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": [
+        "A — Information d'intérêt public SANS validation humaine",
+        "B — Information d'intérêt public AVEC contrôle éditorial",
+        "C — Communication commerciale, marketing ou publicitaire",
+        "D — Outil de productivité interne ou technique",
+        "E — Assistance standard, correction et traduction"
+      ],
+      "interpretation": "Une seule question regroupe l'ancien enchaînement intérêt public / contrôle éditorial / usages internes (Art. 50.4, transparence texte).",
+      "quick_wins": [
+        "Aligner la documentation sur la finalité réelle du texte généré",
+        "Tracer la chaîne de validation humaine lorsqu'elle existe"
+      ],
+      "priority": 4,
+      "article_concerne": "Article 50 (transparence des modèles à usage général), obligations de transparence pour contenus synthétiques",
+      "risk_category": "Transparency",
+      "impact_conformite": "L'option A (intérêt public sans validation humaine) correspond au profil risque limité sur le volet transparence ; les options B à E visent en principe un impact minimal sur ce pivot."
     },
     "E4.N8.Q12": {
       "code": "E4.N8.Q12",

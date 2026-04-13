@@ -44,7 +44,7 @@ describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
     // E4.N7.Q3.1 - Situations prohibées (Aucune)
     { question_code: 'E4.N7.Q3.1', single_value: null, multiple_codes: ['E4.N7.Q3.1.E'], conditional_main: null },
     // E5.N9.Q7 - Registre centralisé (OUI)
-    { question_code: 'E5.N9.Q7', single_value: null, multiple_codes: null, conditional_main: 'E5.N9.Q7.B' },
+    { question_code: 'E5.N9.Q7', single_value: 'E5.N9.Q7.B', multiple_codes: null, conditional_main: null },
     // E5.N9.Q4 - Documentation technique (OUI)
     { question_code: 'E5.N9.Q4', single_value: 'E5.N9.Q4.A', multiple_codes: null, conditional_main: null },
     // E5.N9.Q1 - Gestion des risques (OUI)
@@ -56,11 +56,11 @@ describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
     // E5.N9.Q5 - Types données (Publiques)
     { question_code: 'E5.N9.Q5', single_value: null, multiple_codes: ['E5.N9.Q5.A'], conditional_main: null },
     // E5.N9.Q6 - Qualité données (OUI)
-    { question_code: 'E5.N9.Q6', single_value: null, multiple_codes: null, conditional_main: 'E5.N9.Q6.B' },
+    { question_code: 'E5.N9.Q6', single_value: 'E5.N9.Q6.B', multiple_codes: null, conditional_main: null },
     // E5.N9.Q9 - Cybersécurité (OUI)
-    { question_code: 'E5.N9.Q9', single_value: null, multiple_codes: null, conditional_main: 'E5.N9.Q9.B' },
+    { question_code: 'E5.N9.Q9', single_value: 'E5.N9.Q9.B', multiple_codes: null, conditional_main: null },
     // E5.N9.Q8 - Surveillance humaine (OUI)
-    { question_code: 'E5.N9.Q8', single_value: null, multiple_codes: null, conditional_main: 'E5.N9.Q8.B' },
+    { question_code: 'E5.N9.Q8', single_value: 'E5.N9.Q8.B', multiple_codes: null, conditional_main: null },
     // E4.N8.Q12 - Jeux/anti-spam (OUI)
     { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.A', multiple_codes: null, conditional_main: null },
     // E4.N8.Q9 - Interactions personnes (NON)
@@ -70,8 +70,7 @@ describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
     { question_code: 'E4.N8.Q10', single_value: 'E4.N8.Q10.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q11.0', single_value: 'E4.N8.Q11.0.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q11.1', single_value: null, multiple_codes: ['E4.N8.Q11.1.A'], conditional_main: null },
-    { question_code: 'E4.N8.Q11.T1', single_value: 'E4.N8.Q11.T1.B', multiple_codes: null, conditional_main: null },
-    { question_code: 'E4.N8.Q11.T2', single_value: 'E4.N8.Q11.T2.B', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q11.T1', single_value: 'E4.N8.Q11.T1.E', multiple_codes: null, conditional_main: null },
     // E6.N10.Q1 - Utilisateurs informés (OUI)
     { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.A', multiple_codes: null, conditional_main: null },
     // E6.N10.Q2 - Label IA (OUI)
@@ -94,7 +93,7 @@ describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
     // E4.N7.Q3.1 - Situations prohibées (Aucune)
     { question_code: 'E4.N7.Q3.1', single_value: null, multiple_codes: ['E4.N7.Q3.1.E'], conditional_main: null },
     // E5.N9.Q7 - Registre centralisé (NON) → -5 human_oversight
-    { question_code: 'E5.N9.Q7', single_value: null, multiple_codes: null, conditional_main: 'E5.N9.Q7.A' },
+    { question_code: 'E5.N9.Q7', single_value: 'E5.N9.Q7.A', multiple_codes: null, conditional_main: null },
     // E5.N9.Q4 - Documentation technique (NON) → -3 human_oversight
     { question_code: 'E5.N9.Q4', single_value: 'E5.N9.Q4.B', multiple_codes: null, conditional_main: null },
     // E5.N9.Q1 - Gestion des risques (NON) → -3 technical_robustness
@@ -106,11 +105,11 @@ describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
     // E5.N9.Q5 - Types données (Personnelles/Stratégiques/Sensibles) → -3 privacy_data
     { question_code: 'E5.N9.Q5', single_value: null, multiple_codes: ['E5.N9.Q5.B'], conditional_main: null },
     // E5.N9.Q6 - Qualité données (NON) → -3 privacy_data
-    { question_code: 'E5.N9.Q6', single_value: null, multiple_codes: null, conditional_main: 'E5.N9.Q6.A' },
+    { question_code: 'E5.N9.Q6', single_value: 'E5.N9.Q6.A', multiple_codes: null, conditional_main: null },
     // E5.N9.Q9 - Cybersécurité (NON) → -3 technical_robustness
-    { question_code: 'E5.N9.Q9', single_value: null, multiple_codes: null, conditional_main: 'E5.N9.Q9.A' },
+    { question_code: 'E5.N9.Q9', single_value: 'E5.N9.Q9.A', multiple_codes: null, conditional_main: null },
     // E5.N9.Q8 - Surveillance humaine (NON) → -3 human_oversight
-    { question_code: 'E5.N9.Q8', single_value: null, multiple_codes: null, conditional_main: 'E5.N9.Q8.A' },
+    { question_code: 'E5.N9.Q8', single_value: 'E5.N9.Q8.A', multiple_codes: null, conditional_main: null },
     // E4.N8.Q12 - Jeux/anti-spam (NON) → -0.8 privacy_data
     { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.B', multiple_codes: null, conditional_main: null },
     // E4.N8.Q9 - Interactions personnes (OUI) → -3 human_oversight
@@ -305,7 +304,7 @@ describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
   describe('Validation des impacts mis à jour', () => {
     test('E5.N9.Q7 NON should have -5 impact (was -10)', async () => {
       const responses = [
-        { question_code: 'E5.N9.Q7', single_value: null, multiple_codes: null, conditional_main: 'E5.N9.Q7.A' }
+        { question_code: 'E5.N9.Q7', single_value: 'E5.N9.Q7.A', multiple_codes: null, conditional_main: null }
       ]
 
       const result = await calculateScore(mockUsecaseId, responses)

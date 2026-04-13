@@ -20,10 +20,10 @@ describe('e4n7-qualification-ui', () => {
   })
 
   describe('getE4N7StepCallout', () => {
-    test('retourne un callout pour le cœur E4.N7', () => {
-      expect(getE4N7StepCallout('E4.N7.Q3')?.variant).toBe('danger')
-      expect(getE4N7StepCallout('E4.N7.Q3.1')?.variant).toBe('danger')
-      expect(getE4N7StepCallout('E4.N7.Q2.1')?.variant).toBe('caution')
+    test('retourne des callouts pour Q2 et Q5 ; pas d’encart pour Q3, Q3.1 et Q2.1', () => {
+      expect(getE4N7StepCallout('E4.N7.Q3')).toBeNull()
+      expect(getE4N7StepCallout('E4.N7.Q3.1')).toBeNull()
+      expect(getE4N7StepCallout('E4.N7.Q2.1')).toBeNull()
       expect(getE4N7StepCallout('E4.N7.Q2')?.variant).toBe('domains')
       expect(getE4N7StepCallout('E4.N7.Q5')?.variant).toBe('safeguard')
       expect(getE4N7StepCallout('E4.N8.Q9')).toBeNull()

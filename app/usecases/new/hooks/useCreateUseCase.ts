@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApiCall } from '@/lib/api-client-legacy'
+import { useCaseRoutes } from '@/app/usecases/[id]/utils/routes'
 import type { CreateUseCasePayload } from '../types'
 
 export interface UseCreateUseCaseOptions {
@@ -51,7 +52,7 @@ export function useCreateUseCase(options?: UseCreateUseCaseOptions): UseCreateUs
 
       if (response.data?.id) {
         options?.onSuccess?.(response.data.id)
-        router.push(`/usecases/${response.data.id}/evaluation`)
+        router.push(useCaseRoutes.selectPath(response.data.id))
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erreur lors de la création du cas d\'usage'

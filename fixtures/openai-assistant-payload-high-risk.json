@@ -2,12 +2,13 @@
   "questionnaire_questions": {
     "E4.N7.Q1": {
       "code": "E4.N7.Q1",
-      "question_text": "Dans cette situation, votre cas d'usage concerne :",
+      "question_text": "Quel est le rôle de votre organisation par rapport à ce système d'IA ?",
       "type": "radio",
       "status": "minimal",
       "possible_answers": [
-        "Mon entreprise travaille dans le domaine de l'informatique et de l'IA",
-        "Mon entreprise utilise des systèmes d'IA tiers"
+        "Fournisseur (Provider)",
+        "Déployeur (Deployer)",
+        "Intégrateur / Marque blanche (Bascule Fournisseur)"
       ],
       "interpretation": "Détermine le statut de l'entreprise dans la chaîne de valeur IA (fabricant vs utilisateur)",
       "quick_wins": [
@@ -22,7 +23,7 @@
         "answered": true,
         "question_code": "E4.N7.Q1",
         "single_value": "E4.N7.Q1.B",
-        "single_label": "Mon entreprise utilise des systèmes d'IA tiers"
+        "single_label": "Déployeur (Deployer)"
       }
     },
     "E4.N7.Q1.1": {

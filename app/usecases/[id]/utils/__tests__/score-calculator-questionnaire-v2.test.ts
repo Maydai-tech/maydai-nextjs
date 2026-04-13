@@ -68,7 +68,7 @@ describe('Score Calculator — questionnaire V2', () => {
   test('V1 inchangé : réponses inchangées sans option explicite (version implicite V1)', async () => {
     const responses = [
       row('E6.N10.Q1', { single_value: 'E6.N10.Q1.B' }),
-      row('E5.N9.Q9', { conditional_main: 'E5.N9.Q9.B' })
+      row('E5.N9.Q9', { single_value: 'E5.N9.Q9.B' })
     ]
     const result = await calculateScore(mockUsecaseId, responses)
     expect(result.score).toBe(87)

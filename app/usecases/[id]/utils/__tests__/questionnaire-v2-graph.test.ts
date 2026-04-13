@@ -40,23 +40,23 @@ describe('questionnaire V2 graph', () => {
     expect(getNextQuestionV2('E4.N8.Q8', {})).toBeNull()
   })
 
-  it('V2 : sortie unacceptable après Q3.1 → mini BPGV (E5.N9.Q7)', () => {
+  it('V2 : sortie unacceptable après Q3.1 → entrée BPGV complète (E5.N9.Q1)', () => {
     expect(isOrsUnacceptableAtQ31({ 'E4.N7.Q3.1': ['E4.N7.Q3.1.A'] })).toBe(true)
     const next = getNextQuestionV2('E4.N7.Q3.1', {
       ...baseN7,
       'E4.N7.Q3.1': ['E4.N7.Q3.1.A']
     })
-    expect(next).toBe('E5.N9.Q7')
+    expect(next).toBe('E5.N9.Q1')
   })
 
-  it('V2 : mini BPGV Q7 sans Q6 → E4.N8.Q12 puis fin (pas d’E6 si unacceptable)', () => {
+  it('V2 : unacceptable puis mini BPGV Q7 → Q12 puis E6 obligatoire', () => {
     const unacceptable = {
       ...baseN7,
       'E4.N7.Q3.1': ['E4.N7.Q3.1.A'],
       'E5.N9.Q7': { selected: 'E5.N9.Q7.B', conditionalValues: { registry_type: 'X', system_name: 'Y' } }
     }
     expect(getNextQuestionV2('E5.N9.Q7', unacceptable)).toBe('E4.N8.Q12')
-    expect(getNextQuestionV2('E4.N8.Q12', unacceptable)).toBe(null)
+    expect(getNextQuestionV2('E4.N8.Q12', unacceptable)).toBe('E6.N10.Q1')
   })
 
   it('V2 : BPGV long — Q7 après Q6 → Q8 → Q9 → Q12', () => {
@@ -79,23 +79,25 @@ describe('questionnaire V2 graph', () => {
     expect(getNextQuestionV2('E5.N9.Q6', e5)).toBe('E5.N9.Q7')
   })
 
-  it('V2 : E6 — Q1 seulement si Q9 = Oui', () => {
+  it('V2 : E6 — après Q12 toujours Q1 puis Q2 (Q9 oui)', () => {
     const a = {
       'E4.N7.Q3.1': ['E4.N7.Q3.1.E'],
       'E4.N8.Q9': 'E4.N8.Q9.A',
       'E4.N8.Q11.0': 'E4.N8.Q11.0.B'
     }
     expect(getNextQuestionV2('E4.N8.Q12', a)).toBe('E6.N10.Q1')
-    expect(getNextQuestionV2('E6.N10.Q1', a)).toBe(null)
+    expect(getNextQuestionV2('E6.N10.Q1', a)).toBe('E6.N10.Q2')
+    expect(getNextQuestionV2('E6.N10.Q2', a)).toBe(null)
   })
 
-  it('V2 : E6 — Q2 seulement si Q11.0 = Oui', () => {
+  it('V2 : E6 — après Q12 Q1 puis Q2 même si Q9 non et Q11.0 oui', () => {
     const a = {
       'E4.N7.Q3.1': ['E4.N7.Q3.1.E'],
       'E4.N8.Q9': 'E4.N8.Q9.B',
       'E4.N8.Q11.0': 'E4.N8.Q11.0.A'
     }
-    expect(getNextQuestionV2('E4.N8.Q12', a)).toBe('E6.N10.Q2')
+    expect(getNextQuestionV2('E4.N8.Q12', a)).toBe('E6.N10.Q1')
+    expect(getNextQuestionV2('E6.N10.Q1', a)).toBe('E6.N10.Q2')
     expect(getNextQuestionV2('E6.N10.Q2', a)).toBe(null)
   })
 
@@ -127,8 +129,8 @@ describe('questionnaire V2 graph', () => {
     expect(band).toBe(BPGV_VARIANT_LIMITED)
   })
 
-  it('getFirstE5AfterOrs : minimal → Q7, limited/high → Q1', () => {
-    expect(getFirstE5AfterOrs({ ...baseN7, 'E4.N7.Q3.1': ['E4.N7.Q3.1.E'] })).toBe('E5.N9.Q7')
+  it('getFirstE5AfterOrs : toujours E5.N9.Q1 (plus de raccourci minimal → Q7)', () => {
+    expect(getFirstE5AfterOrs({ ...baseN7, 'E4.N7.Q3.1': ['E4.N7.Q3.1.E'] })).toBe('E5.N9.Q1')
     expect(
       getFirstE5AfterOrs({
         ...baseN7,
