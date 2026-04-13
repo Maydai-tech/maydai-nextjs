@@ -3,7 +3,12 @@ import {
   v3CompositeCanProceed,
   v3EntryFollowUpQuestionId,
 } from '../questionnaire-v3-ui'
-import { V3_SHORT_MINIPACK_ID } from '../questionnaire-v3-graph'
+import {
+  V3_SHORT_ENTREPRISE_ID,
+  V3_SHORT_MINIPACK_ID,
+  V3_SHORT_TRANSPARENCE_ID,
+  V3_SHORT_USAGE_ID,
+} from '../questionnaire-v3-graph'
 
 describe('questionnaire-v3-ui', () => {
   describe('getV3CompositeKind', () => {
@@ -13,8 +18,13 @@ describe('questionnaire-v3-ui', () => {
     test('retourne content-q11 pour E4.N8.Q11.0', () => {
       expect(getV3CompositeKind('E4.N8.Q11.0')).toBe('content-q11')
     })
-    test('retourne short-minipack pour le nœud consolidé parcours court', () => {
+    test('retourne short-minipack pour le nœud consolidé parcours court (legacy)', () => {
       expect(getV3CompositeKind(V3_SHORT_MINIPACK_ID)).toBe('short-minipack')
+    })
+    test('retourne short-minipack pour les trois étapes synthétiques courtes', () => {
+      expect(getV3CompositeKind(V3_SHORT_ENTREPRISE_ID)).toBe('short-minipack')
+      expect(getV3CompositeKind(V3_SHORT_USAGE_ID)).toBe('short-minipack')
+      expect(getV3CompositeKind(V3_SHORT_TRANSPARENCE_ID)).toBe('short-minipack')
     })
     test('retourne null pour les autres codes', () => {
       expect(getV3CompositeKind('E4.N7.Q2')).toBeNull()
@@ -100,6 +110,9 @@ describe('questionnaire-v3-ui', () => {
 
     test('mini-pack court : autorise Suivant même sans réponse (défaut pénalités)', () => {
       expect(v3CompositeCanProceed(V3_SHORT_MINIPACK_ID, {})).toBe(true)
+      expect(v3CompositeCanProceed(V3_SHORT_ENTREPRISE_ID, {})).toBe(true)
+      expect(v3CompositeCanProceed(V3_SHORT_USAGE_ID, {})).toBe(true)
+      expect(v3CompositeCanProceed(V3_SHORT_TRANSPARENCE_ID, {})).toBe(true)
     })
   })
 })

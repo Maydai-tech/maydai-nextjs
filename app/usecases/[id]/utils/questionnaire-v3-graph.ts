@@ -19,8 +19,28 @@ import { isOrsUnacceptableAtQ31 } from './questionnaire-v2-graph'
 import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
 import { V3_PRODUCT_SYSTEM_TYPE } from '@/lib/qualification-v3-decision'
 
-/** Noeud synthétique parcours court V3 : mini-pack BPGV / transparence avant Q12 (hors préfixe E5/E6). */
+/** Étapes synthétiques parcours court V3 (séquentielles, sans E4.N8.Q12 — intégrée à l’étape entreprise). */
+export const V3_SHORT_ENTREPRISE_ID = 'V3_SHORT_ENTREPRISE' as const
+export const V3_SHORT_USAGE_ID = 'V3_SHORT_USAGE' as const
+export const V3_SHORT_TRANSPARENCE_ID = 'V3_SHORT_TRANSPARENCE' as const
+
+export const V3_SHORT_STAGE_IDS = [
+  V3_SHORT_ENTREPRISE_ID,
+  V3_SHORT_USAGE_ID,
+  V3_SHORT_TRANSPARENCE_ID,
+] as const
+
+export function isV3ShortSyntheticQuestionId(questionId: string): boolean {
+  return (V3_SHORT_STAGE_IDS as readonly string[]).includes(questionId)
+}
+
+/** @deprecated Utiliser les trois constantes V3_SHORT_* ; conservé pour migrations / anciennes données. */
 export const V3_SHORT_MINIPACK_ID = 'V3._SHORT_CONSOLIDATED' as const
+
+/** Étapes « pack » court V3 (3 écrans + ancien nœud consolidé) pour composite UI / tags. */
+export function isV3ShortPathCompositeQuestionId(questionId: string): boolean {
+  return questionId === V3_SHORT_MINIPACK_ID || isV3ShortSyntheticQuestionId(questionId)
+}
 
 type RawQuestion = {
   type?: string
@@ -138,10 +158,10 @@ export function getFirstE5AfterOrsV3(_answers: Record<string, unknown>): string 
 }
 
 /**
- * Après le bloc ORS (Q10 / T1 / M1) : en long → entrée E5 (Q1) ; en court → mini-pack `V3._SHORT_CONSOLIDATED`.
+ * Après le bloc ORS (Q10 / T1 / M1) : en long → entrée E5 (Q1) ; en court → première étape synthétique entreprise.
  */
 function nextAfterOrsV3(answers: Record<string, unknown>, pathMode: 'long' | 'short'): string | null {
-  if (pathMode === 'short') return V3_SHORT_MINIPACK_ID
+  if (pathMode === 'short') return V3_SHORT_ENTREPRISE_ID
   return getFirstE5AfterOrsV3(answers)
 }
 
@@ -209,10 +229,13 @@ export function getNextQuestionV3(
     case 'E4.N7.Q3':
       return 'E4.N7.Q3.1'
     case 'E4.N7.Q3.1':
-      if (isOrsUnacceptableAtQ31(answers)) return pathMode === 'short' ? null : 'E5.N9.Q1'
+      // Parcours court : pas d’arrêt anticipé sur ORS « inacceptable » — enchaînement obligatoire sur les 3 étapes pack.
+      if (isOrsUnacceptableAtQ31(answers))
+        return pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : 'E5.N9.Q1'
       return 'E4.N7.Q2.1'
     case 'E4.N7.Q2.1':
-      if (hasInterdictionUnacceptable(answers)) return pathMode === 'short' ? null : 'E5.N9.Q1'
+      if (hasInterdictionUnacceptable(answers))
+        return pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : 'E5.N9.Q1'
       if (isProductSystemType(systemType)) return 'E4.N7.Q4'
       return 'E4.N7.Q2'
     case 'E4.N7.Q4':
@@ -272,8 +295,16 @@ export function getNextQuestionV3(
     case 'E4.N8.Q12':
       return getNextAfterQ12(answers, pathMode)
 
+    case V3_SHORT_ENTREPRISE_ID:
+      return V3_SHORT_USAGE_ID
+    case V3_SHORT_USAGE_ID:
+      return V3_SHORT_TRANSPARENCE_ID
+    case V3_SHORT_TRANSPARENCE_ID:
+      return null
+
+    /** Ancien nœud unique : renvoie vers la première étape (les réponses agrégées ne sont plus utilisées). */
     case V3_SHORT_MINIPACK_ID:
-      return 'E4.N8.Q12'
+      return V3_SHORT_ENTREPRISE_ID
 
     case 'E6.N10.Q1':
     case 'E6.N10.Q2':
@@ -296,8 +327,11 @@ export function collectV3ActiveQuestionCodes(
     seen.add(q)
     codes.push(q)
     const ans = answers[q]
-    const shortMinipackPending = pathMode === 'short' && q === V3_SHORT_MINIPACK_ID
-    if ((ans === undefined || ans === null) && !shortMinipackPending) break
+    const shortStagePending =
+      pathMode === 'short' &&
+      isV3ShortPathCompositeQuestionId(q) &&
+      (ans === undefined || ans === null)
+    if ((ans === undefined || ans === null) && !shortStagePending) break
     const next = getNextQuestionV3(q, answers, systemType, pathMode)
     if (!next) break
     q = next

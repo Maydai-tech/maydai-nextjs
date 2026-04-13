@@ -3,6 +3,7 @@ import {
   type QuestionnaireNavOptions,
 } from './questionnaire'
 import type { QuestionnaireVersion } from '@/lib/questionnaire-version'
+import { isV3ShortSyntheticQuestionId, V3_SHORT_MINIPACK_ID } from './questionnaire-v3-graph'
 
 /** Codes d’options E5.N9.* (hors ligne sentinelle) présents dans `answers`. */
 export function collectE5DeclaredOptionCodes(answers: Record<string, unknown>): string[] {
@@ -12,6 +13,15 @@ export function collectE5DeclaredOptionCodes(answers: Record<string, unknown>): 
     if (!/^E5\.N9\.Q/.test(qid)) continue
     for (const code of extractOptionCodesFromValue(raw)) {
       if (code.startsWith('E5.N9.')) out.add(code)
+    }
+  }
+  for (const code of extractOptionCodesFromValue(answers[V3_SHORT_MINIPACK_ID])) {
+    if (code.startsWith('E5.N9.')) out.add(code)
+  }
+  for (const [k, raw] of Object.entries(answers)) {
+    if (!isV3ShortSyntheticQuestionId(k)) continue
+    for (const code of extractOptionCodesFromValue(raw)) {
+      if (/^E5\.N9\.Q/.test(code)) out.add(code)
     }
   }
   return [...out]
@@ -25,6 +35,15 @@ export function collectE6DeclaredOptionCodes(answers: Record<string, unknown>): 
     if (!/^E6\.N10\.Q/.test(qid)) continue
     for (const code of extractOptionCodesFromValue(raw)) {
       if (code.startsWith('E6.N10.')) out.add(code)
+    }
+  }
+  for (const code of extractOptionCodesFromValue(answers[V3_SHORT_MINIPACK_ID])) {
+    if (code.startsWith('E6.N10.')) out.add(code)
+  }
+  for (const [k, raw] of Object.entries(answers)) {
+    if (!isV3ShortSyntheticQuestionId(k)) continue
+    for (const code of extractOptionCodesFromValue(raw)) {
+      if (/^E6\.N10\.Q/.test(code)) out.add(code)
     }
   }
   return [...out]

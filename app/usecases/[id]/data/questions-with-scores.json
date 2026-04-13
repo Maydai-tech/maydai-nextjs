@@ -1074,15 +1074,42 @@
   },
   "V3._SHORT_CONSOLIDATED": {
     "id": "V3._SHORT_CONSOLIDATED",
-    "question": "Parcours court — mini-pack BPGV / transparence (synthétique). Les blocs détaillés sont affichés dans l’interface dédiée ; « Suivant » enregistre les sentinelles checklist.",
-    "type": "radio",
+    "question": "Parcours court — mini-pack BPGV / transparence (ancien nœud, conservé pour compatibilité brouillons).",
+    "type": "tags",
+    "required": false,
+    "options": []
+  },
+  "V3_SHORT_ENTREPRISE": {
+    "id": "V3_SHORT_ENTREPRISE",
+    "question": "Parcours court — entreprise : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
+    "type": "tags",
     "required": false,
     "options": [
-      {
-        "code": "V3._SHORT_CONSOLIDATED.ACK",
-        "label": "Continuer (informations insuffisantes — pénalités par défaut)",
-        "score_impact": 0
-      }
+      { "code": "E4.N8.Q12.A", "label": "Formation des équipes", "score_impact": 0 },
+      { "code": "E5.N9.Q7.B", "label": "Registre des systèmes IA", "score_impact": 0 },
+      { "code": "E5.N9.Q1.A", "label": "Gestion des risques", "score_impact": 0 }
+    ]
+  },
+  "V3_SHORT_USAGE": {
+    "id": "V3_SHORT_USAGE",
+    "question": "Parcours court — usage : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
+    "type": "tags",
+    "required": false,
+    "options": [
+      { "code": "E5.N9.Q3.A", "label": "Instructions systèmes / prompts", "score_impact": 0 },
+      { "code": "E5.N9.Q8.B", "label": "Contrôle humain", "score_impact": 0 },
+      { "code": "E5.N9.Q4.A", "label": "Documentation technique", "score_impact": 0 },
+      { "code": "E5.N9.Q9.B", "label": "Surveillance continue", "score_impact": 0 },
+      { "code": "E5.N9.Q6.B", "label": "Qualité des données", "score_impact": 0 }
+    ]
+  },
+  "V3_SHORT_TRANSPARENCE": {
+    "id": "V3_SHORT_TRANSPARENCE",
+    "question": "Parcours court — transparence : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
+    "type": "tags",
+    "required": false,
+    "options": [
+      { "code": "E6.N10.TRANSPARENCY_PACK.A", "label": "Marque de transparence / Information utilisateur", "score_impact": 0 }
     ]
   },
   "E5.N9.Q1": {

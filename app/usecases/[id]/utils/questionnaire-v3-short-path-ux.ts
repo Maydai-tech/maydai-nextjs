@@ -3,7 +3,13 @@
  * Ne modifie pas le graphe ni les IDs — lecture UX uniquement.
  */
 
-export const V3_SHORT_PATH_SEGMENT_COUNT = 6
+import {
+  V3_SHORT_ENTREPRISE_ID,
+  V3_SHORT_TRANSPARENCE_ID,
+  V3_SHORT_USAGE_ID,
+} from './questionnaire-v3-graph'
+
+export const V3_SHORT_PATH_SEGMENT_COUNT = 7
 
 export type V3ShortPathSegment = {
   order: number
@@ -39,20 +45,26 @@ export const V3_SHORT_PATH_SEGMENTS: readonly V3ShortPathSegment[] = [
   },
   {
     order: 5,
-    key: 'maturity-snapshot',
-    title: 'Socle maturité (aperçu)',
-    tagline: 'Mini-pack E5 réglementaire : indicateurs clés sans l’exhaustivité du parcours long.',
+    key: 'maturity-enterprise',
+    title: 'Socle de maturité — entreprise',
+    tagline: 'Formation des équipes, registre des systèmes IA, gestion des risques.',
   },
   {
     order: 6,
-    key: 'sensibilisation-e6',
-    title: 'Sensibilisation & transparence (Q12 / E6)',
-    tagline: 'Formations AI Act, obligations de transparence et questions E6 lorsque le graphe les ouvre.',
+    key: 'maturity-usage',
+    title: 'Socle de maturité — usage',
+    tagline: 'Prompts, contrôle humain, documentation, surveillance continue, qualité des données.',
+  },
+  {
+    order: 7,
+    key: 'maturity-transparency',
+    title: 'Socle de maturité — transparence',
+    tagline: 'Information utilisateurs et marque de transparence.',
   },
 ] as const
 
 /**
- * Associe l’ID de question courante à un segment 1..6 (parcours court uniquement).
+ * Associe l’ID de question courante à un segment 1..7 (parcours court uniquement).
  */
 export function getV3ShortPathSegmentOrder(questionId: string): number {
   if (questionId === 'E4.N7.Q1' || questionId === 'E4.N7.Q1.1' || questionId === 'E4.N7.Q1.2') {
@@ -73,11 +85,17 @@ export function getV3ShortPathSegmentOrder(questionId: string): number {
   if (questionId.startsWith('E4.N8.Q11') || questionId === 'E4.N8.Q10') {
     return 4
   }
-  if (questionId === 'V3._SHORT_CONSOLIDATED' || questionId.startsWith('E5.N9.')) {
+  if (questionId === V3_SHORT_ENTREPRISE_ID || questionId === 'V3._SHORT_CONSOLIDATED') {
     return 5
   }
-  if (questionId === 'E4.N8.Q12' || questionId.startsWith('E6.N10.')) {
+  if (questionId === V3_SHORT_USAGE_ID) {
     return 6
+  }
+  if (questionId === V3_SHORT_TRANSPARENCE_ID) {
+    return 7
+  }
+  if (questionId.startsWith('E5.N9.')) {
+    return 5
   }
   return 3
 }

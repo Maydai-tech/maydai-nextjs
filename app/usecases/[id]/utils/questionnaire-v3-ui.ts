@@ -3,14 +3,14 @@
  * regroupe seulement l’affichage / la validation « Suivant » sur une étape visuelle.
  */
 
-import { V3_SHORT_MINIPACK_ID } from './questionnaire-v3-graph'
+import { isV3ShortPathCompositeQuestionId } from './questionnaire-v3-graph'
 
 export type V3CompositeKind = 'entry-q1' | 'content-q11' | 'short-minipack' | null
 
 export function getV3CompositeKind(currentQuestionId: string): V3CompositeKind {
   if (currentQuestionId === 'E4.N7.Q1') return 'entry-q1'
   if (currentQuestionId === 'E4.N8.Q11.0') return 'content-q11'
-  if (currentQuestionId === V3_SHORT_MINIPACK_ID) return 'short-minipack'
+  if (isV3ShortPathCompositeQuestionId(currentQuestionId)) return 'short-minipack'
   return null
 }
 
@@ -41,7 +41,7 @@ export function v3CompositeCanProceed(
     }
     return true
   }
-  if (currentQuestionId === V3_SHORT_MINIPACK_ID) {
+  if (isV3ShortPathCompositeQuestionId(currentQuestionId)) {
     return true
   }
   return null

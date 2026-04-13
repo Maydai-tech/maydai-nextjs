@@ -160,12 +160,6 @@ function UseCaseOverviewSections({
               {DECLARATION_PROOF_FLOW_COPY.synthesisV3CompletedReevalBanner}
             </p>
           ) : null}
-          {useCase.short_path_completed_at && !isCaseCompleted ? (
-            <p className="text-xs font-medium text-teal-900 bg-teal-100/80 border border-teal-200 rounded-lg px-3 py-2 mb-2">
-              Parcours court terminé — le cas n’est pas encore finalisé sur le parcours long. Vous pouvez affiner ou
-              réévaluer ci-dessous.
-            </p>
-          ) : null}
           {useCase.short_path_completed_at && isCaseCompleted ? (
             <p className="text-xs font-medium text-teal-900 bg-teal-100/80 border border-teal-200 rounded-lg px-3 py-2 mb-2">
               {DECLARATION_PROOF_FLOW_COPY.synthesisV3ShortPathDoneCompletedHint}
@@ -184,8 +178,8 @@ function UseCaseOverviewSections({
               <>
                 <span className="font-semibold text-gray-800">Parcours complet</span> — analyse détaillée, bloc E5,
                 score fin, rapport et todo.{' '}
-                <span className="font-semibold text-gray-800">Pré-diagnostic court</span> — première lecture AI Act en
-                quelques minutes (même moteur, périmètre réduit).
+                <span className="font-semibold text-gray-800">Parcours court</span> — même questionnaire et moteur, avec
+                un périmètre de questions actives réduit pour une première passe plus rapide.
               </>
             )}
           </p>
@@ -548,9 +542,9 @@ function UseCaseOverviewSections({
             <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
               <h3 className="text-sm font-semibold text-slate-900 mb-2">Plan d&apos;action non généré</h3>
               <p className="text-sm text-slate-700 leading-relaxed">
-                Générez votre plan d&apos;action de base basé sur vos réponses actuelles. Note : les modules de
-                Maturité et de Documentation approfondie seront marqués &apos;Hors périmètre&apos; tant que le
-                Parcours Long n&apos;aura pas été complété.
+                Générez votre plan d&apos;action à partir des réponses enregistrées. Les points non couverts par le
+                questionnaire restent évalués avec les règles « information insuffisante » / hors périmètre actif,
+                comme pour tout cas complété.
               </p>
             </div>
           )}

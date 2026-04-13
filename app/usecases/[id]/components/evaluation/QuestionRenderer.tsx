@@ -1,85 +1,104 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Question, QuestionOption } from '../../types/usecase'
 import Tooltip from '@/components/Tooltip'
 import { getE4N7CheckboxGroups, getE4N7VisualSegment } from '../../utils/e4n7-qualification-ui'
 import type { QuestionnairePathMode } from '../../utils/questionnaire'
-import { V3_SHORT_MINIPACK_ID } from '../../utils/questionnaire-v3-graph'
+import {
+  V3_SHORT_ENTREPRISE_ID,
+  V3_SHORT_TRANSPARENCE_ID,
+  V3_SHORT_USAGE_ID,
+  isV3ShortPathCompositeQuestionId,
+} from '../../utils/questionnaire-v3-graph'
 
-/** Réponse locale du mini-pack court (persistée dans `answers` jusqu’au « Suivant »). */
-export type V3ShortMinipackAnswer = {
-  governanceEnterprise: 'pending' | 'skipped'
-  governanceUseCase: 'pending' | 'skipped'
-  transparency: 'pending' | 'skipped'
+const V3_SHORT_STAGE_HEADINGS: Record<string, string> = {
+  [V3_SHORT_ENTREPRISE_ID]: 'Entreprise',
+  [V3_SHORT_USAGE_ID]: 'Usage',
+  [V3_SHORT_TRANSPARENCE_ID]: 'Transparence',
 }
 
-function parseV3ShortMinipackAnswer(raw: unknown): V3ShortMinipackAnswer {
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-    const o = raw as Record<string, unknown>
-    return {
-      governanceEnterprise: o.governanceEnterprise === 'skipped' ? 'skipped' : 'pending',
-      governanceUseCase: o.governanceUseCase === 'skipped' ? 'skipped' : 'pending',
-      transparency: o.transparency === 'skipped' ? 'skipped' : 'pending',
-    }
-  }
-  return {
-    governanceEnterprise: 'pending',
-    governanceUseCase: 'pending',
-    transparency: 'pending',
-  }
-}
-
-function V3ShortMinipackQuestionStub({
+/**
+ * Une étape du parcours court V3 : cases à cocher + déclaration « information insuffisante » (`[]` persistée puis avancement).
+ */
+export function V3ShortPathStageQuestion({
+  question,
   currentAnswer,
   onAnswerChange,
-  isReadOnly,
+  onSubmitInsufficientInfo,
+  insufficientInfoBusy = false,
+  isReadOnly = false,
 }: {
+  question: Question
   currentAnswer: unknown
-  onAnswerChange: (answer: unknown) => void
-  isReadOnly: boolean
+  onAnswerChange: (answer: string[]) => void
+  /** Si fourni : clic « Je ne sais pas / Passer » = soumission explicite de `[]` + enchaînement (pas seulement state local). */
+  onSubmitInsufficientInfo?: () => void | Promise<void>
+  /** Désactive le bouton pendant la sauvegarde / navigation (évite double clic). */
+  insufficientInfoBusy?: boolean
+  isReadOnly?: boolean
 }) {
-  const [blocks, setBlocks] = React.useState<V3ShortMinipackAnswer>(() =>
-    parseV3ShortMinipackAnswer(currentAnswer)
+  const [selectedCodes, setSelectedCodes] = useState<string[]>(() =>
+    Array.isArray(currentAnswer)
+      ? (currentAnswer as unknown[]).filter((x): x is string => typeof x === 'string' && x.length > 0)
+      : []
   )
 
-  const skipBlock = (key: keyof V3ShortMinipackAnswer) => {
+  useEffect(() => {
+    if (!Array.isArray(currentAnswer)) return
+    setSelectedCodes(
+      (currentAnswer as unknown[]).filter((x): x is string => typeof x === 'string' && x.length > 0)
+    )
+  }, [currentAnswer])
+
+  const toggleCode = (code: string) => {
     if (isReadOnly) return
-    setBlocks((prev) => {
-      const next = { ...prev, [key]: 'skipped' as const }
+    setSelectedCodes((prev) => {
+      const next = prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
       onAnswerChange(next)
       return next
     })
   }
 
+  const submitInsufficientInfo = async () => {
+    if (isReadOnly || insufficientInfoBusy) return
+    setSelectedCodes([])
+    if (onSubmitInsufficientInfo) {
+      await onSubmitInsufficientInfo()
+      return
+    }
+    onAnswerChange([])
+  }
+
+  const heading = V3_SHORT_STAGE_HEADINGS[question.id] ?? 'Parcours court'
+
   return (
-    <div data-v3-short-minipack-stub>
-      <div>
-        <h3>Gouvernance Entreprise</h3>
+    <div
+      data-v3-short-path-stage={question.id}
+      className="w-full max-w-3xl mx-auto"
+    >
+      <h2 className="text-2xl font-bold mb-6 text-gray-900">{heading}</h2>
+      <div className="p-6 border border-gray-200 rounded-lg shadow-sm bg-white">
+        <p className="text-sm text-gray-600 leading-relaxed mb-5">{question.question}</p>
+        <div className="space-y-3 mb-6">
+          {question.options.map((opt) => (
+            <label key={opt.code} className="flex items-start gap-3 cursor-pointer sm:items-center">
+              <input
+                type="checkbox"
+                checked={selectedCodes.includes(opt.code)}
+                onChange={() => toggleCode(opt.code)}
+                disabled={isReadOnly}
+                className="mt-1 sm:mt-0 form-checkbox h-5 w-5 text-[#0080A3] rounded border-gray-300 shrink-0"
+              />
+              <span className="text-gray-900 leading-relaxed">{opt.label}</span>
+            </label>
+          ))}
+        </div>
         <button
           type="button"
-          disabled={isReadOnly || blocks.governanceEnterprise === 'skipped'}
-          onClick={() => skipBlock('governanceEnterprise')}
+          disabled={isReadOnly || insufficientInfoBusy}
+          onClick={() => void submitInsufficientInfo()}
+          className="text-sm text-gray-500 hover:text-gray-800 underline underline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Je ne sais pas / Passer
-        </button>
-      </div>
-      <div>
-        <h3>Gouvernance Cas d&apos;Usage</h3>
-        <button
-          type="button"
-          disabled={isReadOnly || blocks.governanceUseCase === 'skipped'}
-          onClick={() => skipBlock('governanceUseCase')}
-        >
-          Je ne sais pas / Passer
-        </button>
-      </div>
-      <div>
-        <h3>Transparence</h3>
-        <button
-          type="button"
-          disabled={isReadOnly || blocks.transparency === 'skipped'}
-          onClick={() => skipBlock('transparency')}
-        >
-          Je ne sais pas / Passer
+          Je ne sais pas / Passer (Information insuffisante)
         </button>
       </div>
     </div>
@@ -124,6 +143,9 @@ interface QuestionRendererProps {
   isReadOnly?: boolean
   /** Parcours court : enveloppes colorées E4.N7 allégées */
   questionnairePathMode?: QuestionnairePathMode
+  /** Pack court V3 : déclaration « information insuffisante » = `[]` persisté puis `handleNext` avec payload explicite. */
+  onSubmitInsufficientInfo?: () => void | Promise<void>
+  insufficientInfoBusy?: boolean
 }
 
 const checkboxFocusClass =
@@ -135,12 +157,17 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
   onAnswerChange,
   isReadOnly = false,
   questionnairePathMode,
+  onSubmitInsufficientInfo,
+  insufficientInfoBusy,
 }: QuestionRendererProps) {
-  if (question.id === V3_SHORT_MINIPACK_ID) {
+  if (isV3ShortPathCompositeQuestionId(question.id)) {
     return (
-      <V3ShortMinipackQuestionStub
+      <V3ShortPathStageQuestion
+        question={question}
         currentAnswer={currentAnswer}
         onAnswerChange={onAnswerChange}
+        onSubmitInsufficientInfo={onSubmitInsufficientInfo}
+        insufficientInfoBusy={insufficientInfoBusy}
         isReadOnly={isReadOnly}
       />
     )

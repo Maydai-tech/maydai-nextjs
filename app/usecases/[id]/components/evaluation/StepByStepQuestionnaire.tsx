@@ -30,14 +30,12 @@ import {
 } from '@/lib/questionnaire-version'
 import { loadQuestions } from '../../utils/questions-loader'
 import { getV3CompositeKind } from '../../utils/questionnaire-v3-ui'
-import { V3_SHORT_MINIPACK_ID } from '../../utils/questionnaire-v3-graph'
 import { getE4N7StepCallout } from '../../utils/e4n7-qualification-ui'
 import type { QuestionnairePathMode } from '../../utils/questionnaire'
 import {
   getV3ShortPathSegmentForQuestion,
   getV3ShortPathSegmentOrder,
 } from '../../utils/questionnaire-v3-short-path-ux'
-import { V3ShortPathOutcome } from './V3ShortPathOutcome'
 import { V3ShortPathStepper } from './V3ShortPathStepper'
 import { DECLARATION_PROOF_FLOW_COPY } from '../../utils/declaration-proof-flow-copy'
 
@@ -49,7 +47,7 @@ interface StepByStepQuestionnaireProps {
   useCase: UseCase
   /** Fonction appelée quand le questionnaire est terminé */
   onComplete: () => void
-  /** V3 : parcours court métier (s’arrête après Usage & transparence / ORS ; pas E5, Q12 ni E6). */
+  /** V3 : `short` = même questionnaire avec périmètre actif réduit (graphe + scoring) ; fin identique au long. */
   questionnairePathMode?: QuestionnairePathMode
   /** Run first-party (Supabase) pour mesurer fin parcours long. */
   evaluationRunId?: string | null
@@ -125,7 +123,6 @@ export function StepByStepQuestionnaire({
     isCalculatingScore,  // Indique si le calcul du score est en cours
     isGeneratingReport,  // Indique si la génération du rapport est en cours
     showProcessingAnimation, // Contrôle l'affichage de l'animation de traitement
-    showShortPathOutcome,
     error,               // Message d'erreur éventuel
     handleAnswerSelect,  // Fonction pour sélectionner une réponse
     setAnswerForQuestion,
@@ -140,8 +137,6 @@ export function StepByStepQuestionnaire({
     questionnaireVersion: useCase.questionnaire_version,
     systemType: useCase.system_type,
     questionnairePathMode: questionnairePathMode,
-    onShortPathOutcomeReady:
-      questionnairePathMode === 'short' ? () => router.refresh() : undefined,
   })
 
   const questionnaireVersionNorm = useMemo(
@@ -151,7 +146,6 @@ export function StepByStepQuestionnaire({
 
   useEffect(() => {
     if (questionnairePathMode !== 'short' || questionnaireVersionNorm !== QUESTIONNAIRE_VERSION_V3) return
-    if (showShortPathOutcome) return
     if (!currentQuestion?.id) return
     const order = getV3ShortPathSegmentOrder(currentQuestion.id)
     if (shortPathSegmentsSeen.current.has(order)) return
@@ -166,7 +160,6 @@ export function StepByStepQuestionnaire({
   }, [
     questionnairePathMode,
     questionnaireVersionNorm,
-    showShortPathOutcome,
     currentQuestion?.id,
     useCase.id,
   ])
@@ -276,42 +269,6 @@ export function StepByStepQuestionnaire({
     useCase.classification_status,
     useCase.risk_level,
   ])
-
-  if (showShortPathOutcome && questionnairePathMode === 'short') {
-    return (
-      <>
-        <div className="mb-4 text-center">
-          <Link
-            href={useCaseRoutes.overview(useCase.id)}
-            className="text-sm text-gray-600 hover:text-[#0080A3] inline-flex items-center gap-1"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Retour à la synthèse du cas
-          </Link>
-        </div>
-        <V3ShortPathOutcome
-          useCaseId={useCase.id}
-          companyId={useCase.company_id}
-          accessToken={session?.access_token}
-          answers={questionnaireData.answers as Record<string, unknown>}
-          useCaseName={useCase.name}
-          systemType={useCase.system_type}
-          evaluationRunId={evaluationRunId}
-        />
-        <InviteScopeChoiceModal
-          isOpen={isScopeChoiceModalOpen}
-          onClose={() => setIsScopeChoiceModalOpen(false)}
-          onSelectScope={handleScopeSelect}
-        />
-        <InviteCollaboratorModal
-          isOpen={isInviteModalOpen}
-          onClose={() => setIsInviteModalOpen(false)}
-          onInvite={handleInvite}
-          scope={inviteScope}
-        />
-      </>
-    )
-  }
 
   // État de fin : questionnaire terminé avec succès
   if (isCompleted) {
@@ -612,13 +569,19 @@ export function StepByStepQuestionnaire({
                 )}
               </div>
             </>
-          ) : v3CompositeKind === 'short-minipack' ? (
+          ) : v3CompositeKind === 'short-minipack' && currentQuestion ? (
             <QuestionRenderer
-              question={allQuestions[V3_SHORT_MINIPACK_ID]}
-              currentAnswer={questionnaireData.answers[V3_SHORT_MINIPACK_ID]}
-              onAnswerChange={(a) => setAnswerForQuestion(V3_SHORT_MINIPACK_ID, a)}
+              question={allQuestions[currentQuestion.id]}
+              currentAnswer={questionnaireData.answers[currentQuestion.id]}
+              onAnswerChange={(a) => setAnswerForQuestion(currentQuestion.id, a)}
               isReadOnly={false}
               questionnairePathMode={questionnairePathMode}
+              onSubmitInsufficientInfo={
+                questionnairePathMode === 'short'
+                  ? () => handleNext({ explicitAnswerForCurrentStep: [] })
+                  : undefined
+              }
+              insufficientInfoBusy={isSubmitting}
             />
           ) : (
             <>
@@ -716,9 +679,7 @@ export function StepByStepQuestionnaire({
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    {questionnairePathMode === 'short' && questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3
-                      ? 'Obtenir mon résultat'
-                      : "Terminer l'évaluation"}
+                    Terminer l&apos;évaluation
                   </>
                 )}
               </button>

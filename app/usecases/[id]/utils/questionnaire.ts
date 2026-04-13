@@ -6,7 +6,12 @@ import {
   type QuestionnaireVersion,
 } from '@/lib/questionnaire-version'
 import { getNextQuestionV2, buildQuestionPathV2, getResumeQuestionIdV2 } from './questionnaire-v2-graph'
-import { getNextQuestionV3, buildQuestionPathV3, getResumeQuestionIdV3 } from './questionnaire-v3-graph'
+import {
+  getNextQuestionV3,
+  buildQuestionPathV3,
+  getResumeQuestionIdV3,
+  isV3ShortPathCompositeQuestionId,
+} from './questionnaire-v3-graph'
 import { getAbsoluteQuestionProgressV2, getCurrentQuestionPositionV2, resetProgressCacheV2 } from './questionnaire-v2-progress'
 import {
   getAbsoluteQuestionProgressV3,
@@ -355,6 +360,9 @@ export const checkCanProceed = (question: Question, answer: any): boolean => {
     case 'checkbox':
       return Array.isArray(answer) && answer.length > 0
     case 'tags':
+      if (isV3ShortPathCompositeQuestionId(question.id)) {
+        return Array.isArray(answer)
+      }
       return Array.isArray(answer) && answer.length > 0
     case 'conditional':
       if (!answer) return false

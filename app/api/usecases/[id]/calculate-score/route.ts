@@ -393,49 +393,35 @@ export async function POST(
     
     const nowIso = new Date().toISOString();
 
-    // Parcours court V3 : score initial distinct, sans marquer le cas comme « complété » long ni écraser score_final.
-    const updateData: Record<string, unknown> =
-      questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && requestPathMode === 'short'
-        ? {
-            short_path_initial_score: finalResult.scores.score_final,
-            short_path_completed_at: nowIso,
-            risk_level: riskLevel,
-            company_status: companyStatus,
-            last_calculation_date: nowIso,
-            updated_at: nowIso,
-            updated_by: user.id,
-            ...(v3ScoringCtx && {
-              bpgv_variant: v3ScoringCtx.bpgv_variant,
-              ors_exit: v3ScoringCtx.ors_exit,
-              active_question_codes: v3ScoringCtx.active_question_codes,
-              classification_status: classificationStatusForDb,
-            }),
-          }
-        : {
-            score_base: finalResult.scores.score_base,
-            score_model: finalResult.scores.score_model,
-            score_final: finalResult.scores.score_final,
-            is_eliminated: finalResult.scores.is_eliminated,
-            elimination_reason: finalResult.scores.elimination_reason,
-            risk_level: riskLevel,
-            company_status: companyStatus,
-            last_calculation_date: nowIso,
-            updated_at: nowIso,
-            updated_by: user.id,
-          };
+    // Même persistance `score_*` / risque pour tous les parcours (V3 court inclus). Le court conserve en plus les horodatages/trace « short path ».
+    const updateData: Record<string, unknown> = {
+      score_base: finalResult.scores.score_base,
+      score_model: finalResult.scores.score_model,
+      score_final: finalResult.scores.score_final,
+      is_eliminated: finalResult.scores.is_eliminated,
+      elimination_reason: finalResult.scores.elimination_reason,
+      risk_level: riskLevel,
+      company_status: companyStatus,
+      last_calculation_date: nowIso,
+      updated_at: nowIso,
+      updated_by: user.id,
+    };
 
-    if (!(questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && requestPathMode === 'short')) {
-      if (v3ScoringCtx) {
-        updateData.bpgv_variant = v3ScoringCtx.bpgv_variant;
-        updateData.ors_exit = v3ScoringCtx.ors_exit;
-        updateData.active_question_codes = v3ScoringCtx.active_question_codes;
-        updateData.classification_status = classificationStatusForDb;
-      } else if (v2ScoringCtx) {
-        updateData.bpgv_variant = v2ScoringCtx.bpgv_variant;
-        updateData.ors_exit = v2ScoringCtx.ors_exit;
-        updateData.active_question_codes = v2ScoringCtx.active_question_codes;
-        updateData.classification_status = null;
-      }
+    if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && requestPathMode === 'short') {
+      updateData.short_path_initial_score = finalResult.scores.score_final;
+      updateData.short_path_completed_at = nowIso;
+    }
+
+    if (v3ScoringCtx) {
+      updateData.bpgv_variant = v3ScoringCtx.bpgv_variant;
+      updateData.ors_exit = v3ScoringCtx.ors_exit;
+      updateData.active_question_codes = v3ScoringCtx.active_question_codes;
+      updateData.classification_status = classificationStatusForDb;
+    } else if (v2ScoringCtx) {
+      updateData.bpgv_variant = v2ScoringCtx.bpgv_variant;
+      updateData.ors_exit = v2ScoringCtx.ors_exit;
+      updateData.active_question_codes = v2ScoringCtx.active_question_codes;
+      updateData.classification_status = null;
     }
     
     console.log('✅ Mise à jour avec le statut d\'entreprise:', companyStatus);
@@ -447,7 +433,17 @@ export async function POST(
     
     if (updateError) {
       console.error('❌ Erreur lors de la mise à jour:', updateError);
-      return createErrorResponse('Impossible de mettre à jour les scores', 500);
+      const message =
+        typeof updateError.message === 'string' && updateError.message.length > 0
+          ? updateError.message
+          : 'Impossible de mettre à jour les scores';
+      return NextResponse.json(
+        {
+          error: message,
+          details: 'hint' in updateError ? (updateError as { hint?: string }).hint : undefined,
+        },
+        { status: 500 }
+      );
     }
 
     console.log('✅ Scores mis à jour avec succès');
