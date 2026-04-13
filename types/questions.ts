@@ -22,6 +22,7 @@ export interface Tooltip {
 export interface QuestionOption {
   code: string;
   label: string;
+  description?: string;
   score_impact?: number;
   category_impacts?: Record<string, number>;
   is_eliminatory?: boolean;
@@ -36,6 +37,10 @@ export interface QuestionOption {
 export interface Question {
   id: string;
   question: string;
+  /** Ligne de contexte sous le titre (ex. rappel juridique court) */
+  context_subtitle?: string;
+  /** Court texte d’aide sous le libellé (affiché par QuestionRenderer) */
+  description?: string;
   type: 'radio' | 'checkbox' | 'tags' | 'conditional';
   required: boolean;
   risk?: string;
@@ -55,5 +60,23 @@ export interface Question {
  * Collection de toutes les questions indexées par ID
  */
 export type QuestionsData = Record<string, Question>;
+
+/**
+ * Champs optionnels côté persistance / API pour le batch E5 (N9) et E6 (N10).
+ * Les clés sont des codes d’option (ex. `E5.N9.Q1.B`, `E6.N10.Q1.A`).
+ * Peuvent coexister avec `single_value` / `multiple_codes` des autres blocs.
+ */
+export interface UseCaseChecklistResponseFields {
+  bpgv_keys?: string[] | null
+  transparency_keys?: string[] | null
+}
+
+/**
+ * Lignes sentinelles `usecase_responses.question_code` pour enregistrer
+ * uniquement les tableaux batch (sans colonnes DB dédiées).
+ * À synchroniser avec la logique Edge `calculate-usecase-score`.
+ */
+export const BPGV_CHECKLIST_RESPONSE_CODE = 'E5.N9._CHECKLIST' as const
+export const TRANSPARENCY_CHECKLIST_RESPONSE_CODE = 'E6.N10._CHECKLIST' as const
 
 

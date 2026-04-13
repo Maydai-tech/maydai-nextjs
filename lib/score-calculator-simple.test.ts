@@ -48,14 +48,24 @@ describe('Score Calculator', () => {
       expect(getSelectedCodes(response)).toEqual(['E4.N7.Q2.A', 'E4.N7.Q2.B']);
     });
 
-    it('should extract conditional main value', () => {
+    it('should extract conditional main value for questions hors bloc E5/E6', () => {
+      const response: UserResponse = {
+        question_code: 'E4.N8.Q12',
+        conditional_main: 'E4.N8.Q12.A',
+        conditional_keys: ['k'],
+        conditional_values: ['v'],
+      };
+      expect(getSelectedCodes(response)).toEqual(['E4.N8.Q12.A']);
+    });
+
+    it('should ignore conditional_main for les questions E5/E6 (batch / radio uniquement)', () => {
       const response: UserResponse = {
         question_code: 'E5.N9.Q6',
         conditional_main: 'E5.N9.Q6.B',
         conditional_keys: ['procedures_details'],
         conditional_values: ['Test procedure'],
       };
-      expect(getSelectedCodes(response)).toEqual(['E5.N9.Q6.B']);
+      expect(getSelectedCodes(response)).toEqual([]);
     });
 
     it('should return empty array for no response', () => {
@@ -71,7 +81,7 @@ describe('Score Calculator', () => {
       const option = findQuestionOption('E4.N7.Q1', 'E4.N7.Q1.A');
       expect(option).toBeDefined();
       expect(option?.code).toBe('E4.N7.Q1.A');
-      expect(option?.label).toBe("Mon entreprise travaille dans le domaine de l'informatique et de l'IA");
+      expect(option?.label).toBe('Fournisseur (Provider)');
     });
 
     it('should return null for invalid question', () => {

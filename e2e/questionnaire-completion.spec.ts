@@ -29,7 +29,7 @@ const QUESTIONNAIRE_ANSWERS: Array<{
   answer: string | string[]
   conditionalValue?: string
 }> = [
-  { questionId: 'E4.N7.Q1', type: 'radio', answer: 'Mon entreprise utilise des systèmes d\'IA tiers' },
+  { questionId: 'E4.N7.Q1', type: 'radio', answer: 'Déployeur (Deployer)' },
   { questionId: 'E4.N7.Q1.2', type: 'radio', answer: 'Je suis un utilisateur d\'un système d\'IA pour mon entreprise' },
   { questionId: 'E4.N7.Q2', type: 'checkbox', answer: 'Aucun de ces domaines' },
   { questionId: 'E4.N7.Q2.1', type: 'checkbox', answer: 'Aucun de ces cas' },

@@ -6,7 +6,12 @@ import {
   type QuestionnaireVersion,
 } from '@/lib/questionnaire-version'
 import { getNextQuestionV2, buildQuestionPathV2, getResumeQuestionIdV2 } from './questionnaire-v2-graph'
-import { getNextQuestionV3, buildQuestionPathV3, getResumeQuestionIdV3 } from './questionnaire-v3-graph'
+import {
+  getNextQuestionV3,
+  buildQuestionPathV3,
+  getResumeQuestionIdV3,
+  isV3ShortPathCompositeQuestionId,
+} from './questionnaire-v3-graph'
 import { getAbsoluteQuestionProgressV2, getCurrentQuestionPositionV2, resetProgressCacheV2 } from './questionnaire-v2-progress'
 import {
   getAbsoluteQuestionProgressV3,
@@ -40,9 +45,9 @@ export const hasQ111Media = (answers: Record<string, any>): boolean => {
 export const getNextQuestionV1 = (currentQuestionId: string, answers: Record<string, any>): string | null => {
   switch (currentQuestionId) {
     case 'E4.N7.Q1':
-      // Si A -> E4.N7.Q1.1, Si B -> E4.N7.Q1.2
+      // Si A ou C (fournisseur / intégrateur) -> Q1.1 ; Si B (déployeur) -> Q1.2
       const q1Answer = answers['E4.N7.Q1']
-      if (q1Answer === 'E4.N7.Q1.A') {
+      if (q1Answer === 'E4.N7.Q1.A' || q1Answer === 'E4.N7.Q1.C') {
         return 'E4.N7.Q1.1'
       } else if (q1Answer === 'E4.N7.Q1.B') {
         return 'E4.N7.Q1.2'
@@ -124,12 +129,6 @@ export const getNextQuestionV1 = (currentQuestionId: string, answers: Record<str
     }
 
     case 'E4.N8.Q11.T1': {
-      if (answers['E4.N8.Q11.T1'] === 'E4.N8.Q11.T1.B') return 'E4.N8.Q11.T2'
-      if (hasQ111Media(answers)) return 'E4.N8.Q11.M1'
-      return 'E6.N10.Q1'
-    }
-
-    case 'E4.N8.Q11.T2': {
       if (hasQ111Media(answers)) return 'E4.N8.Q11.M1'
       return 'E6.N10.Q1'
     }
@@ -234,7 +233,7 @@ export const getQuestionProgress = (currentQuestionId: string, answers: Record<s
   // Count current progress
   const questionOrder = ['E4.N7.Q1']
   // Add Q1.1 or Q1.2 based on Q1 answer
-  if (answers['E4.N7.Q1'] === 'E4.N7.Q1.A') {
+  if (answers['E4.N7.Q1'] === 'E4.N7.Q1.A' || answers['E4.N7.Q1'] === 'E4.N7.Q1.C') {
     questionOrder.push('E4.N7.Q1.1')
   } else if (answers['E4.N7.Q1'] === 'E4.N7.Q1.B') {
     questionOrder.push('E4.N7.Q1.2')
@@ -361,6 +360,9 @@ export const checkCanProceed = (question: Question, answer: any): boolean => {
     case 'checkbox':
       return Array.isArray(answer) && answer.length > 0
     case 'tags':
+      if (isV3ShortPathCompositeQuestionId(question.id)) {
+        return Array.isArray(answer)
+      }
       return Array.isArray(answer) && answer.length > 0
     case 'conditional':
       if (!answer) return false
@@ -492,10 +494,10 @@ export const resetProgressCache = (): void => {
 const generateAnswerContexts = (questionId: string): Record<string, any>[] => {
   switch (questionId) {
     case 'E4.N7.Q1':
-      // Test both possible answers
       return [
         { 'E4.N7.Q1': 'E4.N7.Q1.A' },
-        { 'E4.N7.Q1': 'E4.N7.Q1.B' }
+        { 'E4.N7.Q1': 'E4.N7.Q1.B' },
+        { 'E4.N7.Q1': 'E4.N7.Q1.C' },
       ]
 
     case 'E5.N9.Q4':
@@ -520,22 +522,22 @@ const generateAnswerContexts = (questionId: string): Record<string, any>[] => {
 
     case 'E4.N8.Q11.T1':
       return [
-        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B' },
         { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.A' },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B' },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.C' },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.D' },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.E' },
         { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.A' },
         { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B' },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.C' },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.D' },
+        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.E' },
       ]
 
     case 'E4.N8.Q11.M1':
       return [
         { 'E4.N8.Q11.M1': 'E4.N8.Q11.M1.A' },
         { 'E4.N8.Q11.M1': 'E4.N8.Q11.M1.B' },
-      ]
-
-    case 'E4.N8.Q11.T2':
-      return [
-        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T2': 'E4.N8.Q11.T2.A' },
-        { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T2': 'E4.N8.Q11.T2.A' },
       ]
 
     default:

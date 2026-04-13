@@ -122,20 +122,18 @@ describe('nextsteps-ux-state', () => {
   })
 
   describe('canRequestAiReportGeneration', () => {
-    test('admin complété qualified : oui', () => {
+    test('complété qualified : oui', () => {
       expect(
         canRequestAiReportGeneration({
-          isAdmin: true,
           classificationStatus: 'qualified',
           useCaseStatus: 'completed',
         })
       ).toBe(true)
     })
 
-    test('impossible : non même admin', () => {
+    test('impossible : non', () => {
       expect(
         canRequestAiReportGeneration({
-          isAdmin: true,
           classificationStatus: 'impossible',
           useCaseStatus: 'completed',
         })

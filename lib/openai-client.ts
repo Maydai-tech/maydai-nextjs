@@ -27,10 +27,6 @@ interface OpenAIAnalysisInput {
       question: string
       selected_option: string
       selected_label: string
-      conditional_data: {
-        registry_type?: string
-        system_name?: string
-      }
     }
   }
 }
@@ -438,14 +434,9 @@ ${domainsText}`
    * @returns string - Section formatée
    */
   private buildRegistrySection(registryInfo: any): string {
-    const conditionalDetails = Object.keys(registryInfo.conditional_data).length > 0 
-      ? `Détails : ${Object.entries(registryInfo.conditional_data).map(([key, value]) => `${key}: ${value}`).join(', ')}`
-      : ''
-
     return `**E5.N9.Q7 - Registre centralisé des systèmes IA :**
 Question : ${registryInfo.question}
-Réponse : ${registryInfo.selected_label}
-${conditionalDetails}`
+Réponse déclarée : ${registryInfo.selected_label || registryInfo.selected_option || '(non renseigné)'}`
   }
 
   /**
@@ -660,12 +651,22 @@ SORTIE JSON
         if (q.hors_parcours_questionnaire_v2) {
           t += `  (hors périmètre du parcours V2 — question non posée ; ne pas inférer de réponse.)\n`
         } else if (q.user_response?.answered) {
+          const code = String(q.code ?? '')
+          const isE5E6 = code.startsWith('E5.N9') || code.startsWith('E6.N10')
+          if (q.user_response.checklist_selected_option_codes?.length) {
+            t += `  Options cochées (synthèse checklist): ${q.user_response.checklist_selected_option_codes.join(', ')}\n`
+          }
           if (q.user_response.single_label) t += `  Choix: ${q.user_response.single_label}\n`
-          if (q.user_response.conditional_label) t += `  Choix: ${q.user_response.conditional_label}\n`
+          if (!isE5E6 && q.user_response.conditional_label) {
+            t += `  Choix: ${q.user_response.conditional_label}\n`
+          }
           if (q.user_response.multiple_labels?.length) {
             t += `  Choix: ${q.user_response.multiple_labels.join('; ')}\n`
           }
-          const cd = q.user_response.conditional_data
+          if (typeof q.user_response.checklist_affirmative_option_declared === 'boolean') {
+            t += `  Statut checklist (booléen): ${q.user_response.checklist_affirmative_option_declared ? 'oui' : 'non'}\n`
+          }
+          const cd = !isE5E6 ? q.user_response.conditional_data : undefined
           if (cd && Object.keys(cd).length) {
             t += `  Champs: ${Object.entries(cd).map(([k, v]) => `${k}=${v}`).join('; ')}\n`
           }

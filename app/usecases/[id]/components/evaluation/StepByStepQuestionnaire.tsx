@@ -21,7 +21,7 @@ import {
 import Tooltip from '@/components/Tooltip'
 import { useAuth } from '@/lib/auth'
 import { useCompanyInfo } from '../../hooks/useCompanyInfo'
-import { useCaseRoutes, withEvaluationEntree } from '../../utils/routes'
+import { useCaseRoutes } from '../../utils/routes'
 import InviteScopeChoiceModal from '@/components/Collaboration/InviteScopeChoiceModal'
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
 import {
@@ -36,8 +36,6 @@ import {
   getV3ShortPathSegmentForQuestion,
   getV3ShortPathSegmentOrder,
 } from '../../utils/questionnaire-v3-short-path-ux'
-import { V3ShortPathOutcome } from './V3ShortPathOutcome'
-import { V3ShortPathIntro } from './V3ShortPathIntro'
 import { V3ShortPathStepper } from './V3ShortPathStepper'
 import { DECLARATION_PROOF_FLOW_COPY } from '../../utils/declaration-proof-flow-copy'
 
@@ -49,7 +47,7 @@ interface StepByStepQuestionnaireProps {
   useCase: UseCase
   /** Fonction appelée quand le questionnaire est terminé */
   onComplete: () => void
-  /** V3 : parcours court métier (mini-pack E5 + Q12 + E6). */
+  /** V3 : `short` = même questionnaire avec périmètre actif réduit (graphe + scoring) ; fin identique au long. */
   questionnairePathMode?: QuestionnairePathMode
   /** Run first-party (Supabase) pour mesurer fin parcours long. */
   evaluationRunId?: string | null
@@ -125,7 +123,6 @@ export function StepByStepQuestionnaire({
     isCalculatingScore,  // Indique si le calcul du score est en cours
     isGeneratingReport,  // Indique si la génération du rapport est en cours
     showProcessingAnimation, // Contrôle l'affichage de l'animation de traitement
-    showShortPathOutcome,
     error,               // Message d'erreur éventuel
     handleAnswerSelect,  // Fonction pour sélectionner une réponse
     setAnswerForQuestion,
@@ -140,8 +137,6 @@ export function StepByStepQuestionnaire({
     questionnaireVersion: useCase.questionnaire_version,
     systemType: useCase.system_type,
     questionnairePathMode: questionnairePathMode,
-    onShortPathOutcomeReady:
-      questionnairePathMode === 'short' ? () => router.refresh() : undefined,
   })
 
   const questionnaireVersionNorm = useMemo(
@@ -151,7 +146,6 @@ export function StepByStepQuestionnaire({
 
   useEffect(() => {
     if (questionnairePathMode !== 'short' || questionnaireVersionNorm !== QUESTIONNAIRE_VERSION_V3) return
-    if (showShortPathOutcome) return
     if (!currentQuestion?.id) return
     const order = getV3ShortPathSegmentOrder(currentQuestion.id)
     if (shortPathSegmentsSeen.current.has(order)) return
@@ -166,7 +160,6 @@ export function StepByStepQuestionnaire({
   }, [
     questionnairePathMode,
     questionnaireVersionNorm,
-    showShortPathOutcome,
     currentQuestion?.id,
     useCase.id,
   ])
@@ -277,42 +270,6 @@ export function StepByStepQuestionnaire({
     useCase.risk_level,
   ])
 
-  if (showShortPathOutcome && questionnairePathMode === 'short') {
-    return (
-      <>
-        <div className="mb-4 text-center">
-          <Link
-            href={useCaseRoutes.overview(useCase.id)}
-            className="text-sm text-gray-600 hover:text-[#0080A3] inline-flex items-center gap-1"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Retour à la synthèse du cas
-          </Link>
-        </div>
-        <V3ShortPathOutcome
-          useCaseId={useCase.id}
-          companyId={useCase.company_id}
-          accessToken={session?.access_token}
-          answers={questionnaireData.answers as Record<string, unknown>}
-          useCaseName={useCase.name}
-          systemType={useCase.system_type}
-          evaluationRunId={evaluationRunId}
-        />
-        <InviteScopeChoiceModal
-          isOpen={isScopeChoiceModalOpen}
-          onClose={() => setIsScopeChoiceModalOpen(false)}
-          onSelectScope={handleScopeSelect}
-        />
-        <InviteCollaboratorModal
-          isOpen={isInviteModalOpen}
-          onClose={() => setIsInviteModalOpen(false)}
-          onInvite={handleInvite}
-          scope={inviteScope}
-        />
-      </>
-    )
-  }
-
   // État de fin : questionnaire terminé avec succès
   if (isCompleted) {
     return (
@@ -360,13 +317,6 @@ export function StepByStepQuestionnaire({
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
-        {questionnairePathMode === 'short' && questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3 && (
-          <V3ShortPathIntro
-            useCaseId={useCase.id}
-            longEvaluationHref={withEvaluationEntree(useCaseRoutes.evaluation(useCase.id), 'short_path_intro_long')}
-            systemType={useCase.system_type}
-          />
-        )}
         {/* Header avec navigation et informations du cas d'usage */}
         <div className="text-center mb-8">
           <Link
@@ -395,11 +345,6 @@ export function StepByStepQuestionnaire({
           <p className="text-gray-600">
             Registre : {companyName || 'Chargement...'}
           </p>
-          {questionnairePathMode === 'short' && questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3 && (
-            <p className="mt-3 text-sm text-teal-900/90 font-medium max-w-xl mx-auto leading-relaxed">
-              {DECLARATION_PROOF_FLOW_COPY.synthesisV3ShortCtaLead}
-            </p>
-          )}
         </div>
 
         {/* Progression : dédiée au parcours court V3, sinon barre historique */}
@@ -407,6 +352,7 @@ export function StepByStepQuestionnaire({
           <V3ShortPathStepper
             currentQuestionId={currentQuestion.id}
             isLastQuestion={isLastQuestion}
+            hideSegmentCardTitles
           />
         ) : (
           <div className="mb-8">
@@ -435,25 +381,7 @@ export function StepByStepQuestionnaire({
 
         {/* Section question principale */}
         <div className="mb-8">
-          {questionnairePathMode === 'short' &&
-            questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3 &&
-            currentQuestion && (
-              <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 rounded-lg border border-gray-200 bg-gray-50/90 px-3 py-2.5 text-sm text-gray-800">
-                <span className="text-xs font-semibold uppercase tracking-wide text-[#0080A3] shrink-0">
-                  Segment en cours
-                </span>
-                <span className="text-gray-900 font-medium">
-                  {getV3ShortPathSegmentForQuestion(currentQuestion.id).title}
-                </span>
-                <span className="hidden sm:inline text-gray-400" aria-hidden>
-                  ·
-                </span>
-                <span className="text-gray-600 text-xs sm:text-sm leading-snug">
-                  {getV3ShortPathSegmentForQuestion(currentQuestion.id).tagline}
-                </span>
-              </div>
-            )}
-          {currentQuestion.id.startsWith('E5.N9.') && (
+          {/^E5\.N9\.Q/.test(currentQuestion.id) && (
               <div className="mb-6 rounded-lg border border-[#0080A3]/25 bg-[#0080A3]/5 px-4 py-3 text-sm text-gray-700 leading-relaxed">
                 <p className="font-medium text-gray-900 mb-1">Bloc E5 — réponses déclaratives</p>
                 <p className="mb-2">
@@ -499,16 +427,18 @@ export function StepByStepQuestionnaire({
 
           {v3CompositeKind === 'entry-q1' ? (
             <>
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                  Votre organisation et ce cas d’usage
-                </h2>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Deux étapes en un écran : d’abord le <strong>rôle principal</strong> (chaîne de valeur IA), puis la
-                  situation la plus proche de la vôtre. Les libellés juridiques détaillés restent disponibles via les
-                  icônes d’aide à côté de chaque réponse.
-                </p>
-              </div>
+              {!(questionnairePathMode === 'short' && questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3) && (
+                <div className="mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                    Votre organisation et ce cas d’usage
+                  </h2>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Deux étapes en un écran : d’abord le <strong>rôle principal</strong> (chaîne de valeur IA), puis la
+                    situation la plus proche de la vôtre. Les libellés juridiques détaillés restent disponibles via les
+                    icônes d’aide à côté de chaque réponse.
+                  </p>
+                </div>
+              )}
               <div className="space-y-8">
                 <section>
                   <div className="flex items-center gap-2 mb-3">
@@ -528,9 +458,11 @@ export function StepByStepQuestionnaire({
                     currentAnswer={questionnaireData.answers['E4.N7.Q1']}
                     onAnswerChange={(a) => setAnswerForQuestion('E4.N7.Q1', a)}
                     isReadOnly={false}
+                    questionnairePathMode={questionnairePathMode}
                   />
                 </section>
-                {questionnaireData.answers['E4.N7.Q1'] === 'E4.N7.Q1.A' && (
+                {(questionnaireData.answers['E4.N7.Q1'] === 'E4.N7.Q1.A' ||
+                  questionnaireData.answers['E4.N7.Q1'] === 'E4.N7.Q1.C') && (
                   <section>
                     <div className="flex items-center gap-2 mb-3">
                       <h3 className="text-lg font-medium text-gray-900">{allQuestions['E4.N7.Q1.1'].question}</h3>
@@ -549,10 +481,12 @@ export function StepByStepQuestionnaire({
                       currentAnswer={questionnaireData.answers['E4.N7.Q1.1']}
                       onAnswerChange={(a) => setAnswerForQuestion('E4.N7.Q1.1', a)}
                       isReadOnly={false}
+                      questionnairePathMode={questionnairePathMode}
                     />
                   </section>
                 )}
-                {questionnaireData.answers['E4.N7.Q1'] === 'E4.N7.Q1.B' && (
+                {questionnaireData.answers['E4.N7.Q1'] === 'E4.N7.Q1.B' &&
+                  !(questionnairePathMode === 'short' && questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3) && (
                   <section>
                     <div className="flex items-center gap-2 mb-3">
                       <h3 className="text-lg font-medium text-gray-900">{allQuestions['E4.N7.Q1.2'].question}</h3>
@@ -571,6 +505,7 @@ export function StepByStepQuestionnaire({
                       currentAnswer={questionnaireData.answers['E4.N7.Q1.2']}
                       onAnswerChange={(a) => setAnswerForQuestion('E4.N7.Q1.2', a)}
                       isReadOnly={false}
+                      questionnairePathMode={questionnairePathMode}
                     />
                   </section>
                 )}
@@ -606,6 +541,7 @@ export function StepByStepQuestionnaire({
                     currentAnswer={questionnaireData.answers['E4.N8.Q11.0']}
                     onAnswerChange={(a) => setAnswerForQuestion('E4.N8.Q11.0', a)}
                     isReadOnly={false}
+                    questionnairePathMode={questionnairePathMode}
                   />
                 </section>
                 {questionnaireData.answers['E4.N8.Q11.0'] === 'E4.N8.Q11.0.A' && (
@@ -627,11 +563,26 @@ export function StepByStepQuestionnaire({
                       currentAnswer={questionnaireData.answers['E4.N8.Q11.1']}
                       onAnswerChange={(a) => setAnswerForQuestion('E4.N8.Q11.1', a)}
                       isReadOnly={false}
+                      questionnairePathMode={questionnairePathMode}
                     />
                   </section>
                 )}
               </div>
             </>
+          ) : v3CompositeKind === 'short-minipack' && currentQuestion ? (
+            <QuestionRenderer
+              question={allQuestions[currentQuestion.id]}
+              currentAnswer={questionnaireData.answers[currentQuestion.id]}
+              onAnswerChange={(a) => setAnswerForQuestion(currentQuestion.id, a)}
+              isReadOnly={false}
+              questionnairePathMode={questionnairePathMode}
+              onSubmitInsufficientInfo={
+                questionnairePathMode === 'short'
+                  ? () => handleNext({ explicitAnswerForCurrentStep: [] })
+                  : undefined
+              }
+              insufficientInfoBusy={isSubmitting}
+            />
           ) : (
             <>
               {e4N7Callout && (
@@ -671,6 +622,7 @@ export function StepByStepQuestionnaire({
                 currentAnswer={questionnaireData.answers[currentQuestion.id]}
                 onAnswerChange={handleAnswerSelect}
                 isReadOnly={false}
+                questionnairePathMode={questionnairePathMode}
               />
             </>
           )}
@@ -727,9 +679,7 @@ export function StepByStepQuestionnaire({
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    {questionnairePathMode === 'short' && questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3
-                      ? 'Obtenir mon résultat'
-                      : "Terminer l'évaluation"}
+                    Terminer l&apos;évaluation
                   </>
                 )}
               </button>

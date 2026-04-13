@@ -1,19 +1,27 @@
 {
   "E4.N7.Q1": {
     "id": "E4.N7.Q1",
-    "question": "Dans cette situation, votre cas d'usage concerne :",
+    "question": "Quel est le rôle de votre organisation par rapport à ce système d'IA ?",
     "type": "radio",
     "required": true,
     "risk": "minimal",
     "options": [
       {
         "code": "E4.N7.Q1.A",
-        "label": "Mon entreprise travaille dans le domaine de l'informatique et de l'IA",
+        "label": "Fournisseur (Provider)",
+        "description": "Nous développons cette IA (ou l'avons fait développer) pour la proposer sous notre propre nom ou marque.",
         "score_impact": 0
       },
       {
         "code": "E4.N7.Q1.B",
-        "label": "Mon entreprise utilise des systèmes d'IA tiers",
+        "label": "Déployeur (Deployer)",
+        "description": "Nous utilisons une IA développée par un tiers pour notre activité professionnelle, sans modifier sa finalité initiale.",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N7.Q1.C",
+        "label": "Intégrateur / Marque blanche (Bascule Fournisseur)",
+        "description": "Nous utilisons une IA tierce, mais nous l'avons modifiée de façon substantielle ou la distribuons sous notre propre marque.",
         "score_impact": 0
       }
     ]
@@ -99,6 +107,7 @@
   "E4.N7.Q2": {
     "id": "E4.N7.Q2",
     "question": "Votre système d'IA est utilisé dans un ou des domaines suivants ?",
+    "description": "⚠️ Domaines sensibles : Ces usages imposent des obligations de conformité strictes.",
     "type": "checkbox",
     "required": true,
     "risk": "high",
@@ -168,6 +177,7 @@
   "E4.N7.Q2.1": {
     "id": "E4.N7.Q2.1",
     "question": "Votre système d'IA est utilisé dans un ou plusieurs des cas suivants ?",
+    "description": "⚠️ Domaines sensibles : Ces usages imposent des obligations de conformité strictes.",
     "type": "checkbox",
     "required": true,
     "risk": "unacceptable",
@@ -219,6 +229,7 @@
   "E4.N7.Q3": {
     "id": "E4.N7.Q3",
     "question": "Votre système d'IA a pour finalité une ou des activités suivantes ?",
+    "description": "🚨 Article 5 de l'AI Act : Ces finalités sont strictement interdites.",
     "type": "checkbox",
     "required": true,
     "risk": "unacceptable",
@@ -258,6 +269,7 @@
   "E4.N7.Q3.1": {
     "id": "E4.N7.Q3.1",
     "question": "Possible intervention dans l'une de ces situations ?",
+    "description": "🚨 Article 5 de l'AI Act : Ces situations sont strictement interdites ou assimilées.",
     "type": "checkbox",
     "required": true,
     "risk": "unacceptable",
@@ -429,13 +441,20 @@
   },
   "E4.N8.Q9": {
     "id": "E4.N8.Q9",
-    "question": "Le système d'IA interagit-il directement avec des personnes physiques ?",
+    "question": "Le système d'IA interagit-il directement avec des personnes physiques sous la forme d'un interlocuteur (ex: chatbot, assistant vocal) ?",
     "type": "radio",
     "required": true,
+    "tooltip": {
+      "title": "Art. 50.1 — transparence",
+      "shortContent": "L'obligation de transparence de l'AI Act (Art. 50.1) vise uniquement à éviter qu'un humain ne soit trompé. Si votre système est utilisé de manière évidente comme un outil logiciel (ex: copilote de code, génération de rapports internes), l'obligation d'information est levée.",
+      "fullContent": "L'obligation de transparence de l'AI Act (Art. 50.1) vise uniquement à éviter qu'un humain ne soit trompé. Si votre système est utilisé de manière évidente comme un outil logiciel (ex: copilote de code, génération de rapports internes), l'obligation d'information est levée.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N8.Q9.A",
-        "label": "Oui",
+        "label": "Oui (Interlocuteur direct)",
+        "description": "Chatbot client, assistant virtuel, appel automatisé où la personne pourrait ignorer qu'elle parle à une IA.",
         "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
@@ -444,20 +463,27 @@
       },
       {
         "code": "E4.N8.Q9.B",
-        "label": "Non",
+        "label": "Non (Outil logiciel évident)",
+        "description": "Copilote de code interne, outil d'analyse ou d'aide à la rédaction utilisé consciemment par les équipes.",
         "score_impact": 0
       }
     ]
   },
   "E4.N8.Q9.1": {
     "id": "E4.N8.Q9.1",
-    "question": "Le système utilise-t-il la reconnaissance ou l'inférence d'émotions, ou la catégorisation biométrique de personnes physiques, dans un cadre autorisé et hors des cas déjà qualifiés à risque élevé ou inacceptable ?",
+    "question": "Le système analyse-t-il physiquement les personnes (visage, corps, voix) pour déduire des caractéristiques comme leur âge, leur genre ou leurs émotions ?",
     "type": "radio",
     "required": true,
+    "tooltip": {
+      "title": "Article 50.3 — information des utilisateurs",
+      "shortContent": "Article 50.3 de l'AI Act : L'obligation d'information s'applique aux systèmes qui catégorisent les personnes ou détectent leurs émotions (ex: ciblage publicitaire physique, adaptation de contenu), même s'ils ne sont pas classés à haut risque.",
+      "fullContent": "Article 50.3 de l'AI Act : L'obligation d'information s'applique aux systèmes qui catégorisent les personnes ou détectent leurs émotions (ex: ciblage publicitaire physique, adaptation de contenu), même s'ils ne sont pas classés à haut risque.",
+      "icon": "💡"
+    },
     "options": [
       {
         "code": "E4.N8.Q9.1.A",
-        "label": "Oui",
+        "label": "Oui (Catégorisation ou émotions)",
         "score_impact": -2,
         "risk": "limited",
         "category_impacts": {
@@ -466,7 +492,7 @@
       },
       {
         "code": "E4.N8.Q9.1.B",
-        "label": "Non",
+        "label": "Non (Aucune analyse de ce type)",
         "score_impact": 0
       }
     ]
@@ -562,13 +588,14 @@
   },
   "E4.N8.Q11.T1": {
     "id": "E4.N8.Q11.T1",
-    "question": "Pour la partie texte, ce contenu est-il principalement destiné à une diffusion au public visant à informer sur des questions d'intérêt public, à l'exclusion des communications purement commerciales, promotionnelles ou internes ?",
+    "question": "Quelle est la finalité principale du texte généré par l'IA et comment est-il validé ?",
     "type": "radio",
     "required": true,
     "options": [
       {
         "code": "E4.N8.Q11.T1.A",
-        "label": "Oui",
+        "label": "A — Information d'intérêt public SANS validation humaine",
+        "description": "Publication automatisée d'articles, de communiqués ou d'informations citoyennes.",
         "score_impact": -2,
         "risk": "limited",
         "category_impacts": {
@@ -577,7 +604,49 @@
       },
       {
         "code": "E4.N8.Q11.T1.B",
+        "label": "B — Information d'intérêt public AVEC contrôle éditorial",
+        "description": "Rédaction d'articles relus et validés par un humain qui en assume la responsabilité.",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.T1.C",
+        "label": "C — Communication commerciale, marketing ou publicitaire",
+        "description": "Création de fiches produits, posts pour les réseaux sociaux, e-mailing.",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.T1.D",
+        "label": "D — Outil de productivité interne ou technique",
+        "description": "Génération de code informatique, synthèses de réunions, documentation métier.",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.T1.E",
+        "label": "E — Assistance standard, correction et traduction",
+        "description": "Traduction ou correction orthographique sans modifier le sens initial.",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E4.N8.Q11.T1E": {
+    "id": "E4.N8.Q11.T1E",
+    "question": "Ce texte fait-il l'objet d'une relecture et d'une validation par un humain qui en assume la responsabilité éditoriale ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E4.N8.Q11.T1E.A",
+        "label": "Oui",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.T1E.B",
         "label": "Non",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.T1E.C",
+        "label": "Je ne sais pas",
         "score_impact": 0
       }
     ]
@@ -676,6 +745,46 @@
           "privacy_data": -0.8
         }
       }
+    ]
+  },
+  "V3._SHORT_CONSOLIDATED": {
+    "id": "V3._SHORT_CONSOLIDATED",
+    "question": "Parcours court — mini-pack (ancien nœud).",
+    "type": "tags",
+    "required": false,
+    "options": []
+  },
+  "V3_SHORT_ENTREPRISE": {
+    "id": "V3_SHORT_ENTREPRISE",
+    "question": "Parcours court — entreprise.",
+    "type": "tags",
+    "required": false,
+    "options": [
+      { "code": "E4.N8.Q12.A", "label": "Formation des équipes", "score_impact": 0 },
+      { "code": "E5.N9.Q7.B", "label": "Registre des systèmes IA", "score_impact": 0 },
+      { "code": "E5.N9.Q1.A", "label": "Gestion des risques", "score_impact": 0 }
+    ]
+  },
+  "V3_SHORT_USAGE": {
+    "id": "V3_SHORT_USAGE",
+    "question": "Parcours court — usage.",
+    "type": "tags",
+    "required": false,
+    "options": [
+      { "code": "E5.N9.Q3.A", "label": "Instructions systèmes / prompts", "score_impact": 0 },
+      { "code": "E5.N9.Q8.B", "label": "Contrôle humain", "score_impact": 0 },
+      { "code": "E5.N9.Q4.A", "label": "Documentation technique", "score_impact": 0 },
+      { "code": "E5.N9.Q9.B", "label": "Surveillance continue", "score_impact": 0 },
+      { "code": "E5.N9.Q6.B", "label": "Qualité des données", "score_impact": 0 }
+    ]
+  },
+  "V3_SHORT_TRANSPARENCE": {
+    "id": "V3_SHORT_TRANSPARENCE",
+    "question": "Parcours court — transparence.",
+    "type": "tags",
+    "required": false,
+    "options": [
+      { "code": "E6.N10.TRANSPARENCY_PACK.A", "label": "Marque de transparence / Information utilisateur", "score_impact": 0 }
     ]
   },
   "E5.N9.Q1": {
@@ -815,25 +924,13 @@
   "E5.N9.Q6": {
     "id": "E5.N9.Q6",
     "question": "Avez vous des procédures de vérification de la qualité des données ?",
-    "type": "conditional",
+    "type": "radio",
     "required": true,
     "risk": "limited",
-    "conditionalFields": [
-      {
-        "key": "procedures_details",
-        "label": "Précisions",
-        "placeholder": "Décrivez vos procédures..."
-      }
-    ],
     "options": [
       {
         "code": "E5.N9.Q6.B",
         "label": "Oui",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q6.C",
-        "label": "Si oui préciser",
         "score_impact": 0
       },
       {
@@ -850,30 +947,13 @@
   "E5.N9.Q7": {
     "id": "E5.N9.Q7",
     "question": "Tenez vous un registre centralisé de vos systèmes d'IA ?",
-    "type": "conditional",
+    "type": "radio",
     "required": true,
     "risk": "minimal",
-    "conditionalFields": [
-      {
-        "key": "registry_type",
-        "label": "Type",
-        "placeholder": "Interne"
-      },
-      {
-        "key": "system_name",
-        "label": "Système",
-        "placeholder": "MaydAI"
-      }
-    ],
     "options": [
       {
         "code": "E5.N9.Q7.B",
         "label": "Oui",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q7.C",
-        "label": "Si oui préciser",
         "score_impact": 0
       },
       {
@@ -890,30 +970,13 @@
   "E5.N9.Q8": {
     "id": "E5.N9.Q8",
     "question": "Avez vous une étape de surveillance humaine dans votre système d'IA ?",
-    "type": "conditional",
+    "type": "radio",
     "required": true,
     "risk": "limited",
-    "conditionalFields": [
-      {
-        "key": "supervisor_name",
-        "label": "Nom prénom",
-        "placeholder": ""
-      },
-      {
-        "key": "supervisor_role",
-        "label": "Rôle",
-        "placeholder": ""
-      }
-    ],
     "options": [
       {
         "code": "E5.N9.Q8.B",
         "label": "Oui",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q8.C",
-        "label": "Si oui préciser",
         "score_impact": 0
       },
       {
@@ -930,25 +993,13 @@
   "E5.N9.Q9": {
     "id": "E5.N9.Q9",
     "question": "Vérifiez vous l'exactitude, la robustesse et la cybersécurité de votre système d'IA ?",
-    "type": "conditional",
+    "type": "radio",
     "required": true,
     "risk": "limited",
-    "conditionalFields": [
-      {
-        "key": "security_details",
-        "label": "Détails",
-        "placeholder": "Décrivez vos procédures..."
-      }
-    ],
     "options": [
       {
         "code": "E5.N9.Q9.B",
         "label": "Oui",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q9.C",
-        "label": "Si oui préciser",
         "score_impact": 0
       },
       {

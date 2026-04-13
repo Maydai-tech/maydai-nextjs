@@ -29,7 +29,11 @@ function mergeCtx(
 function generateAnswerContextsV2(questionId: string): Record<string, unknown>[] {
   switch (questionId) {
     case 'E4.N7.Q1':
-      return [{ 'E4.N7.Q1': 'E4.N7.Q1.A' }, { 'E4.N7.Q1': 'E4.N7.Q1.B' }]
+      return [
+        { 'E4.N7.Q1': 'E4.N7.Q1.A' },
+        { 'E4.N7.Q1': 'E4.N7.Q1.B' },
+        { 'E4.N7.Q1': 'E4.N7.Q1.C' },
+      ]
     case 'E4.N7.Q3.1':
       return [{ 'E4.N7.Q3.1': ['E4.N7.Q3.1.E'] }, { 'E4.N7.Q3.1': ['E4.N7.Q3.1.A'] }]
     case 'E4.N8.Q11.0':
@@ -47,58 +51,39 @@ function generateAnswerContextsV2(questionId: string): Record<string, unknown>[]
         mergeCtx({ 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'] }, CTX_ORS_MINIMAL),
         mergeCtx({ 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'] }, CTX_ORS_HIGH)
       ]
-    case 'E4.N8.Q11.T1':
-      return [
-        mergeCtx(
-          { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B' },
-          CTX_ORS_MINIMAL
-        ),
-        mergeCtx(
-          { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B' },
-          CTX_ORS_HIGH
-        ),
-        mergeCtx(
-          { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.A' },
-          CTX_ORS_MINIMAL
-        ),
-        mergeCtx(
-          { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.A' },
-          CTX_ORS_HIGH
-        ),
-        mergeCtx(
-          { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.A' },
-          CTX_ORS_MINIMAL
-        ),
-        mergeCtx(
-          { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T1': 'E4.N8.Q11.T1.B' },
-          CTX_ORS_HIGH
+    case 'E4.N8.Q11.T1': {
+      const t1Codes = [
+        'E4.N8.Q11.T1.A',
+        'E4.N8.Q11.T1.B',
+        'E4.N8.Q11.T1.C',
+        'E4.N8.Q11.T1.D',
+        'E4.N8.Q11.T1.E',
+      ] as const
+      const out: Record<string, unknown>[] = []
+      for (const code of t1Codes) {
+        out.push(
+          mergeCtx({ 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': code }, CTX_ORS_MINIMAL),
+          mergeCtx({ 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T1': code }, CTX_ORS_HIGH)
         )
-      ]
+        out.push(
+          mergeCtx(
+            { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T1': code },
+            CTX_ORS_MINIMAL
+          ),
+          mergeCtx(
+            { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T1': code },
+            CTX_ORS_HIGH
+          )
+        )
+      }
+      return out
+    }
     case 'E4.N8.Q11.M1':
       return [
         mergeCtx({ 'E4.N8.Q11.M1': 'E4.N8.Q11.M1.A' }, CTX_ORS_MINIMAL),
         mergeCtx({ 'E4.N8.Q11.M1': 'E4.N8.Q11.M1.A' }, CTX_ORS_HIGH),
         mergeCtx({ 'E4.N8.Q11.M1': 'E4.N8.Q11.M1.B' }, CTX_ORS_MINIMAL),
         mergeCtx({ 'E4.N8.Q11.M1': 'E4.N8.Q11.M1.B' }, CTX_ORS_HIGH)
-      ]
-    case 'E4.N8.Q11.T2':
-      return [
-        mergeCtx(
-          { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T2': 'E4.N8.Q11.T2.A' },
-          CTX_ORS_MINIMAL
-        ),
-        mergeCtx(
-          { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A'], 'E4.N8.Q11.T2': 'E4.N8.Q11.T2.A' },
-          CTX_ORS_HIGH
-        ),
-        mergeCtx(
-          { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T2': 'E4.N8.Q11.T2.A' },
-          CTX_ORS_MINIMAL
-        ),
-        mergeCtx(
-          { 'E4.N8.Q11.1': ['E4.N8.Q11.1.A', 'E4.N8.Q11.1.B'], 'E4.N8.Q11.T2': 'E4.N8.Q11.T2.A' },
-          CTX_ORS_HIGH
-        )
       ]
     case 'E4.N8.Q11.M2':
       return [mergeCtx({}, CTX_ORS_MINIMAL), mergeCtx({}, CTX_ORS_HIGH)]

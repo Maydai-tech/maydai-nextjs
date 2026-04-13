@@ -1,38 +1,52 @@
 {
   "E4.N7.Q1": {
     "id": "E4.N7.Q1",
-    "question": "Dans la chaîne de valeur de ce système d'IA, vous êtes plutôt :",
+    "question": "Quel est le rôle de votre organisation par rapport à ce système d'IA ?",
     "type": "radio",
     "required": true,
     "risk": "minimal",
     "options": [
       {
         "code": "E4.N7.Q1.A",
-        "label": "Mon entreprise travaille dans le domaine de l'informatique et de l'IA",
+        "label": "Fournisseur (Provider)",
+        "description": "Nous développons cette IA (ou l'avons fait développer) pour la proposer sous notre propre nom ou marque.",
         "score_impact": 0,
         "tooltip": {
-          "title": "Fournisseur, importateur ou distributeur d'IA",
-          "shortContent": "Vous êtes du côté de la mise sur le marché ou de la distribution de systèmes d'IA (y compris logiciel ou produit embarquant de l'IA).",
-          "fullContent": "Soit un Fournisseur qui développe l'IA et la met sur le marché, soit un importateur qui introduit l'IA d'un pays tiers dans l'UE, soit un distributeur qui la met à disposition, soit un mandataire qui représente le fournisseur non-UE pour la conformité.",
+          "title": "Fournisseur (Provider)",
+          "shortContent": "Vous développez ou faites développer le système d'IA et le mettez sur le marché ou en service sous votre nom ou marque (notion de fournisseur AI Act).",
+          "fullContent": "Le fournisseur est l'opérateur qui met sur le marché ou en service un système d'IA sous son propre nom ou marque, qu'il l'ait développé ou fait développer.",
           "icon": "💡"
         }
       },
       {
         "code": "E4.N7.Q1.B",
-        "label": "Mon entreprise utilise des systèmes d'IA tiers",
+        "label": "Déployeur (Deployer)",
+        "description": "Nous utilisons une IA développée par un tiers pour notre activité professionnelle, sans modifier sa finalité initiale.",
         "score_impact": 0,
         "tooltip": {
-          "title": "Déployeur (utilisateur) d'IA",
-          "shortContent": "Vous utilisez un système d'IA sous votre responsabilité (même si un prestataire l'héberge pour vous).",
-          "fullContent": "Un déployeur (utilisateur) est une personne physique ou morale, une autorité publique, une entreprise ou un autre organisme qui utilise un système d'IA sous sa propre autorité. Il doit s'assurer d'utiliser les systèmes d'IA conformément à l'AI Act et de garantir un contrôle humain approprié.",
+          "title": "Déployeur (Deployer)",
+          "shortContent": "Vous utilisez un système d'IA sous votre responsabilité, sans en être le fournisseur au sens AI Act.",
+          "fullContent": "Le déployeur est l'opérateur qui utilise un système d'IA sous sa propre autorité, sans modification substantielle de sa finalité par rapport au produit mis sur le marché par un tiers.",
+          "icon": "💡"
+        }
+      },
+      {
+        "code": "E4.N7.Q1.C",
+        "label": "Intégrateur / Marque blanche (Bascule Fournisseur)",
+        "description": "Nous utilisons une IA tierce, mais nous l'avons modifiée de façon substantielle ou la distribuons sous notre propre marque.",
+        "score_impact": 0,
+        "tooltip": {
+          "title": "Intégrateur / marque blanche",
+          "shortContent": "Modification substantielle ou mise sur le marché sous votre marque : le droit peut vous qualifier comme fournisseur.",
+          "fullContent": "Lorsque vous modifiez substantiellement un système d'IA existant ou que vous le mettez sur le marché sous votre propre nom ou marque, votre positionnement suit en général les obligations du fournisseur (AI Act).",
           "icon": "💡"
         }
       }
     ],
     "tooltip": {
-      "title": "Rôle dans la chaîne de valeur",
-      "shortContent": "Premier choix simple : vous positionnez-vous comme acteur de l'offre (mise sur le marché, intégration, distribution) ou comme utilisateur d'une IA existante ?",
-      "fullContent": "Cette question sépare les opérateurs qui mettent un système d'IA sur le marché ou le font circuler (fournisseur, importateur, distributeur, mandataire, etc.) des opérateurs qui l'utilisent pour leur propre activité. Les libellés juridiques détaillés (AI Act) sont rappelés dans l'aide de chaque réponse.",
+      "title": "Provider et Déployeur (AI Act)",
+      "shortContent": "Le droit européen (AI Act) impose des règles très strictes à celui qui crée l'IA ou appose sa marque dessus (Fournisseur), et des règles de surveillance à l'entreprise qui s'en sert au quotidien (Déployeur).",
+      "fullContent": "Le droit européen (AI Act) impose des règles très strictes à celui qui crée l'IA ou appose sa marque dessus (Fournisseur), et des règles de surveillance à l'entreprise qui s'en sert au quotidien (Déployeur).",
       "icon": "💡"
     }
   },
@@ -159,6 +173,7 @@
   "E4.N7.Q2": {
     "id": "E4.N7.Q2",
     "question": "Votre système d'IA est utilisé dans un ou des domaines suivants ?",
+    "description": "⚠️ Domaines sensibles : Ces usages imposent des obligations de conformité strictes.",
     "type": "checkbox",
     "required": true,
     "risk": "high",
@@ -264,6 +279,7 @@
   "E4.N7.Q2.1": {
     "id": "E4.N7.Q2.1",
     "question": "Votre système d'IA est utilisé dans un ou plusieurs des cas suivants ?",
+    "description": "⚠️ Domaines sensibles : Ces usages imposent des obligations de conformité strictes.",
     "type": "checkbox",
     "required": true,
     "risk": "unacceptable",
@@ -341,6 +357,7 @@
   "E4.N7.Q3": {
     "id": "E4.N7.Q3",
     "question": "Votre système d'IA a pour finalité une ou des activités suivantes ?",
+    "description": "🚨 Article 5 de l'AI Act : Ces finalités sont strictement interdites.",
     "type": "checkbox",
     "required": true,
     "risk": "unacceptable",
@@ -406,6 +423,7 @@
   "E4.N7.Q3.1": {
     "id": "E4.N7.Q3.1",
     "question": "Possible intervention dans l'une de ces situations ?",
+    "description": "🚨 Article 5 de l'AI Act : Ces situations sont strictement interdites ou assimilées.",
     "type": "checkbox",
     "required": true,
     "risk": "unacceptable",
@@ -503,6 +521,7 @@
   "E4.N7.Q5": {
     "id": "E4.N7.Q5",
     "question": "Dans ce domaine sensible, l'IA se limite-t-elle à vous aider ou préparer le dossier, sans peser directement sur la décision finale ?",
+    "description": "⚠️ Domaines sensibles : Ces usages imposent des obligations de conformité strictes.",
     "type": "radio",
     "required": true,
     "tooltip": {
@@ -703,18 +722,20 @@
   },
   "E4.N8.Q9": {
     "id": "E4.N8.Q9",
-    "question": "Le système d'IA interagit-il directement avec des personnes physiques ?",
+    "question": "Le système d'IA interagit-il directement avec des personnes physiques sous la forme d'un interlocuteur (ex: chatbot, assistant vocal) ?",
     "type": "radio",
     "required": true,
     "tooltip": {
-      "title": "Interaction directe",
-      "shortContent": "Répondez « Oui » si le système échange directement avec une personne via une interface, un agent conversationnel, un assistant vocal, une messagerie, un appel ou un accompagnement en temps réel.",
+      "title": "Art. 50.1 — transparence",
+      "shortContent": "L'obligation de transparence de l'AI Act (Art. 50.1) vise uniquement à éviter qu'un humain ne soit trompé. Si votre système est utilisé de manière évidente comme un outil logiciel (ex: copilote de code, génération de rapports internes), l'obligation d'information est levée.",
+      "fullContent": "L'obligation de transparence de l'AI Act (Art. 50.1) vise uniquement à éviter qu'un humain ne soit trompé. Si votre système est utilisé de manière évidente comme un outil logiciel (ex: copilote de code, génération de rapports internes), l'obligation d'information est levée.",
       "icon": "💡"
     },
     "options": [
       {
         "code": "E4.N8.Q9.A",
-        "label": "Oui",
+        "label": "Oui (Interlocuteur direct)",
+        "description": "Chatbot client, assistant virtuel, appel automatisé où la personne pourrait ignorer qu'elle parle à une IA.",
         "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
@@ -723,26 +744,27 @@
       },
       {
         "code": "E4.N8.Q9.B",
-        "label": "Non",
+        "label": "Non (Outil logiciel évident)",
+        "description": "Copilote de code interne, outil d'analyse ou d'aide à la rédaction utilisé consciemment par les équipes.",
         "score_impact": 0
       }
     ]
   },
   "E4.N8.Q9.1": {
     "id": "E4.N8.Q9.1",
-    "question": "En dehors des cas déjà exclus (interdit ou haut risque), le système analyse-t-il des émotions ou des données biométriques sur des personnes ?",
+    "question": "Le système analyse-t-il physiquement les personnes (visage, corps, voix) pour déduire des caractéristiques comme leur âge, leur genre ou leurs émotions ?",
     "type": "radio",
     "required": true,
     "tooltip": {
-      "title": "Émotions et biométrie (complément)",
-      "shortContent": "« Oui » seulement si c'est réellement dans le périmètre fonctionnel du système — pas pour des usages théoriques ou futurs.",
-      "fullContent": "Cette question complète les réponses précédentes : elle ne concerne que ce qui n'a pas déjà été traité comme usage interdit ou comme système à haut risque dans le questionnaire. S'applique notamment à la reconnaissance ou l'inférence d'émotions et à la catégorisation biométrique de personnes physiques, lorsque le cadre reste autorisé au regard des réponses déjà données.",
+      "title": "Article 50.3 — information des utilisateurs",
+      "shortContent": "Article 50.3 de l'AI Act : L'obligation d'information s'applique aux systèmes qui catégorisent les personnes ou détectent leurs émotions (ex: ciblage publicitaire physique, adaptation de contenu), même s'ils ne sont pas classés à haut risque.",
+      "fullContent": "Article 50.3 de l'AI Act : L'obligation d'information s'applique aux systèmes qui catégorisent les personnes ou détectent leurs émotions (ex: ciblage publicitaire physique, adaptation de contenu), même s'ils ne sont pas classés à haut risque.",
       "icon": "💡"
     },
     "options": [
       {
         "code": "E4.N8.Q9.1.A",
-        "label": "Oui",
+        "label": "Oui (Catégorisation ou émotions)",
         "score_impact": -2,
         "risk": "limited",
         "category_impacts": {
@@ -751,7 +773,7 @@
       },
       {
         "code": "E4.N8.Q9.1.B",
-        "label": "Non",
+        "label": "Non (Aucune analyse de ce type)",
         "score_impact": 0
       }
     ]
@@ -847,7 +869,7 @@
     "tooltip": {
       "title": "Texte et/ou médias",
       "shortContent": "Texte seul, médias seuls (image, audio, vidéo), ou les deux : les questions suivantes s'adapteront à votre combinaison.",
-      "fullContent": "Les branches « texte » (T1, T1E, T2) et « média » (M1, M2) du questionnaire s'affichent selon les cases cochées ; le graphe et les codes de réponse restent inchangés.",
+      "fullContent": "Les branches « texte » (T1) et « média » (M1, M2) du questionnaire s'affichent selon les cases cochées.",
       "icon": "💡"
     },
     "options": [
@@ -865,18 +887,20 @@
   },
   "E4.N8.Q11.T1": {
     "id": "E4.N8.Q11.T1",
-    "question": "Pour la partie texte, ce contenu est-il principalement destiné à une diffusion au public visant à informer sur des questions d'intérêt public, à l'exclusion des communications purement commerciales, promotionnelles ou internes ?",
+    "question": "Quelle est la finalité principale du texte généré par l'IA et comment est-il validé ?",
     "type": "radio",
     "required": true,
     "tooltip": {
-      "title": "Texte et intérêt public",
-      "shortContent": "Répondez « Oui » si l'objectif principal est d'informer le public sur des sujets d'intérêt général, comme l'actualité, l'information citoyenne, le débat public ou une information institutionnelle d'intérêt général.",
+      "title": "Texte généré et validation (Art. 50.4)",
+      "shortContent": "Choisissez le scénario qui correspond le mieux à l'usage principal du texte produit ou fortement modifié par l'IA.",
+      "fullContent": "Une seule réponse : du contenu d'intérêt public diffusé sans passage humain de validation éditoriale avant publication correspond au profil transparence « risque limité » pour ce volet. Les autres situations listées sont généralement hors de ce profil lorsque la validation ou la finalité l'exclut.",
       "icon": "💡"
     },
     "options": [
       {
         "code": "E4.N8.Q11.T1.A",
-        "label": "Oui",
+        "label": "A — Information d'intérêt public SANS validation humaine",
+        "description": "Publication automatisée d'articles, de communiqués ou d'informations citoyennes.",
         "score_impact": -2,
         "risk": "limited",
         "category_impacts": {
@@ -885,7 +909,26 @@
       },
       {
         "code": "E4.N8.Q11.T1.B",
-        "label": "Non",
+        "label": "B — Information d'intérêt public AVEC contrôle éditorial",
+        "description": "Rédaction d'articles relus et validés par un humain qui en assume la responsabilité.",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.T1.C",
+        "label": "C — Communication commerciale, marketing ou publicitaire",
+        "description": "Création de fiches produits, posts pour les réseaux sociaux, e-mailing.",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.T1.D",
+        "label": "D — Outil de productivité interne ou technique",
+        "description": "Génération de code informatique, synthèses de réunions, documentation métier.",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q11.T1.E",
+        "label": "E — Assistance standard, correction et traduction",
+        "description": "Traduction ou correction orthographique sans modifier le sens initial.",
         "score_impact": 0
       }
     ]
@@ -1027,6 +1070,46 @@
           "privacy_data": -0.8
         }
       }
+    ]
+  },
+  "V3._SHORT_CONSOLIDATED": {
+    "id": "V3._SHORT_CONSOLIDATED",
+    "question": "Parcours court — mini-pack BPGV / transparence (ancien nœud, conservé pour compatibilité brouillons).",
+    "type": "tags",
+    "required": false,
+    "options": []
+  },
+  "V3_SHORT_ENTREPRISE": {
+    "id": "V3_SHORT_ENTREPRISE",
+    "question": "Parcours court — entreprise : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
+    "type": "tags",
+    "required": false,
+    "options": [
+      { "code": "E4.N8.Q12.A", "label": "Formation des équipes", "score_impact": 0 },
+      { "code": "E5.N9.Q7.B", "label": "Registre des systèmes IA", "score_impact": 0 },
+      { "code": "E5.N9.Q1.A", "label": "Gestion des risques", "score_impact": 0 }
+    ]
+  },
+  "V3_SHORT_USAGE": {
+    "id": "V3_SHORT_USAGE",
+    "question": "Parcours court — usage : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
+    "type": "tags",
+    "required": false,
+    "options": [
+      { "code": "E5.N9.Q3.A", "label": "Instructions systèmes / prompts", "score_impact": 0 },
+      { "code": "E5.N9.Q8.B", "label": "Contrôle humain", "score_impact": 0 },
+      { "code": "E5.N9.Q4.A", "label": "Documentation technique", "score_impact": 0 },
+      { "code": "E5.N9.Q9.B", "label": "Surveillance continue", "score_impact": 0 },
+      { "code": "E5.N9.Q6.B", "label": "Qualité des données", "score_impact": 0 }
+    ]
+  },
+  "V3_SHORT_TRANSPARENCE": {
+    "id": "V3_SHORT_TRANSPARENCE",
+    "question": "Parcours court — transparence : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
+    "type": "tags",
+    "required": false,
+    "options": [
+      { "code": "E6.N10.TRANSPARENCY_PACK.A", "label": "Marque de transparence / Information utilisateur", "score_impact": 0 }
     ]
   },
   "E5.N9.Q1": {
@@ -1178,8 +1261,7 @@
   "E5.N9.Q6": {
     "id": "E5.N9.Q6",
     "question": "Avez vous des procédures de vérification de la qualité des données ?",
-    "type": "conditional",
-    "conditional_detail_optional": true,
+    "type": "radio",
     "required": true,
     "todo_action": "data_quality",
     "tooltip": {
@@ -1187,22 +1269,10 @@
       "shortContent": "Des pratiques de gouvernance et de gestion des données appropriées sont demandées pour les systèmes d'IA utilisant l'entraînement. Les jeux de données (entraînement, validation, test) doivent être pertinents et représentatifs pour détecter, prévenir et atténuer les biais.",
       "icon": "💡"
     },
-    "conditionalFields": [
-      {
-        "key": "procedures_details",
-        "label": "Précisions",
-        "placeholder": "Décrivez vos procédures..."
-      }
-    ],
     "options": [
       {
         "code": "E5.N9.Q6.B",
         "label": "Oui",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q6.C",
-        "label": "Si oui préciser",
         "score_impact": 0
       },
       {
@@ -1218,8 +1288,7 @@
   "E5.N9.Q7": {
     "id": "E5.N9.Q7",
     "question": "Tenez vous un registre centralisé de vos systèmes d'IA ?",
-    "type": "conditional",
-    "conditional_detail_optional": true,
+    "type": "radio",
     "required": true,
     "todo_action": "registry_proof",
     "tooltip": {
@@ -1227,27 +1296,10 @@
       "shortContent": "Les fournisseurs de système d'IA à Haut Risque doivent s'enregistrer dans la Base de données de l'UE (Article 71) avant la mise sur le marché. Les autorités publiques/déployeurs doivent aussi enregistrer leur utilisation.",
       "icon": "💡"
     },
-    "conditionalFields": [
-      {
-        "key": "registry_type",
-        "label": "Type",
-        "placeholder": "Interne"
-      },
-      {
-        "key": "system_name",
-        "label": "Système",
-        "placeholder": "MaydAI"
-      }
-    ],
     "options": [
       {
         "code": "E5.N9.Q7.B",
         "label": "Oui",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q7.C",
-        "label": "Si oui préciser",
         "score_impact": 0
       },
       {
@@ -1263,8 +1315,7 @@
   "E5.N9.Q8": {
     "id": "E5.N9.Q8",
     "question": "Avez vous une étape de surveillance humaine dans votre système d'IA ?",
-    "type": "conditional",
-    "conditional_detail_optional": true,
+    "type": "radio",
     "required": true,
     "todo_action": "human_oversight",
     "tooltip": {
@@ -1272,27 +1323,10 @@
       "shortContent": "Un système d'IA à Haut Risque doit permettre un contrôle humain effectif pour prévenir les risques. L'opérateur doit pouvoir détecter les anomalies, intervenir, ignorer ou arrêter le système en cas de dysfonctionnement ou de résultats inattendus (Article 14).",
       "icon": "💡"
     },
-    "conditionalFields": [
-      {
-        "key": "supervisor_name",
-        "label": "Nom prénom",
-        "placeholder": ""
-      },
-      {
-        "key": "supervisor_role",
-        "label": "Rôle",
-        "placeholder": ""
-      }
-    ],
     "options": [
       {
         "code": "E5.N9.Q8.B",
         "label": "Oui",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q8.C",
-        "label": "Si oui préciser",
         "score_impact": 0
       },
       {
@@ -1308,8 +1342,7 @@
   "E5.N9.Q9": {
     "id": "E5.N9.Q9",
     "question": "Vérifiez vous l'exactitude, la robustesse et la cybersécurité de votre système d'IA ?",
-    "type": "conditional",
-    "conditional_detail_optional": true,
+    "type": "radio",
     "required": true,
     "todo_action": "continuous_monitoring",
     "tooltip": {
@@ -1317,22 +1350,10 @@
       "shortContent": "Les systèmes d'IA à doivent atteindre un niveau approprié d'exactitude, de robustesse et de cybersécurité tout au long de leur cycle de vie. Ils doivent être résilients face aux erreurs et aux cyberattaques (ex: empoisonnement des données) (Article 15).",
       "icon": "💡"
     },
-    "conditionalFields": [
-      {
-        "key": "security_details",
-        "label": "Détails",
-        "placeholder": "Décrivez vos procédures..."
-      }
-    ],
     "options": [
       {
         "code": "E5.N9.Q9.B",
         "label": "Oui",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q9.C",
-        "label": "Si oui préciser",
         "score_impact": 0
       },
       {

@@ -11,7 +11,7 @@ Instrumentation **côté client uniquement** via `sendGTMEvent` (`lib/gtm.ts`). 
 | `v3_short_path_start` | Chargement de la page d’évaluation avec `?parcours=court` et cas V3 prêt | Idem + `entry_surface` si l’URL contient `entree=` (surface d’origine) |
 | `v3_evaluation_entry_surface` | Chargement de la page d’évaluation en **parcours long** avec paramètre `entree=` | `questionnaire_version`, `usecase_id`, `path_mode` (`long`), `entry_surface`, `system_type_bucket` |
 | `v3_short_path_segment` | Première entrée dans chaque segment 1–5 **par session de page** (pas de re-feu si l’utilisateur revient en arrière sur un segment déjà vu) | `segment_order`, `segment_key`, `question_id` (code question courante) |
-| `v3_short_path_outcome_view` | Affichage de l’écran de sortie courte (`V3ShortPathOutcome` monté) | `usecase_id` |
+| `v3_short_path_outcome_view` | **Legacy** — ancien écran de sortie courte (supprimé) ; l’API `trackV3ShortPathOutcomeView` existe encore mais n’est plus appelée depuis l’UI | `usecase_id` |
 | `v3_short_path_outcome_result` | Réponse API `/api/use-cases/[id]/risk-level` OK avec statut de classification | `classification_status`, `risk_level`, `system_type_bucket` |
 | `v3_short_path_cta` | Clic sur un CTA ou action d’export listée ci-dessous | `cta`, `classification_status` / `risk_level` si déjà connus côté client ; `cta_placement` (optionnel) pour distinguer la zone d’écran |
 
@@ -26,12 +26,12 @@ Instrumentation **côté client uniquement** via `sendGTMEvent` (`lib/gtm.ts`). 
 - `copy_summary` — copie réussie du résumé
 - `download_txt` — téléchargement `.txt`
 - `download_md` — téléchargement `.md`
-- `download_pdf_prediagnostic` — téléchargement du PDF léger serveur (pré-diagnostic court)
+- `download_pdf_prediagnostic` — **Legacy** — route PDF pré-diagnostic supprimée ; ne plus s’attendre à de nouveaux hits
 - `mailto_prepare` — clic sur « Préparer un e-mail »
 
 ### Valeurs `cta_placement` (optionnel, `v3_short_path_cta`)
 
-- `outcome_hero` — bloc principal « prochain pas » sur la sortie courte (`V3ShortPathOutcome`)
+- `outcome_hero` — **Legacy** — ancien bloc « prochain pas » sur l’écran de sortie courte (supprimé)
 - `outcome_quick_links` — grille « Accès rapides » sur la sortie courte
 - `intro_primary` — CTA parcours complet en tête du parcours court (`V3ShortPathIntro`)
 - `overview_v3_card` — encart synthèse cas V3 non terminé (`page.tsx` overview)
@@ -68,4 +68,3 @@ Les liens vers `/usecases/[id]/evaluation` peuvent inclure `?entree=` ou `&entre
 - `lib/v3-short-path-analytics.ts` — fonctions `trackV3ShortPath*`
 - `app/usecases/[id]/evaluation/EvaluationPageContent.tsx` — `v3_short_path_start` + `v3_evaluation_entry_surface`
 - `app/usecases/[id]/components/evaluation/StepByStepQuestionnaire.tsx` — `v3_short_path_segment`
-- `app/usecases/[id]/components/evaluation/V3ShortPathOutcome.tsx` — `outcome_*` + `v3_short_path_cta`

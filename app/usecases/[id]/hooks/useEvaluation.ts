@@ -11,7 +11,20 @@ import {
 } from '../utils/questionnaire'
 import { v3CompositeCanProceed, v3EntryFollowUpQuestionId } from '../utils/questionnaire-v3-ui'
 import { computeV2UsecaseQuestionnaireFields } from '../utils/questionnaire-v2-graph'
-import { computeV3UsecaseQuestionnaireFields } from '../utils/questionnaire-v3-graph'
+import {
+  computeV3UsecaseQuestionnaireFields,
+  isV3ShortPathCompositeQuestionId,
+  V3_SHORT_ENTREPRISE_ID,
+  V3_SHORT_MINIPACK_ID,
+  V3_SHORT_TRANSPARENCE_ID,
+  V3_SHORT_USAGE_ID,
+} from '../utils/questionnaire-v3-graph'
+import {
+  declarativeAnswersAfterEnterpriseStage,
+  declarativeAnswersAfterTransparenceStage,
+  declarativeAnswersAfterUsageStage,
+  normalizeShortPathStageSelection,
+} from '../utils/v3-short-path-stages'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 import { supabase } from '@/lib/supabase'
 import { ScoreService } from '@/lib/score-service'
@@ -22,6 +35,16 @@ import {
   normalizeQuestionnaireVersion,
   type QuestionnaireVersion
 } from '@/lib/questionnaire-version'
+import {
+  BPGV_CHECKLIST_RESPONSE_CODE,
+  TRANSPARENCY_CHECKLIST_RESPONSE_CODE,
+} from '@/types/questions'
+import {
+  collectE5DeclaredOptionCodes,
+  collectE6DeclaredOptionCodes,
+  isLeavingE5Block,
+  isLeavingE6Block,
+} from '../utils/bpgv-transparency-checklist-save'
 
 interface UseEvaluationReturn {
   questionnaireData: QuestionnaireData
@@ -36,23 +59,23 @@ interface UseEvaluationReturn {
   isCalculatingScore: boolean
   isGeneratingReport: boolean
   showProcessingAnimation: boolean
-  /** V3 parcours court : afficher l’écran de synthèse qualification sans finaliser le cas. */
-  showShortPathOutcome: boolean
   questionnairePathMode: QuestionnairePathMode
   error: string | null
   handleAnswerSelect: (answer: any) => void
   /** V3 composite : enregistrer une réponse pour un code autre que la question courante (sans changer currentQuestionId). */
   setAnswerForQuestion: (questionId: string, answer: any) => void
-  handleNext: () => void
+  /** `explicitAnswerForCurrentStep` : soumission synchrone (ex. `[]` = information insuffisante sur les étapes pack court V3) sans dépendre du state parent. */
+  handleNext: (opts?: { explicitAnswerForCurrentStep?: unknown }) => Promise<void>
   handlePrevious: () => void
   handleSubmit: () => Promise<void>
   handleProcessingComplete: () => void
 }
 
-const E5_N9_Q7_MAYDAI_DEFAULT = {
-  selected: 'E5.N9.Q7.B',
-  conditionalValues: { registry_type: 'Interne', system_name: 'MaydAI' }
-} as const
+/** Pré-remplissage V1 MaydAI comme registre : réponse radio « Oui » (sans champs texte). */
+const E5_N9_Q7_MAYDAI_DEFAULT = 'E5.N9.Q7.B' as const
+
+/** Parcours court : Q1.2 (profilage usage) masquée à l’UI — valeur persistée pour le graphe / sauvegardes. */
+const V3_SHORT_PATH_DEFAULT_Q1_2 = 'E4.N7.Q1.2.A' as const
 
 interface UseEvaluationProps {
   usecaseId: string
@@ -62,10 +85,8 @@ interface UseEvaluationProps {
   questionnaireVersion?: number | null
   /** V3 : même valeur que usecases.system_type (ex. « Produit »). */
   systemType?: string | null
-  /** V3 uniquement : `short` = parcours court métier (mini-pack E5, Q12, E6 ; pivots de qualification). */
+  /** V3 uniquement : `short` = parcours court (même graphe métier, périmètre actif réduit côté scoring). */
   questionnairePathMode?: QuestionnairePathMode
-  /** V3 court : après calcul score initial + affichage sortie (ex. `router.refresh()`). */
-  onShortPathOutcomeReady?: () => void
 }
 
 export function useEvaluation({
@@ -75,7 +96,6 @@ export function useEvaluation({
   questionnaireVersion: questionnaireVersionProp,
   systemType: systemTypeProp,
   questionnairePathMode: questionnairePathModeProp = 'long',
-  onShortPathOutcomeReady,
 }: UseEvaluationProps): UseEvaluationReturn {
   const questionnaireVersion: QuestionnaireVersion = useMemo(
     () => normalizeQuestionnaireVersion(questionnaireVersionProp),
@@ -96,8 +116,6 @@ export function useEvaluation({
   const [isCalculatingScore, setIsCalculatingScore] = useState(false)
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [showProcessingAnimation, setShowProcessingAnimation] = useState(false)
-  const [showShortPathOutcome, setShowShortPathOutcome] = useState(false)
-
   const {
     formattedAnswers: savedAnswers,
     loading: loadingResponses,
@@ -121,8 +139,6 @@ export function useEvaluation({
   // Load initial data once
   useEffect(() => {
     if (!initialDataLoaded && !loadingResponses) {
-      console.log('🔄 Loading initial data from saved responses:', savedAnswers)
-
       if (savedAnswers && Object.keys(savedAnswers).length > 0) {
         const navOpts =
           questionnaireVersion === QUESTIONNAIRE_VERSION_V3
@@ -131,11 +147,18 @@ export function useEvaluation({
                 pathMode: questionnairePathModeProp,
               }
             : undefined
-        const currentQuestionId = getResumeQuestionId(
+        let currentQuestionId = getResumeQuestionId(
           savedAnswers,
           questionnaireVersion,
           navOpts
         )
+        if (
+          questionnairePathModeProp === 'short' &&
+          questionnaireVersion === QUESTIONNAIRE_VERSION_V3 &&
+          currentQuestionId === V3_SHORT_MINIPACK_ID
+        ) {
+          currentQuestionId = V3_SHORT_ENTREPRISE_ID
+        }
 
         setQuestionnaireData(prev => ({
           ...prev,
@@ -150,10 +173,7 @@ export function useEvaluation({
           navOpts
         )
         setQuestionHistory(historyPath.length > 0 ? historyPath : ['E4.N7.Q1'])
-
-        console.log('📍 Setting current question to:', currentQuestionId)
       } else {
-        console.log('📍 No saved responses, starting from first question')
         setQuestionnaireData(prev => ({
           ...prev,
           currentQuestionId: 'E4.N7.Q1',
@@ -173,6 +193,21 @@ export function useEvaluation({
     questionnairePathModeProp,
   ])
 
+  /** Parcours court : si Q1.B sans Q1.2 (reprise ou brouillon), compléter la valeur par défaut pour débloquer l’étape composite. */
+  useEffect(() => {
+    if (!initialDataLoaded) return
+    if (questionnaireVersion !== QUESTIONNAIRE_VERSION_V3) return
+    if (questionnairePathModeProp !== 'short') return
+    setQuestionnaireData((prev) => {
+      if (prev.answers['E4.N7.Q1'] !== 'E4.N7.Q1.B') return prev
+      if (typeof prev.answers['E4.N7.Q1.2'] === 'string' && prev.answers['E4.N7.Q1.2']) return prev
+      return {
+        ...prev,
+        answers: { ...prev.answers, 'E4.N7.Q1.2': V3_SHORT_PATH_DEFAULT_Q1_2 },
+      }
+    })
+  }, [initialDataLoaded, questionnaireVersion, questionnairePathModeProp])
+
   // Pre-fill E5.N9.Q7 (V1 uniquement — en V2 l’E5 intervient après l’ORS)
   useEffect(() => {
     if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2 || questionnaireVersion === QUESTIONNAIRE_VERSION_V3)
@@ -184,7 +219,7 @@ export function useEvaluation({
         ...prev,
         answers: {
           ...prev.answers,
-          'E5.N9.Q7': { ...E5_N9_Q7_MAYDAI_DEFAULT }
+          'E5.N9.Q7': E5_N9_Q7_MAYDAI_DEFAULT
         }
       }
     })
@@ -222,8 +257,6 @@ export function useEvaluation({
   const progress = getAbsoluteQuestionProgress(questionnaireData.currentQuestionId, questionnaireVersion)
 
   const handleAnswerSelect = useCallback((answer: any) => {
-    console.log(`📝 Answer selected for ${questionnaireData.currentQuestionId}:`, answer)
-    
     setQuestionnaireData(prev => ({
       ...prev,
       answers: {
@@ -239,20 +272,54 @@ export function useEvaluation({
     setQuestionnaireData(prev => {
       const nextAnswers: Record<string, any> = { ...prev.answers, [questionId]: answer }
       if (questionId === 'E4.N7.Q1') {
-        if (answer === 'E4.N7.Q1.A') delete nextAnswers['E4.N7.Q1.2']
-        if (answer === 'E4.N7.Q1.B') delete nextAnswers['E4.N7.Q1.1']
+        if (answer === 'E4.N7.Q1.A' || answer === 'E4.N7.Q1.C') delete nextAnswers['E4.N7.Q1.2']
+        if (answer === 'E4.N7.Q1.B') {
+          delete nextAnswers['E4.N7.Q1.1']
+          if (questionnairePathModeProp === 'short') {
+            nextAnswers['E4.N7.Q1.2'] = V3_SHORT_PATH_DEFAULT_Q1_2
+          }
+        }
       }
       if (questionId === 'E4.N8.Q11.0' && answer === 'E4.N8.Q11.0.B') {
         delete nextAnswers['E4.N8.Q11.1']
       }
+      if (questionId === 'E4.N8.Q11.1') {
+        for (const k of [
+          'E4.N8.Q11.T1',
+          'E4.N8.Q11.T1E',
+          'E4.N8.Q11.T2',
+          'E4.N8.Q11.M1',
+          'E4.N8.Q11.M2',
+        ]) {
+          delete nextAnswers[k]
+        }
+      }
+      if (questionId === 'E4.N8.Q11.T1') {
+        for (const k of ['E4.N8.Q11.T1E', 'E4.N8.Q11.T2']) {
+          delete nextAnswers[k]
+        }
+      }
       return { ...prev, answers: nextAnswers }
     })
     setError(null)
-  }, [])
+  }, [questionnairePathModeProp])
 
   const saveIndividualResponse = useCallback(async (questionId: string, answer: any) => {
     try {
-      console.log(`💾 Saving response for ${questionId}:`, answer)
+      if (questionId === BPGV_CHECKLIST_RESPONSE_CODE) {
+        const keys = Array.isArray(answer)
+          ? answer.filter((x: unknown): x is string => typeof x === 'string' && x.length > 0)
+          : []
+        await saveResponse(questionId, undefined, { bpgv_keys: keys })
+        return
+      }
+      if (questionId === TRANSPARENCY_CHECKLIST_RESPONSE_CODE) {
+        const keys = Array.isArray(answer)
+          ? answer.filter((x: unknown): x is string => typeof x === 'string' && x.length > 0)
+          : []
+        await saveResponse(questionId, undefined, { transparency_keys: keys })
+        return
+      }
       
       // Use the proper saveResponse method from useQuestionnaireResponses
       const questions = loadQuestions()
@@ -278,23 +345,31 @@ export function useEvaluation({
         await saveResponse(questionId, undefined, answer)
       }
       
-      console.log(`✅ Successfully saved response for ${questionId}`)
-      
     } catch (error) {
       console.error('❌ Error in saveIndividualResponse:', error)
       throw error
     }
   }, [saveResponse])
 
-  const handleNext = useCallback(async () => {
-    if (!canProceed || isSubmitting) return
+  const handleNext = useCallback(async (opts?: { explicitAnswerForCurrentStep?: unknown }) => {
+    const currentId = questionnaireData.currentQuestionId
+    const isExplicitShortPackInsufficient =
+      opts?.explicitAnswerForCurrentStep !== undefined &&
+      questionnaireVersion === QUESTIONNAIRE_VERSION_V3 &&
+      questionnairePathModeProp === 'short' &&
+      isV3ShortPathCompositeQuestionId(currentId)
+
+    if (isSubmitting) return
+    if (!isExplicitShortPackInsufficient && !canProceed) return
 
     setIsSubmitting(true)
     setError(null)
 
     try {
-      const currentId = questionnaireData.currentQuestionId
-      const currentAnswer = questionnaireData.answers[currentId]
+      const currentAnswer =
+        isExplicitShortPackInsufficient && opts?.explicitAnswerForCurrentStep !== undefined
+          ? opts.explicitAnswerForCurrentStep
+          : questionnaireData.answers[currentId]
 
       /** V3 — étapes composites : sauver plusieurs codes puis sauter au même next que le graphe après le sous-questionnaire. */
       if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && currentId === 'E4.N7.Q1') {
@@ -379,8 +454,230 @@ export function useEvaluation({
         return
       }
 
+      if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && currentId === V3_SHORT_ENTREPRISE_ID) {
+        const sel = normalizeShortPathStageSelection(currentAnswer)
+        const patches = declarativeAnswersAfterEnterpriseStage(sel)
+        const merged = {
+          ...questionnaireData.answers,
+          [V3_SHORT_ENTREPRISE_ID]: sel,
+          ...patches,
+        } as Record<string, unknown>
+
+        await saveIndividualResponse(V3_SHORT_ENTREPRISE_ID, sel)
+        for (const [qid, val] of Object.entries(patches)) {
+          await saveIndividualResponse(qid, val)
+        }
+
+        const fields = computeV3UsecaseQuestionnaireFields(
+          merged,
+          systemTypeProp ?? null,
+          questionnairePathModeProp
+        )
+        const { error: v3MetaError } = await supabase
+          .from('usecases')
+          .update({
+            bpgv_variant: fields.bpgv_variant,
+            ors_exit: fields.ors_exit,
+            active_question_codes: fields.active_question_codes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', usecaseId)
+        if (v3MetaError) {
+          console.warn('Métadonnées questionnaire V3 non persistées:', v3MetaError.message)
+        }
+
+        const nextId = getNextQuestion(
+          V3_SHORT_ENTREPRISE_ID,
+          merged as Record<string, any>,
+          questionnaireVersion,
+          navOptions
+        )
+        if (nextId) {
+          setQuestionnaireData(prev => ({
+            ...prev,
+            answers: merged as Record<string, any>,
+            currentQuestionId: nextId,
+          }))
+          setQuestionHistory(prev => [...prev, nextId])
+        }
+        setIsSubmitting(false)
+        return
+      }
+
+      if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && currentId === V3_SHORT_USAGE_ID) {
+        const sel = normalizeShortPathStageSelection(currentAnswer)
+        const patches = declarativeAnswersAfterUsageStage(sel)
+        const merged = {
+          ...questionnaireData.answers,
+          [V3_SHORT_USAGE_ID]: sel,
+          ...patches,
+        } as Record<string, unknown>
+
+        await saveIndividualResponse(V3_SHORT_USAGE_ID, sel)
+        for (const [qid, val] of Object.entries(patches)) {
+          await saveIndividualResponse(qid, val)
+        }
+
+        const fields = computeV3UsecaseQuestionnaireFields(
+          merged,
+          systemTypeProp ?? null,
+          questionnairePathModeProp
+        )
+        const { error: v3MetaError } = await supabase
+          .from('usecases')
+          .update({
+            bpgv_variant: fields.bpgv_variant,
+            ors_exit: fields.ors_exit,
+            active_question_codes: fields.active_question_codes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', usecaseId)
+        if (v3MetaError) {
+          console.warn('Métadonnées questionnaire V3 non persistées:', v3MetaError.message)
+        }
+
+        const nextId = getNextQuestion(
+          V3_SHORT_USAGE_ID,
+          merged as Record<string, any>,
+          questionnaireVersion,
+          navOptions
+        )
+        if (nextId) {
+          setQuestionnaireData(prev => ({
+            ...prev,
+            answers: merged as Record<string, any>,
+            currentQuestionId: nextId,
+          }))
+          setQuestionHistory(prev => [...prev, nextId])
+        }
+        setIsSubmitting(false)
+        return
+      }
+
+      if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && currentId === V3_SHORT_TRANSPARENCE_ID) {
+        const sel = normalizeShortPathStageSelection(currentAnswer)
+        const patches = declarativeAnswersAfterTransparenceStage(sel)
+        const merged = {
+          ...questionnaireData.answers,
+          [V3_SHORT_TRANSPARENCE_ID]: sel,
+          ...patches,
+        } as Record<string, unknown>
+
+        await saveIndividualResponse(V3_SHORT_TRANSPARENCE_ID, sel)
+        for (const [qid, val] of Object.entries(patches)) {
+          await saveIndividualResponse(qid, val)
+        }
+        await saveIndividualResponse(
+          BPGV_CHECKLIST_RESPONSE_CODE,
+          collectE5DeclaredOptionCodes(merged)
+        )
+        await saveIndividualResponse(
+          TRANSPARENCY_CHECKLIST_RESPONSE_CODE,
+          collectE6DeclaredOptionCodes(merged)
+        )
+
+        const fields = computeV3UsecaseQuestionnaireFields(
+          merged,
+          systemTypeProp ?? null,
+          questionnairePathModeProp
+        )
+        const { error: v3MetaError } = await supabase
+          .from('usecases')
+          .update({
+            bpgv_variant: fields.bpgv_variant,
+            ors_exit: fields.ors_exit,
+            active_question_codes: fields.active_question_codes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', usecaseId)
+        if (v3MetaError) {
+          console.warn('Métadonnées questionnaire V3 non persistées:', v3MetaError.message)
+        }
+
+        setQuestionnaireData(prev => ({
+          ...prev,
+          answers: merged as Record<string, any>,
+        }))
+
+        setIsCalculatingScore(true)
+        try {
+          if (!session?.access_token) {
+            throw new Error('Token d\'authentification manquant')
+          }
+          const scoreService = new ScoreService(session.access_token)
+          await scoreService.calculateUseCaseScore(
+            usecaseId,
+            questionnairePathModeProp === 'short' ? { path_mode: 'short' } : undefined
+          )
+        } catch (scoreError) {
+          console.error('❌ Error calculating score:', scoreError)
+          setError(
+            scoreError instanceof Error && scoreError.message
+              ? `Erreur lors de l'enregistrement du score : ${scoreError.message}`
+              : "Erreur lors de l'enregistrement du score. Veuillez réessayer."
+          )
+          return
+        } finally {
+          setIsCalculatingScore(false)
+        }
+
+        setShowProcessingAnimation(true)
+
+        await supabase.from('usecases').update({ status: 'completed' }).eq('id', usecaseId)
+
+        setIsGeneratingReport(true)
+        try {
+          const headers: HeadersInit = { 'Content-Type': 'application/json' }
+          if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`
+          }
+          const reportResponse = await fetch('/api/generate-report', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ usecase_id: usecaseId }),
+          })
+          if (!reportResponse.ok) {
+            const errorData = await reportResponse.json()
+            if (!errorData.requires_questionnaire) {
+              console.warn('⚠️ OpenAI report generation failed, but continuing...')
+            }
+          }
+        } catch (reportError) {
+          console.error('❌ Error generating OpenAI report:', reportError)
+        } finally {
+          setIsGeneratingReport(false)
+        }
+
+        setIsSubmitting(false)
+        return
+      }
+
       // Save current response
       await saveIndividualResponse(currentId, currentAnswer)
+
+      const mergedAfterStep = {
+        ...questionnaireData.answers,
+        [currentId]: currentAnswer,
+      } as Record<string, unknown>
+
+      if (
+        currentId !== BPGV_CHECKLIST_RESPONSE_CODE &&
+        isLeavingE5Block(currentId, mergedAfterStep, questionnaireVersion, navOptions)
+      ) {
+        await saveIndividualResponse(
+          BPGV_CHECKLIST_RESPONSE_CODE,
+          collectE5DeclaredOptionCodes(mergedAfterStep)
+        )
+      }
+      if (
+        currentId !== TRANSPARENCY_CHECKLIST_RESPONSE_CODE &&
+        isLeavingE6Block(currentId, mergedAfterStep, questionnaireVersion, navOptions)
+      ) {
+        await saveIndividualResponse(
+          TRANSPARENCY_CHECKLIST_RESPONSE_CODE,
+          collectE6DeclaredOptionCodes(mergedAfterStep)
+        )
+      }
 
       if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
         const mergedAnswers = {
@@ -427,50 +724,32 @@ export function useEvaluation({
       }
 
       if (isLastQuestion) {
-        console.log('🏁 Fin de questionnaire sur la question courante')
-
-        if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && questionnairePathModeProp === 'short') {
-          console.log('🧮 Parcours court V3 — score initial (périmètre court uniquement)')
-          setIsCalculatingScore(true)
-          try {
-            if (!session?.access_token) {
-              throw new Error('Token d\'authentification manquant')
-            }
-            const scoreService = new ScoreService(session.access_token)
-            const scoreResult = await scoreService.calculateUseCaseScore(usecaseId, { path_mode: 'short' })
-            console.log('✅ Score initial parcours court enregistré:', scoreResult)
-          } catch (shortScoreErr) {
-            console.error('❌ Erreur calcul score initial parcours court:', shortScoreErr)
-          } finally {
-            setIsCalculatingScore(false)
-          }
-          onShortPathOutcomeReady?.()
-          setShowShortPathOutcome(true)
-          setIsSubmitting(false)
-          return
-        }
-
-        console.log('🧮 Calculating use case score...')
         setIsCalculatingScore(true)
         try {
           if (!session?.access_token) {
             throw new Error('Token d\'authentification manquant')
           }
           const scoreService = new ScoreService(session.access_token)
-          const scoreResult = await scoreService.calculateUseCaseScore(usecaseId)
-          console.log('✅ Score calculated successfully:', scoreResult)
+          await scoreService.calculateUseCaseScore(
+            usecaseId,
+            questionnairePathModeProp === 'short' ? { path_mode: 'short' } : undefined
+          )
         } catch (scoreError) {
           console.error('❌ Error calculating score:', scoreError)
+          setError(
+            scoreError instanceof Error && scoreError.message
+              ? `Erreur lors de l'enregistrement du score : ${scoreError.message}`
+              : "Erreur lors de l'enregistrement du score. Veuillez réessayer."
+          )
+          return
         } finally {
           setIsCalculatingScore(false)
         }
 
-        console.log('🏁 Finalisation parcours long')
         setShowProcessingAnimation(true)
 
         await supabase.from('usecases').update({ status: 'completed' }).eq('id', usecaseId)
 
-        console.log('🤖 Generating OpenAI report automatically...')
         setIsGeneratingReport(true)
         try {
           const headers: HeadersInit = { 'Content-Type': 'application/json' }
@@ -482,13 +761,9 @@ export function useEvaluation({
             headers,
             body: JSON.stringify({ usecase_id: usecaseId }),
           })
-          if (reportResponse.ok) {
-            console.log('✅ OpenAI report generated successfully')
-          } else {
+          if (!reportResponse.ok) {
             const errorData = await reportResponse.json()
-            if (errorData.requires_questionnaire) {
-              console.log('ℹ️ Questionnaire incomplet, rapport non généré')
-            } else {
+            if (!errorData.requires_questionnaire) {
               console.warn('⚠️ OpenAI report generation failed, but continuing...')
             }
           }
@@ -509,8 +784,6 @@ export function useEvaluation({
           navOptions
         )
         if (nextId) {
-          console.log(`➡️ Moving to next question: ${nextId}`)
-          
           setQuestionnaireData(prev => ({
             ...prev,
             currentQuestionId: nextId
@@ -539,7 +812,6 @@ export function useEvaluation({
     questionnairePathModeProp,
     navOptions,
     session?.access_token,
-    onShortPathOutcomeReady,
   ])
 
   const handlePrevious = useCallback(() => {
@@ -548,8 +820,6 @@ export function useEvaluation({
     const newHistory = [...questionHistory]
     newHistory.pop() // Remove current question
     const previousQuestionId = newHistory[newHistory.length - 1]
-    
-    console.log(`⬅️ Going back to: ${previousQuestionId}`)
     
     setQuestionnaireData(prev => ({
       ...prev,
@@ -566,7 +836,6 @@ export function useEvaluation({
   }
 
   const handleProcessingComplete = useCallback(() => {
-    console.log('🎉 Processing animation completed')
     setShowProcessingAnimation(false)
     setQuestionnaireData(prev => ({ ...prev, isCompleted: true }))
     setTimeout(() => {
@@ -587,7 +856,6 @@ export function useEvaluation({
     isCalculatingScore,
     isGeneratingReport,
     showProcessingAnimation,
-    showShortPathOutcome,
     questionnairePathMode: questionnairePathModeProp,
     error,
     handleAnswerSelect,

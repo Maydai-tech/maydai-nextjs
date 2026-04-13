@@ -23,12 +23,9 @@ describe('report-llm-grounding — finition rapport (Lot finition)', () => {
     expect(text).toContain('ne pas élargir le récit')
   })
 
-  test('minimal + T1/T1E : parcours texte, public, contrôle, lien avec limited', () => {
+  test('minimal + T1.B : intérêt public avec contrôle éditorial, lien avec limited', () => {
     const text = formatReportGroundingForPrompt({
-      responses: [
-        { question_code: 'E4.N8.Q11.T1', single_value: 'E4.N8.Q11.T1.A' },
-        { question_code: 'E4.N8.Q11.T1E', single_value: 'E4.N8.Q11.T1E.A' },
-      ],
+      responses: [{ question_code: 'E4.N8.Q11.T1', single_value: 'E4.N8.Q11.T1.B' }],
       riskLevelCode: 'minimal',
       classificationImpossible: false,
       questionnaireParcours: {
@@ -40,8 +37,8 @@ describe('report-llm-grounding — finition rapport (Lot finition)', () => {
     })
     expect(text).toContain('Volet texte public + contrôle éditorial')
     expect(text).toContain('validation ou relecture éditoriale humaine')
-    expect(text).toContain('Risque limité')
-    expect(text).toContain('T1E = Oui')
+    expect(text.toLowerCase()).toContain('risque limité')
+    expect(text).toContain('E4.N8.Q11.T1 = B')
   })
 
   test('limited + deepfake sans interaction : slots internes / pas utilisateur final', () => {

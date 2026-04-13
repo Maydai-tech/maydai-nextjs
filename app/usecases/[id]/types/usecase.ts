@@ -74,6 +74,8 @@ export interface Tooltip {
 export interface QuestionOption {
   code: string
   label: string
+  /** Sous-texte d’option (ex. parcours radio B2B) */
+  description?: string
   score_impact?: number
   category_impacts?: Record<string, number>
   is_eliminatory?: boolean
@@ -86,6 +88,10 @@ export interface QuestionOption {
 export interface Question {
   id: string
   question: string
+  /** Ligne de contexte sous le titre (ex. rappel juridique court) */
+  context_subtitle?: string
+  /** Court texte d’aide sous le libellé (affiché par QuestionRenderer) */
+  description?: string
   type: 'radio' | 'checkbox' | 'tags' | 'conditional'
   options: QuestionOption[]
   required: boolean

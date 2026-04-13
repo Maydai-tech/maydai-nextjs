@@ -36,26 +36,11 @@ export interface E4N7StepCallout {
 export function getE4N7StepCallout(questionId: string): E4N7StepCallout | null {
   switch (questionId) {
     case 'E4.N7.Q3':
-      return {
-        variant: 'danger',
-        title: 'Ligne rouge — finalités interdites (art. 5 AI Act)',
-        description:
-          'Cochez chaque finalité qui correspond réellement à votre système. Si vous cochez « Aucune de ces activités », aucune de ces interdictions ne s’applique. En cas de doute juridique, utilisez l’aide à côté de chaque ligne.',
-      }
+      return null
     case 'E4.N7.Q3.1':
-      return {
-        variant: 'danger',
-        title: 'Ligne rouge — situations à risque extrême',
-        description:
-          'Ces cas décrivent des manipulations, profilages ou vulnérabilités particulièrement sensibles. Cochez uniquement ce qui correspond au fonctionnement réel du système, puis « Aucune de ces situations » si rien ne s’applique.',
-      }
+      return null
     case 'E4.N7.Q2.1':
-      return {
-        variant: 'caution',
-        title: 'Filtrage après les interdits — cas ORS très sensibles',
-        description:
-          'Vous confirmez ici si le système entre dans des cas d’usage listés comme particulièrement critiques (biométrie, évaluations, services essentiels, etc.). Cette étape est distincte des domaines Annexe III de la question suivante.',
-      }
+      return null
     case 'E4.N7.Q2':
       return {
         variant: 'domains',
@@ -77,7 +62,10 @@ export function getE4N7StepCallout(questionId: string): E4N7StepCallout | null {
 
 export interface E4N7CheckboxGroup {
   key: string
-  title: string
+  /** Omis si hideHeading : pas de titre de section (ex. option « Aucun » seule) */
+  title?: string
+  /** Pas de h3 ni description de groupe ; séparateur visuel au-dessus des cases */
+  hideHeading?: boolean
   description?: string
   codes: string[]
 }
@@ -118,7 +106,7 @@ const E4N7_Q3_GROUPS: E4N7CheckboxGroup[] = [
   },
   {
     key: 'aucune-q3',
-    title: 'Réponse exclusive',
+    hideHeading: true,
     codes: ['E4.N7.Q3.E'],
   },
 ]
@@ -138,7 +126,7 @@ const E4N7_Q3_1_GROUPS: E4N7CheckboxGroup[] = [
   },
   {
     key: 'aucune-q31',
-    title: 'Réponse exclusive',
+    hideHeading: true,
     codes: ['E4.N7.Q3.1.E'],
   },
 ]
@@ -162,7 +150,7 @@ const E4N7_Q2_1_GROUPS: E4N7CheckboxGroup[] = [
   },
   {
     key: 'aucun-q21',
-    title: 'Réponse exclusive',
+    hideHeading: true,
     codes: ['E4.N7.Q2.1.E'],
   },
 ]

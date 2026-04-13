@@ -26,9 +26,7 @@ describe('OpenAI Data Transformer', () => {
     },
     {
       question_code: 'E5.N9.Q7',
-      conditional_main: 'E5.N9.Q7.B',
-      conditional_keys: ['registry_type', 'system_name'],
-      conditional_values: ['Interne', 'MaydAI']
+      single_value: 'E5.N9.Q7.B',
     }
   ]
 
@@ -61,10 +59,6 @@ describe('OpenAI Data Transformer', () => {
             question: 'Tenez vous un registre centralisé de vos systèmes d\'IA ?',
             selected_option: 'E5.N9.Q7.B',
             selected_label: 'Oui',
-            conditional_data: {
-              registry_type: 'Interne',
-              system_name: 'MaydAI'
-            }
           }
         }
       })
@@ -85,7 +79,6 @@ describe('OpenAI Data Transformer', () => {
       expect(result.responses.E4_N7_Q2.selected_labels).toEqual([])
       expect(result.responses.E5_N9_Q7.selected_option).toBe('')
       expect(result.responses.E5_N9_Q7.selected_label).toBe('')
-      expect(result.responses.E5_N9_Q7.conditional_data).toEqual({})
     })
 
     it('should handle responses with only codes (no labels)', () => {
@@ -110,11 +103,11 @@ describe('OpenAI Data Transformer', () => {
       expect(result.responses.E4_N7_Q2.selected_labels[1]).toContain('Aucun')
     })
 
-    it('should handle conditional response with missing conditional data', () => {
+    it('should handle E5.N9.Q7 with single_value (Non)', () => {
       const responsesWithoutConditional: UseCaseResponse[] = [
         {
           question_code: 'E5.N9.Q7',
-          conditional_main: 'E5.N9.Q7.A' // "Non"
+          single_value: 'E5.N9.Q7.A',
         }
       ]
       
@@ -127,7 +120,6 @@ describe('OpenAI Data Transformer', () => {
       
       expect(result.responses.E5_N9_Q7.selected_option).toBe('E5.N9.Q7.A')
       expect(result.responses.E5_N9_Q7.selected_label).toBe('Non')
-      expect(result.responses.E5_N9_Q7.conditional_data).toEqual({})
     })
   })
 
@@ -136,7 +128,7 @@ describe('OpenAI Data Transformer', () => {
       const allResponses = [
         ...mockResponses,
         { question_code: 'E4.N7.Q1', single_value: 'E4.N7.Q1.A' },
-        { question_code: 'E5.N9.Q8', conditional_main: 'E5.N9.Q8.B' }
+        { question_code: 'E5.N9.Q8', single_value: 'E5.N9.Q8.B' }
       ]
       
       const targetResponses = extractTargetResponses(allResponses)
@@ -148,7 +140,7 @@ describe('OpenAI Data Transformer', () => {
     it('should return empty array when no target responses', () => {
       const otherResponses = [
         { question_code: 'E4.N7.Q1', single_value: 'E4.N7.Q1.A' },
-        { question_code: 'E5.N9.Q8', conditional_main: 'E5.N9.Q8.B' }
+        { question_code: 'E5.N9.Q8', single_value: 'E5.N9.Q8.B' }
       ]
       
       const targetResponses = extractTargetResponses(otherResponses)
@@ -173,7 +165,6 @@ describe('OpenAI Data Transformer', () => {
             question: 'Test question',
             selected_option: 'E5.N9.Q7.B',
             selected_label: 'Oui',
-            conditional_data: {}
           }
         }
       }
@@ -199,7 +190,6 @@ describe('OpenAI Data Transformer', () => {
             question: 'Test question',
             selected_option: 'E5.N9.Q7.B',
             selected_label: 'Oui',
-            conditional_data: {}
           }
         }
       }
@@ -225,7 +215,6 @@ describe('OpenAI Data Transformer', () => {
             question: 'Test question',
             selected_option: '',
             selected_label: '',
-            conditional_data: {}
           }
         }
       }

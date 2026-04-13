@@ -33,6 +33,7 @@ import { validateDeploymentDateDDMMYYYY } from './lib/validators'
 import { resolvePrimaryModelId, isCustomPartner as isCustomPartnerCheck } from './lib/model-resolver'
 import { normalizeDeploymentCountriesToArray } from './lib/payload-builder'
 import { ISO_TO_COUNTRY_NAME } from './lib/countries'
+import { useCaseRoutes } from '../[id]/utils/routes'
 
 interface Company {
   id: string
@@ -666,11 +667,11 @@ function CreateUseCasePageContent() {
       }
 
       if (response.data?.id) {
-        console.log('Redirection vers:', `/usecases/${response.data.id}/evaluation`)
+        console.log('Redirection vers:', useCaseRoutes.selectPath(response.data.id))
         if (companyId && formData.ai_category) {
           trackUseCaseCreation(companyId, formData.ai_category)
         }
-        router.push(`/usecases/${response.data.id}/evaluation`)
+        router.push(useCaseRoutes.selectPath(response.data.id))
       }
     } catch (error: any) {
       console.error('=== ERREUR lors de la création du use case ===')

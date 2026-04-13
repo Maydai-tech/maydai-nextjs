@@ -42,9 +42,9 @@ describe('Score Calculator', () => {
         },
         {
           question_code: 'E5.N9.Q9',
-          conditional_main: 'E5.N9.Q9.B', // OUI = 0 (question conditional)
-          single_value: null,
-          multiple_codes: null
+          single_value: 'E5.N9.Q9.B', // OUI = 0 (radio)
+          multiple_codes: null,
+          conditional_main: null
         }
       ]
 
@@ -257,9 +257,9 @@ describe('Score Calculator', () => {
         },
         {
           question_code: 'E5.N9.Q4',
-          single_value: null,
+          single_value: 'E5.N9.Q4.A', // Radio: Oui = 0
           multiple_codes: null,
-          conditional_main: 'E5.N9.Q4.A', // Conditional: OUI = 0
+          conditional_main: null
         }
       ]
 

@@ -17,7 +17,7 @@
  */
 
 import { loadQuestions } from '@/app/usecases/[id]/utils/questions-loader';
-import type { QuestionOption } from '@/types/questions';
+import type { QuestionOption, UseCaseChecklistResponseFields } from '@/types/questions';
 
 // Charger les questions depuis le JSON
 const QUESTIONS_DATA = loadQuestions();
@@ -70,11 +70,11 @@ export type CompanyStatus = 'utilisateur' | 'fabriquant_produits' | 'distributeu
 /**
  * Structure d'une réponse utilisateur
  */
-export interface UserResponse {
+export interface UserResponse extends UseCaseChecklistResponseFields {
   question_code: string;
   single_value?: string;        // Pour les questions radio/conditional
   multiple_codes?: string[];    // Pour les questions checkbox/tags
-  conditional_main?: string;    // Pour les questions conditionnelles
+  conditional_main?: string;    // Pour les questions conditionnelles (hors E5/E6 — voir getSelectedCodes)
   conditional_keys?: string[];  // Clés des champs conditionnels
   conditional_values?: string[]; // Valeurs des champs conditionnels
 }
@@ -174,11 +174,15 @@ export function getSelectedCodes(response: UserResponse): string[] {
     return response.multiple_codes;
   }
   
-  // Cas 3: Réponse conditionnelle
-  if (response.conditional_main) {
+  // Cas 3: Réponse conditionnelle (hors E5/E6 : batch ou radio uniquement)
+  const qid = response.question_code;
+  const isE5E6Block =
+    typeof qid === 'string' &&
+    (qid.startsWith('E5.N9') || qid.startsWith('E6.N10'));
+  if (!isE5E6Block && response.conditional_main) {
     return [response.conditional_main];
   }
-  
+
   // Cas 4: Aucune réponse
   return [];
 }
@@ -209,8 +213,9 @@ export function findQuestionOption(questionCode: string, answerCode: string): Qu
 /**
  * Détermine le statut d'entreprise basé sur les labels des réponses au questionnaire
  * 
- * Logique basée sur les labels des réponses :
- * - "Mon entreprise utilise des systèmes d'IA tiers" → "utilisateur"
+ * Logique basée sur les codes (E4.N7.Q1) puis les labels des réponses affinées :
+ * - E4.N7.Q1.B (Déployeur) → "utilisateur"
+ * - E4.N7.Q1.C (intégrateur / marque blanche) → "fournisseur"
  * - "Je suis fabricant d'un produit intégrant un système d'IA" → "fabriquant_produits"
  * - "Je distribue et/ou déploie un système d'IA pour d'autres entreprises" → "distributeur"
  * - "Je suis importateur d'un système d'IA" → "importateur"
@@ -222,57 +227,54 @@ export function findQuestionOption(questionCode: string, answerCode: string): Qu
  * @returns Statut d'entreprise déterminé
  */
 export function determineCompanyStatus(responses: UserResponse[]): CompanyStatus {
-  console.log(`🏢 Détermination du statut d'entreprise pour ${responses.length} réponses`);
-  
   // Parcourir toutes les réponses pour trouver les labels correspondants
   for (const response of responses) {
     const question = QUESTIONS_DATA[response.question_code];
     if (!question) continue;
     
     const selectedCodes = getSelectedCodes(response);
-    console.log(`✅ Codes sélectionnés pour ${response.question_code}:`, selectedCodes);
     
     // Analyser chaque réponse sélectionnée
     for (const selectedCode of selectedCodes) {
+      if (response.question_code === 'E4.N7.Q1') {
+        if (selectedCode === 'E4.N7.Q1.B') {
+          return 'utilisateur';
+        }
+        if (selectedCode === 'E4.N7.Q1.C') {
+          return 'fournisseur';
+        }
+        continue;
+      }
+
       const option = findQuestionOption(response.question_code, selectedCode);
       if (!option) continue;
-      
-      console.log(`🎯 Analyse de l'option ${selectedCode}: ${option.label}`);
       
       // Vérifier chaque label pour déterminer le statut
       switch (option.label) {
         case "Mon entreprise utilise des systèmes d'IA tiers":
-          console.log(`✅ Statut déterminé: utilisateur (utilise des systèmes d'IA tiers)`);
           return 'utilisateur';
           
         case "Je suis fabricant d'un produit intégrant un système d'IA":
-          console.log(`✅ Statut déterminé: fabriquant_produits (fabricant de produit intégrant un système d'IA)`);
           return 'fabriquant_produits';
           
         case "Je distribue et/ou déploie un système d'IA pour d'autres entreprises":
-          console.log(`✅ Statut déterminé: distributeur (distribue et/ou déploie un système d'IA)`);
           return 'distributeur';
           
         case "Je suis importateur d'un système d'IA":
-          console.log(`✅ Statut déterminé: importateur (importateur d'un système d'IA)`);
           return 'importateur';
           
         case "Je suis un fournisseur d'un système d'IA":
-          console.log(`✅ Statut déterminé: fournisseur (fournisseur d'un système d'IA)`);
           return 'fournisseur';
           
         case "Je suis représentant autorisé d'un fournisseur de système d'IA":
-          console.log(`✅ Statut déterminé: mandataire (représentant autorisé)`);
           return 'mandataire';
           
         case "Je suis éditeur d'un logiciel intégrant un système d'IA":
-          console.log(`✅ Statut déterminé: distributeur (éditeur de logiciel intégrant un système d'IA)`);
           return 'distributeur';
       }
     }
   }
   
-  console.log(`⚠️ Aucune réponse reconnue pour déterminer le statut - statut: unknown`);
   return 'unknown';
 }
 
@@ -323,16 +325,12 @@ export function calculateBaseScore(
       ? responses.filter(r => options.activeQuestionCodes!.has(r.question_code))
       : responses;
 
-  console.log(`🔍 Début du calcul de score de base pour ${scoped.length} réponses`);
-
   let totalImpact = 0;
   let isEliminated = false;
   let eliminationReason = '';
   
   // ÉTAPE 1 : Parcourir les réponses du périmètre (V1 = toutes)
   for (const response of scoped) {
-    console.log(`📝 Analyse de la réponse pour la question ${response.question_code}`);
-    
     // Vérifier que la question existe dans nos données
     const question = QUESTIONS_DATA[response.question_code];
     if (!question) {
@@ -342,36 +340,46 @@ export function calculateBaseScore(
     
     // ÉTAPE 2 : Récupérer les codes de réponse sélectionnés
     const selectedCodes = getSelectedCodes(response);
-    console.log(`✅ Codes sélectionnés pour ${response.question_code}:`, selectedCodes);
-    
-    // ÉTAPE 3 : Analyser chaque réponse sélectionnée
+
+    // ÉTAPE 3 : Élimination — toutes les options sélectionnées
     for (const selectedCode of selectedCodes) {
       const option = findQuestionOption(response.question_code, selectedCode);
-      if (!option) {
-        continue; // Option non trouvée, passer à la suivante
-      }
-      
-      console.log(`🎯 Analyse de l'option ${selectedCode}: ${option.label}`);
-      
-      // ÉTAPE 4 : Vérifier si c'est une réponse éliminatoire
+      if (!option) continue;
       if (option.is_eliminatory) {
-        console.log(`❌ RÉPONSE ÉLIMINATOIRE DÉTECTÉE : ${option.label}`);
         isEliminated = true;
         eliminationReason = `Réponse éliminatoire: ${option.label}`;
-        break; // Arrêter l'analyse immédiatement
-      }
-      
-      // ÉTAPE 5 : Ajouter l'impact au score total
-      if (option.score_impact) {
-        totalImpact += option.score_impact;
-        console.log(`📊 Impact ajouté: ${option.score_impact} (total: ${totalImpact})`);
+        break;
       }
     }
-    
-    // Si une réponse éliminatoire a été trouvée, arrêter complètement
     if (isEliminated) {
-      console.log(`🛑 Calcul arrêté - cas d'usage éliminé`);
       break;
+    }
+
+    if (selectedCodes.length === 0) continue;
+
+    // ÉTAPE 4 : Impacts — `impact_mode: any` = une seule prise en compte (min des impacts numériques)
+    if (question.impact_mode === 'any') {
+      const impacts: number[] = [];
+      for (const selectedCode of selectedCodes) {
+        const option = findQuestionOption(response.question_code, selectedCode);
+        if (option && typeof option.score_impact === 'number') {
+          impacts.push(option.score_impact);
+        }
+      }
+      if (impacts.length > 0) {
+        const agg = Math.min(...impacts);
+        if (agg) {
+          totalImpact += agg;
+        }
+      }
+    } else {
+      for (const selectedCode of selectedCodes) {
+        const option = findQuestionOption(response.question_code, selectedCode);
+        if (!option) continue;
+        if (option.score_impact) {
+          totalImpact += option.score_impact;
+        }
+      }
     }
   }
   
@@ -381,11 +389,9 @@ export function calculateBaseScore(
   if (isEliminated) {
     // Si éliminé, le score est toujours 0
     finalScore = 0;
-    console.log(`💀 Score final : 0 (éliminé)`);
   } else {
     // Sinon, calculer : BASE_SCORE + impacts (minimum 0)
     finalScore = Math.max(0, BASE_SCORE + totalImpact);
-    console.log(`✨ Score final : ${finalScore} (base: ${BASE_SCORE} + impacts: ${totalImpact})`);
   }
   
   return {
@@ -419,10 +425,6 @@ export function calculateFinalScore(
   modelScore: number | null,
   usecaseId: string
 ): CompleteScoreResult {
-  console.log(`🎯 Calcul du score final pour le cas d'usage ${usecaseId}`);
-  console.log(`📊 Score de base: ${baseScoreResult.score_base}`);
-  console.log(`🤖 Score modèle brut: ${modelScore !== null ? modelScore : 'N/A'}`);
-
   let finalScore = 0;
   let hasValidModelScore = modelScore !== null && modelScore !== undefined;
 
@@ -432,24 +434,19 @@ export function calculateFinalScore(
   if (baseScoreResult.is_eliminated) {
     // Si éliminé, le score final est toujours 0
     finalScore = 0;
-    console.log(`💀 Score final : 0 (cas éliminé)`);
   } else {
     // ÉTAPE 1 : Calculer le score brut (score_base + model_score × 2.5)
     const scoreBrut = baseScoreResult.score_base + modelContribution + MARGIN_SCORE;
-    console.log(`📊 Score brut: ${baseScoreResult.score_base} + (${modelScore || 0} × ${COMPL_AI_WEIGHT}) + ${MARGIN_SCORE} = ${roundToTwoDecimals(scoreBrut)}`);
 
     // ÉTAPE 2 : Appliquer la formule finale
     // Formule : (score_brut / 150) * 100
     finalScore = (scoreBrut / TOTAL_WEIGHT) * 100;
-    console.log(`✨ Score final calculé: ${roundToTwoDecimals(finalScore)}%`);
   }
 
-  // ÉTAPE 3 : Construire la formule utilisée pour debug
+  // Formule exposée dans le résultat (traçabilité calcul)
   const formulaUsed = hasValidModelScore && modelScore !== null
     ? `((${baseScoreResult.score_base} + ${roundToTwoDecimals(modelScore)} × ${COMPL_AI_WEIGHT}) / ${TOTAL_WEIGHT}) * 100`
     : `((${baseScoreResult.score_base} + 0) / ${TOTAL_WEIGHT}) * 100`;
-
-  console.log(`📐 Formule utilisée: ${formulaUsed}`);
 
   return {
     success: true,

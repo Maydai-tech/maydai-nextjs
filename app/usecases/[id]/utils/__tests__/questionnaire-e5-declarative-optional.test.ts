@@ -2,16 +2,19 @@ import { checkCanProceed } from '../questionnaire'
 import { loadQuestions } from '../questions-loader'
 import type { Question } from '../../types/usecase'
 
-describe('E5 — conditional_detail_optional (déclaratif vs preuve)', () => {
+describe('E5 — N9 Q6 à Q9 (radio, sans champs conditionnels)', () => {
   const questions = loadQuestions()
 
-  it('expose conditional_detail_optional sur E5.N9.Q6 à Q9', () => {
+  it('déclare Q6 à Q9 comme questions radio sans conditional_detail_optional', () => {
     for (const id of ['E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8', 'E5.N9.Q9'] as const) {
-      expect(questions[id]?.conditional_detail_optional).toBe(true)
+      const q = questions[id]!
+      expect(q.type).toBe('radio')
+      expect(q.conditional_detail_optional).toBeUndefined()
+      expect(q.conditionalFields).toBeUndefined()
     }
   })
 
-  it('autorise « Oui » (.B) sans champs conditionnels remplis pour Q6–Q9', () => {
+  it('autorise une réponse radio (chaîne) pour Q6–Q9', () => {
     const cases = [
       ['E5.N9.Q6', 'E5.N9.Q6.B'],
       ['E5.N9.Q7', 'E5.N9.Q7.B'],
@@ -20,27 +23,11 @@ describe('E5 — conditional_detail_optional (déclaratif vs preuve)', () => {
     ] as const
     for (const [qid, sel] of cases) {
       const q = questions[qid]!
-      expect(checkCanProceed(q, { selected: sel, conditionalValues: {} })).toBe(true)
+      expect(checkCanProceed(q, sel)).toBe(true)
     }
   })
 
-  it('autorise toujours « Oui » avec des détails partiels ou complets', () => {
-    const q7 = questions['E5.N9.Q7']!
-    expect(
-      checkCanProceed(q7, {
-        selected: 'E5.N9.Q7.B',
-        conditionalValues: { registry_type: 'Interne', system_name: '' },
-      })
-    ).toBe(true)
-    expect(
-      checkCanProceed(q7, {
-        selected: 'E5.N9.Q7.B',
-        conditionalValues: { registry_type: 'Interne', system_name: 'MaydAI' },
-      })
-    ).toBe(true)
-  })
-
-  it('sans conditional_detail_optional, « Oui » + champs exige encore au moins une valeur', () => {
+  it('sans conditional_detail_optional, « Oui » + champs exige encore au moins une valeur (question conditional synthétique)', () => {
     const synthetic: Question = {
       id: 'TEST.Q1',
       question: 'test',

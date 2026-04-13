@@ -102,31 +102,28 @@ export function deriveBpgvBandFromOrsAnswers(answers: Record<string, unknown>): 
   return m
 }
 
-export function getFirstE5AfterOrs(answers: Record<string, unknown>): string {
-  const band = deriveBpgvBandFromOrsAnswers(answers)
-  if (band === BPGV_VARIANT_MINIMAL) return 'E5.N9.Q7'
+/**
+ * Entrée BPGV après l’ORS : toujours le début du bloc E5 (parcours long complet),
+ * sans raccourci « bande minimale → Q7 ».
+ */
+export function getFirstE5AfterOrs(_answers: Record<string, unknown>): string {
   return 'E5.N9.Q1'
 }
 
-function getNextAfterQ12(answers: Record<string, unknown>): string | null {
-  if (isOrsUnacceptableAtQ31(answers)) return null
-  if (answers['E4.N8.Q9'] === 'E4.N8.Q9.A') return 'E6.N10.Q1'
-  if (answers['E4.N8.Q11.0'] === 'E4.N8.Q11.0.A') return 'E6.N10.Q2'
-  return null
+/** Après Q12 : bloc transparence E6 obligatoire (Q1 puis Q2), quel que soit le niveau de risque déclaré en amont. */
+function getNextAfterQ12(_answers: Record<string, unknown>): string | null {
+  return 'E6.N10.Q1'
 }
 
-function getNextE6(current: string, answers: Record<string, unknown>): string | null {
-  if (current === 'E6.N10.Q1') {
-    if (answers['E4.N8.Q11.0'] === 'E4.N8.Q11.0.A') return 'E6.N10.Q2'
-    return null
-  }
+function getNextE6(current: string, _answers: Record<string, unknown>): string | null {
+  if (current === 'E6.N10.Q1') return 'E6.N10.Q2'
   if (current === 'E6.N10.Q2') return null
   return null
 }
 
 /**
  * BPGV V2 : ordre validé Q1→…→Q9 puis E4.N8.Q12.
- * Branche courte (minimal / unacceptable) : arrivée directe sur Q7 sans Q6 → Q12.
+ * L’entrée après ORS est toujours Q1 (voir `getFirstE5AfterOrs`).
  */
 function getNextE5V2(currentQuestionId: string, answers: Record<string, unknown>): string | null {
   switch (currentQuestionId) {
@@ -155,8 +152,8 @@ function getNextE5V2(currentQuestionId: string, answers: Record<string, unknown>
 }
 
 /**
- * Navigation questionnaire V2 : ORS N7 → (sortie unacceptable) ou ORS N8 (E4.N8.Q9→…→Q11.* uniquement) ;
- * puis BPGV ; E6 uniquement après E4.N8.Q12 si non unacceptable.
+ * Navigation questionnaire V2 : ORS N7 → ORS N8 (E4.N8.Q9→…→Q11.*) ;
+ * puis BPGV (entrée toujours E5.N9.Q1) ; bloc E6 obligatoire après E4.N8.Q12 (E6.N10.Q1 → Q2).
  */
 export function getNextQuestionV2(
   currentQuestionId: string,
@@ -165,7 +162,7 @@ export function getNextQuestionV2(
   switch (currentQuestionId) {
     case 'E4.N7.Q1': {
       const q1 = answers['E4.N7.Q1']
-      if (q1 === 'E4.N7.Q1.A') return 'E4.N7.Q1.1'
+      if (q1 === 'E4.N7.Q1.A' || q1 === 'E4.N7.Q1.C') return 'E4.N7.Q1.1'
       if (q1 === 'E4.N7.Q1.B') return 'E4.N7.Q1.2'
       return null
     }
@@ -180,7 +177,7 @@ export function getNextQuestionV2(
     case 'E4.N7.Q3':
       return 'E4.N7.Q3.1'
     case 'E4.N7.Q3.1':
-      if (isOrsUnacceptableAtQ31(answers)) return 'E5.N9.Q7'
+      if (isOrsUnacceptableAtQ31(answers)) return 'E5.N9.Q1'
       return 'E4.N8.Q9'
 
     case 'E4.N8.Q9':
@@ -204,12 +201,6 @@ export function getNextQuestionV2(
     }
 
     case 'E4.N8.Q11.T1': {
-      if (answers['E4.N8.Q11.T1'] === 'E4.N8.Q11.T1.B') return 'E4.N8.Q11.T2'
-      if (hasQ111Media(answers)) return 'E4.N8.Q11.M1'
-      return getFirstE5AfterOrs(answers)
-    }
-
-    case 'E4.N8.Q11.T2': {
       if (hasQ111Media(answers)) return 'E4.N8.Q11.M1'
       return getFirstE5AfterOrs(answers)
     }

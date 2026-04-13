@@ -10,12 +10,18 @@ import { Check } from 'lucide-react'
 type Props = {
   currentQuestionId: string
   isLastQuestion: boolean
+  /** Parcours court : pastilles compactes (numéro / check uniquement), sans titres de segment. */
+  hideSegmentCardTitles?: boolean
 }
 
 /**
  * Progression « parcours court » : 5 segments lisibles + barre dédiée (hors graphe métier).
  */
-export function V3ShortPathStepper({ currentQuestionId, isLastQuestion }: Props) {
+export function V3ShortPathStepper({
+  currentQuestionId,
+  isLastQuestion,
+  hideSegmentCardTitles = false,
+}: Props) {
   const activeOrder = getV3ShortPathSegmentOrder(currentQuestionId)
   const percent = getV3ShortPathProgressPercent(currentQuestionId, isLastQuestion)
 
@@ -39,6 +45,7 @@ export function V3ShortPathStepper({ currentQuestionId, isLastQuestion }: Props)
             <div
               key={seg.key}
               role="listitem"
+              aria-label={`${seg.title}. ${seg.tagline}`}
               className={`min-w-[7.5rem] sm:min-w-0 sm:flex-1 snap-start rounded-lg border px-2 py-2 sm:px-3 sm:py-2.5 text-left transition-colors ${
                 current
                   ? 'border-[#0080A3] bg-[#0080A3]/8 ring-1 ring-[#0080A3]/20'
@@ -47,7 +54,11 @@ export function V3ShortPathStepper({ currentQuestionId, isLastQuestion }: Props)
                     : 'border-gray-200/90 bg-gray-50/60'
               }`}
             >
-              <div className="flex items-center gap-1 mb-0.5">
+              <div
+                className={`flex items-center gap-1 mb-0.5 ${
+                  hideSegmentCardTitles ? 'justify-center' : ''
+                }`}
+              >
                 <span
                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                     current
@@ -59,24 +70,20 @@ export function V3ShortPathStepper({ currentQuestionId, isLastQuestion }: Props)
                 >
                   {done ? <Check className="h-3 w-3" strokeWidth={3} aria-hidden /> : seg.order}
                 </span>
-                <span
-                  className={`text-[11px] sm:text-xs font-semibold leading-tight line-clamp-2 ${
-                    current ? 'text-gray-900' : 'text-gray-600'
-                  }`}
-                >
-                  {seg.title}
-                </span>
+                {!hideSegmentCardTitles ? (
+                  <span
+                    className={`text-[11px] sm:text-xs font-semibold leading-tight line-clamp-2 ${
+                      current ? 'text-gray-900' : 'text-gray-600'
+                    }`}
+                  >
+                    {seg.title}
+                  </span>
+                ) : null}
               </div>
             </div>
           )
         })}
       </div>
-
-      <p className="text-xs sm:text-sm text-gray-600 mb-2 leading-relaxed">
-        <span className="font-medium text-gray-800">{V3_SHORT_PATH_SEGMENTS[activeOrder - 1].title}</span>
-        {' — '}
-        {V3_SHORT_PATH_SEGMENTS[activeOrder - 1].tagline}
-      </p>
 
       <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
         <div
@@ -84,9 +91,6 @@ export function V3ShortPathStepper({ currentQuestionId, isLastQuestion }: Props)
           style={{ width: `${percent}%` }}
         />
       </div>
-      <p className="text-[11px] text-gray-500 mt-1.5">
-        Progression adaptée au parcours court (indépendante du décompte technique du parcours long).
-      </p>
     </div>
   )
 }
