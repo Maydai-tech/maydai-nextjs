@@ -686,7 +686,9 @@ export function StepByStepQuestionnaire({
             ) : (
               /* Bouton Suivant (questions intermédiaires) */
               <button
-                onClick={handleNext}
+                onClick={() => {
+                  void handleNext()
+                }}
                 disabled={!canProceed || isSubmitting}
                 className={`inline-flex items-center px-6 py-2 text-sm font-medium rounded-lg transition-colors ${
                   canProceed && !isSubmitting
