@@ -15,7 +15,7 @@ export function CompletedAction({ title, points, onClick }: CompletedActionProps
   return (
     <button
       onClick={onClick}
-      className="mt-2 ml-8 inline-flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+      className="inline-flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
     >
       <span className="flex-1 text-left">{title}</span>
       {points > 0 && (

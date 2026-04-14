@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import UnacceptableStatusBanner from '@/components/UnacceptableCase/UnacceptableStatusBanner'
 import {
   getDeploymentUrgency,
@@ -57,12 +57,9 @@ export default function UnacceptableInterditsPanel({
 
   return (
     <div className="mb-8 space-y-6">
-      <div className="flex items-center gap-3">
-        <AlertTriangle className="h-6 w-6 shrink-0 text-red-600" aria-hidden />
-        <h3 className="text-xl font-semibold text-gray-900">
-          Cas de risque inacceptable
-        </h3>
-      </div>
+      <h3 className="text-xl font-semibold text-gray-900">
+        Cas de risque inacceptable
+      </h3>
 
       <UnacceptableStatusBanner deploymentDateIso={deploymentDateIso} urgency={urgency} />
 

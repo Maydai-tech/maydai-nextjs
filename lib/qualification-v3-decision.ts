@@ -38,10 +38,21 @@ function radioToResponse(questionCode: string, answer: unknown): RiskLevelRespon
   return [{ question_code: questionCode, single_value: answer }]
 }
 
+/** Codes E4.N7.Q2 déclarés (tableau normalisé ou chaîne isolée). */
+export function annexIiiSelectedCodes(answers: Record<string, unknown>): string[] {
+  const raw = answers['E4.N7.Q2']
+  if (Array.isArray(raw)) {
+    return raw.filter((c): c is string => typeof c === 'string')
+  }
+  if (typeof raw === 'string' && raw.trim()) {
+    return [raw.trim()]
+  }
+  return []
+}
+
 function hasSensitiveAnnexIII(answers: Record<string, unknown>): boolean {
-  const v = answers['E4.N7.Q2']
-  if (!Array.isArray(v) || v.length === 0) return false
-  return v.some(c => c !== 'E4.N7.Q2.G')
+  const codes = annexIiiSelectedCodes(answers)
+  return codes.length > 0 && codes.some((c) => c !== 'E4.N7.Q2.G')
 }
 
 function interdictionResponses(answers: Record<string, unknown>): RiskLevelResponseInput[] {
@@ -136,10 +147,12 @@ export function resolveQualificationOutcomeV3(
   if (hasSensitiveAnnexIII(answers)) {
     const q5v = answers['E4.N7.Q5']
     if (q5v === 'E4.N7.Q5.B') {
-      pieces.push(...checkboxToResponses('E4.N7.Q2', answers['E4.N7.Q2']))
-    }
-    if (q5v === 'E4.N7.Q5.A') {
+      pieces.push(...checkboxToResponses('E4.N7.Q2', annexIiiSelectedCodes(answers)))
+    } else if (q5v === 'E4.N7.Q5.A') {
       /* garde-fou 6.3 : ne pas retenir le « high » des domaines sensibles */
+    } else {
+      /* Q5 absent ou valeur inattendue : pas de 6.3 tranché — plafond légal conservateur */
+      return { classification_status: 'qualified', risk_level: 'high' }
     }
   }
 

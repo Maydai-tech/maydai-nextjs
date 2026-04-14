@@ -395,7 +395,7 @@ export function buildReportCanonicalItemForSlot(params: {
     narrative: { text: narrative_text, source_slot_key: reportSlotKey },
     cta: {
       completed: docCompleted,
-      ctaOmitted: isHorsPerimetre,
+      ctaOmitted: false,
       dossierUrl,
       todoUrl,
       label: metadata.title,

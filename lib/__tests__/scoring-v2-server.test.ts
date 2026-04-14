@@ -1,4 +1,7 @@
-import { buildV2ScoringContextFromDbResponses } from '@/lib/scoring-v2-server'
+import {
+  buildV2ScoringContextFromDbResponses,
+  dbResponsesToQuestionnaireAnswers,
+} from '@/lib/scoring-v2-server'
 import { QUESTIONNAIRE_VERSION_V2 } from '@/lib/questionnaire-version'
 
 describe('scoring-v2-server', () => {
@@ -40,5 +43,33 @@ describe('scoring-v2-server', () => {
     expect(ctx!.scoringActiveQuestionCodes.has('E4.N7.Q1')).toBe(true)
     expect(ctx!.scoringActiveQuestionCodes.has('E4.N7.Q1.2')).toBe(true)
     expect(ctx!.scoringActiveQuestionCodes.has('E6.N10.Q1')).toBe(false)
+  })
+
+  test('E4.N7.Q2 : single_value seul est normalisé en tableau (rétrocompat DB)', () => {
+    const answers = dbResponsesToQuestionnaireAnswers([
+      {
+        question_code: 'E4.N7.Q2',
+        single_value: 'E4.N7.Q2.A',
+        multiple_codes: null,
+        conditional_main: null,
+        conditional_keys: null,
+        conditional_values: null,
+      },
+    ])
+    expect(answers['E4.N7.Q2']).toEqual(['E4.N7.Q2.A'])
+  })
+
+  test('E4.N7.Q2 : multiple_codes prime sur single_value', () => {
+    const answers = dbResponsesToQuestionnaireAnswers([
+      {
+        question_code: 'E4.N7.Q2',
+        single_value: 'E4.N7.Q2.G',
+        multiple_codes: ['E4.N7.Q2.A'],
+        conditional_main: null,
+        conditional_keys: null,
+        conditional_values: null,
+      },
+    ])
+    expect(answers['E4.N7.Q2']).toEqual(['E4.N7.Q2.A'])
   })
 })

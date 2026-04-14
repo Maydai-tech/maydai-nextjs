@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { useUseCaseData } from './hooks/useUseCaseData'
 import { useUseCaseNavigation } from './utils/navigation'
@@ -249,16 +250,18 @@ function UseCaseOverviewSections({
                     {score.score_scope === 'short_initial' && score.score_display_hint ? (
                       <p className="mt-2 text-[11px] text-gray-600 leading-relaxed">{score.score_display_hint}</p>
                     ) : null}
-                    <a
-                      href="#scores-description"
-                      className="mt-3 block text-xs text-[#0080A3] hover:text-[#006280] hover:underline focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-1 rounded"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        document.getElementById('scores-description')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }}
-                    >
-                      Comment est calculé ce score ?
-                    </a>
+                    {riskLevel !== 'unacceptable' && (
+                      <a
+                        href="#scores-description"
+                        className="mt-3 block text-xs text-[#0080A3] hover:text-[#006280] hover:underline focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-1 rounded"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          document.getElementById('scores-description')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }}
+                      >
+                        Comment est calculé ce score ?
+                      </a>
+                    )}
                   </div>
                 )}
               </div>
@@ -275,30 +278,39 @@ function UseCaseOverviewSections({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <h2 className="text-2xl font-semibold text-gray-900">Recommandations et plan d&apos;action</h2>
             <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:justify-end">
-              <button
-                onClick={handleGenerateReport}
-                disabled={generatingReport || !canClickGenerateReport}
-                title={
-                  generatingReport
-                    ? 'Génération du rapport en cours…'
-                    : !canClickGenerateReport
-                      ? generateReportDisabledTitle
-                      : undefined
-                }
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-[#006280] rounded-lg hover:bg-[#004d63] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-              >
-                {generatingReport ? (
-                  <>
-                    <RefreshCcw className="w-4 h-4 animate-spin" />
-                    Génération...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCcw className="w-4 h-4" />
-                    Générer le plan d&apos;action (IA)
-                  </>
-                )}
-              </button>
+              {riskLevel === 'unacceptable' ? (
+                <Link
+                  href="/usecases"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+                >
+                  Créer un nouveau cas d&apos;usage
+                </Link>
+              ) : (
+                <button
+                  onClick={handleGenerateReport}
+                  disabled={generatingReport || !canClickGenerateReport}
+                  title={
+                    generatingReport
+                      ? 'Génération du rapport en cours…'
+                      : !canClickGenerateReport
+                        ? generateReportDisabledTitle
+                        : undefined
+                  }
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-[#006280] rounded-lg hover:bg-[#004d63] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                >
+                  {generatingReport ? (
+                    <>
+                      <RefreshCcw className="w-4 h-4 animate-spin" />
+                      Génération...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCcw className="w-4 h-4" />
+                      Générer le plan d&apos;action (IA)
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
 

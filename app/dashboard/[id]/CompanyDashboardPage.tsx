@@ -635,6 +635,7 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
             </div>
 
             <button
+              type="button"
               onClick={() => {
                 const maxUseCases = plan.maxUseCasesPerRegistry || 3
 
@@ -645,9 +646,9 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                   router.push(`/usecases/new?company=${companyId}`)
                 }
               }}
-              className="inline-flex items-center justify-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] transition-colors"
+              className="inline-flex items-center gap-2 bg-[#0080A3] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#006682] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3]"
             >
-              <Plus className="h-5 w-5 mr-2" />
+              <Plus className="w-4 h-4 shrink-0" aria-hidden="true" />
               Nouveau cas d'usage
             </button>
           </div>
@@ -773,6 +774,7 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                   )}
                 </div>
                 <button
+                  type="button"
                   onClick={() => {
                     const maxUseCases = plan.maxUseCasesPerRegistry || 3
 
@@ -783,9 +785,9 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                       router.push(`/usecases/new?company=${companyId}`)
                     }
                   }}
-                  className="inline-flex items-center justify-center px-8 py-4 bg-[#0080A3] text-white text-lg font-medium rounded-lg hover:bg-[#006280] transition-colors w-full sm:w-auto"
+                  className="inline-flex items-center gap-2 bg-[#0080A3] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#006682] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3]"
                 >
-                  <Plus className="h-8 w-8 mr-4" />
+                  <Plus className="w-4 h-4 shrink-0" aria-hidden="true" />
                   Nouveau cas d'usage
                 </button>
               </div>
@@ -831,9 +833,9 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                 <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Créez votre premier cas d'usage IA pour ce registre</p>
                 <Link
                   href={`/usecases/new?company=${companyId}`}
-                  className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white text-sm font-medium rounded-lg hover:bg-[#006280] transition-colors"
+                  className="inline-flex items-center gap-2 bg-[#0080A3] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#006682] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3]"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="w-4 h-4 shrink-0" aria-hidden="true" />
                   Nouveau cas d'usage
                 </Link>
               </div>

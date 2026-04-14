@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle } from 'lucide-react'
+import { Ban } from 'lucide-react'
 import {
   getDeploymentUrgency,
   getUnacceptableStatusBannerLines,
@@ -23,7 +23,7 @@ export default function UnacceptableStatusBanner({
   return (
     <div className="rounded-lg border border-red-200 bg-red-50 p-4">
       <div className="flex items-start gap-3">
-        <AlertTriangle
+        <Ban
           className="mt-0.5 h-5 w-5 shrink-0 text-red-600"
           aria-hidden
         />

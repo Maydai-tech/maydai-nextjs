@@ -1,13 +1,17 @@
 'use client'
 
+import { useState } from 'react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import type { RiskLevelCode } from '@/lib/risk-level'
 import type { UseCaseNextSteps } from '@/lib/supabase'
 import { buildReportCanonicalItemForSlot, type ReportCanonicalItem } from '@/lib/report-canonical-items'
 import type { SlotStatusMap } from '@/lib/slot-statuses'
 import { REPORT_STANDARD_SLOT_KEYS_ORDERED } from '@/lib/canonical-actions'
-import { groupStandardPlanItemsByLegalCode } from '@/lib/report-plan-ors-ocru-bpgv'
+import {
+  groupStandardPlanItemsByLegalCode,
+  type ReportLegalGroupCode,
+} from '@/lib/report-plan-ors-ocru-bpgv'
 import { ReportCanonicalItemRow } from './ReportCanonicalItemRow'
-import { DECLARATION_PROOF_FLOW_COPY } from '../../utils/declaration-proof-flow-copy'
 
 type DocumentStatuses = Record<string, { status: string }>
 
@@ -22,6 +26,17 @@ const LEGAL_GROUP_ICON: Record<
   ORS: { src: '/icons/attention.png', alt: 'Priorités' },
   OCRU: { src: '/icons/schedule.png', alt: 'Actions' },
   BPGV: { src: '/icons/work-in-progress.png', alt: 'Quickwins' },
+}
+
+function borderClassForLegalGroup(code: ReportLegalGroupCode): string {
+  switch (code) {
+    case 'ORS':
+      return 'border-[#ffab5a]'
+    case 'OCRU':
+      return 'border-[#F5E6C2]'
+    case 'BPGV':
+      return 'border-[#0080a3]'
+  }
 }
 
 export type PlanClassificationStatus = 'qualified' | 'impossible'
@@ -49,6 +64,12 @@ export function ReportStandardPlanBlocks({
   riskLevel,
   classificationStatus,
 }: ReportStandardPlanBlocksProps) {
+  const [groupExpanded, setGroupExpanded] = useState<Record<ReportLegalGroupCode, boolean>>({
+    ORS: true,
+    OCRU: false,
+    BPGV: false,
+  })
+
   if (classificationStatus === 'impossible') {
     return (
       <div className="rounded-lg border border-violet-200 bg-violet-50/80 p-4 text-sm text-violet-900">
@@ -96,39 +117,81 @@ export function ReportStandardPlanBlocks({
 
   return (
     <>
-      <p className="text-sm text-gray-700 mb-6 rounded-lg border border-gray-200 bg-slate-50/80 px-3 py-2.5 leading-relaxed">
-        {DECLARATION_PROOF_FLOW_COPY.filRougeTitle} — {DECLARATION_PROOF_FLOW_COPY.rapportPlanHint}
-      </p>
       {groups.map((group, idx) => {
         const icon = LEGAL_GROUP_ICON[group.code]
+        const isExpanded = groupExpanded[group.code]
+        const panelId = `plan-action-group-${group.code}`
+        const headerId = `plan-action-group-header-${group.code}`
         return (
           <section
             key={group.code}
-            className={[
-              'pt-6',
-              'border-t-2 border-[#0080a3]',
-              idx === 0 ? 'mt-0' : 'mt-8',
-            ].join(' ')}
+            className={['pt-6', idx === 0 ? 'mt-0' : 'mt-8'].join(' ')}
             aria-label={group.title}
           >
-            <div className="flex items-center gap-3 mb-3">
-              {icon ? (
-                <img
-                  src={icon.src}
-                  alt={icon.alt}
-                  width={22}
-                  height={22}
-                  className="flex-shrink-0"
-                />
-              ) : null}
-              <h3 className="text-xl font-semibold text-gray-900">{group.title}</h3>
-            </div>
-            <p className="text-sm text-gray-600 italic mb-4">{group.subtitle}</p>
-            <ul className="space-y-4 mb-2 ml-4">
-              {group.items.map(item => (
-                <ReportCanonicalItemRow key={item.identity.report_slot_key} item={item} />
-              ))}
-            </ul>
+            <button
+              type="button"
+              id={headerId}
+              aria-expanded={isExpanded}
+              aria-controls={panelId}
+              onClick={() =>
+                setGroupExpanded(prev => ({
+                  ...prev,
+                  [group.code]: !prev[group.code],
+                }))
+              }
+              className={[
+                'w-full text-left rounded-t-lg transition-all duration-200',
+                'border-b-4 pb-3 mb-1',
+                borderClassForLegalGroup(group.code),
+                'hover:bg-gray-50/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2',
+              ].join(' ')}
+            >
+              <div className="flex items-center justify-between py-3 cursor-pointer group gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  {icon ? (
+                    <img
+                      src={icon.src}
+                      alt={icon.alt}
+                      width={22}
+                      height={22}
+                      className="flex-shrink-0"
+                    />
+                  ) : null}
+                  <span className="text-xl font-semibold text-gray-900 truncate">{group.title}</span>
+                </div>
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                  <span className="px-2.5 py-0.5 rounded-full text-sm font-semibold bg-gray-100 text-gray-700 whitespace-nowrap">
+                    {group.items.length} action(s)
+                  </span>
+                  {isExpanded ? (
+                    <ChevronUp
+                      className="w-5 h-5 text-gray-500 group-hover:text-gray-700 shrink-0 transition-colors"
+                      aria-hidden
+                    />
+                  ) : (
+                    <ChevronDown
+                      className="w-5 h-5 text-gray-500 group-hover:text-gray-700 shrink-0 transition-colors"
+                      aria-hidden
+                    />
+                  )}
+                </div>
+              </div>
+            </button>
+            {isExpanded && (
+              <div
+                id={panelId}
+                role="region"
+                aria-labelledby={headerId}
+                className="transition-all duration-200 ease-out"
+              >
+                <p className="text-sm text-gray-600 italic mb-4">{group.subtitle}</p>
+                <ul className="flex flex-col mb-2 ml-0 sm:ml-2">
+                  {group.items.map(item => (
+                    <ReportCanonicalItemRow key={item.identity.report_slot_key} item={item} />
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
         )
       })}

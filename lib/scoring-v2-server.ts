@@ -10,6 +10,33 @@ import {
 import { calculateMaxCategoryScoresForActiveQuestionCodes } from '@/lib/score-category-max'
 import { QUESTIONNAIRE_VERSION_V2, normalizeQuestionnaireVersion } from '@/lib/questionnaire-version'
 
+/** Questions checkbox : lecture rétrocompatible `single_value` → tableau (lignes DB hétérogènes). */
+export const CHECKBOX_QUESTION_CODES = new Set<string>([
+  'E4.N7.Q2',
+  'E4.N7.Q2.1',
+  'E4.N7.Q3',
+  'E4.N7.Q3.1',
+])
+
+/**
+ * Priorise `multiple_codes` ; pour les codes checkbox connus, promeut un `single_value` seul en tableau.
+ */
+export function toCheckboxCodes(
+  questionCode: string,
+  multiple_codes: string[] | null | undefined,
+  single_value: string | null | undefined,
+  cleanValue: (value: string) => string
+): string[] | null {
+  if (multiple_codes && multiple_codes.length > 0) {
+    return multiple_codes.map((code) => cleanValue(code))
+  }
+  if (CHECKBOX_QUESTION_CODES.has(questionCode) && single_value) {
+    const v = cleanValue(single_value)
+    if (v) return [v]
+  }
+  return null
+}
+
 /** Même logique que `useQuestionnaireResponses` (formattedAnswers). */
 export function dbResponsesToQuestionnaireAnswers(
   responses: Array<{
@@ -38,8 +65,14 @@ export function dbResponsesToQuestionnaireAnswers(
       conditional_values
     } = response
 
-    if (multiple_codes && multiple_codes.length > 0) {
-      formatted[question_code] = multiple_codes.map(code => cleanValue(code))
+    const checkboxCodes = toCheckboxCodes(
+      question_code,
+      multiple_codes,
+      single_value,
+      cleanValue
+    )
+    if (checkboxCodes) {
+      formatted[question_code] = checkboxCodes
     } else if (conditional_main) {
       const conditionalVals: Record<string, string> = {}
       if (conditional_keys && conditional_values) {
