@@ -351,6 +351,14 @@ export function useEvaluation({
     }
   }, [saveResponse])
 
+  const handleProcessingComplete = useCallback(() => {
+    setShowProcessingAnimation(false)
+    setQuestionnaireData(prev => ({ ...prev, isCompleted: true }))
+    setTimeout(() => {
+      onComplete()
+    }, 500)
+  }, [onComplete])
+
   const handleNext = useCallback(async (opts?: { explicitAnswerForCurrentStep?: unknown }) => {
     const currentId = questionnaireData.currentQuestionId
     const isExplicitShortPackInsufficient =
@@ -648,6 +656,8 @@ export function useEvaluation({
           setIsGeneratingReport(false)
         }
 
+        handleProcessingComplete()
+
         setIsSubmitting(false)
         return
       }
@@ -772,6 +782,8 @@ export function useEvaluation({
         } finally {
           setIsGeneratingReport(false)
         }
+
+        handleProcessingComplete()
       } else {
         const mergedForNav = {
           ...questionnaireData.answers,
@@ -812,6 +824,7 @@ export function useEvaluation({
     questionnairePathModeProp,
     navOptions,
     session?.access_token,
+    handleProcessingComplete,
   ])
 
   const handlePrevious = useCallback(() => {
@@ -834,14 +847,6 @@ export function useEvaluation({
     if (!canProceed) return
     await handleNext()
   }
-
-  const handleProcessingComplete = useCallback(() => {
-    setShowProcessingAnimation(false)
-    setQuestionnaireData(prev => ({ ...prev, isCompleted: true }))
-    setTimeout(() => {
-      onComplete()
-    }, 500)
-  }, [onComplete])
 
   return {
     questionnaireData,

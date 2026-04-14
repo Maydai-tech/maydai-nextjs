@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Info, ShieldCheck } from 'lucide-react'
 import { Question, QuestionOption } from '../../types/usecase'
 import Tooltip from '@/components/Tooltip'
 import { getE4N7CheckboxGroups, getE4N7VisualSegment } from '../../utils/e4n7-qualification-ui'
@@ -14,6 +15,50 @@ const V3_SHORT_STAGE_HEADINGS: Record<string, string> = {
   [V3_SHORT_ENTREPRISE_ID]: 'Entreprise',
   [V3_SHORT_USAGE_ID]: 'Usage',
   [V3_SHORT_TRANSPARENCE_ID]: 'Transparence',
+}
+
+const V3_SHORT_TRANSPARENCE_UI_ROWS = [
+  {
+    label: "Information sur l'interaction avec une IA",
+    tooltip:
+      "L'Article 50 exige d'informer clairement les personnes physiques qu'elles interagissent directement avec un système d'IA.",
+  },
+  {
+    label: 'Marquage et identification du contenu généré',
+    tooltip:
+      "L'Article 50 impose de marquer les contenus générés ou manipulés pour qu'ils soient identifiables comme artificiels.",
+  },
+] as const
+
+function V3ShortLegalInfoButton({
+  tooltipId,
+  tooltipText,
+  ariaTopic,
+}: {
+  tooltipId: string
+  tooltipText: string
+  ariaTopic: string
+}) {
+  return (
+    <span className="group relative inline-flex items-center">
+      <button
+        type="button"
+        className="inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3] rounded"
+        aria-label={`Afficher l'information juridique pour : ${ariaTopic}`}
+        aria-describedby={tooltipId}
+        onClick={(e) => e.preventDefault()}
+      >
+        <Info className="w-4 h-4 text-gray-400 hover:text-[#0080A3] transition-colors" aria-hidden="true" />
+      </button>
+      <span
+        id={tooltipId}
+        role="tooltip"
+        className="pointer-events-none absolute z-30 hidden w-[min(80vw,420px)] rounded-lg bg-gray-900 px-3 py-2 text-xs leading-relaxed text-white shadow-lg left-1/2 top-full mt-2 -translate-x-1/2 group-hover:block group-focus-within:block"
+      >
+        {tooltipText}
+      </span>
+    </span>
+  )
 }
 
 /**
@@ -70,6 +115,79 @@ export function V3ShortPathStageQuestion({
 
   const heading = V3_SHORT_STAGE_HEADINGS[question.id] ?? 'Parcours court'
 
+  const isV3ShortEntreprise = question.id === V3_SHORT_ENTREPRISE_ID
+  const isV3ShortUsage = question.id === V3_SHORT_USAGE_ID
+  const isV3ShortTransparence = question.id === V3_SHORT_TRANSPARENCE_ID
+
+  const getOptionLegalTooltip = (opt: QuestionOption): string | null => {
+    if (isV3ShortEntreprise) {
+      switch (opt.code) {
+        case 'E4.N8.Q12.A':
+          return "L’Article 4 exige de garantir un niveau suffisant de maîtrise de l’IA pour votre personnel utilisant ces systèmes."
+        case 'E5.N9.Q7.B':
+          return 'Outil de gouvernance essentiel pour cartographier vos IA, prévenir le Shadow AI et garantir la traçabilité (Art.12).'
+        case 'E5.N9.Q1.A':
+          return "Processus itératif imposé pour l'IA à haut risque (Art.9) et bonne pratique recommandée pour vos autres déploiements."
+        default:
+          return null
+      }
+    }
+    if (isV3ShortUsage) {
+      switch (opt.code) {
+        case 'E5.N9.Q8.B':
+          return "L'Article 14 exige un contrôle effectif par des personnes physiques disposant des compétences et de l'autorité nécessaires."
+        case 'E5.N9.Q3.A':
+          return "Mesure technique (Art. 9 et 15) essentielle pour encadrer l'IA, garantir sa robustesse et atténuer les risques."
+        case 'E5.N9.Q4.A':
+          return "L'Article 11 impose de tenir à jour une documentation exhaustive démontrant la conformité du système avant déploiement."
+        case 'E5.N9.Q6.B':
+          return "L'Article 10 exige une gouvernance stricte des données pour prévenir les biais et garantir un fonctionnement fiable."
+        case 'E5.N9.Q9.B':
+          return "L'Article 72 impose une surveillance après commercialisation pour évaluer en continu la conformité des systèmes d'IA déployés."
+        default:
+          return null
+      }
+    }
+    if (isV3ShortTransparence) {
+      switch (opt.code) {
+        case 'E6.N10.TRANSPARENCY_PACK.INTERACTION':
+        case 'E6.N10.TRANSPARENCY_PACK.A':
+          return V3_SHORT_TRANSPARENCE_UI_ROWS[0].tooltip
+        case 'E6.N10.TRANSPARENCY_PACK.CONTENT':
+          return V3_SHORT_TRANSPARENCE_UI_ROWS[1].tooltip
+        default:
+          break
+      }
+    }
+    return null
+  }
+
+  const getOptionDisplayLabel = (opt: QuestionOption): string => {
+    if (isV3ShortTransparence) {
+      if (
+        opt.code === 'E6.N10.TRANSPARENCY_PACK.INTERACTION' ||
+        opt.code === 'E6.N10.TRANSPARENCY_PACK.CONTENT'
+      ) {
+        return opt.label
+      }
+    }
+    if (!isV3ShortUsage) return opt.label
+    switch (opt.code) {
+      case 'E5.N9.Q8.B':
+        return "Désignation d'un responsable humain pour le contrôle"
+      case 'E5.N9.Q3.A':
+        return 'Définition et stockage des instructions systèmes / prompts'
+      case 'E5.N9.Q4.A':
+        return "Réalisation d'une documentation technique"
+      case 'E5.N9.Q6.B':
+        return 'Procédures de vérification de la qualité des données'
+      case 'E5.N9.Q9.B':
+        return 'Plan de surveillance continue'
+      default:
+        return opt.label
+    }
+  }
+
   return (
     <div
       data-v3-short-path-stage={question.id}
@@ -77,30 +195,133 @@ export function V3ShortPathStageQuestion({
     >
       <h2 className="text-2xl font-bold mb-6 text-gray-900">{heading}</h2>
       <div className="p-6 border border-gray-200 rounded-lg shadow-sm bg-white">
-        <p className="text-sm text-gray-600 leading-relaxed mb-5">{question.question}</p>
+        {isV3ShortEntreprise ? (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              Quelles bonnes pratiques d&apos;encadrement de l&apos;IA sont actuellement en place ?
+            </h3>
+            <p className="text-sm text-gray-500">
+              Cochez les éléments déjà effectifs. Laissez vide si la pratique n&apos;est pas encore déployée.
+            </p>
+          </div>
+        ) : null}
+        {isV3ShortUsage ? (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              Quelles bonnes pratiques d&apos;encadrement sont appliquées à ce cas d&apos;usage spécifique ?
+            </h3>
+            <p className="text-sm text-gray-500">
+              Cochez les éléments déjà effectifs. Laissez vide si la pratique n&apos;est pas encore déployée.
+            </p>
+          </div>
+        ) : null}
+        {isV3ShortTransparence ? (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              Comment gérez-vous la transparence de ce système d&apos;IA envers les utilisateurs ?
+            </h3>
+            <p className="text-sm text-gray-500">
+              Cochez les éléments déjà effectifs. Laissez vide si la pratique n&apos;est pas encore déployée.
+            </p>
+          </div>
+        ) : null}
+        {!isV3ShortEntreprise && !isV3ShortUsage && !isV3ShortTransparence ? (
+          <p className="text-sm text-gray-600 leading-relaxed mb-6">{question.question}</p>
+        ) : null}
         <div className="space-y-3 mb-6">
-          {question.options.map((opt) => (
-            <label key={opt.code} className="flex items-start gap-3 cursor-pointer sm:items-center">
+          {isV3ShortTransparence && question.options.length === 1 ? (
+            <label className="flex items-start gap-3 cursor-pointer sm:items-start">
               <input
                 type="checkbox"
-                checked={selectedCodes.includes(opt.code)}
-                onChange={() => toggleCode(opt.code)}
+                checked={selectedCodes.includes(question.options[0].code)}
+                onChange={() => toggleCode(question.options[0].code)}
                 disabled={isReadOnly}
                 className="mt-1 sm:mt-0 form-checkbox h-5 w-5 text-[#0080A3] rounded border-gray-300 shrink-0"
               />
-              <span className="text-gray-900 leading-relaxed">{opt.label}</span>
+              <div className="min-w-0 flex-1 space-y-3 text-gray-900 leading-relaxed">
+                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-md px-3 py-2">
+                  Données : une seule option est configurée pour cette étape. Les deux volets juridiques (Art. 50)
+                  sont regroupés ci-dessous ; pour deux réponses distinctes en base, ajoutez une seconde option dans le
+                  JSON (ex. <code className="font-mono text-[11px]">questions-with-scores.json</code>) et synchronisez
+                  le scoring si nécessaire.
+                </p>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span>{V3_SHORT_TRANSPARENCE_UI_ROWS[0].label}</span>
+                  <V3ShortLegalInfoButton
+                    tooltipId={`v3-short-${question.id}-transp-row-0`}
+                    tooltipText={V3_SHORT_TRANSPARENCE_UI_ROWS[0].tooltip}
+                    ariaTopic={V3_SHORT_TRANSPARENCE_UI_ROWS[0].label}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span>{V3_SHORT_TRANSPARENCE_UI_ROWS[1].label}</span>
+                  <V3ShortLegalInfoButton
+                    tooltipId={`v3-short-${question.id}-transp-row-1`}
+                    tooltipText={V3_SHORT_TRANSPARENCE_UI_ROWS[1].tooltip}
+                    ariaTopic={V3_SHORT_TRANSPARENCE_UI_ROWS[1].label}
+                  />
+                </div>
+              </div>
             </label>
-          ))}
+          ) : (
+            question.options.map((opt) => {
+              const tooltipText = getOptionLegalTooltip(opt)
+              const displayLabel = getOptionDisplayLabel(opt)
+              const tooltipId = `v3-short-${question.id}-opt-${opt.code}-tooltip`
+
+              return (
+                <label key={opt.code} className="flex items-start gap-3 cursor-pointer sm:items-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedCodes.includes(opt.code)}
+                    onChange={() => toggleCode(opt.code)}
+                    disabled={isReadOnly}
+                    className="mt-1 sm:mt-0 form-checkbox h-5 w-5 text-[#0080A3] rounded border-gray-300 shrink-0"
+                  />
+                  <span className="text-gray-900 leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span>{displayLabel}</span>
+                    {tooltipText ? (
+                      <V3ShortLegalInfoButton
+                        tooltipId={tooltipId}
+                        tooltipText={tooltipText}
+                        ariaTopic={displayLabel}
+                      />
+                    ) : null}
+                  </span>
+                </label>
+              )
+            })
+          )}
         </div>
-        <button
-          type="button"
-          disabled={isReadOnly || insufficientInfoBusy}
-          onClick={() => void submitInsufficientInfo()}
-          className="text-sm text-gray-500 hover:text-gray-800 underline underline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Je ne sais pas / Passer (Information insuffisante)
-        </button>
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={() => void submitInsufficientInfo()}
+            disabled={isReadOnly || insufficientInfoBusy}
+            className="w-full flex items-center justify-between p-4 border border-gray-200 bg-gray-50 rounded-lg text-left hover:bg-blue-50 hover:border-[#0080A3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Déclarer que l'information n'est pas disponible et passer à l'étape suivante"
+          >
+            <span className="text-sm font-medium text-gray-700 group-hover:text-[#0080A3]">
+              Information non disponible à ce stade
+            </span>
+            <span className="text-sm text-gray-500 group-hover:text-[#0080A3]" aria-hidden="true">
+              Passer l&apos;étape &rarr;
+            </span>
+          </button>
+        </div>
       </div>
+      {isV3ShortTransparence ? (
+        <div className="mt-8 p-4 bg-blue-50/50 border border-blue-100 rounded-lg flex items-start gap-3">
+          <ShieldCheck className="w-5 h-5 text-[#0080A3] shrink-0 mt-0.5" aria-hidden="true" />
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900">Évaluation terminée</h4>
+            <p className="text-sm text-gray-600 mt-1">
+              En validant cette étape, vos réponses seront enregistrées de manière sécurisée. Notre moteur calculera
+              votre niveau de risque AI Act et vous pourrez consulter votre rapport sur le tableau de bord.
+            </p>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

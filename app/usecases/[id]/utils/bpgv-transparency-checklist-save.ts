@@ -5,6 +5,33 @@ import {
 import type { QuestionnaireVersion } from '@/lib/questionnaire-version'
 import { isV3ShortSyntheticQuestionId, V3_SHORT_MINIPACK_ID } from './questionnaire-v3-graph'
 
+/** Parcours court V3 : option « interaction » → legacy E6.N10.Q1.A */
+export const E6_TRANSPARENCY_PACK_INTERACTION_CODE = 'E6.N10.TRANSPARENCY_PACK.INTERACTION' as const
+/** Parcours court V3 : option « contenu » → legacy E6.N10.Q2.A */
+export const E6_TRANSPARENCY_PACK_CONTENT_CODE = 'E6.N10.TRANSPARENCY_PACK.CONTENT' as const
+/** @deprecated Ancienne option unique (les deux volets) ; conservée pour données historiques. */
+export const E6_TRANSPARENCY_PACK_LEGACY_SINGLE_CODE = 'E6.N10.TRANSPARENCY_PACK.A' as const
+
+/** @deprecated Utiliser les constantes INTERACTION / CONTENT / LEGACY_SINGLE. */
+export const E6_TRANSPARENCY_PACK_YES_CODE = E6_TRANSPARENCY_PACK_LEGACY_SINGLE_CODE
+
+/**
+ * Transforme les codes synthétiques du pack transparence en codes d’options réels attendus
+ * par le batch `E6.N10._CHECKLIST`, le calculateur et l’edge function (`E6.N10.Q1` / `Q2`).
+ */
+export function expandE6TransparencyPackToLegacyOptionCodes(code: string): string[] {
+  if (code === E6_TRANSPARENCY_PACK_LEGACY_SINGLE_CODE) {
+    return ['E6.N10.Q1.A', 'E6.N10.Q2.A']
+  }
+  if (code === E6_TRANSPARENCY_PACK_INTERACTION_CODE) {
+    return ['E6.N10.Q1.A']
+  }
+  if (code === E6_TRANSPARENCY_PACK_CONTENT_CODE) {
+    return ['E6.N10.Q2.A']
+  }
+  return [code]
+}
+
 /** Codes d’options E5.N9.* (hors ligne sentinelle) présents dans `answers`. */
 export function collectE5DeclaredOptionCodes(answers: Record<string, unknown>): string[] {
   const out = new Set<string>()
@@ -30,20 +57,33 @@ export function collectE5DeclaredOptionCodes(answers: Record<string, unknown>): 
 /** Codes d’options E6.N10.* (hors sentinelle). */
 export function collectE6DeclaredOptionCodes(answers: Record<string, unknown>): string[] {
   const out = new Set<string>()
+  const addE6 = (code: string) => {
+    if (!code.startsWith('E6.N10.')) return
+    for (const expanded of expandE6TransparencyPackToLegacyOptionCodes(code)) {
+      if (expanded.startsWith('E6.N10.')) out.add(expanded)
+    }
+  }
   for (const [qid, raw] of Object.entries(answers)) {
     if (!qid.startsWith('E6.N10.') || qid.includes('_CHECKLIST')) continue
     if (!/^E6\.N10\.Q/.test(qid)) continue
     for (const code of extractOptionCodesFromValue(raw)) {
-      if (code.startsWith('E6.N10.')) out.add(code)
+      addE6(code)
     }
   }
   for (const code of extractOptionCodesFromValue(answers[V3_SHORT_MINIPACK_ID])) {
-    if (code.startsWith('E6.N10.')) out.add(code)
+    addE6(code)
   }
   for (const [k, raw] of Object.entries(answers)) {
     if (!isV3ShortSyntheticQuestionId(k)) continue
     for (const code of extractOptionCodesFromValue(raw)) {
-      if (/^E6\.N10\.Q/.test(code)) out.add(code)
+      if (
+        code === E6_TRANSPARENCY_PACK_LEGACY_SINGLE_CODE ||
+        code === E6_TRANSPARENCY_PACK_INTERACTION_CODE ||
+        code === E6_TRANSPARENCY_PACK_CONTENT_CODE ||
+        /^E6\.N10\.Q/.test(code)
+      ) {
+        addE6(code)
+      }
     }
   }
   return [...out]

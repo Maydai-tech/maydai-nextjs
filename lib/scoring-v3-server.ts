@@ -34,6 +34,17 @@ export function buildV3ScoringContextFromDbResponses(
   const scoringActiveQuestionCodes = new Set(
     responses.map(r => r.question_code).filter(code => pathSet.has(code))
   )
+  /**
+   * Parcours court : le graphe s’arrête sur `V3_SHORT_TRANSPARENCE` (pas E6.N10.Q1/Q2),
+   * mais les réponses dérivées E6 sont persistées pour le legacy / slots.
+   * Les inclure dans le périmètre de scoring évite d’ignorer les malus transparence.
+   */
+  if (questionnairePathMode === 'short') {
+    const rowCodes = new Set(responses.map(r => r.question_code))
+    for (const qid of ['E6.N10.Q1', 'E6.N10.Q2'] as const) {
+      if (rowCodes.has(qid)) scoringActiveQuestionCodes.add(qid)
+    }
+  }
   const meta = computeV3UsecaseQuestionnaireFields(answers, systemType, questionnairePathMode)
   const categoryMaxScores =
     calculateMaxCategoryScoresForActiveQuestionCodes(scoringActiveQuestionCodes)

@@ -393,11 +393,18 @@ export async function POST(
     
     const nowIso = new Date().toISOString();
 
+    const roundedScoreBase = Math.round(Number(finalResult.scores.score_base));
+    const roundedScoreFinal = Math.round(Number(finalResult.scores.score_final));
+    const roundedScoreModel =
+      finalResult.scores.score_model == null
+        ? null
+        : Math.round(Number(finalResult.scores.score_model));
+
     // Même persistance `score_*` / risque pour tous les parcours (V3 court inclus). Le court conserve en plus les horodatages/trace « short path ».
     const updateData: Record<string, unknown> = {
-      score_base: finalResult.scores.score_base,
-      score_model: finalResult.scores.score_model,
-      score_final: finalResult.scores.score_final,
+      score_base: roundedScoreBase,
+      score_model: roundedScoreModel,
+      score_final: roundedScoreFinal,
       is_eliminated: finalResult.scores.is_eliminated,
       elimination_reason: finalResult.scores.elimination_reason,
       risk_level: riskLevel,
@@ -408,7 +415,7 @@ export async function POST(
     };
 
     if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && requestPathMode === 'short') {
-      updateData.short_path_initial_score = finalResult.scores.score_final;
+      updateData.short_path_initial_score = roundedScoreFinal;
       updateData.short_path_completed_at = nowIso;
     }
 
@@ -454,7 +461,7 @@ export async function POST(
         questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && requestPathMode === 'short'
           ? {
               path_mode: 'short',
-              short_path_initial_score: finalResult.scores.score_final,
+              short_path_initial_score: roundedScoreFinal,
               previous_risk_level: previousRiskLevel,
               new_risk_level: riskLevel,
             }
