@@ -10,7 +10,8 @@ interface ProcessingStep {
 
 interface ProcessingAnimationProps {
   isVisible: boolean
-  onComplete: () => void
+  /** Si absent, l’animation peut se terminer visuellement sans callback parent (ex. fin pilotée par `useEvaluation`). */
+  onComplete?: () => void
 }
 
 const PROCESSING_STEPS: ProcessingStep[] = [
@@ -111,7 +112,7 @@ export function ProcessingAnimation({ isVisible, onComplete }: ProcessingAnimati
         // Toutes les étapes sont terminées
         setIsCompleted(true)
         setTimeout(() => {
-          onComplete()
+          onComplete?.()
         }, 1000)
       }
     }

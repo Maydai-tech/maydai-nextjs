@@ -1109,7 +1109,16 @@
     "type": "tags",
     "required": false,
     "options": [
-      { "code": "E6.N10.TRANSPARENCY_PACK.A", "label": "Marque de transparence / Information utilisateur", "score_impact": 0 }
+      {
+        "code": "E6.N10.TRANSPARENCY_PACK.INTERACTION",
+        "label": "Les utilisateurs sont informés qu'ils interagissent avec un système d'IA (ex: chatbot).",
+        "score_impact": 0
+      },
+      {
+        "code": "E6.N10.TRANSPARENCY_PACK.CONTENT",
+        "label": "Les contenus générés ou manipulés (textes, images, audios) sont marqués de manière lisible par la machine.",
+        "score_impact": 0
+      }
     ]
   },
   "E5.N9.Q1": {

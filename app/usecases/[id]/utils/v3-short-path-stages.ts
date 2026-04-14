@@ -28,11 +28,18 @@ export function declarativeAnswersAfterUsageStage(selection: string[]): Record<s
   }
 }
 
-/** Dernière étape transparence : une case « marque / information » couvre E6.Q1 et E6.Q2 (Oui si cochée). */
+/**
+ * Dernière étape transparence : deux cases (interaction / marquage contenu), alignées E6.N10.Q1 et Q2.
+ * L’ancienne option unique `E6.N10.TRANSPARENCY_PACK.A` reste acceptée pour les réponses déjà enregistrées.
+ */
 export function declarativeAnswersAfterTransparenceStage(selection: string[]): Record<string, string> {
-  const ok = selection.includes('E6.N10.TRANSPARENCY_PACK.A')
+  const s = new Set(selection)
+  const q1Yes =
+    s.has('E6.N10.TRANSPARENCY_PACK.INTERACTION') || s.has('E6.N10.TRANSPARENCY_PACK.A')
+  const q2Yes =
+    s.has('E6.N10.TRANSPARENCY_PACK.CONTENT') || s.has('E6.N10.TRANSPARENCY_PACK.A')
   return {
-    'E6.N10.Q1': ok ? 'E6.N10.Q1.A' : 'E6.N10.Q1.B',
-    'E6.N10.Q2': ok ? 'E6.N10.Q2.A' : 'E6.N10.Q2.B',
+    'E6.N10.Q1': q1Yes ? 'E6.N10.Q1.A' : 'E6.N10.Q1.B',
+    'E6.N10.Q2': q2Yes ? 'E6.N10.Q2.A' : 'E6.N10.Q2.B',
   }
 }

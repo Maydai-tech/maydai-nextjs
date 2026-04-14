@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { useRouter, useParams, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useUseCaseData } from './hooks/useUseCaseData'
 import { useUseCaseNavigation } from './utils/navigation'
@@ -29,14 +28,6 @@ import {
   getNextStepsRecommendationsPhase,
   canRequestAiReportGeneration,
 } from './utils/nextsteps-ux-state'
-import { useCaseRoutes, withEvaluationEntree } from './utils/routes'
-import { DECLARATION_PROOF_FLOW_COPY } from './utils/declaration-proof-flow-copy'
-import {
-  getV3ShortPathFunnelCopy,
-  resolveV3ShortPathFunnelOutcomeKey,
-} from './utils/v3-short-path-funnel-context'
-import { trackV3ShortPathCta, v3ShortPathSystemTypeBucket } from '@/lib/v3-short-path-analytics'
-import { showV3DualPathEntrypoints } from './utils/v3-dual-path-ui'
 
 interface UseCaseOverviewSectionsProps {
   useCase: UseCase
@@ -47,8 +38,6 @@ interface UseCaseOverviewSectionsProps {
   session: { access_token?: string } | null
   generatingReport: boolean
   handleGenerateReport: () => void | Promise<void>
-  /** Valeur brute du paramètre d’URL `entree` (analytics / message d’orientation). */
-  urlEntrySurface: string | null
 }
 
 function UseCaseOverviewSections({
@@ -60,7 +49,6 @@ function UseCaseOverviewSections({
   session,
   generatingReport,
   handleGenerateReport,
-  urlEntrySurface,
 }: UseCaseOverviewSectionsProps) {
   const { riskLevel, classificationStatus, loading: riskLoading, error: riskError } = useUseCaseRisk()
   const classificationForNextSteps = classificationStatus ?? useCase.classification_status ?? null
@@ -117,129 +105,8 @@ function UseCaseOverviewSections({
         ? "L'évaluation doit être terminée avant de pouvoir générer le plan d'action."
         : undefined
 
-  const showV3DualPath = showV3DualPathEntrypoints(useCase.questionnaire_version)
-  const isCaseCompleted = String(useCase.status || '').toLowerCase() === 'completed'
-
-  const v3SystemBucket = useMemo(
-    () => v3ShortPathSystemTypeBucket(useCase.system_type),
-    [useCase.system_type]
-  )
-
-  const synthesisFunnelKey = useMemo(
-    () =>
-      showV3DualPath
-        ? resolveV3ShortPathFunnelOutcomeKey(
-            classificationForNextSteps ?? null,
-            riskLevel ?? useCase.risk_level
-          )
-        : null,
-    [showV3DualPath, classificationForNextSteps, riskLevel, useCase.risk_level]
-  )
-
-  const synthesisFunnel = useMemo(
-    () => (synthesisFunnelKey ? getV3ShortPathFunnelCopy(synthesisFunnelKey) : null),
-    [synthesisFunnelKey]
-  )
-
   return (
     <div className="space-y-6 sm:space-y-8">
-      {showV3DualPath && (
-        <div className="rounded-xl border border-teal-200 bg-teal-50/90 p-4 sm:p-5 text-sm text-gray-800 shadow-sm">
-          {urlEntrySurface === 'dashboard_card' && (
-            <p className="text-sm text-gray-800 leading-relaxed mb-3 pb-3 border-b border-teal-200/80">
-              {DECLARATION_PROOF_FLOW_COPY.synthesisV3DashboardEntryBanner}
-            </p>
-          )}
-          <p className="font-semibold text-gray-900 mb-1">
-            {isCaseCompleted
-              ? DECLARATION_PROOF_FLOW_COPY.synthesisV3DualPathTitleReeval
-              : DECLARATION_PROOF_FLOW_COPY.synthesisV3DualPathTitle}
-          </p>
-          {isCaseCompleted ? (
-            <p className="text-xs text-gray-800 leading-relaxed mb-3 p-3 rounded-lg border border-teal-300/80 bg-white/70">
-              {DECLARATION_PROOF_FLOW_COPY.synthesisV3CompletedReevalBanner}
-            </p>
-          ) : null}
-          {useCase.short_path_completed_at && isCaseCompleted ? (
-            <p className="text-xs font-medium text-teal-900 bg-teal-100/80 border border-teal-200 rounded-lg px-3 py-2 mb-2">
-              {DECLARATION_PROOF_FLOW_COPY.synthesisV3ShortPathDoneCompletedHint}
-            </p>
-          ) : null}
-          <p className="leading-relaxed mb-2">{DECLARATION_PROOF_FLOW_COPY.synthesisV3DualPathLead}</p>
-          <p className="text-xs text-gray-600 leading-relaxed mb-3">{DECLARATION_PROOF_FLOW_COPY.synthesisV3ShortCtaLead}</p>
-          <p className="text-xs text-gray-700 leading-relaxed mb-4 border-t border-teal-100/80 pt-3">
-            <span className="font-semibold text-gray-900">{DECLARATION_PROOF_FLOW_COPY.filRougeTitle}</span>
-            {' — '}
-            {DECLARATION_PROOF_FLOW_COPY.filRougeBody}
-          </p>
-          <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Prochain meilleur pas</p>
-          <p className="text-xs text-gray-600 leading-relaxed mb-2">
-            {synthesisFunnel?.synthesisNextBestLine ?? (
-              <>
-                <span className="font-semibold text-gray-800">Parcours complet</span> — analyse détaillée, bloc E5,
-                score fin, rapport et todo.{' '}
-                <span className="font-semibold text-gray-800">Parcours court</span> — même questionnaire et moteur, avec
-                un périmètre de questions actives réduit pour une première passe plus rapide.
-              </>
-            )}
-          </p>
-          <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 mb-3">
-            <Link
-              href={withEvaluationEntree(useCaseRoutes.evaluation(useCaseId), 'overview_v3_card_long')}
-              onClick={() =>
-                trackV3ShortPathCta({
-                  usecase_id: useCaseId,
-                  system_type_bucket: v3SystemBucket,
-                  cta: 'evaluation_long',
-                  cta_placement: 'overview_v3_card',
-                  ...(synthesisFunnelKey && { outcome_funnel_key: synthesisFunnelKey }),
-                })
-              }
-              className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-[#0080A3] text-white font-semibold text-sm hover:bg-[#006280] transition-colors shadow-sm order-1"
-            >
-              {isCaseCompleted
-                ? 'Affiner avec le parcours long'
-                : synthesisFunnel?.synthesisLongCtaLabel ?? 'Parcours complet — reprendre le questionnaire'}
-            </Link>
-            <Link
-              href={withEvaluationEntree(useCaseRoutes.evaluationShort(useCaseId), 'overview_v3_card_short')}
-              onClick={() =>
-                trackV3ShortPathCta({
-                  usecase_id: useCaseId,
-                  system_type_bucket: v3SystemBucket,
-                  cta: 'evaluation_short',
-                  cta_placement: 'overview_v3_card',
-                  ...(synthesisFunnelKey && { outcome_funnel_key: synthesisFunnelKey }),
-                })
-              }
-              className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-800 font-medium text-sm hover:bg-white/90 transition-colors order-2"
-            >
-              {isCaseCompleted
-                ? 'Réévaluer sur parcours court'
-                : synthesisFunnel?.synthesisShortCtaLabel ?? 'Pré-diagnostic rapide (parcours court)'}
-            </Link>
-          </div>
-          <p className="text-xs text-gray-600 leading-relaxed mb-4">
-            Après le court, vos réponses restent dans le même questionnaire : ouvrez le parcours complet pour la suite
-            (E5, score détaillé, rapport).
-          </p>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Preuves & suivi</p>
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 text-xs font-medium text-[#0080A3]">
-            <Link
-              href={`/dashboard/${useCase.company_id}/dossiers/${useCaseId}`}
-              className="underline-offset-2 hover:underline"
-            >
-              {DECLARATION_PROOF_FLOW_COPY.linkLabelDossierCase}
-            </Link>
-            <Link
-              href={`/dashboard/${useCase.company_id}/todo-list`}
-              className="underline-offset-2 hover:underline"
-            >
-              {DECLARATION_PROOF_FLOW_COPY.linkLabelTodo}
-            </Link>
-          </div>
-        </div>
-      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         <UseCaseDetails useCase={useCase} onUpdateUseCase={updateUseCase} updating={updating} />
         <UseCaseSidebar useCase={useCase} onUpdateUseCase={updateUseCase} isRecalculating={isRecalculating} />
@@ -408,40 +275,6 @@ function UseCaseOverviewSections({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <h2 className="text-2xl font-semibold text-gray-900">Recommandations et plan d&apos;action</h2>
             <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:justify-end">
-              {showV3DualPath && (
-                <>
-                  <Link
-                    href={withEvaluationEntree(useCaseRoutes.evaluation(useCaseId), 'synthesis_v3_refine_long')}
-                    onClick={() =>
-                      trackV3ShortPathCta({
-                        usecase_id: useCaseId,
-                        system_type_bucket: v3SystemBucket,
-                        cta: 'evaluation_long',
-                        cta_placement: 'synthesis_v3_refine_long',
-                        ...(synthesisFunnelKey && { outcome_funnel_key: synthesisFunnelKey }),
-                      })
-                    }
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] shadow-sm whitespace-nowrap"
-                  >
-                    Affiner avec le parcours long
-                  </Link>
-                  <Link
-                    href={withEvaluationEntree(useCaseRoutes.evaluationShort(useCaseId), 'synthesis_v3_reeval_short')}
-                    onClick={() =>
-                      trackV3ShortPathCta({
-                        usecase_id: useCaseId,
-                        system_type_bucket: v3SystemBucket,
-                        cta: 'evaluation_short',
-                        cta_placement: 'synthesis_v3_reeval_short',
-                        ...(synthesisFunnelKey && { outcome_funnel_key: synthesisFunnelKey }),
-                      })
-                    }
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-800 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 whitespace-nowrap"
-                  >
-                    Réévaluer sur parcours court
-                  </Link>
-                </>
-              )}
               <button
                 onClick={handleGenerateReport}
                 disabled={generatingReport || !canClickGenerateReport}
@@ -649,11 +482,9 @@ export default function UseCaseDetailPage() {
   const { user, loading, session } = useAuth()
   const router = useRouter()
   const params = useParams()
-  const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
 
   const useCaseId = params.id as string
-  const urlEntrySurface = searchParams.get('entree')
   // Récupération des données du use case avec état de recalcul
   const { useCase, progress, loading: loadingData, error, updateUseCase, updating, isRecalculating } = useUseCaseData(useCaseId)
   const { goToCompanies } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
@@ -748,7 +579,6 @@ export default function UseCaseDetailPage() {
         session={session}
         generatingReport={generatingReport}
         handleGenerateReport={handleGenerateReport}
-        urlEntrySurface={urlEntrySurface}
       />
     </UseCaseLayout>
   )

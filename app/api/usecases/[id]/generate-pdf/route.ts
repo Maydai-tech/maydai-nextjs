@@ -14,6 +14,47 @@ import {
   QUESTIONNAIRE_VERSION_V3,
   normalizeQuestionnaireVersion,
 } from '@/lib/questionnaire-version'
+import { buildV3ScoringContextFromDbResponses } from '@/lib/scoring-v3-server'
+
+function stringSetsEqual(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) return false
+  for (const x of a) {
+    if (!b.has(x)) return false
+  }
+  return true
+}
+
+/**
+ * Aligne le calcul PDF sur le dernier recalcul serveur : les `active_question_codes` stockés
+ * correspondent au graphe court ou long (évite le défaut « long » pour le parcours court V3).
+ */
+function inferV3PdfQuestionnairePathMode(
+  responses: { question_code?: string }[] | null | undefined,
+  systemType: string | null | undefined,
+  activeCodesRaw: unknown
+): 'long' | 'short' {
+  const stored = new Set(
+    Array.isArray(activeCodesRaw)
+      ? activeCodesRaw.filter((c): c is string => typeof c === 'string' && c.length > 0)
+      : []
+  )
+  if (stored.size === 0) {
+    return 'long'
+  }
+  const rows = responses ?? []
+  const shortCtx = buildV3ScoringContextFromDbResponses(QUESTIONNAIRE_VERSION_V3, rows as any, systemType, 'short')
+  const longCtx = buildV3ScoringContextFromDbResponses(QUESTIONNAIRE_VERSION_V3, rows as any, systemType, 'long')
+  if (!shortCtx || !longCtx) {
+    return 'long'
+  }
+  if (stringSetsEqual(stored, new Set(shortCtx.active_question_codes))) {
+    return 'short'
+  }
+  if (stringSetsEqual(stored, new Set(longCtx.active_question_codes))) {
+    return 'long'
+  }
+  return 'long'
+}
 
 function rankDocStatus(status: string | null | undefined): number {
   if (status === 'validated') return 3
@@ -198,9 +239,20 @@ export async function GET(
     let fullScoreData
     try {
       const { calculateScore } = await import('@/app/usecases/[id]/utils/score-calculator')
+      const v3PathModeForPdf =
+        pdfQuestionnaireVersion === QUESTIONNAIRE_VERSION_V3
+          ? inferV3PdfQuestionnairePathMode(
+              responses || [],
+              (useCase as { system_type?: string | null }).system_type ?? null,
+              (useCase as { active_question_codes?: unknown }).active_question_codes
+            )
+          : 'long'
       fullScoreData = await calculateScore(useCaseId, responses || [], supabase, {
         questionnaireVersion: useCase.questionnaire_version,
-        systemType: (useCase as { system_type?: string | null }).system_type ?? null
+        systemType: (useCase as { system_type?: string | null }).system_type ?? null,
+        ...(pdfQuestionnaireVersion === QUESTIONNAIRE_VERSION_V3
+          ? { questionnairePathMode: v3PathModeForPdf }
+          : {}),
       })
       console.log('✅ Score calculé avec succès:', fullScoreData)
     } catch (scoreError) {

@@ -20,10 +20,7 @@ import { getScoreStyle } from '@/lib/score-styles'
 import { usePDFExport } from '../../hooks/usePDFExport'
 import { V3_IMPOSSIBLE_MATURITY_SCORES_DISCLAIMER } from '@/lib/classification-risk-display'
 import { DECLARATION_PROOF_FLOW_COPY } from '../../utils/declaration-proof-flow-copy'
-import {
-  getV3ShortPathFunnelCopy,
-  resolveV3ShortPathFunnelOutcomeKey,
-} from '../../utils/v3-short-path-funnel-context'
+import { resolveV3ShortPathFunnelOutcomeKey } from '../../utils/v3-short-path-funnel-context'
 import { trackV3ShortPathCta, v3ShortPathSystemTypeBucket } from '@/lib/v3-short-path-analytics'
 import { showV3DualPathEntrypoints } from '../../utils/v3-dual-path-ui'
 import { useUseCaseScore } from '../../hooks/useUseCaseScore'
@@ -164,7 +161,6 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const [isSavingDeploymentDate, setIsSavingDeploymentDate] = useState(false)
   const { goToEvaluation } = useUseCaseNavigation(useCase.id, useCase.company_id)
   const showV3DualPath = showV3DualPathEntrypoints(useCase.questionnaire_version)
-  const isCaseCompleted = String(useCase.status || '').toLowerCase() === 'completed'
   const { riskLevel, classificationStatus, loading: riskLoading, error: riskError } = useUseCaseRisk()
   const headerFunnelKey = useMemo(
     () =>
@@ -172,10 +168,6 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         ? resolveV3ShortPathFunnelOutcomeKey(classificationStatus, riskLevel)
         : null,
     [showV3DualPath, classificationStatus, riskLevel]
-  )
-  const headerFunnelCopy = useMemo(
-    () => (headerFunnelKey ? getV3ShortPathFunnelCopy(headerFunnelKey) : null),
-    [headerFunnelKey]
   )
   const { isGenerating, error: pdfError, successMessage: pdfSuccessMessage, generatePDF } = usePDFExport(useCase.id)
   const pdfBlocked =
@@ -638,28 +630,10 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                     className="w-full inline-flex items-center justify-center gap-2 bg-[#0080a3] text-white px-4 py-2.5 rounded-lg hover:bg-[#006280] text-sm font-semibold shadow-sm"
                   >
                     <RefreshCcw className="h-4 w-4 shrink-0" aria-hidden />
-                    Affiner avec le parcours long
+                    Passer au Parcours Complet
                   </Link>
-                  <Link
-                    href={withEvaluationEntree(useCaseRoutes.evaluationShort(useCase.id), 'header_v3_reeval_short')}
-                    onClick={() =>
-                      trackV3ShortPathCta({
-                        usecase_id: useCase.id,
-                        system_type_bucket: v3ShortPathSystemTypeBucket(useCase.system_type),
-                        cta: 'evaluation_short',
-                        cta_placement: 'header_v3_reeval_short',
-                        ...(headerFunnelKey && { outcome_funnel_key: headerFunnelKey }),
-                      })
-                    }
-                    className="w-full inline-flex items-center justify-center gap-2 border border-gray-300 bg-white text-gray-800 px-4 py-2.5 rounded-lg hover:bg-gray-50 text-sm font-medium"
-                  >
-                    Réévaluer sur parcours court
-                  </Link>
-                  <p className="text-xs text-gray-600 leading-relaxed pt-1">
-                    {headerFunnelCopy?.headerResumeHint ??
-                      (isCaseCompleted
-                        ? DECLARATION_PROOF_FLOW_COPY.headerV3CompletedResumeHint
-                        : DECLARATION_PROOF_FLOW_COPY.headerV3ResumeEvaluationHint)}
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    Accédez à l&apos;analyse détaillée et générez votre documentation de conformité.
                   </p>
                 </>
               ) : (

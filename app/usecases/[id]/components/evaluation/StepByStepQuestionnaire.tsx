@@ -129,7 +129,6 @@ export function StepByStepQuestionnaire({
     handleNext,          // Fonction pour passer à la question suivante
     handlePrevious,      // Fonction pour revenir à la question précédente
     handleSubmit,        // Fonction pour soumettre le questionnaire complet
-    handleProcessingComplete // Fonction appelée à la fin du traitement
   } = useEvaluation({
     usecaseId: useCase.id,
     companyId: useCase.company_id,
@@ -715,10 +714,7 @@ export function StepByStepQuestionnaire({
       </div>
 
       {/* Animation de traitement (calcul du score et génération du rapport) */}
-      <ProcessingAnimation
-        isVisible={showProcessingAnimation}
-        onComplete={handleProcessingComplete}
-      />
+      <ProcessingAnimation isVisible={showProcessingAnimation} />
 
       {/* Modal de choix du scope d'invitation */}
       <InviteScopeChoiceModal
