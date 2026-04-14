@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { UseCase, Progress } from '../../types/usecase'
@@ -6,7 +6,21 @@ import { ComplAIModel } from '@/lib/supabase'
 import { getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
 import { useCaseRoutes, withEvaluationEntree } from '../../utils/routes'
 import { useUseCaseNavigation } from '../../utils/navigation'
-import { ArrowLeft, CheckCircle, Clock, Edit3, RefreshCcw, AlertTriangle, Trash2, Download, UserPlus, Calendar, History } from 'lucide-react'
+import {
+  ArrowLeft,
+  CheckCircle,
+  Clock,
+  Edit3,
+  RefreshCcw,
+  AlertTriangle,
+  Trash2,
+  Download,
+  UserPlus,
+  Calendar,
+  History,
+  Zap,
+  MoreVertical,
+} from 'lucide-react'
 import Image from 'next/image'
 import ModelSelectorModal from '../ModelSelectorModal'
 import DeleteConfirmationModal from '../DeleteConfirmationModal'
@@ -19,7 +33,6 @@ import { getProviderIcon } from '@/lib/provider-icons'
 import { getScoreStyle } from '@/lib/score-styles'
 import { usePDFExport } from '../../hooks/usePDFExport'
 import { V3_IMPOSSIBLE_MATURITY_SCORES_DISCLAIMER } from '@/lib/classification-risk-display'
-import { DECLARATION_PROOF_FLOW_COPY } from '../../utils/declaration-proof-flow-copy'
 import { resolveV3ShortPathFunnelOutcomeKey } from '../../utils/v3-short-path-funnel-context'
 import { trackV3ShortPathCta, v3ShortPathSystemTypeBucket } from '@/lib/v3-short-path-analytics'
 import { showV3DualPathEntrypoints } from '../../utils/v3-dual-path-ui'
@@ -53,7 +66,7 @@ const getStatusIcon = (status: string) => {
 // Composant d'affichage du score dans le header
 // Utilise le hook useUseCaseScore pour garantir la synchronisation avec l'API (source de vérité unique)
 function HeaderScore({ useCaseId }: { useCaseId: string }) {
-  const { classificationStatus } = useUseCaseRisk()
+  const { classificationStatus, riskLevel } = useUseCaseRisk()
   // Récupération du score via l'API (même source que le rapport)
   const { score, loading, error } = useUseCaseScore(useCaseId)
 
@@ -123,16 +136,18 @@ function HeaderScore({ useCaseId }: { useCaseId: string }) {
           )}
         </div>
       </div>
-      <a
-        href="#scores-description"
-        className="mt-3 block text-xs text-[#0080A3] hover:text-[#006280] hover:underline focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-1 rounded"
-        onClick={(e) => {
-          e.preventDefault()
-          document.getElementById('scores-description')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }}
-      >
-        Comment est calculé ce score ?
-      </a>
+      {riskLevel !== 'unacceptable' && (
+        <a
+          href="#scores-description"
+          className="mt-3 block text-xs text-[#0080A3] hover:text-[#006280] hover:underline focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-1 rounded"
+          onClick={(e) => {
+            e.preventDefault()
+            document.getElementById('scores-description')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }}
+        >
+          Comment est calculé ce score ?
+        </a>
+      )}
       {score.score_scope === 'short_initial' && score.score_display_hint ? (
         <p className="mt-2 text-[11px] text-gray-600 leading-relaxed">{score.score_display_hint}</p>
       ) : null}
@@ -155,6 +170,19 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [inviteScope, setInviteScope] = useState<'company' | 'registry'>('registry')
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
+  const moreMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isMoreMenuOpen) return
+    const handlePointerDown = (event: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setIsMoreMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [isMoreMenuOpen])
 
   // État pour l'édition de la date de déploiement
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
@@ -352,7 +380,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center mb-6">
         <Link
           href={useCaseRoutes.dashboard(useCase.company_id)}
           className="group inline-flex items-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-gray-50 rounded-lg px-3 py-2 -ml-3"
@@ -360,59 +388,6 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
           <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-0.5 transition-transform duration-200" />
           <span className="text-sm font-medium">Retour au dashboard</span>
         </Link>
-
-        <div className="flex items-center space-x-3">
-          {/* Bouton Inviter un collaborateur - visible uniquement pour les owners */}
-          {isOwner && (
-            <button
-              onClick={handleInviteClick}
-              className="group inline-flex items-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-blue-50 rounded-lg px-3 py-2"
-              title="Inviter un collaborateur"
-            >
-              <UserPlus className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-              <span className="text-sm font-medium">Inviter un collaborateur</span>
-            </button>
-          )}
-
-          {/* Bouton Télécharger PDF */}
-          <button
-            onClick={generatePDF}
-            disabled={isGenerating || pdfBlocked}
-            className="group inline-flex items-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-blue-50 rounded-lg px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            title={pdfButtonTitle}
-          >
-            {isGenerating ? (
-              <RefreshCcw className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-            )}
-            <span className="text-sm font-medium">
-              {isGenerating
-                ? 'Génération PDF…'
-                : pdfBlocked && classificationStatus === 'impossible'
-                  ? 'PDF indisponible'
-                  : 'Télécharger PDF'}
-            </span>
-          </button>
-
-          <button
-            onClick={handleDeleteClick}
-            className="group inline-flex items-center text-gray-500 hover:text-red-600 transition-all duration-200 hover:bg-red-50 rounded-lg px-3 py-2"
-            title="Supprimer le use case"
-          >
-            <Trash2 className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-            <span className="text-sm font-medium">Supprimer</span>
-          </button>
-
-          <button
-            onClick={() => setIsHistoryModalOpen(true)}
-            className="group inline-flex items-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-blue-50 rounded-lg px-3 py-2"
-            title="Voir l'historique des modifications"
-          >
-            <History className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-            <span className="text-sm font-medium">Historique</span>
-          </button>
-        </div>
       </div>
 
       {/* Message d'erreur PDF */}
@@ -450,19 +425,110 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               {useCase.name}
             </h1>
-            <div className="rounded-lg border border-gray-200 bg-slate-50/90 px-3 py-2.5 text-xs text-gray-700 leading-relaxed max-w-3xl">
-              <p className="font-semibold text-gray-900 mb-1">{DECLARATION_PROOF_FLOW_COPY.filRougeTitle}</p>
-              <p className="mb-2">{DECLARATION_PROOF_FLOW_COPY.filRougeBody}</p>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 font-medium text-[#0080A3]">
-                <Link href={`/dashboard/${useCase.company_id}/dossiers/${useCase.id}`} className="hover:underline underline-offset-2">
-                  {DECLARATION_PROOF_FLOW_COPY.linkLabelDossierCase}
-                </Link>
-                <span className="text-gray-300 hidden sm:inline" aria-hidden>
-                  |
-                </span>
-                <Link href={`/dashboard/${useCase.company_id}/todo-list`} className="hover:underline underline-offset-2">
-                  {DECLARATION_PROOF_FLOW_COPY.linkLabelTodo}
-                </Link>
+
+            <div className="flex flex-wrap items-center justify-between gap-4 mt-4 mb-6 border-b border-gray-200 pb-4">
+              <div className="flex flex-wrap items-center gap-3 min-w-0">
+                {showV3DualPath ? (
+                  <Link
+                    href={withEvaluationEntree(useCaseRoutes.evaluation(useCase.id), 'header_v3_refine_long')}
+                    onClick={() =>
+                      trackV3ShortPathCta({
+                        usecase_id: useCase.id,
+                        system_type_bucket: v3ShortPathSystemTypeBucket(useCase.system_type),
+                        cta: 'evaluation_long',
+                        cta_placement: 'header_v3_refine_long',
+                        ...(headerFunnelKey && { outcome_funnel_key: headerFunnelKey }),
+                      })
+                    }
+                    className="inline-flex items-center gap-2 bg-[#0080A3] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#006682] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3]"
+                  >
+                    <Zap className="w-4 h-4 shrink-0" aria-hidden />
+                    Passer au Parcours Complet
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => goToEvaluation()}
+                    disabled={updating}
+                    className="inline-flex items-center gap-2 bg-[#0080A3] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#006682] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RefreshCcw className="w-4 h-4 shrink-0" aria-hidden />
+                    Réévaluer le cas d&apos;usage
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4 shrink-0">
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={handleInviteClick}
+                    className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 rounded-md px-2 py-1.5 hover:bg-gray-50 transition-colors"
+                    title="Inviter un collaborateur"
+                  >
+                    <UserPlus className="w-4 h-4 shrink-0" />
+                    <span className="hidden sm:inline">Inviter</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={generatePDF}
+                  disabled={isGenerating || pdfBlocked}
+                  className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 rounded-md px-2 py-1.5 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  title={pdfButtonTitle}
+                >
+                  {isGenerating ? (
+                    <RefreshCcw className="w-4 h-4 shrink-0 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 shrink-0" />
+                  )}
+                  <span className="hidden sm:inline">{isGenerating ? 'Génération…' : 'PDF'}</span>
+                </button>
+
+                <div className="relative" ref={moreMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsMoreMenuOpen(open => !open)}
+                    className="inline-flex items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3]"
+                    aria-expanded={isMoreMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label="Plus d'actions"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                  {isMoreMenuOpen && (
+                    <div
+                      role="menu"
+                      className="absolute right-0 z-20 mt-1 min-w-[11rem] rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => {
+                          setIsMoreMenuOpen(false)
+                          setIsHistoryModalOpen(true)
+                        }}
+                      >
+                        <History className="w-4 h-4 shrink-0" />
+                        Historique
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                        onClick={() => {
+                          setIsMoreMenuOpen(false)
+                          handleDeleteClick()
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 shrink-0" />
+                        Supprimer
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -610,42 +676,6 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
             {/* Ligne 3: Score de conformité */}
             <div className="bg-white border border-gray-200 rounded-lg p-4 w-full">
               <HeaderScore useCaseId={useCase.id} />
-            </div>
-
-            {/* Ligne 4 : parcours V3 non terminé — affiner (long) / réévaluer (court) ; sinon réévaluation classique */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4 w-full space-y-2">
-              {showV3DualPath ? (
-                <>
-                  <Link
-                    href={withEvaluationEntree(useCaseRoutes.evaluation(useCase.id), 'header_v3_refine_long')}
-                    onClick={() =>
-                      trackV3ShortPathCta({
-                        usecase_id: useCase.id,
-                        system_type_bucket: v3ShortPathSystemTypeBucket(useCase.system_type),
-                        cta: 'evaluation_long',
-                        cta_placement: 'header_v3_refine_long',
-                        ...(headerFunnelKey && { outcome_funnel_key: headerFunnelKey }),
-                      })
-                    }
-                    className="w-full inline-flex items-center justify-center gap-2 bg-[#0080a3] text-white px-4 py-2.5 rounded-lg hover:bg-[#006280] text-sm font-semibold shadow-sm"
-                  >
-                    <RefreshCcw className="h-4 w-4 shrink-0" aria-hidden />
-                    Passer au Parcours Complet
-                  </Link>
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    Accédez à l&apos;analyse détaillée et générez votre documentation de conformité.
-                  </p>
-                </>
-              ) : (
-                <button
-                  onClick={() => goToEvaluation()}
-                  disabled={updating}
-                  className="w-full bg-[#0080a3] text-white px-4 py-2 rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                >
-                  <RefreshCcw className="h-4 w-4" />
-                  <span>Réévaluer le cas d&apos;usage</span>
-                </button>
-              )}
             </div>
           </div>
         </div>

@@ -483,7 +483,10 @@ export async function POST(
     return NextResponse.json({
       ...finalResult,
       company_status: companyStatus,  // NOUVEAU: Inclure le statut d'entreprise dans la réponse
-      company_status_definition: getCompanyStatusDefinition(companyStatus)
+      company_status_definition: getCompanyStatusDefinition(companyStatus),
+      /** Aligné sur la persistance `usecases` (V3 : qualified / impossible + palier ou null). */
+      classification_status: classificationStatusForDb,
+      risk_level: riskLevel,
     }, { status: 200 });
     
   } catch (error) {
