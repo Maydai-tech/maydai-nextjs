@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 
 /**
@@ -58,7 +58,49 @@ function getAdminClient() {
   })
 }
 
+/** Arrive sur l’étape « Partenaire technologique » (wizard, steps 1–3). */
+async function goToTechnologyPartnerStep(page: Page, registryId: string) {
+  const supabase = getAdminClient()
+  const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
+  const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+    type: 'magiclink',
+    email: TEST_USER.email,
+    options: { redirectTo: baseUrl },
+  })
+
+  if (linkError || !linkData?.properties?.action_link) {
+    throw new Error(`Magic link: ${linkError?.message ?? 'no action_link'}`)
+  }
+
+  await page.goto(linkData.properties.action_link)
+  await page.waitForTimeout(2000)
+
+  await page.goto(`/usecases/new?company=${registryId}`)
+  await page.waitForLoadState('networkidle')
+
+  await page.fill('input[type="text"]', `E2E Partner Tooltip ${Date.now()}`)
+  await page.click('button:has-text("Suivant")')
+  await page.waitForTimeout(500)
+
+  await page.click('label:has-text("En production")')
+  await page.fill('input[type="date"]', '2025-06-15')
+  await page.click('button:has-text("Suivant")')
+  await page.waitForTimeout(500)
+
+  await page.click(`label:has-text("${TEST_USECASE.responsible_service}")`)
+  await page.click('button:has-text("Suivant")')
+  await page.waitForTimeout(500)
+
+  await expect(page.getByText('Chargement des partenaires technologiques')).not.toBeVisible({
+    timeout: 30000,
+  })
+  await expect(page.getByRole('radiogroup')).toBeVisible()
+}
+
 test.describe('UseCase Creation', () => {
+  // Même compte / même session magique : exécution séquentielle pour éviter les courses entre tests.
+  test.describe.configure({ mode: 'serial' })
+
   test.beforeAll(async () => {
     const supabase = getAdminClient()
 
@@ -254,8 +296,9 @@ test.describe('UseCase Creation', () => {
     await page.click('button:has-text("Suivant")')
     await page.waitForTimeout(500)
 
-    // Step 2: Deployment date
-    await page.fill('input[placeholder="DD/MM/YYYY"]', TEST_USECASE.deployment_date)
+    // Step 2: Phase + date de déploiement
+    await page.click('label:has-text("En production")')
+    await page.fill('input[type="date"]', '2025-06-15')
     await page.click('button:has-text("Suivant")')
     await page.waitForTimeout(500)
 
@@ -317,5 +360,57 @@ test.describe('UseCase Creation', () => {
     await expect(page).toHaveURL(/\/usecases\/[a-f0-9-]+\/evaluation/)
 
     console.log(`UseCase created successfully: ${testUseCaseId}`)
+  })
+
+  test('étape partenaire : clic sur Info ne sélectionne pas le radio ; clic sur la carte oui', async ({
+    page,
+  }) => {
+    if (!testRegistryId) {
+      throw new Error('testRegistryId manquant (beforeAll)')
+    }
+
+    await goToTechnologyPartnerStep(page, testRegistryId)
+
+    const partnerInputs = page.locator('[role="radiogroup"] input[name="technology_partner"]')
+    const n = await partnerInputs.count()
+
+    let mistralRadio: ReturnType<Page['locator']> | undefined
+    for (let i = 0; i < n; i++) {
+      const inp = partnerInputs.nth(i)
+      const value = await inp.getAttribute('value')
+      if (value && /mistral/i.test(value)) {
+        mistralRadio = inp
+        break
+      }
+    }
+
+    if (!mistralRadio) {
+      test.skip(true, 'Aucun partenaire « Mistral » dans model_providers pour cet environnement.')
+    }
+    const cardLabel = page.locator('label').filter({ has: mistralRadio })
+    const infoButton = cardLabel.getByRole('button', { name: "Afficher l'infobulle" })
+
+    await expect(mistralRadio).not.toBeChecked()
+
+    // Desktop : l’infobulle s’ouvre au survol (voir Tooltip.tsx, viewport Playwright « Desktop Chrome »)
+    await infoButton.hover()
+    const tooltipPanel = page.locator('[role="radiogroup"] .z-50').filter({ has: page.locator('p') }).first()
+    await expect(tooltipPanel).toBeVisible()
+    await expect(tooltipPanel.locator('p').first()).not.toHaveText('')
+
+    await expect(mistralRadio).not.toBeChecked()
+
+    // Clic explicite sur le bouton Info : ne doit pas activer le radio (stopPropagation / bouton dans la carte)
+    await infoButton.click()
+    await expect(mistralRadio).not.toBeChecked()
+
+    const cardFace = cardLabel.locator('> div').first()
+    await expect(cardFace).not.toHaveAttribute('class', /\bring-1\b/)
+
+    // Clic sur la zone visuelle de la carte (logo), hors bouton Info
+    await cardLabel.getByRole('img').first().click()
+    await expect(mistralRadio).toBeChecked()
+    await expect(cardFace).toHaveAttribute('class', /\bring-1\b/)
+    await expect(cardFace).toHaveAttribute('class', /border-\[#0080A3\]/)
   })
 })

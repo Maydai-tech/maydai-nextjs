@@ -33,7 +33,7 @@ describe('expandE6TransparencyPackToLegacyOptionCodes', () => {
 })
 
 describe('collectE6DeclaredOptionCodes — pack transparence parcours court', () => {
-  it('agrège INTERACTION + CONTENT en codes legacy pour la ligne E6.N10._CHECKLIST', () => {
+  it('agrège INTERACTION + CONTENT en codes legacy pour checklist_gov_usecase', () => {
     const codes = collectE6DeclaredOptionCodes({
       [V3_SHORT_TRANSPARENCE_ID]: [
         E6_TRANSPARENCY_PACK_INTERACTION_CODE,

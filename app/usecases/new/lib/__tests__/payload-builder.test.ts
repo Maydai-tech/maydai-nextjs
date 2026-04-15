@@ -44,6 +44,7 @@ describe('normalizeDeploymentCountriesToArray', () => {
 describe('buildCreateUseCasePayload', () => {
   const draft: GuidedChatDraft = {
     name: 'Test Use Case',
+    deployment_phase: 'En production',
     deployment_date: '15/06/2025',
     responsible_service: 'Ressources Humaines (RH)',
     technology_partner: 'OpenAI',
@@ -96,6 +97,7 @@ describe('buildCreateUseCasePayload', () => {
 
   test('preserves all fields from draft', () => {
     const payload = buildCreateUseCasePayload(draft, 'company-123', models, partners)
+    expect(payload.deployment_phase).toBe('En production')
     expect(payload.deployment_date).toBe('15/06/2025')
     expect(payload.responsible_service).toBe('Ressources Humaines (RH)')
     expect(payload.technology_partner).toBe('OpenAI')

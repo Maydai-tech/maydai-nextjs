@@ -6,10 +6,6 @@
 import { QUESTIONS_DATA } from '@/lib/questions-data'
 import type { RiskLevelCode } from '@/lib/risk-level'
 import { QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
-import {
-  applyChecklistKeyOverlayToResponses,
-  type ResponseInput,
-} from '@/lib/slot-statuses'
 
 /** Même forme que QuestionnaireParcoursMeta — évite import circulaire avec openai-data-transformer. */
 export interface ReportGroundingParcoursMeta {
@@ -34,6 +30,9 @@ export interface ReportGroundingInput {
   riskLevelCode: RiskLevelCode | null
   classificationImpossible: boolean
   questionnaireParcours?: ReportGroundingParcoursMeta | null
+  /** Critères persistés sur le use case (colonnes JSONB), hors questionnaire. */
+  checklist_gov_enterprise?: string[]
+  checklist_gov_usecase?: string[]
 }
 
 function optionLabel(questionCode: string, optionCode: string): string {
@@ -93,14 +92,36 @@ export function collectAnnexIiiDomains(map: Map<string, ReportGroundingDbRespons
  * Texte d’ancrage pour le prompt LLM (français, lignes courtes, autoritatif).
  */
 export function formatReportGroundingForPrompt(input: ReportGroundingInput): string {
-  const { responses, riskLevelCode, classificationImpossible, questionnaireParcours } = input
-  const enriched = applyChecklistKeyOverlayToResponses(responses as ResponseInput[])
-  const map = buildMap(enriched as ReportGroundingDbResponse[])
+  const {
+    responses,
+    riskLevelCode,
+    classificationImpossible,
+    questionnaireParcours,
+    checklist_gov_enterprise = [],
+    checklist_gov_usecase = [],
+  } = input
+  const map = buildMap(responses)
   const lines: string[] = []
+
+  const ent = checklist_gov_enterprise.filter((s) => s.length > 0)
+  const uc = checklist_gov_usecase.filter((s) => s.length > 0)
+  lines.push(
+    ent.length > 0
+      ? `Critères de gouvernance entreprise validés : ${ent.join(', ')}`
+      : 'Critères de gouvernance entreprise validés : (aucun)'
+  )
+  lines.push(
+    uc.length > 0
+      ? `Critères de gouvernance cas d'usage validés : ${uc.join(', ')}`
+      : `Critères de gouvernance cas d'usage validés : (aucun)`
+  )
+  lines.push(
+    'Ces listes remplacent toute inférence à partir d’anciennes questions questionnaire E5/E6 — ne pas les reconstruire depuis questionnaire_questions.'
+  )
 
   const v3 =
     questionnaireParcours?.questionnaire_version === QUESTIONNAIRE_VERSION_V3
-  lines.push(`Parcours questionnaire (version déclarée) : ${questionnaireParcours?.questionnaire_version ?? 'non fourni'}${v3 ? ' (V3 — ancrage BPGV / pivots ci-dessous prioritaire sur toute formulation générique).' : ''}`)
+  lines.push(`Parcours questionnaire (version déclarée) : ${questionnaireParcours?.questionnaire_version ?? 'non fourni'}${v3 ? ' (V3 — pivots qualification / transparence ci-dessous prioritaires sur toute formulation générique).' : ''}`)
 
   if (questionnaireParcours?.active_question_codes?.length) {
     lines.push(
@@ -291,7 +312,7 @@ export function formatReportGroundingForPrompt(input: ReportGroundingInput): str
   }
 
   lines.push(
-    `- Recommandations (slots) : contextualiser OCRU / transparence / registre selon les réponses E4.N8.Q9 (interaction), E4.N8.Q11.* (médias), E5/E6 — ne pas imposer de scénario « utilisateur final » si le questionnaire indique usage interne ou sans interaction directe.`
+    `- Recommandations (slots) : contextualiser OCRU / transparence / registre selon les réponses E4.N8.Q9 (interaction), E4.N8.Q11.* (médias) et les listes de gouvernance validées ci-dessus — ne pas imposer de scénario « utilisateur final » si le questionnaire indique usage interne ou sans interaction directe.`
   )
 
   return lines.join('\n')

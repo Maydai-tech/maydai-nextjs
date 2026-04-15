@@ -35,7 +35,9 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData>({
     currentQuestionId: 'E4.N7.Q1',
     answers: {},
-    isCompleted: false
+    isCompleted: false,
+    checklist_gov_enterprise: [],
+    checklist_gov_usecase: [],
   })
   
   // État des réponses sauvegardées (chargées depuis Supabase)

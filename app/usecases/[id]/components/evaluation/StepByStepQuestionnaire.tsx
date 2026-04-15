@@ -14,8 +14,6 @@ import {
   AlertCircle,
   UserPlus,
   ArrowLeft,
-  BookMarked,
-  X,
   ShieldAlert,
 } from 'lucide-react'
 import Tooltip from '@/components/Tooltip'
@@ -80,9 +78,6 @@ export function StepByStepQuestionnaire({
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [inviteScope, setInviteScope] = useState<'company' | 'registry'>('registry')
 
-  // Popup "Registre MaydAI par défaut" (question E5.N9.Q7)
-  const [showRegistreMaydaiPopup, setShowRegistreMaydaiPopup] = useState(false)
-  const hasShownRegistrePopup = useRef(false)
   const shortPathSegmentsSeen = useRef<Set<number>>(new Set())
   const longPathRunCompletedSent = useRef(false)
   const router = useRouter()
@@ -179,18 +174,6 @@ export function StepByStepQuestionnaire({
           : e4N7Callout?.variant === 'safeguard'
             ? 'border-emerald-200 bg-emerald-50/90 text-emerald-950'
             : ''
-
-  // Afficher la popup "Registre MaydAI par défaut" une fois quand E5.N9.Q7 = Oui + MaydAI
-  useEffect(() => {
-    if (hasShownRegistrePopup.current || !currentQuestion) return
-    if (currentQuestion.id !== 'E5.N9.Q7') return
-    const answer = questionnaireData.answers['E5.N9.Q7']
-    if (!answer || typeof answer !== 'object' || answer.selected !== 'E5.N9.Q7.B') return
-    const systemName = (answer.conditionalValues?.system_name ?? '').toLowerCase()
-    if (systemName !== 'maydai') return
-    hasShownRegistrePopup.current = true
-    setShowRegistreMaydaiPopup(true)
-  }, [currentQuestion?.id, questionnaireData.answers])
 
   // Handlers pour la collaboration
   const handleInviteClick = () => {
@@ -731,51 +714,6 @@ export function StepByStepQuestionnaire({
         scope={inviteScope}
       />
 
-      {/* Popup Registre MaydAI par défaut (E5.N9.Q7) */}
-      {showRegistreMaydaiPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 border border-[#0080A3]/20">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-[#0080A3]/10">
-                <BookMarked className="w-5 h-5 text-[#0080A3]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">Registre MaydAI</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  MaydAI est le registre <strong>par défaut</strong> pour ce cas d&apos;usage. Pensez à confirmer ce choix dans les paramètres du registre (Paramètres &gt; Registre) pour que tous vos cas d&apos;usage en bénéficient.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowRegistreMaydaiPopup(false)}
-                    className="px-4 py-2 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors"
-                  >
-                    Compris
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowRegistreMaydaiPopup(false)
-                      router.push(`/dashboard/${useCase.company_id}/settings#registry`)
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-[#0080A3] border border-[#0080A3] rounded-lg hover:bg-[#0080A3]/5 transition-colors"
-                  >
-                    Aller aux paramètres
-                  </button>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowRegistreMaydaiPopup(false)}
-                className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 rounded"
-                aria-label="Fermer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 } 

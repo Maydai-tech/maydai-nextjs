@@ -36,6 +36,8 @@ interface UseCase {
   score_final?: number | null
   deployment_date?: string | null
   questionnaire_version?: string | number | null
+  checklist_gov_enterprise?: string[] | null
+  checklist_gov_usecase?: string[] | null
 }
 
 interface DocumentStatus {
@@ -72,7 +74,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
   const [companyId, setCompanyId] = useState<string>('')
   const [useCases, setUseCases] = useState<UseCase[]>([])
   const [company, setCompany] = useState<any>(null) // Company data with maydai_as_registry
-  const [useCaseResponses, setUseCaseResponses] = useState<Record<string, any[]>>({}) // E5.N9.Q7 responses by usecase ID
+  const [useCaseResponses, setUseCaseResponses] = useState<Record<string, any[]>>({}) // Réponses questionnaire (points todo)
   const [unacceptableDocByType, setUnacceptableDocByType] = useState<
     Record<string, Record<'stopping_proof' | 'system_prompt', DocumentStatus>>
   >({})
@@ -168,7 +170,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
           })
           setUnacceptableDocByType(unacceptableDocMap)
 
-          // Fetch E5.N9.Q7 responses for completed, non-unacceptable use cases
+          // Réponses questionnaire (calcul points affichés sur les todos)
           const responsesMap: Record<string, any[]> = {}
           const completedNonUnacceptable = filteredUseCases.filter(
             (uc: UseCase) => uc.status === 'completed' && !isUnacceptableCase(uc)
@@ -312,30 +314,14 @@ export default function TodoListPage({ params }: TodoListPageProps) {
     }
   }, [highlightUseCase, highlightActionCanonical, loadingData, useCases.length])
 
-  // Get E5.N9.Q7 response for a use case
-  const getE5N9Q7Response = (useCaseId: string) => {
-    const responses = useCaseResponses[useCaseId] || []
-    return responses.find((r: any) => r.question_code === 'E5.N9.Q7')
-  }
-
-  // Determine registry case (A, B, or C) for a use case
-  const determineRegistryCase = (useCaseId: string): 'A' | 'B' | 'C' | null => {
-    const response = getE5N9Q7Response(useCaseId)
-
-    if (!response) return null
-
-    // Case A: "Non" answer
-    if (response.single_value === 'E5.N9.Q7.A') {
-      return 'A'
-    }
-
-    // Case B or C: "Oui" answer with system name
-    if (response.conditional_main === 'E5.N9.Q7.B') {
-      const systemName = response.conditional_values?.[0]?.toLowerCase() || ''
-      return systemName === 'maydai' ? 'B' : 'C'
-    }
-
-    return null
+  /** Cas registre (A/B/C) à partir des checklists `usecases` et du drapeau entreprise MaydAI. */
+  const determineRegistryCase = (uc: UseCase): 'A' | 'B' | 'C' => {
+    if (company?.maydai_as_registry === true) return 'B'
+    const keys = uc.checklist_gov_enterprise ?? []
+    const blob = keys.map(k => String(k).toLowerCase()).join(' ')
+    if (blob.includes('maydai')) return 'B'
+    if (keys.length > 0) return 'C'
+    return 'A'
   }
 
   // Check if registry todo is completed
@@ -396,9 +382,8 @@ export default function TodoListPage({ params }: TodoListPageProps) {
       const useCaseDocs = complianceDocStatuses[useCase.id] || {}
       const responses = useCaseResponses[useCase.id] || []
 
-      // Registry todo: always show (9 actions). When no response to E5.N9.Q7, treat as Case A.
-      const registryCase = determineRegistryCase(useCase.id)
-      const effectiveRegistryCase: 'A' | 'B' | 'C' = registryCase ?? 'A'
+      const registryCase = determineRegistryCase(useCase)
+      const effectiveRegistryCase: 'A' | 'B' | 'C' = registryCase
       const registryCompleted = isRegistryTodoCompleted(useCase.id, effectiveRegistryCase)
       const registryPotentialPoints = getPotentialPoints('registry_proof', responses)
       const registryEarnedPoints = getEarnedPoints('registry_proof', responses, registryCompleted)

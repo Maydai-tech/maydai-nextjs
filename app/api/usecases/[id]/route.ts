@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { recordFieldChanges, FIELD_LABELS } from '@/lib/usecase-history'
+import { convertDeploymentDateForDb } from '@/lib/convert-deployment-date'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -165,7 +166,7 @@ export async function PUT(
 
     // Parse request body
     const body = await request.json()
-    const { primary_model_id, deployment_countries, deployment_date, description } = body
+    const { primary_model_id, deployment_countries, deployment_date, deployment_phase, description } = body
 
     // Validate model_id if provided
     if (primary_model_id !== null && primary_model_id !== undefined) {
@@ -183,7 +184,7 @@ export async function PUT(
     // Verify user has access to this use case and get current values for history tracking
     const { data: existingUseCase, error: useCaseError } = await supabase
       .from('usecases')
-      .select('company_id, primary_model_id, deployment_countries, deployment_date, description')
+      .select('company_id, primary_model_id, deployment_countries, deployment_date, deployment_phase, description')
       .eq('id', useCaseId)
       .single()
 
@@ -210,7 +211,15 @@ export async function PUT(
     }
     if (primary_model_id !== undefined) updateData.primary_model_id = primary_model_id
     if (deployment_countries !== undefined) updateData.deployment_countries = deployment_countries
-    if (deployment_date !== undefined) updateData.deployment_date = deployment_date
+    if (deployment_date !== undefined) {
+      updateData.deployment_date = convertDeploymentDateForDb(deployment_date)
+    }
+    if (deployment_phase !== undefined) {
+      updateData.deployment_phase =
+        typeof deployment_phase === 'string' && deployment_phase.trim()
+          ? deployment_phase.trim()
+          : null
+    }
     if (description !== undefined) updateData.description = description
 
     // Update the use case
@@ -279,11 +288,28 @@ export async function PUT(
         })
       }
     }
-    if (deployment_date !== undefined && existingUseCase.deployment_date !== deployment_date) {
+    if (deployment_date !== undefined) {
+      const normalizedNew = convertDeploymentDateForDb(deployment_date) ?? deployment_date
+      if (existingUseCase.deployment_date !== normalizedNew) {
+        changes.push({
+          fieldName: 'deployment_date',
+          oldValue: existingUseCase.deployment_date,
+          newValue: normalizedNew
+        })
+      }
+    }
+    if (
+      deployment_phase !== undefined &&
+      existingUseCase.deployment_phase !==
+        (typeof deployment_phase === 'string' && deployment_phase.trim() ? deployment_phase.trim() : null)
+    ) {
       changes.push({
-        fieldName: 'deployment_date',
-        oldValue: existingUseCase.deployment_date,
-        newValue: deployment_date
+        fieldName: 'deployment_phase',
+        oldValue: valueToString(existingUseCase.deployment_phase),
+        newValue:
+          typeof deployment_phase === 'string' && deployment_phase.trim()
+            ? deployment_phase.trim()
+            : null,
       })
     }
     if (description !== undefined && existingUseCase.description !== description) {

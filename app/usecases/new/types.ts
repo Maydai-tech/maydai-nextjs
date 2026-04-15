@@ -1,6 +1,8 @@
 // --- Draft du chat guidé ---
 export interface GuidedChatDraft {
   name: string
+  /** Phase déclarée (distincte du statut workflow du cas). */
+  deployment_phase: string
   deployment_date: string
   responsible_service: string
   technology_partner: string
@@ -16,6 +18,7 @@ export interface GuidedChatDraft {
 // --- Payload final envoyé à POST /api/usecases ---
 export interface CreateUseCasePayload {
   name: string
+  deployment_phase?: string | null
   deployment_date: string
   responsible_service: string
   technology_partner: string
@@ -105,7 +108,7 @@ export const CHAT_STEP_LABELS: Record<ChatStepId, string> = {
 
 export const CHAT_STEP_BOT_MESSAGES: Record<ChatStepId, string> = {
   name: 'Comment souhaitez-vous nommer ce cas d\'usage IA ?',
-  deployment_date: 'Quelle est la date de déploiement passée ou prévue ? (format JJ/MM/AAAA)',
+  deployment_date: 'Où en est le déploiement et quelle est la date associée ?',
   responsible_service: 'Quel service est en charge de ce cas d\'usage ?',
   technology_partner: 'Quel est le partenaire technologique ?',
   llm_model_version: 'Quel modèle utilisez-vous ?',
@@ -150,6 +153,7 @@ export type CreationMode = 'form' | 'chat'
 export function createEmptyDraft(): GuidedChatDraft {
   return {
     name: '',
+    deployment_phase: '',
     deployment_date: '',
     responsible_service: '',
     technology_partner: '',

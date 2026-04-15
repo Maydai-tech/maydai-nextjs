@@ -10,6 +10,7 @@ export type DuplicateV1SourceRow = {
   name: string
   description?: string | null
   deployment_date?: string | null
+  deployment_phase?: string | null
   responsible_service?: string | null
   technology_partner?: string | null
   llm_model_version?: string | null
@@ -40,6 +41,7 @@ export function buildV2DuplicateInsertPayload(
     description: source.description ?? null,
     company_id: source.company_id,
     deployment_date: source.deployment_date ?? null,
+    deployment_phase: source.deployment_phase ?? null,
     responsible_service: source.responsible_service ?? null,
     technology_partner: source.technology_partner ?? null,
     llm_model_version: source.llm_model_version ?? null,

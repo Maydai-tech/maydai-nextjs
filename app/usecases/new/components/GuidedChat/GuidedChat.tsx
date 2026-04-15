@@ -8,8 +8,7 @@ import { useGuidedChatState } from '../../hooks/useGuidedChatState'
 import { useModelProviders } from '../../hooks/useModelProviders'
 import { useCreateUseCase } from '../../hooks/useCreateUseCase'
 import { trackUseCaseCreation } from '@/lib/gtm'
-import { validateDeploymentDateDDMMYYYY } from '../../lib/validators'
-import { validateDraft, validateFinalClosedFieldsAgainstReferentials } from '../../lib/validators'
+import { validateDraft, validateFinalClosedFieldsAgainstReferentials, validateDeploymentDateFlexible } from '../../lib/validators'
 import { isCustomPartner as isCustomPartnerCheck } from '../../lib/model-resolver'
 import { buildCreateUseCasePayload } from '../../lib/payload-builder'
 import { getResponsibleServiceOptions, getAiCategoryOptions, getSystemTypeOptions } from '../../lib/referentials'
@@ -70,8 +69,10 @@ export default function GuidedChat({ companyId, company }: GuidedChatProps) {
     switch (stepId) {
       case 'deployment_countries':
         return draft.deployment_countries.map(c => isoCodeToFrenchName(c)).join(', ')
-      case 'deployment_date':
-        return draft.deployment_date || '(Non renseigné)'
+      case 'deployment_date': {
+        const parts = [draft.deployment_phase?.trim(), draft.deployment_date?.trim()].filter(Boolean)
+        return parts.length ? parts.join(' — ') : '(Non renseigné)'
+      }
       default: {
         const val = draft[stepId as keyof typeof draft]
         if (Array.isArray(val)) return val.join(', ')
@@ -91,9 +92,20 @@ export default function GuidedChat({ companyId, company }: GuidedChatProps) {
         if (draft.name.length > 50) { setStepError('50 caractères maximum.'); return }
         break
       case 'deployment_date':
-        if (draft.deployment_date) {
-          const r = validateDeploymentDateDDMMYYYY(draft.deployment_date)
-          if (!r.isValid) { setStepError(r.error!); return }
+        if (!draft.deployment_phase?.trim()) {
+          setStepError('Sélectionnez une phase de déploiement.')
+          return
+        }
+        if (!draft.deployment_date?.trim()) {
+          setStepError('Sélectionnez une date.')
+          return
+        }
+        {
+          const r = validateDeploymentDateFlexible(draft.deployment_date)
+          if (!r.isValid) {
+            setStepError(r.error!)
+            return
+          }
         }
         break
       case 'responsible_service':
@@ -188,6 +200,7 @@ export default function GuidedChat({ companyId, company }: GuidedChatProps) {
 
   // Handle skip (only for deployment_date)
   const handleSkipStep = useCallback(() => {
+    actions.setFieldValue('deployment_phase', '')
     actions.setFieldValue('deployment_date', '')
     actions.skipStep(state.currentStepId)
     setStepError('')

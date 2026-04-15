@@ -152,59 +152,22 @@ export function deriveBpgvBandFromOrsAnswersV3(answers: Record<string, unknown>)
   return m
 }
 
-/** Entrée BPGV après ORS : toujours Q1 (pas de raccourci « bande minimale → Q7 »). */
+/** Après ORS (parcours long) : déclaration E4.N8.Q12 (bloc E5 retiré). */
 export function getFirstE5AfterOrsV3(_answers: Record<string, unknown>): string {
-  return 'E5.N9.Q1'
+  return 'E4.N8.Q12'
 }
 
 /**
- * Après le bloc ORS (Q10 / T1 / M1) : en long → entrée E5 (Q1) ; en court → première étape synthétique entreprise.
+ * Après le bloc ORS (Q10 / T1 / M1) : en long → E4.N8.Q12 ; en court → première étape synthétique entreprise.
  */
-function nextAfterOrsV3(answers: Record<string, unknown>, pathMode: 'long' | 'short'): string | null {
+function nextAfterOrsV3(_answers: Record<string, unknown>, pathMode: 'long' | 'short'): string | null {
   if (pathMode === 'short') return V3_SHORT_ENTREPRISE_ID
-  return getFirstE5AfterOrsV3(answers)
+  return getFirstE5AfterOrsV3(_answers)
 }
 
 function getNextAfterQ12(_answers: Record<string, unknown>, pathMode: 'long' | 'short'): string | null {
   if (pathMode === 'short') return null
-  return 'E6.N10.Q1'
-}
-
-function getNextE6(
-  current: string,
-  _answers: Record<string, unknown>,
-  pathMode: 'long' | 'short'
-): string | null {
-  if (pathMode === 'short') return null
-  if (current === 'E6.N10.Q1') return 'E6.N10.Q2'
-  if (current === 'E6.N10.Q2') return null
   return null
-}
-
-function getNextE5V3(currentQuestionId: string, answers: Record<string, unknown>): string | null {
-  switch (currentQuestionId) {
-    case 'E5.N9.Q1':
-      return 'E5.N9.Q2'
-    case 'E5.N9.Q2':
-      return 'E5.N9.Q3'
-    case 'E5.N9.Q3':
-      return 'E5.N9.Q4'
-    case 'E5.N9.Q4':
-      return 'E5.N9.Q5'
-    case 'E5.N9.Q5':
-      return 'E5.N9.Q6'
-    case 'E5.N9.Q6':
-      return 'E5.N9.Q7'
-    case 'E5.N9.Q7':
-      if (!answers['E5.N9.Q6']) return 'E4.N8.Q12'
-      return 'E5.N9.Q8'
-    case 'E5.N9.Q8':
-      return 'E5.N9.Q9'
-    case 'E5.N9.Q9':
-      return 'E4.N8.Q12'
-    default:
-      return null
-  }
 }
 
 /**
@@ -231,11 +194,11 @@ export function getNextQuestionV3(
     case 'E4.N7.Q3.1':
       // Parcours court : pas d’arrêt anticipé sur ORS « inacceptable » — enchaînement obligatoire sur les 3 étapes pack.
       if (isOrsUnacceptableAtQ31(answers))
-        return pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : 'E5.N9.Q1'
+        return pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : 'E4.N8.Q9'
       return 'E4.N7.Q2.1'
     case 'E4.N7.Q2.1':
       if (hasInterdictionUnacceptable(answers))
-        return pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : 'E5.N9.Q1'
+        return pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : 'E4.N8.Q9'
       if (isProductSystemType(systemType)) return 'E4.N7.Q4'
       return 'E4.N7.Q2'
     case 'E4.N7.Q4':
@@ -280,18 +243,6 @@ export function getNextQuestionV3(
     case 'E4.N8.Q10':
       return nextAfterOrsV3(answers, pathMode)
 
-    case 'E5.N9.Q4':
-    case 'E5.N9.Q1':
-    case 'E5.N9.Q2':
-    case 'E5.N9.Q3':
-    case 'E5.N9.Q9':
-    case 'E5.N9.Q5':
-    case 'E5.N9.Q6':
-    case 'E5.N9.Q7':
-    case 'E5.N9.Q8':
-      if (pathMode === 'short') return null
-      return getNextE5V3(currentQuestionId, answers)
-
     case 'E4.N8.Q12':
       return getNextAfterQ12(answers, pathMode)
 
@@ -305,10 +256,6 @@ export function getNextQuestionV3(
     /** Ancien nœud unique : renvoie vers la première étape (les réponses agrégées ne sont plus utilisées). */
     case V3_SHORT_MINIPACK_ID:
       return V3_SHORT_ENTREPRISE_ID
-
-    case 'E6.N10.Q1':
-    case 'E6.N10.Q2':
-      return getNextE6(currentQuestionId, answers, pathMode)
 
     default:
       return null
@@ -368,7 +315,13 @@ export function getResumeQuestionIdV3(
     const ans = answers[q]
     if (ans === undefined || ans === null || !isComplete(q, ans)) return q
     const next = getNextQuestionV3(q, answers, systemType, pathMode)
-    if (!next) return q
+    if (!next) {
+      if (/^E5\.N9\./.test(q) || /^E6\.N10\./.test(q)) {
+        q = pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : 'E4.N8.Q12'
+        continue
+      }
+      return q
+    }
     q = next
   }
   return 'E4.N7.Q1'
@@ -388,19 +341,28 @@ export function computeV3UsecaseQuestionnaireFields(
   const hasN8 = Object.keys(answers).some(
     k => /^E4\.N8\.(?!Q12$)(?!Q10$)/.test(k) && !isN8ExcludedFromV2OrsBand(k)
   )
-  const touchedBpgv = Object.keys(answers).some(k => /^E5\.N9\.Q/.test(k))
+  const reachedDeclaration =
+    pathMode === 'long' &&
+    answers['E4.N8.Q12'] !== undefined &&
+    answers['E4.N8.Q12'] !== null
+  const shortGovStarted =
+    pathMode === 'short' &&
+    (V3_SHORT_STAGE_IDS as readonly string[]).some(
+      id => answers[id] !== undefined && answers[id] !== null
+    )
+  const touchedBpgvFlow = reachedDeclaration || shortGovStarted
 
   let ors_exit: OrsExit | null = null
   if (isOrsUnacceptableAtQ31(answers) || hasInterdictionUnacceptable(answers)) {
     ors_exit = ORS_EXIT_UNACCEPTABLE
-  } else if (hasN8 && touchedBpgv) {
+  } else if (hasN8 && touchedBpgvFlow) {
     ors_exit = ORS_EXIT_N8_COMPLETED
   }
 
   let bpgv_variant: BpgvVariant | null = null
   if (isOrsUnacceptableAtQ31(answers) || hasInterdictionUnacceptable(answers)) {
     bpgv_variant = BPGV_VARIANT_UNACCEPTABLE
-  } else if (touchedBpgv) {
+  } else if (touchedBpgvFlow) {
     bpgv_variant = deriveBpgvBandFromOrsAnswersV3(answers)
   }
 

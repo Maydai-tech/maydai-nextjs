@@ -41,6 +41,7 @@ import { useCompanyInfo } from '../../hooks/useCompanyInfo'
 import InviteScopeChoiceModal from '@/components/Collaboration/InviteScopeChoiceModal'
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
 import { DatePickerModal } from '../shared/DatePickerModal'
+import { getDeploymentStatus, getDeploymentStatusColor } from '@/lib/deployment-status'
 import UseCaseHistoryModal from './UseCaseHistoryModal'
 
 type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
@@ -215,42 +216,6 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
     () => useCase.deployment_countries || [],
     [useCase.deployment_countries]
   )
-
-  // Fonction pour déterminer le statut de déploiement (Actif/Inactif)
-  const getDeploymentStatus = (deploymentDate?: string): 'Actif' | 'Inactif' => {
-    if (!deploymentDate) return 'Inactif'
-
-    try {
-      const deployment = new Date(deploymentDate)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      deployment.setHours(0, 0, 0, 0)
-
-      // Vérifier si la date est valide
-      if (isNaN(deployment.getTime())) return 'Inactif'
-
-      return deployment <= today ? 'Actif' : 'Inactif'
-    } catch (error) {
-      return 'Inactif'
-    }
-  }
-
-  // Fonction pour obtenir les styles de la pastille de statut de déploiement
-  const getDeploymentStatusColor = (status: 'Actif' | 'Inactif') => {
-    if (status === 'Actif') {
-      return {
-        backgroundColor: '#f1fdfa',
-        color: '#0080a3',
-        border: 'border border-[#0080a3]'
-      }
-    } else {
-      return {
-        backgroundColor: '#f3f4f6',
-        color: '#6b7280',
-        border: 'border border-gray-300'
-      }
-    }
-  }
 
   const handleModelEdit = () => {
     setIsModalOpen(true)
@@ -554,7 +519,10 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                 {frenchStatus}
               </div>
               {(() => {
-                const deploymentStatus = getDeploymentStatus(useCase.deployment_date)
+                const deploymentStatus = getDeploymentStatus(
+                  useCase.deployment_date,
+                  useCase.deployment_phase
+                )
                 const statusStyle = getDeploymentStatusColor(deploymentStatus)
                 return (
                   <div

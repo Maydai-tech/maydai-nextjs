@@ -5,7 +5,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
  * E2E Test: Questionnaire Completion and Score Calculation
  *
  * This test suite verifies:
- * 1. Complete questionnaire flow (19 questions)
+ * 1. Parcours questionnaire V2 (ORS N7 puis N8, sans blocs E5/E6)
  * 2. Score calculation and display
  * 3. Exact score value verification
  * 4. OpenAI report generation (skipped by default)
@@ -35,19 +35,11 @@ const QUESTIONNAIRE_ANSWERS: Array<{
   { questionId: 'E4.N7.Q2.1', type: 'checkbox', answer: 'Aucun de ces cas' },
   { questionId: 'E4.N7.Q3', type: 'checkbox', answer: 'Aucune de ces activités' },
   { questionId: 'E4.N7.Q3.1', type: 'checkbox', answer: 'Aucune de ces situations' },
-  { questionId: 'E5.N9.Q4', type: 'radio', answer: 'Oui' },
-  { questionId: 'E5.N9.Q1', type: 'radio', answer: 'Oui' },
-  { questionId: 'E5.N9.Q9', type: 'conditional', answer: 'Oui', conditionalValue: 'Test E2E procedures' },
-  { questionId: 'E5.N9.Q5', type: 'tags', answer: 'Publiques' },
-  { questionId: 'E5.N9.Q6', type: 'conditional', answer: 'Oui', conditionalValue: 'Test E2E security measures' },
-  { questionId: 'E5.N9.Q7', type: 'conditional', answer: 'Oui', conditionalValue: 'Test E2E procedures' },
-  { questionId: 'E5.N9.Q8', type: 'conditional', answer: 'Oui', conditionalValue: 'Test E2E procedures' },
+  { questionId: 'E4.N8.Q9', type: 'radio', answer: 'Non (Outil logiciel évident)' },
+  { questionId: 'E4.N8.Q9.1', type: 'radio', answer: 'Non (Aucune analyse de ce type)' },
+  { questionId: 'E4.N8.Q10', type: 'radio', answer: 'Moins de 100' },
+  { questionId: 'E4.N8.Q11.0', type: 'radio', answer: 'Non' },
   { questionId: 'E4.N8.Q12', type: 'radio', answer: 'Oui' },
-  { questionId: 'E4.N8.Q9', type: 'radio', answer: 'Non' },
-  { questionId: 'E4.N8.Q10', type: 'conditional', answer: '< à 100', conditionalValue: '50' },
-  { questionId: 'E4.N8.Q11', type: 'tags', answer: 'Texte' },
-  { questionId: 'E6.N10.Q1', type: 'radio', answer: 'Oui' },
-  { questionId: 'E6.N10.Q2', type: 'radio', answer: 'Oui' },
 ]
 
 // Create Supabase admin client for setup/teardown
@@ -160,6 +152,7 @@ async function createTestData(testId: string): Promise<TestData> {
       company_id: registryId,
       status: 'draft',
       deployment_date: new Date().toISOString(),
+      questionnaire_version: 2,
     })
     .select('id')
     .single()

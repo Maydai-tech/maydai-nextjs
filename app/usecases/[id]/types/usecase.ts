@@ -3,6 +3,7 @@ export interface UseCase {
   name: string
   description: string
   deployment_date?: string
+  deployment_phase?: string | null
   status: string
   risk_level: string
   ai_category: string
@@ -13,6 +14,10 @@ export interface UseCase {
   system_type?: string
   deployment_countries?: string[]
   company_id: string
+  /** Gouvernance entreprise — colonnes JSONB `checklist_gov_*` côté base. */
+  checklist_gov_enterprise: string[]
+  /** Gouvernance cas d'usage — colonnes JSONB `checklist_gov_*` côté base. */
+  checklist_gov_usecase: string[]
   /** 1 = parcours historique, 2 = parcours long V2, 3 = parcours long V3 */
   questionnaire_version?: number
   /** V3 : qualified | impossible (pivots JNS) — ne remplace pas risk_level sémantiquement */
@@ -110,6 +115,9 @@ export interface QuestionnaireData {
   currentQuestionId: string
   answers: Record<string, any>
   isCompleted: boolean
+  /** Colonnes `usecases.checklist_gov_*` — source de vérité hors `usecase_responses`. */
+  checklist_gov_enterprise: string[]
+  checklist_gov_usecase: string[]
 }
 
 export interface QuestionProgress {

@@ -52,6 +52,7 @@ export async function POST(
         name,
         description,
         deployment_date,
+        deployment_phase,
         responsible_service,
         technology_partner,
         llm_model_version,

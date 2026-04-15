@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useId, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
@@ -16,24 +16,112 @@ import {
   Search,
   HelpCircle,
   X,
+  Check,
   Sparkles,
-  UserPlus
+  UserPlus,
+  Users,
+  Megaphone,
+  Briefcase,
+  Calculator,
+  Factory,
+  FlaskConical,
+  MonitorSmartphone,
+  Scale,
+  ShoppingCart,
+  Headset,
+  ClipboardCheck,
+  MoreHorizontal,
+  MessageSquare,
+  Eye,
+  BrainCircuit,
+  Bot,
+  Network,
+  GraduationCap,
+  Cpu,
+  Package,
+  Loader2,
 } from 'lucide-react'
 import Image from 'next/image'
 import { getProviderIcon } from '@/lib/provider-icons'
 import { trackUseCaseCreation, trackLimitReached } from '@/lib/gtm'
 import Tooltip from '@/components/Tooltip'
-import ModelTooltip from '@/components/ModelTooltip'
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal'
 import { useCompanyInfo } from '../[id]/hooks/useCompanyInfo'
 import { loadCreationQuestions } from './questions-loader'
 import { useModelProviders } from './hooks/useModelProviders'
 import { useCreateUseCase } from './hooks/useCreateUseCase'
-import { validateDeploymentDateDDMMYYYY } from './lib/validators'
+import { validateDeploymentDateFlexible } from './lib/validators'
+import {
+  DEPLOYMENT_PHASE_OPTIONS,
+  getDeploymentDateFieldLabel,
+} from '@/lib/deployment-status'
 import { resolvePrimaryModelId, isCustomPartner as isCustomPartnerCheck } from './lib/model-resolver'
 import { normalizeDeploymentCountriesToArray } from './lib/payload-builder'
 import { ISO_TO_COUNTRY_NAME } from './lib/countries'
 import { useCaseRoutes } from '../[id]/utils/routes'
+import type { LucideIcon } from 'lucide-react'
+
+/** Valeur factice du radio « Autre modèle… » (liste déroulante), non persistée en base. */
+const LLM_MORE_MODELS_CARD_RADIO = '__LLM_MORE_MODELS_CARD__'
+
+/** Icônes Lucide pour l’étape « Service en charge » (clés = libellés JSON). */
+const RESPONSIBLE_SERVICE_ICONS: Record<string, LucideIcon> = {
+  'Ressources Humaines (RH)': Users,
+  'Communication / Marketing': Megaphone,
+  'Commercial / Ventes': Briefcase,
+  'Finance / Comptabilité': Calculator,
+  'Production / Opérations': Factory,
+  'Recherche et Développement (R&D)': FlaskConical,
+  "Systèmes d'Information (SI) / IT": MonitorSmartphone,
+  Juridique: Scale,
+  'Achats / Approvisionnement': ShoppingCart,
+  'Service Client': Headset,
+  Qualité: ClipboardCheck,
+  Autre: MoreHorizontal,
+}
+
+/** Icônes Lucide pour l’étape « Catégorie d’IA » (clés = libellés JSON). */
+const AI_CATEGORY_ICONS: Record<string, LucideIcon> = {
+  'Large Language Model (LLM)': MessageSquare,
+  'Vision par ordinateur': Eye,
+  'Machine Learning': BrainCircuit,
+  Robotique: Bot,
+  'Systèmes experts': Network,
+  'Logiciels métiers': Briefcase,
+  'Apprentissage / e-learning': GraduationCap,
+}
+
+/** Infobulles juridiques (AI Act) — étape « Système autonome ou produit ». */
+const SYSTEM_TYPE_LEGAL_TOOLTIP: Record<string, { title: string; shortContent: string }> = {
+  'Système autonome': {
+    title: 'Système autonome',
+    shortContent:
+      "Fonctionne de manière indépendante pour accomplir sa propre finalité, sans être le composant de sécurité d'un produit matériel. (Ex: Analyse de CV, Évaluation de solvabilité).",
+  },
+  Produit: {
+    title: 'Produit',
+    shortContent:
+      "IA soumise aux normes de l'UE ou intégrée comme composant de sécurité dont la défaillance mettrait en danger la sécurité des personnes. (Ex: Assistance chirurgicale, Sécurité industrielle).",
+  },
+}
+
+/** Codes ISO disponibles dans le sélecteur de pays de déploiement (aligné sur react-flags-select). */
+const DEPLOYMENT_SELECTABLE_CODES: string[] = [
+  'US', 'GB', 'FR', 'DE', 'ES', 'IT', 'NL', 'BE', 'CH', 'AT', 'PT', 'IE', 'DK', 'SE', 'NO', 'FI', 'PL', 'CZ',
+  'HU', 'SK', 'SI', 'HR', 'BG', 'RO', 'GR', 'CY', 'MT', 'LU', 'LV', 'LT', 'EE', 'CA', 'MX', 'BR', 'AR', 'CL',
+  'CO', 'PE', 'UY', 'VE', 'EC', 'BO', 'PY', 'SR', 'GY', 'FK', 'GF', 'AU', 'NZ', 'JP', 'KR', 'CN', 'IN', 'TH',
+  'VN', 'PH', 'ID', 'MY', 'SG', 'HK', 'TW', 'BD', 'PK', 'LK', 'NP', 'AF', 'IR', 'IQ', 'SA', 'AE', 'KW', 'QA',
+  'BH', 'OM', 'YE', 'JO', 'LB', 'SY', 'IL', 'PS', 'TR', 'EG', 'LY', 'TN', 'DZ', 'MA', 'SD', 'ET', 'KE', 'UG',
+  'TZ', 'RW', 'BI', 'DJ', 'SO', 'ER', 'SS', 'CF', 'TD', 'CM', 'GQ', 'GA', 'CG', 'CD', 'AO', 'ZM', 'ZW', 'BW',
+  'NA', 'SZ', 'LS', 'ZA', 'MZ', 'MW', 'MG', 'MU', 'SC', 'KM', 'YT', 'RE', 'MV', 'RU', 'BY', 'UA', 'MD', 'GE',
+  'AM', 'AZ', 'KZ', 'KG', 'TJ', 'TM', 'UZ', 'MN',
+]
+
+/** États membres de l’UE (codes présents dans le sélecteur). */
+const EU_COUNTRIES: string[] = [
+  'FR', 'DE', 'IT', 'ES', 'BE', 'NL', 'LU', 'PT', 'AT', 'IE', 'FI', 'SE', 'DK', 'PL', 'CZ', 'HU', 'SK', 'SI',
+  'EE', 'LV', 'LT', 'GR', 'BG', 'RO', 'HR', 'CY', 'MT',
+]
 
 interface Company {
   id: string
@@ -67,6 +155,7 @@ interface ModelData {
 
 interface FormData {
   name: string
+  deployment_phase: string
   deployment_date: string
   responsible_service: string
   technology_partner: string
@@ -81,7 +170,7 @@ interface FormData {
 interface Question {
   id: keyof FormData
   question: string
-  type: 'text' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date' | 'countries'
+  type: 'text' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date' | 'countries' | 'deployment_phase_and_date'
   options?: string[] | { label: string; examples: string[]; tooltip?: { title: string; shortContent: string; fullContent?: string; icon?: string }; modelData?: ModelData }[]
   placeholder?: string
   maxLength?: number
@@ -114,6 +203,7 @@ function CreateUseCasePageContent() {
   const [company, setCompany] = useState<Company | null>(null)
   const [formData, setFormData] = useState<FormData>({
     name: '',
+    deployment_phase: '',
     deployment_date: '',
     responsible_service: '',
     technology_partner: '',
@@ -125,6 +215,7 @@ function CreateUseCasePageContent() {
   })
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const [isNextNavigating, setIsNextNavigating] = useState(false)
   const [error, setError] = useState<string>('')
   const [partners, setPartners] = useState<ModelProvider[]>([])
   const [loadingPartners, setLoadingPartners] = useState(false)
@@ -133,6 +224,8 @@ function CreateUseCasePageContent() {
   const [selectedCountries, setSelectedCountries] = useState<string[]>([])
   const [otherRadioValue, setOtherRadioValue] = useState('')
   const [otherRadioSelected, setOtherRadioSelected] = useState(false)
+  /** Étape LLM : carte « Autre modèle… » + liste des modèles au-delà du top 5 */
+  const [llmMoreModelsCardSelected, setLlmMoreModelsCardSelected] = useState(false)
   const api = useApiCall()
 
   // Données des infobulles pour chaque partenaire technologique (fallback)
@@ -221,9 +314,14 @@ function CreateUseCasePageContent() {
   const { isOwner } = useCompanyInfo(companyId)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
 
-  const validateDateFormat = (dateString: string): boolean => {
-    return validateDeploymentDateDDMMYYYY(dateString).isValid
-  }
+  const deploymentPhaseHeadingId = useId()
+  const responsibleServiceHeadingId = useId()
+  const technologyPartnerHeadingId = useId()
+  const llmModelHeadingId = useId()
+  const aiCategoryHeadingId = useId()
+  const systemTypeHeadingId = useId()
+  const deploymentCountriesHeadingId = useId()
+  const descriptionHeadingId = useId()
 
   // Fonction pour récupérer les partenaires depuis l'API
   const fetchPartners = async () => {
@@ -340,6 +438,13 @@ function CreateUseCasePageContent() {
     })
   }
 
+  const llmPickerSorted =
+    currentQuestion.id === 'llm_model_version' && !isCustomTechnologyPartner()
+      ? getAvailableModels()
+      : []
+  const llmTopModels = llmPickerSorted.slice(0, 5)
+  const llmOtherModels = llmPickerSorted.slice(5)
+
   const isLastQuestion = currentQuestionIndex === questions.length - 1
   const isFirstQuestion = currentQuestionIndex === 0
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100
@@ -368,6 +473,36 @@ function CreateUseCasePageContent() {
     if (typeof window === 'undefined') return
     setMounted(true)
   }, [])
+
+  // Étape LLM : carte « Autre modèle… » cochée si la valeur sauvegardée est hors du top 5 (ex. retour « Précédent »)
+  useEffect(() => {
+    if (questions[currentQuestionIndex]?.id !== 'llm_model_version') return
+    if (isCustomTechnologyPartner() || loadingModels) return
+    if (otherRadioSelected) {
+      setLlmMoreModelsCardSelected(false)
+      return
+    }
+    const others = getAvailableModels().slice(5)
+    if (others.length === 0) {
+      setLlmMoreModelsCardSelected(false)
+      return
+    }
+    const v = (formData.llm_model_version || '').trim()
+    if (v && others.some((m) => m.model_name === v)) {
+      setLlmMoreModelsCardSelected(true)
+    } else {
+      setLlmMoreModelsCardSelected(false)
+    }
+  }, [
+    currentQuestionIndex,
+    availableModels,
+    loadingModels,
+    formData.llm_model_version,
+    formData.technology_partner,
+    partners,
+    otherRadioSelected,
+    questions,
+  ])
 
   // Charger les partenaires au démarrage
   useEffect(() => {
@@ -507,11 +642,21 @@ function CreateUseCasePageContent() {
         setError('Veuillez sélectionner au moins un pays')
         return false
       }
-    } else if (currentQuestion.id === 'deployment_date') {
-      // For deployment date, validate format if provided
-      const valueStr = typeof value === 'string' ? value : String(value)
-      if (value && !validateDateFormat(valueStr)) {
-        setError('Format de date invalide. Utilisez le format DD/MM/YYYY (ex: 15/06/2025)')
+    } else if (
+      currentQuestion.id === 'deployment_date' &&
+      currentQuestion.type === 'deployment_phase_and_date'
+    ) {
+      if (!formData.deployment_phase?.trim()) {
+        setError('Sélectionnez une phase de déploiement.')
+        return false
+      }
+      if (!formData.deployment_date?.trim()) {
+        setError('Sélectionnez une date.')
+        return false
+      }
+      const dateCheck = validateDeploymentDateFlexible(formData.deployment_date)
+      if (!dateCheck.isValid) {
+        setError(dateCheck.error || 'Date invalide.')
         return false
       }
     } else {
@@ -530,33 +675,33 @@ function CreateUseCasePageContent() {
   const handleNext = async () => {
     if (!validateCurrentQuestion()) return
 
-    // Si on est à la question "technology_partner" (question 4), charger les modèles avant de continuer
-    if (currentQuestion.id === 'technology_partner' && formData.technology_partner_id) {
-      try {
-        setSubmitting(true) // Activer l'indicateur de chargement
-        setError('')
-        await fetchAvailableModels(formData.technology_partner_id)
-      } catch (error) {
-        console.error('Erreur chargement modèles:', error)
-        setError('Impossible de charger les modèles. Veuillez réessayer.')
-        setSubmitting(false)
-        return
-      } finally {
-        setSubmitting(false)
+    setIsNextNavigating(true)
+    try {
+      // Si on est à la question "technology_partner" (question 4), charger les modèles avant de continuer
+      if (currentQuestion.id === 'technology_partner' && formData.technology_partner_id) {
+        try {
+          setError('')
+          await fetchAvailableModels(formData.technology_partner_id)
+        } catch (error) {
+          console.error('Erreur chargement modèles:', error)
+          setError('Impossible de charger les modèles. Veuillez réessayer.')
+          return
+        }
       }
-    }
 
-    // Navigation normale
-    if (isLastQuestion) {
-      handleSubmit()
-    } else {
-      setCurrentQuestionIndex(prev => prev + 1)
-      // Reset other radio value and countries selection when moving to next question
-      setOtherRadioValue('')
-      setOtherRadioSelected(false)
-      if (currentQuestion.type === 'countries') {
-        setSelectedCountries([])
+      if (isLastQuestion) {
+        await handleSubmit()
+      } else {
+        setCurrentQuestionIndex(prev => prev + 1)
+        setOtherRadioValue('')
+        setOtherRadioSelected(false)
+        setLlmMoreModelsCardSelected(false)
+        if (currentQuestion.type === 'countries') {
+          setSelectedCountries([])
+        }
       }
+    } finally {
+      setIsNextNavigating(false)
     }
   }
 
@@ -613,6 +758,7 @@ function CreateUseCasePageContent() {
       // Log des données à envoyer
       const payload = {
         name: formData.name,
+        deployment_phase: formData.deployment_phase.trim() || null,
         deployment_date: formData.deployment_date,
         responsible_service: formData.responsible_service,
         technology_partner: formData.technology_partner,
@@ -692,48 +838,6 @@ function CreateUseCasePageContent() {
     }
   }
 
-  const handleDateInputChange = (value: string, inputElement?: HTMLInputElement) => {
-    // Remove non-digits except slashes for formatting
-    let digits = value.replace(/[^\d]/g, '')
-
-    // Limit to 8 digits (DDMMYYYY)
-    digits = digits.substring(0, 8)
-
-    // Format as DD/MM/YYYY with automatic slash insertion
-    let formatted = ''
-
-    if (digits.length >= 1) {
-      formatted = digits.substring(0, 2)
-      if (digits.length >= 2) {
-        formatted += '/'
-        if (digits.length >= 3) {
-          formatted += digits.substring(2, 4)
-          if (digits.length >= 4) {
-            formatted += '/'
-            if (digits.length >= 5) {
-              formatted += digits.substring(4, 8)
-            }
-          }
-        }
-      }
-    }
-
-    setFormData(prev => ({ ...prev, deployment_date: formatted }))
-    if (error) {
-      setError('')
-    }
-
-    // Auto-position cursor after slash
-    if (inputElement) {
-      setTimeout(() => {
-        if (digits.length === 2 || digits.length === 4) {
-          inputElement.setSelectionRange(formatted.length, formatted.length)
-        }
-      }, 0)
-    }
-  }
-
-
   const handleCountrySelect = (countryCode: string) => {
     const newSelectedCountries = [...selectedCountries]
     const index = newSelectedCountries.indexOf(countryCode)
@@ -753,6 +857,17 @@ function CreateUseCasePageContent() {
       .map(code => isoToCountryName[code.toLowerCase()] || code)
       .filter(name => name) // Filtrer les noms non trouvés
 
+    handleInputChange(countryNames.join(', '))
+  }
+
+  const handleAddEU = () => {
+    const selectable = new Set(DEPLOYMENT_SELECTABLE_CODES)
+    const euCodesPresent = EU_COUNTRIES.filter((c) => selectable.has(c))
+    const newSelectedCountries = [...new Set([...selectedCountries, ...euCodesPresent])]
+    setSelectedCountries(newSelectedCountries)
+    const countryNames = newSelectedCountries
+      .map((code) => isoToCountryName[code.toLowerCase()] || code)
+      .filter(Boolean)
     handleInputChange(countryNames.join(', '))
   }
 
@@ -817,7 +932,7 @@ function CreateUseCasePageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 px-4 sm:px-6 lg:px-8 font-sans">
       <style dangerouslySetInnerHTML={{ __html: animationStyles }} />
       <div className="max-w-2xl mx-auto py-8 sm:py-12">
         {/* Header */}
@@ -875,73 +990,202 @@ function CreateUseCasePageContent() {
             </div>
           )}
 
-          <div className="mb-6">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-0">
-                {currentQuestion.question}
-              </h2>
-              {currentQuestion.tooltip && (
-                <Tooltip
-                  title={currentQuestion.tooltip.title}
-                  shortContent={currentQuestion.tooltip.shortContent}
-                  fullContent={currentQuestion.tooltip.fullContent}
-                  icon={currentQuestion.tooltip.icon}
-                  type="question"
-                />
+          {currentQuestion.id !== 'name' && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2">
+                <h2
+                  id={
+                    currentQuestion.id === 'responsible_service'
+                      ? responsibleServiceHeadingId
+                      : currentQuestion.id === 'technology_partner'
+                        ? technologyPartnerHeadingId
+                        : currentQuestion.id === 'llm_model_version' && !isCustomTechnologyPartner()
+                          ? llmModelHeadingId
+                          : currentQuestion.id === 'ai_category'
+                            ? aiCategoryHeadingId
+                            : currentQuestion.id === 'system_type'
+                              ? systemTypeHeadingId
+                              : currentQuestion.id === 'deployment_countries'
+                                ? deploymentCountriesHeadingId
+                                : currentQuestion.id === 'description'
+                                  ? descriptionHeadingId
+                                  : undefined
+                  }
+                  className="text-xl sm:text-2xl font-semibold text-gray-900 mb-0"
+                >
+                  {currentQuestion.id === 'llm_model_version' && !isCustomTechnologyPartner()
+                    ? (() => {
+                        const pn =
+                          typeof formData.technology_partner === 'string'
+                            ? formData.technology_partner.trim()
+                            : ''
+                        return pn
+                          ? `Quel modèle de ${pn} utilisez-vous ?`
+                          : 'Quel modèle IA utilisez-vous ?'
+                      })()
+                    : currentQuestion.id === 'system_type'
+                      ? 'Système autonome ou produit ?'
+                      : currentQuestion.id === 'deployment_countries'
+                        ? 'Dans quels pays ce système sera-t-il déployé ?'
+                        : currentQuestion.id === 'description'
+                          ? 'Comment décririez-vous ce système IA ?'
+                          : currentQuestion.question}
+                </h2>
+                {currentQuestion.tooltip &&
+                  currentQuestion.id !== 'responsible_service' &&
+                  currentQuestion.id !== 'technology_partner' &&
+                  currentQuestion.id !== 'llm_model_version' &&
+                  currentQuestion.id !== 'system_type' &&
+                  currentQuestion.id !== 'ai_category' &&
+                  currentQuestion.id !== 'deployment_countries' &&
+                  currentQuestion.id !== 'description' && (
+                  <Tooltip
+                    title={currentQuestion.tooltip.title}
+                    shortContent={currentQuestion.tooltip.shortContent}
+                    fullContent={currentQuestion.tooltip.fullContent}
+                    icon={currentQuestion.tooltip.icon}
+                    type="question"
+                  />
+                )}
+              </div>
+              {currentQuestion.id === 'responsible_service' && (
+                <p className="text-sm text-gray-600 mb-6">
+                  Identifiez le département responsable du pilotage opérationnel de ce système.
+                </p>
+              )}
+              {currentQuestion.id === 'technology_partner' && (
+                <p className="text-sm text-gray-600 mb-6">
+                  Sélectionnez l&apos;éditeur principal de la technologie IA utilisée.
+                </p>
+              )}
+              {currentQuestion.id === 'system_type' && (
+                <p className="text-sm text-gray-600 mb-6">
+                  Votre IA est-elle essentielle à la sécurité d&apos;un produit matériel, ou
+                  s&apos;agit-il d&apos;un logiciel indépendant utilisé pour sa propre finalité ?
+                </p>
+              )}
+              {currentQuestion.id === 'deployment_countries' && (
+                <p className="text-sm text-gray-600 mb-6">
+                  La zone géographique détermine les cadres réglementaires applicables (ex: RGPD, AI Act).
+                </p>
+              )}
+              {currentQuestion.id === 'description' && (
+                <p className="text-sm text-gray-600 mb-6">
+                  Cette description servira de base à votre registre de conformité. Soyez factuel ou laissez
+                  notre IA la rédiger pour vous.
+                </p>
+              )}
+              {currentQuestion.maxLength && (
+                <p className="text-sm text-gray-500">
+                  Maximum {currentQuestion.maxLength} caractères
+                </p>
               )}
             </div>
-            {currentQuestion.maxLength && (
-              <p className="text-sm text-gray-500">
-                Maximum {currentQuestion.maxLength} caractères
-              </p>
-            )}
-          </div>
-
-          {/* Input based on question type */}
-          {currentQuestion.type === 'text' && currentQuestion.id !== 'deployment_date' && (
-            <input
-              type="text"
-              value={formData[currentQuestion.id]}
-              onChange={(e) => handleInputChange(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors ${
-                error ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder={currentQuestion.placeholder}
-              maxLength={currentQuestion.maxLength}
-              autoFocus
-            />
           )}
 
-          {/* Special date input for deployment_date */}
-          {currentQuestion.type === 'text' && currentQuestion.id === 'deployment_date' && (
-            <div className="relative">
+          {/* Input based on question type — étape 1 : nom du système IA */}
+          {currentQuestion.type === 'text' && currentQuestion.id === 'name' && (
+            <div>
+              <label
+                htmlFor="create-use-case-name-input"
+                className="block text-base sm:text-lg font-medium text-gray-900 mb-2"
+              >
+                Comment souhaitez-vous nommer ce système IA ?
+              </label>
               <input
+                id="create-use-case-name-input"
                 type="text"
-                value={formData[currentQuestion.id]}
-                onChange={(e) => handleDateInputChange(e.target.value, e.target)}
+                value={formData.name}
+                onChange={(e) => handleInputChange(e.target.value)}
                 onKeyPress={handleKeyPress}
-                onFocus={(e) => {
-                  // Position cursor at the beginning if empty
-                  setTimeout(() => {
-                    if (!e.target.value) {
-                      e.target.setSelectionRange(0, 0)
-                    }
-                  }, 0)
-                }}
-                className={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors font-mono tracking-wider ${
+                maxLength={50}
+                aria-describedby="naming-hint"
+                className={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 placeholder-gray-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus:border-[#0080A3] ${
                   error ? 'border-red-300' : 'border-gray-300'
                 }`}
-                placeholder="DD/MM/YYYY"
-                maxLength={10}
+                placeholder={currentQuestion.placeholder}
                 autoFocus
               />
-              {/* Helper text */}
-              <div className="mt-2 text-sm text-gray-500">
-                Format : JJ/MM/AAAA (ex: 15/06/2025)
+              <div id="naming-hint" className="text-sm text-gray-600 mt-2">
+                <p>Soyez précis sur sa finalité pour optimiser l&apos;analyse juridique.</p>
+                <span className="block mt-2 text-red-600">
+                  <X size={16} className="inline text-red-600 mr-1" aria-hidden="true" />
+                  À éviter : &apos;IA Production&apos;
+                </span>
+                <span className="block mt-1 text-teal-700">
+                  <Check size={16} className="inline text-teal-600 mr-1" aria-hidden="true" />
+                  Idéal : &apos;Système prédictif des pannes de montage&apos;
+                </span>
               </div>
             </div>
           )}
+
+          {currentQuestion.type === 'deployment_phase_and_date' &&
+            currentQuestion.id === 'deployment_date' && (
+              <div className="space-y-6">
+                <p
+                  id={deploymentPhaseHeadingId}
+                  className="text-base sm:text-lg font-medium text-gray-900"
+                >
+                  Où en est le déploiement de ce système IA ?
+                </p>
+                <div
+                  role="radiogroup"
+                  aria-labelledby={deploymentPhaseHeadingId}
+                  className="grid grid-cols-1 gap-3"
+                >
+                  {DEPLOYMENT_PHASE_OPTIONS.map((option) => (
+                    <label
+                      key={option}
+                      className={`group flex cursor-pointer flex-col rounded-xl border-2 p-4 transition-all duration-200 ${
+                        formData.deployment_phase === option
+                          ? 'border-[#0080A3] bg-[#0080A3]/5'
+                          : 'border-gray-200 hover:border-[#0080A3] hover:bg-[#0080A3]/5'
+                      }`}
+                    >
+                      <div className="flex items-start space-x-4">
+                        <div className="mt-1 flex h-6 items-center">
+                          <input
+                            type="radio"
+                            name="deployment_phase"
+                            value={option}
+                            checked={formData.deployment_phase === option}
+                            onChange={() => {
+                              setFormData((prev) => ({ ...prev, deployment_phase: option }))
+                              if (error) setError('')
+                            }}
+                            className="h-5 w-5 border-2 border-gray-300 text-[#0080A3] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus:ring-offset-0"
+                          />
+                        </div>
+                        <span className="text-lg font-semibold text-gray-900">{option}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <div>
+                  <label
+                    htmlFor="create-use-case-deployment-date"
+                    className="mb-2 block text-sm font-medium text-gray-900"
+                  >
+                    {getDeploymentDateFieldLabel(formData.deployment_phase)}
+                  </label>
+                  <input
+                    id="create-use-case-deployment-date"
+                    type="date"
+                    value={formData.deployment_date}
+                    onChange={(e) => {
+                      setFormData((prev) => ({ ...prev, deployment_date: e.target.value }))
+                      if (error) setError('')
+                    }}
+                    onKeyPress={handleKeyPress}
+                    className={`w-full rounded-lg border px-4 py-3 text-lg text-gray-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus:border-[#0080A3] ${
+                      error ? 'border-red-300' : 'border-gray-300'
+                    }`}
+                    autoFocus
+                  />
+                </div>
+              </div>
+            )}
 
           {currentQuestion.type === 'select' && (
             <div className="space-y-4">
@@ -949,35 +1193,50 @@ function CreateUseCasePageContent() {
                 <div className="space-y-3">
                   {/* Affichage spécial pour la question responsible_service avec 2 colonnes */}
                   {currentQuestion.id === 'responsible_service' ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {(currentQuestion.options as string[]).map((option, index) => (
-                        <label
-                          key={index}
-                          className={`group flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                            formData[currentQuestion.id] === option
-                              ? 'border-[#0080A3] bg-[#0080A3]/5'
-                              : 'border-gray-200 hover:border-[#0080A3] hover:bg-[#0080A3]/5'
-                          }`}
-                        >
-                          <div className="flex items-start space-x-4">
-                            <div className="flex items-center h-6 mt-1">
-                              <input
-                                type="radio"
-                                name={currentQuestion.id}
-                                value={option}
-                                checked={formData[currentQuestion.id] === option}
-                                onChange={() => handleInputChange(option)}
-                                className="h-5 w-5 text-[#0080A3] border-2 border-gray-300 focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0"
+                    <div
+                      role="radiogroup"
+                      aria-labelledby={responsibleServiceHeadingId}
+                      className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                    >
+                      {(currentQuestion.options as string[]).map((option, index) => {
+                        const Icon = RESPONSIBLE_SERVICE_ICONS[option] ?? MoreHorizontal
+                        const selected = formData[currentQuestion.id] === option
+                        return (
+                          <label
+                            key={index}
+                            className="block cursor-pointer rounded-lg"
+                          >
+                            <input
+                              type="radio"
+                              name={currentQuestion.id}
+                              value={option}
+                              checked={selected}
+                              onChange={() => handleInputChange(option)}
+                              className="peer sr-only"
+                            />
+                            <div
+                              className={`flex items-center gap-3 rounded-lg border p-4 transition-all peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-[#0080A3] ${
+                                selected
+                                  ? 'border-[#0080A3] bg-[#0080A3]/5 ring-1 ring-[#0080A3]'
+                                  : 'border-gray-300 bg-white hover:border-[#0080A3]/50 hover:bg-slate-50'
+                              }`}
+                            >
+                              <Icon
+                                size={20}
+                                className="shrink-0 text-[#0080A3]"
+                                aria-hidden
                               />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-lg font-semibold text-gray-900">
+                              <span
+                                className={`min-w-0 text-left text-base text-gray-900 ${
+                                  selected ? 'font-medium' : ''
+                                }`}
+                              >
                                 {option}
-                              </div>
+                              </span>
                             </div>
-                          </div>
-                        </label>
-                      ))}
+                          </label>
+                        )
+                      })}
                     </div>
                   ) : (
                     /* Affichage normal pour les autres questions select */
@@ -1017,69 +1276,69 @@ function CreateUseCasePageContent() {
 
           {currentQuestion.type === 'textarea' && (
             <div className="space-y-4">
-              {/* Bouton de génération automatique pour la question description */}
               {currentQuestion.id === 'description' && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Sparkles className="h-5 w-5 text-[#0080A3]" />
-                    <span className="text-sm font-medium text-gray-700">
-                      Génération automatique avec Mistral AI
-                    </span>
-                  </div>
+                <div className="mb-2 flex justify-end">
                   <button
                     type="button"
                     onClick={generateDescriptionWithAI}
                     disabled={isGeneratingDescription || !formData.name || !formData.ai_category}
-                    className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-[#0080A3] to-[#006080] text-white text-sm font-medium rounded-lg hover:from-[#006080] hover:to-[#005060] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                    aria-busy={isGeneratingDescription ? true : undefined}
+                    className="flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isGeneratingDescription ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Génération...
+                        <Loader2 size={16} className="animate-spin shrink-0" aria-hidden />
+                        Génération en cours...
                       </>
                     ) : (
                       <>
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        Générer avec AI
+                        <Sparkles size={16} className="shrink-0" aria-hidden />
+                        Rédiger pour moi (Mistral AI)
                       </>
                     )}
                   </button>
                 </div>
               )}
 
-              {/* Affichage de la description générée */}
               {currentQuestion.id === 'description' && showGeneratedDescription && generatedDescription && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-blue-800 flex items-center">
-                      <Sparkles className="h-4 w-4 mr-2" />
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="flex items-center text-sm font-semibold text-blue-800">
+                      <Sparkles className="mr-2 h-4 w-4" aria-hidden />
                       Description générée par Mistral AI
                     </h4>
                     <button
+                      type="button"
                       onClick={() => setShowGeneratedDescription(false)}
                       className="text-blue-600 hover:text-blue-800"
+                      aria-label="Masquer l’aperçu de la description générée"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-4 w-4" aria-hidden />
                     </button>
                   </div>
-                  <p className="text-blue-700 text-sm leading-relaxed">
-                    {generatedDescription}
-                  </p>
+                  <p className="text-sm leading-relaxed text-blue-700">{generatedDescription}</p>
                   <div className="mt-3 text-xs text-blue-600">
-                    Cette description a été pré-remplie dans le champ ci-dessous. Vous pouvez la modifier selon vos besoins.
+                    Cette description a été pré-remplie dans le champ ci-dessous. Vous pouvez la modifier selon
+                    vos besoins.
                   </div>
                 </div>
               )}
 
-              {/* Champ textarea existant */}
               <textarea
-                rows={6}
+                id="create-use-case-description"
+                aria-labelledby={
+                  currentQuestion.id === 'description' ? descriptionHeadingId : undefined
+                }
                 value={formData[currentQuestion.id]}
                 onChange={(e) => handleInputChange(e.target.value)}
-                className={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors resize-none ${
+                className={`min-h-[160px] w-full resize-y rounded-lg border bg-white p-4 text-gray-900 transition-all focus:border-[#0080A3] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] ${
                   error ? 'border-red-300' : 'border-gray-300'
                 }`}
-                placeholder={currentQuestion.placeholder}
+                placeholder={
+                  currentQuestion.id === 'description'
+                    ? "Ex: Ce système analyse l'historique des tickets clients pour suggérer des réponses pré-rédigées aux agents du SAV, afin de réduire le temps de traitement."
+                    : currentQuestion.placeholder
+                }
                 autoFocus
               />
             </div>
@@ -1146,151 +1405,428 @@ function CreateUseCasePageContent() {
               )}
 
               {Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 && !loadingPartners && !loadingModels && (
-                <div className={currentQuestion.id === 'technology_partner' || currentQuestion.id === 'ai_category' ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : 'space-y-3'}>
-                  {(currentQuestion.options as { label: string; examples: string[]; tooltip?: { title: string; shortContent: string; fullContent?: string; icon?: string }; modelData?: ModelData }[]).map((option, index) => (
-                    <label
-                      key={index}
-                      className={`group flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                        formData[currentQuestion.id] === option.label
-                          ? 'border-[#0080A3] bg-[#0080A3]/5'
-                          : 'border-gray-200 hover:border-[#0080A3] hover:bg-[#0080A3]/5'
-                      }`}
+                <>
+                  {currentQuestion.id === 'technology_partner' ? (
+                    <div
+                      role="radiogroup"
+                      aria-labelledby={technologyPartnerHeadingId}
+                      className="grid grid-cols-1 gap-4 sm:grid-cols-2"
                     >
-                      <div className="flex items-start space-x-4">
-                        <div className="flex items-center h-6 mt-1">
-                          <input
-                            type="radio"
-                            name={currentQuestion.id}
-                            value={option.label}
-                            checked={formData[currentQuestion.id] === option.label}
-                            onChange={() => {
-                              handleInputChange(option.label)
-                              setOtherRadioValue('') // Reset other value when selecting predefined option
-                              setOtherRadioSelected(false)
-                            }}
-                            className="h-5 w-5 text-[#0080A3] border-2 border-gray-300 focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          {currentQuestion.id === 'technology_partner' ? (
-                            <div className="flex items-center space-x-3">
-                              <div className="flex-shrink-0">
+                      {(
+                        currentQuestion.options as {
+                          label: string
+                          examples: string[]
+                          tooltip?: {
+                            title: string
+                            shortContent: string
+                            fullContent?: string
+                            icon?: string
+                          }
+                          modelData?: ModelData
+                        }[]
+                      ).map((option, index) => {
+                        const selected = formData.technology_partner === option.label
+                        const tooltipData = getProviderTooltip(option.label)
+                        return (
+                          <label
+                            key={`${option.label}-${index}`}
+                            className="block cursor-pointer rounded-lg"
+                          >
+                            <input
+                              type="radio"
+                              name={currentQuestion.id}
+                              value={option.label}
+                              checked={selected}
+                              onChange={() => {
+                                handleInputChange(option.label)
+                                setOtherRadioValue('')
+                                setOtherRadioSelected(false)
+                              }}
+                              className="peer sr-only"
+                            />
+                            <div
+                              className={`flex items-center justify-between rounded-lg border p-4 transition-all peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-[#0080A3] ${
+                                selected
+                                  ? 'border-[#0080A3] bg-[#0080A3]/5 ring-1 ring-[#0080A3]'
+                                  : 'cursor-pointer border-gray-300 bg-white hover:border-[#0080A3]/50 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex min-w-0 flex-1 items-center gap-3 pr-2">
                                 <Image
                                   src={getProviderIcon(option.label)}
                                   alt={`Logo ${option.label}`}
                                   width={24}
                                   height={24}
-                                  className="w-6 h-6 object-contain"
+                                  className="h-6 w-6 shrink-0 object-contain"
                                 />
-                              </div>
-                              <div className="flex-1 flex items-center justify-between">
-                                <div className="text-lg font-semibold text-gray-900">
+                                <span
+                                  className={`truncate text-base text-gray-900 ${
+                                    selected ? 'font-medium' : ''
+                                  }`}
+                                >
                                   {option.label}
-                                </div>
-                                {(() => {
-                                  const tooltipData = getProviderTooltip(option.label)
-                                  return tooltipData ? (
-                                    <Tooltip
-                                      title={tooltipData.title}
-                                      shortContent={tooltipData.shortContent}
-                                      fullContent={tooltipData.fullContent}
-                                      icon={tooltipData.icon}
-                                      rank={tooltipData.rank}
-                                      rankText={tooltipData.rankText}
-                                      type="answer"
-                                      position="auto"
-                                    />
-                                  ) : null
-                                })()}
+                                </span>
                               </div>
-                            </div>
-                          ) : currentQuestion.id === 'llm_model_version' && option.modelData ? (
-                            <>
-                              <div className="flex items-center justify-between w-full mb-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="text-lg font-semibold text-gray-900">
-                                    {option.label}
-                                  </div>
-                                  <ModelTooltip
-                                    notesShort={option.modelData.notes_short}
-                                    notesLong={option.modelData.notes_long}
-                                    launchDate={option.modelData.launch_date}
-                                  />
-                                </div>
-                              </div>
-                              {option.modelData.variants && option.modelData.variants.length > 0 && (
-                                <div className="text-sm text-gray-500 italic mt-1">
-                                  {option.modelData.variants.join(', ')}
-                                </div>
+                              {tooltipData ? (
+                                <Tooltip
+                                  title={tooltipData.title}
+                                  shortContent={tooltipData.shortContent}
+                                  fullContent={tooltipData.fullContent}
+                                  icon={tooltipData.icon}
+                                  rank={tooltipData.rank}
+                                  rankText={tooltipData.rankText}
+                                  type="answer"
+                                  position="auto"
+                                  triggerVariant="info"
+                                  isolateSelection
+                                />
+                              ) : (
+                                <span className="h-4 w-4 shrink-0" aria-hidden />
                               )}
-                            </>
-                          ) : (
-                            <>
-                              <div className="flex items-center justify-between w-full mb-2">
-                                <div className="text-lg font-semibold text-gray-900">
-                                  {option.label}
+                            </div>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  ) : currentQuestion.id === 'llm_model_version' && !isCustomTechnologyPartner() ? (
+                    <div className="space-y-4">
+                      <div
+                        role="radiogroup"
+                        aria-labelledby={llmModelHeadingId}
+                        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                      >
+                        {llmTopModels.map((model) => {
+                          const selected =
+                            !llmMoreModelsCardSelected &&
+                            !otherRadioSelected &&
+                            formData.llm_model_version === model.model_name
+                          const hasInfo = Boolean(model.notes_short || model.notes_long)
+                          return (
+                            <label key={model.id} className="block cursor-pointer rounded-lg">
+                              <input
+                                type="radio"
+                                name={currentQuestion.id}
+                                value={model.model_name}
+                                checked={selected}
+                                onChange={() => {
+                                  setLlmMoreModelsCardSelected(false)
+                                  setOtherRadioSelected(false)
+                                  setOtherRadioValue('')
+                                  handleInputChange(model.model_name)
+                                }}
+                                className="peer sr-only"
+                              />
+                              <div
+                                className={`flex items-center justify-between rounded-lg border p-4 transition-all peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-[#0080A3] ${
+                                  selected
+                                    ? 'border-[#0080A3] bg-[#0080A3]/5 ring-1 ring-[#0080A3]'
+                                    : 'cursor-pointer border-gray-300 bg-white hover:border-[#0080A3]/50 hover:bg-slate-50'
+                                }`}
+                              >
+                                <div className="flex min-w-0 flex-1 items-center gap-3 pr-2">
+                                  <span
+                                    className={`truncate text-base text-gray-900 ${
+                                      selected ? 'font-medium' : ''
+                                    }`}
+                                  >
+                                    {model.model_name}
+                                  </span>
                                 </div>
-                                {option.tooltip && (
+                                {hasInfo ? (
                                   <Tooltip
-                                    title={option.tooltip.title}
-                                    shortContent={option.tooltip.shortContent}
-                                    fullContent={option.tooltip.fullContent}
-                                    icon={option.tooltip.icon}
+                                    title={model.model_name}
+                                    shortContent={model.notes_short || model.model_name}
+                                    fullContent={model.notes_long}
                                     type="answer"
                                     position="auto"
+                                    triggerVariant="info"
+                                    isolateSelection
                                   />
+                                ) : (
+                                  <span className="h-4 w-4 shrink-0" aria-hidden />
                                 )}
                               </div>
-                              {option.examples.length > 0 && (
-                                <div className="text-sm text-gray-600">
-                                  <span className="font-medium">Exemples : </span>
-                                  <span className="text-gray-500">{option.examples.join(', ')}</span>
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-
-                  {/* Other Option for questions that have hasOtherOption */}
-                  {currentQuestion.hasOtherOption && (
-                    <div className="space-y-3">
-                      <label
-                        className={`group flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${
-                          otherRadioSelected
-                            ? 'border-[#0080A3] bg-[#0080A3]/5'
-                            : 'border-gray-200 hover:border-[#0080A3] hover:bg-[#0080A3]/5'
-                        }`}
-                      >
-                        <div className="flex items-start space-x-4">
-                          <div className="flex items-center h-6 mt-1">
+                            </label>
+                          )
+                        })}
+                        {llmOtherModels.length > 0 && (
+                          <label className="block cursor-pointer rounded-lg">
                             <input
                               type="radio"
                               name={currentQuestion.id}
-                              value="Autre"
-                              checked={otherRadioSelected}
+                              value={LLM_MORE_MODELS_CARD_RADIO}
+                              checked={llmMoreModelsCardSelected}
                               onChange={() => {
-                                setOtherRadioSelected(true)
-                                // Focus on the input field after a short delay
-                                setTimeout(() => {
-                                  const input = document.getElementById(`other-input-${currentQuestion.id}`)
-                                  if (input) input.focus()
-                                }, 100)
+                                setLlmMoreModelsCardSelected(true)
+                                setOtherRadioSelected(false)
+                                setOtherRadioValue('')
+                                const first = llmOtherModels[0]
+                                if (first) handleInputChange(first.model_name)
                               }}
-                              className="h-5 w-5 text-[#0080A3] border-2 border-gray-300 focus:ring-[#0080A3] focus:ring-2 focus:ring-offset-0"
+                              className="peer sr-only"
                             />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-lg font-semibold text-gray-900 mb-2">
-                              Autre
+                            <div
+                              className={`flex items-center justify-between rounded-lg border p-4 transition-all peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-[#0080A3] ${
+                                llmMoreModelsCardSelected
+                                  ? 'border-[#0080A3] bg-[#0080A3]/5 ring-1 ring-[#0080A3]'
+                                  : 'cursor-pointer border-gray-300 bg-white hover:border-[#0080A3]/50 hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex min-w-0 flex-1 items-center gap-3">
+                                <MoreHorizontal
+                                  size={24}
+                                  className="shrink-0 text-[#0080A3]"
+                                  aria-hidden="true"
+                                />
+                                <span
+                                  className={`text-base text-gray-900 ${
+                                    llmMoreModelsCardSelected ? 'font-medium' : ''
+                                  }`}
+                                >
+                                  Autre modèle...
+                                </span>
+                              </div>
                             </div>
+                          </label>
+                        )}
+                      </div>
+                      {llmOtherModels.length > 0 && llmMoreModelsCardSelected && (
+                        <select
+                          aria-label="Sélectionnez un autre modèle dans la liste"
+                          className="mt-4 w-full border border-gray-300 rounded-lg bg-white p-4 text-gray-900 transition-all focus:border-[#0080A3] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3]"
+                          value={
+                            llmOtherModels.some((m) => m.model_name === formData.llm_model_version)
+                              ? formData.llm_model_version
+                              : (llmOtherModels[0]?.model_name ?? '')
+                          }
+                          onChange={(e) => handleInputChange(e.target.value)}
+                        >
+                          {llmOtherModels.map((m) => (
+                            <option key={m.id} value={m.model_name}>
+                              {m.model_name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  ) : currentQuestion.id === 'ai_category' ? (
+                    <div
+                      role="radiogroup"
+                      aria-labelledby={aiCategoryHeadingId}
+                      className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                    >
+                      {(
+                        currentQuestion.options as {
+                          label: string
+                          examples: string[]
+                          tooltip?: {
+                            title: string
+                            shortContent: string
+                            fullContent?: string
+                            icon?: string
+                          }
+                          modelData?: ModelData
+                        }[]
+                      ).map((option) => {
+                        const Icon = AI_CATEGORY_ICONS[option.label] ?? MoreHorizontal
+                        const selected = formData.ai_category === option.label
+                        return (
+                          <label key={option.label} className="block cursor-pointer rounded-lg">
+                            <input
+                              type="radio"
+                              name={currentQuestion.id}
+                              value={option.label}
+                              checked={selected}
+                              onChange={() => {
+                                handleInputChange(option.label)
+                                setOtherRadioValue('')
+                                setOtherRadioSelected(false)
+                              }}
+                              className="peer sr-only"
+                            />
+                            <div
+                              className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-all peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-[#0080A3] ${
+                                selected
+                                  ? 'border-[#0080A3] bg-[#0080A3]/5 ring-1 ring-[#0080A3]'
+                                  : 'border-gray-300 bg-white hover:border-[#0080A3]/50 hover:bg-slate-50'
+                              }`}
+                            >
+                              <Icon
+                                size={24}
+                                className="mt-0.5 shrink-0 text-[#0080A3]"
+                                aria-hidden="true"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="mb-1 flex items-start justify-between gap-2">
+                                  <span
+                                    className={`text-base text-gray-900 ${
+                                      selected ? 'font-semibold' : 'font-medium'
+                                    }`}
+                                  >
+                                    {option.label}
+                                  </span>
+                                  {option.tooltip ? (
+                                    <Tooltip
+                                      title={option.tooltip.title}
+                                      shortContent={option.tooltip.shortContent}
+                                      fullContent={option.tooltip.fullContent}
+                                      icon={option.tooltip.icon}
+                                      type="answer"
+                                      position="auto"
+                                      triggerVariant="info"
+                                      isolateSelection
+                                    />
+                                  ) : (
+                                    <span className="h-4 w-4 shrink-0" aria-hidden />
+                                  )}
+                                </div>
+                                {option.examples.length > 0 && (
+                                  <div className="text-sm text-gray-600">
+                                    <span className="font-medium">Exemples : </span>
+                                    <span className="text-gray-500">{option.examples.join(', ')}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  ) : currentQuestion.id === 'system_type' ? (
+                    <div
+                      role="radiogroup"
+                      aria-labelledby={systemTypeHeadingId}
+                      className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                    >
+                      {(
+                        currentQuestion.options as {
+                          label: string
+                          examples: string[]
+                          tooltip?: {
+                            title: string
+                            shortContent: string
+                            fullContent?: string
+                            icon?: string
+                          }
+                          modelData?: ModelData
+                        }[]
+                      ).map((option) => {
+                        const Icon = option.label === 'Produit' ? Package : Cpu
+                        const selected = formData.system_type === option.label
+                        const legal = SYSTEM_TYPE_LEGAL_TOOLTIP[option.label]
+                        return (
+                          <label
+                            key={option.label}
+                            className="flex h-full min-h-0 cursor-pointer flex-col rounded-lg"
+                          >
+                            <input
+                              type="radio"
+                              name={currentQuestion.id}
+                              value={option.label}
+                              checked={selected}
+                              onChange={() => {
+                                handleInputChange(option.label)
+                                setOtherRadioValue('')
+                                setOtherRadioSelected(false)
+                              }}
+                              className="peer sr-only"
+                            />
+                            <div
+                              className={`flex h-full min-h-0 flex-1 flex-col peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-[#0080A3] ${
+                                selected
+                                  ? 'rounded-lg border border-[#0080A3] bg-[#0080A3]/5 ring-1 ring-[#0080A3]'
+                                  : 'cursor-pointer rounded-lg border border-gray-300 bg-white hover:border-[#0080A3]/50 hover:bg-slate-50'
+                              } transition-all`}
+                            >
+                              <div className="flex flex-1 flex-col gap-3 p-4">
+                                <div className="flex items-start gap-3">
+                                  <Icon
+                                    size={24}
+                                    className="mt-0.5 shrink-0 text-[#0080A3]"
+                                    aria-hidden="true"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <span
+                                        className={`text-base text-gray-900 ${
+                                          selected ? 'font-semibold' : 'font-medium'
+                                        }`}
+                                      >
+                                        {option.label}
+                                      </span>
+                                      {legal ? (
+                                        <Tooltip
+                                          title={legal.title}
+                                          shortContent={legal.shortContent}
+                                          type="answer"
+                                          position="auto"
+                                          triggerVariant="info"
+                                          isolateSelection
+                                        />
+                                      ) : (
+                                        <span className="h-4 w-4 shrink-0" aria-hidden />
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                {option.examples.length > 0 && (
+                                  <div className="mt-auto text-sm text-gray-600">
+                                    <span className="font-medium">Exemples : </span>
+                                    <span className="text-gray-500">{option.examples.join(', ')}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  ) : null}
+
+                  {/* Other Option for questions that have hasOtherOption */}
+                  {currentQuestion.hasOtherOption && currentQuestion.id === 'technology_partner' && (
+                    <div className="space-y-3">
+                      <label className="block cursor-pointer rounded-lg">
+                        <input
+                          type="radio"
+                          name={currentQuestion.id}
+                          value="Autre"
+                          checked={otherRadioSelected}
+                          onChange={() => {
+                            setOtherRadioSelected(true)
+                            setTimeout(() => {
+                              const input = document.getElementById(
+                                `other-input-${currentQuestion.id}`
+                              )
+                              if (input) input.focus()
+                            }, 100)
+                          }}
+                          className="peer sr-only"
+                        />
+                        <div
+                          className={`flex items-center justify-between rounded-lg border p-4 transition-all peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-[#0080A3] ${
+                            otherRadioSelected
+                              ? 'border-[#0080A3] bg-[#0080A3]/5 ring-1 ring-[#0080A3]'
+                              : 'cursor-pointer border-gray-300 bg-white hover:border-[#0080A3]/50 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex min-w-0 flex-1 items-center gap-3">
+                            <MoreHorizontal
+                              size={24}
+                              className="shrink-0 text-[#0080A3]"
+                              aria-hidden="true"
+                            />
+                            <span
+                              className={`text-base text-gray-900 ${
+                                otherRadioSelected ? 'font-medium' : ''
+                              }`}
+                            >
+                              Autre
+                            </span>
                           </div>
                         </div>
                       </label>
 
-                      {/* Other Input Field - Only show when "Autre" is selected */}
                       {otherRadioSelected && (
                         <div className="ml-2 animate-fadeIn">
                           <input
@@ -1302,35 +1838,87 @@ function CreateUseCasePageContent() {
                               handleInputChange(e.target.value)
                             }}
                             onKeyPress={handleKeyPress}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:border-[#0080A3] focus:ring-2 focus:ring-[#0080A3] focus:ring-opacity-20 focus:outline-none transition-all duration-200"
-                            placeholder={
-                              currentQuestion.id === 'technology_partner'
-                                ? "Spécifiez le partenaire technologique..."
-                                : "Spécifiez votre réponse..."
-                            }
+                            className="w-full rounded-lg border-2 border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-[#0080A3] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-opacity-20"
+                            placeholder="Spécifiez le partenaire technologique..."
                             autoFocus
                           />
                         </div>
                       )}
                     </div>
                   )}
-                </div>
+                  {currentQuestion.hasOtherOption && currentQuestion.id !== 'technology_partner' && (
+                    <div className="space-y-3">
+                      <label
+                        className={`group flex flex-col cursor-pointer rounded-xl border-2 p-4 transition-all duration-200 ${
+                          otherRadioSelected
+                            ? 'border-[#0080A3] bg-[#0080A3]/5'
+                            : 'border-gray-200 hover:border-[#0080A3] hover:bg-[#0080A3]/5'
+                        }`}
+                      >
+                        <div className="flex items-start space-x-4">
+                          <div className="mt-1 flex h-6 items-center">
+                            <input
+                              type="radio"
+                              name={currentQuestion.id}
+                              value="Autre"
+                              checked={otherRadioSelected}
+                              onChange={() => {
+                                setOtherRadioSelected(true)
+                                if (currentQuestion.id === 'llm_model_version') {
+                                  setLlmMoreModelsCardSelected(false)
+                                }
+                                setTimeout(() => {
+                                  const input = document.getElementById(
+                                    `other-input-${currentQuestion.id}`
+                                  )
+                                  if (input) input.focus()
+                                }, 100)
+                              }}
+                              className="h-5 w-5 border-2 border-gray-300 text-[#0080A3] focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-0"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-2 text-lg font-semibold text-gray-900">Autre</div>
+                          </div>
+                        </div>
+                      </label>
+
+                      {otherRadioSelected && (
+                        <div className="ml-2 animate-fadeIn">
+                          <input
+                            id={`other-input-${currentQuestion.id}`}
+                            type="text"
+                            value={otherRadioValue}
+                            onChange={(e) => {
+                              setOtherRadioValue(e.target.value)
+                              handleInputChange(e.target.value)
+                            }}
+                            onKeyPress={handleKeyPress}
+                            className="w-full rounded-lg border-2 border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-[#0080A3] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-opacity-20"
+                            placeholder="Spécifiez votre réponse..."
+                            autoFocus
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
 
           {currentQuestion.type === 'countries' && (
-            <div className="space-y-6">
+            <div className="space-y-6" aria-labelledby={deploymentCountriesHeadingId}>
               {/* Country Selector */}
               <div className="relative">
                 <ReactFlagsSelect
-                  countries={['US', 'GB', 'FR', 'DE', 'ES', 'IT', 'NL', 'BE', 'CH', 'AT', 'PT', 'IE', 'DK', 'SE', 'NO', 'FI', 'PL', 'CZ', 'HU', 'SK', 'SI', 'HR', 'BG', 'RO', 'GR', 'CY', 'MT', 'LU', 'LV', 'LT', 'EE', 'CA', 'MX', 'BR', 'AR', 'CL', 'CO', 'PE', 'UY', 'VE', 'EC', 'BO', 'PY', 'SR', 'GY', 'FK', 'GF', 'AU', 'NZ', 'JP', 'KR', 'CN', 'IN', 'TH', 'VN', 'PH', 'ID', 'MY', 'SG', 'HK', 'TW', 'BD', 'PK', 'LK', 'NP', 'AF', 'IR', 'IQ', 'SA', 'AE', 'KW', 'QA', 'BH', 'OM', 'YE', 'JO', 'LB', 'SY', 'IL', 'PS', 'TR', 'EG', 'LY', 'TN', 'DZ', 'MA', 'SD', 'ET', 'KE', 'UG', 'TZ', 'RW', 'BI', 'DJ', 'SO', 'ER', 'SS', 'CF', 'TD', 'CM', 'GQ', 'GA', 'CG', 'CD', 'AO', 'ZM', 'ZW', 'BW', 'NA', 'SZ', 'LS', 'ZA', 'MZ', 'MW', 'MG', 'MU', 'SC', 'KM', 'YT', 'RE', 'MV', 'RU', 'BY', 'UA', 'MD', 'GE', 'AM', 'AZ', 'KZ', 'KG', 'TJ', 'TM', 'UZ', 'MN']}
+                  countries={DEPLOYMENT_SELECTABLE_CODES}
                   selected=""
                   onSelect={(code) => handleCountrySelect(code)}
                   searchable
                   placeholder="Rechercher et sélectionner un pays..."
                   className="w-full"
-                  selectButtonClassName={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors ${
+                  selectButtonClassName={`w-full px-4 py-3 text-lg border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:border-[#0080A3] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus-visible:ring-2 focus-visible:ring-[#0080A3] transition-colors ${
                     error ? 'border-red-300' : 'border-gray-300'
                   }`}
                   showSelectedLabel={false}
@@ -1338,47 +1926,58 @@ function CreateUseCasePageContent() {
                 />
               </div>
 
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  type="button"
+                  onClick={handleAddEU}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-700 transition-colors hover:bg-slate-200"
+                >
+                  🇪🇺 Ajouter l&apos;Union Européenne
+                </button>
+              </div>
+
               {/* Selected Countries Display */}
               {selectedCountries.length > 0 && (
-                <div className="bg-white border-2 border-[#0080A3] rounded-xl p-6 shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                      <CheckCircle className="h-5 w-5 text-[#0080A3] mr-2" />
+                <div className="rounded-xl border-2 border-[#0080A3] bg-white p-6 shadow-sm">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="flex items-center text-lg font-semibold text-gray-900">
+                      <CheckCircle className="mr-2 h-5 w-5 text-[#0080A3]" />
                       Pays sélectionnés
                     </h3>
-                    <span className="bg-[#0080A3] text-white text-sm font-medium px-3 py-1 rounded-full">
+                    <span className="rounded-full bg-[#0080A3] px-3 py-1 text-sm font-medium text-white">
                       {selectedCountries.length}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {selectedCountries.map((countryCode) => (
-                      <div
-                        key={countryCode}
-                        className="group flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-all duration-200"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-6 flex items-center justify-center overflow-hidden rounded border border-gray-200">
-                            <img
-                              src={`https://flagcdn.com/${countryCode.toLowerCase()}.svg`}
-                              alt={`Drapeau ${countryCode}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <span className="font-medium text-gray-900">
-                            {new Intl.DisplayNames(['fr'], {type: 'region'}).of(countryCode)}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => removeCountry(countryCode)}
-                          className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-6 h-6 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-all duration-200"
-                          type="button"
-                          title="Supprimer ce pays"
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCountries.map((countryCode) => {
+                      const countryName =
+                        new Intl.DisplayNames(['fr'], { type: 'region' }).of(countryCode) ??
+                        countryCode
+                      return (
+                        <span
+                          key={countryCode}
+                          className="inline-flex items-center gap-2 rounded-full border border-[#0080A3]/20 bg-[#0080A3]/10 px-3 py-1.5 text-sm font-medium text-[#0080A3]"
                         >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
+                          <img
+                            src={`https://flagcdn.com/${countryCode.toLowerCase()}.svg`}
+                            alt=""
+                            className="h-3.5 w-5 shrink-0 rounded-sm object-cover"
+                            width={20}
+                            height={14}
+                          />
+                          {countryName}
+                          <button
+                            type="button"
+                            onClick={() => removeCountry(countryCode)}
+                            className="rounded-full p-0.5 transition-colors hover:bg-[#0080A3]/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3]"
+                            aria-label={`Supprimer ${countryName}`}
+                          >
+                            <X size={14} aria-hidden />
+                          </button>
+                        </span>
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -1403,51 +2002,61 @@ function CreateUseCasePageContent() {
           )}
         </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-0 pt-6 border-t border-gray-200">
-          <button
-            onClick={handlePrevious}
-            disabled={isFirstQuestion}
-            className="flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Précédent
-          </button>
-
-          {isOwner && companyId && (
+        {/* Navigation */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 w-full mt-6">
+          <div className="flex flex-wrap gap-4 items-center">
+            {!isFirstQuestion && (
+              <button
+                type="button"
+                onClick={handlePrevious}
+                className="flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Précédent
+              </button>
+            )}
+            {isOwner && companyId && (
+              <button
+                type="button"
+                onClick={handleInviteClick}
+                className="flex items-center justify-center gap-2 px-4 py-2 text-[#0080A3] border border-[#0080A3] rounded-md hover:bg-[#0080A3]/10 transition-colors font-medium"
+              >
+                <UserPlus size={18} aria-hidden />
+                Inviter un collaborateur
+              </button>
+            )}
+          </div>
+          <div className="flex justify-end sm:justify-end">
             <button
               type="button"
-              onClick={handleInviteClick}
-              className="group inline-flex items-center justify-center text-gray-500 hover:text-[#0080A3] transition-all duration-200 hover:bg-blue-50 rounded-lg px-3 py-2"
-              title="Inviter un collaborateur"
+              onClick={handleNext}
+              disabled={submitting || isNextNavigating}
+              aria-busy={submitting || isNextNavigating ? true : undefined}
+              className="flex min-w-[140px] w-full items-center justify-center rounded-lg bg-[#0080A3] px-6 py-3 font-medium text-white transition-colors hover:bg-[#006280] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
-              <UserPlus className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-              <span className="text-sm font-medium">Inviter un collaborateur</span>
+              {submitting && isLastQuestion ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin text-white" aria-hidden />
+                  Création en cours...
+                </>
+              ) : isNextNavigating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 shrink-0 animate-spin text-white" aria-hidden />
+                  Chargement...
+                </>
+              ) : isLastQuestion ? (
+                <>
+                  <Save className="h-4 w-4 mr-2" aria-hidden />
+                  {"Créer le cas d'usage"}
+                </>
+              ) : (
+                <>
+                  Suivant
+                  <ChevronRight className="h-4 w-4 ml-2" aria-hidden />
+                </>
+              )}
             </button>
-          )}
-
-          <button
-            onClick={handleNext}
-            disabled={submitting}
-            className="flex items-center justify-center px-6 py-3 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
-          >
-            {submitting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Création en cours...
-              </>
-            ) : isLastQuestion ? (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Créer le cas d'usage
-              </>
-            ) : (
-              <>
-                Suivant
-                <ChevronRight className="h-4 w-4 ml-2" />
-              </>
-            )}
-          </button>
+          </div>
         </div>
 
         {/* Question Summary for Review */}
@@ -1460,7 +2069,10 @@ function CreateUseCasePageContent() {
                   <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
                   <span className="text-gray-600">{q.question}</span>
                   <span className="ml-2 font-medium text-gray-900 truncate">
-                    {formData[q.id]}
+                    {q.id === 'deployment_date'
+                      ? [formData.deployment_phase, formData.deployment_date].filter(Boolean).join(' — ') ||
+                        '—'
+                      : formData[q.id]}
                   </span>
                 </div>
               ))}

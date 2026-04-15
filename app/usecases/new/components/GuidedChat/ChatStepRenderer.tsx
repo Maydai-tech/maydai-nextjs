@@ -2,7 +2,7 @@
 
 import type { GuidedChatDraft, ChatStepId, ModelProviderOption, ModelOption, ClosedFieldOption } from '../../types'
 import TextInputStep from './steps/TextInputStep'
-import DateInputStep from './steps/DateInputStep'
+import DeploymentPhaseDateStep from './steps/DeploymentPhaseDateStep'
 import SingleSelectStep from './steps/SingleSelectStep'
 import PartnerSelectStep from './steps/PartnerSelectStep'
 import ModelSelectStep from './steps/ModelSelectStep'
@@ -69,9 +69,11 @@ export default function ChatStepRenderer({
 
     case 'deployment_date':
       return (
-        <DateInputStep
-          value={draft.deployment_date}
-          onChange={(v) => onFieldChange('deployment_date', v)}
+        <DeploymentPhaseDateStep
+          phaseValue={draft.deployment_phase}
+          dateValue={draft.deployment_date}
+          onPhaseChange={(v) => onFieldChange('deployment_phase', v)}
+          onDateChange={(v) => onFieldChange('deployment_date', v)}
           onSubmit={onSubmitStep}
           onSkip={onSkipStep}
           error={error}

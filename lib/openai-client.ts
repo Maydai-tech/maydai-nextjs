@@ -15,18 +15,14 @@ interface OpenAIAnalysisInput {
   company_industry?: string
   company_city?: string
   company_country?: string
+  checklist_gouvernance_entreprise?: string
+  checklist_gouvernance_cas_usage?: string
   responses: {
     // Domaines d'utilisation à risque élevé
     E4_N7_Q2: {
       question: string
       selected_options: string[]
       selected_labels: string[]
-    }
-    // Questions sur le registre centralisé des systèmes IA
-    E5_N9_Q7: {
-      question: string
-      selected_option: string
-      selected_label: string
     }
   }
 }
@@ -61,6 +57,8 @@ interface OpenAIAnalysisInputComplete {
       deployment_countries: string[]
       /** V3 : qualified | impossible */
       classification_status?: string | null
+      checklist_gouvernance_entreprise: string
+      checklist_gouvernance_cas_usage: string
     }
     technologie: {
       technology_partner: string
@@ -386,18 +384,12 @@ export class OpenAIClient {
    * @returns string - Prompt formaté prêt à être envoyé à l'assistant
    */
   private buildAnalysisPrompt(data: OpenAIAnalysisInput): string {
-    // Extraire les données nécessaires des réponses
     const highRiskDomains = data.responses.E4_N7_Q2.selected_labels || []
-    const registryInfo = data.responses.E5_N9_Q7
-    
-    // Construire la section des domaines à risque élevé
     const domainsSection = this.buildHighRiskDomainsSection(data.responses.E4_N7_Q2, highRiskDomains)
-    
-    // Construire la section du registre centralisé
-    const registrySection = this.buildRegistrySection(registryInfo)
-    
-    // Construire les données du questionnaire
-    const questionnaireData = `${domainsSection}\n\n${registrySection}`
+    const govLines = [data.checklist_gouvernance_entreprise, data.checklist_gouvernance_cas_usage].filter(
+      (line): line is string => typeof line === 'string' && line.trim().length > 0
+    )
+    const questionnaireData = [domainsSection, ...govLines].join('\n\n')
 
     // Utiliser le template standardisé
     return buildStandardizedPrompt(
@@ -429,17 +421,6 @@ ${domainsText}`
   }
 
   /**
-   * Construit la section du registre centralisé du prompt
-   * @param registryInfo - Données de la question E5_N9_Q7
-   * @returns string - Section formatée
-   */
-  private buildRegistrySection(registryInfo: any): string {
-    return `**E5.N9.Q7 - Registre centralisé des systèmes IA :**
-Question : ${registryInfo.question}
-Réponse déclarée : ${registryInfo.selected_label || registryInfo.selected_option || '(non renseigné)'}`
-  }
-
-  /**
    * Construit le prompt d'analyse complet pour le nouveau format (PHASE 1 — faits, questionnaire, règles métier, schéma JSON).
    * La formulation des champs texte est supposée être guidée par les instructions système de l'assistant.
    * @param data - Données complètes du cas d'usage et réponses au questionnaire
@@ -462,6 +443,8 @@ Description (contexte narratif secondaire — ne pas en déduire de motif juridi
 Déploiement: ${cas_usage.deployment_date} | Statut cas: ${cas_usage.status}
 Pays: ${cas_usage.deployment_countries.join(', ')} | Service: ${cas_usage.responsible_service}
 Catégorie / type: ${cas_usage.ai_category} | ${cas_usage.system_type}
+${cas_usage.checklist_gouvernance_entreprise}
+${cas_usage.checklist_gouvernance_cas_usage}
 ${isClassificationImpossible ? `Qualification réglementaire (application) : IMPOSSIBLE — ne pas conclure un palier AI Act définitif (minimal, limité, élevé, interdit) à partir du questionnaire ou du score seul.` : ''}
 
 Technologie: ${technologie.technology_partner} | LLM: ${technologie.llm_model_version} | Modèle: ${technologie.model_name} (${technologie.model_provider}, ${technologie.model_type})

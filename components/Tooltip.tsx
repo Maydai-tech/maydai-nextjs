@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { HelpCircle } from 'lucide-react'
+import { HelpCircle, Info } from 'lucide-react'
 
 interface TooltipProps {
   title: string
@@ -12,6 +12,10 @@ interface TooltipProps {
   position?: 'left' | 'right' | 'bottom' | 'auto'
   rank?: number  // Pour afficher le classement mondial (partenaires)
   rankText?: string  // Pour afficher un rang textuel spécial (ex: "Challenger", "Leader Européen")
+  /** `info` : icône discrète (cartes partenaires). défaut : pastille aide. */
+  triggerVariant?: 'help' | 'info'
+  /** Empêche la remontée du clic (ex. sélection d’un radio dans une `<label>` parente). */
+  isolateSelection?: boolean
 }
 
 export default function Tooltip({ 
@@ -22,7 +26,9 @@ export default function Tooltip({
   type = 'question',
   position = 'auto',
   rank,
-  rankText
+  rankText,
+  triggerVariant = 'help',
+  isolateSelection = false,
 }: TooltipProps) {
   const [isHovering, setIsHovering] = useState(false)
   const [isMobileDevice, setIsMobileDevice] = useState(false)
@@ -90,11 +96,20 @@ export default function Tooltip({
   }, [position, type])
 
   // Toggle hover sur mobile (clic)
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    if (isolateSelection) {
+      e.stopPropagation()
+    }
     if (isMobileDevice) {
       setIsHovering(!isHovering)
     }
   }
+
+  const stopIfIsolated = isolateSelection
+    ? (e: React.SyntheticEvent) => {
+        e.stopPropagation()
+      }
+    : undefined
 
   // Fonction pour générer le badge de classement mondial
   const getRankBadge = () => {
@@ -157,24 +172,37 @@ export default function Tooltip({
       {/* Icône avec hover preview */}
       <div 
         ref={tooltipRef}
-        className="relative inline-block ml-2"
+        className={triggerVariant === 'info' ? 'relative inline-block' : 'relative inline-block ml-2'}
         onMouseEnter={() => !isMobileDevice && setIsHovering(true)}
         onMouseLeave={() => !isMobileDevice && setIsHovering(false)}
       >
         <button
           onClick={handleClick}
+          onMouseDown={isolateSelection ? (e) => e.stopPropagation() : undefined}
           className="relative group"
           type="button"
           aria-label="Afficher l'infobulle"
         >
-          <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[#0080A3]/10 hover:bg-[#0080A3]/20 transition-colors">
-            <HelpCircle className="h-3.5 w-3.5 text-[#0080A3]" />
-          </div>
+          {triggerVariant === 'info' ? (
+            <Info
+              size={16}
+              className="text-gray-400 transition-colors hover:text-[#0080A3]"
+              aria-hidden
+            />
+          ) : (
+            <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[#0080A3]/10 hover:bg-[#0080A3]/20 transition-colors">
+              <HelpCircle className="h-3.5 w-3.5 text-[#0080A3]" />
+            </div>
+          )}
         </button>
 
         {/* Tooltip au hover/survol - Desktop et mobile */}
         {isHovering && (
-          <div className={`absolute ${getPositionClasses()} z-50`}>
+          <div
+            className={`absolute ${getPositionClasses()} z-50`}
+            onMouseDown={stopIfIsolated}
+            onClick={stopIfIsolated}
+          >
             <div 
               className="bg-[#0080A3] text-white text-sm px-6 py-4 rounded-lg shadow-xl relative break-words"
               style={getWidthStyle()}

@@ -70,13 +70,3 @@ export interface UseCaseChecklistResponseFields {
   bpgv_keys?: string[] | null
   transparency_keys?: string[] | null
 }
-
-/**
- * Lignes sentinelles `usecase_responses.question_code` pour enregistrer
- * uniquement les tableaux batch (sans colonnes DB dédiées).
- * À synchroniser avec la logique Edge `calculate-usecase-score`.
- */
-export const BPGV_CHECKLIST_RESPONSE_CODE = 'E5.N9._CHECKLIST' as const
-export const TRANSPARENCY_CHECKLIST_RESPONSE_CODE = 'E6.N10._CHECKLIST' as const
-
-

@@ -36,14 +36,10 @@ import {
   type QuestionnaireVersion
 } from '@/lib/questionnaire-version'
 import {
-  BPGV_CHECKLIST_RESPONSE_CODE,
-  TRANSPARENCY_CHECKLIST_RESPONSE_CODE,
-} from '@/types/questions'
-import {
+  CHECKLIST_GOV_ENTERPRISE_QUESTION_CODE,
+  CHECKLIST_GOV_USECASE_QUESTION_CODE,
   collectE5DeclaredOptionCodes,
   collectE6DeclaredOptionCodes,
-  isLeavingE5Block,
-  isLeavingE6Block,
 } from '../utils/bpgv-transparency-checklist-save'
 
 interface UseEvaluationReturn {
@@ -70,9 +66,6 @@ interface UseEvaluationReturn {
   handleSubmit: () => Promise<void>
   handleProcessingComplete: () => void
 }
-
-/** Pré-remplissage V1 MaydAI comme registre : réponse radio « Oui » (sans champs texte). */
-const E5_N9_Q7_MAYDAI_DEFAULT = 'E5.N9.Q7.B' as const
 
 /** Parcours court : Q1.2 (profilage usage) masquée à l’UI — valeur persistée pour le graphe / sauvegardes. */
 const V3_SHORT_PATH_DEFAULT_Q1_2 = 'E4.N7.Q1.2.A' as const
@@ -102,11 +95,12 @@ export function useEvaluation({
     [questionnaireVersionProp]
   )
   const { session } = useAuth()
-  const [company, setCompany] = useState<{ maydai_as_registry?: boolean } | null>(null)
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData>({
     currentQuestionId: 'E4.N7.Q1',
     answers: {},
-    isCompleted: false
+    isCompleted: false,
+    checklist_gov_enterprise: [],
+    checklist_gov_usecase: [],
   })
   
   const [questionHistory, setQuestionHistory] = useState<string[]>(['E4.N7.Q1'])
@@ -123,66 +117,74 @@ export function useEvaluation({
     refreshResponses
   } = useQuestionnaireResponses(usecaseId)
 
-  // Fetch company for MaydAI registry default
-  useEffect(() => {
-    if (!companyId || !session?.access_token) return
-    let cancelled = false
-    fetch(`/api/companies/${companyId}`, {
-      headers: { 'Authorization': `Bearer ${session.access_token}` }
-    })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => { if (!cancelled && data) setCompany(data) })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [companyId, session?.access_token])
-
-  // Load initial data once
+  // Load initial data once (réponses questionnaire + checklists gouvernance sur `usecases`)
   useEffect(() => {
     if (!initialDataLoaded && !loadingResponses) {
-      if (savedAnswers && Object.keys(savedAnswers).length > 0) {
-        const navOpts =
-          questionnaireVersion === QUESTIONNAIRE_VERSION_V3
-            ? {
-                systemType: systemTypeProp ?? null,
-                pathMode: questionnairePathModeProp,
-              }
-            : undefined
-        let currentQuestionId = getResumeQuestionId(
-          savedAnswers,
-          questionnaireVersion,
-          navOpts
-        )
-        if (
-          questionnairePathModeProp === 'short' &&
-          questionnaireVersion === QUESTIONNAIRE_VERSION_V3 &&
-          currentQuestionId === V3_SHORT_MINIPACK_ID
-        ) {
-          currentQuestionId = V3_SHORT_ENTREPRISE_ID
+      const run = async () => {
+        let govEnt: string[] = []
+        let govUc: string[] = []
+        if (session?.access_token) {
+          const { data: ucRow } = await supabase
+            .from('usecases')
+            .select('checklist_gov_enterprise, checklist_gov_usecase')
+            .eq('id', usecaseId)
+            .single()
+          if (ucRow) {
+            govEnt = Array.isArray(ucRow.checklist_gov_enterprise) ? ucRow.checklist_gov_enterprise : []
+            govUc = Array.isArray(ucRow.checklist_gov_usecase) ? ucRow.checklist_gov_usecase : []
+          }
         }
 
-        setQuestionnaireData(prev => ({
-          ...prev,
-          answers: { ...savedAnswers },
-          currentQuestionId
-        }))
+        if (savedAnswers && Object.keys(savedAnswers).length > 0) {
+          const navOpts =
+            questionnaireVersion === QUESTIONNAIRE_VERSION_V3
+              ? {
+                  systemType: systemTypeProp ?? null,
+                  pathMode: questionnairePathModeProp,
+                }
+              : undefined
+          let currentQuestionId = getResumeQuestionId(
+            savedAnswers,
+            questionnaireVersion,
+            navOpts
+          )
+          if (
+            questionnairePathModeProp === 'short' &&
+            questionnaireVersion === QUESTIONNAIRE_VERSION_V3 &&
+            currentQuestionId === V3_SHORT_MINIPACK_ID
+          ) {
+            currentQuestionId = V3_SHORT_ENTREPRISE_ID
+          }
 
-        const historyPath = buildQuestionPath(
-          currentQuestionId,
-          savedAnswers,
-          questionnaireVersion,
-          navOpts
-        )
-        setQuestionHistory(historyPath.length > 0 ? historyPath : ['E4.N7.Q1'])
-      } else {
-        setQuestionnaireData(prev => ({
-          ...prev,
-          currentQuestionId: 'E4.N7.Q1',
-          answers: {}
-        }))
-        setQuestionHistory(['E4.N7.Q1'])
+          setQuestionnaireData(prev => ({
+            ...prev,
+            answers: { ...savedAnswers },
+            currentQuestionId,
+            checklist_gov_enterprise: govEnt,
+            checklist_gov_usecase: govUc,
+          }))
+
+          const historyPath = buildQuestionPath(
+            currentQuestionId,
+            savedAnswers,
+            questionnaireVersion,
+            navOpts
+          )
+          setQuestionHistory(historyPath.length > 0 ? historyPath : ['E4.N7.Q1'])
+        } else {
+          setQuestionnaireData(prev => ({
+            ...prev,
+            currentQuestionId: 'E4.N7.Q1',
+            answers: {},
+            checklist_gov_enterprise: govEnt,
+            checklist_gov_usecase: govUc,
+          }))
+          setQuestionHistory(['E4.N7.Q1'])
+        }
+
+        setInitialDataLoaded(true)
       }
-
-      setInitialDataLoaded(true)
+      void run()
     }
   }, [
     savedAnswers,
@@ -191,6 +193,8 @@ export function useEvaluation({
     questionnaireVersion,
     systemTypeProp,
     questionnairePathModeProp,
+    session?.access_token,
+    usecaseId,
   ])
 
   /** Parcours court : si Q1.B sans Q1.2 (reprise ou brouillon), compléter la valeur par défaut pour débloquer l’étape composite. */
@@ -207,23 +211,6 @@ export function useEvaluation({
       }
     })
   }, [initialDataLoaded, questionnaireVersion, questionnairePathModeProp])
-
-  // Pre-fill E5.N9.Q7 (V1 uniquement — en V2 l’E5 intervient après l’ORS)
-  useEffect(() => {
-    if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2 || questionnaireVersion === QUESTIONNAIRE_VERSION_V3)
-      return
-    if (!company?.maydai_as_registry || !initialDataLoaded) return
-    setQuestionnaireData(prev => {
-      if (prev.answers['E5.N9.Q7']) return prev
-      return {
-        ...prev,
-        answers: {
-          ...prev.answers,
-          'E5.N9.Q7': E5_N9_Q7_MAYDAI_DEFAULT
-        }
-      }
-    })
-  }, [company?.maydai_as_registry, initialDataLoaded, questionnaireVersion])
 
   const questions = loadQuestions()
   const currentQuestion = questions[questionnaireData.currentQuestionId]
@@ -306,18 +293,48 @@ export function useEvaluation({
 
   const saveIndividualResponse = useCallback(async (questionId: string, answer: any) => {
     try {
-      if (questionId === BPGV_CHECKLIST_RESPONSE_CODE) {
+      if (questionId === CHECKLIST_GOV_ENTERPRISE_QUESTION_CODE) {
         const keys = Array.isArray(answer)
           ? answer.filter((x: unknown): x is string => typeof x === 'string' && x.length > 0)
           : []
-        await saveResponse(questionId, undefined, { bpgv_keys: keys })
+        const saved = await saveResponse(questionId, undefined, { selected_codes: keys })
+        if (saved && typeof saved === 'object' && (saved as { updated?: string }).updated === 'usecase_checklists') {
+          const s = saved as {
+            checklist_gov_enterprise?: string[]
+            checklist_gov_usecase?: string[]
+          }
+          setQuestionnaireData(prev => ({
+            ...prev,
+            checklist_gov_enterprise: Array.isArray(s.checklist_gov_enterprise)
+              ? s.checklist_gov_enterprise
+              : prev.checklist_gov_enterprise,
+            checklist_gov_usecase: Array.isArray(s.checklist_gov_usecase)
+              ? s.checklist_gov_usecase
+              : prev.checklist_gov_usecase,
+          }))
+        }
         return
       }
-      if (questionId === TRANSPARENCY_CHECKLIST_RESPONSE_CODE) {
+      if (questionId === CHECKLIST_GOV_USECASE_QUESTION_CODE) {
         const keys = Array.isArray(answer)
           ? answer.filter((x: unknown): x is string => typeof x === 'string' && x.length > 0)
           : []
-        await saveResponse(questionId, undefined, { transparency_keys: keys })
+        const saved = await saveResponse(questionId, undefined, { selected_codes: keys })
+        if (saved && typeof saved === 'object' && (saved as { updated?: string }).updated === 'usecase_checklists') {
+          const s = saved as {
+            checklist_gov_enterprise?: string[]
+            checklist_gov_usecase?: string[]
+          }
+          setQuestionnaireData(prev => ({
+            ...prev,
+            checklist_gov_enterprise: Array.isArray(s.checklist_gov_enterprise)
+              ? s.checklist_gov_enterprise
+              : prev.checklist_gov_enterprise,
+            checklist_gov_usecase: Array.isArray(s.checklist_gov_usecase)
+              ? s.checklist_gov_usecase
+              : prev.checklist_gov_usecase,
+          }))
+        }
         return
       }
       
@@ -576,11 +593,11 @@ export function useEvaluation({
           await saveIndividualResponse(qid, val)
         }
         await saveIndividualResponse(
-          BPGV_CHECKLIST_RESPONSE_CODE,
+          CHECKLIST_GOV_ENTERPRISE_QUESTION_CODE,
           collectE5DeclaredOptionCodes(merged)
         )
         await saveIndividualResponse(
-          TRANSPARENCY_CHECKLIST_RESPONSE_CODE,
+          CHECKLIST_GOV_USECASE_QUESTION_CODE,
           collectE6DeclaredOptionCodes(merged)
         )
 
@@ -669,25 +686,6 @@ export function useEvaluation({
         ...questionnaireData.answers,
         [currentId]: currentAnswer,
       } as Record<string, unknown>
-
-      if (
-        currentId !== BPGV_CHECKLIST_RESPONSE_CODE &&
-        isLeavingE5Block(currentId, mergedAfterStep, questionnaireVersion, navOptions)
-      ) {
-        await saveIndividualResponse(
-          BPGV_CHECKLIST_RESPONSE_CODE,
-          collectE5DeclaredOptionCodes(mergedAfterStep)
-        )
-      }
-      if (
-        currentId !== TRANSPARENCY_CHECKLIST_RESPONSE_CODE &&
-        isLeavingE6Block(currentId, mergedAfterStep, questionnaireVersion, navOptions)
-      ) {
-        await saveIndividualResponse(
-          TRANSPARENCY_CHECKLIST_RESPONSE_CODE,
-          collectE6DeclaredOptionCodes(mergedAfterStep)
-        )
-      }
 
       if (questionnaireVersion === QUESTIONNAIRE_VERSION_V2) {
         const mergedAnswers = {

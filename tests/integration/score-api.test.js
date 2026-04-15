@@ -60,27 +60,24 @@ describe('Score API Integration Tests', () => {
     });
 
     test('Score calculation should be deterministic', () => {
-      // Test que le calcul de score est déterministe
+      // Test que le calcul de score est déterministe (exemple hors blocs E5/E6 retirés)
       const mockResponses = [
         {
-          question_code: 'E6.N10.Q1',
-          single_value: 'E6.N10.Q1.B', // NON = -5
+          question_code: 'E4.N8.Q12',
+          single_value: 'E4.N8.Q12.B',
         }
       ];
 
       const BASE_SCORE = 100;
-      const expectedScore = BASE_SCORE - 5; // 95
 
-      // Simulation du calcul
       let score = BASE_SCORE;
       mockResponses.forEach(response => {
-        if (response.single_value === 'E6.N10.Q1.B') {
-          score -= 5;
+        if (response.single_value === 'E4.N8.Q12.B') {
+          score -= 0.8;
         }
       });
 
-      expect(score).toBe(expectedScore);
-      expect(score).toBe(95);
+      expect(score).toBeCloseTo(99.2, 5);
     });
 
     test('Category scores should be calculated correctly', () => {

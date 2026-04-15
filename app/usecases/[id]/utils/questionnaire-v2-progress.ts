@@ -87,11 +87,6 @@ function generateAnswerContextsV2(questionId: string): Record<string, unknown>[]
       ]
     case 'E4.N8.Q11.M2':
       return [mergeCtx({}, CTX_ORS_MINIMAL), mergeCtx({}, CTX_ORS_HIGH)]
-    case 'E5.N9.Q7':
-      return [
-        {},
-        { 'E5.N9.Q6': { selected: 'E5.N9.Q6.B' } }
-      ]
     case 'E4.N8.Q12':
       return [
         { 'E4.N7.Q3.1': ['E4.N7.Q3.1.A'] },
@@ -127,11 +122,6 @@ function generateAnswerContextsV2(questionId: string): Record<string, unknown>[]
           },
           CTX_ORS_MINIMAL
         )
-      ]
-    case 'E6.N10.Q1':
-      return [
-        { 'E4.N8.Q11.0': 'E4.N8.Q11.0.B' },
-        { 'E4.N8.Q11.0': 'E4.N8.Q11.0.A' }
       ]
     default:
       return [{}]

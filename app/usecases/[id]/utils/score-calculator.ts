@@ -335,6 +335,12 @@ export async function calculateScore(
 
     // PREMIÈRE PASSE : Détecter les réponses éliminatoires (périmètre V1 = tout, V2 = questions actives répondues)
     for (const response of responsesForScoring) {
+      if (
+        response.question_code.startsWith('E5.') ||
+        response.question_code.startsWith('E6.')
+      ) {
+        continue
+      }
       const question = questions[response.question_code]
       if (!question) continue
 
@@ -379,6 +385,12 @@ export async function calculateScore(
 
     // DEUXIÈME PASSE : Calculer les scores normalement (même si éliminé, pour le breakdown)
     for (const response of responsesForScoring) {
+      if (
+        response.question_code.startsWith('E5.') ||
+        response.question_code.startsWith('E6.')
+      ) {
+        continue
+      }
       // console.log('Processing response for question:', response.question_code)
       
       const question = questions[response.question_code]

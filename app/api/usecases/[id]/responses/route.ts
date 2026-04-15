@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import {
-  BPGV_CHECKLIST_RESPONSE_CODE,
-  TRANSPARENCY_CHECKLIST_RESPONSE_CODE,
-} from '@/types/questions'
+  isChecklistGovEnterpriseQuestionCode,
+  isChecklistGovUsecaseQuestionCode,
+} from '@/app/usecases/[id]/utils/bpgv-transparency-checklist-save'
+
+function normalizeStringArray(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  return v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -172,6 +177,113 @@ export async function POST(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
+    /** Checklists gouvernance : UPDATE direct sur `usecases`, pas de ligne dans `usecase_responses`. */
+    if (isChecklistGovEnterpriseQuestionCode(question_code)) {
+      const rawKeys: string[] | null = Array.isArray(bpgv_keys)
+        ? bpgv_keys
+        : Array.isArray(response_data?.bpgv_keys)
+          ? (response_data.bpgv_keys as string[])
+          : Array.isArray(response_data?.selected_codes)
+            ? (response_data.selected_codes as string[])
+            : null
+      if (rawKeys === null) {
+        return NextResponse.json(
+          {
+            error:
+              'Fournir bpgv_keys, response_data.bpgv_keys ou response_data.selected_codes (tableau) pour checklist_gov_enterprise',
+          },
+          { status: 400 }
+        )
+      }
+      const keys = normalizeStringArray(rawKeys)
+      const { data: current, error: curErr } = await supabase
+        .from('usecases')
+        .select('checklist_gov_usecase')
+        .eq('id', usecaseId)
+        .single()
+      if (curErr) {
+        return NextResponse.json(
+          { error: 'Erreur lecture cas d’usage', details: curErr.message },
+          { status: 500 }
+        )
+      }
+      const nextUc = normalizeStringArray(current?.checklist_gov_usecase)
+      const { error: upErr } = await supabase
+        .from('usecases')
+        .update({
+          checklist_gov_enterprise: keys,
+          checklist_gov_usecase: nextUc,
+          updated_at: new Date().toISOString(),
+          updated_by: user.id,
+        })
+        .eq('id', usecaseId)
+      if (upErr) {
+        return NextResponse.json(
+          { error: 'Erreur mise à jour checklist entreprise', details: upErr.message },
+          { status: 500 }
+        )
+      }
+      return NextResponse.json({
+        updated: 'usecase_checklists',
+        checklist_gov_enterprise: keys,
+        checklist_gov_usecase: nextUc,
+        checklist_field: 'enterprise',
+      })
+    }
+
+    if (isChecklistGovUsecaseQuestionCode(question_code)) {
+      const rawKeys: string[] | null = Array.isArray(transparency_keys)
+        ? transparency_keys
+        : Array.isArray(response_data?.transparency_keys)
+          ? (response_data.transparency_keys as string[])
+          : Array.isArray(response_data?.selected_codes)
+            ? (response_data.selected_codes as string[])
+            : null
+      if (rawKeys === null) {
+        return NextResponse.json(
+          {
+            error:
+              'Fournir transparency_keys, response_data.transparency_keys ou response_data.selected_codes (tableau) pour checklist_gov_usecase',
+          },
+          { status: 400 }
+        )
+      }
+      const keys = normalizeStringArray(rawKeys)
+      const { data: current, error: curErr } = await supabase
+        .from('usecases')
+        .select('checklist_gov_enterprise')
+        .eq('id', usecaseId)
+        .single()
+      if (curErr) {
+        return NextResponse.json(
+          { error: 'Erreur lecture cas d’usage', details: curErr.message },
+          { status: 500 }
+        )
+      }
+      const nextEnt = normalizeStringArray(current?.checklist_gov_enterprise)
+      const { error: upErr } = await supabase
+        .from('usecases')
+        .update({
+          checklist_gov_enterprise: nextEnt,
+          checklist_gov_usecase: keys,
+          updated_at: new Date().toISOString(),
+          updated_by: user.id,
+        })
+        .eq('id', usecaseId)
+      if (upErr) {
+        return NextResponse.json(
+          { error: 'Erreur mise à jour checklist cas d’usage', details: upErr.message },
+          { status: 500 }
+        )
+      }
+      return NextResponse.json({
+        updated: 'usecase_checklists',
+        checklist_gov_enterprise: nextEnt,
+        checklist_gov_usecase: keys,
+        checklist_field: 'usecase',
+      })
+    }
+
     // Préparer les données selon le type de réponse
     const updateData: any = {
       usecase_id: usecaseId,
@@ -187,46 +299,7 @@ export async function POST(
       conditional_values: null
     }
 
-    /** Batch BPGV / transparence : lignes sentinelles, tableaux stockés dans `multiple_codes`. */
-    if (question_code === BPGV_CHECKLIST_RESPONSE_CODE) {
-      const keys: string[] | null = Array.isArray(bpgv_keys)
-        ? bpgv_keys
-        : Array.isArray(response_data?.bpgv_keys)
-          ? response_data.bpgv_keys
-          : Array.isArray(response_data?.selected_codes)
-            ? response_data.selected_codes
-            : null
-      if (keys === null) {
-        return NextResponse.json(
-          { error: 'Fournir bpgv_keys ou response_data.selected_codes (tableau) pour E5.N9._CHECKLIST' },
-          { status: 400 }
-        )
-      }
-      updateData.multiple_codes = keys
-      updateData.multiple_labels =
-        Array.isArray(response_data?.selected_labels) && response_data.selected_labels.length === keys.length
-          ? response_data.selected_labels
-          : keys
-    } else if (question_code === TRANSPARENCY_CHECKLIST_RESPONSE_CODE) {
-      const keys: string[] | null = Array.isArray(transparency_keys)
-        ? transparency_keys
-        : Array.isArray(response_data?.transparency_keys)
-          ? response_data.transparency_keys
-          : Array.isArray(response_data?.selected_codes)
-            ? response_data.selected_codes
-            : null
-      if (keys === null) {
-        return NextResponse.json(
-          { error: 'Fournir transparency_keys ou response_data.selected_codes (tableau) pour E6.N10._CHECKLIST' },
-          { status: 400 }
-        )
-      }
-      updateData.multiple_codes = keys
-      updateData.multiple_labels =
-        Array.isArray(response_data?.selected_labels) && response_data.selected_labels.length === keys.length
-          ? response_data.selected_labels
-          : keys
-    } else if (response_data?.selected_codes) {
+    if (response_data?.selected_codes) {
       // Réponse multiple
       updateData.multiple_codes = response_data.selected_codes
       updateData.multiple_labels = response_data.selected_labels || response_data.selected_codes
@@ -391,41 +464,87 @@ export async function PUT(
         conditional_values: null
       }
 
-      if (question_code === BPGV_CHECKLIST_RESPONSE_CODE) {
-        const keys: string[] | null = Array.isArray(bpgv_keys)
+      if (isChecklistGovEnterpriseQuestionCode(question_code)) {
+        const rawKeys: string[] | null = Array.isArray(bpgv_keys)
           ? bpgv_keys
           : Array.isArray(response_data?.bpgv_keys)
-            ? response_data.bpgv_keys
+            ? (response_data.bpgv_keys as string[])
             : Array.isArray(response_data?.selected_codes)
-              ? response_data.selected_codes
+              ? (response_data.selected_codes as string[])
               : null
-        if (keys === null) {
-          console.log('Skipping E5.N9._CHECKLIST without keys array', { question_code, response_data, bpgv_keys })
+        if (rawKeys === null) continue
+        const keys = normalizeStringArray(rawKeys)
+        const { data: current, error: curErr } = await supabase
+          .from('usecases')
+          .select('checklist_gov_usecase')
+          .eq('id', usecaseId)
+          .single()
+        if (curErr) {
+          console.error('PUT checklist entreprise — lecture usecase:', curErr)
           continue
         }
-        updateData.multiple_codes = keys
-        updateData.multiple_labels =
-          Array.isArray(response_data?.selected_labels) && response_data.selected_labels.length === keys.length
-            ? response_data.selected_labels
-            : keys
-      } else if (question_code === TRANSPARENCY_CHECKLIST_RESPONSE_CODE) {
-        const keys: string[] | null = Array.isArray(transparency_keys)
+        const nextUc = normalizeStringArray(current?.checklist_gov_usecase)
+        const { error: upErr } = await supabase
+          .from('usecases')
+          .update({
+            checklist_gov_enterprise: keys,
+            checklist_gov_usecase: nextUc,
+            updated_at: new Date().toISOString(),
+            updated_by: user.id,
+          })
+          .eq('id', usecaseId)
+        if (!upErr) {
+          savedResponses.push({
+            question_code,
+            updated: 'usecase_checklists',
+            checklist_gov_enterprise: keys,
+            checklist_gov_usecase: nextUc,
+          })
+        }
+        continue
+      }
+
+      if (isChecklistGovUsecaseQuestionCode(question_code)) {
+        const rawKeys: string[] | null = Array.isArray(transparency_keys)
           ? transparency_keys
           : Array.isArray(response_data?.transparency_keys)
-            ? response_data.transparency_keys
+            ? (response_data.transparency_keys as string[])
             : Array.isArray(response_data?.selected_codes)
-              ? response_data.selected_codes
+              ? (response_data.selected_codes as string[])
               : null
-        if (keys === null) {
-          console.log('Skipping E6.N10._CHECKLIST without keys array', { question_code, response_data, transparency_keys })
+        if (rawKeys === null) continue
+        const keys = normalizeStringArray(rawKeys)
+        const { data: current, error: curErr } = await supabase
+          .from('usecases')
+          .select('checklist_gov_enterprise')
+          .eq('id', usecaseId)
+          .single()
+        if (curErr) {
+          console.error('PUT checklist cas d’usage — lecture usecase:', curErr)
           continue
         }
-        updateData.multiple_codes = keys
-        updateData.multiple_labels =
-          Array.isArray(response_data?.selected_labels) && response_data.selected_labels.length === keys.length
-            ? response_data.selected_labels
-            : keys
-      } else if (response_data?.selected_codes) {
+        const nextEnt = normalizeStringArray(current?.checklist_gov_enterprise)
+        const { error: upErr } = await supabase
+          .from('usecases')
+          .update({
+            checklist_gov_enterprise: nextEnt,
+            checklist_gov_usecase: keys,
+            updated_at: new Date().toISOString(),
+            updated_by: user.id,
+          })
+          .eq('id', usecaseId)
+        if (!upErr) {
+          savedResponses.push({
+            question_code,
+            updated: 'usecase_checklists',
+            checklist_gov_enterprise: nextEnt,
+            checklist_gov_usecase: keys,
+          })
+        }
+        continue
+      }
+
+      if (response_data?.selected_codes) {
         // Réponse multiple
         updateData.multiple_codes = response_data.selected_codes
         updateData.multiple_labels = response_data.selected_labels || response_data.selected_codes

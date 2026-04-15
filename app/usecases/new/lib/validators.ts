@@ -1,6 +1,37 @@
 import type { GuidedChatDraft, PayloadValidationResult, FieldValidationError } from '../types'
 
 /**
+ * Valide une date au format JJ/MM/AAAA ou natif HTML AAAA-MM-JJ.
+ * Chaîne vide : valide (champ optionnel selon contexte).
+ */
+export function validateDeploymentDateFlexible(
+  dateString: string
+): { isValid: boolean; error?: string } {
+  if (!dateString) return { isValid: true }
+
+  const iso = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (iso) {
+    const year = parseInt(iso[1], 10)
+    const month = parseInt(iso[2], 10)
+    const day = parseInt(iso[3], 10)
+    const date = new Date(year, month - 1, day)
+    const isRealDate =
+      date.getDate() === day &&
+      date.getMonth() === month - 1 &&
+      date.getFullYear() === year
+    if (!isRealDate) {
+      return {
+        isValid: false,
+        error: 'Date invalide. Vérifiez le jour, le mois et l\'année.',
+      }
+    }
+    return { isValid: true }
+  }
+
+  return validateDeploymentDateDDMMYYYY(dateString)
+}
+
+/**
  * Validates deployment date in DD/MM/YYYY format.
  * Returns valid for empty strings (field is optional).
  */
@@ -58,8 +89,17 @@ export function validateDraft(
     errors.push({ field: 'name', message: 'Le nom ne doit pas dépasser 50 caractères.' })
   }
 
+  const hasPhase = Boolean(draft.deployment_phase?.trim())
+  const hasDate = Boolean(draft.deployment_date?.trim())
+  if (hasPhase !== hasDate) {
+    errors.push({
+      field: 'deployment_date',
+      message:
+        'Renseignez ensemble la phase de déploiement et la date, ou laissez les deux vides.',
+    })
+  }
   if (draft.deployment_date) {
-    const dateResult = validateDeploymentDateDDMMYYYY(draft.deployment_date)
+    const dateResult = validateDeploymentDateFlexible(draft.deployment_date)
     if (!dateResult.isValid) {
       errors.push({ field: 'deployment_date', message: dateResult.error! })
     }

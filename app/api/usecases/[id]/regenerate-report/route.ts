@@ -45,10 +45,9 @@ export async function PUT(
       return NextResponse.json({ error: 'usecase_id is required' }, { status: 400 })
     }
 
-    // Récupérer les informations du use case
     const { data: usecase, error: usecaseError } = await supabase
       .from('usecases')
-      .select('id, name')
+      .select('id, name, checklist_gov_enterprise, checklist_gov_usecase')
       .eq('id', usecase_id)
       .single()
 
@@ -56,26 +55,23 @@ export async function PUT(
       return NextResponse.json({ error: 'Usecase not found' }, { status: 404 })
     }
 
-    // Récupérer les réponses du questionnaire pour les questions E4.N7.Q2 et E5.N9.Q7
     const { data: responses, error: responseError } = await supabase
       .from('usecase_responses')
       .select('question_code, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values')
       .eq('usecase_id', usecase_id)
-      .in('question_code', ['E4.N7.Q2', 'E5.N9.Q7'])
+      .eq('question_code', 'E4.N7.Q2')
 
     if (responseError) {
       console.error('Erreur récupération réponses:', responseError)
       return NextResponse.json({ error: 'Failed to fetch questionnaire responses' }, { status: 500 })
     }
 
-    if (!responses || responses.length === 0) {
-      return NextResponse.json({ 
-        error: 'No questionnaire responses found for this use case' 
-      }, { status: 404 })
-    }
-
     // Extraire et transformer les réponses
-    const targetResponses = extractTargetResponses(responses)
+    const targetResponses = extractTargetResponses(responses || [])
+    const uc = usecase as {
+      checklist_gov_enterprise?: string[] | null
+      checklist_gov_usecase?: string[] | null
+    }
     const transformedData = transformToOpenAIFormat(
       usecase.id, 
       usecase.name, 
@@ -83,7 +79,9 @@ export async function PUT(
       targetResponses,
       undefined,      // company_industry
       undefined,      // company_city
-      undefined       // company_country
+      undefined,      // company_country
+      uc.checklist_gov_enterprise ?? null,
+      uc.checklist_gov_usecase ?? null
     )
 
     // Valider les données transformées
