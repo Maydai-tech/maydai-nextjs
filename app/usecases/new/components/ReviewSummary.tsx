@@ -14,7 +14,13 @@ interface ReviewSummaryProps {
 
 const REVIEW_FIELDS: { stepId: ChatStepId; getValue: (d: GuidedChatDraft) => string }[] = [
   { stepId: 'name', getValue: d => d.name },
-  { stepId: 'deployment_date', getValue: d => d.deployment_date || '(Non renseigné)' },
+  {
+    stepId: 'deployment_date',
+    getValue: d => {
+      const parts = [d.deployment_phase?.trim(), d.deployment_date?.trim()].filter(Boolean)
+      return parts.length ? parts.join(' — ') : '(Non renseigné)'
+    },
+  },
   { stepId: 'responsible_service', getValue: d => d.responsible_service },
   { stepId: 'technology_partner', getValue: d => d.technology_partner },
   { stepId: 'llm_model_version', getValue: d => d.llm_model_version },

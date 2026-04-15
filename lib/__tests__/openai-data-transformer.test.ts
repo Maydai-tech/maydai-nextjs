@@ -24,10 +24,6 @@ describe('OpenAI Data Transformer', () => {
         'Administration de la justice et processus démocratiques'
       ]
     },
-    {
-      question_code: 'E5.N9.Q7',
-      single_value: 'E5.N9.Q7.B',
-    }
   ]
 
   describe('transformToOpenAIFormat', () => {
@@ -55,11 +51,6 @@ describe('OpenAI Data Transformer', () => {
               'Administration de la justice et processus démocratiques'
             ]
           },
-          E5_N9_Q7: {
-            question: 'Tenez vous un registre centralisé de vos systèmes d\'IA ?',
-            selected_option: 'E5.N9.Q7.B',
-            selected_label: 'Oui',
-          }
         }
       })
     })
@@ -77,8 +68,6 @@ describe('OpenAI Data Transformer', () => {
       expect(result.usecase_name).toBe('Test Use Case')
       expect(result.responses.E4_N7_Q2.selected_options).toEqual([])
       expect(result.responses.E4_N7_Q2.selected_labels).toEqual([])
-      expect(result.responses.E5_N9_Q7.selected_option).toBe('')
-      expect(result.responses.E5_N9_Q7.selected_label).toBe('')
     })
 
     it('should handle responses with only codes (no labels)', () => {
@@ -103,24 +92,6 @@ describe('OpenAI Data Transformer', () => {
       expect(result.responses.E4_N7_Q2.selected_labels[1]).toContain('Aucun')
     })
 
-    it('should handle E5.N9.Q7 with single_value (Non)', () => {
-      const responsesWithoutConditional: UseCaseResponse[] = [
-        {
-          question_code: 'E5.N9.Q7',
-          single_value: 'E5.N9.Q7.A',
-        }
-      ]
-      
-      const result = transformToOpenAIFormat(
-        'uuid-test', 
-        'Test Use Case', 
-        'Test Company',
-        responsesWithoutConditional
-      )
-      
-      expect(result.responses.E5_N9_Q7.selected_option).toBe('E5.N9.Q7.A')
-      expect(result.responses.E5_N9_Q7.selected_label).toBe('Non')
-    })
   })
 
   describe('extractTargetResponses', () => {
@@ -133,8 +104,8 @@ describe('OpenAI Data Transformer', () => {
       
       const targetResponses = extractTargetResponses(allResponses)
       
-      expect(targetResponses).toHaveLength(2)
-      expect(targetResponses.map(r => r.question_code)).toEqual(['E4.N7.Q2', 'E5.N9.Q7'])
+      expect(targetResponses).toHaveLength(1)
+      expect(targetResponses.map(r => r.question_code)).toEqual(['E4.N7.Q2'])
     })
 
     it('should return empty array when no target responses', () => {
@@ -161,11 +132,6 @@ describe('OpenAI Data Transformer', () => {
             selected_options: ['E4.N7.Q2.A'],
             selected_labels: ['Test label']
           },
-          E5_N9_Q7: {
-            question: 'Test question',
-            selected_option: 'E5.N9.Q7.B',
-            selected_label: 'Oui',
-          }
         }
       }
       
@@ -186,11 +152,6 @@ describe('OpenAI Data Transformer', () => {
             selected_options: ['E4.N7.Q2.A'],
             selected_labels: ['Test label']
           },
-          E5_N9_Q7: {
-            question: 'Test question',
-            selected_option: 'E5.N9.Q7.B',
-            selected_label: 'Oui',
-          }
         }
       }
       
@@ -211,11 +172,6 @@ describe('OpenAI Data Transformer', () => {
             selected_options: [],
             selected_labels: []
           },
-          E5_N9_Q7: {
-            question: 'Test question',
-            selected_option: '',
-            selected_label: '',
-          }
         }
       }
 

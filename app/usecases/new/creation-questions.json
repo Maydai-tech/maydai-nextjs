@@ -1,16 +1,16 @@
 {
   "name": {
     "id": "name",
-    "question": "Nom du cas d'usage IA ?",
+    "question": "Comment souhaitez-vous nommer ce système IA ?",
     "type": "text",
-    "placeholder": "ex: Système IA Anti-Fraude",
+    "placeholder": "ex: Assistant IA d'analyse anti-fraude sur les paiements",
     "maxLength": 50
   },
   "deployment_date": {
     "id": "deployment_date",
-    "question": "Date de déploiement passée ou prévue ?",
-    "type": "text",
-    "placeholder": "DD/MM/YYYY (ex: 15/06/2025)",
+    "question": "Statut et calendrier de déploiement",
+    "type": "deployment_phase_and_date",
+    "placeholder": "",
     "maxLength": 10,
     "tooltip": {
       "title": "Pourquoi documenter la date de déploiement ?",
@@ -36,13 +36,7 @@
       "Service Client",
       "Qualité",
       "Autre"
-    ],
-    "tooltip": {
-      "title": "Pourquoi documenter le service responsable ?",
-      "shortContent": "Renseignez le service de l'entreprise responsable du suivi opérationnel du cas d'usage IA.",
-      "fullContent": "Renseignez le service de l'entreprise responsable du suivi opérationnel du cas d'usage IA.",
-      "icon": "💡"
-    }
+    ]
   },
   "technology_partner": {
     "id": "technology_partner",

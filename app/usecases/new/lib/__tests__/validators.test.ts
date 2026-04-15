@@ -1,5 +1,6 @@
 import {
   validateDeploymentDateDDMMYYYY,
+  validateDeploymentDateFlexible,
   validateDraft,
   validateFinalClosedFieldsAgainstReferentials,
 } from '../validators'
@@ -8,6 +9,7 @@ import type { GuidedChatDraft } from '../../types'
 function makeValidDraft(overrides: Partial<GuidedChatDraft> = {}): GuidedChatDraft {
   return {
     name: 'Mon cas d\'usage',
+    deployment_phase: 'En production',
     deployment_date: '15/06/2025',
     responsible_service: 'Ressources Humaines (RH)',
     technology_partner: 'OpenAI',
@@ -72,6 +74,17 @@ describe('validateDeploymentDateDDMMYYYY', () => {
   })
 })
 
+describe('validateDeploymentDateFlexible', () => {
+  test('accepts valid ISO date', () => {
+    expect(validateDeploymentDateFlexible('2025-06-15')).toEqual({ isValid: true })
+  })
+
+  test('rejects invalid ISO calendar date', () => {
+    const result = validateDeploymentDateFlexible('2025-02-30')
+    expect(result.isValid).toBe(false)
+  })
+})
+
 describe('validateDraft', () => {
   test('validates a complete valid draft', () => {
     const result = validateDraft(makeValidDraft())
@@ -120,15 +133,24 @@ describe('validateDraft', () => {
   })
 
   test('reports invalid deployment_date format', () => {
-    const result = validateDraft(makeValidDraft({ deployment_date: '2025-06-15' }))
+    const result = validateDraft(
+      makeValidDraft({ deployment_date: 'ceci-n-est-pas-une-date', deployment_phase: 'En production' })
+    )
     expect(result.isValid).toBe(false)
     expect(result.errors).toContainEqual(
       expect.objectContaining({ field: 'deployment_date' })
     )
   })
 
+  test('accepts ISO deployment_date when phase is set', () => {
+    const result = validateDraft(
+      makeValidDraft({ deployment_date: '2025-06-15', deployment_phase: 'En production' })
+    )
+    expect(result.isValid).toBe(true)
+  })
+
   test('accepts empty deployment_date', () => {
-    const result = validateDraft(makeValidDraft({ deployment_date: '' }))
+    const result = validateDraft(makeValidDraft({ deployment_date: '', deployment_phase: '' }))
     expect(result.isValid).toBe(true)
   })
 

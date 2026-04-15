@@ -191,6 +191,7 @@ export async function POST(req: NextRequest) {
       technology_partner, llm_model_version, primary_model_id,
       score_base, score_model, score_final, is_eliminated, elimination_reason,
       questionnaire_version, bpgv_variant, active_question_codes, ors_exit, classification_status,
+      checklist_gov_enterprise, checklist_gov_usecase,
       companies(name, industry, city, country)
     `)
     .eq('id', usecase_id)

@@ -15,11 +15,11 @@ import {
   QUESTIONNAIRE_VERSION_V3,
   normalizeQuestionnaireVersion
 } from '@/lib/questionnaire-version'
-import {
-  BPGV_CHECKLIST_RESPONSE_CODE,
-  TRANSPARENCY_CHECKLIST_RESPONSE_CODE,
-  type UseCaseChecklistResponseFields,
-} from '@/types/questions'
+import type { UseCaseChecklistResponseFields } from '@/types/questions'
+
+/** Anciennes lignes sentinelles `usecase_responses` — à retirer avec la refonte E5/E6. */
+const BPGV_CHECKLIST_RESPONSE_CODE = 'E5.N9._CHECKLIST' as const
+const TRANSPARENCY_CHECKLIST_RESPONSE_CODE = 'E6.N10._CHECKLIST' as const
 
 export type SlotStatus =
   | 'OUI'

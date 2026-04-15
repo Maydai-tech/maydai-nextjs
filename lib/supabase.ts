@@ -58,6 +58,8 @@ export interface UseCase {
   description?: string
   company_id?: string
   deployment_date?: string
+  /** Phase déclarée (production / test / projet) — distincte de `status` (workflow). */
+  deployment_phase?: string | null
   status: string
   risk_level?: string
   responsible_service?: string
@@ -77,6 +79,8 @@ export interface UseCase {
   bpgv_variant?: string | null
   active_question_codes?: string[]
   ors_exit?: string | null
+  checklist_gov_enterprise: string[]
+  checklist_gov_usecase: string[]
   created_at: string
   updated_at: string
   updated_by?: string

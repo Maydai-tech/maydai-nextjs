@@ -74,7 +74,7 @@ export interface UserResponse extends UseCaseChecklistResponseFields {
   question_code: string;
   single_value?: string;        // Pour les questions radio/conditional
   multiple_codes?: string[];    // Pour les questions checkbox/tags
-  conditional_main?: string;    // Pour les questions conditionnelles (hors E5/E6 — voir getSelectedCodes)
+  conditional_main?: string;    // Pour les questions conditionnelles
   conditional_keys?: string[];  // Clés des champs conditionnels
   conditional_values?: string[]; // Valeurs des champs conditionnels
 }
@@ -174,16 +174,10 @@ export function getSelectedCodes(response: UserResponse): string[] {
     return response.multiple_codes;
   }
   
-  // Cas 3: Réponse conditionnelle (hors E5/E6 : batch ou radio uniquement)
-  const qid = response.question_code;
-  const isE5E6Block =
-    typeof qid === 'string' &&
-    (qid.startsWith('E5.N9') || qid.startsWith('E6.N10'));
-  if (!isE5E6Block && response.conditional_main) {
+  if (response.conditional_main) {
     return [response.conditional_main];
   }
 
-  // Cas 4: Aucune réponse
   return [];
 }
 
@@ -331,6 +325,12 @@ export function calculateBaseScore(
   
   // ÉTAPE 1 : Parcourir les réponses du périmètre (V1 = toutes)
   for (const response of scoped) {
+    if (
+      response.question_code.startsWith('E5.') ||
+      response.question_code.startsWith('E6.')
+    ) {
+      continue;
+    }
     // Vérifier que la question existe dans nos données
     const question = QUESTIONS_DATA[response.question_code];
     if (!question) {

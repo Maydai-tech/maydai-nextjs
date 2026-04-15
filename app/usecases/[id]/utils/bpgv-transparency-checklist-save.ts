@@ -1,9 +1,19 @@
-import {
-  getNextQuestion,
-  type QuestionnaireNavOptions,
-} from './questionnaire'
-import type { QuestionnaireVersion } from '@/lib/questionnaire-version'
 import { isV3ShortSyntheticQuestionId, V3_SHORT_MINIPACK_ID } from './questionnaire-v3-graph'
+
+/** Codes `question_code` côté API `/responses` pour persister les JSONB `usecases.checklist_gov_*`. */
+export const CHECKLIST_GOV_ENTERPRISE_QUESTION_CODE = 'checklist_gov_enterprise' as const
+export const CHECKLIST_GOV_USECASE_QUESTION_CODE = 'checklist_gov_usecase' as const
+/** @deprecated Anciennes sentinelles — encore acceptées par l’API pour compatibilité clients. */
+export const LEGACY_BPGV_CHECKLIST_SENTINEL = 'E5.N9._CHECKLIST' as const
+export const LEGACY_TRANSPARENCY_CHECKLIST_SENTINEL = 'E6.N10._CHECKLIST' as const
+
+export function isChecklistGovEnterpriseQuestionCode(code: string): boolean {
+  return code === CHECKLIST_GOV_ENTERPRISE_QUESTION_CODE || code === LEGACY_BPGV_CHECKLIST_SENTINEL
+}
+
+export function isChecklistGovUsecaseQuestionCode(code: string): boolean {
+  return code === CHECKLIST_GOV_USECASE_QUESTION_CODE || code === LEGACY_TRANSPARENCY_CHECKLIST_SENTINEL
+}
 
 /** Parcours court V3 : option « interaction » → legacy E6.N10.Q1.A */
 export const E6_TRANSPARENCY_PACK_INTERACTION_CODE = 'E6.N10.TRANSPARENCY_PACK.INTERACTION' as const
@@ -17,7 +27,7 @@ export const E6_TRANSPARENCY_PACK_YES_CODE = E6_TRANSPARENCY_PACK_LEGACY_SINGLE_
 
 /**
  * Transforme les codes synthétiques du pack transparence en codes d’options réels attendus
- * par le batch `E6.N10._CHECKLIST`, le calculateur et l’edge function (`E6.N10.Q1` / `Q2`).
+ * pour agrégation dans `checklist_gov_usecase` (parcours court V3).
  */
 export function expandE6TransparencyPackToLegacyOptionCodes(code: string): string[] {
   if (code === E6_TRANSPARENCY_PACK_LEGACY_SINGLE_CODE) {
@@ -101,41 +111,3 @@ function extractOptionCodesFromValue(raw: unknown): string[] {
   return []
 }
 
-/**
- * Prochaine question hors du préfixe E5.N9 (réponses fusionnées incluant le pas courant).
- * Ne modifie pas la navigation : sert uniquement à détecter la sortie du bloc BPGV pour persister la ligne sentinelle.
- */
-export function isLeavingE5Block(
-  currentQuestionId: string,
-  mergedAnswers: Record<string, unknown>,
-  questionnaireVersion: QuestionnaireVersion,
-  navOptions?: QuestionnaireNavOptions
-): boolean {
-  if (!currentQuestionId.startsWith('E5.N9.')) return false
-  const next = getNextQuestion(
-    currentQuestionId,
-    mergedAnswers as Record<string, any>,
-    questionnaireVersion,
-    navOptions
-  )
-  if (!next) return false
-  return !next.startsWith('E5.N9.')
-}
-
-/** Sortie du bloc transparence (dernière question E6 ou enchaînement hors E6.N10). */
-export function isLeavingE6Block(
-  currentQuestionId: string,
-  mergedAnswers: Record<string, unknown>,
-  questionnaireVersion: QuestionnaireVersion,
-  navOptions?: QuestionnaireNavOptions
-): boolean {
-  if (!currentQuestionId.startsWith('E6.N10.')) return false
-  const next = getNextQuestion(
-    currentQuestionId,
-    mergedAnswers as Record<string, any>,
-    questionnaireVersion,
-    navOptions
-  )
-  if (next === null) return true
-  return !next.startsWith('E6.N10.')
-}

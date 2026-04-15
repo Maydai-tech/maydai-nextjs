@@ -6,29 +6,33 @@ import {
   riskLevelCodeToReportLabel,
   type RiskLevelCode,
 } from '@/lib/risk-level'
-import {
-  applyChecklistKeyOverlayToResponses,
-  type SlotStatusMap,
-} from '@/lib/slot-statuses'
+import type { SlotStatusMap } from '@/lib/slot-statuses'
 import { QUESTIONNAIRE_VERSION_V2, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 import { formatReportGroundingForPrompt } from '@/lib/report-llm-grounding'
-import {
-  BPGV_CHECKLIST_RESPONSE_CODE,
-  TRANSPARENCY_CHECKLIST_RESPONSE_CODE,
-  type UseCaseChecklistResponseFields,
-} from '@/types/questions'
+import type { UseCaseChecklistResponseFields } from '@/types/questions'
 
-/** Aligné sur `lib/slot-statuses` : code d’option = « oui / conforme » pour le prompt (pas de champs conditionnels texte). */
-const E5_E6_OUI_OPTION_BY_QUESTION: Record<string, string> = {
-  'E5.N9.Q7': 'E5.N9.Q7.B',
-  'E5.N9.Q8': 'E5.N9.Q8.B',
-  'E5.N9.Q3': 'E5.N9.Q3.A',
-  'E5.N9.Q4': 'E5.N9.Q4.A',
-  'E5.N9.Q6': 'E5.N9.Q6.B',
-  'E5.N9.Q1': 'E5.N9.Q1.A',
-  'E5.N9.Q9': 'E5.N9.Q9.B',
-  'E6.N10.Q1': 'E6.N10.Q1.A',
-  'E6.N10.Q2': 'E6.N10.Q2.A',
+function normalizeChecklistStrings(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  return v.filter((x): x is string => typeof x === 'string' && x.length > 0)
+}
+
+/** Lignes texte pour le prompt LLM (entreprise + cas d’usage), à partir des colonnes `checklist_gov_*`. */
+export function formatGovernanceChecklistLines(
+  enterprise?: unknown,
+  usecaseGov?: unknown
+): { checklist_gouvernance_entreprise: string; checklist_gouvernance_cas_usage: string } {
+  const checklistEnterprise = normalizeChecklistStrings(enterprise)
+  const checklistUsecaseGov = normalizeChecklistStrings(usecaseGov)
+  return {
+    checklist_gouvernance_entreprise:
+      checklistEnterprise.length > 0
+        ? `Critères de gouvernance entreprise validés : ${checklistEnterprise.join(', ')}`
+        : 'Critères de gouvernance entreprise validés : (aucun)',
+    checklist_gouvernance_cas_usage:
+      checklistUsecaseGov.length > 0
+        ? `Critères de gouvernance cas d'usage validés : ${checklistUsecaseGov.join(', ')}`
+        : `Critères de gouvernance cas d'usage validés : (aucun)`,
+  }
 }
 
 /** Métadonnées parcours V2 transmises au LLM (source serveur). */
@@ -56,16 +60,14 @@ interface OpenAIAnalysisInput {
   company_industry?: string
   company_city?: string
   company_country?: string
+  /** Présents si les colonnes `checklist_gov_*` ont été fournies au transform (ex. régénération rapport). */
+  checklist_gouvernance_entreprise?: string
+  checklist_gouvernance_cas_usage?: string
   responses: {
     E4_N7_Q2: {
       question: string
       selected_options: string[]
       selected_labels: string[]
-    }
-    E5_N9_Q7: {
-      question: string
-      selected_option: string
-      selected_label: string
     }
   }
 }
@@ -80,7 +82,9 @@ export function transformToOpenAIFormat(
   responses: UseCaseResponse[],
   companyIndustry?: string,
   companyCity?: string,
-  companyCountry?: string
+  companyCountry?: string,
+  checklistGovEnterprise?: unknown,
+  checklistGovUsecase?: unknown
 ): OpenAIAnalysisInput {
   const result: OpenAIAnalysisInput = {
     usecase_id: usecaseId,
@@ -95,12 +99,13 @@ export function transformToOpenAIFormat(
         selected_options: [],
         selected_labels: []
       },
-      E5_N9_Q7: {
-        question: getQuestionText('E5.N9.Q7'),
-        selected_option: '',
-        selected_label: '',
-      }
     }
+  }
+
+  if (checklistGovEnterprise !== undefined || checklistGovUsecase !== undefined) {
+    const lines = formatGovernanceChecklistLines(checklistGovEnterprise, checklistGovUsecase)
+    result.checklist_gouvernance_entreprise = lines.checklist_gouvernance_entreprise
+    result.checklist_gouvernance_cas_usage = lines.checklist_gouvernance_cas_usage
   }
 
   // Traiter chaque réponse
@@ -114,12 +119,6 @@ export function transformToOpenAIFormat(
           Array.isArray(providedLabels) && providedLabels.length > 0
             ? providedLabels
             : response.multiple_codes.map((code: string) => getOptionLabel('E4.N7.Q2', code))
-      }
-    } else if (response.question_code === 'E5.N9.Q7') {
-      const code = response.single_value || response.multiple_codes?.[0]
-      if (code) {
-        result.responses.E5_N9_Q7.selected_option = code
-        result.responses.E5_N9_Q7.selected_label = getOptionLabel('E5.N9.Q7', code)
       }
     }
   })
@@ -146,13 +145,9 @@ function getOptionLabel(questionCode: string, optionCode: string): string {
   return option?.label || optionCode
 }
 
-/**
- * Récupère les réponses spécifiques E4.N7.Q2 et E5.N9.Q7 depuis la base
- */
+/** Réponses ciblées pour l’ancien flux d’analyse ciblé (Annexe III). */
 export function extractTargetResponses(responses: UseCaseResponse[]): UseCaseResponse[] {
-  return responses.filter(response => 
-    response.question_code === 'E4.N7.Q2' || response.question_code === 'E5.N9.Q7'
-  )
+  return responses.filter(response => response.question_code === 'E4.N7.Q2')
 }
 
 // /**
@@ -195,6 +190,8 @@ interface UseCaseComplete {
   technology_partner?: string
   llm_model_version?: string
   primary_model_id?: string
+  checklist_gov_enterprise?: string[]
+  checklist_gov_usecase?: string[]
   score_base?: number
   score_model?: number | null
   score_final?: number | null
@@ -274,6 +271,9 @@ interface OpenAIAnalysisInputComplete {
       deployment_countries: string[]
       /** V3 : qualified | impossible */
       classification_status?: string | null
+      /** Listes persistées sur le use case (JSONB) — texte prêt pour le prompt. */
+      checklist_gouvernance_entreprise: string
+      checklist_gouvernance_cas_usage: string
     }
     technologie: {
       technology_partner: string
@@ -322,10 +322,11 @@ export function transformToOpenAIFormatComplete(
       ? new Set(questionnaireParcours.active_question_codes)
       : null
 
-  const responsesForLlm = applyChecklistKeyOverlayToResponses(responses)
+  const { checklist_gouvernance_entreprise: lineEntreprise, checklist_gouvernance_cas_usage: lineCasUsage } =
+    formatGovernanceChecklistLines(usecase.checklist_gov_enterprise, usecase.checklist_gov_usecase)
 
   // Construire le questionnaire avec toutes les questions et réponses
-  const questionnaireQuestions = buildQuestionnaireQuestions(responsesForLlm, activeParcoursSet)
+  const questionnaireQuestions = buildQuestionnaireQuestions(responses, activeParcoursSet)
 
   const classificationImpossible = usecase.classification_status === 'impossible'
 
@@ -367,6 +368,8 @@ export function transformToOpenAIFormatComplete(
       responsible_service: usecase.responsible_service || 'Non spécifié',
       deployment_countries: usecase.deployment_countries || [],
       classification_status: usecase.classification_status ?? null,
+      checklist_gouvernance_entreprise: lineEntreprise,
+      checklist_gouvernance_cas_usage: lineCasUsage,
     },
     technologie: {
       technology_partner: usecase.technology_partner || 'Non spécifié',
@@ -390,10 +393,12 @@ export function transformToOpenAIFormatComplete(
   }
 
   const report_grounding_block = formatReportGroundingForPrompt({
-    responses: responsesForLlm,
+    responses,
     riskLevelCode,
     classificationImpossible,
     questionnaireParcours: questionnaireParcours ?? null,
+    checklist_gov_enterprise: normalizeChecklistStrings(usecase.checklist_gov_enterprise),
+    checklist_gov_usecase: normalizeChecklistStrings(usecase.checklist_gov_usecase),
   })
 
   const base: OpenAIAnalysisInputComplete = {
@@ -485,40 +490,18 @@ function buildUserResponse(response: UseCaseResponseComplete, _questionData: any
     question_code: response.question_code
   }
 
-  const qc = response.question_code
-  if (qc === BPGV_CHECKLIST_RESPONSE_CODE || qc === TRANSPARENCY_CHECKLIST_RESPONSE_CODE) {
-    const codes = response.multiple_codes ?? []
-    userResponse.checklist_selected_option_codes = [...codes]
-    userResponse.checklist_selected_labels = (response.multiple_labels?.length
-      ? response.multiple_labels
-      : codes.map((c: string) => getOptionLabel(qc, c))) as string[]
-    return userResponse
-  }
-  
   if (response.single_value) {
     userResponse.single_value = response.single_value
     userResponse.single_label = getOptionLabel(response.question_code, response.single_value)
   }
-  
+
   if (response.multiple_codes && response.multiple_codes.length > 0) {
     userResponse.multiple_codes = response.multiple_codes
-    userResponse.multiple_labels = response.multiple_labels || 
+    userResponse.multiple_labels = response.multiple_labels ||
       response.multiple_codes.map((code: string) => getOptionLabel(response.question_code, code))
   }
-  
-  const isE5E6 = qc.startsWith('E5.N9') || qc.startsWith('E6.N10')
 
-  if (isE5E6) {
-    const ouiCode = E5_E6_OUI_OPTION_BY_QUESTION[qc]
-    const declared =
-      (typeof response.single_value === 'string' && response.single_value) ||
-      (response.multiple_codes?.length === 1 ? response.multiple_codes[0] : null)
-    if (ouiCode && typeof declared === 'string') {
-      userResponse.checklist_affirmative_option_declared = declared === ouiCode
-    }
-  }
-
-  if (!isE5E6 && response.conditional_main) {
+  if (response.conditional_main) {
     userResponse.conditional_main = response.conditional_main
     userResponse.conditional_label = getOptionLabel(response.question_code, response.conditional_main)
 
@@ -573,8 +556,6 @@ function generateInterpretation(questionData: any): string {
     'E4.N7.Q1': "Détermine le statut de l'entreprise dans la chaîne de valeur IA (fabricant vs utilisateur)",
     'E4.N7.Q2': "Identifie les domaines à haut risque selon l'annexe III de l'AI Act",
     'E4.N7.Q3': "Identifie les finalités interdites par l'AI Act",
-    'E5.N9.Q1': "Obligation fondamentale pour les systèmes à risque limité et élevé",
-    'E5.N9.Q7': "Obligation de registre pour les systèmes à haut risque ; recommandé pour tous"
   }
   
   return interpretations[questionData.id] || "Question d'évaluation de conformité IA Act"
@@ -588,8 +569,6 @@ function generateQuickWins(questionData: any): string[] {
     'E4.N7.Q1': ["Identifier clairement le rôle dans la chaîne de valeur", "Documenter les responsabilités légales selon le statut"],
     'E4.N7.Q2': ["Cartographier les domaines d'application", "Vérifier les obligations par domaine", "Mettre en place une surveillance renforcée"],
     'E4.N7.Q3': ["ARRÊT IMMÉDIAT du développement", "Révision de la finalité", "Consultation juridique urgente"],
-    'E5.N9.Q1': ["Créer un système de gestion des risques", "Documenter les processus de surveillance"],
-    'E5.N9.Q7': ["Créer un registre simple (Excel, Notion, etc.)", "Structurer les champs : nom, objectif, MAJ, etc."]
   }
   
   return quickWinsMap[questionData.id] || ["Évaluer la conformité", "Mettre à jour la documentation"]
@@ -630,8 +609,6 @@ function determineArticleConcerne(questionData: any): string {
     'E4.N7.Q1': "Article 3 (définitions Acteur AI)",
     'E4.N7.Q2': "Article 6 (Interdiction de certaines pratiques d'IA), Articles 8 à 13 (Exigences pour les systèmes d'IA à haut risque), Annexe III",
     'E4.N7.Q3': "Article 5 (Pratiques d'IA interdites)",
-    'E5.N9.Q1': "Article 9 (Système de gestion des risques)",
-    'E5.N9.Q7': "Article 12"
   }
   
   return articleMap[questionData.id] || "AI Act - Conformité générale"
@@ -645,8 +622,6 @@ function determineRiskCategory(questionData: any): string {
     'E4.N7.Q1': "Acteurs IA",
     'E4.N7.Q2': "Niveau de risque",
     'E4.N7.Q3': "Niveau de risque",
-    'E5.N9.Q1': "Technical Robustness and Safety",
-    'E5.N9.Q7': "Human Agency & Oversight"
   }
   
   return categoryMap[questionData.id] || "Conformité générale"
@@ -660,8 +635,6 @@ function generateImpactConformite(questionData: any): string {
     'E4.N7.Q1': "En fonction de la catégorie d'acteur l'application des règles et obligations spécifiques",
     'E4.N7.Q2': "Une réponse 'Oui' déclenche la nécessité d'évaluer la conformité avec les exigences relatives aux systèmes d'IA à haut risque",
     'E4.N7.Q3': "Une réponse 'Oui' indique que le système relève de la catégorie de risque interdit",
-    'E5.N9.Q1': "Une réponse 'Non' indique une non-conformité pour les systèmes à haut risque",
-    'E5.N9.Q7': "Une réponse autre que Non classerait le système à risque"
   }
   
   return impactMap[questionData.id] || "Impact sur la conformité générale"

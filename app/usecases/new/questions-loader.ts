@@ -22,7 +22,7 @@ export interface QuestionOption {
 export interface CreationQuestion {
   id: string;
   question: string;
-  type: 'text' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date' | 'countries';
+  type: 'text' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date' | 'countries' | 'deployment_phase_and_date';
   options?: string[] | QuestionOption[];
   placeholder?: string;
   maxLength?: number;

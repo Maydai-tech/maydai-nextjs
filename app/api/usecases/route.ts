@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { recordUseCaseHistory } from '@/lib/usecase-history'
 import { getRegistryOwnerPlan } from '@/lib/subscription/user-plan'
 import { QUESTIONNAIRE_VERSION_V1, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
+import { convertDeploymentDateForDb } from '@/lib/convert-deployment-date'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -11,18 +12,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     'Les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être définies'
   )
-}
-
-// Convertir le format DD/MM/YYYY vers YYYY-MM-DD pour PostgreSQL
-const convertDateFormat = (dateString: string): string | null => {
-  if (!dateString) return null
-  
-  // Vérifier le format DD/MM/YYYY
-  const match = dateString.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-  if (!match) return dateString // Retourner tel quel si déjà au bon format ou autre format
-  
-  const [, day, month, year] = match
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
 }
 
 export async function GET(request: NextRequest) {
@@ -119,6 +108,7 @@ export async function POST(request: NextRequest) {
     const {
       name,
       deployment_date,
+      deployment_phase,
       responsible_service,
       technology_partner,
       llm_model_version,
@@ -209,7 +199,11 @@ export async function POST(request: NextRequest) {
     // Create the use case
     const insertData = {
       name,
-      deployment_date: convertDateFormat(deployment_date),
+      deployment_date: convertDeploymentDateForDb(deployment_date),
+      deployment_phase:
+        typeof deployment_phase === 'string' && deployment_phase.trim()
+          ? deployment_phase.trim()
+          : null,
       responsible_service,
       technology_partner,
       llm_model_version,

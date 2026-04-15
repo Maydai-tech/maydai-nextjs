@@ -50,6 +50,7 @@ export function buildCreateUseCasePayload(
 
   return {
     name: draft.name,
+    deployment_phase: draft.deployment_phase?.trim() ? draft.deployment_phase.trim() : null,
     deployment_date: draft.deployment_date,
     responsible_service: draft.responsible_service,
     technology_partner: draft.technology_partner,

@@ -103,57 +103,20 @@ export function deriveBpgvBandFromOrsAnswers(answers: Record<string, unknown>): 
 }
 
 /**
- * Entrée BPGV après l’ORS : toujours le début du bloc E5 (parcours long complet),
- * sans raccourci « bande minimale → Q7 ».
+ * Après fin de bloc ORS (N8) : déclaration E4.N8.Q12 (blocs E5/E6 retirés du parcours).
  */
 export function getFirstE5AfterOrs(_answers: Record<string, unknown>): string {
-  return 'E5.N9.Q1'
+  return 'E4.N8.Q12'
 }
 
-/** Après Q12 : bloc transparence E6 obligatoire (Q1 puis Q2), quel que soit le niveau de risque déclaré en amont. */
+/** Après Q12 : fin du questionnaire (E6 retiré). */
 function getNextAfterQ12(_answers: Record<string, unknown>): string | null {
-  return 'E6.N10.Q1'
-}
-
-function getNextE6(current: string, _answers: Record<string, unknown>): string | null {
-  if (current === 'E6.N10.Q1') return 'E6.N10.Q2'
-  if (current === 'E6.N10.Q2') return null
   return null
 }
 
 /**
- * BPGV V2 : ordre validé Q1→…→Q9 puis E4.N8.Q12.
- * L’entrée après ORS est toujours Q1 (voir `getFirstE5AfterOrs`).
- */
-function getNextE5V2(currentQuestionId: string, answers: Record<string, unknown>): string | null {
-  switch (currentQuestionId) {
-    case 'E5.N9.Q1':
-      return 'E5.N9.Q2'
-    case 'E5.N9.Q2':
-      return 'E5.N9.Q3'
-    case 'E5.N9.Q3':
-      return 'E5.N9.Q4'
-    case 'E5.N9.Q4':
-      return 'E5.N9.Q5'
-    case 'E5.N9.Q5':
-      return 'E5.N9.Q6'
-    case 'E5.N9.Q6':
-      return 'E5.N9.Q7'
-    case 'E5.N9.Q7':
-      if (!answers['E5.N9.Q6']) return 'E4.N8.Q12'
-      return 'E5.N9.Q8'
-    case 'E5.N9.Q8':
-      return 'E5.N9.Q9'
-    case 'E5.N9.Q9':
-      return 'E4.N8.Q12'
-    default:
-      return null
-  }
-}
-
-/**
  * Navigation questionnaire V2 : ORS N7 → ORS N8 (E4.N8.Q9→…→Q11.*) ;
- * puis BPGV (entrée toujours E5.N9.Q1) ; bloc E6 obligatoire après E4.N8.Q12 (E6.N10.Q1 → Q2).
+ * puis déclaration E4.N8.Q12 (plus de chaînage E5 / E6).
  */
 export function getNextQuestionV2(
   currentQuestionId: string,
@@ -177,7 +140,6 @@ export function getNextQuestionV2(
     case 'E4.N7.Q3':
       return 'E4.N7.Q3.1'
     case 'E4.N7.Q3.1':
-      if (isOrsUnacceptableAtQ31(answers)) return 'E5.N9.Q1'
       return 'E4.N8.Q9'
 
     case 'E4.N8.Q9':
@@ -213,23 +175,8 @@ export function getNextQuestionV2(
     case 'E4.N8.Q11.M2':
       return getFirstE5AfterOrs(answers)
 
-    case 'E5.N9.Q4':
-    case 'E5.N9.Q1':
-    case 'E5.N9.Q2':
-    case 'E5.N9.Q3':
-    case 'E5.N9.Q9':
-    case 'E5.N9.Q5':
-    case 'E5.N9.Q6':
-    case 'E5.N9.Q7':
-    case 'E5.N9.Q8':
-      return getNextE5V2(currentQuestionId, answers)
-
     case 'E4.N8.Q12':
       return getNextAfterQ12(answers)
-
-    case 'E6.N10.Q1':
-    case 'E6.N10.Q2':
-      return getNextE6(currentQuestionId, answers)
 
     default:
       return null
@@ -282,7 +229,13 @@ export function getResumeQuestionIdV2(
     const ans = answers[q]
     if (ans === undefined || ans === null || !isComplete(q, ans)) return q
     const next = getNextQuestionV2(q, answers)
-    if (!next) return q
+    if (!next) {
+      if (/^E5\.N9\./.test(q) || /^E6\.N10\./.test(q)) {
+        q = 'E4.N8.Q12'
+        continue
+      }
+      return q
+    }
     q = next
   }
   return 'E4.N7.Q1'
@@ -298,19 +251,20 @@ export function computeV2UsecaseQuestionnaireFields(answers: Record<string, unkn
   const hasN8 = Object.keys(answers).some(
     k => /^E4\.N8\.(?!Q12$)/.test(k) && !isN8ExcludedFromV2OrsBand(k)
   )
-  const touchedBpgv = Object.keys(answers).some(k => k.startsWith('E5.N9.'))
+  const reachedDeclaration =
+    answers['E4.N8.Q12'] !== undefined && answers['E4.N8.Q12'] !== null
 
   let ors_exit: OrsExit | null = null
   if (isOrsUnacceptableAtQ31(answers)) {
     ors_exit = ORS_EXIT_UNACCEPTABLE
-  } else if (hasN8 && touchedBpgv) {
+  } else if (hasN8 && reachedDeclaration) {
     ors_exit = ORS_EXIT_N8_COMPLETED
   }
 
   let bpgv_variant: BpgvVariant | null = null
   if (isOrsUnacceptableAtQ31(answers)) {
     bpgv_variant = BPGV_VARIANT_UNACCEPTABLE
-  } else if (touchedBpgv) {
+  } else if (reachedDeclaration) {
     bpgv_variant = deriveBpgvBandFromOrsAnswers(answers)
   }
 

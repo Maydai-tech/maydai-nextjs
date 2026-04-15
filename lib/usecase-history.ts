@@ -148,6 +148,7 @@ export const FIELD_LABELS: Record<string, string> = {
   name: 'Nom',
   description: 'Description',
   deployment_date: 'Date de déploiement',
+  deployment_phase: 'Phase de déploiement',
   deployment_countries: 'Pays de déploiement',
   responsible_service: 'Service responsable',
   technology_partner: 'Partenaire technologique',

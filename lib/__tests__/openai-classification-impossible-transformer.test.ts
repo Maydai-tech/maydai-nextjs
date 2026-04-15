@@ -18,6 +18,8 @@ const baseUsecase = {
   technology_partner: 't',
   llm_model_version: 'v',
   primary_model_id: null as string | null,
+  checklist_gov_enterprise: [] as string[],
+  checklist_gov_usecase: [] as string[],
   score_base: 0,
   score_model: null as number | null,
   score_final: 50,

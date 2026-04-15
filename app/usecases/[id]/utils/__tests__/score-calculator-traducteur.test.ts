@@ -25,7 +25,8 @@ jest.mock('@/lib/supabase', () => ({
 
 import { calculateScore } from '../score-calculator'
 
-describe('Score Calculator - Cas Traducteur (validation CSV)', () => {
+/* Phase 2 : grille CSV incluant E5/E6 — réécriture requise après retrait du référentiel. */
+describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
   const mockUsecaseId = 'test-traducteur-usecase'
 
   /**

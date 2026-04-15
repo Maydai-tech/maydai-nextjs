@@ -66,6 +66,8 @@ describe('V2 restitution — transformer OpenAI (hors parcours)', () => {
         technology_partner: 't',
         llm_model_version: 'v',
         primary_model_id: null,
+        checklist_gov_enterprise: [],
+        checklist_gov_usecase: [],
         score_base: 0,
         score_model: null,
         score_final: 50,
@@ -76,10 +78,8 @@ describe('V2 restitution — transformer OpenAI (hors parcours)', () => {
       null,
       [
         {
-          question_code: 'E5.N9.Q7',
-          conditional_main: 'E5.N9.Q7.B',
-          conditional_keys: ['registry_type'],
-          conditional_values: ['Interne'],
+          question_code: 'E4.N7.Q1',
+          single_value: 'E4.N7.Q1.B',
         },
       ],
       'user@test.com',
@@ -91,7 +91,7 @@ describe('V2 restitution — transformer OpenAI (hors parcours)', () => {
       }
     )
 
-    const q = out.questionnaire_questions['E5.N9.Q7']
+    const q = out.questionnaire_questions['E4.N7.Q1']
     expect(q.hors_parcours_questionnaire_v2).toBe(true)
     expect(q.user_response).toBeNull()
   })

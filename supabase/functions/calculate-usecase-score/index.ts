@@ -45,131 +45,24 @@ function createErrorResponse(message: string, status: number, corsHeaders: any) 
 // Les données des questions sont maintenant importées depuis questions-data.json
 // Ce fichier JSON est synchronisé avec app/usecases/[id]/data/questions-with-scores.json
 
-/** Aligné sur `types/questions.ts` — batch E5/E6 sans colonnes dédiées. */
-const BPGV_CHECKLIST_RESPONSE_CODE = 'E5.N9._CHECKLIST'
-const TRANSPARENCY_CHECKLIST_RESPONSE_CODE = 'E6.N10._CHECKLIST'
-
-function isE5OrE6QuestionCode(questionCode: string): boolean {
-  return questionCode.startsWith('E5.N9.') || questionCode.startsWith('E6.N10.')
+/** Réponses E5/E6 ne font plus partie du référentiel de score (hors boucle). */
+function isRemovedGovernanceBlock(questionCode: string): boolean {
+  return questionCode.startsWith('E5.') || questionCode.startsWith('E6.')
 }
 
-/** Ex. `E5.N9.Q5.B` → `E5.N9.Q5` */
-function optionParentQuestionId(optionCode: string): string | null {
-  const parts = optionCode.split('.')
-  if (parts.length < 4) return null
-  return parts.slice(0, 3).join('.')
-}
-
-/**
- * Extrait les clés batch (colonnes `bpgv_keys` / `transparency_keys` ou `multiple_codes` sur lignes sentinelles).
- */
-function extractBpgvTransparencyChecklistKeys(responses: any[]): {
-  bpgvKeys: string[]
-  transparencyKeys: string[]
-} {
-  let bpgvKeys: string[] = []
-  let transparencyKeys: string[] = []
-  for (const r of responses) {
-    const qc = r.question_code as string
-    if (Array.isArray(r.bpgv_keys) && r.bpgv_keys.length > 0) {
-      bpgvKeys = r.bpgv_keys
-    } else if (qc === BPGV_CHECKLIST_RESPONSE_CODE && Array.isArray(r.multiple_codes) && r.multiple_codes.length > 0) {
-      bpgvKeys = r.multiple_codes
-    }
-    if (Array.isArray(r.transparency_keys) && r.transparency_keys.length > 0) {
-      transparencyKeys = r.transparency_keys
-    } else if (qc === TRANSPARENCY_CHECKLIST_RESPONSE_CODE && Array.isArray(r.multiple_codes) && r.multiple_codes.length > 0) {
-      transparencyKeys = r.multiple_codes
-    }
-  }
-  return { bpgvKeys, transparencyKeys }
-}
-
-function hasBatchE5E6Checklist(bpgvKeys: string[], transparencyKeys: string[]): boolean {
-  return bpgvKeys.length > 0 || transparencyKeys.length > 0
-}
-
-/**
- * Impacts pour un ensemble de codes d’options (E5/E6), groupés par question parente.
- * `impact_mode === 'any'` : un seul impact négatif retenu par question (min des impacts numériques).
- */
-function sumChecklistOptionImpacts(
-  optionCodes: string[],
-  questionsData: Record<string, any>
-): { totalImpact: number; isEliminated: boolean; eliminationReason: string } {
-  let totalImpact = 0
-  let isEliminated = false
-  let eliminationReason = ''
-
-  const byQuestion = new Map<string, string[]>()
-  for (const code of optionCodes) {
-    const qid = optionParentQuestionId(code)
-    if (!qid) continue
-    if (!byQuestion.has(qid)) byQuestion.set(qid, [])
-    byQuestion.get(qid)!.push(code)
-  }
-
-  for (const [questionId, codes] of byQuestion) {
-    const question = questionsData[questionId]
-    if (!question?.options) continue
-
-    const uniqueCodes = [...new Set(codes)]
-
-    for (const selectedCode of uniqueCodes) {
-      const option = question.options.find((opt: any) => opt.code === selectedCode)
-      if (option?.is_eliminatory) {
-        isEliminated = true
-        eliminationReason = `Réponse éliminatoire: ${option.label}`
-        return { totalImpact, isEliminated, eliminationReason }
-      }
-    }
-
-    const impacts: number[] = []
-    for (const selectedCode of uniqueCodes) {
-      const option = question.options.find((opt: any) => opt.code === selectedCode)
-      if (option && typeof option.score_impact === 'number') {
-        impacts.push(option.score_impact)
-      }
-    }
-    if (impacts.length === 0) continue
-
-    if (question.impact_mode === 'any') {
-      const agg = Math.min(...impacts)
-      if (agg) totalImpact += agg
-    } else {
-      for (const selectedCode of uniqueCodes) {
-        const option = question.options.find((opt: any) => opt.code === selectedCode)
-        if (option?.score_impact) {
-          totalImpact += option.score_impact
-        }
-      }
-    }
-  }
-
-  return { totalImpact, isEliminated, eliminationReason }
-}
-
-/**
- * Codes sélectionnés pour le score — E5/E6 : pas de `conditional_main` / `conditional_keys`.
- */
-function getSelectedCodesForScoring(response: any, questionCode: string): string[] {
-  const isE56 = isE5OrE6QuestionCode(questionCode)
-
+function getSelectedCodesForScoring(response: any): string[] {
   if (response.single_value) {
-    const cleanValue = response.single_value
+    const cleanValue = String(response.single_value)
       .replace(/^"|"$/g, '')
       .replace(/\\"/g, '"')
     return [cleanValue]
   }
-
   if (response.multiple_codes && Array.isArray(response.multiple_codes)) {
     return response.multiple_codes
   }
-
-  if (!isE56 && response.conditional_main) {
+  if (response.conditional_main) {
     return [response.conditional_main]
   }
-
   return []
 }
 
@@ -350,71 +243,53 @@ function calculateBaseScore(responses: any[]) {
   let isEliminated = false;
   let eliminationReason = '';
 
-  const { bpgvKeys, transparencyKeys } = extractBpgvTransparencyChecklistKeys(responses);
-  const useBatchE5E6 = hasBatchE5E6Checklist(bpgvKeys, transparencyKeys);
+  for (const response of responses) {
+    const qc = response.question_code as string;
+    if (isRemovedGovernanceBlock(qc)) continue;
 
-  if (useBatchE5E6) {
-    const batch = sumChecklistOptionImpacts([...bpgvKeys, ...transparencyKeys], QUESTIONS_DATA as any);
-    totalImpact += batch.totalImpact;
-    if (batch.isEliminated) {
-      isEliminated = true;
-      eliminationReason = batch.eliminationReason;
+    const question = QUESTIONS_DATA[qc as keyof typeof QUESTIONS_DATA];
+
+    if (!question) {
+      console.warn(`Question ${qc} non trouvée`);
+      continue;
     }
-  }
 
-  if (!isEliminated) {
-    for (const response of responses) {
-      const qc = response.question_code as string;
+    const selectedCodes = getSelectedCodesForScoring(response);
 
-      if (useBatchE5E6) {
-        if (isE5OrE6QuestionCode(qc)) continue;
-        if (qc === BPGV_CHECKLIST_RESPONSE_CODE || qc === TRANSPARENCY_CHECKLIST_RESPONSE_CODE) continue;
-      }
-
-      const question = QUESTIONS_DATA[qc as keyof typeof QUESTIONS_DATA];
-
-      if (!question) {
-        console.warn(`Question ${qc} non trouvée`);
+    for (const selectedCode of selectedCodes) {
+      const option = question.options.find((opt: any) => opt.code === selectedCode);
+      if (!option) {
+        console.warn(`Option ${selectedCode} non trouvée`);
         continue;
       }
+      if (option.is_eliminatory) {
+        isEliminated = true;
+        eliminationReason = `Réponse éliminatoire: ${option.label}`;
+        break;
+      }
+    }
+    if (isEliminated) break;
 
-      const selectedCodes = getSelectedCodesForScoring(response, qc);
+    if (selectedCodes.length === 0) continue;
 
+    if ((question as any).impact_mode === 'any') {
+      const impacts: number[] = [];
       for (const selectedCode of selectedCodes) {
         const option = question.options.find((opt: any) => opt.code === selectedCode);
-        if (!option) {
-          console.warn(`Option ${selectedCode} non trouvée`);
-          continue;
-        }
-        if (option.is_eliminatory) {
-          isEliminated = true;
-          eliminationReason = `Réponse éliminatoire: ${option.label}`;
-          break;
+        if (option && typeof option.score_impact === 'number') {
+          impacts.push(option.score_impact);
         }
       }
-      if (isEliminated) break;
-
-      if (selectedCodes.length === 0) continue;
-
-      if ((question as any).impact_mode === 'any') {
-        const impacts: number[] = [];
-        for (const selectedCode of selectedCodes) {
-          const option = question.options.find((opt: any) => opt.code === selectedCode);
-          if (option && typeof option.score_impact === 'number') {
-            impacts.push(option.score_impact);
-          }
-        }
-        if (impacts.length > 0) {
-          const agg = Math.min(...impacts);
-          if (agg) totalImpact += agg;
-        }
-      } else {
-        for (const selectedCode of selectedCodes) {
-          const option = question.options.find((opt: any) => opt.code === selectedCode);
-          if (!option) continue;
-          if (option.score_impact) {
-            totalImpact += option.score_impact;
-          }
+      if (impacts.length > 0) {
+        const agg = Math.min(...impacts);
+        if (agg) totalImpact += agg;
+      }
+    } else {
+      for (const selectedCode of selectedCodes) {
+        const option = question.options.find((opt: any) => opt.code === selectedCode);
+        if (!option) continue;
+        if (option.score_impact) {
+          totalImpact += option.score_impact;
         }
       }
     }
@@ -443,36 +318,9 @@ function calculateRiskLevel(responses: any[]): string {
   let highestRiskLevel = 'minimal';
   const riskHierarchy = ['minimal', 'limited', 'high', 'unacceptable'];
 
-  const bumpFromOptionCode = (optionCode: string) => {
-    const qid = optionParentQuestionId(optionCode);
-    if (!qid) return;
-    const question = QUESTIONS_DATA[qid as keyof typeof QUESTIONS_DATA];
-    if (!question?.options) return;
-    const option = question.options.find((opt: any) => opt.code === optionCode);
-    if (option && 'risk' in option && typeof (option as any).risk === 'string') {
-      const optionRisk = (option as any).risk;
-      if (riskHierarchy.indexOf(optionRisk) > riskHierarchy.indexOf(highestRiskLevel)) {
-        highestRiskLevel = optionRisk;
-      }
-    }
-  };
-
-  const { bpgvKeys, transparencyKeys } = extractBpgvTransparencyChecklistKeys(responses);
-  const useBatchE5E6 = hasBatchE5E6Checklist(bpgvKeys, transparencyKeys);
-  if (useBatchE5E6) {
-    for (const code of [...bpgvKeys, ...transparencyKeys]) {
-      bumpFromOptionCode(code);
-    }
-  }
-
   for (const response of responses) {
     const questionCode = response.question_code as string;
-    if (useBatchE5E6) {
-      if (isE5OrE6QuestionCode(questionCode)) continue;
-      if (questionCode === BPGV_CHECKLIST_RESPONSE_CODE || questionCode === TRANSPARENCY_CHECKLIST_RESPONSE_CODE) {
-        continue;
-      }
-    }
+    if (isRemovedGovernanceBlock(questionCode)) continue;
 
     const question = QUESTIONS_DATA[questionCode as keyof typeof QUESTIONS_DATA];
 
@@ -480,7 +328,7 @@ function calculateRiskLevel(responses: any[]): string {
 
     let selectedRiskLevel: string | undefined;
 
-    const selectedCodes = getSelectedCodesForScoring(response, questionCode);
+    const selectedCodes = getSelectedCodesForScoring(response);
     for (const code of selectedCodes) {
       const option = question.options?.find((opt: any) => opt.code === code);
       if (option && 'risk' in option) {

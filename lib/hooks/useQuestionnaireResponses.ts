@@ -26,7 +26,11 @@ interface UseQuestionnaireResponsesReturn {
   error: string | null
   
   // Actions
-  saveResponse: (questionCode: string, responseValue?: string, responseData?: any) => Promise<void>
+  saveResponse: (
+    questionCode: string,
+    responseValue?: string,
+    responseData?: any
+  ) => Promise<Record<string, unknown> | void>
   saveMultiple: (answers: Record<string, any>) => Promise<void>
   refreshResponses: () => Promise<void>
   getResponse: (questionCode: string) => UseCaseResponse | null
@@ -96,7 +100,7 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
     questionCode: string, 
     responseValue?: string, 
     responseData?: any
-  ) => {
+  ): Promise<Record<string, unknown> | void> => {
     if (!accessToken) throw new Error('No session found')
 
     try {
@@ -120,22 +124,26 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
         throw new Error('Failed to save response')
       }
 
-      const savedResponse = await response.json()
-      
-      // Mettre à jour l'état local
+      const savedResponse = (await response.json()) as Record<string, unknown>
+
+      if (savedResponse?.updated === 'usecase_checklists') {
+        lastFetchId.current = ''
+        return savedResponse
+      }
+
       setResponses(prev => {
         const index = prev.findIndex(r => r.question_code === questionCode)
+        const row = savedResponse as unknown as UseCaseResponse
         if (index >= 0) {
           const newResponses = [...prev]
-          newResponses[index] = savedResponse
+          newResponses[index] = row
           return newResponses
-        } else {
-          return [...prev, savedResponse]
         }
+        return [...prev, row]
       })
-      
-      // Invalider le cache pour forcer un refresh lors du prochain mount
+
       lastFetchId.current = ''
+      return savedResponse
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error saving response')
       throw err
@@ -191,18 +199,21 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
       }
 
       const result = await response.json()
-      const savedResponses = result.saved_responses || []
+      const savedResponses = (result.saved_responses || []) as Array<UseCaseResponse | Record<string, unknown>>
       
-      // Mettre à jour l'état local avec toutes les réponses sauvegardées
       setResponses(prev => {
         const newResponses = [...prev]
         
-        savedResponses.forEach((savedResponse: UseCaseResponse) => {
-          const existingIndex = newResponses.findIndex(r => r.question_code === savedResponse.question_code)
+        savedResponses.forEach((savedResponse) => {
+          if ((savedResponse as Record<string, unknown>).updated === 'usecase_checklists') {
+            return
+          }
+          const row = savedResponse as UseCaseResponse
+          const existingIndex = newResponses.findIndex(r => r.question_code === row.question_code)
           if (existingIndex >= 0) {
-            newResponses[existingIndex] = savedResponse
+            newResponses[existingIndex] = row
           } else {
-            newResponses.push(savedResponse)
+            newResponses.push(row)
           }
         })
         
