@@ -33,6 +33,50 @@ export interface ReportGroundingInput {
   /** Critères persistés sur le use case (colonnes JSONB), hors questionnaire. */
   checklist_gov_enterprise?: string[]
   checklist_gov_usecase?: string[]
+  /** Codes de conformité bloc E5 (JSONB sur `usecases`). */
+  block_e5_governance?: string[]
+  /** Codes de conformité bloc E6 (JSONB sur `usecases`). */
+  block_e6_transparence?: string[]
+}
+
+type QuestionnaireEntryForLookup = {
+  id?: string
+  question?: string
+  options?: Array<{ code: string; label: string }>
+}
+
+/**
+ * Résout un code stocké (ex. clé question `E5.N9.Q1`, code option `E5.N9.Q1.A`, ou alias hors référentiel)
+ * vers un libellé lisible : titre de la question si la clé existe, sinon label d’option dans tout le référentiel.
+ * Si introuvable, retourne le code d’entrée (trim).
+ */
+export function translateCodeToLabel(code: string): string {
+  if (typeof code !== 'string') return String(code)
+  const trimmed = code.trim()
+  if (!trimmed) return code
+
+  const data = QUESTIONS_DATA as Record<string, QuestionnaireEntryForLookup>
+  const asQuestion = data[trimmed]
+  if (asQuestion?.question && asQuestion.question.trim().length > 0) {
+    return asQuestion.question.trim()
+  }
+
+  for (const q of Object.values(data)) {
+    const opt = q.options?.find((o) => o.code === trimmed)
+    if (opt?.label && opt.label.trim().length > 0) {
+      return opt.label.trim()
+    }
+  }
+
+  return trimmed
+}
+
+/** Une entrée pour le prompt : « Libellé (code) », ou seulement le code si pas de libellé distinct. */
+function formatComplianceCodeForPrompt(code: string): string {
+  const trimmed = typeof code === 'string' ? code.trim() : String(code).trim()
+  if (!trimmed) return code
+  const label = translateCodeToLabel(trimmed)
+  return label === trimmed ? trimmed : `${label} (${trimmed})`
 }
 
 function optionLabel(questionCode: string, optionCode: string): string {
@@ -91,15 +135,19 @@ export function collectAnnexIiiDomains(map: Map<string, ReportGroundingDbRespons
 /**
  * Texte d’ancrage pour le prompt LLM (français, lignes courtes, autoritatif).
  */
+/** JSONB / API : `null`, objet ou valeur non-tableau → tableau vide (évite `.filter` / `.join` sur null). */
+function coerceStringArray(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  return v.filter((s): s is string => typeof s === 'string')
+}
+
 export function formatReportGroundingForPrompt(input: ReportGroundingInput): string {
-  const {
-    responses,
-    riskLevelCode,
-    classificationImpossible,
-    questionnaireParcours,
-    checklist_gov_enterprise = [],
-    checklist_gov_usecase = [],
-  } = input
+  const { responses, riskLevelCode, classificationImpossible, questionnaireParcours } = input
+  const checklist_gov_enterprise = coerceStringArray(input.checklist_gov_enterprise)
+  const checklist_gov_usecase = coerceStringArray(input.checklist_gov_usecase)
+  const block_e5_governance = coerceStringArray(input.block_e5_governance)
+  const block_e6_transparence = coerceStringArray(input.block_e6_transparence)
+
   const map = buildMap(responses)
   const lines: string[] = []
 
@@ -115,6 +163,24 @@ export function formatReportGroundingForPrompt(input: ReportGroundingInput): str
       ? `Critères de gouvernance cas d'usage validés : ${uc.join(', ')}`
       : `Critères de gouvernance cas d'usage validés : (aucun)`
   )
+
+  const e5Codes = block_e5_governance
+    .filter((s) => s.length > 0)
+    .map((c) => formatComplianceCodeForPrompt(c))
+  const e6Codes = block_e6_transparence
+    .filter((s) => s.length > 0)
+    .map((c) => formatComplianceCodeForPrompt(c))
+  lines.push(
+    e5Codes.length > 0
+      ? `Codes E5 (Gouvernance) validés : ${e5Codes.join(', ')}`
+      : 'Codes E5 (Gouvernance) validés : (aucun)'
+  )
+  lines.push(
+    e6Codes.length > 0
+      ? `Codes E6 (Transparence) validés : ${e6Codes.join(', ')}`
+      : 'Codes E6 (Transparence) validés : (aucun)'
+  )
+
   lines.push(
     'Ces listes remplacent toute inférence à partir d’anciennes questions questionnaire E5/E6 — ne pas les reconstruire depuis questionnaire_questions.'
   )

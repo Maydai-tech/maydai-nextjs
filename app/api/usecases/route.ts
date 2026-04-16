@@ -119,7 +119,9 @@ export async function POST(request: NextRequest) {
       description,
       status,
       risk_level,
-      company_id
+      company_id,
+      BLOCK_E5_GOVERNANCE,
+      BLOCK_E6_TRANSPARENCE
     } = body
 
     // Validate required fields
@@ -196,6 +198,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const blockE5Governance = Array.isArray(BLOCK_E5_GOVERNANCE)
+      ? BLOCK_E5_GOVERNANCE.filter((item: unknown): item is string => typeof item === 'string')
+      : []
+    const blockE6Transparence = Array.isArray(BLOCK_E6_TRANSPARENCE)
+      ? BLOCK_E6_TRANSPARENCE.filter((item: unknown): item is string => typeof item === 'string')
+      : []
+
     // Create the use case
     const insertData = {
       name,
@@ -215,6 +224,8 @@ export async function POST(request: NextRequest) {
       status: status || 'draft',
       risk_level,
       company_id,
+      block_e5_governance: blockE5Governance,
+      block_e6_transparence: blockE6Transparence,
       questionnaire_version: QUESTIONNAIRE_VERSION_V3,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -230,12 +241,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (createError) {
-      console.error('🚨 ERREUR EXACTE SUPABASE:', createError);
-      return NextResponse.json({
-        error: 'Error creating use case',
-        details: createError.message,
-        code: createError.code
-      }, { status: 500 })
+      console.error('=== SUPABASE INSERT ERROR ===', createError)
+      return NextResponse.json(
+        { error: 'Erreur Supabase', details: createError },
+        { status: 500 }
+      )
     }
 
     // Enregistrer l'événement de création dans l'historique

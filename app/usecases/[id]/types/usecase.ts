@@ -18,6 +18,9 @@ export interface UseCase {
   checklist_gov_enterprise: string[]
   /** Gouvernance cas d'usage — colonnes JSONB `checklist_gov_*` côté base. */
   checklist_gov_usecase: string[]
+  /** Colonnes JSONB `usecases` — codes E5 / E6 cochés (tableau JSON). */
+  block_e5_governance: string[]
+  block_e6_transparence: string[]
   /** 1 = parcours historique, 2 = parcours long V2, 3 = parcours long V3 */
   questionnaire_version?: number
   /** V3 : qualified | impossible (pivots JNS) — ne remplace pas risk_level sémantiquement */

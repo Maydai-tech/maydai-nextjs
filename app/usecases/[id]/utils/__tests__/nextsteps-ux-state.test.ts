@@ -119,6 +119,48 @@ describe('nextsteps-ux-state', () => {
         })
       ).toBe('empty_impossible')
     })
+
+    test('erreur next steps : priorité sur finalizing_recommendations', () => {
+      expect(
+        getNextStepsRecommendationsPhase({
+          loading: false,
+          hasNextSteps: false,
+          useCaseStatus: 'completed',
+          classificationStatus: 'qualified',
+          reportGeneratedAt: '2025-01-01',
+          parentReportGenerating: false,
+          nextStepsError: 'Erreur réseau',
+        })
+      ).toBe('error')
+    })
+
+    test('sync bloquée : priorité sur finalizing_recommendations', () => {
+      expect(
+        getNextStepsRecommendationsPhase({
+          loading: false,
+          hasNextSteps: false,
+          useCaseStatus: 'completed',
+          classificationStatus: 'qualified',
+          reportGeneratedAt: '2025-01-01',
+          parentReportGenerating: false,
+          nextStepsSyncStalled: true,
+        })
+      ).toBe('error')
+    })
+
+    test('chaîne erreur vide : reste en finalizing', () => {
+      expect(
+        getNextStepsRecommendationsPhase({
+          loading: false,
+          hasNextSteps: false,
+          useCaseStatus: 'completed',
+          classificationStatus: 'qualified',
+          reportGeneratedAt: '2025-01-01',
+          parentReportGenerating: false,
+          nextStepsError: '   ',
+        })
+      ).toBe('finalizing_recommendations')
+    })
   })
 
   describe('canRequestAiReportGeneration', () => {

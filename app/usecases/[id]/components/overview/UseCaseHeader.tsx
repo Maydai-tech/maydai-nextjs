@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { UseCase, Progress } from '../../types/usecase'
 import { ComplAIModel } from '@/lib/supabase'
 import { getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
@@ -9,6 +9,7 @@ import { useUseCaseNavigation } from '../../utils/navigation'
 import {
   ArrowLeft,
   CheckCircle,
+  CheckCircle2,
   Clock,
   Edit3,
   RefreshCcw,
@@ -18,7 +19,7 @@ import {
   UserPlus,
   Calendar,
   History,
-  Zap,
+  ArrowRight,
   MoreVertical,
 } from 'lucide-react'
 import Image from 'next/image'
@@ -209,7 +210,30 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         : 'Télécharger le rapport PDF'
   const { isOwner } = useCompanyInfo(useCase.company_id)
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { session } = useAuth()
+
+  const parcoursQuery = searchParams.get('parcours')
+
+  /** Parcours long : évaluation sans `parcours=court`, cas terminé, ou progression persistée côté graphe long (E5 / déclaration Q12). */
+  const showParcoursCompletBadge = useMemo(() => {
+    if (!showV3DualPath) return false
+    const onEval = pathname === useCaseRoutes.evaluation(useCase.id)
+    if (onEval && parcoursQuery !== 'court') return true
+    if (useCase.score_final != null && useCase.score_final !== undefined) return true
+    if (String(useCase.status || '').toLowerCase() === 'completed') return true
+    const ac = useCase.active_question_codes ?? []
+    return ac.some((c) => /^E5\./.test(c) || c === 'E4.N8.Q12')
+  }, [
+    showV3DualPath,
+    pathname,
+    useCase.id,
+    parcoursQuery,
+    useCase.score_final,
+    useCase.status,
+    useCase.active_question_codes,
+  ])
 
   // Memoize deployment countries to prevent WorldMap flickering
   const deploymentCountries = useMemo(
@@ -394,22 +418,33 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
             <div className="flex flex-wrap items-center justify-between gap-4 mt-4 mb-6 border-b border-gray-200 pb-4">
               <div className="flex flex-wrap items-center gap-3 min-w-0">
                 {showV3DualPath ? (
-                  <Link
-                    href={withEvaluationEntree(useCaseRoutes.evaluation(useCase.id), 'header_v3_refine_long')}
-                    onClick={() =>
-                      trackV3ShortPathCta({
-                        usecase_id: useCase.id,
-                        system_type_bucket: v3ShortPathSystemTypeBucket(useCase.system_type),
-                        cta: 'evaluation_long',
-                        cta_placement: 'header_v3_refine_long',
-                        ...(headerFunnelKey && { outcome_funnel_key: headerFunnelKey }),
-                      })
-                    }
-                    className="inline-flex items-center gap-2 bg-[#0080A3] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#006682] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3]"
-                  >
-                    <Zap className="w-4 h-4 shrink-0" aria-hidden />
-                    Passer au Parcours Complet
-                  </Link>
+                  showParcoursCompletBadge ? (
+                    <span
+                      role="status"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-[#0080A3] border border-sky-200"
+                    >
+                      <CheckCircle2 className="h-[14px] w-[14px] shrink-0" aria-hidden />
+                      Parcours Complet
+                    </span>
+                  ) : (
+                    <Link
+                      href={withEvaluationEntree(useCaseRoutes.evaluation(useCase.id), 'header_v3_refine_long')}
+                      onClick={() =>
+                        trackV3ShortPathCta({
+                          usecase_id: useCase.id,
+                          system_type_bucket: v3ShortPathSystemTypeBucket(useCase.system_type),
+                          cta: 'evaluation_long',
+                          cta_placement: 'header_v3_refine_long',
+                          ...(headerFunnelKey && { outcome_funnel_key: headerFunnelKey }),
+                        })
+                      }
+                      aria-label="Passer à l'évaluation détaillée du parcours complet"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#0080A3] text-[#0080A3] bg-white hover:bg-sky-50 transition-colors text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3]"
+                    >
+                      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                      Passer au Parcours Complet
+                    </Link>
+                  )
                 ) : (
                   <button
                     type="button"

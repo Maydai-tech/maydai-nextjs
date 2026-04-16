@@ -47,7 +47,9 @@ export async function PUT(
 
     const { data: usecase, error: usecaseError } = await supabase
       .from('usecases')
-      .select('id, name, checklist_gov_enterprise, checklist_gov_usecase')
+      .select(
+        'id, name, checklist_gov_enterprise, checklist_gov_usecase, block_e5_governance, block_e6_transparence'
+      )
       .eq('id', usecase_id)
       .single()
 

@@ -1,8 +1,12 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Info, ShieldCheck } from 'lucide-react'
 import { Question, QuestionOption } from '../../types/usecase'
 import Tooltip from '@/components/Tooltip'
-import { getE4N7CheckboxGroups, getE4N7VisualSegment } from '../../utils/e4n7-qualification-ui'
+import {
+  getE4N7CheckboxGroups,
+  getE4N7VisualSegment,
+  type E4N7VisualSegment,
+} from '../../utils/e4n7-qualification-ui'
 import type { QuestionnairePathMode } from '../../utils/questionnaire'
 import {
   V3_SHORT_ENTREPRISE_ID,
@@ -10,6 +14,47 @@ import {
   V3_SHORT_USAGE_ID,
   isV3ShortPathCompositeQuestionId,
 } from '../../utils/questionnaire-v3-graph'
+import { computeCheckboxNextAnswers } from '../../utils/compute-checkbox-next-answers'
+import {
+  selectableCardBase,
+  selectableCardInteractive,
+  selectableCardSelected,
+  selectableCardDimmed,
+  VisualRadioMark,
+  VisualCheckboxMark,
+} from '@/components/ui/selectable-question-cards'
+
+export { computeCheckboxNextAnswers }
+
+function E4N7GroupedContextBanner({ segment }: { segment: E4N7VisualSegment }) {
+  if (segment === 'annex-iii' || segment === null) return null
+  let title = 'Contexte réglementaire'
+  let body: string
+  if (segment === 'prohibited-art5') {
+    title = 'Finalités prohibées (article 5)'
+    body =
+      'Les pratiques listées sont interdites lorsqu’elles s’appliquent telles quelles à votre système. Cochez tout ce qui correspond à votre situation réelle, ou l’option dédiée si aucune ne s’applique.'
+  } else if (segment === 'prohibited-situations') {
+    title = 'Situations encadrées (article 5.1)'
+    body =
+      'Certaines finalités visant des personnes physiques ou des évaluations automatisées sont très encadrées. Indiquez ce qui correspond à votre cas d’usage.'
+  } else if (segment === 'ors-narrowing') {
+    title = 'Affinage de la qualification'
+    body =
+      'Ces questions précisent le chemin réglementaire ouvert par vos réponses sur les domaines sensibles (Annexe III).'
+  } else {
+    return null
+  }
+  return (
+    <div className="mb-6 flex items-start gap-3 rounded-lg border border-sky-100 bg-sky-50 p-4 text-sm leading-relaxed text-sky-900">
+      <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" aria-hidden />
+      <div>
+        <p className="font-medium text-sky-950">{title}</p>
+        <p className="mt-1 text-sky-900/95">{body}</p>
+      </div>
+    </div>
+  )
+}
 
 const V3_SHORT_STAGE_HEADINGS: Record<string, string> = {
   [V3_SHORT_ENTREPRISE_ID]: 'Entreprise',
@@ -46,7 +91,11 @@ function V3ShortLegalInfoButton({
         className="inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3] rounded"
         aria-label={`Afficher l'information juridique pour : ${ariaTopic}`}
         aria-describedby={tooltipId}
-        onClick={(e) => e.preventDefault()}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <Info className="w-4 h-4 text-gray-400 hover:text-[#0080A3] transition-colors" aria-hidden="true" />
       </button>
@@ -81,32 +130,24 @@ export function V3ShortPathStageQuestion({
   insufficientInfoBusy?: boolean
   isReadOnly?: boolean
 }) {
-  const [selectedCodes, setSelectedCodes] = useState<string[]>(() =>
-    Array.isArray(currentAnswer)
-      ? (currentAnswer as unknown[]).filter((x): x is string => typeof x === 'string' && x.length > 0)
-      : []
+  /** Même normalisation que `renderCheckboxQuestion` (parcours long) — source de vérité : `questionnaireData.answers[id]`. */
+  const checkboxAnswers: string[] = Array.isArray(currentAnswer)
+    ? (currentAnswer as unknown[]).filter((x): x is string => typeof x === 'string' && x.length > 0)
+    : []
+
+  const hasExclusiveSelected = question.options.some(
+    (o) => Boolean(o.unique_answer) && checkboxAnswers.includes(o.code)
   )
 
-  useEffect(() => {
-    if (!Array.isArray(currentAnswer)) return
-    setSelectedCodes(
-      (currentAnswer as unknown[]).filter((x): x is string => typeof x === 'string' && x.length > 0)
-    )
-  }, [currentAnswer])
-
-  const toggleCode = (code: string) => {
+  const applyCheckboxChange = (option: QuestionOption, checked: boolean) => {
     if (isReadOnly) return
-    setSelectedCodes((prev) => {
-      const next = prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
-      onAnswerChange(next)
-      return next
-    })
+    onAnswerChange(computeCheckboxNextAnswers(checkboxAnswers, question.options, option, checked))
   }
 
   const submitInsufficientInfo = async () => {
     if (isReadOnly || insufficientInfoBusy) return
-    setSelectedCodes([])
     if (onSubmitInsufficientInfo) {
+      onAnswerChange([])
       await onSubmitInsufficientInfo()
       return
     }
@@ -188,6 +229,105 @@ export function V3ShortPathStageQuestion({
     }
   }
 
+  const shortListClass =
+    question.options.length > 3
+      ? 'mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-4'
+      : 'mb-6 space-y-3'
+
+  const renderShortOptionCard = (opt: QuestionOption) => {
+    const isChecked = checkboxAnswers.includes(opt.code)
+    const isExclusive = Boolean(opt.unique_answer)
+    const dimOtherOptions = hasExclusiveSelected && !isExclusive
+    const interactive = !isReadOnly && !dimOtherOptions
+    const tooltipText = getOptionLegalTooltip(opt)
+    const displayLabel = getOptionDisplayLabel(opt)
+    const tooltipId = `v3-short-${question.id}-opt-${opt.code}-tooltip`
+
+    return (
+      <label
+        key={opt.code}
+        className={`${selectableCardBase} ${interactive ? selectableCardInteractive : ''} ${
+          dimOtherOptions ? selectableCardDimmed : ''
+        } ${isChecked ? selectableCardSelected : ''}`}
+      >
+        <input
+          type="checkbox"
+          checked={isChecked}
+          onChange={(e) => applyCheckboxChange(opt, e.target.checked)}
+          disabled={isReadOnly || dimOtherOptions}
+          className="sr-only"
+          aria-checked={isChecked}
+        />
+        <VisualCheckboxMark checked={isChecked} exclusive={isExclusive} />
+        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 leading-relaxed text-gray-900">
+          <span>{displayLabel}</span>
+          {tooltipText ? (
+            <V3ShortLegalInfoButton
+              tooltipId={tooltipId}
+              tooltipText={tooltipText}
+              ariaTopic={displayLabel}
+            />
+          ) : null}
+        </span>
+      </label>
+    )
+  }
+
+  const renderShortOptionsBlock = () => {
+    if (isV3ShortTransparence && question.options.length === 1) {
+      const opt = question.options[0]
+      const isChecked = checkboxAnswers.includes(opt.code)
+      const isExclusive = Boolean(opt.unique_answer)
+      const interactive = !isReadOnly
+
+      return (
+        <div className={shortListClass}>
+          <label
+            className={`${selectableCardBase} ${
+              interactive ? selectableCardInteractive : 'cursor-default'
+            } ${isChecked ? selectableCardSelected : ''}`}
+          >
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={(e) => applyCheckboxChange(opt, e.target.checked)}
+              disabled={isReadOnly}
+              className="sr-only"
+              aria-checked={isChecked}
+            />
+            <VisualCheckboxMark checked={isChecked} exclusive={isExclusive} />
+            <div className="min-w-0 flex-1 space-y-3 leading-relaxed text-gray-900">
+              <p className="rounded-md border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Données : une seule option est configurée pour cette étape. Les deux volets juridiques (Art. 50) sont
+                regroupés ci-dessous ; pour deux réponses distinctes en base, ajoutez une seconde option dans le JSON
+                (ex. <code className="font-mono text-[11px]">questions-with-scores.json</code>) et synchronisez le
+                scoring si nécessaire.
+              </p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span>{V3_SHORT_TRANSPARENCE_UI_ROWS[0].label}</span>
+                <V3ShortLegalInfoButton
+                  tooltipId={`v3-short-${question.id}-transp-row-0`}
+                  tooltipText={V3_SHORT_TRANSPARENCE_UI_ROWS[0].tooltip}
+                  ariaTopic={V3_SHORT_TRANSPARENCE_UI_ROWS[0].label}
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span>{V3_SHORT_TRANSPARENCE_UI_ROWS[1].label}</span>
+                <V3ShortLegalInfoButton
+                  tooltipId={`v3-short-${question.id}-transp-row-1`}
+                  tooltipText={V3_SHORT_TRANSPARENCE_UI_ROWS[1].tooltip}
+                  ariaTopic={V3_SHORT_TRANSPARENCE_UI_ROWS[1].label}
+                />
+              </div>
+            </div>
+          </label>
+        </div>
+      )
+    }
+
+    return <div className={shortListClass}>{question.options.map((opt) => renderShortOptionCard(opt))}</div>
+  }
+
   return (
     <div
       data-v3-short-path-stage={question.id}
@@ -228,71 +368,7 @@ export function V3ShortPathStageQuestion({
         {!isV3ShortEntreprise && !isV3ShortUsage && !isV3ShortTransparence ? (
           <p className="text-sm text-gray-600 leading-relaxed mb-6">{question.question}</p>
         ) : null}
-        <div className="space-y-3 mb-6">
-          {isV3ShortTransparence && question.options.length === 1 ? (
-            <label className="flex items-start gap-3 cursor-pointer sm:items-start">
-              <input
-                type="checkbox"
-                checked={selectedCodes.includes(question.options[0].code)}
-                onChange={() => toggleCode(question.options[0].code)}
-                disabled={isReadOnly}
-                className="mt-1 sm:mt-0 form-checkbox h-5 w-5 text-[#0080A3] rounded border-gray-300 shrink-0"
-              />
-              <div className="min-w-0 flex-1 space-y-3 text-gray-900 leading-relaxed">
-                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-md px-3 py-2">
-                  Données : une seule option est configurée pour cette étape. Les deux volets juridiques (Art. 50)
-                  sont regroupés ci-dessous ; pour deux réponses distinctes en base, ajoutez une seconde option dans le
-                  JSON (ex. <code className="font-mono text-[11px]">questions-with-scores.json</code>) et synchronisez
-                  le scoring si nécessaire.
-                </p>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span>{V3_SHORT_TRANSPARENCE_UI_ROWS[0].label}</span>
-                  <V3ShortLegalInfoButton
-                    tooltipId={`v3-short-${question.id}-transp-row-0`}
-                    tooltipText={V3_SHORT_TRANSPARENCE_UI_ROWS[0].tooltip}
-                    ariaTopic={V3_SHORT_TRANSPARENCE_UI_ROWS[0].label}
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span>{V3_SHORT_TRANSPARENCE_UI_ROWS[1].label}</span>
-                  <V3ShortLegalInfoButton
-                    tooltipId={`v3-short-${question.id}-transp-row-1`}
-                    tooltipText={V3_SHORT_TRANSPARENCE_UI_ROWS[1].tooltip}
-                    ariaTopic={V3_SHORT_TRANSPARENCE_UI_ROWS[1].label}
-                  />
-                </div>
-              </div>
-            </label>
-          ) : (
-            question.options.map((opt) => {
-              const tooltipText = getOptionLegalTooltip(opt)
-              const displayLabel = getOptionDisplayLabel(opt)
-              const tooltipId = `v3-short-${question.id}-opt-${opt.code}-tooltip`
-
-              return (
-                <label key={opt.code} className="flex items-start gap-3 cursor-pointer sm:items-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedCodes.includes(opt.code)}
-                    onChange={() => toggleCode(opt.code)}
-                    disabled={isReadOnly}
-                    className="mt-1 sm:mt-0 form-checkbox h-5 w-5 text-[#0080A3] rounded border-gray-300 shrink-0"
-                  />
-                  <span className="text-gray-900 leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span>{displayLabel}</span>
-                    {tooltipText ? (
-                      <V3ShortLegalInfoButton
-                        tooltipId={tooltipId}
-                        tooltipText={tooltipText}
-                        ariaTopic={displayLabel}
-                      />
-                    ) : null}
-                  </span>
-                </label>
-              )
-            })
-          )}
-        </div>
+        {renderShortOptionsBlock()}
         <div className="mt-8 pt-6 border-t border-gray-200">
           <button
             type="button"
@@ -326,37 +402,6 @@ export function V3ShortPathStageQuestion({
   )
 }
 
-function computeCheckboxNextAnswers(
-  checkboxAnswers: string[],
-  allOptions: QuestionOption[],
-  option: QuestionOption,
-  checked: boolean
-): string[] {
-  let newAnswers: string[]
-  if (checked) {
-    if (option.unique_answer) {
-      newAnswers = [option.code]
-    } else {
-      const uniqueOptions = allOptions.filter((opt) => opt.unique_answer)
-      const hasUniqueSelected = checkboxAnswers.some((answer) =>
-        uniqueOptions.some((unique) => unique.code === answer)
-      )
-
-      if (hasUniqueSelected) {
-        const filteredAnswers = checkboxAnswers.filter(
-          (answer) => !uniqueOptions.some((unique) => unique.code === answer)
-        )
-        newAnswers = [...filteredAnswers, option.code]
-      } else {
-        newAnswers = [...checkboxAnswers, option.code]
-      }
-    }
-  } else {
-    newAnswers = checkboxAnswers.filter((item: string) => item !== option.code)
-  }
-  return newAnswers
-}
-
 interface QuestionRendererProps {
   question: Question
   currentAnswer: any
@@ -368,9 +413,6 @@ interface QuestionRendererProps {
   onSubmitInsufficientInfo?: () => void | Promise<void>
   insufficientInfoBusy?: boolean
 }
-
-const checkboxFocusClass =
-  'mt-1 mr-3 shrink-0 rounded border-gray-300 text-[#0080A3] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3] disabled:opacity-50'
 
 export const QuestionRenderer = React.memo(function QuestionRenderer({
   question,
@@ -394,102 +436,96 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
     )
   }
 
-  const questionDescriptionToneClass = (id: string) => {
-    if (id === 'E4.N7.Q3' || id === 'E4.N7.Q3.1') {
-      return 'mb-4 text-sm leading-relaxed font-medium text-red-600'
-    }
-    if (id === 'E4.N7.Q2' || id === 'E4.N7.Q2.1' || id === 'E4.N7.Q5') {
-      return 'mb-4 text-sm leading-relaxed font-medium text-orange-600'
-    }
-    return 'mb-4 text-sm leading-relaxed text-gray-600'
-  }
-
   const renderQuestionDescription = () => {
     const text = question.description?.trim()
     if (!text) return null
-    return <p className={questionDescriptionToneClass(question.id)}>{text}</p>
+    return <p className="mb-4 text-sm leading-relaxed text-gray-600">{text}</p>
   }
 
-  const renderRadioQuestion = () => (
-    <>
-      {renderQuestionDescription()}
-      <div className="space-y-3">
-      {question.options.map((option, index) => {
-        const isChecked = currentAnswer === option.code
-        
-        return (
-          <label
-            key={`${question.id}-${option.code}-${index}`}
-            className={`flex items-start p-4 border rounded-lg transition-all ${
-              isReadOnly 
-                ? 'cursor-default' 
-                : 'cursor-pointer hover:bg-gray-50'
-            } ${
-              isChecked
-                ? 'border-[#0080A3] bg-[#0080A3]/5'
-                : 'border-gray-200'
-            }`}
-          >
-            <input
-              type="radio"
-              name={question.id}
-              value={option.code}
-              checked={isChecked}
-              disabled={isReadOnly}
-              onChange={() => {
-                if (!isReadOnly) {
-                  onAnswerChange(option.code)
-                }
-              }}
-              className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3] disabled:opacity-50"
-            />
-            <div className="flex flex-1 flex-col min-w-0">
-              <div className="flex items-start gap-2">
-                <span
-                  className={`font-medium leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}
-                >
-                  {option.label}
-                </span>
-                {(option as QuestionOption).tooltip && (
-                  <Tooltip
-                    title={(option as QuestionOption).tooltip!.title}
-                    shortContent={(option as QuestionOption).tooltip!.shortContent}
-                    fullContent={(option as QuestionOption).tooltip!.fullContent}
-                    icon={(option as QuestionOption).tooltip!.icon}
-                    type="answer"
-                    position="auto"
-                  />
-                )}
-              </div>
-              {option.description ? (
-                <span className="mt-1 text-sm leading-relaxed text-gray-600">{option.description}</span>
-              ) : null}
-            </div>
-          </label>
-        )
-      })}
-    </div>
-    </>
-  )
+  const renderRadioQuestion = () => {
+    const optionCount = question.options.length
+    const listClass =
+      optionCount > 3 ? 'grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-4 mb-6' : 'mb-6 space-y-3'
+
+    return (
+      <>
+        {renderQuestionDescription()}
+        <div className={listClass}>
+          {question.options.map((option, index) => {
+            const isChecked = currentAnswer === option.code
+            const interactive = !isReadOnly
+
+            return (
+              <label
+                key={`${question.id}-${option.code}-${index}`}
+                className={`${selectableCardBase} ${
+                  interactive ? selectableCardInteractive : 'cursor-default'
+                } ${isChecked ? selectableCardSelected : ''}`}
+              >
+                <input
+                  type="radio"
+                  name={question.id}
+                  value={option.code}
+                  checked={isChecked}
+                  disabled={isReadOnly}
+                  onChange={() => {
+                    if (!isReadOnly) {
+                      onAnswerChange(option.code)
+                    }
+                  }}
+                  className="sr-only"
+                />
+                <VisualRadioMark checked={isChecked} />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <div className="flex items-start gap-2">
+                    <span
+                      className={`font-medium leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}
+                    >
+                      {option.label}
+                    </span>
+                    {(option as QuestionOption).tooltip && (
+                      <Tooltip
+                        title={(option as QuestionOption).tooltip!.title}
+                        shortContent={(option as QuestionOption).tooltip!.shortContent}
+                        fullContent={(option as QuestionOption).tooltip!.fullContent}
+                        icon={(option as QuestionOption).tooltip!.icon}
+                        type="answer"
+                        position="auto"
+                        isolateSelection
+                      />
+                    )}
+                  </div>
+                  {option.description ? (
+                    <span className="mt-1 text-sm leading-relaxed text-gray-600">{option.description}</span>
+                  ) : null}
+                </div>
+              </label>
+            )
+          })}
+        </div>
+      </>
+    )
+  }
 
   const renderCheckboxQuestion = () => {
     const checkboxAnswers = Array.isArray(currentAnswer) ? currentAnswer : []
+    const hasExclusiveSelected = question.options.some(
+      (o) => Boolean(o.unique_answer) && checkboxAnswers.includes(o.code)
+    )
 
     const renderCheckboxRow = (option: QuestionOption, index: number) => {
       const isChecked = checkboxAnswers.includes(option.code)
       const isExclusive = Boolean(option.unique_answer)
+      const dimOtherOptions = hasExclusiveSelected && !isExclusive
+      const interactive = !isReadOnly && !dimOtherOptions
 
       return (
         <label
           key={`${question.id}-${option.code}-${index}`}
-          className={`flex items-start p-3 sm:p-4 border rounded-lg transition-all ${
-            isReadOnly ? 'cursor-default' : 'cursor-pointer hover:bg-gray-50'
-          } ${
-            isChecked
-              ? isExclusive
-                ? 'border-gray-700 bg-gray-100/80'
-                : 'border-[#0080A3] bg-[#0080A3]/5'
-              : 'border-gray-200'
+          className={`${selectableCardBase} ${
+            interactive ? selectableCardInteractive : ''
+          } ${dimOtherOptions ? selectableCardDimmed : ''} ${
+            isChecked ? selectableCardSelected : ''
           }`}
         >
           <input
@@ -498,7 +534,7 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
             value={option.code}
             checked={isChecked}
             aria-checked={isChecked}
-            disabled={isReadOnly}
+            disabled={isReadOnly || dimOtherOptions}
             onChange={(e) => {
               if (!isReadOnly) {
                 const newAnswers = computeCheckboxNextAnswers(
@@ -510,20 +546,22 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
                 onAnswerChange(newAnswers)
               }
             }}
-            className={checkboxFocusClass}
+            className="sr-only"
           />
-          <div className="flex items-start flex-1 min-w-0 gap-2">
-            <span className={`leading-relaxed flex-1 min-w-0 ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
+          <VisualCheckboxMark checked={isChecked} exclusive={isExclusive} />
+          <div className="flex min-w-0 flex-1 items-start gap-2">
+            <span className={`min-w-0 flex-1 leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
               {option.label}
             </span>
-            {(option as any).tooltip && (
+            {(option as QuestionOption).tooltip && (
               <Tooltip
-                title={(option as any).tooltip.title}
-                shortContent={(option as any).tooltip.shortContent}
-                fullContent={(option as any).tooltip.fullContent}
-                icon={(option as any).tooltip.icon}
+                title={(option as QuestionOption).tooltip!.title}
+                shortContent={(option as QuestionOption).tooltip!.shortContent}
+                fullContent={(option as QuestionOption).tooltip!.fullContent}
+                icon={(option as QuestionOption).tooltip!.icon}
                 type="answer"
                 position="auto"
+                isolateSelection
               />
             )}
           </div>
@@ -535,24 +573,27 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
     if (groups) {
       const seg = getE4N7VisualSegment(question.id)
       const usePlainShell = questionnairePathMode === 'short'
-      const segmentShell = usePlainShell
+      const segmentWrapperClass = usePlainShell
         ? ''
-        : seg === 'annex-iii'
-          ? 'rounded-xl border-l-4 border-sky-600 bg-sky-50/40 pl-3 sm:pl-5 py-4 pr-2 sm:pr-4'
-          : seg === 'ors-narrowing'
-            ? 'rounded-xl border-l-4 border-amber-500 bg-amber-50/35 pl-3 sm:pl-5 py-4 pr-2 sm:pr-4'
-            : 'rounded-xl border-l-4 border-red-700 bg-red-50/25 pl-3 sm:pl-5 py-4 pr-2 sm:pr-4'
+        : 'space-y-8 rounded-xl border border-gray-200 bg-slate-50/50 p-4 sm:p-5'
 
       return (
         <>
           {renderQuestionDescription()}
           <div
-            className={`space-y-8 ${segmentShell}`}
+            className={segmentWrapperClass}
             data-e4n7-segment={seg ?? undefined}
             data-e4n7-grouped="true"
           >
+            {!usePlainShell && seg ? <E4N7GroupedContextBanner segment={seg} /> : null}
             {groups.map((group) => {
               const hideHeading = Boolean(group.hideHeading)
+              const gridGapClass =
+                group.codes.length > 3
+                  ? 'grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-4'
+                  : group.codes.length > 1
+                    ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4'
+                    : 'grid grid-cols-1 gap-3'
               return (
                 <section
                   key={group.key}
@@ -565,22 +606,16 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
                     <div className="space-y-1">
                       <h3
                         id={`${question.id}-${group.key}-title`}
-                        className="text-base font-semibold text-gray-900 tracking-tight"
+                        className="text-base font-semibold tracking-tight text-gray-900"
                       >
                         {group.title}
                       </h3>
                       {group.description ? (
-                        <p className="text-sm text-gray-600 leading-relaxed">{group.description}</p>
+                        <p className="text-sm leading-relaxed text-gray-600">{group.description}</p>
                       ) : null}
                     </div>
                   ) : null}
-                  <div
-                    className={
-                      group.codes.length > 1
-                        ? 'grid grid-cols-1 gap-3 md:grid-cols-2'
-                        : 'grid grid-cols-1 gap-3'
-                    }
-                  >
+                  <div className={gridGapClass}>
                     {group.codes.map((code, idx) => {
                       const option = question.options.find((o) => o.code === code)
                       if (!option) return null
@@ -595,10 +630,14 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
       )
     }
 
+    const flatCount = question.options.length
+    const flatListClass =
+      flatCount > 3 ? 'mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-4' : 'mb-6 space-y-3'
+
     return (
       <>
         {renderQuestionDescription()}
-        <div className="space-y-3">
+        <div className={flatListClass}>
           {question.options.map((option, index) => renderCheckboxRow(option, index))}
         </div>
       </>
@@ -664,14 +703,15 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
                 >
                   {option.label}
                 </button>
-                {(option as any).tooltip && (
+                {(option as QuestionOption).tooltip && (
                   <Tooltip
-                    title={(option as any).tooltip.title}
-                    shortContent={(option as any).tooltip.shortContent}
-                    fullContent={(option as any).tooltip.fullContent}
-                    icon={(option as any).tooltip.icon}
+                    title={(option as QuestionOption).tooltip!.title}
+                    shortContent={(option as QuestionOption).tooltip!.shortContent}
+                    fullContent={(option as QuestionOption).tooltip!.fullContent}
+                    icon={(option as QuestionOption).tooltip!.icon}
                     type="answer"
                     position="auto"
+                    isolateSelection
                   />
                 )}
               </div>
@@ -720,22 +760,23 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
     return (
       <div className="space-y-4">
         {renderQuestionDescription()}
-        <div className="space-y-3">
+        <div
+          className={
+            visibleOptions.length > 3
+              ? 'mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-4'
+              : 'mb-6 space-y-3'
+          }
+        >
           {visibleOptions.map((option, index) => {
             const isChecked = currentSelection === option.code
-            
+            const interactive = !isReadOnly
+
             return (
               <label
                 key={`${question.id}-${option.code}-${index}`}
-                className={`flex items-start p-4 border rounded-lg transition-all ${
-                  isReadOnly 
-                    ? 'cursor-default' 
-                    : 'cursor-pointer hover:bg-gray-50'
-                } ${
-                  isChecked
-                    ? 'border-[#0080A3] bg-[#0080A3]/5'
-                    : 'border-gray-200'
-                }`}
+                className={`${selectableCardBase} ${
+                  interactive ? selectableCardInteractive : 'cursor-default'
+                } ${isChecked ? selectableCardSelected : ''}`}
               >
                 <input
                   type="radio"
@@ -748,20 +789,22 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
                       handleConditionalChange(option.code)
                     }
                   }}
-                  className="mt-1 mr-3 text-[#0080A3] focus:ring-[#0080A3] disabled:opacity-50"
+                  className="sr-only"
                 />
-                <div className="flex items-center flex-1">
+                <VisualRadioMark checked={isChecked} />
+                <div className="flex min-w-0 flex-1 items-center gap-2">
                   <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
                     {option.label}
                   </span>
-                  {(option as any).tooltip && (
+                  {(option as QuestionOption).tooltip && (
                     <Tooltip
-                      title={(option as any).tooltip.title}
-                      shortContent={(option as any).tooltip.shortContent}
-                      fullContent={(option as any).tooltip.fullContent}
-                      icon={(option as any).tooltip.icon}
+                      title={(option as QuestionOption).tooltip!.title}
+                      shortContent={(option as QuestionOption).tooltip!.shortContent}
+                      fullContent={(option as QuestionOption).tooltip!.fullContent}
+                      icon={(option as QuestionOption).tooltip!.icon}
                       type="answer"
                       position="auto"
+                      isolateSelection
                     />
                   )}
                 </div>
@@ -773,11 +816,11 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
         {/* Conditional fields - Affichés quand "Oui" est sélectionné (.B) ou "Other" (E4.N8.Q10.G) */}
         {((currentSelection?.endsWith('.B') && question.conditionalFields) || currentSelection === 'E4.N8.Q10.G') && question.conditionalFields && (
           <div
-            className={`ml-4 sm:ml-6 space-y-3 border-l-2 pl-3 sm:pl-4 ${
+            className={
               question.conditional_detail_optional
-                ? 'border-dashed border-[#0080A3]/35 bg-[#0080A3]/[0.04] rounded-r-lg py-3 pr-2'
-                : 'border-gray-200'
-            }`}
+                ? 'space-y-3 rounded-xl border border-dashed border-[#0080A3]/25 bg-white p-4 sm:p-5'
+                : 'space-y-3 rounded-xl border border-gray-200 bg-slate-50/50 p-4 sm:p-5'
+            }
           >
             <div className="text-sm font-medium text-gray-800 mb-1">
               {question.conditional_detail_optional

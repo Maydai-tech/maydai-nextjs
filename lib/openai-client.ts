@@ -596,7 +596,8 @@ SORTIE JSON — QUALIFICATION RÉGLEMENTAIRE IMPOSSIBLE
 - evaluation_risque.niveau : "${cas_usage.risk_level_label_fr}" EXACTEMENT — ne pas remplacer par « Risque minimal », « Risque limité », « Risque élevé », « Interdit » ni aucune variante de palier AI Act.
 - evaluation_risque.justification : doit expliciter l'impossibilité de conclure ; interdiction d'y présenter un palier du barème comme acquis.
 - introduction_contextuelle, impact_attendu, conclusion : même discipline — pas de « le système est à risque minimal/limité/élevé » ni équivalent ; orienter vers clarification et collecte d'informations.
-- Les 9 slots : préfixes et structure comme pour le cas standard ; ils peuvent refléter l'incertitude réglementaire sans contredire l'état impossible du niveau.`
+- Les 9 slots : préfixes et structure comme pour le cas standard ; ils peuvent refléter l'incertitude réglementaire sans contredire l'état impossible du niveau.
+- Même règle de distinction : chaque triplet quick_win_* / priorite_* / action_* doit avoir des contenus nettement différents ; priorités numériques uniques et séquentielles si tableaux d'objets.`
       : isUnacceptable
       ? `
 SORTIE JSON — CAS RISQUE INACCEPTABLE
@@ -617,7 +618,9 @@ SORTIE JSON
 - Toutes les valeurs chaîne non vides (espaces seuls interdits). impact_attendu et conclusion obligatoires même si plusieurs des 9 slots sont « Information insuffisante : ».
 - evaluation_risque.niveau : "${cas_usage.risk_level_label_fr}" exactement ; ne pas utiliser la formulation « Risque inacceptable » dans niveau (utiliser « Interdit » si cas maximal).
 - evaluation_risque.justification : respecter intégralement le bloc NIVEAU DE RISQUE ci-dessus (y compris les règles spécifiques « Risque élevé » si applicables).
-- quick_win_1, quick_win_2, quick_win_3, priorite_1, priorite_2, priorite_3, action_1, action_2, action_3 : chaque valeur doit commencer par le préfixe imposé (OUI / NON / Information insuffisante / Hors périmètre), contenir au moins 2 phrases explicatives, et se terminer obligatoirement par « Références : ... » (y compris pour Information insuffisante et Hors périmètre).`
+- quick_win_1, quick_win_2, quick_win_3, priorite_1, priorite_2, priorite_3, action_1, action_2, action_3 : chaque valeur doit commencer par le préfixe imposé (OUI / NON / Information insuffisante / Hors périmètre), contenir au moins 2 phrases explicatives, et se terminer obligatoirement par « Références : ... » (y compris pour Information insuffisante et Hors périmètre).
+- DISTINCTION OBLIGATOIRE DES NEUF SLOTS : à l'intérieur de chaque triplet (quick_win_* entre eux, priorite_* entre eux, action_* entre eux), chaque texte DOIT être clairement distinct des deux autres (pas de copier-coller, pas de paraphrase quasi identique). Traiter la numérotation comme une priorité métier séquentielle unique : quick_win_1 / priorite_1 / action_1 = premier axe du groupe, … puis 2, puis 3 — angles, obligations et références différents.
+- Si tu utilises des tableaux JSON (quick_wins_actions_immediates, priorites_actions_reglementaires, actions_moyen_terme) avec des objets { "priority", "text" } (ou champs équivalents), chaque priorité numérique DOIT être unique et ordonnée (1, 2, 3 sans doublon) ; l'ordre des éléments doit refléter 1 puis 2 puis 3.`
 
     return `${factsBlock}${parcoursMetaBlock}${structuredGroundingBlock}\n\n${questionnaireSection}\n\n${authoritativeRiskBlock}\n\n${slotMappingBlock}\n\n${formatBlock}`.trim()
   }

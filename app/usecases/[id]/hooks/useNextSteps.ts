@@ -3,6 +3,9 @@ import { UseCaseNextSteps } from '@/lib/supabase'
 import { createClient } from '@supabase/supabase-js'
 import { shouldPollForNextSteps } from '../utils/nextsteps-ux-state'
 
+/** Délai max d’attente de la ligne `usecase_nextsteps` après un rapport persisté (évite loader infini). */
+const NEXTSTEPS_SYNC_POLL_MAX_MS = 2 * 60 * 1000
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -24,6 +27,8 @@ interface UseNextStepsReturn {
   /** True uniquement pendant le tout premier chargement pour ce use case (pas les polls). */
   loading: boolean
   error: string | null
+  /** True si le polling n’a pas reçu de next steps dans le délai imparti (sortie du loader « finalisation »). */
+  syncStalled: boolean
   refetch: () => Promise<void>
   /**
    * @deprecated Préférer la phase côté UI via getNextStepsRecommendationsPhase.
@@ -43,7 +48,9 @@ export function useNextSteps({
   const [nextSteps, setNextSteps] = useState<UseCaseNextSteps | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [syncStalled, setSyncStalled] = useState(false)
   const lastFetchedId = useRef<string | null>(null)
+  const pollDeadlineRef = useRef<number | null>(null)
 
   const statusRef = useRef(useCaseStatus)
   statusRef.current = useCaseStatus
@@ -61,8 +68,8 @@ export function useNextSteps({
       const silent = Boolean(options?.silent)
       if (!silent) {
         setLoading(true)
+        setError(null)
       }
-      setError(null)
 
       try {
         const {
@@ -89,6 +96,7 @@ export function useNextSteps({
         }
 
         if (response.ok) {
+          setError(null)
           setNextSteps((data as UseCaseNextSteps | null) ?? null)
         } else if (response.status === 404) {
           // Rétrocompat : ancienne API « pas de ligne » en 404
@@ -116,6 +124,18 @@ export function useNextSteps({
   )
 
   useEffect(() => {
+    pollDeadlineRef.current = null
+    setSyncStalled(false)
+  }, [usecaseId])
+
+  useEffect(() => {
+    if (nextSteps) {
+      setSyncStalled(false)
+      pollDeadlineRef.current = null
+    }
+  }, [nextSteps])
+
+  useEffect(() => {
     if (!usecaseId || usecaseId === '') return
     if (lastFetchedId.current !== usecaseId) {
       lastFetchedId.current = usecaseId
@@ -138,7 +158,10 @@ export function useNextSteps({
 
   useEffect(() => {
     if (!usecaseId || usecaseId === '') return
-    if (nextSteps) return
+    if (nextSteps) {
+      return
+    }
+    if (syncStalled) return
 
     const poll = shouldPollForNextSteps({
       useCaseStatus: statusRef.current,
@@ -148,9 +171,28 @@ export function useNextSteps({
       hasNextSteps: false,
     })
 
-    if (!poll) return
+    if (!poll) {
+      pollDeadlineRef.current = null
+      return
+    }
+
+    if (pollDeadlineRef.current === null) {
+      pollDeadlineRef.current = Date.now() + NEXTSTEPS_SYNC_POLL_MAX_MS
+    }
 
     const intensiveInterval = setInterval(() => {
+      if (pollDeadlineRef.current !== null && Date.now() > pollDeadlineRef.current) {
+        clearInterval(intensiveInterval)
+        setSyncStalled(true)
+        setError(
+          "Échec de la synchronisation du plan d'action (délai dépassé). Veuillez rafraîchir la page ou regénérer le rapport."
+        )
+        console.error(
+          '[useNextSteps] Synchronisation usecase_nextsteps interrompue : délai dépassé sans ligne en base',
+          { usecaseId, maxMs: NEXTSTEPS_SYNC_POLL_MAX_MS }
+        )
+        return
+      }
       void fetchNextSteps({ silent: true })
     }, 5000)
 
@@ -163,20 +205,24 @@ export function useNextSteps({
     reportGeneratedAt,
     parentReportGenerating,
     classificationStatus,
+    syncStalled,
   ])
 
-  const isGenerating = shouldPollForNextSteps({
-    useCaseStatus,
-    classificationStatus: classificationStatus ?? null,
-    reportGeneratedAt: reportGeneratedAt ?? null,
-    parentReportGenerating,
-    hasNextSteps: Boolean(nextSteps),
-  })
+  const isGenerating =
+    !syncStalled &&
+    shouldPollForNextSteps({
+      useCaseStatus,
+      classificationStatus: classificationStatus ?? null,
+      reportGeneratedAt: reportGeneratedAt ?? null,
+      parentReportGenerating,
+      hasNextSteps: Boolean(nextSteps),
+    })
 
   return {
     nextSteps,
     loading,
     error,
+    syncStalled,
     refetch: () => fetchNextSteps({ silent: false }),
     isGenerating,
   }

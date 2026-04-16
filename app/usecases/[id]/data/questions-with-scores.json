@@ -852,7 +852,11 @@
       {
         "code": "E4.N8.Q11.0.A",
         "label": "Oui",
-        "score_impact": 0
+        "score_impact": 0,
+        "category_impacts": {
+          "technical_robustness": -1,
+          "diversity_fairness": -1
+        }
       },
       {
         "code": "E4.N8.Q11.0.B",
@@ -876,12 +880,20 @@
       {
         "code": "E4.N8.Q11.1.A",
         "label": "Texte",
-        "score_impact": 0
+        "score_impact": 0,
+        "category_impacts": {
+          "technical_robustness": -1,
+          "diversity_fairness": -1
+        }
       },
       {
         "code": "E4.N8.Q11.1.B",
         "label": "Image, audio ou vidéo",
-        "score_impact": 0
+        "score_impact": 0,
+        "category_impacts": {
+          "technical_robustness": -1,
+          "diversity_fairness": -1
+        }
       }
     ]
   },
@@ -904,32 +916,50 @@
         "score_impact": -2,
         "risk": "limited",
         "category_impacts": {
-          "transparency": -2
+          "transparency": -2,
+          "technical_robustness": -1,
+          "diversity_fairness": -1
         }
       },
       {
         "code": "E4.N8.Q11.T1.B",
         "label": "B — Information d'intérêt public AVEC contrôle éditorial",
         "description": "Rédaction d'articles relus et validés par un humain qui en assume la responsabilité.",
-        "score_impact": 0
+        "score_impact": 0,
+        "category_impacts": {
+          "technical_robustness": -0.5,
+          "diversity_fairness": -0.5
+        }
       },
       {
         "code": "E4.N8.Q11.T1.C",
         "label": "C — Communication commerciale, marketing ou publicitaire",
         "description": "Création de fiches produits, posts pour les réseaux sociaux, e-mailing.",
-        "score_impact": 0
+        "score_impact": 0,
+        "category_impacts": {
+          "technical_robustness": -1,
+          "diversity_fairness": -1
+        }
       },
       {
         "code": "E4.N8.Q11.T1.D",
         "label": "D — Outil de productivité interne ou technique",
         "description": "Génération de code informatique, synthèses de réunions, documentation métier.",
-        "score_impact": 0
+        "score_impact": 0,
+        "category_impacts": {
+          "technical_robustness": -1,
+          "diversity_fairness": -1
+        }
       },
       {
         "code": "E4.N8.Q11.T1.E",
         "label": "E — Assistance standard, correction et traduction",
         "description": "Traduction ou correction orthographique sans modifier le sens initial.",
-        "score_impact": 0
+        "score_impact": 0,
+        "category_impacts": {
+          "technical_robustness": -1,
+          "diversity_fairness": -1
+        }
       }
     ]
   },
@@ -952,12 +982,20 @@
       {
         "code": "E4.N8.Q11.T1E.B",
         "label": "Non",
-        "score_impact": 0
+        "score_impact": 0,
+        "category_impacts": {
+          "technical_robustness": -1,
+          "diversity_fairness": -1
+        }
       },
       {
         "code": "E4.N8.Q11.T1E.C",
         "label": "Je ne sais pas",
-        "score_impact": 0
+        "score_impact": 0,
+        "category_impacts": {
+          "technical_robustness": -1,
+          "diversity_fairness": -1
+        }
       }
     ]
   },
@@ -977,20 +1015,28 @@
         "label": "Contrôle éditorial humain avant diffusion, avec responsabilité éditoriale clairement identifiée",
         "score_impact": 0,
         "category_impacts": {
-          "transparency": -1
+          "transparency": -1,
+          "technical_robustness": -0.5,
+          "diversity_fairness": -0.5
         }
       },
       {
         "code": "E4.N8.Q11.T2.B",
         "label": "Mise en forme standard, traduction, correction ou harmonisation linguistique sans modification substantielle du sens",
-        "score_impact": 0
+        "score_impact": 0,
+        "category_impacts": {
+          "technical_robustness": -1,
+          "diversity_fairness": -1
+        }
       },
       {
         "code": "E4.N8.Q11.T2.C",
         "label": "Usage interne, communication privée ou communication commerciale ne visant pas principalement à informer le public sur des questions d'intérêt public",
         "score_impact": -1,
         "category_impacts": {
-          "transparency": -1
+          "transparency": -1,
+          "technical_robustness": -1,
+          "diversity_fairness": -1
         }
       }
     ]
@@ -1012,7 +1058,9 @@
         "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "social_environmental": -3
+          "social_environmental": -3,
+          "technical_robustness": -1,
+          "diversity_fairness": -1
         }
       },
       {
@@ -1038,7 +1086,9 @@
         "label": "Oui",
         "score_impact": 0,
         "category_impacts": {
-          "transparency": -1
+          "transparency": -1,
+          "technical_robustness": -1,
+          "diversity_fairness": -1
         }
       },
       {
@@ -1046,7 +1096,9 @@
         "label": "Non",
         "score_impact": -1,
         "category_impacts": {
-          "transparency": -1
+          "transparency": -1,
+          "technical_robustness": -1,
+          "diversity_fairness": -1
         }
       }
     ]

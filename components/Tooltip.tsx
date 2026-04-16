@@ -181,6 +181,8 @@ export default function Tooltip({
           onMouseDown={isolateSelection ? (e) => e.stopPropagation() : undefined}
           className="relative group"
           type="button"
+          role="button"
+          tabIndex={0}
           aria-label="Afficher l'infobulle"
         >
           {triggerVariant === 'info' ? (
