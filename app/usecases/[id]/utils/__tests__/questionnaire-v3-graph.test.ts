@@ -3,10 +3,13 @@ import {
   collectV3ActiveQuestionCodes,
   computeV3UsecaseQuestionnaireFields,
   deriveBpgvBandFromOrsAnswersV3,
-  getFirstE5AfterOrsV3,
   getNextQuestionV3,
   getResumeQuestionIdV3,
+  V3_FULL_ENTREPRISE_ID,
+  V3_FULL_TRANSPARENCE_ID,
+  V3_FULL_USAGE_ID,
   V3_PRODUCT_SYSTEM_TYPE,
+  V3_SHORT_ENTREPRISE_ID,
 } from '../questionnaire-v3-graph'
 import {
   BPGV_VARIANT_HIGH,
@@ -65,7 +68,7 @@ describe('questionnaire-v3-graph — séquence N8 (Q9.1, Q10, Q12)', () => {
     expect(getNextQuestionV3('E4.N8.Q9', {}, null)).toBe('E4.N8.Q9.1')
   })
 
-  it('Q10 absente sur branche texte seule (après T1) sans média : saut direct vers E5', () => {
+  it('Q10 absente sur branche texte seule (après T1) sans média : après ORS → checklist consolidée (long / short)', () => {
     const a = {
       ...ctxOrsMinimal,
       'E4.N7.Q2': ['E4.N7.Q2.G'],
@@ -75,12 +78,38 @@ describe('questionnaire-v3-graph — séquence N8 (Q9.1, Q10, Q12)', () => {
       'E4.N8.Q11.1': ['E4.N8.Q11.1.A'],
       'E4.N8.Q11.T1': 'E4.N8.Q11.T1.A',
     }
-    /** T1.A élève la bande ORS → première E5 = Q1 (pas Q7 minimal). */
-    expect(getNextQuestionV3('E4.N8.Q11.T1', a, null)).toBe('E5.N9.Q1')
+    /** Après ORS : parcours long → `V3_FULL_ENTREPRISE` ; court → première étape pack entreprise. */
+    expect(getNextQuestionV3('E4.N8.Q11.T1', a, null, 'long')).toBe(V3_FULL_ENTREPRISE_ID)
+    expect(getNextQuestionV3('E4.N8.Q11.T1', a, null, 'short')).toBe(V3_SHORT_ENTREPRISE_ID)
     const codes = collectV3ActiveQuestionCodes(a, null)
     expect(codes).not.toContain('E4.N8.Q10')
     expect(codes).not.toContain('E4.N8.Q11.T1E')
     expect(codes).not.toContain('E4.N8.Q11.T2')
+  })
+
+  it('après `V3_FULL_ENTREPRISE` (parcours long) : enchaînement vers `V3_FULL_USAGE`', () => {
+    expect(getNextQuestionV3(V3_FULL_ENTREPRISE_ID, {}, null, 'long')).toBe(V3_FULL_USAGE_ID)
+  })
+
+  it('après `V3_FULL_USAGE` (parcours long) : enchaînement vers `V3_FULL_TRANSPARENCE`', () => {
+    expect(getNextQuestionV3(V3_FULL_USAGE_ID, {}, null, 'long')).toBe(V3_FULL_TRANSPARENCE_ID)
+  })
+
+  it('après `V3_FULL_TRANSPARENCE` (parcours long) : aligné sur getNextAfterQ12 (long → null)', () => {
+    expect(getNextQuestionV3(V3_FULL_TRANSPARENCE_ID, {}, null, 'long')).toBeNull()
+  })
+
+  it('après Q10 (parcours long) : enchaînement vers V3_FULL_ENTREPRISE', () => {
+    const a = {
+      ...ctxOrsMinimal,
+      'E4.N7.Q2': ['E4.N7.Q2.G'],
+      'E4.N8.Q9': 'E4.N8.Q9.B',
+      'E4.N8.Q9.1': 'E4.N8.Q9.1.B',
+      'E4.N8.Q11.0': 'E4.N8.Q11.0.B',
+      'E4.N8.Q10': 'E4.N8.Q10.A',
+    }
+    expect(getNextQuestionV3('E4.N8.Q10', a, null, 'long')).toBe(V3_FULL_ENTREPRISE_ID)
+    expect(getNextQuestionV3('E4.N8.Q10', a, null, 'short')).toBe(V3_SHORT_ENTREPRISE_ID)
   })
 
   it('T1.A : bande ORS au moins limited (transparence texte)', () => {
@@ -120,13 +149,9 @@ describe('questionnaire-v3-graph — séquence N8 (Q9.1, Q10, Q12)', () => {
     expect(path.indexOf('E4.N8.Q9.1')).toBeLessThan(path.indexOf('E4.N8.Q10'))
   })
 
-  it('première question E5 : toujours E5.N9.Q1 après ORS (parcours long)', () => {
-    expect(getFirstE5AfterOrsV3({})).toBe('E5.N9.Q1')
-    expect(getFirstE5AfterOrsV3({ 'E4.N8.Q9': 'E4.N8.Q9.A' })).toBe('E5.N9.Q1')
-  })
 })
 
-describe('questionnaire-v3-graph — E6 après Q12', () => {
+describe('questionnaire-v3-graph — après E4.N8.Q12 (parcours long)', () => {
   const baseN8toE5 = {
     ...ctxOrsMinimal,
     'E4.N7.Q2': ['E4.N7.Q2.G'],
@@ -137,7 +162,7 @@ describe('questionnaire-v3-graph — E6 après Q12', () => {
     'E5.N9.Q7': { selected: 'E5.N9.Q7.B', conditionalValues: {} },
   }
 
-  it('parcours court : après Q12 → null (pas E6)', () => {
+  it('parcours court : après Q12 → null (fin graphe)', () => {
     const a = {
       ...baseN8toE5,
       'E4.N8.Q9': 'E4.N8.Q9.A',
@@ -146,15 +171,15 @@ describe('questionnaire-v3-graph — E6 après Q12', () => {
     expect(getNextQuestionV3('E4.N8.Q12', a, null, 'short')).toBeNull()
   })
 
-  it('Q9 = interaction oui : après Q12 → E6.N10.Q1', () => {
+  it('parcours long : getNextAfterQ12 retourne null — pas de nœud E6 dans getNextQuestionV3', () => {
     const a = {
       ...baseN8toE5,
       'E4.N8.Q9': 'E4.N8.Q9.A',
     }
-    expect(getNextQuestionV3('E4.N8.Q12', a, null)).toBe('E6.N10.Q1')
+    expect(getNextQuestionV3('E4.N8.Q12', a, null, 'long')).toBeNull()
   })
 
-  it('Q9 = non, Q11.0 = oui : après Q12 → E6.N10.Q1 puis Q2', () => {
+  it('parcours long (variante Q11) : après Q12 → null', () => {
     const a = {
       ...baseN8toE5,
       'E4.N8.Q9': 'E4.N8.Q9.B',
@@ -164,12 +189,12 @@ describe('questionnaire-v3-graph — E6 après Q12', () => {
       'E4.N8.Q10': 'E4.N8.Q10.A',
       'E5.N9.Q7': { selected: 'E5.N9.Q7.B', conditionalValues: {} },
     }
-    expect(getNextQuestionV3('E4.N8.Q12', a, null)).toBe('E6.N10.Q1')
-    expect(getNextQuestionV3('E6.N10.Q1', a, null)).toBe('E6.N10.Q2')
+    expect(getNextQuestionV3('E4.N8.Q12', a, null, 'long')).toBeNull()
+    expect(getNextQuestionV3('E6.N10.Q1', a, null, 'long')).toBeNull()
   })
 
-  it('Q9 = non, Q11.0 = non : après Q12 → E6.N10.Q1 (bloc transparence obligatoire)', () => {
-    expect(getNextQuestionV3('E4.N8.Q12', baseN8toE5, null)).toBe('E6.N10.Q1')
+  it('parcours long (Q11.0 = non) : après Q12 → null', () => {
+    expect(getNextQuestionV3('E4.N8.Q12', baseN8toE5, null, 'long')).toBeNull()
   })
 })
 
@@ -218,16 +243,43 @@ describe('questionnaire-v3-graph — reprise (resume)', () => {
     }
     expect(getResumeQuestionIdV3(answers, V3_PRODUCT_SYSTEM_TYPE, isComplete)).toBe('E4.N8.Q9.1')
   })
-})
 
-describe('questionnaire-v3-graph — métadonnées use case', () => {
-  it('ors_exit N8 complété lorsque N8 (hors Q10/Q12) et BPGV touchés', () => {
+  it('reprise long : premier trou sur la checklist consolidée entreprise (V3_FULL_ENTREPRISE)', () => {
     const answers = {
       ...ctxOrsMinimal,
       'E4.N7.Q2': ['E4.N7.Q2.G'],
       'E4.N8.Q9': 'E4.N8.Q9.B',
       'E4.N8.Q9.1': 'E4.N8.Q9.1.B',
       'E4.N8.Q11.0': 'E4.N8.Q11.0.B',
+      'E4.N8.Q10': 'E4.N8.Q10.A',
+    }
+    expect(getResumeQuestionIdV3(answers, null, isComplete, 'long')).toBe(V3_FULL_ENTREPRISE_ID)
+  })
+
+  it('reprise long : après `V3_FULL_ENTREPRISE` complété, premier trou sur `V3_FULL_USAGE`', () => {
+    const answers = {
+      ...ctxOrsMinimal,
+      'E4.N7.Q2': ['E4.N7.Q2.G'],
+      'E4.N8.Q9': 'E4.N8.Q9.B',
+      'E4.N8.Q9.1': 'E4.N8.Q9.1.B',
+      'E4.N8.Q11.0': 'E4.N8.Q11.0.B',
+      'E4.N8.Q10': 'E4.N8.Q10.A',
+      [V3_FULL_ENTREPRISE_ID]: ['E4.N8.Q12.A', 'E5.N9.Q7.B'],
+    }
+    expect(getResumeQuestionIdV3(answers, null, isComplete, 'long')).toBe(V3_FULL_USAGE_ID)
+  })
+})
+
+describe('questionnaire-v3-graph — métadonnées use case', () => {
+  it('ors_exit N8 complété lorsque N8 (hors Q10/Q12) et déclaration Q12 / BPGV touchés', () => {
+    const answers = {
+      ...ctxOrsMinimal,
+      'E4.N7.Q2': ['E4.N7.Q2.G'],
+      'E4.N8.Q9': 'E4.N8.Q9.B',
+      'E4.N8.Q9.1': 'E4.N8.Q9.1.B',
+      'E4.N8.Q11.0': 'E4.N8.Q11.0.B',
+      [V3_FULL_ENTREPRISE_ID]: ['E4.N8.Q12.A', 'E5.N9.Q7.B'],
+      'E4.N8.Q12': 'E4.N8.Q12.A',
       'E5.N9.Q7': { selected: 'E5.N9.Q7.B', conditionalValues: {} },
     }
     const meta = computeV3UsecaseQuestionnaireFields(answers, null)

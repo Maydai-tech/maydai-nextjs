@@ -9,6 +9,9 @@ import {
 } from '../../utils/e4n7-qualification-ui'
 import type { QuestionnairePathMode } from '../../utils/questionnaire'
 import {
+  V3_FULL_ENTREPRISE_ID,
+  V3_FULL_TRANSPARENCE_ID,
+  V3_FULL_USAGE_ID,
   V3_SHORT_ENTREPRISE_ID,
   V3_SHORT_TRANSPARENCE_ID,
   V3_SHORT_USAGE_ID,
@@ -58,8 +61,11 @@ function E4N7GroupedContextBanner({ segment }: { segment: E4N7VisualSegment }) {
 
 const V3_SHORT_STAGE_HEADINGS: Record<string, string> = {
   [V3_SHORT_ENTREPRISE_ID]: 'Entreprise',
+  [V3_FULL_ENTREPRISE_ID]: 'Entreprise',
   [V3_SHORT_USAGE_ID]: 'Usage',
+  [V3_FULL_USAGE_ID]: 'Usage',
   [V3_SHORT_TRANSPARENCE_ID]: 'Transparence',
+  [V3_FULL_TRANSPARENCE_ID]: 'Transparence',
 }
 
 const V3_SHORT_TRANSPARENCE_UI_ROWS = [
@@ -156,9 +162,12 @@ export function V3ShortPathStageQuestion({
 
   const heading = V3_SHORT_STAGE_HEADINGS[question.id] ?? 'Parcours court'
 
-  const isV3ShortEntreprise = question.id === V3_SHORT_ENTREPRISE_ID
-  const isV3ShortUsage = question.id === V3_SHORT_USAGE_ID
-  const isV3ShortTransparence = question.id === V3_SHORT_TRANSPARENCE_ID
+  const isV3ShortEntreprise =
+    question.id === V3_SHORT_ENTREPRISE_ID || question.id === V3_FULL_ENTREPRISE_ID
+  const isV3ShortUsage =
+    question.id === V3_SHORT_USAGE_ID || question.id === V3_FULL_USAGE_ID
+  const isV3ShortTransparence =
+    question.id === V3_SHORT_TRANSPARENCE_ID || question.id === V3_FULL_TRANSPARENCE_ID
 
   const getOptionLegalTooltip = (opt: QuestionOption): string | null => {
     if (isV3ShortEntreprise) {

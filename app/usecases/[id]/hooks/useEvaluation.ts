@@ -14,6 +14,9 @@ import { computeV2UsecaseQuestionnaireFields } from '../utils/questionnaire-v2-g
 import {
   computeV3UsecaseQuestionnaireFields,
   isV3ShortPathCompositeQuestionId,
+  V3_FULL_ENTREPRISE_ID,
+  V3_FULL_TRANSPARENCE_ID,
+  V3_FULL_USAGE_ID,
   V3_SHORT_ENTREPRISE_ID,
   V3_SHORT_MINIPACK_ID,
   V3_SHORT_TRANSPARENCE_ID,
@@ -40,7 +43,32 @@ import {
   CHECKLIST_GOV_USECASE_QUESTION_CODE,
   collectE5DeclaredOptionCodes,
   collectE6DeclaredOptionCodes,
+  isChecklistGovEnterpriseQuestionCode,
+  isChecklistGovUsecaseQuestionCode,
 } from '../utils/bpgv-transparency-checklist-save'
+
+function normalizeStringArrayForChecklist(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((x): x is string => typeof x === 'string' && x.length > 0)
+}
+
+/** Charge utile API checklist entreprise : tableau de codes ou `{ bpgv_keys }`. */
+function extractChecklistGovEnterpriseKeys(answer: unknown): string[] {
+  if (Array.isArray(answer)) return normalizeStringArrayForChecklist(answer)
+  if (answer !== null && typeof answer === 'object' && 'bpgv_keys' in answer) {
+    return normalizeStringArrayForChecklist((answer as { bpgv_keys: unknown }).bpgv_keys)
+  }
+  return []
+}
+
+/** Charge utile API checklist usage : tableau de codes ou `{ transparency_keys }`. */
+function extractChecklistGovUsecaseKeys(answer: unknown): string[] {
+  if (Array.isArray(answer)) return normalizeStringArrayForChecklist(answer)
+  if (answer !== null && typeof answer === 'object' && 'transparency_keys' in answer) {
+    return normalizeStringArrayForChecklist((answer as { transparency_keys: unknown }).transparency_keys)
+  }
+  return []
+}
 
 interface UseEvaluationReturn {
   questionnaireData: QuestionnaireData
@@ -51,6 +79,8 @@ interface UseEvaluationReturn {
   canProceed: boolean
   canGoBack: boolean
   isSubmitting: boolean
+  /** True pendant les appels `saveResponse` du hook questionnaire (complète isSubmitting). */
+  isSaving: boolean
   isCompleted: boolean
   isCalculatingScore: boolean
   isGeneratingReport: boolean
@@ -113,6 +143,7 @@ export function useEvaluation({
   const {
     formattedAnswers: savedAnswers,
     loading: loadingResponses,
+    saving: isSaving,
     saveResponse,
     refreshResponses
   } = useQuestionnaireResponses(usecaseId)
@@ -291,13 +322,9 @@ export function useEvaluation({
     setError(null)
   }, [questionnairePathModeProp])
 
-  const saveIndividualResponse = useCallback(async (questionId: string, answer: any) => {
+  const saveIndividualResponse = useCallback(async (questionId: string, answer: unknown) => {
     try {
-      if (questionId === CHECKLIST_GOV_ENTERPRISE_QUESTION_CODE) {
-        const keys = Array.isArray(answer)
-          ? answer.filter((x: unknown): x is string => typeof x === 'string' && x.length > 0)
-          : []
-        const saved = await saveResponse(questionId, undefined, { selected_codes: keys })
+      const applyChecklistSaveResult = (saved: Record<string, unknown> | void) => {
         if (saved && typeof saved === 'object' && (saved as { updated?: string }).updated === 'usecase_checklists') {
           const s = saved as {
             checklist_gov_enterprise?: string[]
@@ -313,50 +340,67 @@ export function useEvaluation({
               : prev.checklist_gov_usecase,
           }))
         }
+      }
+
+      if (isChecklistGovEnterpriseQuestionCode(questionId)) {
+        const keys = extractChecklistGovEnterpriseKeys(answer)
+        const saved = await saveResponse(questionId, undefined, { bpgv_keys: keys })
+        applyChecklistSaveResult(saved)
         return
       }
-      if (questionId === CHECKLIST_GOV_USECASE_QUESTION_CODE) {
-        const keys = Array.isArray(answer)
-          ? answer.filter((x: unknown): x is string => typeof x === 'string' && x.length > 0)
-          : []
-        const saved = await saveResponse(questionId, undefined, { selected_codes: keys })
-        if (saved && typeof saved === 'object' && (saved as { updated?: string }).updated === 'usecase_checklists') {
-          const s = saved as {
-            checklist_gov_enterprise?: string[]
-            checklist_gov_usecase?: string[]
-          }
-          setQuestionnaireData(prev => ({
-            ...prev,
-            checklist_gov_enterprise: Array.isArray(s.checklist_gov_enterprise)
-              ? s.checklist_gov_enterprise
-              : prev.checklist_gov_enterprise,
-            checklist_gov_usecase: Array.isArray(s.checklist_gov_usecase)
-              ? s.checklist_gov_usecase
-              : prev.checklist_gov_usecase,
-          }))
-        }
+      if (isChecklistGovUsecaseQuestionCode(questionId)) {
+        const keys = extractChecklistGovUsecaseKeys(answer)
+        const saved = await saveResponse(questionId, undefined, { transparency_keys: keys })
+        applyChecklistSaveResult(saved)
         return
       }
-      
+      if (questionId.startsWith('checklist_')) {
+        const responseData: Record<string, unknown> =
+          answer !== null && typeof answer === 'object' && !Array.isArray(answer)
+            ? { ...(answer as Record<string, unknown>) }
+            : { selected_codes: normalizeStringArrayForChecklist(answer) }
+        await saveResponse(questionId, undefined, responseData)
+        return
+      }
+
       // Use the proper saveResponse method from useQuestionnaireResponses
       const questions = loadQuestions()
       const question = questions[questionId]
       if (!question) {
+        // Parcours court V3 : `declarativeAnswersAfterUsageStage` / transparence écrivent des codes
+        // (E5.N9.*, E6.N10.*, …) sans entrée dédiée dans questions-with-scores.json — persistance API directe.
+        if (typeof answer === 'string' && answer.length > 0) {
+          await saveResponse(questionId, answer)
+          return
+        }
+        if (Array.isArray(answer)) {
+          const codes = answer as string[]
+          await saveResponse(questionId, undefined, {
+            selected_codes: codes,
+            selected_labels: codes,
+          })
+          return
+        }
+        if (answer !== null && typeof answer === 'object') {
+          await saveResponse(questionId, undefined, answer as Record<string, unknown>)
+          return
+        }
         throw new Error(`Question not found: ${questionId}`)
       }
 
       if (question.type === 'radio') {
-        await saveResponse(questionId, answer)
+        await saveResponse(questionId, typeof answer === 'string' ? answer : String(answer))
       } else if (question.type === 'checkbox' || question.type === 'tags') {
-        await saveResponse(questionId, undefined, { 
-          selected_codes: answer,
-          selected_labels: answer?.map((code: string) => {
+        const codes = Array.isArray(answer) ? (answer as string[]) : []
+        await saveResponse(questionId, undefined, {
+          selected_codes: codes,
+          selected_labels: codes.map(code => {
             const option = question.options.find(opt => opt.code === code)
             return option?.label || code
-          }) || []
+          }),
         })
       } else if (question.type === 'conditional') {
-        await saveResponse(questionId, undefined, answer)
+        await saveResponse(questionId, undefined, answer as Record<string, unknown>)
       } else {
         // Fallback for other types
         await saveResponse(questionId, undefined, answer)
@@ -479,19 +523,23 @@ export function useEvaluation({
         return
       }
 
-      if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && currentId === V3_SHORT_ENTREPRISE_ID) {
+      if (
+        questionnaireVersion === QUESTIONNAIRE_VERSION_V3 &&
+        (currentId === V3_SHORT_ENTREPRISE_ID || currentId === V3_FULL_ENTREPRISE_ID)
+      ) {
         const sel = normalizeShortPathStageSelection(currentAnswer)
         const patches = declarativeAnswersAfterEnterpriseStage(sel)
         const merged = {
           ...questionnaireData.answers,
-          [V3_SHORT_ENTREPRISE_ID]: sel,
+          [currentId]: sel,
           ...patches,
         } as Record<string, unknown>
 
-        await saveIndividualResponse(V3_SHORT_ENTREPRISE_ID, sel)
+        await saveIndividualResponse(currentId, sel)
         for (const [qid, val] of Object.entries(patches)) {
           await saveIndividualResponse(qid, val)
         }
+        await saveIndividualResponse(CHECKLIST_GOV_ENTERPRISE_QUESTION_CODE, { bpgv_keys: sel })
 
         const fields = computeV3UsecaseQuestionnaireFields(
           merged,
@@ -512,7 +560,7 @@ export function useEvaluation({
         }
 
         const nextId = getNextQuestion(
-          V3_SHORT_ENTREPRISE_ID,
+          currentId,
           merged as Record<string, any>,
           questionnaireVersion,
           navOptions
@@ -524,21 +572,30 @@ export function useEvaluation({
             currentQuestionId: nextId,
           }))
           setQuestionHistory(prev => [...prev, nextId])
+        } else {
+          /** Parcours long : dernière étape synthétique sans question suivante dans le graphe — persister les réponses fusionnées. */
+          setQuestionnaireData(prev => ({
+            ...prev,
+            answers: merged as Record<string, any>,
+          }))
         }
         setIsSubmitting(false)
         return
       }
 
-      if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && currentId === V3_SHORT_USAGE_ID) {
+      if (
+        questionnaireVersion === QUESTIONNAIRE_VERSION_V3 &&
+        (currentId === V3_SHORT_USAGE_ID || currentId === V3_FULL_USAGE_ID)
+      ) {
         const sel = normalizeShortPathStageSelection(currentAnswer)
         const patches = declarativeAnswersAfterUsageStage(sel)
         const merged = {
           ...questionnaireData.answers,
-          [V3_SHORT_USAGE_ID]: sel,
+          [currentId]: sel,
           ...patches,
         } as Record<string, unknown>
 
-        await saveIndividualResponse(V3_SHORT_USAGE_ID, sel)
+        await saveIndividualResponse(currentId, sel)
         for (const [qid, val] of Object.entries(patches)) {
           await saveIndividualResponse(qid, val)
         }
@@ -562,7 +619,7 @@ export function useEvaluation({
         }
 
         const nextId = getNextQuestion(
-          V3_SHORT_USAGE_ID,
+          currentId,
           merged as Record<string, any>,
           questionnaireVersion,
           navOptions
@@ -579,16 +636,19 @@ export function useEvaluation({
         return
       }
 
-      if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && currentId === V3_SHORT_TRANSPARENCE_ID) {
+      if (
+        questionnaireVersion === QUESTIONNAIRE_VERSION_V3 &&
+        (currentId === V3_SHORT_TRANSPARENCE_ID || currentId === V3_FULL_TRANSPARENCE_ID)
+      ) {
         const sel = normalizeShortPathStageSelection(currentAnswer)
         const patches = declarativeAnswersAfterTransparenceStage(sel)
         const merged = {
           ...questionnaireData.answers,
-          [V3_SHORT_TRANSPARENCE_ID]: sel,
+          [currentId]: sel,
           ...patches,
         } as Record<string, unknown>
 
-        await saveIndividualResponse(V3_SHORT_TRANSPARENCE_ID, sel)
+        await saveIndividualResponse(currentId, sel)
         for (const [qid, val] of Object.entries(patches)) {
           await saveIndividualResponse(qid, val)
         }
@@ -617,6 +677,23 @@ export function useEvaluation({
           .eq('id', usecaseId)
         if (v3MetaError) {
           console.warn('Métadonnées questionnaire V3 non persistées:', v3MetaError.message)
+        }
+
+        const nextAfterTransparency = getNextQuestion(
+          currentId,
+          merged as Record<string, any>,
+          questionnaireVersion,
+          navOptions
+        )
+        if (nextAfterTransparency) {
+          setQuestionnaireData(prev => ({
+            ...prev,
+            answers: merged as Record<string, any>,
+            currentQuestionId: nextAfterTransparency,
+          }))
+          setQuestionHistory(prev => [...prev, nextAfterTransparency])
+          setIsSubmitting(false)
+          return
         }
 
         setQuestionnaireData(prev => ({
@@ -804,7 +881,11 @@ export function useEvaluation({
       }
     } catch (error) {
       console.error('❌ Error handling next:', error)
-      setError('Erreur lors de la sauvegarde. Veuillez réessayer.')
+      const message =
+        error instanceof Error && error.message.includes('Question not found')
+          ? error.message
+          : 'Erreur lors de la sauvegarde. Veuillez réessayer.'
+      setError(message)
     } finally {
       setIsSubmitting(false)
     }
@@ -855,6 +936,7 @@ export function useEvaluation({
     canProceed,
     canGoBack,
     isSubmitting,
+    isSaving,
     isCompleted: questionnaireData.isCompleted,
     isCalculatingScore,
     isGeneratingReport,

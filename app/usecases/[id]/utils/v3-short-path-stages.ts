@@ -4,15 +4,14 @@ export function normalizeShortPathStageSelection(answer: unknown): string[] {
   return answer.filter((x): x is string => typeof x === 'string' && x.length > 0)
 }
 
-/** Après l’étape Entreprise : radios déclaratives (Q12 intégrée ici, plus d’écran E4.N8.Q12). */
+/**
+ * Après l’étape Entreprise (parcours court) : dérivation déclarative de E4.N8.Q12 uniquement.
+ * Les entrées E5 sont portées par les checklists consolidées, plus par des questions JSON dédiées.
+ */
 export function declarativeAnswersAfterEnterpriseStage(selection: string[]): Record<string, string> {
   const s = new Set(selection)
-  const sgrYes = s.has('E5.N9.Q1.A')
   return {
     'E4.N8.Q12': s.has('E4.N8.Q12.A') ? 'E4.N8.Q12.A' : 'E4.N8.Q12.B',
-    'E5.N9.Q1': sgrYes ? 'E5.N9.Q1.A' : 'E5.N9.Q1.B',
-    'E5.N9.Q2': sgrYes ? 'E5.N9.Q2.A' : 'E5.N9.Q2.B',
-    'E5.N9.Q7': s.has('E5.N9.Q7.B') ? 'E5.N9.Q7.B' : 'E5.N9.Q7.A',
   }
 }
 

@@ -15,6 +15,7 @@ import {
   UserPlus,
   ArrowLeft,
   Info,
+  Loader2,
 } from 'lucide-react'
 import Tooltip from '@/components/Tooltip'
 import { useAuth } from '@/lib/auth'
@@ -114,6 +115,7 @@ export function StepByStepQuestionnaire({
     canProceed,          // Indique si on peut passer à la suite (réponse valide)
     canGoBack,           // Indique si on peut revenir en arrière
     isSubmitting,        // Indique si une sauvegarde est en cours
+    isSaving,            // Sauvegarde API (useQuestionnaireResponses)
     isCompleted,         // Indique si le questionnaire est terminé
     isCalculatingScore,  // Indique si le calcul du score est en cours
     isGeneratingReport,  // Indique si la génération du rapport est en cours
@@ -136,6 +138,7 @@ export function StepByStepQuestionnaire({
   const progressPercentage = typeof progress?.percentage === 'number' ? progress.percentage : 0
   /** CTA « Terminer » : dernière question du graphe ou progression déjà à 100 % (fin / raccourci). */
   const primaryActionIsFinish = isLastQuestion || progressPercentage >= 100
+  const saveBusy = isSubmitting || isSaving
 
   const questionnaireVersionNorm = useMemo(
     () => normalizeQuestionnaireVersion(useCase.questionnaire_version),
@@ -345,15 +348,20 @@ export function StepByStepQuestionnaire({
           </div>
         )}
 
-        {/* Message d'erreur (affiché conditionnellement) */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        {/* Message d'erreur — aria-live pour annoncer les échecs (ex. Question not found) sans interrompre la lecture */}
+        {error ? (
+          <div
+            className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
             <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+              <AlertCircle className="h-5 w-5 text-red-600 mr-2 shrink-0" aria-hidden />
               <p className="text-red-800 text-sm font-medium">{error}</p>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Section question principale */}
         <div className="mb-8">
@@ -612,7 +620,7 @@ export function StepByStepQuestionnaire({
             disabled={!canGoBack}
             className={`inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
               canGoBack
-                ? 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                ? 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2'
                 : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
             }`}
           >
@@ -662,26 +670,29 @@ export function StepByStepQuestionnaire({
             ) : (
               /* Bouton Suivant (questions intermédiaires) */
               <button
+                type="button"
                 onClick={() => {
                   void handleNext()
                 }}
-                disabled={!canProceed || isSubmitting}
-                className={`inline-flex items-center px-6 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  canProceed && !isSubmitting
-                    ? 'text-white bg-[#0080A3] hover:bg-[#0080A3]/90'
-                    : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
+                disabled={!canProceed || saveBusy}
+                aria-busy={saveBusy}
+                className={`inline-flex items-center justify-center px-6 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-70 disabled:cursor-not-allowed ${
+                  canProceed && !saveBusy
+                    ? 'text-white bg-[#0080A3] hover:bg-[#0080A3]/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2'
+                    : saveBusy && canProceed
+                      ? 'text-white bg-[#0080A3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2'
+                      : 'text-gray-400 bg-gray-100 border border-gray-200'
                 }`}
               >
-                {isSubmitting ? (
+                {saveBusy ? (
                   <>
-                    {/* Animation de sauvegarde */}
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                    Sauvegarde...
+                    <Loader2 className="animate-spin h-4 w-4 mr-2" aria-hidden />
+                    Enregistrement...
                   </>
                 ) : (
                   <>
                     Suivant
-                    <ChevronRight className="h-4 w-4 ml-2" />
+                    <ChevronRight className="h-4 w-4 ml-2" aria-hidden />
                   </>
                 )}
               </button>
