@@ -1154,6 +1154,29 @@
       }
     ]
   },
+  "V3_FULL_ENTREPRISE": {
+    "id": "V3_FULL_ENTREPRISE",
+    "question": "Parcours court — entreprise : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
+    "type": "tags",
+    "required": false,
+    "options": [
+      {
+        "code": "E4.N8.Q12.A",
+        "label": "Formation des équipes",
+        "score_impact": 0
+      },
+      {
+        "code": "E5.N9.Q7.B",
+        "label": "Registre des systèmes IA",
+        "score_impact": 0
+      },
+      {
+        "code": "E5.N9.Q1.A",
+        "label": "Gestion des risques",
+        "score_impact": 0
+      }
+    ]
+  },
   "V3_SHORT_USAGE": {
     "id": "V3_SHORT_USAGE",
     "question": "Parcours court — usage : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
@@ -1187,8 +1210,59 @@
       }
     ]
   },
+  "V3_FULL_USAGE": {
+    "id": "V3_FULL_USAGE",
+    "question": "Parcours court — usage : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
+    "type": "tags",
+    "required": false,
+    "options": [
+      {
+        "code": "E5.N9.Q3.A",
+        "label": "Instructions systèmes / prompts",
+        "score_impact": 0
+      },
+      {
+        "code": "E5.N9.Q8.B",
+        "label": "Contrôle humain",
+        "score_impact": 0
+      },
+      {
+        "code": "E5.N9.Q4.A",
+        "label": "Documentation technique",
+        "score_impact": 0
+      },
+      {
+        "code": "E5.N9.Q9.B",
+        "label": "Surveillance continue",
+        "score_impact": 0
+      },
+      {
+        "code": "E5.N9.Q6.B",
+        "label": "Qualité des données",
+        "score_impact": 0
+      }
+    ]
+  },
   "V3_SHORT_TRANSPARENCE": {
     "id": "V3_SHORT_TRANSPARENCE",
+    "question": "Parcours court — transparence : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
+    "type": "tags",
+    "required": false,
+    "options": [
+      {
+        "code": "E6.N10.TRANSPARENCY_PACK.INTERACTION",
+        "label": "Les utilisateurs sont informés qu'ils interagissent avec un système d'IA (ex: chatbot).",
+        "score_impact": 0
+      },
+      {
+        "code": "E6.N10.TRANSPARENCY_PACK.CONTENT",
+        "label": "Les contenus générés ou manipulés (textes, images, audios) sont marqués de manière lisible par la machine.",
+        "score_impact": 0
+      }
+    ]
+  },
+  "V3_FULL_TRANSPARENCE": {
+    "id": "V3_FULL_TRANSPARENCE",
     "question": "Parcours court — transparence : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
     "type": "tags",
     "required": false,

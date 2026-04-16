@@ -21,8 +21,12 @@ import { V3_PRODUCT_SYSTEM_TYPE } from '@/lib/qualification-v3-decision'
 
 /** Étapes synthétiques parcours court V3 (séquentielles, sans E4.N8.Q12 — intégrée à l’étape entreprise). */
 export const V3_SHORT_ENTREPRISE_ID = 'V3_SHORT_ENTREPRISE' as const
+/** Checklist entreprise consolidée — parcours long uniquement (après ORS, avant E4.N8.Q12). */
+export const V3_FULL_ENTREPRISE_ID = 'V3_FULL_ENTREPRISE' as const
 export const V3_SHORT_USAGE_ID = 'V3_SHORT_USAGE' as const
 export const V3_SHORT_TRANSPARENCE_ID = 'V3_SHORT_TRANSPARENCE' as const
+export const V3_FULL_USAGE_ID = 'V3_FULL_USAGE' as const
+export const V3_FULL_TRANSPARENCE_ID = 'V3_FULL_TRANSPARENCE' as const
 
 export const V3_SHORT_STAGE_IDS = [
   V3_SHORT_ENTREPRISE_ID,
@@ -39,7 +43,13 @@ export const V3_SHORT_MINIPACK_ID = 'V3._SHORT_CONSOLIDATED' as const
 
 /** Étapes « pack » court V3 (3 écrans + ancien nœud consolidé) pour composite UI / tags. */
 export function isV3ShortPathCompositeQuestionId(questionId: string): boolean {
-  return questionId === V3_SHORT_MINIPACK_ID || isV3ShortSyntheticQuestionId(questionId)
+  return (
+    questionId === V3_SHORT_MINIPACK_ID ||
+    isV3ShortSyntheticQuestionId(questionId) ||
+    questionId === V3_FULL_ENTREPRISE_ID ||
+    questionId === V3_FULL_USAGE_ID ||
+    questionId === V3_FULL_TRANSPARENCE_ID
+  )
 }
 
 type RawQuestion = {
@@ -158,11 +168,11 @@ export function getFirstE5AfterOrsV3(_answers: Record<string, unknown>): string 
 }
 
 /**
- * Après le bloc ORS (Q10 / T1 / M1) : en long → E4.N8.Q12 ; en court → première étape synthétique entreprise.
+ * Après le bloc ORS (Q10 / T1 / M1) : en long → checklist entreprise consolidée ; en court → première étape synthétique entreprise.
  */
 function nextAfterOrsV3(_answers: Record<string, unknown>, pathMode: 'long' | 'short'): string | null {
   if (pathMode === 'short') return V3_SHORT_ENTREPRISE_ID
-  return getFirstE5AfterOrsV3(_answers)
+  return V3_FULL_ENTREPRISE_ID
 }
 
 function getNextAfterQ12(_answers: Record<string, unknown>, pathMode: 'long' | 'short'): string | null {
@@ -246,6 +256,15 @@ export function getNextQuestionV3(
     case 'E4.N8.Q12':
       return getNextAfterQ12(answers, pathMode)
 
+    case V3_FULL_ENTREPRISE_ID:
+      return V3_FULL_USAGE_ID
+
+    case V3_FULL_USAGE_ID:
+      return V3_FULL_TRANSPARENCE_ID
+
+    case V3_FULL_TRANSPARENCE_ID:
+      return getNextAfterQ12(answers, 'long')
+
     case V3_SHORT_ENTREPRISE_ID:
       return V3_SHORT_USAGE_ID
     case V3_SHORT_USAGE_ID:
@@ -316,8 +335,12 @@ export function getResumeQuestionIdV3(
     if (ans === undefined || ans === null || !isComplete(q, ans)) return q
     const next = getNextQuestionV3(q, answers, systemType, pathMode)
     if (!next) {
-      if (/^E5\.N9\./.test(q) || /^E6\.N10\./.test(q)) {
-        q = pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : 'E4.N8.Q12'
+      if (/^E5\.N9\./.test(q)) {
+        q = pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : V3_FULL_ENTREPRISE_ID
+        continue
+      }
+      if (/^E6\.N10\./.test(q)) {
+        q = pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : V3_FULL_USAGE_ID
         continue
       }
       return q
