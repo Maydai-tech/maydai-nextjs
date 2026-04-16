@@ -55,7 +55,7 @@ export default function SelectEvaluationPathPage() {
                 <span className="text-lg font-semibold text-gray-900">Parcours Court</span>
               </div>
               <span className="inline-flex shrink-0 items-center text-sm text-gray-500">
-                <Clock className="mr-1 inline h-4 w-4" aria-hidden /> ~4 min
+                <Clock className="mr-1 inline h-4 w-4" aria-hidden /> 2 mn
               </span>
             </div>
             <p className="text-sm leading-relaxed text-gray-600">
@@ -80,7 +80,7 @@ export default function SelectEvaluationPathPage() {
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 <span className="rounded px-2 py-1 text-xs font-semibold bg-teal-100 text-teal-800">Recommandé</span>
                 <span className="inline-flex items-center text-sm text-gray-500">
-                  <Clock className="mr-1 inline h-4 w-4" aria-hidden /> ~10 min
+                  <Clock className="mr-1 inline h-4 w-4" aria-hidden /> 6 mn
                 </span>
               </div>
             </div>

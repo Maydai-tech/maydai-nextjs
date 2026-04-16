@@ -81,6 +81,9 @@ export interface UseCase {
   ors_exit?: string | null
   checklist_gov_enterprise: string[]
   checklist_gov_usecase: string[]
+  /** Colonnes JSONB `usecases` — codes E5 / E6 cochés (tableau JSON). */
+  block_e5_governance: string[]
+  block_e6_transparence: string[]
   created_at: string
   updated_at: string
   updated_by?: string

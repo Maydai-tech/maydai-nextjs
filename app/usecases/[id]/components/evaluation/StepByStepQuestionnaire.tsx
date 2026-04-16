@@ -14,7 +14,7 @@ import {
   AlertCircle,
   UserPlus,
   ArrowLeft,
-  ShieldAlert,
+  Info,
 } from 'lucide-react'
 import Tooltip from '@/components/Tooltip'
 import { useAuth } from '@/lib/auth'
@@ -133,6 +133,10 @@ export function StepByStepQuestionnaire({
     questionnairePathMode: questionnairePathMode,
   })
 
+  const progressPercentage = typeof progress?.percentage === 'number' ? progress.percentage : 0
+  /** CTA « Terminer » : dernière question du graphe ou progression déjà à 100 % (fin / raccourci). */
+  const primaryActionIsFinish = isLastQuestion || progressPercentage >= 100
+
   const questionnaireVersionNorm = useMemo(
     () => normalizeQuestionnaireVersion(useCase.questionnaire_version),
     [useCase.questionnaire_version]
@@ -164,16 +168,6 @@ export function StepByStepQuestionnaire({
       : null
 
   const e4N7Callout = currentQuestion ? getE4N7StepCallout(currentQuestion.id) : null
-  const e4N7CalloutStyles =
-    e4N7Callout?.variant === 'danger'
-      ? 'border-red-200 bg-red-50/90 text-red-950'
-      : e4N7Callout?.variant === 'caution'
-        ? 'border-amber-200 bg-amber-50/90 text-amber-950'
-        : e4N7Callout?.variant === 'domains'
-          ? 'border-sky-200 bg-sky-50/90 text-sky-950'
-          : e4N7Callout?.variant === 'safeguard'
-            ? 'border-emerald-200 bg-emerald-50/90 text-emerald-950'
-            : ''
 
   // Handlers pour la collaboration
   const handleInviteClick = () => {
@@ -569,13 +563,13 @@ export function StepByStepQuestionnaire({
             <>
               {e4N7Callout && (
                 <div
-                  className={`mb-5 flex gap-3 rounded-lg border px-4 py-3 text-sm leading-relaxed ${e4N7CalloutStyles}`}
+                  className="mb-6 flex items-start gap-3 rounded-lg border border-sky-100 bg-sky-50 p-4 text-sm leading-relaxed text-sky-900"
                   data-e4n7-callout={e4N7Callout.variant}
                 >
-                  <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5 opacity-90" aria-hidden />
+                  <Info className="h-5 w-5 shrink-0 text-sky-700 mt-0.5" aria-hidden />
                   <div>
-                    <p className="font-semibold text-gray-900">{e4N7Callout.title}</p>
-                    <p className="mt-1 text-gray-700">{e4N7Callout.description}</p>
+                    <p className="font-semibold text-sky-950">{e4N7Callout.title}</p>
+                    <p className="mt-1 text-sky-900/95">{e4N7Callout.description}</p>
                   </div>
                 </div>
               )}
@@ -641,14 +635,14 @@ export function StepByStepQuestionnaire({
           {/* Conteneur pour les boutons d'action (Suivant/Terminer) */}
           <div className="flex space-x-3">
             {/* Bouton conditionnel : Terminer ou Suivant selon la position */}
-            {isLastQuestion ? (
+            {primaryActionIsFinish ? (
               /* Bouton Terminer (dernière question) */
               <button
                 onClick={handleSubmit}
                 disabled={!canProceed || isSubmitting}
                 className={`inline-flex items-center px-6 py-2 text-sm font-medium rounded-lg transition-colors ${
                   canProceed && !isSubmitting
-                    ? 'text-white bg-green-600 hover:bg-green-700'
+                    ? 'text-white bg-emerald-600 hover:bg-emerald-700'
                     : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
                 }`}
               >
@@ -674,7 +668,7 @@ export function StepByStepQuestionnaire({
                 disabled={!canProceed || isSubmitting}
                 className={`inline-flex items-center px-6 py-2 text-sm font-medium rounded-lg transition-colors ${
                   canProceed && !isSubmitting
-                    ? 'text-white bg-[#0080A3] hover:bg-[#006280]'
+                    ? 'text-white bg-[#0080A3] hover:bg-[#0080A3]/90'
                     : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
                 }`}
               >

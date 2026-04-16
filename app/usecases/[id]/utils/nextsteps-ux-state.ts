@@ -38,6 +38,10 @@ export function getNextStepsRecommendationsPhase(params: {
   classificationStatus?: string | null
   reportGeneratedAt?: string | null
   parentReportGenerating: boolean
+  /** Erreur réseau / API lors du chargement des next steps */
+  nextStepsError?: string | null
+  /** Délai max de polling dépassé sans ligne usecase_nextsteps */
+  nextStepsSyncStalled?: boolean
 }): NextStepsRecommendationsPhase {
   if (params.hasNextSteps) {
     return 'ready'
@@ -47,6 +51,11 @@ export function getNextStepsRecommendationsPhase(params: {
   }
   if (params.parentReportGenerating) {
     return 'admin_generating_report'
+  }
+  const hasMeaningfulNextStepsError =
+    typeof params.nextStepsError === 'string' && params.nextStepsError.trim().length > 0
+  if (hasMeaningfulNextStepsError || params.nextStepsSyncStalled) {
+    return 'error'
   }
   if (params.loading) {
     return 'initial_fetch'

@@ -201,8 +201,9 @@ export function extractNextStepsFromMarkdown(reportText: string): Partial<UseCas
 }
 
 /**
- * Validation stricte des données extraites.
- * isValid = true seulement si usecase_id + toutes les 9 actions + pas de doublons.
+ * Validation des données extraites.
+ * isValid = true si usecase_id + les 9 actions sont présents.
+ * Les quasi-doublons (similarité Jaccard > 80 % dans un même groupe) sont signalés mais ne bloquent plus la sauvegarde.
  */
 export function validateNextStepsData(data: Partial<UseCaseNextStepsInput>): ValidationResult {
   const missingFields: string[] = []
@@ -250,8 +251,14 @@ export function validateNextStepsData(data: Partial<UseCaseNextStepsInput>): Val
     }
   }
 
+  if (hasDuplicates && duplicateDetails.length > 0) {
+    warnings.push(
+      `Textes très similaires dans un même groupe (non bloquant) : ${duplicateDetails.join(' ; ')}`
+    )
+  }
+
   const actionsMissing = missingFields.filter(f => ACTION_KEYS.includes(f as ActionKey))
-  const isValid = !missingFields.includes('usecase_id') && actionsMissing.length === 0 && !hasDuplicates
+  const isValid = !missingFields.includes('usecase_id') && actionsMissing.length === 0
 
   return { isValid, missingFields, warnings, hasDuplicates, duplicateDetails }
 }
@@ -312,18 +319,87 @@ function extractString(value: unknown): string | undefined {
   return undefined
 }
 
+type ActionArrayRow = { priority: number; index: number; text: string }
+
+/** Extrait des textes depuis un tableau JSON (chaînes ou objets { priority, text, ... }) en triant par priorité puis ordre d'origine. */
+function flattenActionArrayToStrings(arr: unknown): string[] {
+  if (!Array.isArray(arr)) return []
+  const rows: ActionArrayRow[] = []
+  for (let index = 0; index < arr.length; index++) {
+    const item = arr[index]
+    let text: string | undefined
+    let priority = index + 1
+    if (typeof item === 'string') {
+      text = extractString(item)
+    } else if (item && typeof item === 'object') {
+      const o = item as Record<string, unknown>
+      text =
+        extractString(o.text) ||
+        extractString(o.description) ||
+        extractString(o.action) ||
+        extractString(o.contenu) ||
+        extractString(o.libelle) ||
+        extractString(o.message)
+      const p = o.priority ?? o.rang ?? o.order
+      if (typeof p === 'number' && !Number.isNaN(p)) {
+        priority = p
+      } else if (typeof p === 'string') {
+        const n = parseInt(p, 10)
+        if (!Number.isNaN(n)) priority = n
+      }
+    }
+    if (text) rows.push({ priority, index, text })
+  }
+  rows.sort((a, b) => a.priority - b.priority || a.index - b.index)
+  return rows.map((r) => r.text)
+}
+
 function fillFromArray(
   result: Partial<UseCaseNextStepsInput>,
   arr: unknown,
   keys: ActionKey[]
 ): void {
-  if (!Array.isArray(arr)) return
+  const strings = flattenActionArrayToStrings(arr)
   for (let i = 0; i < keys.length; i++) {
-    if (!result[keys[i]] && arr[i]) {
-      const val = extractString(arr[i])
-      if (val) result[keys[i]] = val
+    if (!result[keys[i]] && strings[i]) {
+      result[keys[i]] = strings[i]
     }
   }
+}
+
+const SIMILARITY_DEDUP_THRESHOLD = 0.8
+
+/**
+ * Après extraction JSON : si deux textes d'un même groupe (quick wins, priorités, actions)
+ * sont quasi identiques (Jaccard > seuil), complète le second par une mention de slot pour
+ * réduire le risque de rejet et clarifier l'angle attendu en base.
+ */
+export function sanitizeNextStepsQuasiDuplicateTexts(
+  data: Partial<UseCaseNextStepsInput>
+): Partial<UseCaseNextStepsInput> {
+  const out: Partial<UseCaseNextStepsInput> = { ...data }
+  const groups: ActionKey[][] = [
+    ['quick_win_1', 'quick_win_2', 'quick_win_3'],
+    ['priorite_1', 'priorite_2', 'priorite_3'],
+    ['action_1', 'action_2', 'action_3'],
+  ]
+  const marker = '(Complément distinct — ne pas dupliquer'
+
+  for (const group of groups) {
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        const ki = group[i]
+        const kj = group[j]
+        const textA = out[ki]
+        const textB = out[kj]
+        if (typeof textA !== 'string' || typeof textB !== 'string') continue
+        if (computeTextSimilarity(textA, textB) <= SIMILARITY_DEDUP_THRESHOLD) continue
+        if (textB.includes(marker)) continue
+        out[kj] = `${textB}\n\n${marker} ${ki}) : le slot ${kj} doit porter un angle et des références distincts de ${ki}.`
+      }
+    }
+  }
+  return out
 }
 
 function logParsedActions(result: Partial<UseCaseNextStepsInput>, source: string): void {

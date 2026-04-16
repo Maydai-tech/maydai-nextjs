@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { transformToOpenAIFormatComplete } from '@/lib/openai-data-transformer'
 import { openAIClient } from '@/lib/openai-client'
-import { extractNextStepsFromReport, validateNextStepsData, logExtractionResults } from '@/lib/nextsteps-parser'
+import {
+  extractNextStepsFromReport,
+  validateNextStepsData,
+  logExtractionResults,
+  sanitizeNextStepsQuasiDuplicateTexts,
+} from '@/lib/nextsteps-parser'
 import { errorMonitor, createErrorReport, createPerformanceMetrics } from '@/lib/error-monitor'
 import {
   deriveRiskLevelFromResponses,
@@ -192,6 +197,7 @@ export async function POST(req: NextRequest) {
       score_base, score_model, score_final, is_eliminated, elimination_reason,
       questionnaire_version, bpgv_variant, active_question_codes, ors_exit, classification_status,
       checklist_gov_enterprise, checklist_gov_usecase,
+      block_e5_governance, block_e6_transparence,
       companies(name, industry, city, country)
     `)
     .eq('id', usecase_id)
@@ -458,8 +464,8 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    // Extraire les prochaines étapes structurées du rapport
-    const extractedNextSteps = extractNextStepsFromReport(analysis)
+    // Extraire les prochaines étapes structurées du rapport, puis désambiguïser les textes quasi identiques (LLM)
+    const extractedNextSteps = sanitizeNextStepsQuasiDuplicateTexts(extractNextStepsFromReport(analysis))
 
     // Post-correction : forcer les préfixes OUI/NON/Information insuffisante
     // d'après les statuts calculés par le code (filet de sécurité si le LLM désobéit)
@@ -528,6 +534,13 @@ export async function POST(req: NextRequest) {
         if (nextStepsSaveError) {
           nextStepsError = nextStepsSaveError.message
           nextStepsStatus = 'save_error'
+          console.error('[generate-report] usecase_nextsteps upsert Supabase a échoué', {
+            usecase_id,
+            message: nextStepsSaveError.message,
+            code: nextStepsSaveError.code,
+            details: nextStepsSaveError.details,
+            hint: nextStepsSaveError.hint,
+          })
         } else {
           nextStepsSaved = true
           nextStepsStatus = 'saved'
@@ -535,6 +548,10 @@ export async function POST(req: NextRequest) {
       } catch (error) {
         nextStepsError = error instanceof Error ? error.message : 'Erreur inconnue'
         nextStepsStatus = 'save_error'
+        console.error('[generate-report] usecase_nextsteps upsert exception', {
+          usecase_id,
+          error: nextStepsError,
+        })
       }
     } else {
       // Données corrompues — on ne les écrit PAS en base

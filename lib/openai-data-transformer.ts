@@ -192,6 +192,8 @@ interface UseCaseComplete {
   primary_model_id?: string
   checklist_gov_enterprise?: string[]
   checklist_gov_usecase?: string[]
+  block_e5_governance?: string[]
+  block_e6_transparence?: string[]
   score_base?: number
   score_model?: number | null
   score_final?: number | null
@@ -399,6 +401,8 @@ export function transformToOpenAIFormatComplete(
     questionnaireParcours: questionnaireParcours ?? null,
     checklist_gov_enterprise: normalizeChecklistStrings(usecase.checklist_gov_enterprise),
     checklist_gov_usecase: normalizeChecklistStrings(usecase.checklist_gov_usecase),
+    block_e5_governance: normalizeChecklistStrings(usecase.block_e5_governance),
+    block_e6_transparence: normalizeChecklistStrings(usecase.block_e6_transparence),
   })
 
   const base: OpenAIAnalysisInputComplete = {

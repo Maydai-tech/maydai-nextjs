@@ -755,16 +755,18 @@ function CreateUseCasePageContent() {
         formData.deployment_countries
       )
 
-      // Log des données à envoyer
-      const payload = {
+      // Adapter : aligner le corps de requête sur le schéma Supabase (blocs E5/E6, sans colonnes obsolètes)
+      const formRecord = formData as unknown as Record<string, unknown>
+      const cleanData: Record<string, unknown> = {
+        ...formRecord,
         name: formData.name,
         deployment_phase: formData.deployment_phase.trim() || null,
         deployment_date: formData.deployment_date,
         responsible_service: formData.responsible_service,
         technology_partner: formData.technology_partner,
-        technology_partner_id: formData.technology_partner_id, // Ajouter l'ID du partenaire si disponible
+        technology_partner_id: formData.technology_partner_id,
         llm_model_version: formData.llm_model_version,
-        primary_model_id, // Ajouter l'ID du modèle principal
+        primary_model_id,
         ai_category: formData.ai_category,
         system_type: formData.system_type,
         deployment_countries: deploymentCountriesArray,
@@ -773,14 +775,36 @@ function CreateUseCasePageContent() {
         company_id: companyId
       }
 
+      const BLOCK_E5_GOVERNANCE: string[] = []
+      const BLOCK_E6_TRANSPARENCE: string[] = []
+      for (const key of Object.keys(cleanData)) {
+        if (key.startsWith('E5_') && cleanData[key] === true) {
+          BLOCK_E5_GOVERNANCE.push(key)
+        }
+        if (key.startsWith('E6_') && cleanData[key] === true) {
+          BLOCK_E6_TRANSPARENCE.push(key)
+        }
+      }
+      for (const key of Object.keys(cleanData)) {
+        if (key.startsWith('E5_') || key.startsWith('E6_')) {
+          delete cleanData[key]
+        }
+      }
+      delete cleanData.firstName
+      delete cleanData.lastName
+      delete cleanData.role
+      delete cleanData.user_role_input
+      cleanData.BLOCK_E5_GOVERNANCE = BLOCK_E5_GOVERNANCE
+      cleanData.BLOCK_E6_TRANSPARENCE = BLOCK_E6_TRANSPARENCE
+
       console.log('=== DEBUG: Soumission du use case ===')
-      console.log('Payload complet:', payload)
+      console.log('Payload complet:', cleanData)
       console.log('Company ID:', companyId)
       console.log('FormData actuel:', formData)
       console.log('Available models:', availableModels)
       console.log('Primary model ID trouvée:', primary_model_id)
 
-      const response = await api.post('/api/usecases', payload)
+      const response = await api.post('/api/usecases', cleanData)
 
       console.log('Réponse du serveur:', response)
       console.log('Status:', response.status)

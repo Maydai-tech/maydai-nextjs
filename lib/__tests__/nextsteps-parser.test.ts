@@ -4,6 +4,7 @@ import {
   extractNextStepsFromMarkdown,
   validateNextStepsData,
   computeTextSimilarity,
+  sanitizeNextStepsQuasiDuplicateTexts,
 } from '../nextsteps-parser'
 import { UseCaseNextStepsInput } from '../supabase'
 
@@ -87,6 +88,27 @@ describe('extractNextStepsFromJSON', () => {
     expect(result.action_1).toBe('Action risques')
     expect(result.action_2).toBe('Action monitoring')
     expect(result.action_3).toBe('Action formations')
+  })
+
+  test('fallback tableaux : objets avec priority (tri stable, doublons de rang autorisés en entrée)', () => {
+    const input = JSON.stringify({
+      introduction_contextuelle: 'Intro.',
+      evaluation_risque: { niveau: 'Risque limité', justification: 'J.' },
+      priorites_actions_reglementaires: [
+        { priority: 2, text: 'Deuxième axe réglementaire' },
+        { priority: 1, text: 'Premier axe doc' },
+        { priority: 1, text: 'Autre entrée même rang' },
+      ],
+      quick_wins_actions_immediates: ['Q1', 'Q2', 'Q3'],
+      actions_moyen_terme: ['A1', 'A2', 'A3'],
+      impact_attendu: 'I.',
+      conclusion: 'C.',
+    })
+
+    const result = extractNextStepsFromJSON(input)
+    expect(result.priorite_1).toBe('Premier axe doc')
+    expect(result.priorite_2).toBe('Autre entrée même rang')
+    expect(result.priorite_3).toBe('Deuxième axe réglementaire')
   })
 
   test('clés directes prioritaires sur tableaux', () => {
@@ -264,8 +286,9 @@ describe('validateNextStepsData', () => {
 
     const result = validateNextStepsData(data)
     expect(result.hasDuplicates).toBe(true)
-    expect(result.isValid).toBe(false)
+    expect(result.isValid).toBe(true)
     expect(result.duplicateDetails.length).toBeGreaterThan(0)
+    expect(result.warnings.some((w) => w.includes('Textes très similaires'))).toBe(true)
     expect(result.duplicateDetails[0]).toContain('quick_win_1')
     expect(result.duplicateDetails[0]).toContain('quick_win_2')
   })
@@ -301,6 +324,27 @@ describe('validateNextStepsData', () => {
     expect(result.isValid).toBe(true)
     expect(result.warnings).toContain('Section "introduction" manquante')
     expect(result.warnings).toContain('Section "conclusion" manquante')
+  })
+})
+
+describe('sanitizeNextStepsQuasiDuplicateTexts', () => {
+  test('complète le texte du second slot si similarité très élevée avec un slot précédent du groupe', () => {
+    const t =
+      "Il est recommandé d'initialiser un registre centralisé des systèmes d'IA conformément aux exigences réglementaires."
+    const out = sanitizeNextStepsQuasiDuplicateTexts({
+      usecase_id: 'test-id',
+      quick_win_1: 'Q1',
+      quick_win_2: 'Q2',
+      quick_win_3: 'Q3',
+      priorite_1: t,
+      priorite_2: t,
+      priorite_3: 'Axe qualité des données et traçabilité des jeux de données.',
+      action_1: 'A1',
+      action_2: 'A2',
+      action_3: 'A3',
+    })
+    expect(out.priorite_2).toContain('Complément distinct')
+    expect(out.priorite_2).toContain('priorite_2')
   })
 })
 
@@ -387,7 +431,7 @@ Fin.`
     expect(result.priorite_3).toBeUndefined()
   })
 
-  test('validation bloque les données quand quick_win_1 = quick_win_2 = quick_win_3', () => {
+  test('validation signale mais n’empêche pas la sauvegarde quand quick_win_1 = quick_win_2 = quick_win_3', () => {
     const duplicatedText = 'Il est recommandé d\'initialiser un registre centralisé des systèmes d\'IA.'
     const data: Partial<UseCaseNextStepsInput> = {
       usecase_id: 'test-id',
@@ -400,7 +444,7 @@ Fin.`
 
     const validation = validateNextStepsData(data)
 
-    expect(validation.isValid).toBe(false)
+    expect(validation.isValid).toBe(true)
     expect(validation.hasDuplicates).toBe(true)
     expect(validation.duplicateDetails.length).toBeGreaterThanOrEqual(1)
   })

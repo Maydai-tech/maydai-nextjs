@@ -163,6 +163,11 @@ const PRINCIPLE_TO_CATEGORY_MAPPING: Record<string, string> = {
   'diversity_non_discrimination_fairness': 'diversity_fairness'
 }
 
+/** Catégories `risk-categories` couvertes par COMPL-AI (une entrée par principe benchmark). */
+export const COMPL_AI_MAYDAI_CATEGORY_IDS: readonly string[] = Object.freeze([
+  ...new Set(Object.values(PRINCIPLE_TO_CATEGORY_MAPPING))
+])
+
 /**
  * Récupère les scores MaydAI par principe pour un modèle donné
  */

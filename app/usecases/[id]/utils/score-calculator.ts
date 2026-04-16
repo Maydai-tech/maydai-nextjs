@@ -1,7 +1,11 @@
 import { loadQuestions } from '../utils/questions-loader'
 import { UseCaseScore, ScoreBreakdown, CategoryScore } from '../types/usecase'
 import { RISK_CATEGORIES } from './risk-categories'
-import { getUseCaseComplAiBonus, getMaydAiScoresByPrinciple } from './compl-ai-scoring'
+import {
+  getUseCaseComplAiBonus,
+  getMaydAiScoresByPrinciple,
+  COMPL_AI_MAYDAI_CATEGORY_IDS
+} from './compl-ai-scoring'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { calculateMaxCategoryScoresForAllQuestions } from '@/lib/score-category-max'
 import { buildV2ScoringContextFromDbResponses } from '@/lib/scoring-v2-server'
@@ -583,7 +587,15 @@ export async function calculateScore(
 
       // Récupérer les scores MaydAI par principe si un modèle est associé
       if (modelInfo?.id) {
-        maydaiScoresByPrinciple = await getMaydAiScoresByPrinciple(modelInfo.id, supabaseClient)
+        const rawMaydaiByPrinciple = await getMaydAiScoresByPrinciple(modelInfo.id, supabaseClient)
+        maydaiScoresByPrinciple = { ...rawMaydaiByPrinciple }
+        // Principe absent de la vue SQL ou score agrégé 0 : clé absente ⇒ traité comme 0,
+        // mais le principe reste « évalué » (max MaydAI) pour ne pas afficher « Non évalué ».
+        for (const cid of COMPL_AI_MAYDAI_CATEGORY_IDS) {
+          if (!Object.prototype.hasOwnProperty.call(maydaiScoresByPrinciple, cid)) {
+            maydaiScoresByPrinciple[cid] = 0
+          }
+        }
       }
 
       // Calculer le score final selon la présence de COMPL-AI
@@ -618,8 +630,8 @@ export async function calculateScore(
       let maydaiScore = 0
       let maxMaydaiScore = 0
       
-      // Vérifier si ce principe a un score MaydAI
-      if (maydaiScoresByPrinciple[categoryId]) {
+      // Vérifier si ce principe a un score MaydAI (0 explicite ≠ absence de principe)
+      if (Object.prototype.hasOwnProperty.call(maydaiScoresByPrinciple, categoryId)) {
         maydaiScore = maydaiScoresByPrinciple[categoryId]
         maxMaydaiScore = 4 // Chaque principe MaydAI vaut max 4 points (20 total / 5 principes)
       }
