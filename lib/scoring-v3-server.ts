@@ -31,9 +31,15 @@ export function buildV3ScoringContextFromDbResponses(
   const answers = dbResponsesToQuestionnaireAnswers(responses)
   const active_question_codes = collectV3ActiveQuestionCodes(answers, systemType, questionnairePathMode)
   const pathSet = new Set(active_question_codes)
+  /** Périmètre score : chemin actif ∩ réponses persistées, + tout E4 réellement saisi (answers) pour ne pas ignorer les malus N8 en parcours court. */
   const scoringActiveQuestionCodes = new Set(
-    responses.map(r => r.question_code).filter(code => pathSet.has(code))
+    responses.map(r => r.question_code).filter((code): code is string => Boolean(code)).filter(code => pathSet.has(code))
   )
+  for (const code of Object.keys(answers)) {
+    if (code.startsWith('E4.')) {
+      scoringActiveQuestionCodes.add(code)
+    }
+  }
   const meta = computeV3UsecaseQuestionnaireFields(answers, systemType, questionnairePathMode)
   const categoryMaxScores =
     calculateMaxCategoryScoresForActiveQuestionCodes(scoringActiveQuestionCodes)

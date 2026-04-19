@@ -21,6 +21,19 @@ describe('Score Calculator', () => {
   const mockUsecaseId = 'test-usecase-123'
 
   describe('calculateScore', () => {
+    test('E5.N9.Q9 (radio long) : réponse NON applique -4 sur le breakdown (alignement Edge / maturité)', async () => {
+      const result = await calculateScore(mockUsecaseId, [
+        {
+          question_code: 'E5.N9.Q9',
+          single_value: 'E5.N9.Q9.A',
+          multiple_codes: null,
+          conditional_main: null,
+        },
+      ])
+      const row = result.score_breakdown.find(b => b.question_id === 'E5.N9.Q9')
+      expect(row?.score_impact).toBe(-4)
+    })
+
     test('should return base score for no responses', async () => {
       const result = await calculateScore(mockUsecaseId, [])
 
@@ -126,7 +139,7 @@ describe('Score Calculator', () => {
       const responses = [
         {
           question_code: 'E4.N8.Q12',
-          single_value: 'E4.N8.Q12.B', // NON = -0.8 (mis à jour selon CSV)
+          single_value: 'E4.N8.Q12.A', // NON = -3 governance (littératie Art. 4)
           multiple_codes: null,
           conditional_main: null
         }
@@ -134,8 +147,8 @@ describe('Score Calculator', () => {
 
       const result = await calculateScore(mockUsecaseId, responses)
 
-      expect(result.score).toBe(89.2) // 90 - 0.8
-      expect(result.score_breakdown[0].score_impact).toBe(-0.8)
+      expect(result.score).toBe(87) // 90 - 3 (malus littératie)
+      expect(result.score_breakdown[0].score_impact).toBe(-3)
     })
 
     test('should have all category scores with correct structure', async () => {

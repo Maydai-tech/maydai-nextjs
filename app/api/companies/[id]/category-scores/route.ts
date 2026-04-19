@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { calculateScore } from '@/app/usecases/[id]/utils/score-calculator'
 import { CategoryScore } from '@/app/usecases/[id]/types/usecase'
 import { RISK_CATEGORIES } from '@/app/usecases/[id]/utils/risk-categories'
+import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -83,7 +84,9 @@ export async function GET(
     // Exclude unacceptable cases (score = 0 or is_eliminated = true)
     const { data: usecases, error: usecasesError } = await supabase
       .from('usecases')
-      .select('id, name, score_final, is_eliminated, questionnaire_version')
+      .select(
+        'id, name, score_final, is_eliminated, questionnaire_version, system_type, path_mode, checklist_gov_enterprise, checklist_gov_usecase'
+      )
       .eq('company_id', id)
       .not('score_final', 'is', null)
 
@@ -130,8 +133,24 @@ export async function GET(
         }
 
         // Calculate score to get category_scores
+        const qv = normalizeQuestionnaireVersion(usecase.questionnaire_version)
+        const dbPath = (usecase as { path_mode?: string | null }).path_mode
+        const v3Mode: 'long' | 'short' | undefined =
+          qv === QUESTIONNAIRE_VERSION_V3
+            ? dbPath === 'short'
+              ? 'short'
+              : dbPath === 'long'
+                ? 'long'
+                : 'long'
+            : undefined
         const scoreData = await calculateScore(usecase.id, responses || [], supabase, {
-          questionnaireVersion: usecase.questionnaire_version
+          questionnaireVersion: usecase.questionnaire_version,
+          systemType: (usecase as { system_type?: string | null }).system_type ?? null,
+          ...(v3Mode ? { questionnairePathMode: v3Mode } : {}),
+          checklistGovEnterprise:
+            (usecase as { checklist_gov_enterprise?: string[] | null }).checklist_gov_enterprise ?? null,
+          checklistGovUsecase:
+            (usecase as { checklist_gov_usecase?: string[] | null }).checklist_gov_usecase ?? null,
         })
 
         // Collect percentages for each category

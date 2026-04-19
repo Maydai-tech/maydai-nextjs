@@ -26,6 +26,7 @@ import {
   COMPL_AI_MULTIPLIER,
   type UserResponse
 } from '@/lib/score-calculator-simple';
+import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses';
 import { recordUseCaseHistory } from '@/lib/usecase-history';
 import {
   resolveCanonicalDocType,
@@ -119,10 +120,12 @@ export async function POST(
     // ===== ÉTAPE 3: VÉRIFICATION DES AUTORISATIONS =====
     console.log('🔒 Vérification des autorisations...');
     
-    // Récupérer les informations du cas d'usage
+    // Récupérer les informations du cas d'usage (champs scoring + checklists + parcours persisté)
     const { data: usecase, error: usecaseError } = await supabase
       .from('usecases')
-      .select('company_id, questionnaire_version, system_type')
+      .select(
+        'company_id, questionnaire_version, system_type, path_mode, checklist_gov_enterprise, checklist_gov_usecase'
+      )
       .eq('id', finalUsecaseId)
       .single();
 
@@ -175,52 +178,71 @@ export async function POST(
       return createErrorResponse('Impossible de récupérer les réponses', 500);
     }
     
-    if (!responses || responses.length === 0) {
+    const checklistEnt = (usecase as { checklist_gov_enterprise?: string[] | null })
+      .checklist_gov_enterprise;
+    const checklistUc = (usecase as { checklist_gov_usecase?: string[] | null }).checklist_gov_usecase;
+    const mergedResponses = mergeChecklistIntoDbResponseRows(
+      responses ?? [],
+      checklistEnt ?? null,
+      checklistUc ?? null
+    );
+
+    const hasAnyInput =
+      mergedResponses.length > 0 ||
+      (Array.isArray(checklistEnt) && checklistEnt.length > 0) ||
+      (Array.isArray(checklistUc) && checklistUc.length > 0);
+    if (!hasAnyInput) {
       return createErrorResponse('Aucune réponse trouvée pour ce cas d\'usage', 404);
     }
-    
-    console.log(`📊 ${responses.length} réponses trouvées`);
-    
+
+    console.log(`📊 ${responses?.length ?? 0} réponses brutes, ${mergedResponses.length} après fusion checklists`);
+
     // ===== ÉTAPE 5: CALCUL DU SCORE DE BASE =====
     console.log('🔢 Calcul du score de base...');
-    
-    // Convertir les réponses au format attendu par le calculateur
-    const userResponses: UserResponse[] = responses.map(response => ({
+
+    // Convertir les réponses au format attendu par le calculateur (déjà fusion checklists dans les lignes)
+    const userResponses: UserResponse[] = mergedResponses.map((response) => ({
       question_code: response.question_code,
       single_value: response.single_value,
       multiple_codes: response.multiple_codes,
       conditional_main: response.conditional_main,
       conditional_keys: response.conditional_keys,
-      conditional_values: response.conditional_values
+      conditional_values: response.conditional_values,
     }));
-    
+
     const questionnaireVersion = normalizeQuestionnaireVersion(usecase.questionnaire_version);
-    const v3QuestionnairePathMode: 'long' | 'short' =
-      questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && requestPathMode === 'short' ? 'short' : 'long';
+    const dbPathMode = (usecase as { path_mode?: string | null }).path_mode;
+    let v3QuestionnairePathMode: 'long' | 'short' = 'long';
+    if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3) {
+      if (dbPathMode === 'short') v3QuestionnairePathMode = 'short';
+      else if (dbPathMode === 'long') v3QuestionnairePathMode = 'long';
+      else if (requestPathMode === 'short') v3QuestionnairePathMode = 'short';
+      else v3QuestionnairePathMode = 'long';
+    }
     const v2ScoringCtx =
       questionnaireVersion === QUESTIONNAIRE_VERSION_V2
-        ? buildV2ScoringContextFromDbResponses(questionnaireVersion, responses)
+        ? buildV2ScoringContextFromDbResponses(questionnaireVersion, mergedResponses)
         : null;
     const v3ScoringCtx =
       questionnaireVersion === QUESTIONNAIRE_VERSION_V3
         ? buildV3ScoringContextFromDbResponses(
             questionnaireVersion,
-            responses,
+            mergedResponses,
             (usecase as { system_type?: string | null }).system_type,
             v3QuestionnairePathMode
           )
         : null;
 
-    // Calculer le score de base (V2/V3 : sous-ensemble actif serveur uniquement)
+    // Calculer le score de base (V2/V3 : sous-ensemble actif serveur uniquement ; checklists déjà fusionnées dans userResponses)
     const baseScoreResult = v3ScoringCtx
       ? calculateBaseScore(userResponses, {
-          activeQuestionCodes: v3ScoringCtx.scoringActiveQuestionCodes
+          activeQuestionCodes: v3ScoringCtx.scoringActiveQuestionCodes,
         })
       : v2ScoringCtx
-      ? calculateBaseScore(userResponses, {
-          activeQuestionCodes: v2ScoringCtx.scoringActiveQuestionCodes
-        })
-      : calculateBaseScore(userResponses);
+        ? calculateBaseScore(userResponses, {
+            activeQuestionCodes: v2ScoringCtx.scoringActiveQuestionCodes,
+          })
+        : calculateBaseScore(userResponses);
     console.log(`📈 Score de base calculé: ${baseScoreResult.score_base}`);
     
     if (baseScoreResult.is_eliminated) {
@@ -359,7 +381,11 @@ export async function POST(
     // ===== ÉTAPE 7: CALCUL DU SCORE FINAL =====
     console.log('🏁 Calcul du score final...');
     
-    const finalResult = calculateFinalScore(baseScoreResult, modelScore, finalUsecaseId);
+    const finalResult = calculateFinalScore(baseScoreResult, modelScore, finalUsecaseId, {
+      activeQuestionCodes: v3ScoringCtx?.scoringActiveQuestionCodes ?? v2ScoringCtx?.scoringActiveQuestionCodes,
+      questionnairePathMode:
+        questionnaireVersion === QUESTIONNAIRE_VERSION_V3 ? v3QuestionnairePathMode : undefined,
+    });
     
     console.log(`✨ Score final: ${finalResult.scores.score_final}%`);
     
@@ -369,7 +395,7 @@ export async function POST(
     let classificationStatusForDb: string | null = null;
 
     if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3) {
-      const answers = dbResponsesToQuestionnaireAnswers(responses);
+      const answers = dbResponsesToQuestionnaireAnswers(mergedResponses);
       const v3Outcome = resolveQualificationOutcomeV3(
         answers,
         (usecase as { system_type?: string | null }).system_type
@@ -384,7 +410,7 @@ export async function POST(
         console.log(`🛡️ Niveau de risque V3: ${riskLevel}`);
       }
     } else {
-      riskLevel = deriveRiskLevelFromResponses(responses);
+      riskLevel = deriveRiskLevelFromResponses(mergedResponses);
       console.log(`🛡️ Niveau de risque calculé: ${riskLevel}`);
     }
     
@@ -414,9 +440,13 @@ export async function POST(
       updated_by: user.id,
     };
 
-    if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && requestPathMode === 'short') {
+    if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && v3QuestionnairePathMode === 'short') {
       updateData.short_path_initial_score = roundedScoreFinal;
       updateData.short_path_completed_at = nowIso;
+    }
+
+    if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3) {
+      updateData.path_mode = v3QuestionnairePathMode;
     }
 
     if (v3ScoringCtx) {
@@ -458,7 +488,7 @@ export async function POST(
     // Enregistrer l'événement de réévaluation dans l'historique avec l'évolution du score
     await recordUseCaseHistory(supabase, finalUsecaseId, user.id, 'reevaluated', {
       metadata:
-        questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && requestPathMode === 'short'
+        questionnaireVersion === QUESTIONNAIRE_VERSION_V3 && v3QuestionnairePathMode === 'short'
           ? {
               path_mode: 'short',
               short_path_initial_score: roundedScoreFinal,

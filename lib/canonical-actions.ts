@@ -201,7 +201,7 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     label: 'Information / marquage de transparence',
     legacy_aliases: ['priorite_2'],
     report_slot_target: 'priorite_2',
-    questionnaire_links: ['E6.N10.Q1', 'E6.N10.Q2'],
+    questionnaire_links: ['E6.N10.Q1', 'E6.N10.Q2', 'E6.N10.Q3'],
     todo_doc_type_target: 'transparency_marking',
     dossier_section_target: 'transparency_marking',
     evidence_mode: 'mixed',

@@ -15,9 +15,9 @@ export function isChecklistGovUsecaseQuestionCode(code: string): boolean {
   return code === CHECKLIST_GOV_USECASE_QUESTION_CODE || code === LEGACY_TRANSPARENCY_CHECKLIST_SENTINEL
 }
 
-/** Parcours court V3 : option « interaction » → legacy E6.N10.Q1.A */
+/** Parcours court V3 : option « interaction » → radio conforme (Oui = `E6.N10.Q1.B`) */
 export const E6_TRANSPARENCY_PACK_INTERACTION_CODE = 'E6.N10.TRANSPARENCY_PACK.INTERACTION' as const
-/** Parcours court V3 : option « contenu » → legacy E6.N10.Q2.A */
+/** Parcours court V3 : option « contenu » → radio conforme (Oui = `E6.N10.Q2.B`) */
 export const E6_TRANSPARENCY_PACK_CONTENT_CODE = 'E6.N10.TRANSPARENCY_PACK.CONTENT' as const
 /** @deprecated Ancienne option unique (les deux volets) ; conservée pour données historiques. */
 export const E6_TRANSPARENCY_PACK_LEGACY_SINGLE_CODE = 'E6.N10.TRANSPARENCY_PACK.A' as const
@@ -31,13 +31,13 @@ export const E6_TRANSPARENCY_PACK_YES_CODE = E6_TRANSPARENCY_PACK_LEGACY_SINGLE_
  */
 export function expandE6TransparencyPackToLegacyOptionCodes(code: string): string[] {
   if (code === E6_TRANSPARENCY_PACK_LEGACY_SINGLE_CODE) {
-    return ['E6.N10.Q1.A', 'E6.N10.Q2.A']
+    return ['E6.N10.Q1.B', 'E6.N10.Q2.B']
   }
   if (code === E6_TRANSPARENCY_PACK_INTERACTION_CODE) {
-    return ['E6.N10.Q1.A']
+    return ['E6.N10.Q1.B']
   }
   if (code === E6_TRANSPARENCY_PACK_CONTENT_CODE) {
-    return ['E6.N10.Q2.A']
+    return ['E6.N10.Q2.B']
   }
   return [code]
 }

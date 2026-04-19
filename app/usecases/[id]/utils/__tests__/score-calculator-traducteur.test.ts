@@ -53,7 +53,7 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
     // E5.N9.Q2 - Analyse des risques (OUI)
     { question_code: 'E5.N9.Q2', single_value: 'E5.N9.Q2.A', multiple_codes: null, conditional_main: null },
     // E5.N9.Q3 - Mesures risques (OUI)
-    { question_code: 'E5.N9.Q3', single_value: 'E5.N9.Q3.A', multiple_codes: null, conditional_main: null },
+    { question_code: 'E5.N9.Q3', single_value: 'E5.N9.Q3.B', multiple_codes: null, conditional_main: null },
     // E5.N9.Q5 - Types données (Publiques)
     { question_code: 'E5.N9.Q5', single_value: null, multiple_codes: ['E5.N9.Q5.A'], conditional_main: null },
     // E5.N9.Q6 - Qualité données (OUI)
@@ -62,8 +62,8 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
     { question_code: 'E5.N9.Q9', single_value: 'E5.N9.Q9.B', multiple_codes: null, conditional_main: null },
     // E5.N9.Q8 - Surveillance humaine (OUI)
     { question_code: 'E5.N9.Q8', single_value: 'E5.N9.Q8.B', multiple_codes: null, conditional_main: null },
-    // E4.N8.Q12 - Jeux/anti-spam (OUI)
-    { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.A', multiple_codes: null, conditional_main: null },
+    // E4.N8.Q12 - Littératie IA (OUI)
+    { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.B', multiple_codes: null, conditional_main: null },
     // E4.N8.Q9 - Interactions personnes (NON)
     { question_code: 'E4.N8.Q9', single_value: 'E4.N8.Q9.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q9.1', single_value: 'E4.N8.Q9.1.B', multiple_codes: null, conditional_main: null },
@@ -73,9 +73,9 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
     { question_code: 'E4.N8.Q11.1', single_value: null, multiple_codes: ['E4.N8.Q11.1.A'], conditional_main: null },
     { question_code: 'E4.N8.Q11.T1', single_value: 'E4.N8.Q11.T1.E', multiple_codes: null, conditional_main: null },
     // E6.N10.Q1 - Utilisateurs informés (OUI)
-    { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.A', multiple_codes: null, conditional_main: null },
-    // E6.N10.Q2 - Label IA (OUI)
-    { question_code: 'E6.N10.Q2', single_value: 'E6.N10.Q2.A', multiple_codes: null, conditional_main: null },
+    { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.B', multiple_codes: null, conditional_main: null },
+    // E6.N10.Q2 - Marquage contenu (OUI)
+    { question_code: 'E6.N10.Q2', single_value: 'E6.N10.Q2.B', multiple_codes: null, conditional_main: null },
   ]
 
   /**
@@ -95,14 +95,14 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
     { question_code: 'E4.N7.Q3.1', single_value: null, multiple_codes: ['E4.N7.Q3.1.E'], conditional_main: null },
     // E5.N9.Q7 - Registre centralisé (NON) → -5 human_oversight
     { question_code: 'E5.N9.Q7', single_value: 'E5.N9.Q7.A', multiple_codes: null, conditional_main: null },
-    // E5.N9.Q4 - Documentation technique (NON) → -3 human_oversight
+    // E5.N9.Q4 - Documentation technique (NON) → -4 human_oversight
     { question_code: 'E5.N9.Q4', single_value: 'E5.N9.Q4.B', multiple_codes: null, conditional_main: null },
-    // E5.N9.Q1 - Gestion des risques (NON) → -3 technical_robustness
+    // E5.N9.Q1 - Gestion des risques (NON) → -4 technical_robustness
     { question_code: 'E5.N9.Q1', single_value: 'E5.N9.Q1.B', multiple_codes: null, conditional_main: null },
     // E5.N9.Q2 - Analyse des risques (NON) → -3 technical_robustness
     { question_code: 'E5.N9.Q2', single_value: 'E5.N9.Q2.B', multiple_codes: null, conditional_main: null },
-    // E5.N9.Q3 - Mesures risques (NON) → -3 technical_robustness
-    { question_code: 'E5.N9.Q3', single_value: 'E5.N9.Q3.B', multiple_codes: null, conditional_main: null },
+    // E5.N9.Q3 - Mesures risques (NON) → -4 technical_robustness
+    { question_code: 'E5.N9.Q3', single_value: 'E5.N9.Q3.A', multiple_codes: null, conditional_main: null },
     // E5.N9.Q5 - Types données (Personnelles/Stratégiques/Sensibles) → -3 privacy_data
     { question_code: 'E5.N9.Q5', single_value: null, multiple_codes: ['E5.N9.Q5.B'], conditional_main: null },
     // E5.N9.Q6 - Qualité données (NON) → -3 privacy_data
@@ -111,8 +111,8 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
     { question_code: 'E5.N9.Q9', single_value: 'E5.N9.Q9.A', multiple_codes: null, conditional_main: null },
     // E5.N9.Q8 - Surveillance humaine (NON) → -3 human_oversight
     { question_code: 'E5.N9.Q8', single_value: 'E5.N9.Q8.A', multiple_codes: null, conditional_main: null },
-    // E4.N8.Q12 - Jeux/anti-spam (NON) → -0.8 privacy_data
-    { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.B', multiple_codes: null, conditional_main: null },
+    // E4.N8.Q12 - Littératie IA (NON) → -3 governance
+    { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.A', multiple_codes: null, conditional_main: null },
     // E4.N8.Q9 - Interactions personnes (OUI) → -3 human_oversight
     { question_code: 'E4.N8.Q9', single_value: 'E4.N8.Q9.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q9.1', single_value: 'E4.N8.Q9.1.B', multiple_codes: null, conditional_main: null },
@@ -121,10 +121,10 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
     { question_code: 'E4.N8.Q11.0', single_value: 'E4.N8.Q11.0.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q11.1', single_value: null, multiple_codes: ['E4.N8.Q11.1.B'], conditional_main: null },
     { question_code: 'E4.N8.Q11.M1', single_value: 'E4.N8.Q11.M1.A', multiple_codes: null, conditional_main: null },
-    // E6.N10.Q1 - Utilisateurs informés (NON) → -3 transparency
-    { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.B', multiple_codes: null, conditional_main: null },
-    // E6.N10.Q2 - Label IA (NON) → -3 transparency
-    { question_code: 'E6.N10.Q2', single_value: 'E6.N10.Q2.B', multiple_codes: null, conditional_main: null },
+    // E6.N10.Q1 - Utilisateurs informés (NON) → -5 transparency
+    { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.A', multiple_codes: null, conditional_main: null },
+    // E6.N10.Q2 - Marquage contenu (NON) → -5 transparency
+    { question_code: 'E6.N10.Q2', single_value: 'E6.N10.Q2.A', multiple_codes: null, conditional_main: null },
   ]
 
   describe('Traducteur page HTML 1 - Réponses positives', () => {
@@ -198,25 +198,9 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
     test('should calculate global score with penalties', async () => {
       const result = await calculateScore(mockUsecaseId, traducteur2Responses)
 
-      // Calcul des pénalités attendues (selon CSV avec nouveaux impacts):
-      // E5.N9.Q7 NON: -5
-      // E5.N9.Q4 NON: -3
-      // E5.N9.Q1 NON: -3
-      // E5.N9.Q2 NON: -3
-      // E5.N9.Q3 NON: -3
-      // E5.N9.Q5 Personnelles: -3
-      // E5.N9.Q6 NON: -3
-      // E5.N9.Q9 NON: -3
-      // E5.N9.Q8 NON: -3
-      // E4.N8.Q12 NON: -0.8
-      // E4.N8.Q9 OUI: -3
-      // E4.N8.Q10 tranche B: -1 (conformité / volumétrie, plus -3)
-      // E4.N8.Q11.M1 synthétique/manipulé: -3
-      // E6.N10.Q1 NON: -3
-      // E6.N10.Q2 NON: -3
-      // Total penalties: -42.8 → score 47.2 (vérifié par le calculateur)
-
-      expect(result.score).toBeCloseTo(47.2, 1)
+      // Pénalités réellement prises en compte (questions définies dans questions-with-scores.json) :
+      // E5.N9.* + E6.N10.Q1/Q2 NON + E4.N8.* + M1 → total -23.8 sur base 90
+      expect(result.score).toBeCloseTo(66.2, 1)
       expect(result.is_eliminated).toBe(false)
     })
 
@@ -239,7 +223,7 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
       )
 
       expect(technical).toBeDefined()
-      // Technical pénalités: -3 (Q1) -3 (Q2) -3 (Q3) -3 (Q9) = -12
+      // Technical pénalités: -4 (Q1) -3 (Q2) -4 (Q3) -4 (Q9) = -15
       // Max Technical questionnaire: 12
       // Score questionnaire: 0%
       // Sans COMPL-AI: percentage devrait être 0%
@@ -298,7 +282,7 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
       expect(q7Impact?.score_impact).toBe(-5)
 
       const q12Impact = result.score_breakdown.find(b => b.question_id === 'E4.N8.Q12')
-      expect(q12Impact?.score_impact).toBe(-0.8)
+      expect(q12Impact?.score_impact).toBe(-3)
     })
   })
 
@@ -314,7 +298,7 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
       expect(breakdown?.score_impact).toBe(-5)
     })
 
-    test('E5.N9.Q4 NON should have -3 impact (was -10)', async () => {
+    test('E5.N9.Q4 NON should have -4 impact (human oversight)', async () => {
       const responses = [
         { question_code: 'E5.N9.Q4', single_value: 'E5.N9.Q4.B', multiple_codes: null, conditional_main: null }
       ]
@@ -322,29 +306,29 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
       const result = await calculateScore(mockUsecaseId, responses)
       const breakdown = result.score_breakdown.find(b => b.question_id === 'E5.N9.Q4')
 
-      expect(breakdown?.score_impact).toBe(-3)
+      expect(breakdown?.score_impact).toBe(-4)
     })
 
-    test('E4.N8.Q12 NON should have -0.8 impact (was -5)', async () => {
+    test('E4.N8.Q12 NON should have -3 impact (governance)', async () => {
       const responses = [
-        { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.B', multiple_codes: null, conditional_main: null }
+        { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.A', multiple_codes: null, conditional_main: null }
       ]
 
       const result = await calculateScore(mockUsecaseId, responses)
       const breakdown = result.score_breakdown.find(b => b.question_id === 'E4.N8.Q12')
 
-      expect(breakdown?.score_impact).toBe(-0.8)
+      expect(breakdown?.score_impact).toBe(-3)
     })
 
-    test('E6.N10.Q1 NON should have -3 impact (was -5)', async () => {
+    test('E6.N10.Q1 NON should have -5 impact (transparency)', async () => {
       const responses = [
-        { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.B', multiple_codes: null, conditional_main: null }
+        { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.A', multiple_codes: null, conditional_main: null }
       ]
 
       const result = await calculateScore(mockUsecaseId, responses)
       const breakdown = result.score_breakdown.find(b => b.question_id === 'E6.N10.Q1')
 
-      expect(breakdown?.score_impact).toBe(-3)
+      expect(breakdown?.score_impact).toBe(-5)
     })
   })
 })

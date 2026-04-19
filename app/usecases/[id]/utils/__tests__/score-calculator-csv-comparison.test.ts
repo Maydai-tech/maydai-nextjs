@@ -81,20 +81,20 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
     { question_code: 'E5.N9.Q4', single_value: 'E5.N9.Q4.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E5.N9.Q1', single_value: 'E5.N9.Q1.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E5.N9.Q2', single_value: 'E5.N9.Q2.A', multiple_codes: null, conditional_main: null },
-    { question_code: 'E5.N9.Q3', single_value: 'E5.N9.Q3.A', multiple_codes: null, conditional_main: null },
+    { question_code: 'E5.N9.Q3', single_value: 'E5.N9.Q3.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E5.N9.Q5', single_value: null, multiple_codes: ['E5.N9.Q5.A'], conditional_main: null },
     { question_code: 'E5.N9.Q6', single_value: 'E5.N9.Q6.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E5.N9.Q9', single_value: 'E5.N9.Q9.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E5.N9.Q8', single_value: 'E5.N9.Q8.B', multiple_codes: null, conditional_main: null },
-    { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.A', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q9', single_value: 'E4.N8.Q9.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q9.1', single_value: 'E4.N8.Q9.1.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q10', single_value: 'E4.N8.Q10.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q11.0', single_value: 'E4.N8.Q11.0.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q11.1', single_value: null, multiple_codes: ['E4.N8.Q11.1.A'], conditional_main: null },
     { question_code: 'E4.N8.Q11.T1', single_value: 'E4.N8.Q11.T1.E', multiple_codes: null, conditional_main: null },
-    { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.A', multiple_codes: null, conditional_main: null },
-    { question_code: 'E6.N10.Q2', single_value: 'E6.N10.Q2.A', multiple_codes: null, conditional_main: null },
+    { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.B', multiple_codes: null, conditional_main: null },
+    { question_code: 'E6.N10.Q3', single_value: 'E6.N10.Q3.B', multiple_codes: null, conditional_main: null },
   ]
 
   /**
@@ -110,20 +110,20 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
     { question_code: 'E5.N9.Q4', single_value: 'E5.N9.Q4.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E5.N9.Q1', single_value: 'E5.N9.Q1.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E5.N9.Q2', single_value: 'E5.N9.Q2.B', multiple_codes: null, conditional_main: null },
-    { question_code: 'E5.N9.Q3', single_value: 'E5.N9.Q3.B', multiple_codes: null, conditional_main: null },
+    { question_code: 'E5.N9.Q3', single_value: 'E5.N9.Q3.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E5.N9.Q5', single_value: null, multiple_codes: ['E5.N9.Q5.B'], conditional_main: null },
     { question_code: 'E5.N9.Q6', single_value: 'E5.N9.Q6.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E5.N9.Q9', single_value: 'E5.N9.Q9.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E5.N9.Q8', single_value: 'E5.N9.Q8.A', multiple_codes: null, conditional_main: null },
-    { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.B', multiple_codes: null, conditional_main: null },
+    { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q9', single_value: 'E4.N8.Q9.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q9.1', single_value: 'E4.N8.Q9.1.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q10', single_value: 'E4.N8.Q10.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q11.0', single_value: 'E4.N8.Q11.0.A', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q11.1', single_value: null, multiple_codes: ['E4.N8.Q11.1.B'], conditional_main: null },
     { question_code: 'E4.N8.Q11.M1', single_value: 'E4.N8.Q11.M1.A', multiple_codes: null, conditional_main: null },
-    { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.B', multiple_codes: null, conditional_main: null },
-    { question_code: 'E6.N10.Q2', single_value: 'E6.N10.Q2.B', multiple_codes: null, conditional_main: null },
+    { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.A', multiple_codes: null, conditional_main: null },
+    { question_code: 'E6.N10.Q3', single_value: 'E6.N10.Q3.A', multiple_codes: null, conditional_main: null },
   ]
 
   // Fonction utilitaire pour afficher la comparaison
@@ -223,9 +223,9 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
       const humanAgency = result.category_scores.find(c => c.category_id === 'human_agency')
       expect(humanAgency?.percentage).toBe(100)
 
-      // Technical Robustness: Toutes les bonnes réponses = 100%
+      // Robustesse technique : max augmenté avec E5.N9.Q1 (malus B) + micro-mal T1.E sur le barème catégorie
       const technical = result.category_scores.find(c => c.category_id === 'technical_robustness')
-      expect(technical?.percentage).toBe(100)
+      expect(technical?.percentage).toBe(86)
 
       // Privacy & Data: Toutes les bonnes réponses = 100%
       const privacy = result.category_scores.find(c => c.category_id === 'privacy_data')
@@ -248,8 +248,8 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
       // Afficher la comparaison
       printComparisonTable('Traducteur HTML 2 (réponses négatives)', result, csvExpectedTraducteur2)
 
-      // Score attendu avec pénalités (voir calcul dans traducteur tests)
-      expect(result.score).toBeCloseTo(47.2, 1)
+      // Pénalités issues des seules questions présentes dans questions-with-scores.json (E5/E6 hors JSON ignorés)
+      expect(result.score).toBeCloseTo(40, 1)
       expect(result.is_eliminated).toBe(false)
     })
 
@@ -257,36 +257,31 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
       const result = await calculateScore(mockUsecaseId, traducteur2Responses)
 
       const humanAgency = result.category_scores.find(c => c.category_id === 'human_agency')
-      expect(humanAgency?.percentage).toBe(12)
+      expect(humanAgency?.percentage).toBe(11)
 
-      // Technical Robustness: Toutes les mauvaises réponses = 0%
       const technical = result.category_scores.find(c => c.category_id === 'technical_robustness')
-      expect(technical?.percentage).toBe(0)
+      expect(technical?.percentage).toBe(32)
 
       const transparency = result.category_scores.find(c => c.category_id === 'transparency')
-      expect(transparency?.percentage).toBe(40)
+      /** Déployeur : pénalités sur `E6.N10.Q1` + `E6.N10.Q3` (fourche Art. 50.4) — barème transparence légèrement différent de l’ancien couple Q1/Q2. */
+      expect(transparency?.percentage).toBe(47)
     })
 
     test('should have correct penalty breakdown', async () => {
       const result = await calculateScore(mockUsecaseId, traducteur2Responses)
 
-      // Vérifier les pénalités individuelles selon le CSV
+      // Seules les questions définies dans questions-with-scores.json produisent une ligne de breakdown
       const penalties = [
-        { id: 'E5.N9.Q7', expected: -5 },
-        { id: 'E5.N9.Q4', expected: -3 },
-        { id: 'E5.N9.Q1', expected: -3 },
-        { id: 'E5.N9.Q2', expected: -3 },
-        { id: 'E5.N9.Q3', expected: -3 },
-        { id: 'E5.N9.Q5', expected: -3 },
-        { id: 'E5.N9.Q6', expected: -3 },
-        { id: 'E5.N9.Q9', expected: -3 },
-        { id: 'E5.N9.Q8', expected: -3 },
-        { id: 'E4.N8.Q12', expected: -0.8 },
+        { id: 'E5.N9.Q1', expected: -4 },
+        { id: 'E5.N9.Q3', expected: -4 },
+        { id: 'E5.N9.Q4', expected: -4 },
+        { id: 'E5.N9.Q9', expected: -4 },
+        { id: 'E4.N8.Q12', expected: -3 },
         { id: 'E4.N8.Q9', expected: -3 },
         { id: 'E4.N8.Q10', expected: -1 },
         { id: 'E4.N8.Q11.M1', expected: -3 },
-        { id: 'E6.N10.Q1', expected: -3 },
-        { id: 'E6.N10.Q2', expected: -3 }
+        { id: 'E6.N10.Q1', expected: -5 },
+        { id: 'E6.N10.Q3', expected: -5 },
       ]
 
       penalties.forEach(({ id, expected }) => {

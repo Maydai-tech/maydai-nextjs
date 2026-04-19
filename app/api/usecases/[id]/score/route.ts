@@ -66,7 +66,7 @@ export async function GET(
     const { data: usecaseData, error: scoreDataError } = await supabase
       .from('usecases')
       .select(
-        'score_final, score_base, score_model, is_eliminated, last_calculation_date, questionnaire_version, system_type, short_path_initial_score, short_path_completed_at'
+        'score_final, score_base, score_model, is_eliminated, last_calculation_date, questionnaire_version, system_type, short_path_initial_score, short_path_completed_at, path_mode, checklist_gov_enterprise, checklist_gov_usecase'
       )
       .eq('id', usecaseId)
       .single()
@@ -77,6 +77,17 @@ export async function GET(
 
     const qv = normalizeQuestionnaireVersion(usecaseData.questionnaire_version)
     const systemType = (usecaseData as { system_type?: string | null }).system_type ?? null
+    const dbPathMode = (usecaseData as { path_mode?: string | null }).path_mode
+    const checklistEnt = (usecaseData as { checklist_gov_enterprise?: string[] | null })
+      .checklist_gov_enterprise
+    const checklistUc = (usecaseData as { checklist_gov_usecase?: string[] | null }).checklist_gov_usecase
+
+    let v3PathForScore: 'long' | 'short' = 'long'
+    if (qv === QUESTIONNAIRE_VERSION_V3) {
+      if (dbPathMode === 'short') v3PathForScore = 'short'
+      else if (dbPathMode === 'long') v3PathForScore = 'long'
+      else v3PathForScore = 'long'
+    }
 
     const { data: responses, error: responsesError } = await supabase
       .from('usecase_responses')
@@ -92,6 +103,11 @@ export async function GET(
       const fullScoreData = await calculateScore(usecaseId, responses || [], supabase, {
         questionnaireVersion: usecaseData.questionnaire_version,
         systemType,
+        ...(qv === QUESTIONNAIRE_VERSION_V3
+          ? { questionnairePathMode: v3PathForScore }
+          : {}),
+        checklistGovEnterprise: checklistEnt ?? null,
+        checklistGovUsecase: checklistUc ?? null,
       })
 
       return NextResponse.json({
@@ -122,6 +138,8 @@ export async function GET(
         questionnaireVersion: usecaseData.questionnaire_version,
         systemType,
         questionnairePathMode: 'short',
+        checklistGovEnterprise: checklistEnt ?? null,
+        checklistGovUsecase: checklistUc ?? null,
       })
 
       return NextResponse.json({
@@ -140,6 +158,9 @@ export async function GET(
     const scoreData = await calculateScore(usecaseId, responses || [], supabase, {
       questionnaireVersion: usecaseData.questionnaire_version,
       systemType,
+      ...(qv === QUESTIONNAIRE_VERSION_V3 ? { questionnairePathMode: v3PathForScore } : {}),
+      checklistGovEnterprise: checklistEnt ?? null,
+      checklistGovUsecase: checklistUc ?? null,
     })
 
     return NextResponse.json({

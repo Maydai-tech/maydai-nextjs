@@ -390,11 +390,11 @@
     },
     "E4.N8.Q12": {
       "code": "E4.N8.Q12",
-      "question_text": "Avez-vous suivi ou mis en place des formations sur l'IA Act ?",
+      "question_text": "Votre personnel et les personnes chargées du fonctionnement de l'IA ont-ils reçu une formation adéquate (littératie en IA) pour comprendre les risques et utiliser le système de manière responsable ?",
       "type": "radio",
       "status": "minimal",
       "possible_answers": ["Oui", "Non"],
-      "interpretation": "Évalue si des formations IA Act ont été suivies ou mises en place (littératie IA).",
+      "interpretation": "Littératie en IA (Art. 4) : formation adéquate du personnel pour comprendre les risques et utiliser le système de manière responsable.",
       "quick_wins": [
         "Mettre en place une sensibilisation IA Act (Article 4) pour les équipes concernées",
         "Conserver une preuve des formations (programme, dates, participants)"
@@ -580,6 +580,22 @@
       "article_concerne": "Article 52(3), Article 50(1)(c)",
       "risk_category": "Transparency",
       "impact_conformite": "Une réponse 'Non' indique une non-conformité pour les systèmes à risque limité ayant cette fonctionnalité"
+    },
+    "E6.N10.Q3": {
+      "code": "E6.N10.Q3",
+      "question_text": "Les contenus générés par l'IA sensibles (hypertrucages, textes d'intérêt public) comportent-ils une mention visible d'origine artificielle ?",
+      "type": "radio",
+      "status": "limited",
+      "possible_answers": ["Oui", "Non", "Non applicable"],
+      "interpretation": "Obligation d'étiquetage visible des contenus (déploiement / mise à disposition au public)",
+      "quick_wins": [
+        "Prévoir une mention ou un pictogramme visible sur les sorties exposées au public",
+        "Documenter les cas d'exemption ou d'usage interne"
+      ],
+      "priority": 3,
+      "article_concerne": "Article 50(4)",
+      "risk_category": "Transparency",
+      "impact_conformite": "Une réponse « Non » lorsque l'obligation s'applique indique un écart de conformité sur l'étiquetage visible"
     }
   },
   "usecase_context_fields": {

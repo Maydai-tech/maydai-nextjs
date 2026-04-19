@@ -10,7 +10,7 @@ describe('calculateBaseScore — filtre V2', () => {
         conditional_main: undefined
       }
     ])
-    expect(r.score_base).toBe(87)
+    expect(r.score_base).toBe(90)
   })
 
   test('avec activeQuestionCodes : ignore les questions hors set', () => {

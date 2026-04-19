@@ -79,6 +79,11 @@ const V3_SHORT_TRANSPARENCE_UI_ROWS = [
     tooltip:
       "L'Article 50 impose de marquer les contenus générés ou manipulés pour qu'ils soient identifiables comme artificiels.",
   },
+  {
+    label: 'Mention visible pour hypertrucages et textes d’intérêt public',
+    tooltip:
+      "L'AI Act exige d'indiquer visiblement au public l'origine artificielle des hypertrucages et des textes d'intérêt public (Art. 50.4), avec des exemptions prévues (contrôle éditorial humain, parodie manifeste, usage interne ou contenu exempté).",
+  },
 ] as const
 
 function V3ShortLegalInfoButton({
@@ -172,8 +177,6 @@ export function V3ShortPathStageQuestion({
   const getOptionLegalTooltip = (opt: QuestionOption): string | null => {
     if (isV3ShortEntreprise) {
       switch (opt.code) {
-        case 'E4.N8.Q12.A':
-          return "L’Article 4 exige de garantir un niveau suffisant de maîtrise de l’IA pour votre personnel utilisant ces systèmes."
         case 'E5.N9.Q7.B':
           return 'Outil de gouvernance essentiel pour cartographier vos IA, prévenir le Shadow AI et garantir la traçabilité (Art.12).'
         case 'E5.N9.Q1.A':
@@ -200,6 +203,13 @@ export function V3ShortPathStageQuestion({
     }
     if (isV3ShortTransparence) {
       switch (opt.code) {
+        case 'E6.N10.Q1.B':
+          return V3_SHORT_TRANSPARENCE_UI_ROWS[0].tooltip
+        case 'E6.N10.Q2.B':
+          return V3_SHORT_TRANSPARENCE_UI_ROWS[1].tooltip
+        case 'E6.N10.Q3.B':
+        case 'E6.N10.Q3.C':
+          return V3_SHORT_TRANSPARENCE_UI_ROWS[2].tooltip
         case 'E6.N10.TRANSPARENCY_PACK.INTERACTION':
         case 'E6.N10.TRANSPARENCY_PACK.A':
           return V3_SHORT_TRANSPARENCE_UI_ROWS[0].tooltip
@@ -215,6 +225,10 @@ export function V3ShortPathStageQuestion({
   const getOptionDisplayLabel = (opt: QuestionOption): string => {
     if (isV3ShortTransparence) {
       if (
+        opt.code === 'E6.N10.Q1.B' ||
+        opt.code === 'E6.N10.Q2.B' ||
+        opt.code === 'E6.N10.Q3.B' ||
+        opt.code === 'E6.N10.Q3.C' ||
         opt.code === 'E6.N10.TRANSPARENCY_PACK.INTERACTION' ||
         opt.code === 'E6.N10.TRANSPARENCY_PACK.CONTENT'
       ) {

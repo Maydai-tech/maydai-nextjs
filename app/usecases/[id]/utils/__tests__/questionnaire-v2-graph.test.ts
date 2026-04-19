@@ -40,75 +40,75 @@ describe('questionnaire V2 graph', () => {
     expect(getNextQuestionV2('E4.N8.Q8', {})).toBeNull()
   })
 
-  it('V2 : sortie unacceptable après Q3.1 → entrée BPGV complète (E5.N9.Q1)', () => {
+  it('V2 : sortie unacceptable après Q3.1 → même entrée ORS N8 (E4.N8.Q9), sans chaînage E5', () => {
     expect(isOrsUnacceptableAtQ31({ 'E4.N7.Q3.1': ['E4.N7.Q3.1.A'] })).toBe(true)
     const next = getNextQuestionV2('E4.N7.Q3.1', {
       ...baseN7,
       'E4.N7.Q3.1': ['E4.N7.Q3.1.A']
     })
-    expect(next).toBe('E5.N9.Q1')
+    expect(next).toBe('E4.N8.Q9')
   })
 
-  it('V2 : unacceptable puis mini BPGV Q7 → Q12 puis E6 obligatoire', () => {
+  it('V2 : E5.N9.* hors graphe (transitions null) ; Q12 termine le parcours', () => {
     const unacceptable = {
       ...baseN7,
       'E4.N7.Q3.1': ['E4.N7.Q3.1.A'],
       'E5.N9.Q7': { selected: 'E5.N9.Q7.B', conditionalValues: { registry_type: 'X', system_name: 'Y' } }
     }
-    expect(getNextQuestionV2('E5.N9.Q7', unacceptable)).toBe('E4.N8.Q12')
-    expect(getNextQuestionV2('E4.N8.Q12', unacceptable)).toBe('E6.N10.Q1')
+    expect(getNextQuestionV2('E5.N9.Q7', unacceptable)).toBeNull()
+    expect(getNextQuestionV2('E4.N8.Q12', unacceptable)).toBeNull()
   })
 
-  it('V2 : BPGV long — Q7 après Q6 → Q8 → Q9 → Q12', () => {
+  it('V2 : pas de chaînage E5 (Q7 → Q8 → Q9) dans le graphe V2', () => {
     const answers = {
       'E5.N9.Q6': { selected: 'E5.N9.Q6.B' },
       'E5.N9.Q7': { selected: 'E5.N9.Q7.B', conditionalValues: { registry_type: 'X', system_name: 'Y' } }
     }
-    expect(getNextQuestionV2('E5.N9.Q7', answers)).toBe('E5.N9.Q8')
-    expect(getNextQuestionV2('E5.N9.Q8', answers)).toBe('E5.N9.Q9')
-    expect(getNextQuestionV2('E5.N9.Q9', answers)).toBe('E4.N8.Q12')
+    expect(getNextQuestionV2('E5.N9.Q7', answers)).toBeNull()
+    expect(getNextQuestionV2('E5.N9.Q8', answers)).toBeNull()
+    expect(getNextQuestionV2('E5.N9.Q9', answers)).toBeNull()
   })
 
-  it('V2 : BPGV limited/high — ordre Q1→…→Q9 puis Q12', () => {
+  it('V2 : identifiants E5 — pas de transition depuis le switch V2', () => {
     const e5 = {}
-    expect(getNextQuestionV2('E5.N9.Q1', e5)).toBe('E5.N9.Q2')
-    expect(getNextQuestionV2('E5.N9.Q2', e5)).toBe('E5.N9.Q3')
-    expect(getNextQuestionV2('E5.N9.Q3', e5)).toBe('E5.N9.Q4')
-    expect(getNextQuestionV2('E5.N9.Q4', e5)).toBe('E5.N9.Q5')
-    expect(getNextQuestionV2('E5.N9.Q5', e5)).toBe('E5.N9.Q6')
-    expect(getNextQuestionV2('E5.N9.Q6', e5)).toBe('E5.N9.Q7')
+    expect(getNextQuestionV2('E5.N9.Q1', e5)).toBeNull()
+    expect(getNextQuestionV2('E5.N9.Q2', e5)).toBeNull()
+    expect(getNextQuestionV2('E5.N9.Q3', e5)).toBeNull()
+    expect(getNextQuestionV2('E5.N9.Q4', e5)).toBeNull()
+    expect(getNextQuestionV2('E5.N9.Q5', e5)).toBeNull()
+    expect(getNextQuestionV2('E5.N9.Q6', e5)).toBeNull()
   })
 
-  it('V2 : E6 — après Q12 toujours Q1 puis Q2 (Q9 oui)', () => {
+  it('V2 : après E4.N8.Q12 — fin du questionnaire (E6 retiré du graphe V2)', () => {
     const a = {
       'E4.N7.Q3.1': ['E4.N7.Q3.1.E'],
       'E4.N8.Q9': 'E4.N8.Q9.A',
       'E4.N8.Q11.0': 'E4.N8.Q11.0.B'
     }
-    expect(getNextQuestionV2('E4.N8.Q12', a)).toBe('E6.N10.Q1')
-    expect(getNextQuestionV2('E6.N10.Q1', a)).toBe('E6.N10.Q2')
-    expect(getNextQuestionV2('E6.N10.Q2', a)).toBe(null)
+    expect(getNextQuestionV2('E4.N8.Q12', a)).toBeNull()
+    expect(getNextQuestionV2('E6.N10.Q1', a)).toBeNull()
+    expect(getNextQuestionV2('E6.N10.Q2', a)).toBeNull()
   })
 
-  it('V2 : E6 — après Q12 Q1 puis Q2 même si Q9 non et Q11.0 oui', () => {
+  it('V2 : après Q12 — fin même si Q9 non et Q11.0 oui', () => {
     const a = {
       'E4.N7.Q3.1': ['E4.N7.Q3.1.E'],
       'E4.N8.Q9': 'E4.N8.Q9.B',
       'E4.N8.Q11.0': 'E4.N8.Q11.0.A'
     }
-    expect(getNextQuestionV2('E4.N8.Q12', a)).toBe('E6.N10.Q1')
-    expect(getNextQuestionV2('E6.N10.Q1', a)).toBe('E6.N10.Q2')
-    expect(getNextQuestionV2('E6.N10.Q2', a)).toBe(null)
+    expect(getNextQuestionV2('E4.N8.Q12', a)).toBeNull()
+    expect(getNextQuestionV2('E6.N10.Q1', a)).toBeNull()
+    expect(getNextQuestionV2('E6.N10.Q2', a)).toBeNull()
   })
 
-  it('V2 : E6 — Q9 et Q11.0 oui → Q1 puis Q2', () => {
+  it('V2 : après Q12 — fin si Q9 et Q11.0 oui', () => {
     const a = {
       'E4.N7.Q3.1': ['E4.N7.Q3.1.E'],
       'E4.N8.Q9': 'E4.N8.Q9.A',
       'E4.N8.Q11.0': 'E4.N8.Q11.0.A'
     }
-    expect(getNextQuestionV2('E4.N8.Q12', a)).toBe('E6.N10.Q1')
-    expect(getNextQuestionV2('E6.N10.Q1', a)).toBe('E6.N10.Q2')
+    expect(getNextQuestionV2('E4.N8.Q12', a)).toBeNull()
+    expect(getNextQuestionV2('E6.N10.Q1', a)).toBeNull()
   })
 
   it('deriveBpgvBandFromOrsAnswers : domaine à risque élevé → high', () => {
@@ -129,15 +129,15 @@ describe('questionnaire V2 graph', () => {
     expect(band).toBe(BPGV_VARIANT_LIMITED)
   })
 
-  it('getFirstE5AfterOrs : toujours E5.N9.Q1 (plus de raccourci minimal → Q7)', () => {
-    expect(getFirstE5AfterOrs({ ...baseN7, 'E4.N7.Q3.1': ['E4.N7.Q3.1.E'] })).toBe('E5.N9.Q1')
+  it('getFirstE5AfterOrs : déclaration E4.N8.Q12 (nom historique ; plus de chaînage E5)', () => {
+    expect(getFirstE5AfterOrs({ ...baseN7, 'E4.N7.Q3.1': ['E4.N7.Q3.1.E'] })).toBe('E4.N8.Q12')
     expect(
       getFirstE5AfterOrs({
         ...baseN7,
         'E4.N7.Q2': ['E4.N7.Q2.A'],
         'E4.N7.Q3.1': ['E4.N7.Q3.1.E']
       })
-    ).toBe('E5.N9.Q1')
+    ).toBe('E4.N8.Q12')
   })
 
   it('getNext avec version 2 délègue au graphe V2', () => {

@@ -111,7 +111,7 @@ function generateAnswerContextsV3(questionId: string): Record<string, unknown>[]
     case 'E4.N8.Q11.M2':
       return [mergeCtx({}, CTX_ORS_MINIMAL), mergeCtx({}, CTX_ORS_HIGH)]
     case 'E5.N9.Q7':
-      return [{}, { 'E5.N9.Q6': { selected: 'E5.N9.Q6.B' } }]
+      return [{ 'E5.N9.Q7': 'E5.N9.Q7.A' }, { 'E5.N9.Q7': 'E5.N9.Q7.B' }]
     case 'E4.N8.Q12':
       return [
         { 'E4.N7.Q3.1': ['E4.N7.Q3.1.A'] },
@@ -126,9 +126,58 @@ function generateAnswerContextsV3(questionId: string): Record<string, unknown>[]
       ]
     case 'E6.N10.Q1':
       return [
-        { 'E4.N8.Q11.0': 'E4.N8.Q11.0.B' },
-        { 'E4.N8.Q11.0': 'E4.N8.Q11.0.A' },
+        { 'E6.N10.Q1': 'E6.N10.Q1.A' },
+        { 'E6.N10.Q1': 'E6.N10.Q1.B' },
+        mergeCtx(
+          {
+            'E4.N7.Q1': 'E4.N7.Q1.A',
+            'E4.N7.Q1.1': 'E4.N7.Q1.1.E',
+            'E6.N10.Q1': 'E6.N10.Q1.B',
+          },
+          CTX_ORS_MINIMAL
+        ),
+        mergeCtx(
+          {
+            'E4.N7.Q1': 'E4.N7.Q1.C',
+            'E4.N7.Q1.1': 'E4.N7.Q1.1.E',
+            'E6.N10.Q1': 'E6.N10.Q1.B',
+          },
+          CTX_ORS_MINIMAL
+        ),
+        mergeCtx(
+          {
+            'E4.N7.Q1': 'E4.N7.Q1.B',
+            'E4.N7.Q1.2': 'E4.N7.Q1.2.A',
+            'E6.N10.Q1': 'E6.N10.Q1.B',
+          },
+          CTX_ORS_MINIMAL
+        ),
       ]
+    case 'E6.N10.Q2':
+      return [{ 'E6.N10.Q2': 'E6.N10.Q2.A' }, { 'E6.N10.Q2': 'E6.N10.Q2.B' }]
+    case 'E6.N10.Q3':
+      return [
+        { 'E6.N10.Q3': 'E6.N10.Q3.A' },
+        { 'E6.N10.Q3': 'E6.N10.Q3.B' },
+        { 'E6.N10.Q3': 'E6.N10.Q3.C' },
+      ]
+    case 'E5.N9.Q5':
+      return [
+        { 'E5.N9.Q5': ['E5.N9.Q5.A'] },
+        { 'E5.N9.Q5': ['E5.N9.Q5.B', 'E5.N9.Q5.D'] },
+      ]
+    case 'E5.N9.Q6':
+      return [{ 'E5.N9.Q6': 'E5.N9.Q6.A' }, { 'E5.N9.Q6': 'E5.N9.Q6.B' }]
+    case 'E5.N9.Q1':
+      return [{ 'E5.N9.Q1': 'E5.N9.Q1.A' }, { 'E5.N9.Q1': 'E5.N9.Q1.B' }]
+    case 'E5.N9.Q4':
+      return [{ 'E5.N9.Q4': 'E5.N9.Q4.A' }, { 'E5.N9.Q4': 'E5.N9.Q4.B' }]
+    case 'E5.N9.Q8':
+      return [{ 'E5.N9.Q8': 'E5.N9.Q8.A' }, { 'E5.N9.Q8': 'E5.N9.Q8.B' }]
+    case 'E5.N9.Q9':
+      return [{ 'E5.N9.Q9': 'E5.N9.Q9.A' }, { 'E5.N9.Q9': 'E5.N9.Q9.B' }]
+    case 'E5.N9.Q3':
+      return [{ 'E5.N9.Q3': 'E5.N9.Q3.A' }, { 'E5.N9.Q3': 'E5.N9.Q3.B' }]
     default:
       return [{}]
   }

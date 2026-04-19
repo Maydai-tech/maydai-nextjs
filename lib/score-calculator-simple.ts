@@ -18,6 +18,7 @@
 
 import { loadQuestions } from '@/app/usecases/[id]/utils/questions-loader';
 import type { QuestionOption, UseCaseChecklistResponseFields } from '@/types/questions';
+import { mergeChecklistIntoUserResponses } from '@/lib/merge-checklist-into-user-responses';
 
 // Charger les questions depuis le JSON
 const QUESTIONS_DATA = loadQuestions();
@@ -41,6 +42,12 @@ export const COMPL_AI_MULTIPLIER = 20;
 export const COMPL_AI_WEIGHT = 2.5;
 
 /**
+ * Plafond MaydAI par principe COMPL-AI mappé (5 principes → 20 pts agrégés côté barème catégorie dans `calculateScore`).
+ * À n’utiliser que lorsqu’une ligne réelle existe dans `compl_ai_maydai_scores` pour ce principe (pas de max artificiel sinon).
+ */
+export const MAYDAI_MAX_SCORE_PER_COMPL_AI_PRINCIPLE = 4;
+
+/**
  * Poids du score de base dans le calcul final (sur 150 total)
  */
 export const BASE_SCORE_WEIGHT = 90;
@@ -56,9 +63,26 @@ export const MODEL_SCORE_WEIGHT = 50;
 export const MARGIN_SCORE = 0;
 
 /**
- * Poids total pour le calcul final
+ * Poids total pour le calcul final (périmètre historique : questionnaire + emplacement modèle).
+ * @see resolveTotalFinalWeight — parcours court V3 avec périmètre actif : dénominateur dynamique.
  */
 export const TOTAL_WEIGHT = 150;
+
+/**
+ * Dénominateur du score final : 150 par défaut ; parcours court V3 avec questions actives
+ * → 90 + 50 pour refléter le plafond questionnaire + contribution modèle sur le même barème.
+ */
+export function resolveTotalFinalWeight(options?: {
+  activeQuestionCodes?: Set<string>
+  questionnairePathMode?: 'long' | 'short'
+}): number {
+  const scoped =
+    options?.activeQuestionCodes !== undefined && options.activeQuestionCodes.size > 0
+  if (scoped && options?.questionnairePathMode === 'short') {
+    return BASE_SCORE + MODEL_SCORE_WEIGHT
+  }
+  return TOTAL_WEIGHT
+}
 
 // ===== TYPES ET INTERFACES =====
 
@@ -82,6 +106,16 @@ export interface UserResponse extends UseCaseChecklistResponseFields {
 /** Options scoring questionnaire V2 (sous-ensemble de questions actives, source serveur). */
 export interface CalculateBaseScoreOptions {
   activeQuestionCodes?: Set<string>
+  /** Codes d’options E5 (gouvernance entreprise) — fusion avant calcul. */
+  checklistGovEnterprise?: string[] | null
+  /** Codes d’options E6 (transparence cas) — fusion avant calcul. */
+  checklistGovUsecase?: string[] | null
+}
+
+/** Options du score final (dénominateur dynamique parcours court). */
+export interface CalculateFinalScoreOptions {
+  activeQuestionCodes?: Set<string>
+  questionnairePathMode?: 'long' | 'short'
 }
 
 /**
@@ -175,6 +209,13 @@ export function getSelectedCodes(response: UserResponse): string[] {
   }
   
   if (response.conditional_main) {
+    // E5/E6 : préférer `multiple_codes` (checklist / batch) — ignorer un `conditional_main` orphelin.
+    if (
+      response.question_code.startsWith('E5.') ||
+      response.question_code.startsWith('E6.')
+    ) {
+      return [];
+    }
     return [response.conditional_main];
   }
 
@@ -301,7 +342,7 @@ export function getCompanyStatusDefinition(status: CompanyStatus): string {
  * Calcule le score de base à partir des réponses de l'utilisateur
  *
  * Logique :
- * 1. Commence avec BASE_SCORE (100 points)
+ * 1. Commence avec BASE_SCORE (90 points)
  * 2. Vérifie d'abord les réponses éliminatoires
  * 3. Si pas éliminé, applique tous les impacts négatifs
  * 4. Le score ne peut pas descendre en dessous de 0
@@ -314,10 +355,16 @@ export function calculateBaseScore(
   responses: UserResponse[],
   options?: CalculateBaseScoreOptions
 ): BaseScoreResult {
+  const enriched = mergeChecklistIntoUserResponses(
+    responses,
+    options?.checklistGovEnterprise,
+    options?.checklistGovUsecase
+  ) as UserResponse[]
+
   const scoped =
     options?.activeQuestionCodes !== undefined
-      ? responses.filter(r => options.activeQuestionCodes!.has(r.question_code))
-      : responses;
+      ? enriched.filter(r => options.activeQuestionCodes!.has(r.question_code))
+      : enriched
 
   let totalImpact = 0;
   let isEliminated = false;
@@ -325,12 +372,6 @@ export function calculateBaseScore(
   
   // ÉTAPE 1 : Parcourir les réponses du périmètre (V1 = toutes)
   for (const response of scoped) {
-    if (
-      response.question_code.startsWith('E5.') ||
-      response.question_code.startsWith('E6.')
-    ) {
-      continue;
-    }
     // Vérifier que la question existe dans nos données
     const question = QUESTIONS_DATA[response.question_code];
     if (!question) {
@@ -418,15 +459,19 @@ export function calculateBaseScore(
  * @param baseScoreResult - Résultat du calcul de score de base
  * @param modelScore - Score du modèle COMPL-AI brut (0-20) ou null
  * @param usecaseId - ID du cas d'usage
+ * @param options - Dénominateur dynamique (parcours court + périmètre actif)
  * @returns Résultat complet du calcul
  */
 export function calculateFinalScore(
   baseScoreResult: BaseScoreResult,
   modelScore: number | null,
-  usecaseId: string
+  usecaseId: string,
+  options?: CalculateFinalScoreOptions
 ): CompleteScoreResult {
   let finalScore = 0;
   let hasValidModelScore = modelScore !== null && modelScore !== undefined;
+
+  const totalWeight = resolveTotalFinalWeight(options)
 
   // Calculer la contribution pondérée du modèle (score_model × 2.5)
   const modelContribution = (modelScore || 0) * COMPL_AI_WEIGHT;
@@ -439,14 +484,13 @@ export function calculateFinalScore(
     const scoreBrut = baseScoreResult.score_base + modelContribution + MARGIN_SCORE;
 
     // ÉTAPE 2 : Appliquer la formule finale
-    // Formule : (score_brut / 150) * 100
-    finalScore = (scoreBrut / TOTAL_WEIGHT) * 100;
+    finalScore = (scoreBrut / totalWeight) * 100;
   }
 
   // Formule exposée dans le résultat (traçabilité calcul)
   const formulaUsed = hasValidModelScore && modelScore !== null
-    ? `((${baseScoreResult.score_base} + ${roundToTwoDecimals(modelScore)} × ${COMPL_AI_WEIGHT}) / ${TOTAL_WEIGHT}) * 100`
-    : `((${baseScoreResult.score_base} + 0) / ${TOTAL_WEIGHT}) * 100`;
+    ? `((${baseScoreResult.score_base} + ${roundToTwoDecimals(modelScore)} × ${COMPL_AI_WEIGHT}) / ${totalWeight}) * 100`
+    : `((${baseScoreResult.score_base} + 0) / ${totalWeight}) * 100`;
 
   return {
     success: true,
@@ -467,7 +511,7 @@ export function calculateFinalScore(
       weights: {
         base_score_weight: BASE_SCORE_WEIGHT,
         model_score_weight: MODEL_SCORE_WEIGHT,
-        total_weight: TOTAL_WEIGHT
+        total_weight: totalWeight
       }
     }
   };

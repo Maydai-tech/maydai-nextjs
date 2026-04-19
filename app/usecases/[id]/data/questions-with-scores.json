@@ -1105,22 +1105,340 @@
   },
   "E4.N8.Q12": {
     "id": "E4.N8.Q12",
-    "question": "Avez-vous suivi ou mis en place des formations sur l'IA Act ?",
+    "question": "Votre personnel et les personnes chargées du fonctionnement de l'IA ont-ils reçu une formation adéquate (littératie en IA) pour comprendre les risques et utiliser le système de manière responsable ?",
     "type": "radio",
     "required": true,
+    "tooltip": {
+      "title": "Littératie en IA (Art. 4)",
+      "shortContent": "L'AI Act impose des mesures pour assurer un niveau suffisant de connaissances en matière d'IA au sein des équipes.",
+      "fullContent": "Littératie en IA (Art. 4) : L'AI Act impose aux fournisseurs et aux déployeurs de prendre des mesures pour assurer un niveau suffisant de connaissances en matière d'IA au sein de leurs équipes. Cela permet de garantir un développement et une utilisation conformes et sécurisés.",
+      "icon": "💡"
+    },
     "options": [
       {
-        "code": "E4.N8.Q12.A",
+        "code": "E4.N8.Q12.B",
         "label": "Oui",
         "score_impact": 0
       },
       {
-        "code": "E4.N8.Q12.B",
+        "code": "E4.N8.Q12.A",
         "label": "Non",
-        "score_impact": -0.8,
+        "score_impact": -3,
         "category_impacts": {
-          "privacy_data": -0.8
+          "governance": -3
         }
+      }
+    ]
+  },
+  "E5.N9.Q5": {
+    "id": "E5.N9.Q5",
+    "question": "Quels sont les types de données traitées en entrée ?",
+    "type": "checkbox",
+    "required": true,
+    "tooltip": {
+      "title": "Types de données et cadre juridique",
+      "shortContent": "Personnelles, sensibles, stratégiques ou anonymisées : chaque catégorie déclenche des obligations et niveaux de vigilance différents (RGPD, AI Act).",
+      "fullContent": "Les données « personnelles » identifient un individu, les données « sensibles » (santé, biométrie) exigent des protections renforcées (Art. 9 RGPD / Art. 10 AI Act), tandis que les données « anonymisées » ne permettent plus aucune identification et sortent du cadre du RGPD. L'AI Act encadre rigoureusement l'usage de données biométriques ou de santé lors de l'entraînement des modèles pour prévenir tout risque de biais algorithmique susceptible d'entraîner des discriminations graves ou de porter atteinte aux droits fondamentaux.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E5.N9.Q5.A",
+        "label": "Publiques / Anonymisées",
+        "score_impact": 0
+      },
+      {
+        "code": "E5.N9.Q5.B",
+        "label": "Personnelles",
+        "score_impact": -2,
+        "category_impacts": {
+          "privacy_data": -2
+        }
+      },
+      {
+        "code": "E5.N9.Q5.C",
+        "label": "Stratégiques / Confidentielles",
+        "score_impact": -2,
+        "category_impacts": {
+          "technical_robustness": -2
+        }
+      },
+      {
+        "code": "E5.N9.Q5.D",
+        "label": "Sensibles (Santé, Biométrie, etc.)",
+        "score_impact": -5,
+        "category_impacts": {
+          "privacy_data": -5
+        }
+      }
+    ]
+  },
+  "E5.N9.Q6": {
+    "id": "E5.N9.Q6",
+    "question": "Avez-vous des procédures de vérification de la qualité des données ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Qualité et représentativité des données (AI Act)",
+      "shortContent": "L'article 10 de l'AI Act exige des données pertinentes, représentatives et autant que possible exemptes d'erreurs pour le contexte d'utilisation prévu.",
+      "fullContent": "Conformément à l'Article 10 de l'AI Act, vos données doivent être pertinentes, représentatives et, dans toute la mesure du possible, complètes et sans erreurs afin de refléter fidèlement le contexte d'utilisation prévu de votre système d'IA. Ces procédures de contrôle et de gouvernance sont une sécurité essentielle pour détecter, atténuer et corriger en amont les biais algorithmiques, garantissant ainsi la fiabilité de votre outil tout en évitant les comportements discriminatoires.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E5.N9.Q6.A",
+        "label": "Non",
+        "score_impact": -4,
+        "category_impacts": {
+          "privacy_data": -4
+        }
+      },
+      {
+        "code": "E5.N9.Q6.B",
+        "label": "Oui",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E5.N9.Q1": {
+    "id": "E5.N9.Q1",
+    "question": "Avez-vous établi et maintenez-vous un système de gestion des risques ?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      {
+        "code": "E5.N9.Q1.A",
+        "label": "Oui",
+        "score_impact": 0
+      },
+      {
+        "code": "E5.N9.Q1.B",
+        "label": "Non",
+        "score_impact": -4,
+        "category_impacts": {
+          "technical_robustness": -4
+        }
+      }
+    ]
+  },
+  "E5.N9.Q7": {
+    "id": "E5.N9.Q7",
+    "question": "Tenez-vous un registre centralisé de vos systèmes d'IA ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Registre centralisé",
+      "shortContent": "Outil essentiel de gouvernance, ce registre cartographie vos usages pour prévenir les risques liés au Shadow AI et sécuriser vos données.",
+      "fullContent": "Outil essentiel de gouvernance, ce registre cartographie vos usages pour prévenir les risques liés au Shadow AI et sécuriser vos données. Pour les systèmes à haut risque, l'AI Act (Art. 12 et 49) impose d'ailleurs une traçabilité stricte et un enregistrement officiel. Centraliser ces informations vous permet de piloter efficacement votre conformité et d'identifier vos responsables internes.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E5.N9.Q7.A",
+        "label": "Non",
+        "score_impact": -4,
+        "category_impacts": {
+          "human_agency": -4
+        }
+      },
+      {
+        "code": "E5.N9.Q7.B",
+        "label": "Oui",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E5.N9.Q4": {
+    "id": "E5.N9.Q4",
+    "question": "Avez-vous établi une documentation technique complète pour votre système d'IA ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Documentation technique",
+      "shortContent": "Recommandée comme bonne pratique pour tout système (et obligatoire pour les hauts risques), cette documentation détaille de manière transparente le fonctionnement de l'IA, son architecture et ses données d'entraînement. Elle décrit également vos procédures de test, la gestion des risques et les mesures de contrôle humain mises en place.",
+      "fullContent": "Recommandée comme bonne pratique pour tout système (et obligatoire pour les hauts risques), cette documentation détaille de manière transparente le fonctionnement de l'IA, son architecture et ses données d'entraînement. Elle décrit également vos procédures de test, la gestion des risques et les mesures de contrôle humain mises en place.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E5.N9.Q4.A",
+        "label": "Oui",
+        "score_impact": 0
+      },
+      {
+        "code": "E5.N9.Q4.B",
+        "label": "Non",
+        "score_impact": -4,
+        "category_impacts": {
+          "human_agency": -4
+        }
+      }
+    ]
+  },
+  "E5.N9.Q8": {
+    "id": "E5.N9.Q8",
+    "question": "Avez-vous une étape de surveillance humaine dans votre système d'IA ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Surveillance humaine (Art. 14)",
+      "shortContent": "L'AI Act exige un contrôle humain effectif : comprendre les limites du système, pouvoir ignorer ou interrompre ses résultats.",
+      "fullContent": "Surveillance humaine (Art. 14) : L'AI Act exige que votre système garantisse un contrôle humain effectif afin de prévenir toute confiance aveugle envers la machine (biais d'automatisation). Concrètement, le superviseur doit en comprendre les limites et conserver l'autorité d'ignorer ses résultats, d'intervenir, voire d'interrompre complètement le système en cas de besoin.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E5.N9.Q8.B",
+        "label": "Oui",
+        "score_impact": 0
+      },
+      {
+        "code": "E5.N9.Q8.A",
+        "label": "Non",
+        "score_impact": -4,
+        "category_impacts": {
+          "human_agency": -4
+        }
+      }
+    ]
+  },
+  "E5.N9.Q9": {
+    "id": "E5.N9.Q9",
+    "question": "Votre système d'IA fait-il l'objet de tests réguliers et de mesures techniques pour garantir son exactitude, sa résilience face aux erreurs (robustesse) et sa protection contre les cyberattaques spécifiques (ex: empoisonnement) ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Exactitude, robustesse et cybersécurité",
+      "shortContent": "Exactitude, Robustesse et Cybersécurité (Art. 15) : Selon l'AI Act, ces trois éléments forment le socle indissociable de la fiabilité technique d'une IA.",
+      "fullContent": "Exactitude, Robustesse et Cybersécurité (Art. 15) : Selon l'AI Act, ces trois éléments forment le socle indissociable de la fiabilité technique d'une IA. Un système très exact mais vulnérable aux attaques, ou robuste mais produisant des erreurs, finira inévitablement par générer des résultats imprévisibles ou dangereux. Ces trois piliers doivent donc être évalués et sécurisés conjointement tout au long du cycle de vie.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E5.N9.Q9.A",
+        "label": "Non",
+        "score_impact": -4,
+        "category_impacts": {
+          "technical_robustness": -4
+        }
+      },
+      {
+        "code": "E5.N9.Q9.B",
+        "label": "Oui",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E5.N9.Q3": {
+    "id": "E5.N9.Q3",
+    "question": "Avez-vous intégré des mesures techniques d'atténuation des risques (ex : garde-fous, filtres, instructions système/prompts) dès la conception de votre IA ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Instructions et garde-fous",
+      "shortContent": "Instructions et garde-fous (Art. 9 et 15) : L'AI Act exige d'éliminer ou de réduire les risques dès la conception du système, y compris face à une mauvaise utilisation raisonnablement prévisible.",
+      "fullContent": "Instructions et garde-fous (Art. 9 et 15) : L'AI Act exige d'éliminer ou de réduire les risques dès la conception du système, y compris face à une mauvaise utilisation raisonnablement prévisible. L'intégration de garde-fous techniques stricts dans les instructions système (system prompts) constitue une mesure de contrôle essentielle pour encadrer le comportement du modèle, prévenir les dérives et garantir sa robustesse.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E5.N9.Q3.A",
+        "label": "Non",
+        "score_impact": -4,
+        "category_impacts": {
+          "technical_robustness": -4
+        }
+      },
+      {
+        "code": "E5.N9.Q3.B",
+        "label": "Oui",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E6.N10.Q1": {
+    "id": "E6.N10.Q1",
+    "question": "Le système d'IA est-il conçu pour que les personnes physiques soient clairement informées qu'elles interagissent avec une machine ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Transparence de l'interaction",
+      "shortContent": "Transparence de l'interaction (Art. 50.1) : L'AI Act exige que l'IA soit conçue pour signaler sa nature artificielle aux personnes physiques, sauf si le contexte d'utilisation rend la chose évidente (ex: un chatbot d'assistance classique).",
+      "fullContent": "Transparence de l'interaction (Art. 50.1) : L'AI Act exige que l'IA soit conçue pour signaler sa nature artificielle aux personnes physiques, sauf si le contexte d'utilisation rend la chose évidente (ex: un chatbot d'assistance classique).",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E6.N10.Q1.A",
+        "label": "Non",
+        "score_impact": -5,
+        "category_impacts": {
+          "transparency": -5
+        }
+      },
+      {
+        "code": "E6.N10.Q1.B",
+        "label": "Oui",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E6.N10.Q2": {
+    "id": "E6.N10.Q2",
+    "question": "Les contenus générés ou manipulés par l'IA (textes, images, audios, vidéos) intègrent-ils un marquage technique permettant de détecter leur origine artificielle (ex : watermarking, métadonnées) ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Marquage des contenus",
+      "shortContent": "Marquage des contenus (Art. 50.2) : Les systèmes génératifs doivent marquer leurs sorties dans un format lisible par machine pour assurer leur traçabilité. Exception : cette obligation ne s'applique pas aux simples outils d'assistance qui ne modifient pas substantiellement le sens du contenu.",
+      "fullContent": "Marquage des contenus (Art. 50.2) : Les systèmes génératifs doivent marquer leurs sorties dans un format lisible par machine pour assurer leur traçabilité. Exception : cette obligation ne s'applique pas aux simples outils d'assistance qui ne modifient pas substantiellement le sens du contenu.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E6.N10.Q2.A",
+        "label": "Non",
+        "score_impact": -5,
+        "category_impacts": {
+          "transparency": -5
+        }
+      },
+      {
+        "code": "E6.N10.Q2.B",
+        "label": "Oui",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E6.N10.Q3": {
+    "id": "E6.N10.Q3",
+    "question": "Les contenus générés par l'IA (hypertrucages vidéo/audio/image ou textes d'intérêt public) sont-ils accompagnés d'une mention visible indiquant clairement au public leur origine artificielle ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Étiquetage des contenus",
+      "shortContent": "Étiquetage des contenus (Art. 50.4) : mention visible de l'origine artificielle pour hypertrucages et textes d'intérêt public, avec exemptions prévues par l'AI Act.",
+      "fullContent": "Étiquetage des contenus (Art. 50.4) : L'AI Act exige d'indiquer visiblement au public l'origine artificielle des hypertrucages (deepfakes) et des textes d'intérêt public. Cette obligation est levée pour les textes ayant fait l'objet d'un contrôle éditorial humain ou pour les œuvres manifestement parodiques.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E6.N10.Q3.B",
+        "label": "Oui",
+        "score_impact": 0
+      },
+      {
+        "code": "E6.N10.Q3.A",
+        "label": "Non",
+        "score_impact": -5,
+        "category_impacts": {
+          "transparency": -5
+        }
+      },
+      {
+        "code": "E6.N10.Q3.C",
+        "label": "Non applicable - Usage interne ou contenu exempté",
+        "score_impact": 0
       }
     ]
   },
@@ -1138,11 +1456,6 @@
     "required": false,
     "options": [
       {
-        "code": "E4.N8.Q12.A",
-        "label": "Formation des équipes",
-        "score_impact": 0
-      },
-      {
         "code": "E5.N9.Q7.B",
         "label": "Registre des systèmes IA",
         "score_impact": 0
@@ -1156,26 +1469,10 @@
   },
   "V3_FULL_ENTREPRISE": {
     "id": "V3_FULL_ENTREPRISE",
-    "question": "Parcours court — entreprise : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
+    "question": "Parcours long — entreprise (ancienne étape consolidée, conservée pour compatibilité brouillons ; ne plus utiliser dans le graphe).",
     "type": "tags",
     "required": false,
-    "options": [
-      {
-        "code": "E4.N8.Q12.A",
-        "label": "Formation des équipes",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q7.B",
-        "label": "Registre des systèmes IA",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q1.A",
-        "label": "Gestion des risques",
-        "score_impact": 0
-      }
-    ]
+    "options": []
   },
   "V3_SHORT_USAGE": {
     "id": "V3_SHORT_USAGE",
@@ -1215,33 +1512,7 @@
     "question": "Parcours court — usage : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
     "type": "tags",
     "required": false,
-    "options": [
-      {
-        "code": "E5.N9.Q3.A",
-        "label": "Instructions systèmes / prompts",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q8.B",
-        "label": "Contrôle humain",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q4.A",
-        "label": "Documentation technique",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q9.B",
-        "label": "Surveillance continue",
-        "score_impact": 0
-      },
-      {
-        "code": "E5.N9.Q6.B",
-        "label": "Qualité des données",
-        "score_impact": 0
-      }
-    ]
+    "options": []
   },
   "V3_SHORT_TRANSPARENCE": {
     "id": "V3_SHORT_TRANSPARENCE",
@@ -1249,6 +1520,26 @@
     "type": "tags",
     "required": false,
     "options": [
+      {
+        "code": "E6.N10.Q1.B",
+        "label": "Information claire qu'il s'agit d'une IA (Art. 50.1)",
+        "score_impact": 0
+      },
+      {
+        "code": "E6.N10.Q2.B",
+        "label": "Marquage technique des contenus générés ou manipulés (Art. 50.2)",
+        "score_impact": 0
+      },
+      {
+        "code": "E6.N10.Q3.B",
+        "label": "Mention visible d'origine artificielle (hypertrucages / textes d'intérêt public) (Art. 50.4)",
+        "score_impact": 0
+      },
+      {
+        "code": "E6.N10.Q3.C",
+        "label": "Non applicable — usage interne ou contenu exempté (Art. 50.4)",
+        "score_impact": 0
+      },
       {
         "code": "E6.N10.TRANSPARENCY_PACK.INTERACTION",
         "label": "Les utilisateurs sont informés qu'ils interagissent avec un système d'IA (ex: chatbot).",
@@ -1266,17 +1557,6 @@
     "question": "Parcours court — transparence : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
     "type": "tags",
     "required": false,
-    "options": [
-      {
-        "code": "E6.N10.TRANSPARENCY_PACK.INTERACTION",
-        "label": "Les utilisateurs sont informés qu'ils interagissent avec un système d'IA (ex: chatbot).",
-        "score_impact": 0
-      },
-      {
-        "code": "E6.N10.TRANSPARENCY_PACK.CONTENT",
-        "label": "Les contenus générés ou manipulés (textes, images, audios) sont marqués de manière lisible par la machine.",
-        "score_impact": 0
-      }
-    ]
+    "options": []
   }
 }

@@ -19,9 +19,9 @@ import { isOrsUnacceptableAtQ31 } from './questionnaire-v2-graph'
 import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
 import { V3_PRODUCT_SYSTEM_TYPE } from '@/lib/qualification-v3-decision'
 
-/** Étapes synthétiques parcours court V3 (séquentielles, sans E4.N8.Q12 — intégrée à l’étape entreprise). */
+/** Étapes synthétiques parcours court V3 (séquentielles). Littératie IA : question autonome `E4.N8.Q12` (long) ou dérivée côté court. */
 export const V3_SHORT_ENTREPRISE_ID = 'V3_SHORT_ENTREPRISE' as const
-/** Checklist entreprise consolidée — parcours long uniquement (après ORS, avant E4.N8.Q12). */
+/** @deprecated Ancienne checklist « entreprise » parcours long — ne plus enchaîner ; conservé pour brouillons / `isV3ShortPathCompositeQuestionId`. */
 export const V3_FULL_ENTREPRISE_ID = 'V3_FULL_ENTREPRISE' as const
 export const V3_SHORT_USAGE_ID = 'V3_SHORT_USAGE' as const
 export const V3_SHORT_TRANSPARENCE_ID = 'V3_SHORT_TRANSPARENCE' as const
@@ -72,6 +72,23 @@ function hasQ111Text(answers: Record<string, unknown>): boolean {
 function hasQ111Media(answers: Record<string, unknown>): boolean {
   const v = answers['E4.N8.Q11.1']
   return Array.isArray(v) && v.includes('E4.N8.Q11.1.B')
+}
+
+/** Rôle « côté fournisseur » : `E4.N7.Q1` = Fournisseur (`…Q1.A`) ou intégrateur / marque blanche (`…Q1.C`). */
+function isV3ProviderRoleForArt50Fork(answers: Record<string, unknown>): boolean {
+  const q1 = answers['E4.N7.Q1']
+  return q1 === 'E4.N7.Q1.A' || q1 === 'E4.N7.Q1.C'
+}
+
+/**
+ * Fourche transparence (long) après `E6.N10.Q1` : Art. 50.2 (marquage technique) si fournisseur
+ * ou intégrateur ; Art. 50.4 (étiquetage visible) si déployeur ou rôle indéterminé (défaut prudent).
+ */
+export function getNextArt50SubquestionAfterE6N10Q1Long(
+  answers: Record<string, unknown>
+): 'E6.N10.Q2' | 'E6.N10.Q3' {
+  if (isV3ProviderRoleForArt50Fork(answers)) return 'E6.N10.Q2'
+  return 'E6.N10.Q3'
 }
 
 function hasSensitiveAnnexIII(answers: Record<string, unknown>): boolean {
@@ -162,17 +179,17 @@ export function deriveBpgvBandFromOrsAnswersV3(answers: Record<string, unknown>)
   return m
 }
 
-/** Après ORS (parcours long) : déclaration E4.N8.Q12 (bloc E5 retiré). */
+/** Après `E4.N8.Q12` (littératie) : premier écran E5 du bloc données / gouvernance (`E5.N9.Q5`). */
 export function getFirstE5AfterOrsV3(_answers: Record<string, unknown>): string {
-  return 'E4.N8.Q12'
+  return 'E5.N9.Q5'
 }
 
 /**
- * Après le bloc ORS (Q10 / T1 / M1) : en long → checklist entreprise consolidée ; en court → première étape synthétique entreprise.
+ * Après le bloc ORS (Q10 / T1 / M1) : parcours long → question autonome `E4.N8.Q12` (Art. 4) puis `E5.N9.Q5` ;
+ * parcours court → directement `E5.N9.Q5` puis packs synthétiques.
  */
 function nextAfterOrsV3(_answers: Record<string, unknown>, pathMode: 'long' | 'short'): string | null {
-  if (pathMode === 'short') return V3_SHORT_ENTREPRISE_ID
-  return V3_FULL_ENTREPRISE_ID
+  return pathMode === 'long' ? 'E4.N8.Q12' : 'E5.N9.Q5'
 }
 
 function getNextAfterQ12(_answers: Record<string, unknown>, pathMode: 'long' | 'short'): string | null {
@@ -254,13 +271,49 @@ export function getNextQuestionV3(
       return nextAfterOrsV3(answers, pathMode)
 
     case 'E4.N8.Q12':
-      return getNextAfterQ12(answers, pathMode)
+      return pathMode === 'long' ? 'E5.N9.Q5' : null
+
+    case 'E5.N9.Q5':
+      return pathMode === 'long' ? 'E5.N9.Q6' : V3_SHORT_ENTREPRISE_ID
+
+    case 'E5.N9.Q6':
+      return pathMode === 'long' ? 'E5.N9.Q1' : null
+
+    case 'E5.N9.Q1':
+      return pathMode === 'long' ? 'E5.N9.Q7' : null
+
+    case 'E5.N9.Q7':
+      return pathMode === 'long' ? 'E5.N9.Q4' : null
+
+    case 'E5.N9.Q4':
+      /** Parcours long : plus de pack `V3_FULL_USAGE` (écran vide) — enchaînement direct sur les questions E5 réelles. */
+      return pathMode === 'long' ? 'E5.N9.Q8' : null
 
     case V3_FULL_ENTREPRISE_ID:
-      return V3_FULL_USAGE_ID
+      return pathMode === 'long' ? 'E5.N9.Q4' : V3_FULL_USAGE_ID
 
     case V3_FULL_USAGE_ID:
-      return V3_FULL_TRANSPARENCE_ID
+      /** Reprise / brouillon : franchir le pack déprécié vers la suite réelle du long. */
+      return pathMode === 'long' ? 'E5.N9.Q8' : null
+
+    case 'E5.N9.Q8':
+      return pathMode === 'long' ? 'E5.N9.Q9' : null
+
+    case 'E5.N9.Q9':
+      return pathMode === 'long' ? 'E5.N9.Q3' : null
+
+    case 'E5.N9.Q3':
+      return pathMode === 'long' ? 'E6.N10.Q1' : null
+
+    case 'E6.N10.Q1': {
+      if (pathMode !== 'long') return null
+      return getNextArt50SubquestionAfterE6N10Q1Long(answers)
+    }
+
+    case 'E6.N10.Q2':
+    case 'E6.N10.Q3':
+      /** Parcours long : plus de pack `V3_FULL_TRANSPARENCE` — fin du questionnaire après E6. */
+      return pathMode === 'long' ? getNextAfterQ12(answers, 'long') : null
 
     case V3_FULL_TRANSPARENCE_ID:
       return getNextAfterQ12(answers, 'long')
@@ -323,6 +376,7 @@ export function buildQuestionPathV3(
   return path
 }
 
+/** Reprise session V3 : suit `getNextQuestionV3` (long : … `E6.N10.Q1` → `E6.N10.Q2` ou `E6.N10.Q3` selon le rôle). */
 export function getResumeQuestionIdV3(
   answers: Record<string, unknown>,
   systemType: string | null | undefined,
@@ -336,12 +390,16 @@ export function getResumeQuestionIdV3(
     const next = getNextQuestionV3(q, answers, systemType, pathMode)
     if (!next) {
       if (/^E5\.N9\./.test(q)) {
-        q = pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : V3_FULL_ENTREPRISE_ID
+        q = pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : 'E5.N9.Q4'
         continue
       }
       if (/^E6\.N10\./.test(q)) {
-        q = pathMode === 'short' ? V3_SHORT_ENTREPRISE_ID : V3_FULL_USAGE_ID
-        continue
+        if (pathMode === 'short') {
+          q = V3_SHORT_ENTREPRISE_ID
+          continue
+        }
+        /** Long : fin de chaîne après E6 — même convention que V1 (`return q` lorsque `next` est null). */
+        return q
       }
       return q
     }
