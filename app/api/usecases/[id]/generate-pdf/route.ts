@@ -15,6 +15,7 @@ import {
   normalizeQuestionnaireVersion,
 } from '@/lib/questionnaire-version'
 import { buildV3ScoringContextFromDbResponses } from '@/lib/scoring-v3-server'
+import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
 
 function stringSetsEqual(a: Set<string>, b: Set<string>): boolean {
   if (a.size !== b.size) return false
@@ -235,17 +236,26 @@ export async function GET(
       console.error('⚠️ Error fetching responses:', responsesError)
     }
 
+    const mergedPdfResponses = mergeChecklistIntoDbResponseRows(
+      responses || [],
+      (useCase as { checklist_gov_enterprise?: string[] | null }).checklist_gov_enterprise ?? null,
+      (useCase as { checklist_gov_usecase?: string[] | null }).checklist_gov_usecase ?? null
+    )
+
     // Calculer le score complet pour obtenir les category_scores avec gestion d'erreur
     let fullScoreData
     try {
       const { calculateScore } = await import('@/app/usecases/[id]/utils/score-calculator')
+      const dbPdfPath = (useCase as { path_mode?: string | null }).path_mode
       const v3PathModeForPdf =
         pdfQuestionnaireVersion === QUESTIONNAIRE_VERSION_V3
-          ? inferV3PdfQuestionnairePathMode(
-              responses || [],
-              (useCase as { system_type?: string | null }).system_type ?? null,
-              (useCase as { active_question_codes?: unknown }).active_question_codes
-            )
+          ? dbPdfPath === 'short' || dbPdfPath === 'long'
+            ? (dbPdfPath as 'short' | 'long')
+            : inferV3PdfQuestionnairePathMode(
+                mergedPdfResponses,
+                (useCase as { system_type?: string | null }).system_type ?? null,
+                (useCase as { active_question_codes?: unknown }).active_question_codes
+              )
           : 'long'
       fullScoreData = await calculateScore(useCaseId, responses || [], supabase, {
         questionnaireVersion: useCase.questionnaire_version,
@@ -253,6 +263,10 @@ export async function GET(
         ...(pdfQuestionnaireVersion === QUESTIONNAIRE_VERSION_V3
           ? { questionnairePathMode: v3PathModeForPdf }
           : {}),
+        checklistGovEnterprise:
+          (useCase as { checklist_gov_enterprise?: string[] | null }).checklist_gov_enterprise ?? null,
+        checklistGovUsecase:
+          (useCase as { checklist_gov_usecase?: string[] | null }).checklist_gov_usecase ?? null,
       })
       console.log('✅ Score calculé avec succès:', fullScoreData)
     } catch (scoreError) {

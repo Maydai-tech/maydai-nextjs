@@ -49,6 +49,27 @@ function orsUpToQ9() {
   ]
 }
 
+/** ORS N8 complet jusqu’à la déclaration Q12 (requis pour `bpgv_variant` en V2). */
+function orsThroughQ12Declaration(opts: {
+  n7HighRiskDomain?: boolean
+  q9: 'E4.N8.Q9.A' | 'E4.N8.Q9.B'
+}) {
+  const n7q2 = opts.n7HighRiskDomain ? ['E4.N7.Q2.A'] : ['E4.N7.Q2.G']
+  return [
+    row('E4.N7.Q1', { single_value: 'E4.N7.Q1.B' }),
+    row('E4.N7.Q1.2', { single_value: 'E4.N7.Q1.2.A' }),
+    row('E4.N7.Q2', { multiple_codes: n7q2 }),
+    row('E4.N7.Q2.1', { multiple_codes: ['E4.N7.Q2.1.E'] }),
+    row('E4.N7.Q3', { multiple_codes: ['E4.N7.Q3.E'] }),
+    row('E4.N7.Q3.1', { multiple_codes: ['E4.N7.Q3.1.E'] }),
+    row('E4.N8.Q9', { single_value: opts.q9 }),
+    row('E4.N8.Q9.1', { single_value: 'E4.N8.Q9.1.B' }),
+    row('E4.N8.Q10', { single_value: 'E4.N8.Q10.A' }),
+    row('E4.N8.Q11.0', { single_value: 'E4.N8.Q11.0.B' }),
+    row('E4.N8.Q12', { single_value: 'E4.N8.Q12.B' })
+  ]
+}
+
 describe('Score Calculator — questionnaire V2', () => {
   const mockUsecaseId = 'test-v2-usecase'
 
@@ -60,9 +81,10 @@ describe('Score Calculator — questionnaire V2', () => {
     const v2 = await calculateScore(mockUsecaseId, responses, undefined, {
       questionnaireVersion: QUESTIONNAIRE_VERSION_V2
     })
-    expect(v1.score).not.toBe(v2.score)
     expect(v1.questionnaire_version).toBe(QUESTIONNAIRE_VERSION_V1)
     expect(v2.questionnaire_version).toBe(QUESTIONNAIRE_VERSION_V2)
+    expect(v2.active_question_codes?.includes('E6.N10.Q1')).toBe(false)
+    expect(v1.score).toBe(v2.score)
   })
 
   test('V1 inchangé : réponses inchangées sans option explicite (version implicite V1)', async () => {
@@ -71,7 +93,7 @@ describe('Score Calculator — questionnaire V2', () => {
       row('E5.N9.Q9', { single_value: 'E5.N9.Q9.B' })
     ]
     const result = await calculateScore(mockUsecaseId, responses)
-    expect(result.score).toBe(87)
+    expect(result.score).toBe(90)
     expect(result.questionnaire_version).toBe(QUESTIONNAIRE_VERSION_V1)
     expect(result.category_scores.every(c => c.evaluation_status !== 'not_evaluated')).toBe(true)
   })
@@ -87,10 +109,11 @@ describe('Score Calculator — questionnaire V2', () => {
     const v2 = await calculateScore(mockUsecaseId, responses, undefined, {
       questionnaireVersion: QUESTIONNAIRE_VERSION_V2
     })
-    expect(v1.score).toBe(87)
+    expect(v1.score).toBe(90)
     expect(v2.score).toBe(90)
     expect(v2.questionnaire_version).toBe(QUESTIONNAIRE_VERSION_V2)
     expect(v2.active_question_codes?.length).toBeGreaterThan(0)
+    expect(v2.active_question_codes?.includes('E6.N10.Q1')).toBe(false)
   })
 
   test('V2 unacceptable : élimination conservée (Q3.1 éliminatoire)', async () => {
@@ -125,19 +148,7 @@ describe('Score Calculator — questionnaire V2', () => {
   })
 
   test('V2 limited : bande BPGV dérivée des réponses ORS (Q9.A risk limited)', async () => {
-    const responses = [
-      row('E4.N7.Q1', { single_value: 'E4.N7.Q1.B' }),
-      row('E4.N7.Q1.2', { single_value: 'E4.N7.Q1.2.A' }),
-      row('E4.N7.Q2', { multiple_codes: ['E4.N7.Q2.G'] }),
-      row('E4.N7.Q2.1', { multiple_codes: ['E4.N7.Q2.1.E'] }),
-      row('E4.N7.Q3', { multiple_codes: ['E4.N7.Q3.E'] }),
-      row('E4.N7.Q3.1', { multiple_codes: ['E4.N7.Q3.1.E'] }),
-      row('E4.N8.Q9', { single_value: 'E4.N8.Q9.A' }),
-      row('E4.N8.Q9.1', { single_value: 'E4.N8.Q9.1.B' }),
-      row('E4.N8.Q10', { single_value: 'E4.N8.Q10.A' }),
-      row('E4.N8.Q11.0', { single_value: 'E4.N8.Q11.0.B' }),
-      row('E5.N9.Q1', { single_value: 'E5.N9.Q1.A' })
-    ]
+    const responses = orsThroughQ12Declaration({ q9: 'E4.N8.Q9.A' })
     const v2 = await calculateScore(mockUsecaseId, responses, undefined, {
       questionnaireVersion: QUESTIONNAIRE_VERSION_V2
     })
@@ -145,19 +156,7 @@ describe('Score Calculator — questionnaire V2', () => {
   })
 
   test('V2 high : option ORS avec risk high sur N7', async () => {
-    const responses = [
-      row('E4.N7.Q1', { single_value: 'E4.N7.Q1.B' }),
-      row('E4.N7.Q1.2', { single_value: 'E4.N7.Q1.2.A' }),
-      row('E4.N7.Q2', { multiple_codes: ['E4.N7.Q2.A'] }),
-      row('E4.N7.Q2.1', { multiple_codes: ['E4.N7.Q2.1.E'] }),
-      row('E4.N7.Q3', { multiple_codes: ['E4.N7.Q3.E'] }),
-      row('E4.N7.Q3.1', { multiple_codes: ['E4.N7.Q3.1.E'] }),
-      row('E4.N8.Q9', { single_value: 'E4.N8.Q9.B' }),
-      row('E4.N8.Q9.1', { single_value: 'E4.N8.Q9.1.B' }),
-      row('E4.N8.Q10', { single_value: 'E4.N8.Q10.A' }),
-      row('E4.N8.Q11.0', { single_value: 'E4.N8.Q11.0.B' }),
-      row('E5.N9.Q1', { single_value: 'E5.N9.Q1.A' })
-    ]
+    const responses = orsThroughQ12Declaration({ n7HighRiskDomain: true, q9: 'E4.N8.Q9.B' })
     const v2 = await calculateScore(mockUsecaseId, responses, undefined, {
       questionnaireVersion: QUESTIONNAIRE_VERSION_V2
     })
@@ -177,7 +176,7 @@ describe('Score Calculator — questionnaire V2', () => {
       row('E4.N8.Q10', { single_value: 'E4.N8.Q10.A' }),
       row('E4.N8.Q11.0', { single_value: 'E4.N8.Q11.0.B' }),
       row('E5.N9.Q7', { single_value: 'E5.N9.Q7.B' }),
-      row('E4.N8.Q12', { single_value: 'E4.N8.Q12.A' })
+      row('E4.N8.Q12', { single_value: 'E4.N8.Q12.B' })
     ]
     const v2 = await calculateScore(mockUsecaseId, responses, undefined, {
       questionnaireVersion: QUESTIONNAIRE_VERSION_V2

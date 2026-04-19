@@ -7,7 +7,7 @@
  *
  * Questionnaire V2 : si une question liée au slot n’est pas dans `active_question_codes`,
  * le statut est « Hors périmètre » (pas « Information insuffisante »).
- * Exception `priorite_2` : en scope dès qu’au moins une des questions E6.N10.Q1 / E6.N10.Q2 est active.
+ * Exception `priorite_2` : en scope dès qu’au moins une des questions E6.N10.Q1 / E6.N10.Q2 / E6.N10.Q3 est active.
  */
 
 import {
@@ -53,7 +53,7 @@ export const SLOT_QUESTION_CODES: Record<SlotKey, readonly string[]> = {
   quick_win_2: ['E5.N9.Q8'],
   quick_win_3: ['E5.N9.Q3'],
   priorite_1: ['E5.N9.Q4'],
-  priorite_2: ['E6.N10.Q1', 'E6.N10.Q2'],
+  priorite_2: ['E6.N10.Q1', 'E6.N10.Q2', 'E6.N10.Q3'],
   priorite_3: ['E5.N9.Q6'],
   action_1: ['E5.N9.Q1'],
   action_2: ['E5.N9.Q9'],
@@ -73,9 +73,11 @@ function slotQuestionsAllInActiveSet(
   return questionCodes.every(q => activeSet.has(q))
 }
 
-/** V2 : le slot transparence est en scope dès qu’au moins une des deux questions du couple est dans le parcours actif. */
+/** V2 / V3 : le slot transparence est en scope dès qu’au moins une question E6.N10 du couple / fourche est dans le parcours actif. */
 function priorite2InScopeV2(activeSet: Set<string>): boolean {
-  return activeSet.has('E6.N10.Q1') || activeSet.has('E6.N10.Q2')
+  return (
+    activeSet.has('E6.N10.Q1') || activeSet.has('E6.N10.Q2') || activeSet.has('E6.N10.Q3')
+  )
 }
 
 // ─── Types d'entrée (alignés sur usecase_responses) ─────────────────────────
@@ -159,14 +161,15 @@ export function applyChecklistKeyOverlayToResponses<T extends ResponseInput>(res
 const OUI_CODES: Record<string, string> = {
   'E5.N9.Q7':  'E5.N9.Q7.B',
   'E5.N9.Q8':  'E5.N9.Q8.B',
-  'E5.N9.Q3':  'E5.N9.Q3.A',
+  'E5.N9.Q3':  'E5.N9.Q3.B',
   'E5.N9.Q4':  'E5.N9.Q4.A',
   'E5.N9.Q6':  'E5.N9.Q6.B',
   'E5.N9.Q1':  'E5.N9.Q1.A',
   'E5.N9.Q9':  'E5.N9.Q9.B',
-  'E4.N8.Q12': 'E4.N8.Q12.A',
-  'E6.N10.Q1': 'E6.N10.Q1.A',
-  'E6.N10.Q2': 'E6.N10.Q2.A',
+  'E4.N8.Q12': 'E4.N8.Q12.B',
+  'E6.N10.Q1': 'E6.N10.Q1.B',
+  'E6.N10.Q2': 'E6.N10.Q2.B',
+  'E6.N10.Q3': 'E6.N10.Q3.B',
 }
 
 const NON_CODES: Record<string, string> = {
@@ -177,9 +180,10 @@ const NON_CODES: Record<string, string> = {
   'E5.N9.Q6':  'E5.N9.Q6.A',
   'E5.N9.Q1':  'E5.N9.Q1.B',
   'E5.N9.Q9':  'E5.N9.Q9.A',
-  'E4.N8.Q12': 'E4.N8.Q12.B',
-  'E6.N10.Q1': 'E6.N10.Q1.B',
-  'E6.N10.Q2': 'E6.N10.Q2.B',
+  'E4.N8.Q12': 'E4.N8.Q12.A',
+  'E6.N10.Q1': 'E6.N10.Q1.A',
+  'E6.N10.Q2': 'E6.N10.Q2.A',
+  'E6.N10.Q3': 'E6.N10.Q3.A',
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -344,6 +348,7 @@ function computePriorite2(
 
   const q1In = activeSetV2.has('E6.N10.Q1')
   const q2In = activeSetV2.has('E6.N10.Q2')
+  const q3In = activeSetV2.has('E6.N10.Q3')
 
   const mainQ1 = resolveDeclaredOptionCodeForSlotQuestion(
     'E6.N10.Q1',
@@ -357,21 +362,46 @@ function computePriorite2(
     transparencyKeys,
     responsesMap.get('E6.N10.Q2')
   )
+  const mainQ3 = resolveDeclaredOptionCodeForSlotQuestion(
+    'E6.N10.Q3',
+    bpgvKeys,
+    transparencyKeys,
+    responsesMap.get('E6.N10.Q3')
+  )
   const q1Answered = isOui('E6.N10.Q1', mainQ1) || isNon('E6.N10.Q1', mainQ1)
   const q2Answered = isOui('E6.N10.Q2', mainQ2) || isNon('E6.N10.Q2', mainQ2)
+  const q3Answered =
+    mainQ3 != null &&
+    (mainQ3 === 'E6.N10.Q3.A' || mainQ3 === 'E6.N10.Q3.B' || mainQ3 === 'E6.N10.Q3.C')
+  const q3Compliant = mainQ3 === 'E6.N10.Q3.B' || mainQ3 === 'E6.N10.Q3.C'
 
-  if (q1In && !q2In) {
+  /** Parcours long V3 déployeur : `Q1` + étiquetage visible `Q3` (sans `Q2`). */
+  if (q1In && q3In && !q2In) {
+    if (!q1Answered || !q3Answered) return 'Information insuffisante'
+    if (isOui('E6.N10.Q1', mainQ1) && q3Compliant) return 'OUI'
+    return 'NON'
+  }
+
+  if (q1In && !q2In && !q3In) {
     if (!q1Answered) return 'Information insuffisante'
     return isOui('E6.N10.Q1', mainQ1) ? 'OUI' : 'NON'
   }
-  if (!q1In && q2In) {
+  if (!q1In && q2In && !q3In) {
     if (!q2Answered) return 'Information insuffisante'
     return isOui('E6.N10.Q2', mainQ2) ? 'OUI' : 'NON'
   }
+  if (!q1In && !q2In && q3In) {
+    if (!q3Answered) return 'Information insuffisante'
+    return q3Compliant ? 'OUI' : 'NON'
+  }
 
-  if (!q1Answered || !q2Answered) return 'Information insuffisante'
-  if (isOui('E6.N10.Q1', mainQ1) && isOui('E6.N10.Q2', mainQ2)) return 'OUI'
-  return 'NON'
+  if (q1In && q2In) {
+    if (!q1Answered || !q2Answered) return 'Information insuffisante'
+    if (isOui('E6.N10.Q1', mainQ1) && isOui('E6.N10.Q2', mainQ2)) return 'OUI'
+    return 'NON'
+  }
+
+  return 'Information insuffisante'
 }
 
 function computePriorite3(

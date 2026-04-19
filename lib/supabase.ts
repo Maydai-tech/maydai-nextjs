@@ -79,8 +79,10 @@ export interface UseCase {
   bpgv_variant?: string | null
   active_question_codes?: string[]
   ors_exit?: string | null
-  checklist_gov_enterprise: string[]
-  checklist_gov_usecase: string[]
+  /** Parcours questionnaire V3 persisté (short / long) pour scoring et API. */
+  path_mode?: 'short' | 'long' | null
+  checklist_gov_enterprise?: string[]
+  checklist_gov_usecase?: string[]
   /** Colonnes JSONB `usecases` — codes E5 / E6 cochés (tableau JSON). */
   block_e5_governance: string[]
   block_e6_transparence: string[]

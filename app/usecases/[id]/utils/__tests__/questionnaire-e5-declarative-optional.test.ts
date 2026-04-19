@@ -2,11 +2,11 @@ import { checkCanProceed } from '../questionnaire'
 import { loadQuestions } from '../questions-loader'
 import type { Question } from '../../types/usecase'
 
-describe('E5 — N9 Q6 à Q9 (radio, sans champs conditionnels)', () => {
+describe('E5 — N9 Q3 & Q6 à Q9 (+ Q7 registre) radio, sans champs conditionnels', () => {
   const questions = loadQuestions()
 
-  it('déclare Q6 à Q9 comme questions radio sans conditional_detail_optional', () => {
-    for (const id of ['E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8', 'E5.N9.Q9'] as const) {
+  it('déclare Q3 et Q6 à Q9 comme questions radio sans conditional_detail_optional', () => {
+    for (const id of ['E5.N9.Q3', 'E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8', 'E5.N9.Q9'] as const) {
       const q = questions[id]!
       expect(q.type).toBe('radio')
       expect(q.conditional_detail_optional).toBeUndefined()
@@ -14,8 +14,9 @@ describe('E5 — N9 Q6 à Q9 (radio, sans champs conditionnels)', () => {
     }
   })
 
-  it('autorise une réponse radio (chaîne) pour Q6–Q9', () => {
+  it('autorise une réponse radio (chaîne) pour Q3 et Q6–Q9', () => {
     const cases = [
+      ['E5.N9.Q3', 'E5.N9.Q3.B'],
       ['E5.N9.Q6', 'E5.N9.Q6.B'],
       ['E5.N9.Q7', 'E5.N9.Q7.B'],
       ['E5.N9.Q8', 'E5.N9.Q8.B'],

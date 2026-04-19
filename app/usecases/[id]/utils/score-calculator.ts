@@ -1,13 +1,10 @@
 import { loadQuestions } from '../utils/questions-loader'
 import { UseCaseScore, ScoreBreakdown, CategoryScore } from '../types/usecase'
 import { RISK_CATEGORIES } from './risk-categories'
-import {
-  getUseCaseComplAiBonus,
-  getMaydAiScoresByPrinciple,
-  COMPL_AI_MAYDAI_CATEGORY_IDS
-} from './compl-ai-scoring'
+import { getUseCaseComplAiBonus, getMaydAiScoresByPrinciple } from './compl-ai-scoring'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { calculateMaxCategoryScoresForAllQuestions } from '@/lib/score-category-max'
+import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
 import { buildV2ScoringContextFromDbResponses } from '@/lib/scoring-v2-server'
 import { buildV3ScoringContextFromDbResponses } from '@/lib/scoring-v3-server'
 import {
@@ -17,6 +14,9 @@ import {
   type QuestionnaireVersion,
   normalizeQuestionnaireVersion
 } from '@/lib/questionnaire-version'
+
+/** Plafond MaydAI par principe (barème 5×4) — appliqué uniquement si le principe a une entrée dans `compl_ai_maydai_scores`. */
+const MAYDAI_MAX_SCORE_PER_COMPL_AI_PRINCIPLE = 4
 
 const BASE_SCORE = 90
 const COMPL_AI_WEIGHT = 2.5           // Multiplicateur COMPL-AI (20 × 2.5 = 50 points max)
@@ -108,6 +108,9 @@ export type CalculateScoreOptions = {
   systemType?: string | null
   /** V3 : sous-ensemble actif court vs long (scoring + métadonnées actives). */
   questionnairePathMode?: 'long' | 'short'
+  /** Colonnes `usecases.checklist_gov_*` (codes d’options) — fusion avec `usecase_responses`. */
+  checklistGovEnterprise?: string[] | null
+  checklistGovUsecase?: string[] | null
 }
 
 // Interface pour les impacts d'une réponse
@@ -310,24 +313,30 @@ export async function calculateScore(
       responses = []
     }
 
+    const mergedResponses = mergeChecklistIntoDbResponseRows(
+      responses,
+      options?.checklistGovEnterprise ?? null,
+      options?.checklistGovUsecase ?? null
+    )
+
     const questionnaireVersion = normalizeQuestionnaireVersion(options?.questionnaireVersion)
     const v2Context =
       questionnaireVersion === QUESTIONNAIRE_VERSION_V2
-        ? buildV2ScoringContextFromDbResponses(QUESTIONNAIRE_VERSION_V2, responses)
+        ? buildV2ScoringContextFromDbResponses(QUESTIONNAIRE_VERSION_V2, mergedResponses)
         : null
     const v3Context =
       questionnaireVersion === QUESTIONNAIRE_VERSION_V3
         ? buildV3ScoringContextFromDbResponses(
             QUESTIONNAIRE_VERSION_V3,
-            responses,
+            mergedResponses,
             options?.systemType ?? null,
             options?.questionnairePathMode ?? 'long'
           )
         : null
     const pathContext = v3Context ?? v2Context
     const responsesForScoring = pathContext
-      ? responses.filter(r => pathContext.scoringActiveQuestionCodes.has(r.question_code))
-      : responses
+      ? mergedResponses.filter(r => pathContext.scoringActiveQuestionCodes.has(r.question_code))
+      : mergedResponses
     const categoryMaxScores = pathContext?.categoryMaxScores ?? CATEGORY_MAX_SCORES
     
     let currentScore = BASE_SCORE
@@ -339,12 +348,6 @@ export async function calculateScore(
 
     // PREMIÈRE PASSE : Détecter les réponses éliminatoires (périmètre V1 = tout, V2 = questions actives répondues)
     for (const response of responsesForScoring) {
-      if (
-        response.question_code.startsWith('E5.') ||
-        response.question_code.startsWith('E6.')
-      ) {
-        continue
-      }
       const question = questions[response.question_code]
       if (!question) continue
 
@@ -389,12 +392,6 @@ export async function calculateScore(
 
     // DEUXIÈME PASSE : Calculer les scores normalement (même si éliminé, pour le breakdown)
     for (const response of responsesForScoring) {
-      if (
-        response.question_code.startsWith('E5.') ||
-        response.question_code.startsWith('E6.')
-      ) {
-        continue
-      }
       // console.log('Processing response for question:', response.question_code)
       
       const question = questions[response.question_code]
@@ -576,6 +573,8 @@ export async function calculateScore(
     let complAiRawScore: number | null = null  // Score brut COMPL-AI (0-20)
     let modelInfo: { id: string; name: string; provider: string } | null = null
     let maydaiScoresByPrinciple: Record<string, number> = {}
+    /** Catégories pour lesquelles `compl_ai_maydai_scores` retourne au moins une ligne mappée (pas de plafond MaydAI artificiel sinon). */
+    let maydaiCategoryIdsFromDb: Set<string> | null = null
     let maxScore = MAX_WITHOUT_COMPL_AI  // Par défaut, max = 90 (questionnaire seul)
 
     if (!isEliminated) {
@@ -585,17 +584,11 @@ export async function calculateScore(
       complAiScore = complAiData.complAiScore
       modelInfo = complAiData.modelInfo
 
-      // Récupérer les scores MaydAI par principe si un modèle est associé
+      // Récupérer les scores MaydAI par principe si un modèle est associé (clés = signal DB réel uniquement)
       if (modelInfo?.id) {
         const rawMaydaiByPrinciple = await getMaydAiScoresByPrinciple(modelInfo.id, supabaseClient)
         maydaiScoresByPrinciple = { ...rawMaydaiByPrinciple }
-        // Principe absent de la vue SQL ou score agrégé 0 : clé absente ⇒ traité comme 0,
-        // mais le principe reste « évalué » (max MaydAI) pour ne pas afficher « Non évalué ».
-        for (const cid of COMPL_AI_MAYDAI_CATEGORY_IDS) {
-          if (!Object.prototype.hasOwnProperty.call(maydaiScoresByPrinciple, cid)) {
-            maydaiScoresByPrinciple[cid] = 0
-          }
-        }
+        maydaiCategoryIdsFromDb = new Set(Object.keys(rawMaydaiByPrinciple))
       }
 
       // Calculer le score final selon la présence de COMPL-AI
@@ -629,11 +622,11 @@ export async function calculateScore(
       let questionnaireScore = Math.max(0, maxQuestionnaireScore - data.lostPoints)
       let maydaiScore = 0
       let maxMaydaiScore = 0
-      
-      // Vérifier si ce principe a un score MaydAI (0 explicite ≠ absence de principe)
-      if (Object.prototype.hasOwnProperty.call(maydaiScoresByPrinciple, categoryId)) {
-        maydaiScore = maydaiScoresByPrinciple[categoryId]
-        maxMaydaiScore = 4 // Chaque principe MaydAI vaut max 4 points (20 total / 5 principes)
+
+      // MaydAI : plafond et numérateur seulement si la vue SQL a une entrée pour ce principe (évite 0 % « 0/4 » sans signal)
+      if (maydaiCategoryIdsFromDb?.has(categoryId)) {
+        maydaiScore = maydaiScoresByPrinciple[categoryId] ?? 0
+        maxMaydaiScore = MAYDAI_MAX_SCORE_PER_COMPL_AI_PRINCIPLE
       }
 
       // Calcul final : questionnaire + MaydAI
@@ -646,9 +639,11 @@ export async function calculateScore(
         maxQuestionnaireScore === 0 &&
         maxMaydaiScore === 0
 
-      // V1 : aucune question sur la catégorie = 100 % historique. V2 : état explicite non évalué.
+      // V1 : aucune question sur la catégorie = 100 % historique. V2 : non évalué → 0 % (comportement historique). V3 : neutre 100 % (évite faux 0 % sans signal MaydAI / axe absent).
       const percentage = isV2NotEvaluated
-        ? 0
+        ? questionnaireVersion === QUESTIONNAIRE_VERSION_V3
+          ? 100
+          : 0
         : totalMaxScore > 0
           ? Math.round((totalScore / totalMaxScore) * 100)
           : 100
@@ -676,6 +671,73 @@ export async function calculateScore(
       globalScorePercent,
       categoryScores,
       questionnaireVersion
+    )
+
+    // --- SONDAGE FORENSIC (audit conformité Human Agency / Social & Environmental) ---
+    const scoringSet = pathContext?.scoringActiveQuestionCodes
+    const scoringCodesList = scoringSet ? [...scoringSet].sort() : null
+    const scoringE5 = scoringCodesList?.filter((c) => c.startsWith('E5.')) ?? []
+    const scoringE6 = scoringCodesList?.filter((c) => c.startsWith('E6.')) ?? []
+    const scoringNonE5E6 =
+      scoringCodesList?.filter((c) => !c.startsWith('E5.') && !c.startsWith('E6.')) ?? []
+    const auditTargets = ['human_agency', 'social_environmental'] as const
+    const forensicCategoryAudit: Record<
+      string,
+      {
+        categoryMaxScore: number
+        lostPoints: number
+        triggering_question_codes: string[]
+        maydaiScoreByPrinciple: number | null
+      }
+    > = {}
+    for (const cat of auditTargets) {
+      forensicCategoryAudit[cat] = {
+        categoryMaxScore: categoryMaxScores[cat] ?? 0,
+        lostPoints: categoryData[cat]?.lostPoints ?? 0,
+        triggering_question_codes: [...(categoryData[cat]?.questionsImpacted ?? new Set())].sort(),
+        maydaiScoreByPrinciple:
+          maydaiCategoryIdsFromDb?.has(cat) === true ? (maydaiScoresByPrinciple[cat] ?? null) : null,
+      }
+    }
+    console.log(
+      JSON.stringify(
+        {
+          forensic_audit: 'calculateScore_principle_trace',
+          usecase_id: usecaseId,
+          questionnaire_version: questionnaireVersion,
+          questionnaire_path_mode: options?.questionnairePathMode ?? null,
+          denominator_context: {
+            categoryMaxScores_human_agency: forensicCategoryAudit.human_agency.categoryMaxScore,
+            categoryMaxScores_social_environmental:
+              forensicCategoryAudit.social_environmental.categoryMaxScore,
+            note:
+              'categoryMaxScores provient de calculateMaxCategoryScoresForActiveQuestionCodes(scoringActiveQuestionCodes) ; les questions E5/E6 incluses dans scoringActiveQuestionCodes contribuent au dénominateur.',
+            scoringActiveQuestionCodes_total_count: scoringSet?.size ?? null,
+            scoringActiveQuestionCodes_E5_count: scoringE5.length,
+            scoringActiveQuestionCodes_E6_count: scoringE6.length,
+            scoringActiveQuestionCodes_non_E5_E6_count: scoringNonE5E6.length,
+            scoringActiveQuestionCodes_E5_sample: scoringE5.slice(0, 20),
+            scoringActiveQuestionCodes_E6_sample: scoringE6.slice(0, 20),
+          },
+          numerator_losses: {
+            human_agency_lostPoints: forensicCategoryAudit.human_agency.lostPoints,
+            social_environmental_lostPoints: forensicCategoryAudit.social_environmental.lostPoints,
+          },
+          response_trace_negative_category_impacts: {
+            human_agency_question_codes_with_negative_impact:
+              forensicCategoryAudit.human_agency.triggering_question_codes,
+            social_environmental_question_codes_with_negative_impact:
+              forensicCategoryAudit.social_environmental.triggering_question_codes,
+          },
+          llm_bonus_maydai_by_principle: {
+            human_agency: forensicCategoryAudit.human_agency.maydaiScoreByPrinciple,
+            social_environmental: forensicCategoryAudit.social_environmental.maydaiScoreByPrinciple,
+            model_id: modelInfo?.id ?? null,
+          },
+        },
+        null,
+        2
+      )
     )
 
     return {

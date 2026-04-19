@@ -46,6 +46,7 @@ import {
   isChecklistGovEnterpriseQuestionCode,
   isChecklistGovUsecaseQuestionCode,
 } from '../utils/bpgv-transparency-checklist-save'
+import { deriveMissingPenaltiesForShortPath } from '@/lib/derive-missing-penalties-short-path'
 
 function normalizeStringArrayForChecklist(value: unknown): string[] {
   if (!Array.isArray(value)) return []
@@ -652,14 +653,26 @@ export function useEvaluation({
         for (const [qid, val] of Object.entries(patches)) {
           await saveIndividualResponse(qid, val)
         }
-        await saveIndividualResponse(
-          CHECKLIST_GOV_ENTERPRISE_QUESTION_CODE,
-          collectE5DeclaredOptionCodes(merged)
-        )
-        await saveIndividualResponse(
-          CHECKLIST_GOV_USECASE_QUESTION_CODE,
-          collectE6DeclaredOptionCodes(merged)
-        )
+        let e5ChecklistKeys = collectE5DeclaredOptionCodes(merged)
+        let e6ChecklistKeys = collectE6DeclaredOptionCodes(merged)
+        if (questionnairePathModeProp === 'short') {
+          const usageSel = normalizeShortPathStageSelection(merged[V3_SHORT_USAGE_ID])
+          const transSel = normalizeShortPathStageSelection(merged[V3_SHORT_TRANSPARENCE_ID])
+          e5ChecklistKeys = [
+            ...new Set([
+              ...e5ChecklistKeys,
+              ...deriveMissingPenaltiesForShortPath(usageSel, V3_SHORT_USAGE_ID),
+            ]),
+          ]
+          e6ChecklistKeys = [
+            ...new Set([
+              ...e6ChecklistKeys,
+              ...deriveMissingPenaltiesForShortPath(transSel, V3_SHORT_TRANSPARENCE_ID),
+            ]),
+          ]
+        }
+        await saveIndividualResponse(CHECKLIST_GOV_ENTERPRISE_QUESTION_CODE, e5ChecklistKeys)
+        await saveIndividualResponse(CHECKLIST_GOV_USECASE_QUESTION_CODE, e6ChecklistKeys)
 
         const fields = computeV3UsecaseQuestionnaireFields(
           merged,
@@ -725,7 +738,15 @@ export function useEvaluation({
 
         setShowProcessingAnimation(true)
 
-        await supabase.from('usecases').update({ status: 'completed' }).eq('id', usecaseId)
+        await supabase
+          .from('usecases')
+          .update({
+            status: 'completed',
+            ...(normalizeQuestionnaireVersion(questionnaireVersion) === QUESTIONNAIRE_VERSION_V3
+              ? { path_mode: questionnairePathModeProp }
+              : {}),
+          })
+          .eq('id', usecaseId)
 
         setIsGeneratingReport(true)
         try {
@@ -833,7 +854,15 @@ export function useEvaluation({
 
         setShowProcessingAnimation(true)
 
-        await supabase.from('usecases').update({ status: 'completed' }).eq('id', usecaseId)
+        await supabase
+          .from('usecases')
+          .update({
+            status: 'completed',
+            ...(normalizeQuestionnaireVersion(questionnaireVersion) === QUESTIONNAIRE_VERSION_V3
+              ? { path_mode: questionnairePathModeProp }
+              : {}),
+          })
+          .eq('id', usecaseId)
 
         setIsGeneratingReport(true)
         try {

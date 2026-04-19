@@ -36,7 +36,6 @@ import {
   getV3ShortPathSegmentOrder,
 } from '../../utils/questionnaire-v3-short-path-ux'
 import { V3ShortPathStepper } from './V3ShortPathStepper'
-import { DECLARATION_PROOF_FLOW_COPY } from '../../utils/declaration-proof-flow-copy'
 
 /**
  * Interface définissant les props du composant StepByStepQuestionnaire
@@ -365,50 +364,6 @@ export function StepByStepQuestionnaire({
 
         {/* Section question principale */}
         <div className="mb-8">
-          {/^E5\.N9\.Q/.test(currentQuestion.id) && (
-              <div className="mb-6 rounded-lg border border-[#0080A3]/25 bg-[#0080A3]/5 px-4 py-3 text-sm text-gray-700 leading-relaxed">
-                <p className="font-medium text-gray-900 mb-1">Bloc E5 — réponses déclaratives</p>
-                <p className="mb-2">
-                  Ici, on vous demande d’abord <strong className="text-gray-900">si la pratique existe</strong> dans
-                  l’état actuel que vous déclarez (qualité des données, registre, surveillance humaine, robustesse /
-                  cybersécurité). Ce n’est <strong className="text-gray-900">pas un audit documentaire</strong> au
-                  milieu du questionnaire : <strong className="text-gray-900">aucune pièce jointe</strong> n’est requise
-                  à cette étape.
-                </p>
-                <p className="mb-2">
-                  Un <strong className="text-gray-900">« Oui »</strong> reste une déclaration : il peut être honnête
-                  sans que tous les détails soient déjà saisis. Les <strong className="text-gray-900">preuves</strong>,
-                  identités précises, exports ou documents se complètent ensuite dans le{' '}
-                  <strong className="text-gray-900">dossier du cas</strong>, la <strong className="text-gray-900">todo
-                  conformité</strong> et les fiches de preuve associées — ce qui alimente aussi les indicateurs «
-                  information suffisante » côté suivi.
-                </p>
-                <p className="text-xs text-gray-600 leading-relaxed mb-2 border-t border-[#0080A3]/15 pt-2">
-                  {DECLARATION_PROOF_FLOW_COPY.ouiSansPreuve}
-                </p>
-                <p className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-x-4 text-[#0080A3] font-medium text-sm">
-                  <Link
-                    href={`/dashboard/${useCase.company_id}/dossiers/${useCase.id}`}
-                    className="underline-offset-2 hover:underline"
-                  >
-                    {DECLARATION_PROOF_FLOW_COPY.linkLabelDossierCase}
-                  </Link>
-                  <Link
-                    href={`/dashboard/${useCase.company_id}/todo-list`}
-                    className="underline-offset-2 hover:underline"
-                  >
-                    {DECLARATION_PROOF_FLOW_COPY.linkLabelTodo}
-                  </Link>
-                  <Link
-                    href={useCaseRoutes.overview(useCase.id)}
-                    className="underline-offset-2 hover:underline"
-                  >
-                    Synthèse du cas
-                  </Link>
-                </p>
-              </div>
-            )}
-
           {v3CompositeKind === 'entry-q1' ? (
             <>
               {!(questionnairePathMode === 'short' && questionnaireVersionNorm === QUESTIONNAIRE_VERSION_V3) && (

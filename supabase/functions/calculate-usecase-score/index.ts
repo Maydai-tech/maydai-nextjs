@@ -45,9 +45,13 @@ function createErrorResponse(message: string, status: number, corsHeaders: any) 
 // Les données des questions sont maintenant importées depuis questions-data.json
 // Ce fichier JSON est synchronisé avec app/usecases/[id]/data/questions-with-scores.json
 
-/** Réponses E5/E6 ne font plus partie du référentiel de score (hors boucle). */
-function isRemovedGovernanceBlock(questionCode: string): boolean {
-  return questionCode.startsWith('E5.') || questionCode.startsWith('E6.')
+/**
+ * Niveau de risque AI Act : uniquement le bloc qualification cas d'usage (`E4.*`).
+ * Exclut explicitement la gouvernance (`E5`, `E6`) et les packs synthétiques (`V3_*`),
+ * ainsi que tout autre préfixe hors `E4`.
+ */
+function isQualificationRiskQuestion(questionCode: string): boolean {
+  return questionCode.startsWith('E4.')
 }
 
 function getSelectedCodesForScoring(response: any): string[] {
@@ -234,9 +238,8 @@ Deno.serve(async (req) => {
   }
 });
 /**
- * Calcule le score de base à partir des réponses de l'utilisateur
- * @param responses - Toutes les réponses de l'utilisateur
- * @returns Objet contenant le score et les détails du calcul
+ * Score de maturité (base /100) : toutes les réponses référencées dans le JSON
+ * (E4, E5, E6, packs `V3_*`, etc.) — aucun filtrage par bloc opérationnel.
  */
 function calculateBaseScore(responses: any[]) {
   let totalImpact = 0;
@@ -245,7 +248,6 @@ function calculateBaseScore(responses: any[]) {
 
   for (const response of responses) {
     const qc = response.question_code as string;
-    if (isRemovedGovernanceBlock(qc)) continue;
 
     const question = QUESTIONS_DATA[qc as keyof typeof QUESTIONS_DATA];
 
@@ -310,9 +312,8 @@ function calculateBaseScore(responses: any[]) {
 }
 
 /**
- * Calcule le niveau de risque basé sur les réponses de l'utilisateur
- * @param responses - Toutes les réponses de l'utilisateur
- * @returns Le niveau de risque le plus élevé
+ * Niveau de risque AI Act : agrège uniquement les options portant `risk` sur les
+ * questions dont le code commence par `E4.` (hors gouvernance et hors packs V3).
  */
 function calculateRiskLevel(responses: any[]): string {
   let highestRiskLevel = 'minimal';
@@ -320,7 +321,7 @@ function calculateRiskLevel(responses: any[]): string {
 
   for (const response of responses) {
     const questionCode = response.question_code as string;
-    if (isRemovedGovernanceBlock(questionCode)) continue;
+    if (!isQualificationRiskQuestion(questionCode)) continue;
 
     const question = QUESTIONS_DATA[questionCode as keyof typeof QUESTIONS_DATA];
 
