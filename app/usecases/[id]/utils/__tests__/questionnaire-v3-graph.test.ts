@@ -8,9 +8,11 @@ import {
   getResumeQuestionIdV3,
   V3_FULL_ENTREPRISE_ID,
   V3_FULL_TRANSPARENCE_ID,
+  V3_FULL_SOCIAL_ENV_ID,
   V3_FULL_USAGE_ID,
   V3_PRODUCT_SYSTEM_TYPE,
   V3_SHORT_ENTREPRISE_ID,
+  V3_SHORT_SOCIAL_ENV_ID,
   V3_SHORT_TRANSPARENCE_ID,
   V3_SHORT_USAGE_ID,
 } from '../questionnaire-v3-graph'
@@ -176,12 +178,20 @@ describe('questionnaire-v3-graph — séquence N8 (Q9.1, Q10, Q12)', () => {
     expect(getNextQuestionV3('E6.N10.Q1', a, null, 'long')).toBe('E6.N10.Q2')
   })
 
-  it('après `E6.N10.Q2` (parcours long) : fin de questionnaire (sans pack `V3_FULL_TRANSPARENCE`)', () => {
-    expect(getNextQuestionV3('E6.N10.Q2', {}, null, 'long')).toBeNull()
+  it('après `E6.N10.Q2` (parcours long) : enchaînement vers le bloc E7 (`E7.N11.Q1`)', () => {
+    expect(getNextQuestionV3('E6.N10.Q2', {}, null, 'long')).toBe('E7.N11.Q1')
   })
 
-  it('après `E6.N10.Q3` (parcours long) : fin de questionnaire (sans pack `V3_FULL_TRANSPARENCE`)', () => {
-    expect(getNextQuestionV3('E6.N10.Q3', {}, null, 'long')).toBeNull()
+  it('après `E6.N10.Q3` (parcours long) : enchaînement vers le bloc E7 (`E7.N11.Q1`)', () => {
+    expect(getNextQuestionV3('E6.N10.Q3', {}, null, 'long')).toBe('E7.N11.Q1')
+  })
+
+  it('après `E7.N11.Q1` (parcours long) : enchaînement vers `E7.N11.Q2`', () => {
+    expect(getNextQuestionV3('E7.N11.Q1', {}, null, 'long')).toBe('E7.N11.Q2')
+  })
+
+  it('après `E7.N11.Q2` (parcours long) : fin de questionnaire', () => {
+    expect(getNextQuestionV3('E7.N11.Q2', {}, null, 'long')).toBeNull()
   })
 
   it('écran `E6.N10.Q2` : pas d’enchaînement en parcours court', () => {
@@ -208,8 +218,8 @@ describe('questionnaire-v3-graph — séquence N8 (Q9.1, Q10, Q12)', () => {
     expect(getNextQuestionV3('E5.N9.Q8', {}, null, 'short')).toBeNull()
   })
 
-  it('après `V3_FULL_TRANSPARENCE` (parcours long) : aligné sur getNextAfterQ12 (long → null)', () => {
-    expect(getNextQuestionV3(V3_FULL_TRANSPARENCE_ID, {}, null, 'long')).toBeNull()
+  it('après `V3_FULL_TRANSPARENCE` (parcours long) : enchaînement vers le bloc E7 (`E7.N11.Q1`)', () => {
+    expect(getNextQuestionV3(V3_FULL_TRANSPARENCE_ID, {}, null, 'long')).toBe('E7.N11.Q1')
   })
 
   it('après Q10 : long → `E4.N8.Q12` puis `E5.N9.Q5` ; court → `E5.N9.Q5` puis pack entreprise après Q5', () => {
@@ -363,9 +373,11 @@ describe('questionnaire-v3-graph — reprise (resume)', () => {
         questionId === V3_FULL_ENTREPRISE_ID ||
         questionId === V3_FULL_USAGE_ID ||
         questionId === V3_FULL_TRANSPARENCE_ID ||
+        questionId === V3_FULL_SOCIAL_ENV_ID ||
         questionId === V3_SHORT_ENTREPRISE_ID ||
         questionId === V3_SHORT_USAGE_ID ||
         questionId === V3_SHORT_TRANSPARENCE_ID ||
+        questionId === V3_SHORT_SOCIAL_ENV_ID ||
         questionId === 'V3._SHORT_CONSOLIDATED'
       ) {
         return true
@@ -585,7 +597,7 @@ describe('questionnaire-v3-graph — reprise (resume)', () => {
     expect(getResumeQuestionIdV3(answers, null, isComplete, 'long')).toBe('E6.N10.Q3')
   })
 
-  it('reprise long : après `E6.N10.Q3` complété (déployeur), fin de questionnaire — reprise sur `E6.N10.Q3` (sans pack `V3_FULL_TRANSPARENCE`)', () => {
+  it('reprise long : après `E6.N10.Q3` complété (déployeur), premier trou sur `E7.N11.Q1`', () => {
     const answers = {
       ...ctxOrsMinimal,
       'E4.N7.Q2': ['E4.N7.Q2.G'],
@@ -605,7 +617,56 @@ describe('questionnaire-v3-graph — reprise (resume)', () => {
       'E6.N10.Q1': 'E6.N10.Q1.B',
       'E6.N10.Q3': 'E6.N10.Q3.B',
     }
-    expect(getResumeQuestionIdV3(answers, null, isComplete, 'long')).toBe('E6.N10.Q3')
+    expect(getResumeQuestionIdV3(answers, null, isComplete, 'long')).toBe('E7.N11.Q1')
+  })
+
+  it('reprise long : après `E7.N11.Q1` complété, premier trou sur `E7.N11.Q2`', () => {
+    const answers = {
+      ...ctxOrsMinimal,
+      'E4.N7.Q2': ['E4.N7.Q2.G'],
+      'E4.N8.Q9': 'E4.N8.Q9.B',
+      'E4.N8.Q9.1': 'E4.N8.Q9.1.B',
+      'E4.N8.Q11.0': 'E4.N8.Q11.0.B',
+      'E4.N8.Q10': 'E4.N8.Q10.A',
+      'E4.N8.Q12': 'E4.N8.Q12.B',
+      'E5.N9.Q5': ['E5.N9.Q5.A'],
+      'E5.N9.Q6': 'E5.N9.Q6.B',
+      'E5.N9.Q1': 'E5.N9.Q1.A',
+      'E5.N9.Q7': 'E5.N9.Q7.B',
+      'E5.N9.Q4': 'E5.N9.Q4.A',
+      'E5.N9.Q8': 'E5.N9.Q8.B',
+      'E5.N9.Q9': 'E5.N9.Q9.B',
+      'E5.N9.Q3': 'E5.N9.Q3.B',
+      'E6.N10.Q1': 'E6.N10.Q1.B',
+      'E6.N10.Q3': 'E6.N10.Q3.B',
+      'E7.N11.Q1': 'E7.N11.Q1.B',
+    }
+    expect(getResumeQuestionIdV3(answers, null, isComplete, 'long')).toBe('E7.N11.Q2')
+  })
+
+  it('reprise long : après E7 complété, reprise sur la dernière question (`E7.N11.Q2`)', () => {
+    const answers = {
+      ...ctxOrsMinimal,
+      'E4.N7.Q2': ['E4.N7.Q2.G'],
+      'E4.N8.Q9': 'E4.N8.Q9.B',
+      'E4.N8.Q9.1': 'E4.N8.Q9.1.B',
+      'E4.N8.Q11.0': 'E4.N8.Q11.0.B',
+      'E4.N8.Q10': 'E4.N8.Q10.A',
+      'E4.N8.Q12': 'E4.N8.Q12.B',
+      'E5.N9.Q5': ['E5.N9.Q5.A'],
+      'E5.N9.Q6': 'E5.N9.Q6.B',
+      'E5.N9.Q1': 'E5.N9.Q1.A',
+      'E5.N9.Q7': 'E5.N9.Q7.B',
+      'E5.N9.Q4': 'E5.N9.Q4.A',
+      'E5.N9.Q8': 'E5.N9.Q8.B',
+      'E5.N9.Q9': 'E5.N9.Q9.B',
+      'E5.N9.Q3': 'E5.N9.Q3.B',
+      'E6.N10.Q1': 'E6.N10.Q1.B',
+      'E6.N10.Q3': 'E6.N10.Q3.B',
+      'E7.N11.Q1': 'E7.N11.Q1.B',
+      'E7.N11.Q2': 'E7.N11.Q2.B',
+    }
+    expect(getResumeQuestionIdV3(answers, null, isComplete, 'long')).toBe('E7.N11.Q2')
   })
 
   it('reprise long : après `E6.N10.Q1` complété (fournisseur), premier trou sur `E6.N10.Q2`', () => {

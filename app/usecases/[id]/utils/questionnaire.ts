@@ -356,7 +356,12 @@ export const checkCanProceed = (question: Question, answer: any): boolean => {
   
   switch (question.type) {
     case 'radio':
-      return typeof answer === 'string' && answer.length > 0
+      if (typeof answer === 'string') return answer.length > 0
+      if (typeof answer === 'object' && answer !== null && 'selected' in answer) {
+        const sel = (answer as { selected?: string }).selected
+        return typeof sel === 'string' && sel.length > 0
+      }
+      return false
     case 'checkbox':
       return Array.isArray(answer) && answer.length > 0
     case 'tags':
@@ -364,22 +369,6 @@ export const checkCanProceed = (question: Question, answer: any): boolean => {
         return Array.isArray(answer)
       }
       return Array.isArray(answer) && answer.length > 0
-    case 'conditional':
-      if (!answer) return false
-      if (typeof answer === 'string') return answer.length > 0
-      if (typeof answer === 'object' && answer.selected) {
-        // Check if it's a "Oui" option (ends with .B) with conditional fields or "Other" option (E4.N8.Q10.G)
-        const isYesWithConditional = answer.selected.endsWith('.B') && question.conditionalFields && question.conditionalFields.length > 0
-
-        if (isYesWithConditional) {
-          if (question.conditional_detail_optional) {
-            return true
-          }
-          return answer.conditionalValues && Object.values(answer.conditionalValues).some((v: any) => v && v.length > 0)
-        }
-        return true
-      }
-      return false
     default:
       return false
   }

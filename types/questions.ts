@@ -41,15 +41,10 @@ export interface Question {
   context_subtitle?: string;
   /** Court texte d’aide sous le libellé (affiché par QuestionRenderer) */
   description?: string;
-  type: 'radio' | 'checkbox' | 'tags' | 'conditional';
+  type: 'radio' | 'checkbox' | 'tags';
   required: boolean;
   risk?: string;
   options: QuestionOption[];
-  conditionalFields?: Array<{
-    key: string;
-    label: string;
-    placeholder: string;
-  }>;
   tooltip?: Tooltip;
   todo_action?: string;
   /** Mode d'impact pour les questions checkbox/tags: 'any' = impact unique si au moins une option sélectionnée */

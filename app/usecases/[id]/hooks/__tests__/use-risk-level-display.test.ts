@@ -67,7 +67,7 @@ describe('useRiskLevel — affichage unifié (merge / parse)', () => {
 
     it('cas impossible : snapshot impossible conservé si API en erreur', () => {
       const snap = {
-        riskLevel: null as const,
+        riskLevel: null,
         classificationStatus: 'impossible' as const,
       }
       const m = mergeRiskDisplay(snap, true, 'Failed', null, null)

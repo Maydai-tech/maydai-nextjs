@@ -554,7 +554,7 @@
   },
   "E4.N8.Q2": {
     "id": "E4.N8.Q2",
-    "question": "Question E4.N8.Q2",
+    "question": "Données personnelles et RGPD",
     "type": "radio",
     "required": true,
     "risk": "minimal",
@@ -567,7 +567,10 @@
       {
         "code": "E4.N8.Q2.A",
         "label": "Oui",
-        "score_impact": -5
+        "score_impact": -5,
+        "category_impacts": {
+          "privacy_data": -2
+        }
       },
       {
         "code": "E4.N8.Q2.B",
@@ -578,7 +581,7 @@
   },
   "E4.N8.Q3": {
     "id": "E4.N8.Q3",
-    "question": "Question E4.N8.Q3",
+    "question": "Décisions automatisées",
     "type": "radio",
     "required": true,
     "risk": "minimal",
@@ -591,7 +594,10 @@
       {
         "code": "E4.N8.Q3.A",
         "label": "Oui",
-        "score_impact": -5
+        "score_impact": -5,
+        "category_impacts": {
+          "human_agency": -2
+        }
       },
       {
         "code": "E4.N8.Q3.B",
@@ -602,7 +608,7 @@
   },
   "E4.N8.Q4": {
     "id": "E4.N8.Q4",
-    "question": "Question E4.N8.Q4",
+    "question": "Apprentissage automatique",
     "type": "radio",
     "required": true,
     "risk": "minimal",
@@ -615,7 +621,10 @@
       {
         "code": "E4.N8.Q4.A",
         "label": "Oui",
-        "score_impact": -5
+        "score_impact": -5,
+        "category_impacts": {
+          "technical_robustness": -2
+        }
       },
       {
         "code": "E4.N8.Q4.B",
@@ -626,7 +635,7 @@
   },
   "E4.N8.Q5": {
     "id": "E4.N8.Q5",
-    "question": "Question E4.N8.Q5",
+    "question": "Contact utilisateurs",
     "type": "radio",
     "required": true,
     "risk": "minimal",
@@ -639,7 +648,10 @@
       {
         "code": "E4.N8.Q5.A",
         "label": "Oui",
-        "score_impact": -5
+        "score_impact": -5,
+        "category_impacts": {
+          "transparency": -2
+        }
       },
       {
         "code": "E4.N8.Q5.B",
@@ -650,7 +662,7 @@
   },
   "E4.N8.Q6": {
     "id": "E4.N8.Q6",
-    "question": "Question E4.N8.Q6",
+    "question": "Prédictions/recommandations",
     "type": "radio",
     "required": true,
     "risk": "minimal",
@@ -663,7 +675,10 @@
       {
         "code": "E4.N8.Q6.A",
         "label": "Oui",
-        "score_impact": -5
+        "score_impact": -5,
+        "category_impacts": {
+          "diversity_fairness": -2
+        }
       },
       {
         "code": "E4.N8.Q6.B",
@@ -674,7 +689,7 @@
   },
   "E4.N8.Q7": {
     "id": "E4.N8.Q7",
-    "question": "Question E4.N8.Q7",
+    "question": "Environnement critique",
     "type": "radio",
     "required": true,
     "risk": "minimal",
@@ -687,7 +702,10 @@
       {
         "code": "E4.N8.Q7.A",
         "label": "Oui",
-        "score_impact": -5
+        "score_impact": -5,
+        "category_impacts": {
+          "risk_level": -10
+        }
       },
       {
         "code": "E4.N8.Q7.B",
@@ -698,7 +716,7 @@
   },
   "E4.N8.Q8": {
     "id": "E4.N8.Q8",
-    "question": "Question E4.N8.Q8",
+    "question": "Surveillance continue",
     "type": "radio",
     "required": true,
     "risk": "minimal",
@@ -711,7 +729,10 @@
       {
         "code": "E4.N8.Q8.A",
         "label": "Oui",
-        "score_impact": -5
+        "score_impact": -5,
+        "category_impacts": {
+          "human_agency": -2
+        }
       },
       {
         "code": "E4.N8.Q8.B",
@@ -854,8 +875,7 @@
         "label": "Oui",
         "score_impact": 0,
         "category_impacts": {
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "technical_robustness": -1
         }
       },
       {
@@ -882,8 +902,7 @@
         "label": "Texte",
         "score_impact": 0,
         "category_impacts": {
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "technical_robustness": -1
         }
       },
       {
@@ -891,8 +910,7 @@
         "label": "Image, audio ou vidéo",
         "score_impact": 0,
         "category_impacts": {
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "technical_robustness": -1
         }
       }
     ]
@@ -916,9 +934,7 @@
         "score_impact": -2,
         "risk": "limited",
         "category_impacts": {
-          "transparency": -2,
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "transparency": -2
         }
       },
       {
@@ -927,8 +943,7 @@
         "description": "Rédaction d'articles relus et validés par un humain qui en assume la responsabilité.",
         "score_impact": 0,
         "category_impacts": {
-          "technical_robustness": -0.5,
-          "diversity_fairness": -0.5
+          "technical_robustness": -0.5
         }
       },
       {
@@ -937,8 +952,7 @@
         "description": "Création de fiches produits, posts pour les réseaux sociaux, e-mailing.",
         "score_impact": 0,
         "category_impacts": {
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "transparency": -1
         }
       },
       {
@@ -947,8 +961,7 @@
         "description": "Génération de code informatique, synthèses de réunions, documentation métier.",
         "score_impact": 0,
         "category_impacts": {
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "technical_robustness": -1
         }
       },
       {
@@ -957,8 +970,7 @@
         "description": "Traduction ou correction orthographique sans modifier le sens initial.",
         "score_impact": 0,
         "category_impacts": {
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "technical_robustness": -1
         }
       }
     ]
@@ -984,8 +996,7 @@
         "label": "Non",
         "score_impact": 0,
         "category_impacts": {
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "technical_robustness": -1
         }
       },
       {
@@ -993,8 +1004,7 @@
         "label": "Je ne sais pas",
         "score_impact": 0,
         "category_impacts": {
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "technical_robustness": -1
         }
       }
     ]
@@ -1015,9 +1025,7 @@
         "label": "Contrôle éditorial humain avant diffusion, avec responsabilité éditoriale clairement identifiée",
         "score_impact": 0,
         "category_impacts": {
-          "transparency": -1,
-          "technical_robustness": -0.5,
-          "diversity_fairness": -0.5
+          "transparency": -1
         }
       },
       {
@@ -1025,8 +1033,7 @@
         "label": "Mise en forme standard, traduction, correction ou harmonisation linguistique sans modification substantielle du sens",
         "score_impact": 0,
         "category_impacts": {
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "transparency": -1
         }
       },
       {
@@ -1034,9 +1041,7 @@
         "label": "Usage interne, communication privée ou communication commerciale ne visant pas principalement à informer le public sur des questions d'intérêt public",
         "score_impact": -1,
         "category_impacts": {
-          "transparency": -1,
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "transparency": -1
         }
       }
     ]
@@ -1058,9 +1063,7 @@
         "score_impact": -3,
         "risk": "limited",
         "category_impacts": {
-          "social_environmental": -3,
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "social_environmental": -3
         }
       },
       {
@@ -1086,9 +1089,7 @@
         "label": "Oui",
         "score_impact": 0,
         "category_impacts": {
-          "transparency": -1,
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "transparency": -1
         }
       },
       {
@@ -1096,9 +1097,7 @@
         "label": "Non",
         "score_impact": -1,
         "category_impacts": {
-          "transparency": -1,
-          "technical_robustness": -1,
-          "diversity_fairness": -1
+          "transparency": -1
         }
       }
     ]
@@ -1214,9 +1213,9 @@
       {
         "code": "E5.N9.Q1.B",
         "label": "Non",
-        "score_impact": -4,
+        "score_impact": -8,
         "category_impacts": {
-          "technical_robustness": -4
+          "technical_robustness": -8
         }
       }
     ]
@@ -1236,9 +1235,9 @@
       {
         "code": "E5.N9.Q7.A",
         "label": "Non",
-        "score_impact": -4,
+        "score_impact": -8,
         "category_impacts": {
-          "human_agency": -4
+          "human_agency": -8
         }
       },
       {
@@ -1268,9 +1267,9 @@
       {
         "code": "E5.N9.Q4.B",
         "label": "Non",
-        "score_impact": -4,
+        "score_impact": -8,
         "category_impacts": {
-          "human_agency": -4
+          "human_agency": -8
         }
       }
     ]
@@ -1295,9 +1294,9 @@
       {
         "code": "E5.N9.Q8.A",
         "label": "Non",
-        "score_impact": -4,
+        "score_impact": -10,
         "category_impacts": {
-          "human_agency": -4
+          "human_agency": -10
         }
       }
     ]
@@ -1317,9 +1316,9 @@
       {
         "code": "E5.N9.Q9.A",
         "label": "Non",
-        "score_impact": -4,
+        "score_impact": -10,
         "category_impacts": {
-          "technical_robustness": -4
+          "technical_robustness": -10
         }
       },
       {
@@ -1371,9 +1370,9 @@
       {
         "code": "E6.N10.Q1.A",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -10,
         "category_impacts": {
-          "transparency": -5
+          "transparency": -10
         }
       },
       {
@@ -1430,14 +1429,68 @@
       {
         "code": "E6.N10.Q3.A",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -10,
         "category_impacts": {
-          "transparency": -5
+          "transparency": -10
         }
       },
       {
         "code": "E6.N10.Q3.C",
         "label": "Non applicable - Usage interne ou contenu exempté",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E7.N11.Q1": {
+    "id": "E7.N11.Q1",
+    "question": "Avez-vous évalué la consommation de ressources de votre modèle ou système d'IA (ex : énergie, puissance de calcul) et mis en œuvre des mesures pour réduire son empreinte environnementale ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Durabilité environnementale",
+      "shortContent": "L'AI Act promeut le développement de systèmes économes en énergie via des codes de conduite volontaires. Pour les modèles d'IA à usage général (GPAI), documenter la consommation énergétique est une obligation stricte.",
+      "fullContent": "Durabilité environnementale (Art. 95 / Annexe XI) : L'AI Act promeut le développement de systèmes économes en énergie via des codes de conduite volontaires. Pour les modèles d'IA à usage général (GPAI), documenter la consommation énergétique est en revanche une obligation stricte.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E7.N11.Q1.A",
+        "label": "Non",
+        "score_impact": -3,
+        "category_impacts": {
+          "social_environmental": -3
+        }
+      },
+      {
+        "code": "E7.N11.Q1.B",
+        "label": "Oui",
+        "score_impact": 0
+      }
+    ]
+  },
+  "E7.N11.Q2": {
+    "id": "E7.N11.Q2",
+    "question": "Le système d'IA intègre-t-il les principes de conception universelle pour prévenir les discriminations et garantir son accessibilité à tous (y compris aux personnes en situation de handicap) ?",
+    "type": "radio",
+    "required": true,
+    "tooltip": {
+      "title": "Inclusion et Accessibilité",
+      "shortContent": "Conformément aux principes ALTAI de l'UE, l'AI Act exige ou encourage fortement la prise en compte de la diversité pour prévenir l'exclusion, limiter les biais et garantir un accès équitable aux technologies d'IA.",
+      "fullContent": "Inclusion et Accessibilité (Considérant 80 / Art. 95) : Conformément aux principes ALTAI de l'UE, l'AI Act exige ou encourage fortement la prise en compte de la diversité pour prévenir l'exclusion, limiter les biais et garantir un accès équitable aux technologies d'IA.",
+      "icon": "💡"
+    },
+    "options": [
+      {
+        "code": "E7.N11.Q2.A",
+        "label": "Non",
+        "score_impact": -3,
+        "category_impacts": {
+          "social_environmental": -3
+        }
+      },
+      {
+        "code": "E7.N11.Q2.B",
+        "label": "Oui",
         "score_impact": 0
       }
     ]
@@ -1463,6 +1516,11 @@
       {
         "code": "E5.N9.Q1.A",
         "label": "Gestion des risques",
+        "score_impact": 0
+      },
+      {
+        "code": "E4.N8.Q12.B",
+        "label": "Formations IA Act",
         "score_impact": 0
       }
     ]
@@ -1522,35 +1580,46 @@
     "options": [
       {
         "code": "E6.N10.Q1.B",
-        "label": "Information claire qu'il s'agit d'une IA (Art. 50.1)",
+        "label": "Information des personnes physiques sur leur interaction avec l'IA (ex: chatbot)",
         "score_impact": 0
       },
       {
         "code": "E6.N10.Q2.B",
-        "label": "Marquage technique des contenus générés ou manipulés (Art. 50.2)",
+        "label": "Marquage technique des contenus générés (lisible par machine)",
         "score_impact": 0
       },
       {
         "code": "E6.N10.Q3.B",
-        "label": "Mention visible d'origine artificielle (hypertrucages / textes d'intérêt public) (Art. 50.4)",
+        "label": "Mention visible d'origine artificielle (hypertrucages / intérêt public)",
         "score_impact": 0
       },
       {
         "code": "E6.N10.Q3.C",
-        "label": "Non applicable — usage interne ou contenu exempté (Art. 50.4)",
-        "score_impact": 0
-      },
+        "label": "Non applicable — Exemption pour usage strictement interne",
+        "score_impact": 0,
+        "unique_answer": true
+      }
+    ]
+  },
+  "V3_SHORT_SOCIAL_ENV": {
+    "id": "V3_SHORT_SOCIAL_ENV",
+    "question": "Parcours court — bien-être social et environnemental : cochez les pratiques en place ; « Je ne sais pas / Passer » vide les cases de cette étape.",
+    "type": "tags",
+    "required": false,
+    "options": [
       {
-        "code": "E6.N10.TRANSPARENCY_PACK.INTERACTION",
-        "label": "Les utilisateurs sont informés qu'ils interagissent avec un système d'IA (ex: chatbot).",
-        "score_impact": 0
-      },
-      {
-        "code": "E6.N10.TRANSPARENCY_PACK.CONTENT",
-        "label": "Les contenus générés ou manipulés (textes, images, audios) sont marqués de manière lisible par la machine.",
+        "code": "E7.N11.Q3.B",
+        "label": "Le système d'IA intègre les principes d'accessibilité pour tous (conception universelle) et des mesures sont prises pour évaluer et réduire son empreinte environnementale.",
         "score_impact": 0
       }
     ]
+  },
+  "V3_FULL_SOCIAL_ENV": {
+    "id": "V3_FULL_SOCIAL_ENV",
+    "question": "Parcours court — bien-être social et environnemental (ancienne étape consolidée, conservée pour compatibilité brouillons).",
+    "type": "tags",
+    "required": false,
+    "options": []
   },
   "V3_FULL_TRANSPARENCE": {
     "id": "V3_FULL_TRANSPARENCE",

@@ -10,9 +10,11 @@ import {
 import type { QuestionnairePathMode } from '../../utils/questionnaire'
 import {
   V3_FULL_ENTREPRISE_ID,
+  V3_FULL_SOCIAL_ENV_ID,
   V3_FULL_TRANSPARENCE_ID,
   V3_FULL_USAGE_ID,
   V3_SHORT_ENTREPRISE_ID,
+  V3_SHORT_SOCIAL_ENV_ID,
   V3_SHORT_TRANSPARENCE_ID,
   V3_SHORT_USAGE_ID,
   isV3ShortPathCompositeQuestionId,
@@ -66,25 +68,96 @@ const V3_SHORT_STAGE_HEADINGS: Record<string, string> = {
   [V3_FULL_USAGE_ID]: 'Usage',
   [V3_SHORT_TRANSPARENCE_ID]: 'Transparence',
   [V3_FULL_TRANSPARENCE_ID]: 'Transparence',
+  [V3_SHORT_SOCIAL_ENV_ID]: 'Bien-être social & environnement',
+  [V3_FULL_SOCIAL_ENV_ID]: 'Bien-être social & environnement',
 }
 
-const V3_SHORT_TRANSPARENCE_UI_ROWS = [
+/** Parcours court V3 — obligations transparence (Art. 50) : libellés validés juridiquement ; `code` = persistance scoring / API. */
+const transparencyOptions = [
   {
-    label: "Information sur l'interaction avec une IA",
+    id: 'transparency_interaction' as const,
+    code: 'E6.N10.Q1.B',
+    label: "Information des personnes physiques sur leur interaction avec l'IA (ex: chatbot)",
+    legal: 'Art. 50.1',
+    isExclusive: false,
     tooltip:
-      "L'Article 50 exige d'informer clairement les personnes physiques qu'elles interagissent directement avec un système d'IA.",
+      "L'Article 50.1 exige d'informer les personnes physiques qu'elles interagissent avec une IA lorsque le contexte n'en rend pas la chose évidente.",
   },
   {
-    label: 'Marquage et identification du contenu généré',
+    id: 'transparency_watermark' as const,
+    code: 'E6.N10.Q2.B',
+    label: 'Marquage technique des contenus générés (lisible par machine)',
+    legal: 'Art. 50.2',
+    isExclusive: false,
     tooltip:
-      "L'Article 50 impose de marquer les contenus générés ou manipulés pour qu'ils soient identifiables comme artificiels.",
+      "L'Article 50.2 impose un marquage technique des sorties générées ou manipulées, dans un format lisible par machine, pour en assurer la détectabilité et la traçabilité.",
   },
   {
-    label: 'Mention visible pour hypertrucages et textes d’intérêt public',
+    id: 'transparency_deepfake' as const,
+    code: 'E6.N10.Q3.B',
+    label: "Mention visible d'origine artificielle (hypertrucages / intérêt public)",
+    legal: 'Art. 50.4',
+    isExclusive: false,
     tooltip:
-      "L'AI Act exige d'indiquer visiblement au public l'origine artificielle des hypertrucages et des textes d'intérêt public (Art. 50.4), avec des exemptions prévues (contrôle éditorial humain, parodie manifeste, usage interne ou contenu exempté).",
+      "L'Article 50.4 encadre la mention visible d'origine artificielle pour les hypertrucages et certains contenus d'intérêt public, avec des exemptions prévues par l'AI Act.",
+  },
+  {
+    id: 'transparency_na' as const,
+    code: 'E6.N10.Q3.C',
+    label: 'Non applicable — Exemption pour usage strictement interne',
+    legal: 'Art. 50.4',
+    isExclusive: true,
+    tooltip:
+      "Exemption pour un usage strictement interne, dans les limites prévues par l'AI Act (hors exposition aux obligations de transparence vis-à-vis du public couvertes par l'Art. 50.4).",
   },
 ] as const
+
+function normalizeTransparencySelectionToCanonical(answers: string[]): string[] {
+  if (answers.includes('E6.N10.Q3.C')) {
+    return ['E6.N10.Q3.C']
+  }
+  const s = new Set(answers)
+  const out: string[] = []
+  const interaction =
+    s.has('E6.N10.Q1.B') ||
+    s.has('E6.N10.TRANSPARENCY_PACK.INTERACTION') ||
+    s.has('E6.N10.TRANSPARENCY_PACK.A')
+  const watermark =
+    s.has('E6.N10.Q2.B') ||
+    s.has('E6.N10.TRANSPARENCY_PACK.CONTENT') ||
+    s.has('E6.N10.TRANSPARENCY_PACK.A')
+  if (interaction) out.push('E6.N10.Q1.B')
+  if (watermark) out.push('E6.N10.Q2.B')
+  if (s.has('E6.N10.Q3.B')) out.push('E6.N10.Q3.B')
+  return out
+}
+
+function isTransparencyShortPathRowChecked(
+  row: (typeof transparencyOptions)[number],
+  answers: string[]
+): boolean {
+  const s = new Set(answers)
+  switch (row.id) {
+    case 'transparency_interaction':
+      return (
+        s.has('E6.N10.Q1.B') ||
+        s.has('E6.N10.TRANSPARENCY_PACK.INTERACTION') ||
+        s.has('E6.N10.TRANSPARENCY_PACK.A')
+      )
+    case 'transparency_watermark':
+      return (
+        s.has('E6.N10.Q2.B') ||
+        s.has('E6.N10.TRANSPARENCY_PACK.CONTENT') ||
+        s.has('E6.N10.TRANSPARENCY_PACK.A')
+      )
+    case 'transparency_deepfake':
+      return s.has('E6.N10.Q3.B')
+    case 'transparency_na':
+      return s.has('E6.N10.Q3.C')
+    default:
+      return false
+  }
+}
 
 function V3ShortLegalInfoButton({
   tooltipId,
@@ -108,7 +181,10 @@ function V3ShortLegalInfoButton({
         }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <Info className="w-4 h-4 text-gray-400 hover:text-[#0080A3] transition-colors" aria-hidden="true" />
+        <Info
+          className="w-4 h-4 text-gray-400 hover:text-[#0080A3] transition-colors"
+          aria-describedby={tooltipId}
+        />
       </button>
       <span
         id={tooltipId}
@@ -173,6 +249,8 @@ export function V3ShortPathStageQuestion({
     question.id === V3_SHORT_USAGE_ID || question.id === V3_FULL_USAGE_ID
   const isV3ShortTransparence =
     question.id === V3_SHORT_TRANSPARENCE_ID || question.id === V3_FULL_TRANSPARENCE_ID
+  const isV3ShortSocialEnv =
+    question.id === V3_SHORT_SOCIAL_ENV_ID || question.id === V3_FULL_SOCIAL_ENV_ID
 
   const getOptionLegalTooltip = (opt: QuestionOption): string | null => {
     if (isV3ShortEntreprise) {
@@ -202,19 +280,14 @@ export function V3ShortPathStageQuestion({
       }
     }
     if (isV3ShortTransparence) {
+      const row = transparencyOptions.find((r) => r.code === opt.code)
+      if (row) return row.tooltip
       switch (opt.code) {
-        case 'E6.N10.Q1.B':
-          return V3_SHORT_TRANSPARENCE_UI_ROWS[0].tooltip
-        case 'E6.N10.Q2.B':
-          return V3_SHORT_TRANSPARENCE_UI_ROWS[1].tooltip
-        case 'E6.N10.Q3.B':
-        case 'E6.N10.Q3.C':
-          return V3_SHORT_TRANSPARENCE_UI_ROWS[2].tooltip
         case 'E6.N10.TRANSPARENCY_PACK.INTERACTION':
         case 'E6.N10.TRANSPARENCY_PACK.A':
-          return V3_SHORT_TRANSPARENCE_UI_ROWS[0].tooltip
+          return transparencyOptions[0].tooltip
         case 'E6.N10.TRANSPARENCY_PACK.CONTENT':
-          return V3_SHORT_TRANSPARENCE_UI_ROWS[1].tooltip
+          return transparencyOptions[1].tooltip
         default:
           break
       }
@@ -224,13 +297,12 @@ export function V3ShortPathStageQuestion({
 
   const getOptionDisplayLabel = (opt: QuestionOption): string => {
     if (isV3ShortTransparence) {
+      const row = transparencyOptions.find((r) => r.code === opt.code)
+      if (row) return row.label
       if (
-        opt.code === 'E6.N10.Q1.B' ||
-        opt.code === 'E6.N10.Q2.B' ||
-        opt.code === 'E6.N10.Q3.B' ||
-        opt.code === 'E6.N10.Q3.C' ||
         opt.code === 'E6.N10.TRANSPARENCY_PACK.INTERACTION' ||
-        opt.code === 'E6.N10.TRANSPARENCY_PACK.CONTENT'
+        opt.code === 'E6.N10.TRANSPARENCY_PACK.CONTENT' ||
+        opt.code === 'E6.N10.TRANSPARENCY_PACK.A'
       ) {
         return opt.label
       }
@@ -297,6 +369,68 @@ export function V3ShortPathStageQuestion({
   }
 
   const renderShortOptionsBlock = () => {
+    const transparencyGridReady =
+      isV3ShortTransparence &&
+      transparencyOptions.every((row) => question.options.some((o) => o.code === row.code))
+
+    const handleToggle = (row: (typeof transparencyOptions)[number], checked: boolean) => {
+      if (isReadOnly) return
+      const opt = question.options.find((o) => o.code === row.code)
+      if (!opt) return
+      const base = normalizeTransparencySelectionToCanonical(checkboxAnswers)
+      onAnswerChange(computeCheckboxNextAnswers(base, question.options, opt, checked))
+    }
+
+    if (transparencyGridReady) {
+      return (
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+          {transparencyOptions.map((row) => {
+            const opt = question.options.find((o) => o.code === row.code)
+            if (!opt) return null
+            const isChecked = isTransparencyShortPathRowChecked(row, checkboxAnswers)
+            const dimOtherOptions = hasExclusiveSelected && !row.isExclusive
+            const interactive = !isReadOnly && !dimOtherOptions
+            const tooltipId = `v3-short-${question.id}-transp-${row.id}-tooltip`
+
+            return (
+              <label
+                key={row.id}
+                className={`relative block ${interactive ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={(e) => handleToggle(row, e.target.checked)}
+                  disabled={isReadOnly || dimOtherOptions}
+                  className="sr-only peer"
+                  aria-checked={isChecked}
+                />
+                <span
+                  className={`relative flex flex-col rounded-xl border p-4 transition-all duration-200 peer-focus-visible:ring-2 peer-focus-visible:ring-[#0080A3] peer-focus-visible:ring-offset-2 ${
+                    dimOtherOptions
+                      ? 'border-slate-100 bg-slate-50'
+                      : 'border-slate-200 bg-white hover:border-[#0080A3]/40 peer-checked:border-[#0080A3] peer-checked:bg-[#0080A3]/5 peer-checked:ring-1 peer-checked:ring-[#0080A3]'
+                  }`}
+                >
+                  <span className="flex min-w-0 items-start justify-between gap-2">
+                    <span className="font-sans text-sm font-medium text-slate-800">{row.label}</span>
+                    <V3ShortLegalInfoButton
+                      tooltipId={tooltipId}
+                      tooltipText={row.tooltip}
+                      ariaTopic={row.label}
+                    />
+                  </span>
+                  <span className="font-mono mt-2 inline-block w-fit rounded-md bg-slate-50 px-2 py-1 text-xs text-slate-500">
+                    {row.legal}
+                  </span>
+                </span>
+              </label>
+            )
+          })}
+        </div>
+      )
+    }
+
     if (isV3ShortTransparence && question.options.length === 1) {
       const opt = question.options[0]
       const isChecked = checkboxAnswers.includes(opt.code)
@@ -315,7 +449,7 @@ export function V3ShortPathStageQuestion({
               checked={isChecked}
               onChange={(e) => applyCheckboxChange(opt, e.target.checked)}
               disabled={isReadOnly}
-              className="sr-only"
+              className="sr-only peer"
               aria-checked={isChecked}
             />
             <VisualCheckboxMark checked={isChecked} exclusive={isExclusive} />
@@ -327,19 +461,19 @@ export function V3ShortPathStageQuestion({
                 scoring si nécessaire.
               </p>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span>{V3_SHORT_TRANSPARENCE_UI_ROWS[0].label}</span>
+                <span>{transparencyOptions[0].label}</span>
                 <V3ShortLegalInfoButton
                   tooltipId={`v3-short-${question.id}-transp-row-0`}
-                  tooltipText={V3_SHORT_TRANSPARENCE_UI_ROWS[0].tooltip}
-                  ariaTopic={V3_SHORT_TRANSPARENCE_UI_ROWS[0].label}
+                  tooltipText={transparencyOptions[0].tooltip}
+                  ariaTopic={transparencyOptions[0].label}
                 />
               </div>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span>{V3_SHORT_TRANSPARENCE_UI_ROWS[1].label}</span>
+                <span>{transparencyOptions[1].label}</span>
                 <V3ShortLegalInfoButton
                   tooltipId={`v3-short-${question.id}-transp-row-1`}
-                  tooltipText={V3_SHORT_TRANSPARENCE_UI_ROWS[1].tooltip}
-                  ariaTopic={V3_SHORT_TRANSPARENCE_UI_ROWS[1].label}
+                  tooltipText={transparencyOptions[1].tooltip}
+                  ariaTopic={transparencyOptions[1].label}
                 />
               </div>
             </div>
@@ -388,7 +522,17 @@ export function V3ShortPathStageQuestion({
             </p>
           </div>
         ) : null}
-        {!isV3ShortEntreprise && !isV3ShortUsage && !isV3ShortTransparence ? (
+        {isV3ShortSocialEnv ? (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              Accessibilité et empreinte environnementale
+            </h3>
+            <p className="text-sm text-gray-500">
+              Cochez si les mesures décrites sont en place. Laissez vide si ce n&apos;est pas encore le cas.
+            </p>
+          </div>
+        ) : null}
+        {!isV3ShortEntreprise && !isV3ShortUsage && !isV3ShortTransparence && !isV3ShortSocialEnv ? (
           <p className="text-sm text-gray-600 leading-relaxed mb-6">{question.question}</p>
         ) : null}
         {renderShortOptionsBlock()}
@@ -409,7 +553,7 @@ export function V3ShortPathStageQuestion({
           </button>
         </div>
       </div>
-      {isV3ShortTransparence ? (
+      {isV3ShortSocialEnv ? (
         <div className="mt-8 p-4 bg-blue-50/50 border border-blue-100 rounded-lg flex items-start gap-3">
           <ShieldCheck className="w-5 h-5 text-[#0080A3] shrink-0 mt-0.5" aria-hidden="true" />
           <div>
@@ -746,154 +890,6 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
     )
   }
 
-  const renderConditionalQuestion = () => {
-    const handleConditionalChange = (selectedOption: string, conditionalValues?: Record<string, string>) => {
-      if (isReadOnly) return
-      
-      // Pour les questions avec des champs conditionnels, on vérifie si c'est "Oui" (code .B)
-      const hasConditionalFields = question.conditionalFields && question.conditionalFields.length > 0
-      const isYesOption = selectedOption.endsWith('.B') && hasConditionalFields
-      const isOtherOption = selectedOption === 'E4.N8.Q10.G'
-      
-      if (isYesOption || isOtherOption) {
-        const newAnswer = {
-          selected: selectedOption,
-          conditionalValues: conditionalValues || {}
-        }
-        onAnswerChange(newAnswer)
-      } else {
-        onAnswerChange(selectedOption)
-      }
-    }
-
-    // Déterminer l'état actuel
-    const currentSelection = typeof currentAnswer === 'string' 
-      ? currentAnswer 
-      : (typeof currentAnswer === 'object' && currentAnswer?.selected)
-        ? currentAnswer.selected
-        : null
-
-    const currentConditionalValues = typeof currentAnswer === 'object' && currentAnswer?.conditionalValues
-      ? currentAnswer.conditionalValues
-      : {}
-
-    // Filtrer les options pour ne pas afficher "Si oui préciser" (code .C)
-    const visibleOptions = question.options.filter(option => !option.code.endsWith('.C'))
-
-    return (
-      <div className="space-y-4">
-        {renderQuestionDescription()}
-        <div
-          className={
-            visibleOptions.length > 3
-              ? 'mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-4'
-              : 'mb-6 space-y-3'
-          }
-        >
-          {visibleOptions.map((option, index) => {
-            const isChecked = currentSelection === option.code
-            const interactive = !isReadOnly
-
-            return (
-              <label
-                key={`${question.id}-${option.code}-${index}`}
-                className={`${selectableCardBase} ${
-                  interactive ? selectableCardInteractive : 'cursor-default'
-                } ${isChecked ? selectableCardSelected : ''}`}
-              >
-                <input
-                  type="radio"
-                  name={question.id}
-                  value={option.code}
-                  checked={isChecked}
-                  disabled={isReadOnly}
-                  onChange={() => {
-                    if (!isReadOnly) {
-                      handleConditionalChange(option.code)
-                    }
-                  }}
-                  className="sr-only"
-                />
-                <VisualRadioMark checked={isChecked} />
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <span className={`leading-relaxed ${isReadOnly ? 'text-gray-700' : 'text-gray-900'}`}>
-                    {option.label}
-                  </span>
-                  {(option as QuestionOption).tooltip && (
-                    <Tooltip
-                      title={(option as QuestionOption).tooltip!.title}
-                      shortContent={(option as QuestionOption).tooltip!.shortContent}
-                      fullContent={(option as QuestionOption).tooltip!.fullContent}
-                      icon={(option as QuestionOption).tooltip!.icon}
-                      type="answer"
-                      position="auto"
-                      isolateSelection
-                    />
-                  )}
-                </div>
-              </label>
-            )
-          })}
-        </div>
-
-        {/* Conditional fields - Affichés quand "Oui" est sélectionné (.B) ou "Other" (E4.N8.Q10.G) */}
-        {((currentSelection?.endsWith('.B') && question.conditionalFields) || currentSelection === 'E4.N8.Q10.G') && question.conditionalFields && (
-          <div
-            className={
-              question.conditional_detail_optional
-                ? 'space-y-3 rounded-xl border border-dashed border-[#0080A3]/25 bg-white p-4 sm:p-5'
-                : 'space-y-3 rounded-xl border border-gray-200 bg-slate-50/50 p-4 sm:p-5'
-            }
-          >
-            <div className="text-sm font-medium text-gray-800 mb-1">
-              {question.conditional_detail_optional
-                ? 'Précisions (optionnel ici)'
-                : 'Veuillez préciser :'}
-            </div>
-            {question.conditional_detail_optional ? (
-              <p className="text-xs text-gray-600 leading-relaxed mb-2">
-                Vous pouvez avancer avec un simple <strong className="font-medium text-gray-800">Oui</strong> déclaratif.
-                Les preuves et le détail opérationnel se complètent ensuite dans le{' '}
-                <strong className="font-medium text-gray-800">dossier du cas</strong> et la{' '}
-                <strong className="font-medium text-gray-800">todo conformité</strong> (y compris les actions liées à
-                cette question).
-              </p>
-            ) : null}
-            {question.conditionalFields.map((field) => (
-              <div key={`${question.id}-${field.key}`}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {field.label}
-                  {question.conditional_detail_optional ? (
-                    <span className="text-xs font-normal text-gray-500 ml-1">(optionnel)</span>
-                  ) : null}
-                </label>
-                <input
-                  type="text"
-                  placeholder={field.placeholder}
-                  value={currentConditionalValues[field.key] || ''}
-                  disabled={isReadOnly}
-                  onChange={(e) => {
-                    if (!isReadOnly) {
-                      const newConditionalValues = {
-                        ...currentConditionalValues,
-                        [field.key]: e.target.value
-                      }
-                      
-                      handleConditionalChange(currentSelection!, newConditionalValues)
-                    }
-                  }}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent ${
-                    isReadOnly ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : ''
-                  }`}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  }
-
   // Rendu principal selon le type de question
   switch (question.type) {
     case 'radio':
@@ -902,8 +898,6 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
       return renderCheckboxQuestion()
     case 'tags':
       return renderTagsQuestion()
-    case 'conditional':
-      return renderConditionalQuestion()
     default:
       return (
         <div className="text-red-600">

@@ -19,19 +19,22 @@ import { isOrsUnacceptableAtQ31 } from './questionnaire-v2-graph'
 import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
 import { V3_PRODUCT_SYSTEM_TYPE } from '@/lib/qualification-v3-decision'
 
-/** Étapes synthétiques parcours court V3 (séquentielles). Littératie IA : question autonome `E4.N8.Q12` (long) ou dérivée côté court. */
+/** Étapes synthétiques parcours court V3 (séquentielles : entreprise, usage, transparence, bien-être social & env.). Littératie IA : question autonome `E4.N8.Q12` (long) ou dérivée côté court. */
 export const V3_SHORT_ENTREPRISE_ID = 'V3_SHORT_ENTREPRISE' as const
 /** @deprecated Ancienne checklist « entreprise » parcours long — ne plus enchaîner ; conservé pour brouillons / `isV3ShortPathCompositeQuestionId`. */
 export const V3_FULL_ENTREPRISE_ID = 'V3_FULL_ENTREPRISE' as const
 export const V3_SHORT_USAGE_ID = 'V3_SHORT_USAGE' as const
 export const V3_SHORT_TRANSPARENCE_ID = 'V3_SHORT_TRANSPARENCE' as const
+export const V3_SHORT_SOCIAL_ENV_ID = 'V3_SHORT_SOCIAL_ENV' as const
 export const V3_FULL_USAGE_ID = 'V3_FULL_USAGE' as const
 export const V3_FULL_TRANSPARENCE_ID = 'V3_FULL_TRANSPARENCE' as const
+export const V3_FULL_SOCIAL_ENV_ID = 'V3_FULL_SOCIAL_ENV' as const
 
 export const V3_SHORT_STAGE_IDS = [
   V3_SHORT_ENTREPRISE_ID,
   V3_SHORT_USAGE_ID,
   V3_SHORT_TRANSPARENCE_ID,
+  V3_SHORT_SOCIAL_ENV_ID,
 ] as const
 
 export function isV3ShortSyntheticQuestionId(questionId: string): boolean {
@@ -41,14 +44,15 @@ export function isV3ShortSyntheticQuestionId(questionId: string): boolean {
 /** @deprecated Utiliser les trois constantes V3_SHORT_* ; conservé pour migrations / anciennes données. */
 export const V3_SHORT_MINIPACK_ID = 'V3._SHORT_CONSOLIDATED' as const
 
-/** Étapes « pack » court V3 (3 écrans + ancien nœud consolidé) pour composite UI / tags. */
+/** Étapes « pack » court V3 (4 écrans + ancien nœud consolidé) pour composite UI / tags. */
 export function isV3ShortPathCompositeQuestionId(questionId: string): boolean {
   return (
     questionId === V3_SHORT_MINIPACK_ID ||
     isV3ShortSyntheticQuestionId(questionId) ||
     questionId === V3_FULL_ENTREPRISE_ID ||
     questionId === V3_FULL_USAGE_ID ||
-    questionId === V3_FULL_TRANSPARENCE_ID
+    questionId === V3_FULL_TRANSPARENCE_ID ||
+    questionId === V3_FULL_SOCIAL_ENV_ID
   )
 }
 
@@ -312,17 +316,24 @@ export function getNextQuestionV3(
 
     case 'E6.N10.Q2':
     case 'E6.N10.Q3':
-      /** Parcours long : plus de pack `V3_FULL_TRANSPARENCE` — fin du questionnaire après E6. */
-      return pathMode === 'long' ? getNextAfterQ12(answers, 'long') : null
+      /** Parcours long : bloc E7 (bien-être social & environnemental) après transparence E6. */
+      return pathMode === 'long' ? 'E7.N11.Q1' : null
 
     case V3_FULL_TRANSPARENCE_ID:
-      return getNextAfterQ12(answers, 'long')
+      return pathMode === 'long' ? 'E7.N11.Q1' : null
+
+    case 'E7.N11.Q1':
+      return pathMode === 'long' ? 'E7.N11.Q2' : null
+    case 'E7.N11.Q2':
+      return null
 
     case V3_SHORT_ENTREPRISE_ID:
       return V3_SHORT_USAGE_ID
     case V3_SHORT_USAGE_ID:
       return V3_SHORT_TRANSPARENCE_ID
     case V3_SHORT_TRANSPARENCE_ID:
+      return V3_SHORT_SOCIAL_ENV_ID
+    case V3_SHORT_SOCIAL_ENV_ID:
       return null
 
     /** Ancien nœud unique : renvoie vers la première étape (les réponses agrégées ne sont plus utilisées). */
@@ -376,7 +387,7 @@ export function buildQuestionPathV3(
   return path
 }
 
-/** Reprise session V3 : suit `getNextQuestionV3` (long : … `E6.N10.Q1` → `E6.N10.Q2` ou `E6.N10.Q3` selon le rôle). */
+/** Reprise session V3 : suit `getNextQuestionV3` (long : … E6 → `E7.N11.Q1` → `E7.N11.Q2`). */
 export function getResumeQuestionIdV3(
   answers: Record<string, unknown>,
   systemType: string | null | undefined,

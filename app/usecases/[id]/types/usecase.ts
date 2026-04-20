@@ -1,3 +1,5 @@
+import type { PathMode } from '@/lib/journey-path-mode'
+
 export interface UseCase {
   id: string
   name: string
@@ -45,6 +47,8 @@ export interface UseCase {
   /** Présent quand le rapport d’analyse IA a été généré (colonne usecases) */
   report_generated_at?: string | null
   report_summary?: string | null
+  /** V3 : `short` = pré-diagnostic express, `long` = évaluation complète ; NULL = héritage (équivalent complet). */
+  path_mode?: PathMode
   /** V3 : fin du parcours court (≠ statut completed du parcours long). */
   short_path_completed_at?: string | null
   /** V3 : score final % sur le périmètre actif court (distinct de score_final long). */
@@ -100,15 +104,9 @@ export interface Question {
   context_subtitle?: string
   /** Court texte d’aide sous le libellé (affiché par QuestionRenderer) */
   description?: string
-  type: 'radio' | 'checkbox' | 'tags' | 'conditional'
+  type: 'radio' | 'checkbox' | 'tags'
   options: QuestionOption[]
   required: boolean
-  conditionalFields?: { key: string, label: string, placeholder?: string }[]
-  /**
-   * Si true : pour l’option « Oui » (.B) avec champs conditionnels, une valeur dans les champs
-   * n’est plus requise pour passer à la suite (déclaratif ; preuves ailleurs).
-   */
-  conditional_detail_optional?: boolean
   tooltip?: Tooltip
   /** Mode d'impact pour les questions checkbox/tags: 'any' = impact unique si au moins une option sélectionnée */
   impact_mode?: 'any' | 'cumulative'

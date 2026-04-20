@@ -1,16 +1,13 @@
 import { checkCanProceed } from '../questionnaire'
 import { loadQuestions } from '../questions-loader'
-import type { Question } from '../../types/usecase'
 
 describe('E5 — N9 Q3 & Q6 à Q9 (+ Q7 registre) radio, sans champs conditionnels', () => {
   const questions = loadQuestions()
 
-  it('déclare Q3 et Q6 à Q9 comme questions radio sans conditional_detail_optional', () => {
+  it('déclare Q3 et Q6 à Q9 comme questions radio standard', () => {
     for (const id of ['E5.N9.Q3', 'E5.N9.Q6', 'E5.N9.Q7', 'E5.N9.Q8', 'E5.N9.Q9'] as const) {
       const q = questions[id]!
       expect(q.type).toBe('radio')
-      expect(q.conditional_detail_optional).toBeUndefined()
-      expect(q.conditionalFields).toBeUndefined()
     }
   })
 
@@ -28,19 +25,8 @@ describe('E5 — N9 Q3 & Q6 à Q9 (+ Q7 registre) radio, sans champs conditionne
     }
   })
 
-  it('sans conditional_detail_optional, « Oui » + champs exige encore au moins une valeur (question conditional synthétique)', () => {
-    const synthetic: Question = {
-      id: 'TEST.Q1',
-      question: 'test',
-      type: 'conditional',
-      required: true,
-      options: [
-        { code: 'TEST.Q1.B', label: 'Oui', score_impact: 0 },
-        { code: 'TEST.Q1.A', label: 'Non', score_impact: 0 },
-      ],
-      conditionalFields: [{ key: 'x', label: 'X' }],
-    }
-    expect(checkCanProceed(synthetic, { selected: 'TEST.Q1.B', conditionalValues: {} })).toBe(false)
-    expect(checkCanProceed(synthetic, { selected: 'TEST.Q1.B', conditionalValues: { x: 'a' } })).toBe(true)
+  it('accepte une réponse objet legacy { selected } pour le contrôle « peut continuer »', () => {
+    const q = questions['E5.N9.Q3']!
+    expect(checkCanProceed(q, { selected: 'E5.N9.Q3.B' })).toBe(true)
   })
 })

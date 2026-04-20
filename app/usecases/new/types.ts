@@ -1,3 +1,5 @@
+import type { JourneyType } from '@/lib/journey-path-mode'
+
 // --- Draft du chat guidé ---
 export interface GuidedChatDraft {
   name: string
@@ -31,6 +33,9 @@ export interface CreateUseCasePayload {
   description: string
   status: 'draft'
   company_id: string
+  /** Persisté en `usecases.path_mode` via l’API (Express → short, Complet → long). */
+  journey_type?: JourneyType
+  path_mode?: 'short' | 'long'
 }
 
 // --- Options fermées (référentiels) ---

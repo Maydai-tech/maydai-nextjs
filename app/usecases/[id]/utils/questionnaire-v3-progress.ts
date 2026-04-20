@@ -161,6 +161,10 @@ function generateAnswerContextsV3(questionId: string): Record<string, unknown>[]
         { 'E6.N10.Q3': 'E6.N10.Q3.B' },
         { 'E6.N10.Q3': 'E6.N10.Q3.C' },
       ]
+    case 'E7.N11.Q1':
+      return [{ 'E7.N11.Q1': 'E7.N11.Q1.A' }, { 'E7.N11.Q1': 'E7.N11.Q1.B' }]
+    case 'E7.N11.Q2':
+      return [{ 'E7.N11.Q2': 'E7.N11.Q2.A' }, { 'E7.N11.Q2': 'E7.N11.Q2.B' }]
     case 'E5.N9.Q5':
       return [
         { 'E5.N9.Q5': ['E5.N9.Q5.A'] },

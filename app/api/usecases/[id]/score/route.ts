@@ -72,7 +72,16 @@ export async function GET(
       .single()
 
     if (scoreDataError) {
-      return NextResponse.json({ error: 'Error fetching use case data' }, { status: 500 })
+      const context = createRequestContext(request)
+      logger.error('Score API: usecase score row fetch failed', scoreDataError, context)
+      return NextResponse.json(
+        {
+          error: 'Error fetching use case data',
+          details: scoreDataError.message,
+          code: scoreDataError.code,
+        },
+        { status: 500 }
+      )
     }
 
     const qv = normalizeQuestionnaireVersion(usecaseData.questionnaire_version)

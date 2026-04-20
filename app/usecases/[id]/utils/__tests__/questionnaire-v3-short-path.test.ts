@@ -4,6 +4,7 @@ import {
   getNextQuestionV3,
   V3_SHORT_ENTREPRISE_ID,
   V3_SHORT_MINIPACK_ID,
+  V3_SHORT_SOCIAL_ENV_ID,
   V3_SHORT_TRANSPARENCE_ID,
   V3_SHORT_USAGE_ID,
 } from '../questionnaire-v3-graph'
@@ -37,10 +38,11 @@ describe('questionnaire V3 parcours court (navigation)', () => {
     expect(getNextQuestionV3('E4.N8.Q10', a, null, 'short')).toBe('E5.N9.Q5')
   })
 
-  test('chaîne parcours court : entreprise → usage → transparence → fin (sans E4.N8.Q12)', () => {
+  test('chaîne parcours court : entreprise → usage → transparence → bien-être social & env. → fin (sans E4.N8.Q12)', () => {
     expect(getNextQuestionV3(V3_SHORT_ENTREPRISE_ID, {}, null, 'short')).toBe(V3_SHORT_USAGE_ID)
     expect(getNextQuestionV3(V3_SHORT_USAGE_ID, {}, null, 'short')).toBe(V3_SHORT_TRANSPARENCE_ID)
-    expect(getNextQuestionV3(V3_SHORT_TRANSPARENCE_ID, {}, null, 'short')).toBeNull()
+    expect(getNextQuestionV3(V3_SHORT_TRANSPARENCE_ID, {}, null, 'short')).toBe(V3_SHORT_SOCIAL_ENV_ID)
+    expect(getNextQuestionV3(V3_SHORT_SOCIAL_ENV_ID, {}, null, 'short')).toBeNull()
   })
 
   test('ancien nœud consolidé → entrée sur la première étape courte', () => {
@@ -56,7 +58,7 @@ describe('questionnaire V3 parcours court (navigation)', () => {
     expect(getNextQuestionV3('E4.N7.Q3.1', a, null, 'short')).toBe(V3_SHORT_ENTREPRISE_ID)
   })
 
-  test('collectV3ActiveQuestionCodes short : après Q10 et E5.N9.Q5, les 3 étapes synthétiques (sans E4.N8.Q12 ni E5.N9.Q6 dédié)', () => {
+  test('collectV3ActiveQuestionCodes short : après Q10 et E5.N9.Q5, les 4 étapes synthétiques (sans E4.N8.Q12 ni E5.N9.Q6 dédié)', () => {
     const a = {
       ...ctxMinimal,
       'E4.N7.Q1': 'E4.N7.Q1.B',
@@ -70,6 +72,7 @@ describe('questionnaire V3 parcours court (navigation)', () => {
       [V3_SHORT_ENTREPRISE_ID]: [],
       [V3_SHORT_USAGE_ID]: [],
       [V3_SHORT_TRANSPARENCE_ID]: [],
+      [V3_SHORT_SOCIAL_ENV_ID]: [],
     } as Record<string, unknown>
     const codes = collectV3ActiveQuestionCodes(a, null, 'short')
     expect(codes).toContain('E5.N9.Q5')
@@ -77,6 +80,7 @@ describe('questionnaire V3 parcours court (navigation)', () => {
     expect(codes).toContain(V3_SHORT_ENTREPRISE_ID)
     expect(codes).toContain(V3_SHORT_USAGE_ID)
     expect(codes).toContain(V3_SHORT_TRANSPARENCE_ID)
+    expect(codes).toContain(V3_SHORT_SOCIAL_ENV_ID)
     expect(codes).not.toContain('E4.N8.Q12')
     expect(codes).toContain('E4.N8.Q10')
   })

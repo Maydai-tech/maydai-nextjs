@@ -147,6 +147,7 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
       'risk_level': 'risk_level',
       'human_agency': 'human_agency',
       'human_oversight': 'human_agency',
+      'governance': 'human_agency',
       'technical_robustness': 'technical_robustness',
       'privacy_data': 'privacy_data',
       'transparency': 'transparency',
@@ -257,14 +258,15 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
       const result = await calculateScore(mockUsecaseId, traducteur2Responses)
 
       const humanAgency = result.category_scores.find(c => c.category_id === 'human_agency')
-      expect(humanAgency?.percentage).toBe(11)
+      // Barème E4.N8.Q2–Q8 + E4.N8.Q11 (catégories simplifiées) : plafonds `human_agency` élargis sans réponses négatives sur Q2–Q8 → % human_agency plus élevé qu’avant (~24 %).
+      expect(humanAgency?.percentage).toBe(24)
 
       const technical = result.category_scores.find(c => c.category_id === 'technical_robustness')
-      expect(technical?.percentage).toBe(32)
+      expect(technical?.percentage).toBe(33)
 
       const transparency = result.category_scores.find(c => c.category_id === 'transparency')
-      /** Déployeur : pénalités sur `E6.N10.Q1` + `E6.N10.Q3` (fourche Art. 50.4) — barème transparence légèrement différent de l’ancien couple Q1/Q2. */
-      expect(transparency?.percentage).toBe(47)
+      /** E6.N10 + barème E4.N8.Q11 (T2/M2 en transparence simplifiée) : plafond / pertes recalés. */
+      expect(transparency?.percentage).toBe(52)
     })
 
     test('should have correct penalty breakdown', async () => {

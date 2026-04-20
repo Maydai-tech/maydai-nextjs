@@ -41,7 +41,7 @@ describe('buildV3ScoringContextFromDbResponses', () => {
     expect(ctx!.scoringActiveQuestionCodes.has('E4.N8.Q9')).toBe(true)
   })
 
-  it('V3 pathMode short : le chemin actif s’arrête après le bloc ORS (pas de mini-pack E5 ; E5 hors chemin même si réponse orpheline)', () => {
+  it('V3 pathMode short : le chemin actif s’arrête après le bloc ORS, mais E5.N9.* persisté est inclus au périmètre score (checklists / fantômes)', () => {
     const rows = [
       { question_code: 'E4.N7.Q1', single_value: 'E4.N7.Q1.B' },
       { question_code: 'E4.N7.Q1.2', single_value: 'E4.N7.Q1.2.A' },
@@ -59,7 +59,7 @@ describe('buildV3ScoringContextFromDbResponses', () => {
     expect(ctx).not.toBeNull()
     expect(ctx!.active_question_codes).not.toContain('E5.N9.Q1')
     expect(ctx!.active_question_codes).toContain('E4.N8.Q10')
-    expect(ctx!.scoringActiveQuestionCodes.has('E5.N9.Q1')).toBe(false)
+    expect(ctx!.scoringActiveQuestionCodes.has('E5.N9.Q1')).toBe(true)
   })
 
   it.skip('V3 pathMode short : inclut E6.N10.Q1 / Q2 dans scoringActiveQuestionCodes si présents en base (dérivés du pack transparence)', () => {

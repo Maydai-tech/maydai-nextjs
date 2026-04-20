@@ -27,7 +27,7 @@ const GEMINI_FLASH_MODEL_ID = 'c4ebe815-b69b-4da2-b366-20dce7349782'
 // Parcours V2 (ORS + N8), réponses favorables sans pénalités fortes
 const QUESTIONNAIRE_ANSWERS: Array<{
   questionId: string
-  type: 'radio' | 'checkbox' | 'tags' | 'conditional'
+  type: 'radio' | 'checkbox' | 'tags'
   answer: string | string[]
   conditionalValue?: string
 }> = [
@@ -253,7 +253,7 @@ async function cleanupTestData(data: TestData): Promise<void> {
  */
 async function answerQuestion(
   page: Page,
-  type: 'radio' | 'checkbox' | 'tags' | 'conditional',
+  type: 'radio' | 'checkbox' | 'tags',
   answer: string | string[],
   conditionalValue?: string
 ) {
@@ -271,6 +271,14 @@ async function answerQuestion(
       })
       await radioInput.click({ force: true })
       await page.waitForTimeout(800)
+      if (conditionalValue) {
+        await page.waitForTimeout(500)
+        const conditionalInput = page.getByRole('textbox').first()
+        if (await conditionalInput.isVisible()) {
+          await conditionalInput.fill(conditionalValue)
+          await page.waitForTimeout(500)
+        }
+      }
       break
 
     case 'checkbox':
@@ -302,21 +310,6 @@ async function answerQuestion(
         await tagButton.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {})
         await tagButton.click({ force: true })
         await page.waitForTimeout(500)
-      }
-      break
-
-    case 'conditional':
-      const conditionalRadio = page.getByRole('radio', { name: new RegExp(answerText.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) })
-      await conditionalRadio.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {})
-      await conditionalRadio.click({ force: true })
-      await page.waitForTimeout(800)
-      if (conditionalValue) {
-        await page.waitForTimeout(500)
-        const conditionalInput = page.getByRole('textbox').first()
-        if (await conditionalInput.isVisible()) {
-          await conditionalInput.fill(conditionalValue)
-          await page.waitForTimeout(500)
-        }
       }
       break
   }
