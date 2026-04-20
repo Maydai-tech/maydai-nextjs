@@ -15,15 +15,18 @@ import {
   computeV3UsecaseQuestionnaireFields,
   isV3ShortPathCompositeQuestionId,
   V3_FULL_ENTREPRISE_ID,
+  V3_FULL_SOCIAL_ENV_ID,
   V3_FULL_TRANSPARENCE_ID,
   V3_FULL_USAGE_ID,
   V3_SHORT_ENTREPRISE_ID,
   V3_SHORT_MINIPACK_ID,
+  V3_SHORT_SOCIAL_ENV_ID,
   V3_SHORT_TRANSPARENCE_ID,
   V3_SHORT_USAGE_ID,
 } from '../utils/questionnaire-v3-graph'
 import {
   declarativeAnswersAfterEnterpriseStage,
+  declarativeAnswersAfterSocialEnvStage,
   declarativeAnswersAfterTransparenceStage,
   declarativeAnswersAfterUsageStage,
   normalizeShortPathStageSelection,
@@ -390,7 +393,18 @@ export function useEvaluation({
       }
 
       if (question.type === 'radio') {
-        await saveResponse(questionId, typeof answer === 'string' ? answer : String(answer))
+        if (typeof answer === 'string') {
+          await saveResponse(questionId, answer)
+        } else if (
+          answer !== null &&
+          typeof answer === 'object' &&
+          !Array.isArray(answer) &&
+          'selected' in answer
+        ) {
+          await saveResponse(questionId, undefined, answer as Record<string, unknown>)
+        } else {
+          await saveResponse(questionId, String(answer))
+        }
       } else if (question.type === 'checkbox' || question.type === 'tags') {
         const codes = Array.isArray(answer) ? (answer as string[]) : []
         await saveResponse(questionId, undefined, {
@@ -400,8 +414,6 @@ export function useEvaluation({
             return option?.label || code
           }),
         })
-      } else if (question.type === 'conditional') {
-        await saveResponse(questionId, undefined, answer as Record<string, unknown>)
       } else {
         // Fallback for other types
         await saveResponse(questionId, undefined, answer)
@@ -639,6 +651,150 @@ export function useEvaluation({
 
       if (
         questionnaireVersion === QUESTIONNAIRE_VERSION_V3 &&
+        (currentId === V3_SHORT_SOCIAL_ENV_ID || currentId === V3_FULL_SOCIAL_ENV_ID)
+      ) {
+        const sel = normalizeShortPathStageSelection(currentAnswer)
+        const patches = declarativeAnswersAfterSocialEnvStage(sel)
+        const merged = {
+          ...questionnaireData.answers,
+          [currentId]: sel,
+          ...patches,
+        } as Record<string, unknown>
+
+        await saveIndividualResponse(currentId, sel)
+        for (const [qid, val] of Object.entries(patches)) {
+          await saveIndividualResponse(qid, val)
+        }
+        let e5ChecklistKeys = collectE5DeclaredOptionCodes(merged)
+        let e6ChecklistKeys = collectE6DeclaredOptionCodes(merged)
+        if (questionnairePathModeProp === 'short') {
+          const enterpriseSel = normalizeShortPathStageSelection(merged[V3_SHORT_ENTREPRISE_ID])
+          const usageSel = normalizeShortPathStageSelection(merged[V3_SHORT_USAGE_ID])
+          const transSel = normalizeShortPathStageSelection(merged[V3_SHORT_TRANSPARENCE_ID])
+          const socialSel = normalizeShortPathStageSelection(merged[V3_SHORT_SOCIAL_ENV_ID])
+          e5ChecklistKeys = [
+            ...new Set([
+              ...e5ChecklistKeys,
+              ...deriveMissingPenaltiesForShortPath(enterpriseSel, V3_SHORT_ENTREPRISE_ID),
+              ...deriveMissingPenaltiesForShortPath(usageSel, V3_SHORT_USAGE_ID),
+            ]),
+          ]
+          e6ChecklistKeys = [
+            ...new Set([
+              ...e6ChecklistKeys,
+              ...deriveMissingPenaltiesForShortPath(transSel, V3_SHORT_TRANSPARENCE_ID),
+              ...deriveMissingPenaltiesForShortPath(socialSel, V3_SHORT_SOCIAL_ENV_ID),
+            ]),
+          ]
+        }
+        await saveIndividualResponse(CHECKLIST_GOV_ENTERPRISE_QUESTION_CODE, e5ChecklistKeys)
+        await saveIndividualResponse(CHECKLIST_GOV_USECASE_QUESTION_CODE, e6ChecklistKeys)
+
+        const fields = computeV3UsecaseQuestionnaireFields(
+          merged,
+          systemTypeProp ?? null,
+          questionnairePathModeProp
+        )
+        const { error: v3MetaErrorSocial } = await supabase
+          .from('usecases')
+          .update({
+            bpgv_variant: fields.bpgv_variant,
+            ors_exit: fields.ors_exit,
+            active_question_codes: fields.active_question_codes,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', usecaseId)
+        if (v3MetaErrorSocial) {
+          console.warn('Métadonnées questionnaire V3 non persistées:', v3MetaErrorSocial.message)
+        }
+
+        const nextAfterSocial = getNextQuestion(
+          currentId,
+          merged as Record<string, any>,
+          questionnaireVersion,
+          navOptions
+        )
+        if (nextAfterSocial) {
+          setQuestionnaireData(prev => ({
+            ...prev,
+            answers: merged as Record<string, any>,
+            currentQuestionId: nextAfterSocial,
+          }))
+          setQuestionHistory(prev => [...prev, nextAfterSocial])
+          setIsSubmitting(false)
+          return
+        }
+
+        setQuestionnaireData(prev => ({
+          ...prev,
+          answers: merged as Record<string, any>,
+        }))
+
+        setIsCalculatingScore(true)
+        try {
+          if (!session?.access_token) {
+            throw new Error('Token d\'authentification manquant')
+          }
+          const scoreService = new ScoreService(session.access_token)
+          await scoreService.calculateUseCaseScore(
+            usecaseId,
+            questionnairePathModeProp === 'short' ? { path_mode: 'short' } : undefined
+          )
+        } catch (scoreError) {
+          console.error('❌ Error calculating score:', scoreError)
+          setError(
+            scoreError instanceof Error && scoreError.message
+              ? `Erreur lors de l'enregistrement du score : ${scoreError.message}`
+              : "Erreur lors de l'enregistrement du score. Veuillez réessayer."
+          )
+          return
+        } finally {
+          setIsCalculatingScore(false)
+        }
+
+        setShowProcessingAnimation(true)
+
+        await supabase
+          .from('usecases')
+          .update({
+            status: 'completed',
+            ...(normalizeQuestionnaireVersion(questionnaireVersion) === QUESTIONNAIRE_VERSION_V3
+              ? { path_mode: questionnairePathModeProp }
+              : {}),
+          })
+          .eq('id', usecaseId)
+
+        setIsGeneratingReport(true)
+        try {
+          const headers: HeadersInit = { 'Content-Type': 'application/json' }
+          if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`
+          }
+          const reportResponse = await fetch('/api/generate-report', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ usecase_id: usecaseId }),
+          })
+          if (!reportResponse.ok) {
+            const errorData = await reportResponse.json()
+            if (!errorData.requires_questionnaire) {
+              console.warn('⚠️ OpenAI report generation failed, but continuing...')
+            }
+          }
+        } catch (reportError) {
+          console.error('❌ Error generating OpenAI report:', reportError)
+        } finally {
+          setIsGeneratingReport(false)
+        }
+
+        handleProcessingComplete()
+
+        setIsSubmitting(false)
+        return
+      }
+
+      if (
+        questionnaireVersion === QUESTIONNAIRE_VERSION_V3 &&
         (currentId === V3_SHORT_TRANSPARENCE_ID || currentId === V3_FULL_TRANSPARENCE_ID)
       ) {
         const sel = normalizeShortPathStageSelection(currentAnswer)
@@ -656,11 +812,13 @@ export function useEvaluation({
         let e5ChecklistKeys = collectE5DeclaredOptionCodes(merged)
         let e6ChecklistKeys = collectE6DeclaredOptionCodes(merged)
         if (questionnairePathModeProp === 'short') {
+          const enterpriseSel = normalizeShortPathStageSelection(merged[V3_SHORT_ENTREPRISE_ID])
           const usageSel = normalizeShortPathStageSelection(merged[V3_SHORT_USAGE_ID])
           const transSel = normalizeShortPathStageSelection(merged[V3_SHORT_TRANSPARENCE_ID])
           e5ChecklistKeys = [
             ...new Set([
               ...e5ChecklistKeys,
+              ...deriveMissingPenaltiesForShortPath(enterpriseSel, V3_SHORT_ENTREPRISE_ID),
               ...deriveMissingPenaltiesForShortPath(usageSel, V3_SHORT_USAGE_ID),
             ]),
           ]

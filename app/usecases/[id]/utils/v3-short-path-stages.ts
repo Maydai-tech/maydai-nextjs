@@ -52,3 +52,13 @@ export function declarativeAnswersAfterTransparenceStage(selection: string[]): R
     'E6.N10.Q3': q3,
   }
 }
+
+/** Après le pack court E7 : alignement sur les radios longues `E7.N11.Q1` / `E7.N11.Q2` (Oui = B). */
+export function declarativeAnswersAfterSocialEnvStage(selection: string[]): Record<string, string> {
+  const s = new Set(selection)
+  const ok = s.has('E7.N11.Q3.B')
+  return {
+    'E7.N11.Q1': ok ? 'E7.N11.Q1.B' : 'E7.N11.Q1.A',
+    'E7.N11.Q2': ok ? 'E7.N11.Q2.B' : 'E7.N11.Q2.A',
+  }
+}

@@ -211,7 +211,18 @@ export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnai
       const questions = loadQuestions()
       const question = questions[questionId]
       if (question.type === 'radio') {
-        await saveResponse(questionId, answer)
+        if (typeof answer === 'string') {
+          await saveResponse(questionId, answer)
+        } else if (
+          answer !== null &&
+          typeof answer === 'object' &&
+          !Array.isArray(answer) &&
+          'selected' in answer
+        ) {
+          await saveResponse(questionId, undefined, answer as Record<string, unknown>)
+        } else {
+          await saveResponse(questionId, String(answer))
+        }
       } else if (question.type === 'checkbox' || question.type === 'tags') {
         await saveResponse(questionId, undefined, { 
           selected_codes: answer,
@@ -220,8 +231,6 @@ export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnai
             return option?.label || code
           })
         })
-      } else if (question.type === 'conditional') {
-        await saveResponse(questionId, undefined, answer)
       }
     } catch (error) {
       console.error('Error saving answer:', error)

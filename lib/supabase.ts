@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { PathMode } from '@/lib/journey-path-mode'
 
 // Fonction pour créer le client Supabase avec validation à l'exécution
 function createSupabaseClient() {
@@ -80,7 +81,7 @@ export interface UseCase {
   active_question_codes?: string[]
   ors_exit?: string | null
   /** Parcours questionnaire V3 persisté (short / long) pour scoring et API. */
-  path_mode?: 'short' | 'long' | null
+  path_mode?: PathMode
   checklist_gov_enterprise?: string[]
   checklist_gov_usecase?: string[]
   /** Colonnes JSONB `usecases` — codes E5 / E6 cochés (tableau JSON). */

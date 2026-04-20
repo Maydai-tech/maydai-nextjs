@@ -6,7 +6,7 @@ import {
 } from '../questionnaire-v3-short-path-ux'
 
 describe('questionnaire-v3-short-path-ux', () => {
-  it('segmente les IDs de questions sur 7 blocs métier', () => {
+  it('segmente les IDs de questions sur 8 blocs métier', () => {
     expect(getV3ShortPathSegmentOrder('E4.N7.Q1')).toBe(1)
     expect(getV3ShortPathSegmentOrder('E4.N7.Q3.1')).toBe(2)
     expect(getV3ShortPathSegmentOrder('E4.N7.Q2')).toBe(3)
@@ -16,6 +16,7 @@ describe('questionnaire-v3-short-path-ux', () => {
     expect(getV3ShortPathSegmentOrder('V3_SHORT_ENTREPRISE')).toBe(5)
     expect(getV3ShortPathSegmentOrder('V3_SHORT_USAGE')).toBe(6)
     expect(getV3ShortPathSegmentOrder('V3_SHORT_TRANSPARENCE')).toBe(7)
+    expect(getV3ShortPathSegmentOrder('V3_SHORT_SOCIAL_ENV')).toBe(8)
     expect(getV3ShortPathSegmentOrder('E5.N9.Q1')).toBe(5)
     expect(getV3ShortPathSegmentOrder('E4.N8.Q12')).toBe(3)
     expect(getV3ShortPathSegmentOrder('E6.N10.Q1')).toBe(3)
@@ -26,6 +27,12 @@ describe('questionnaire-v3-short-path-ux', () => {
     expect(s.order).toBe(7)
     expect(s.title).toContain('transparence')
     expect(s.tagline.length).toBeGreaterThan(10)
+  })
+
+  it('retourne le segment 8 pour le pack bien-être social & environnemental', () => {
+    const s = getV3ShortPathSegmentForQuestion('V3_SHORT_SOCIAL_ENV')
+    expect(s.order).toBe(8)
+    expect(s.title.toLowerCase()).toMatch(/social|environnement/)
   })
 
   it('progression court : dernière question à 100 %', () => {
@@ -39,6 +46,6 @@ describe('questionnaire-v3-short-path-ux', () => {
   })
 
   it('nombre de segments constant', () => {
-    expect(V3_SHORT_PATH_SEGMENT_COUNT).toBe(7)
+    expect(V3_SHORT_PATH_SEGMENT_COUNT).toBe(8)
   })
 })

@@ -387,10 +387,11 @@ test.describe('UseCase Creation', () => {
     if (!mistralRadio) {
       test.skip(true, 'Aucun partenaire « Mistral » dans model_providers pour cet environnement.')
     }
-    const cardLabel = page.locator('label').filter({ has: mistralRadio })
+    const mistralInput = mistralRadio!
+    const cardLabel = page.locator('label').filter({ has: mistralInput })
     const infoButton = cardLabel.getByRole('button', { name: "Afficher l'infobulle" })
 
-    await expect(mistralRadio).not.toBeChecked()
+    await expect(mistralInput).not.toBeChecked()
 
     // Desktop : l’infobulle s’ouvre au survol (voir Tooltip.tsx, viewport Playwright « Desktop Chrome »)
     await infoButton.hover()
@@ -398,18 +399,18 @@ test.describe('UseCase Creation', () => {
     await expect(tooltipPanel).toBeVisible()
     await expect(tooltipPanel.locator('p').first()).not.toHaveText('')
 
-    await expect(mistralRadio).not.toBeChecked()
+    await expect(mistralInput).not.toBeChecked()
 
     // Clic explicite sur le bouton Info : ne doit pas activer le radio (stopPropagation / bouton dans la carte)
     await infoButton.click()
-    await expect(mistralRadio).not.toBeChecked()
+    await expect(mistralInput).not.toBeChecked()
 
     const cardFace = cardLabel.locator('> div').first()
     await expect(cardFace).not.toHaveAttribute('class', /\bring-1\b/)
 
     // Clic sur la zone visuelle de la carte (logo), hors bouton Info
     await cardLabel.getByRole('img').first().click()
-    await expect(mistralRadio).toBeChecked()
+    await expect(mistralInput).toBeChecked()
     await expect(cardFace).toHaveAttribute('class', /\bring-1\b/)
     await expect(cardFace).toHaveAttribute('class', /border-\[#0080A3\]/)
   })

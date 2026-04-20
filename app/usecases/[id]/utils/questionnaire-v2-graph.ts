@@ -76,7 +76,7 @@ function bandFromQuestionAnswer(qid: string, answer: unknown): Band {
     return m
   }
 
-  if (q.type === 'conditional' && typeof answer === 'object' && answer !== null && 'selected' in answer) {
+  if (typeof answer === 'object' && answer !== null && 'selected' in answer) {
     const sel = (answer as { selected?: string }).selected
     if (typeof sel === 'string') {
       const opt = q.options?.find(o => o.code === sel)

@@ -17,7 +17,7 @@ const baseUsecase = {
   company_status: 'utilisateur',
   technology_partner: 't',
   llm_model_version: 'v',
-  primary_model_id: null as string | null,
+  primary_model_id: undefined,
   checklist_gov_enterprise: [] as string[],
   checklist_gov_usecase: [] as string[],
   score_base: 0,

@@ -36,8 +36,18 @@ export function buildV3ScoringContextFromDbResponses(
     responses.map(r => r.question_code).filter((code): code is string => Boolean(code)).filter(code => pathSet.has(code))
   )
   for (const code of Object.keys(answers)) {
-    if (code.startsWith('E4.')) {
+    if (code.startsWith('E4.') || code.startsWith('E7.')) {
       scoringActiveQuestionCodes.add(code)
+    }
+  }
+  /** Parcours court : lignes E5/E6 / E4.N8.Q12 fusionnées (checklists, fantômes packs) doivent participer au score même hors `active_question_codes`. */
+  if (questionnairePathMode === 'short') {
+    for (const r of responses) {
+      const c = r.question_code
+      if (typeof c !== 'string' || !c) continue
+      if (c.startsWith('E5.N9.') || c.startsWith('E6.N10.') || c === 'E4.N8.Q12') {
+        scoringActiveQuestionCodes.add(c)
+      }
     }
   }
   const meta = computeV3UsecaseQuestionnaireFields(answers, systemType, questionnairePathMode)

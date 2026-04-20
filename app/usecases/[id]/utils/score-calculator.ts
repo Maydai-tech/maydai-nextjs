@@ -3,7 +3,10 @@ import { UseCaseScore, ScoreBreakdown, CategoryScore } from '../types/usecase'
 import { RISK_CATEGORIES } from './risk-categories'
 import { getUseCaseComplAiBonus, getMaydAiScoresByPrinciple } from './compl-ai-scoring'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { calculateMaxCategoryScoresForAllQuestions } from '@/lib/score-category-max'
+import {
+  calculateMaxCategoryScoresForAllQuestions,
+  mapCategoryFromJson
+} from '@/lib/score-category-max'
 import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
 import { buildV2ScoringContextFromDbResponses } from '@/lib/scoring-v2-server'
 import { buildV3ScoringContextFromDbResponses } from '@/lib/scoring-v3-server'
@@ -90,15 +93,6 @@ function calculateRiskUseCaseByReverseEngineering(
   }
 }
 
-// Fonction de mapping des catégories du JSON vers les IDs de risk-categories.ts
-function mapCategoryFromJson(jsonCategoryId: string): string {
-  // Seule différence : human_oversight (JSON) → human_agency (risk-categories)
-  if (jsonCategoryId === 'human_oversight') {
-    return 'human_agency'
-  }
-  return jsonCategoryId
-}
-
 // Constante des scores maximum par catégorie — questionnaire V1 (toutes les questions)
 const CATEGORY_MAX_SCORES = calculateMaxCategoryScoresForAllQuestions()
 
@@ -146,7 +140,8 @@ function calculateQuestionCategoryPoints(questionCode: string, response: any, qu
   const categoryPointsData: Record<string, { possible: number, earned: number }> = {}
   
   // Calculer les points selon le type de question
-  if (question.type === 'radio' && response.single_value) {
+  const radioSelectedCode = response.single_value || response.conditional_main
+  if (question.type === 'radio' && radioSelectedCode) {
     // Pour radio : prendre le MAXIMUM des impacts négatifs par catégorie (même logique que calculateMaxCategoryScoresFromAllQuestions)
     const categoryMaxImpacts: Record<string, number> = {}
     
@@ -171,7 +166,7 @@ function calculateQuestionCategoryPoints(questionCode: string, response: any, qu
     })
     
     // Ensuite calculer les points gagnés
-    const selectedOption = question.options.find((opt: any) => opt.code === response.single_value)
+    const selectedOption = question.options.find((opt: any) => opt.code === radioSelectedCode)
     if (selectedOption?.category_impacts) {
       Object.entries(selectedOption.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
         const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
@@ -245,48 +240,6 @@ function calculateQuestionCategoryPoints(questionCode: string, response: any, qu
       })
     }
   }
-  else if (question.type === 'conditional') {
-    // Pour conditional : même logique que radio - prendre le MAXIMUM des impacts négatifs par catégorie
-    // Fallback: utiliser single_value si conditional_main est absent (données legacy)
-    const selectedCode = response.conditional_main || response.single_value
-    if (selectedCode) {
-      const categoryMaxImpacts: Record<string, number> = {}
-
-      question.options.forEach((option: any) => {
-        if (option.category_impacts) {
-          Object.entries(option.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
-            if (impact < 0) {
-              const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
-              const absImpact = Math.abs(impact)
-              categoryMaxImpacts[mappedCategoryId] = Math.max(
-                categoryMaxImpacts[mappedCategoryId] || 0,
-                absImpact
-              )
-            }
-          })
-        }
-      })
-
-      // Initialiser les points possibles avec les maximums calculés
-      Object.entries(categoryMaxImpacts).forEach(([categoryId, maxImpact]) => {
-        categoryPointsData[categoryId] = { possible: maxImpact, earned: 0 }
-      })
-
-      const selectedOption = question.options.find((opt: any) => opt.code === selectedCode)
-      if (selectedOption?.category_impacts) {
-        Object.entries(selectedOption.category_impacts).forEach(([jsonCategoryId, impact]: [string, any]) => {
-          const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
-          if (categoryPointsData[mappedCategoryId]) {
-            categoryPointsData[mappedCategoryId].earned = impact >= 0 ? categoryPointsData[mappedCategoryId].possible : 0
-          }
-        })
-      } else {
-        Object.keys(categoryPointsData).forEach(categoryId => {
-          categoryPointsData[categoryId].earned = categoryPointsData[categoryId].possible
-        })
-      }
-    }
-  }
   
   const possiblePoints: Record<string, number> = {}
   const earnedPoints: Record<string, number> = {}
@@ -352,11 +305,14 @@ export async function calculateScore(
       if (!question) continue
 
       // Vérifier selon le type de réponse
-      if (question.type === 'radio' && response.single_value) {
-        const impacts = getAnswerImpactsFromJSON(response.question_code, response.single_value)
-        if (impacts.is_eliminatory) {
-          isEliminated = true
-          break
+      if (question.type === 'radio') {
+        const radioCode = response.single_value || response.conditional_main
+        if (radioCode) {
+          const impacts = getAnswerImpactsFromJSON(response.question_code, radioCode)
+          if (impacts.is_eliminatory) {
+            isEliminated = true
+            break
+          }
         }
       } else if ((question.type === 'checkbox' || question.type === 'tags') && response.multiple_codes) {
         for (const code of response.multiple_codes) {
@@ -367,12 +323,6 @@ export async function calculateScore(
           }
         }
         if (isEliminated) break
-      } else if (question.type === 'conditional' && response.conditional_main) {
-        const impacts = getAnswerImpactsFromJSON(response.question_code, response.conditional_main)
-        if (impacts.is_eliminatory) {
-          isEliminated = true
-          break
-        }
       }
     }
     
@@ -406,8 +356,8 @@ export async function calculateScore(
 
       // Calculer l'impact selon le type de réponse avec la nouvelle structure Array
       if (question.type === 'radio') {
-        // Réponse unique stockée dans single_value
-        const answerCode = response.single_value
+        // Réponse unique : `single_value` ou anciennes lignes avec `conditional_main`
+        const answerCode = response.single_value || response.conditional_main
         if (answerCode) {
           const impacts = getAnswerImpactsFromJSON(response.question_code, answerCode)
           questionImpact = impacts.score_impact
@@ -485,25 +435,6 @@ export async function calculateScore(
           reasoning = impacts.length > 0 ?
             `${impacts.join(', ')} → Impact total: ${totalImpact} points (cumul)` :
             'Aucun impact'
-        }
-      }
-      else if (question.type === 'conditional') {
-        // Réponse conditionnelle stockée dans conditional_main, conditional_keys, conditional_values
-        // Fallback: utiliser single_value si conditional_main est absent (données legacy)
-        const selectedCode = response.conditional_main || response.single_value
-        if (selectedCode) {
-          const impacts = getAnswerImpactsFromJSON(response.question_code, selectedCode)
-          questionImpact = impacts.score_impact
-
-          // Appliquer les impacts par catégorie avec mapping
-          if (impacts.category_impacts) {
-            Object.entries(impacts.category_impacts).forEach(([jsonCategoryId, impact]) => {
-              const mappedCategoryId = mapCategoryFromJson(jsonCategoryId)
-              categoryImpactsForQuestion[mappedCategoryId] = impact
-            })
-          }
-
-          reasoning = `${selectedCode}: ${questionImpact} points`
         }
       }
 

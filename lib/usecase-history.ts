@@ -157,7 +157,8 @@ export const FIELD_LABELS: Record<string, string> = {
   system_type: 'Type de système',
   company_status: 'Statut entreprise',
   primary_model_id: 'Modèle principal',
-  status: 'Statut'
+  status: 'Statut',
+  path_mode: 'Parcours questionnaire (express / complet)',
 }
 
 /**

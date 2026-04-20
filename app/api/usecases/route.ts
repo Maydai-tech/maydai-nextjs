@@ -4,6 +4,7 @@ import { recordUseCaseHistory } from '@/lib/usecase-history'
 import { getRegistryOwnerPlan } from '@/lib/subscription/user-plan'
 import { QUESTIONNAIRE_VERSION_V1, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 import { convertDeploymentDateForDb } from '@/lib/convert-deployment-date'
+import { resolvePathModeFromBody } from '@/lib/journey-path-mode'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
       risk_level,
       company_id,
       BLOCK_E5_GOVERNANCE,
-      BLOCK_E6_TRANSPARENCE
+      BLOCK_E6_TRANSPARENCE,
     } = body
 
     // Validate required fields
@@ -206,7 +207,7 @@ export async function POST(request: NextRequest) {
       : []
 
     // Create the use case
-    const insertData = {
+    const insertData: Record<string, unknown> = {
       name,
       deployment_date: convertDeploymentDateForDb(deployment_date),
       deployment_phase:
@@ -231,6 +232,8 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
       updated_by: user.id
     }
+
+    insertData.path_mode = resolvePathModeFromBody(body)
 
     console.log('🔍 Header Auth reçu par API:', request.headers.get('Authorization'));
 

@@ -5,11 +5,12 @@
 
 import {
   V3_SHORT_ENTREPRISE_ID,
+  V3_SHORT_SOCIAL_ENV_ID,
   V3_SHORT_TRANSPARENCE_ID,
   V3_SHORT_USAGE_ID,
 } from './questionnaire-v3-graph'
 
-export const V3_SHORT_PATH_SEGMENT_COUNT = 7
+export const V3_SHORT_PATH_SEGMENT_COUNT = 8
 
 export type V3ShortPathSegment = {
   order: number
@@ -61,10 +62,16 @@ export const V3_SHORT_PATH_SEGMENTS: readonly V3ShortPathSegment[] = [
     title: 'Socle de maturité — transparence',
     tagline: 'Information utilisateurs et marque de transparence.',
   },
+  {
+    order: 8,
+    key: 'maturity-social-environment',
+    title: 'Socle de maturité — bien-être social & environnemental',
+    tagline: 'Accessibilité, conception universelle et empreinte environnementale du système d’IA.',
+  },
 ] as const
 
 /**
- * Associe l’ID de question courante à un segment 1..7 (parcours court uniquement).
+ * Associe l’ID de question courante à un segment 1..8 (parcours court uniquement).
  */
 export function getV3ShortPathSegmentOrder(questionId: string): number {
   if (questionId === 'E4.N7.Q1' || questionId === 'E4.N7.Q1.1' || questionId === 'E4.N7.Q1.2') {
@@ -93,6 +100,9 @@ export function getV3ShortPathSegmentOrder(questionId: string): number {
   }
   if (questionId === V3_SHORT_TRANSPARENCE_ID) {
     return 7
+  }
+  if (questionId === V3_SHORT_SOCIAL_ENV_ID) {
+    return 8
   }
   if (questionId.startsWith('E5.N9.')) {
     return 5

@@ -114,7 +114,18 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
 
     try {
       if (question.type === 'radio') {
-        await saveResponse(questionId, answer)
+        if (typeof answer === 'string') {
+          await saveResponse(questionId, answer)
+        } else if (
+          answer !== null &&
+          typeof answer === 'object' &&
+          !Array.isArray(answer) &&
+          'selected' in answer
+        ) {
+          await saveResponse(questionId, undefined, answer as Record<string, unknown>)
+        } else {
+          await saveResponse(questionId, String(answer))
+        }
       } else if (question.type === 'checkbox' || question.type === 'tags') {
         await saveResponse(questionId, undefined, { 
           selected_codes: answer,
@@ -123,8 +134,6 @@ export function useQuestionnaire({ usecaseId, onComplete }: UseQuestionnaireProp
             return option?.label || code
           })
         })
-      } else if (question.type === 'conditional') {
-        await saveResponse(questionId, undefined, answer)
       }
       
       // Mettre à jour les réponses sauvegardées localement

@@ -67,7 +67,7 @@ export function mergeChecklistIntoUserResponses(
     const { questionId, question } = found
     const prev = byQuestion.get(questionId) ?? emptyUserResponse(questionId)
 
-    if (question.type === 'radio' || question.type === 'conditional') {
+    if (question.type === 'radio') {
       byQuestion.set(questionId, {
         ...prev,
         question_code: questionId,

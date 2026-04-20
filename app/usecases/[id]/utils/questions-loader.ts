@@ -20,7 +20,7 @@ export function loadQuestions(): Record<string, Question> {
     questions[questionId] = {
       id: data.id,
       question: data.question,
-      type: data.type as 'radio' | 'checkbox' | 'tags' | 'conditional',
+      type: data.type as 'radio' | 'checkbox' | 'tags',
       options: data.options.map((option: any) => ({
         code: option.code,
         label: option.label,
@@ -32,8 +32,6 @@ export function loadQuestions(): Record<string, Question> {
         risk: option.risk || undefined
       })),
       required: data.required,
-      conditionalFields: data.conditionalFields || undefined,
-      conditional_detail_optional: data.conditional_detail_optional === true || undefined,
       tooltip: data.tooltip || undefined,
       impact_mode: data.impact_mode || undefined
     }

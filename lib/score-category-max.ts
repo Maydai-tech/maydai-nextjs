@@ -1,8 +1,14 @@
 import { loadQuestions } from '@/app/usecases/[id]/utils/questions-loader'
 import { RISK_CATEGORIES } from '@/app/usecases/[id]/utils/risk-categories'
 
-function mapCategoryFromJson(jsonCategoryId: string): string {
-  if (jsonCategoryId === 'human_oversight') return 'human_agency'
+/**
+ * Clés `category_impacts` du JSON questionnaire → id pilier (`RISK_CATEGORIES`).
+ * `human_oversight` et `governance` alimentent la jauge unique « Human Agency & Oversight ».
+ */
+export function mapCategoryFromJson(jsonCategoryId: string): string {
+  if (jsonCategoryId === 'human_oversight' || jsonCategoryId === 'governance') {
+    return 'human_agency'
+  }
   return jsonCategoryId
 }
 
@@ -22,7 +28,7 @@ export function calculateMaxCategoryScoresForActiveQuestionCodes(
   Object.values(questions).forEach(question => {
     if (!activeQuestionCodes.has(question.id)) return
 
-    if (question.type === 'radio' || question.type === 'conditional') {
+    if (question.type === 'radio') {
       const categoryMaxImpacts: Record<string, number> = {}
 
       question.options.forEach(option => {

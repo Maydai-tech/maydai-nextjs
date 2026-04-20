@@ -3,6 +3,12 @@ import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { recordFieldChanges, FIELD_LABELS } from '@/lib/usecase-history'
 import { convertDeploymentDateForDb } from '@/lib/convert-deployment-date'
+import {
+  bodyHasPathModeFields,
+  resolvePathModeFromBody,
+  type PathMode,
+} from '@/lib/journey-path-mode'
+import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -166,7 +172,16 @@ export async function PUT(
 
     // Parse request body
     const body = await request.json()
-    const { primary_model_id, deployment_countries, deployment_date, deployment_phase, description } = body
+    const {
+      primary_model_id,
+      deployment_countries,
+      deployment_date,
+      deployment_phase,
+      description,
+    } = body
+
+    const shouldApplyPathMode = bodyHasPathModeFields(body)
+    const resolvedPathMode = shouldApplyPathMode ? resolvePathModeFromBody(body) : undefined
 
     // Validate model_id if provided
     if (primary_model_id !== null && primary_model_id !== undefined) {
@@ -184,7 +199,9 @@ export async function PUT(
     // Verify user has access to this use case and get current values for history tracking
     const { data: existingUseCase, error: useCaseError } = await supabase
       .from('usecases')
-      .select('company_id, primary_model_id, deployment_countries, deployment_date, deployment_phase, description')
+      .select(
+        'company_id, primary_model_id, deployment_countries, deployment_date, deployment_phase, description, questionnaire_version, path_mode'
+      )
       .eq('id', useCaseId)
       .single()
 
@@ -221,6 +238,21 @@ export async function PUT(
           : null
     }
     if (description !== undefined) updateData.description = description
+
+    if (shouldApplyPathMode) {
+      if (resolvedPathMode === 'short') {
+        const v = normalizeQuestionnaireVersion(
+          (existingUseCase as { questionnaire_version?: string | number | null }).questionnaire_version
+        )
+        if (v !== QUESTIONNAIRE_VERSION_V3) {
+          return NextResponse.json(
+            { error: 'Parcours express (path_mode short) réservé au questionnaire V3.' },
+            { status: 400 }
+          )
+        }
+      }
+      updateData.path_mode = resolvedPathMode
+    }
 
     // Update the use case
     // Note: We fetch the model separately to avoid schema cache issues with PostgREST
@@ -318,6 +350,17 @@ export async function PUT(
         oldValue: existingUseCase.description,
         newValue: description
       })
+    }
+    if (shouldApplyPathMode) {
+      const existingPath = (existingUseCase as { path_mode?: string | null }).path_mode ?? null
+      const newPath: PathMode = resolvedPathMode!
+      if (existingPath !== newPath) {
+        changes.push({
+          fieldName: 'path_mode',
+          oldValue: valueToString(existingPath),
+          newValue: valueToString(newPath),
+        })
+      }
     }
 
     // Enregistrer les changements si il y en a

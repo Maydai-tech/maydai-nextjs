@@ -19,7 +19,7 @@ const GEMINI_FLASH_MODEL_ID = 'c4ebe815-b69b-4da2-b366-20dce7349782'
 /** Ordre aligné sur `getNextQuestionV2` après E4.N7.Q3.1 (Q11.0 « Non » → Q12). */
 const QUESTIONNAIRE_V2_ORS_N8: Array<{
   questionId: string
-  type: 'radio' | 'checkbox' | 'tags' | 'conditional'
+  type: 'radio' | 'checkbox' | 'tags'
   answer: string | string[]
   conditionalValue?: string
 }> = [
@@ -165,7 +165,7 @@ async function cleanupTestData(data: TestData): Promise<void> {
 
 async function answerQuestion(
   page: Page,
-  type: 'radio' | 'checkbox' | 'tags' | 'conditional',
+  type: 'radio' | 'checkbox' | 'tags',
   answer: string | string[],
   conditionalValue?: string
 ) {
@@ -184,6 +184,14 @@ async function answerQuestion(
       })
       await radioInput.click({ force: true })
       await page.waitForTimeout(800)
+      if (conditionalValue) {
+        await page.waitForTimeout(500)
+        const conditionalInput = page.getByRole('textbox').first()
+        if (await conditionalInput.isVisible()) {
+          await conditionalInput.fill(conditionalValue)
+          await page.waitForTimeout(500)
+        }
+      }
       break
     }
 
@@ -218,23 +226,6 @@ async function answerQuestion(
       break
     }
 
-    case 'conditional': {
-      const conditionalRadio = page.getByRole('radio', {
-        name: new RegExp(answerText.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
-      })
-      await conditionalRadio.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {})
-      await conditionalRadio.click({ force: true })
-      await page.waitForTimeout(800)
-      if (conditionalValue) {
-        await page.waitForTimeout(500)
-        const conditionalInput = page.getByRole('textbox').first()
-        if (await conditionalInput.isVisible()) {
-          await conditionalInput.fill(conditionalValue)
-          await page.waitForTimeout(500)
-        }
-      }
-      break
-    }
   }
 }
 

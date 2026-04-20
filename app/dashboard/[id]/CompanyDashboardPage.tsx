@@ -40,6 +40,7 @@ import { CategoryScoresRegistry } from './components/CategoryScoresRegistry'
 import RegistreMaydaiBadge from './components/RegistreMaydaiBadge'
 import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
 import { getDeploymentStatus, getDeploymentStatusColor } from '@/lib/deployment-status'
+import { getJourneyTypeFromPathMode, type PathMode } from '@/lib/journey-path-mode'
 
 interface Company {
   id: string
@@ -86,6 +87,7 @@ interface UseCase {
   }
   questionnaire_version?: string | number | null
   system_type?: string | null
+  path_mode?: PathMode
 }
 
 interface DashboardProps {
@@ -826,6 +828,10 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
               <>
                 <div className="space-y-4">
                   {currentUseCases.map((useCase) => {
+                    const parcoursBadgeLabel = getJourneyTypeFromPathMode(
+                      useCase.path_mode ?? null
+                    )
+
                     // Détermine l'URL de destination selon le statut
                     const getUseCaseUrl = (useCase: UseCase) => {
                       const st = String(useCase.status || '').toLowerCase()
@@ -902,6 +908,9 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                                     } : {}}
                                   >
                                     {getUseCaseStatusInFrench(useCase.status)}
+                                  </span>
+                                  <span className="px-2 py-1 text-xs font-medium rounded-full border border-gray-200 text-gray-700 bg-white">
+                                    {parcoursBadgeLabel}
                                   </span>
                                   {(() => {
                                     const deploymentStatus = getDeploymentStatus(
