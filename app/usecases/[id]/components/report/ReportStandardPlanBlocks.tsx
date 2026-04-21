@@ -48,6 +48,8 @@ export interface ReportStandardPlanBlocksProps {
   maydaiAsRegistry?: boolean
   companyId: string
   useCaseId: string
+  /** Réponses questionnaire — alignement points avec la todo dashboard. */
+  questionnaireResponses?: unknown[]
   /** Niveau de risque qualifié — requis si classificationStatus === 'qualified'. */
   riskLevel: RiskLevelCode | null
   /** qualified = niveau fiable attendu ; impossible géré en amont si le parent filtre correctement. */
@@ -61,6 +63,7 @@ export function ReportStandardPlanBlocks({
   maydaiAsRegistry,
   companyId,
   useCaseId,
+  questionnaireResponses = [],
   riskLevel,
   classificationStatus,
 }: ReportStandardPlanBlocksProps) {
@@ -110,6 +113,7 @@ export function ReportStandardPlanBlocks({
       maydaiAsRegistry,
       companyId,
       useCaseId,
+      questionnaireResponses,
     })
   ).filter(isItem)
 

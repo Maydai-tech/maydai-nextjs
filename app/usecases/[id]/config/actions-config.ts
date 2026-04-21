@@ -3,7 +3,7 @@
  * Les libellés CTA alignés sur la to-do utilisent `todo_action_label` du catalogue.
  */
 
-import { getFixedActionPoints, getRegistryActionPoints } from '@/app/dashboard/[id]/todo-list/utils/todo-helpers'
+import { getPotentialPoints } from '@/app/dashboard/[id]/todo-list/utils/todo-helpers'
 import {
   getCanonicalActionByReportSlot,
   REPORT_STANDARD_SLOT_KEYS_ORDERED,
@@ -18,20 +18,16 @@ for (const key of REPORT_STANDARD_SLOT_KEYS_ORDERED) {
 }
 
 /**
- * Récupère les points potentiels pour une action donnée
+ * Points à récupérer (malus questionnaire) pour une action — aligné sur la todo dashboard.
  * @param actionKey - La clé de l'action (ex: 'quick_win_1', 'priorite_1')
- * @returns Le nombre de points potentiels (0 si pas de points)
+ * @param responses - Réponses questionnaire du cas (défaut : tableau vide → 0 si pas de mapping malus)
  */
-export function getActionPoints(actionKey: string): number {
+export function getActionPoints(actionKey: string, responses: unknown[] = []): number {
   const docType = ACTION_TO_DOCTYPE[actionKey]
 
   if (!docType) return 0
 
-  if (docType === 'registry_proof') {
-    return getRegistryActionPoints()
-  }
-
-  return getFixedActionPoints(docType)
+  return getPotentialPoints(docType, responses as any[])
 }
 
 /**
@@ -46,10 +42,10 @@ export function getActionTitle(actionKey: string): string {
  * @param actionKey - La clé de l'action
  * @returns Un objet contenant le titre, les points et le type de document
  */
-export function getActionMetadata(actionKey: string) {
+export function getActionMetadata(actionKey: string, responses?: unknown[]) {
   return {
     title: getActionTitle(actionKey),
-    points: getActionPoints(actionKey),
+    points: getActionPoints(actionKey, responses),
     docType: ACTION_TO_DOCTYPE[actionKey] || '',
   }
 }
