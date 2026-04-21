@@ -10,7 +10,7 @@ import { SupabaseClient } from '@supabase/supabase-js'
 import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
 import { resolveCanonicalDocType } from '@/lib/canonical-actions'
 
-interface TodoActionMapping {
+export interface TodoActionMapping {
   questionCode: string
   positiveAnswerCode: string
   negativeAnswerCode: string | null
@@ -18,76 +18,80 @@ interface TodoActionMapping {
   reason: string
 }
 
-/**
- * Finds the question and positive/negative answer codes for a given todo_action
- * by scanning questions-with-scores.json for questions with todo_action property
- *
- * The todo_action is now at the question level (not option level)
- * The positive answer is the one with score_impact: 0 (typically "Oui")
- * The negative answer is the one with negative score_impact (typically "Non")
- */
-export function getTodoActionMapping(todoAction: string): TodoActionMapping | null {
-  const canonicalTodo = resolveCanonicalDocType(todoAction)
-  // Scan all questions to find the one with this todo_action at question level
-  for (const [questionCode, question] of Object.entries(questionsData)) {
-    const questionObj = question as any
+function buildTodoActionMappingForQuestion(
+  questionCode: string,
+  questionObj: Record<string, unknown>,
+  canonicalTodo: string
+): TodoActionMapping | null {
+  if (questionObj.todo_action !== canonicalTodo) return null
+  const options = questionObj.options as Array<{ code?: string; score_impact?: number }> | undefined
+  if (!options?.length) return null
 
-    // Check if this question has the todo_action we're looking for
-    if (questionObj.todo_action !== canonicalTodo) continue
-    if (!questionObj.options) continue
+  let positiveAnswerCode: string | null = null
+  let negativeAnswerCode: string | null = null
+  let positiveImpact = 0
+  let negativeImpact = 0
 
-    // Find the positive answer (score_impact = 0 or undefined, typically "Oui")
-    // and the negative answer (negative score_impact, typically "Non")
-    let positiveAnswerCode: string | null = null
-    let negativeAnswerCode: string | null = null
-    let positiveImpact = 0
-    let negativeImpact = 0
+  for (const option of options) {
+    const impact = option.score_impact ?? 0
 
-    for (const option of questionObj.options) {
-      const impact = option.score_impact ?? 0
-
-      if (impact < 0) {
-        // This is the negative answer
-        negativeAnswerCode = option.code
-        negativeImpact = impact
-      } else if (impact === 0 && !positiveAnswerCode) {
-        // This is the positive answer (first one with 0 impact)
-        positiveAnswerCode = option.code
-        positiveImpact = impact
-      }
-    }
-
-    // If we didn't find a positive answer, use the first option with 0 or positive impact
-    if (!positiveAnswerCode) {
-      for (const option of questionObj.options) {
-        const impact = option.score_impact ?? 0
-        if (impact >= 0) {
-          positiveAnswerCode = option.code
-          positiveImpact = impact
-          break
-        }
-      }
-    }
-
-    if (!positiveAnswerCode) {
-      console.warn(`[TODO-SYNC] No positive answer found for question ${questionCode}`)
-      return null
-    }
-
-    // Expected points gained = positive_impact - negative_impact
-    // e.g., 0 - (-10) = +10 points
-    const expectedPointsGained = positiveImpact - negativeImpact
-
-    return {
-      questionCode,
-      positiveAnswerCode,
-      negativeAnswerCode,
-      expectedPointsGained,
-      reason: getReasonForTodoAction(canonicalTodo)
+    if (impact < 0) {
+      negativeAnswerCode = option.code ?? null
+      negativeImpact = impact
+    } else if (impact === 0 && !positiveAnswerCode) {
+      positiveAnswerCode = option.code ?? null
+      positiveImpact = impact
     }
   }
 
-  return null
+  if (!positiveAnswerCode) {
+    for (const option of options) {
+      const impact = option.score_impact ?? 0
+      if (impact >= 0) {
+        positiveAnswerCode = option.code ?? null
+        positiveImpact = impact
+        break
+      }
+    }
+  }
+
+  if (!positiveAnswerCode) {
+    console.warn(`[TODO-SYNC] No positive answer found for question ${questionCode}`)
+    return null
+  }
+
+  const expectedPointsGained = positiveImpact - negativeImpact
+
+  return {
+    questionCode,
+    positiveAnswerCode,
+    negativeAnswerCode,
+    expectedPointsGained,
+    reason: getReasonForTodoAction(canonicalTodo),
+  }
+}
+
+/**
+ * Toutes les questions du JSON portant le même `todo_action` canonique (N → 1 dossier).
+ * Ordre = ordre d’itération des clés dans `questions-with-scores.json`.
+ */
+export function getTodoActionMappings(todoAction: string): TodoActionMapping[] {
+  const canonicalTodo = resolveCanonicalDocType(todoAction)
+  const out: TodoActionMapping[] = []
+  for (const [questionCode, question] of Object.entries(questionsData)) {
+    const m = buildTodoActionMappingForQuestion(questionCode, question as Record<string, unknown>, canonicalTodo)
+    if (m) out.push(m)
+  }
+  return out
+}
+
+/**
+ * Rétrocompatibilité (sync upload dossier, etc.) : première question matchant le `todo_action`.
+ * @see getTodoActionMappings pour le périmètre complet.
+ */
+export function getTodoActionMapping(todoAction: string): TodoActionMapping | null {
+  const mappings = getTodoActionMappings(todoAction)
+  return mappings[0] ?? null
 }
 
 /**
@@ -128,6 +132,67 @@ function getReasonForTodoActionReset(todoAction: string): string {
   return reasons[todoAction] || 'Document de conformite reinitialise'
 }
 
+type SyncOneMappingResult = {
+  changed: boolean
+  shouldRecalculate: boolean
+  previousValue: string | null
+  expectedPointsGained: number
+}
+
+async function syncOneTodoMappingToResponse(
+  supabase: SupabaseClient,
+  usecaseId: string,
+  mapping: TodoActionMapping,
+  userEmail: string,
+  previousValue: string | null
+): Promise<SyncOneMappingResult> {
+  if (previousValue === mapping.positiveAnswerCode) {
+    console.log(
+      `[TODO-SYNC] ${mapping.questionCode} already set to positive value, no change needed`
+    )
+    return { changed: false, shouldRecalculate: false, previousValue, expectedPointsGained: 0 }
+  }
+
+  const wasNegativeAnswer = previousValue === mapping.negativeAnswerCode
+
+  console.log(
+    `[TODO-SYNC] Updating ${mapping.questionCode} from ${previousValue} to ${mapping.positiveAnswerCode}`
+  )
+  console.log(
+    `[TODO-SYNC] Was negative answer: ${wasNegativeAnswer}, Expected points: ${wasNegativeAnswer ? mapping.expectedPointsGained : 0}`
+  )
+
+  const { error } = await supabase.from('usecase_responses').upsert(
+    {
+      usecase_id: usecaseId,
+      question_code: mapping.questionCode,
+      single_value: mapping.positiveAnswerCode,
+      answered_by: userEmail,
+      answered_at: new Date().toISOString(),
+      multiple_codes: null,
+      multiple_labels: null,
+      conditional_main: null,
+      conditional_keys: null,
+      conditional_values: null,
+    },
+    { onConflict: 'usecase_id,question_code' }
+  )
+
+  if (error) {
+    console.error(`[TODO-SYNC] Error updating response for ${mapping.questionCode}:`, error)
+    return { changed: false, shouldRecalculate: false, previousValue, expectedPointsGained: 0 }
+  }
+
+  console.log(`[TODO-SYNC] Response updated successfully for ${mapping.questionCode}`)
+
+  return {
+    changed: true,
+    shouldRecalculate: wasNegativeAnswer,
+    previousValue,
+    expectedPointsGained: wasNegativeAnswer ? mapping.expectedPointsGained : 0,
+  }
+}
+
 /**
  * Updates the questionnaire response for the given todo_action
  * Returns info about whether the response changed and if score should be recalculated
@@ -139,6 +204,8 @@ function getReasonForTodoActionReset(todoAction: string): string {
  * Score should NOT be recalculated when:
  * - Previous value was null (no answer) - delta is 0
  * - Previous value was already positive - no change
+ *
+ * Plusieurs questions peuvent partager le même `todo_action` : toutes sont mises à jour en parallèle.
  */
 export async function syncTodoActionToResponse(
   supabase: SupabaseClient,
@@ -151,69 +218,124 @@ export async function syncTodoActionToResponse(
   previousValue: string | null
   expectedPointsGained: number
 }> {
-  const mapping = getTodoActionMapping(todoAction)
-  if (!mapping) {
+  const mappings = getTodoActionMappings(todoAction)
+  if (mappings.length === 0) {
     console.log(`[TODO-SYNC] No mapping found for todo_action: ${todoAction}`)
     return { changed: false, shouldRecalculate: false, previousValue: null, expectedPointsGained: 0 }
   }
 
-  console.log(`[TODO-SYNC] Found mapping for ${todoAction}:`, mapping)
+  console.log(`[TODO-SYNC] Found ${mappings.length} mapping(s) for ${todoAction}:`, mappings)
 
-  // Check current response value
-  const { data: existingResponse } = await supabase
+  const codes = mappings.map(m => m.questionCode)
+  const { data: existingRows } = await supabase
     .from('usecase_responses')
-    .select('single_value')
+    .select('question_code, single_value')
     .eq('usecase_id', usecaseId)
-    .eq('question_code', mapping.questionCode)
-    .maybeSingle()
+    .in('question_code', codes)
 
-  const previousValue = existingResponse?.single_value || null
-
-  // If already set to the positive answer, no change needed
-  if (previousValue === mapping.positiveAnswerCode) {
-    console.log(`[TODO-SYNC] Response already set to positive value, no change needed`)
-    return { changed: false, shouldRecalculate: false, previousValue, expectedPointsGained: 0 }
+  const previousByCode = new Map<string, string | null>()
+  for (const m of mappings) {
+    previousByCode.set(m.questionCode, null)
+  }
+  for (const row of existingRows ?? []) {
+    const qc = row.question_code as string | undefined
+    if (!qc) continue
+    const sv = row.single_value
+    previousByCode.set(qc, typeof sv === 'string' ? sv : null)
   }
 
-  // Check if previous value was the negative answer (score should increase)
-  const wasNegativeAnswer = previousValue === mapping.negativeAnswerCode
+  const perMapping = await Promise.all(
+    mappings.map(m =>
+      syncOneTodoMappingToResponse(
+        supabase,
+        usecaseId,
+        m,
+        userEmail,
+        previousByCode.get(m.questionCode) ?? null
+      )
+    )
+  )
 
-  console.log(`[TODO-SYNC] Updating response from ${previousValue} to ${mapping.positiveAnswerCode}`)
-  console.log(`[TODO-SYNC] Was negative answer: ${wasNegativeAnswer}, Expected points: ${wasNegativeAnswer ? mapping.expectedPointsGained : 0}`)
+  let expectedPointsGained = 0
+  let anyChanged = false
+  let firstPrevious: string | null = null
+  for (let i = 0; i < perMapping.length; i++) {
+    const r = perMapping[i]!
+    if (i === 0) firstPrevious = r.previousValue
+    if (r.changed) anyChanged = true
+    expectedPointsGained += r.expectedPointsGained
+  }
 
-  // Update or insert the response
-  const { error } = await supabase
-    .from('usecase_responses')
-    .upsert({
+  return {
+    changed: anyChanged,
+    /** Aligné sur les routes API : recalcul uniquement si le cumul des gains de base est strictement positif. */
+    shouldRecalculate: expectedPointsGained > 0,
+    previousValue: firstPrevious,
+    expectedPointsGained,
+  }
+}
+
+type ReverseOneMappingResult = {
+  changed: boolean
+  shouldRecalculate: boolean
+  previousValue: string | null
+  expectedPointsLost: number
+}
+
+async function reverseOneTodoMappingResponse(
+  supabase: SupabaseClient,
+  usecaseId: string,
+  mapping: TodoActionMapping,
+  userEmail: string,
+  previousValue: string | null
+): Promise<ReverseOneMappingResult> {
+  if (!mapping.negativeAnswerCode) {
+    console.log(`[TODO-REVERSE] No negative answer code for ${mapping.questionCode}, skip`)
+    return { changed: false, shouldRecalculate: false, previousValue, expectedPointsLost: 0 }
+  }
+
+  if (previousValue === mapping.negativeAnswerCode) {
+    console.log(`[TODO-REVERSE] ${mapping.questionCode} already set to negative value, no change needed`)
+    return { changed: false, shouldRecalculate: false, previousValue, expectedPointsLost: 0 }
+  }
+
+  const wasPositiveAnswer = previousValue === mapping.positiveAnswerCode
+
+  console.log(
+    `[TODO-REVERSE] Updating ${mapping.questionCode} from ${previousValue} to ${mapping.negativeAnswerCode}`
+  )
+  console.log(
+    `[TODO-REVERSE] Was positive answer: ${wasPositiveAnswer}, Expected points lost: ${wasPositiveAnswer ? mapping.expectedPointsGained : 0}`
+  )
+
+  const { error } = await supabase.from('usecase_responses').upsert(
+    {
       usecase_id: usecaseId,
       question_code: mapping.questionCode,
-      single_value: mapping.positiveAnswerCode,
+      single_value: mapping.negativeAnswerCode,
       answered_by: userEmail,
       answered_at: new Date().toISOString(),
-      // Reset other fields
       multiple_codes: null,
       multiple_labels: null,
       conditional_main: null,
       conditional_keys: null,
-      conditional_values: null
-    }, {
-      onConflict: 'usecase_id,question_code'
-    })
+      conditional_values: null,
+    },
+    { onConflict: 'usecase_id,question_code' }
+  )
 
   if (error) {
-    console.error(`[TODO-SYNC] Error updating response:`, error)
-    return { changed: false, shouldRecalculate: false, previousValue, expectedPointsGained: 0 }
+    console.error(`[TODO-REVERSE] Error updating response for ${mapping.questionCode}:`, error)
+    return { changed: false, shouldRecalculate: false, previousValue, expectedPointsLost: 0 }
   }
 
-  console.log(`[TODO-SYNC] Response updated successfully`)
+  console.log(`[TODO-REVERSE] Response reversed successfully for ${mapping.questionCode}`)
 
-  // Only recalculate score if the previous answer was the negative one
-  // (changing from "Non" to "Oui" gives points; changing from null to "Oui" doesn't)
   return {
     changed: true,
-    shouldRecalculate: wasNegativeAnswer,
+    shouldRecalculate: wasPositiveAnswer,
     previousValue,
-    expectedPointsGained: wasNegativeAnswer ? mapping.expectedPointsGained : 0
+    expectedPointsLost: wasPositiveAnswer ? mapping.expectedPointsGained : 0,
   }
 }
 
@@ -230,6 +352,8 @@ export async function syncTodoActionToResponse(
  * - Previous value was null (no answer) - no change
  * - Previous value was already negative - no change
  * - No negative answer exists for this mapping
+ *
+ * Plusieurs questions peuvent partager le même `todo_action` : chaque ligne réversible est traitée en parallèle.
  */
 export async function reverseTodoActionResponse(
   supabase: SupabaseClient,
@@ -243,77 +367,69 @@ export async function reverseTodoActionResponse(
   expectedPointsLost: number
   reason: string
 }> {
-  const mapping = getTodoActionMapping(todoAction)
-  if (!mapping) {
+  const mappings = getTodoActionMappings(todoAction)
+  const reversible = mappings.filter(m => m.negativeAnswerCode)
+
+  if (mappings.length === 0) {
     console.log(`[TODO-REVERSE] No mapping found for todo_action: ${todoAction}`)
     return { changed: false, shouldRecalculate: false, previousValue: null, expectedPointsLost: 0, reason: '' }
   }
 
-  // If there's no negative answer, we can't reverse
-  if (!mapping.negativeAnswerCode) {
-    console.log(`[TODO-REVERSE] No negative answer code for ${todoAction}, cannot reverse`)
+  if (reversible.length === 0) {
+    console.log(`[TODO-REVERSE] No negative answer code for any question of ${todoAction}, cannot reverse`)
     return { changed: false, shouldRecalculate: false, previousValue: null, expectedPointsLost: 0, reason: '' }
   }
 
-  console.log(`[TODO-REVERSE] Found mapping for ${todoAction}:`, mapping)
+  console.log(`[TODO-REVERSE] Found ${reversible.length} reversible mapping(s) for ${todoAction}:`, reversible)
 
-  // Check current response value
-  const { data: existingResponse } = await supabase
+  const codes = reversible.map(m => m.questionCode)
+  const { data: existingRows } = await supabase
     .from('usecase_responses')
-    .select('single_value')
+    .select('question_code, single_value')
     .eq('usecase_id', usecaseId)
-    .eq('question_code', mapping.questionCode)
-    .maybeSingle()
+    .in('question_code', codes)
 
-  const previousValue = existingResponse?.single_value || null
-
-  // If already set to the negative answer, no change needed
-  if (previousValue === mapping.negativeAnswerCode) {
-    console.log(`[TODO-REVERSE] Response already set to negative value, no change needed`)
-    return { changed: false, shouldRecalculate: false, previousValue, expectedPointsLost: 0, reason: '' }
+  const previousByCode = new Map<string, string | null>()
+  for (const m of reversible) {
+    previousByCode.set(m.questionCode, null)
+  }
+  for (const row of existingRows ?? []) {
+    const qc = row.question_code as string | undefined
+    if (!qc) continue
+    const sv = row.single_value
+    previousByCode.set(qc, typeof sv === 'string' ? sv : null)
   }
 
-  // Check if previous value was the positive answer (score should decrease)
-  const wasPositiveAnswer = previousValue === mapping.positiveAnswerCode
+  const perMapping = await Promise.all(
+    reversible.map(m =>
+      reverseOneTodoMappingResponse(
+        supabase,
+        usecaseId,
+        m,
+        userEmail,
+        previousByCode.get(m.questionCode) ?? null
+      )
+    )
+  )
 
-  console.log(`[TODO-REVERSE] Updating response from ${previousValue} to ${mapping.negativeAnswerCode}`)
-  console.log(`[TODO-REVERSE] Was positive answer: ${wasPositiveAnswer}, Expected points lost: ${wasPositiveAnswer ? mapping.expectedPointsGained : 0}`)
-
-  // Update the response to the negative answer
-  const { error } = await supabase
-    .from('usecase_responses')
-    .upsert({
-      usecase_id: usecaseId,
-      question_code: mapping.questionCode,
-      single_value: mapping.negativeAnswerCode,
-      answered_by: userEmail,
-      answered_at: new Date().toISOString(),
-      // Reset other fields
-      multiple_codes: null,
-      multiple_labels: null,
-      conditional_main: null,
-      conditional_keys: null,
-      conditional_values: null
-    }, {
-      onConflict: 'usecase_id,question_code'
-    })
-
-  if (error) {
-    console.error(`[TODO-REVERSE] Error updating response:`, error)
-    return { changed: false, shouldRecalculate: false, previousValue, expectedPointsLost: 0, reason: '' }
+  let expectedPointsLost = 0
+  let anyChanged = false
+  let firstPrevious: string | null = null
+  for (let i = 0; i < perMapping.length; i++) {
+    const r = perMapping[i]!
+    if (i === 0) firstPrevious = r.previousValue
+    if (r.changed) anyChanged = true
+    expectedPointsLost += r.expectedPointsLost
   }
-
-  console.log(`[TODO-REVERSE] Response reversed successfully`)
 
   const reason = getReasonForTodoActionReset(todoAction)
 
-  // Only recalculate score if the previous answer was the positive one
   return {
-    changed: true,
-    shouldRecalculate: wasPositiveAnswer,
-    previousValue,
-    expectedPointsLost: wasPositiveAnswer ? mapping.expectedPointsGained : 0,
-    reason
+    changed: anyChanged,
+    shouldRecalculate: expectedPointsLost > 0,
+    previousValue: firstPrevious,
+    expectedPointsLost,
+    reason,
   }
 }
 

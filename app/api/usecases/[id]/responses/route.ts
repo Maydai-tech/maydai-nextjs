@@ -4,6 +4,7 @@ import {
   isChecklistGovEnterpriseQuestionCode,
   isChecklistGovUsecaseQuestionCode,
 } from '@/app/usecases/[id]/utils/bpgv-transparency-checklist-save'
+import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
 
 function normalizeStringArray(v: unknown): string[] {
   if (!Array.isArray(v)) return []
@@ -47,10 +48,10 @@ export async function GET(
 
     const { id: usecaseId } = await params
 
-    // Vérifier que l'utilisateur a accès à ce use case
+    // Vérifier que l'utilisateur a accès à ce use case (+ checklists pour fusion identique au scoring)
     const { data: usecase, error: usecaseError } = await supabase
       .from('usecases')
-      .select('company_id')
+      .select('company_id, checklist_gov_enterprise, checklist_gov_usecase')
       .eq('id', usecaseId)
       .single()
 
@@ -102,7 +103,30 @@ export async function GET(
       return NextResponse.json({ error: 'Error fetching responses' }, { status: 500 })
     }
 
-    return NextResponse.json(responses || [])
+    const checklistEnt = normalizeStringArray(
+      (usecase as { checklist_gov_enterprise?: unknown }).checklist_gov_enterprise
+    )
+    const checklistUc = normalizeStringArray(
+      (usecase as { checklist_gov_usecase?: unknown }).checklist_gov_usecase
+    )
+
+    const mergedRows = mergeChecklistIntoDbResponseRows(
+      responses ?? [],
+      checklistEnt.length > 0 ? checklistEnt : null,
+      checklistUc.length > 0 ? checklistUc : null
+    )
+
+    const withUsecaseId = mergedRows.map((row) => ({
+      ...row,
+      usecase_id: (row as { usecase_id?: string | null }).usecase_id ?? usecaseId,
+    }))
+
+    if (codesFilter && codesFilter.length > 0) {
+      const allowed = new Set(codesFilter)
+      return NextResponse.json(withUsecaseId.filter((r) => r.question_code && allowed.has(r.question_code)))
+    }
+
+    return NextResponse.json(withUsecaseId)
   } catch (error) {
     console.error('Error in GET /api/usecases/[id]/responses:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

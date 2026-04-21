@@ -1177,6 +1177,7 @@
     "question": "Avez-vous des procédures de vérification de la qualité des données ?",
     "type": "radio",
     "required": true,
+    "todo_action": "data_quality",
     "tooltip": {
       "title": "Qualité et représentativité des données (AI Act)",
       "shortContent": "L'article 10 de l'AI Act exige des données pertinentes, représentatives et autant que possible exemptes d'erreurs pour le contexte d'utilisation prévu.",
@@ -1204,6 +1205,7 @@
     "question": "Avez-vous établi et maintenez-vous un système de gestion des risques ?",
     "type": "radio",
     "required": true,
+    "todo_action": "risk_management",
     "options": [
       {
         "code": "E5.N9.Q1.A",
@@ -1225,6 +1227,7 @@
     "question": "Tenez-vous un registre centralisé de vos systèmes d'IA ?",
     "type": "radio",
     "required": true,
+    "todo_action": "registry_proof",
     "tooltip": {
       "title": "Registre centralisé",
       "shortContent": "Outil essentiel de gouvernance, ce registre cartographie vos usages pour prévenir les risques liés au Shadow AI et sécuriser vos données.",
@@ -1252,6 +1255,7 @@
     "question": "Avez-vous établi une documentation technique complète pour votre système d'IA ?",
     "type": "radio",
     "required": true,
+    "todo_action": "technical_documentation",
     "tooltip": {
       "title": "Documentation technique",
       "shortContent": "Recommandée comme bonne pratique pour tout système (et obligatoire pour les hauts risques), cette documentation détaille de manière transparente le fonctionnement de l'IA, son architecture et ses données d'entraînement. Elle décrit également vos procédures de test, la gestion des risques et les mesures de contrôle humain mises en place.",
@@ -1279,6 +1283,7 @@
     "question": "Avez-vous une étape de surveillance humaine dans votre système d'IA ?",
     "type": "radio",
     "required": true,
+    "todo_action": "human_oversight",
     "tooltip": {
       "title": "Surveillance humaine (Art. 14)",
       "shortContent": "L'AI Act exige un contrôle humain effectif : comprendre les limites du système, pouvoir ignorer ou interrompre ses résultats.",
@@ -1306,6 +1311,7 @@
     "question": "Votre système d'IA fait-il l'objet de tests réguliers et de mesures techniques pour garantir son exactitude, sa résilience face aux erreurs (robustesse) et sa protection contre les cyberattaques spécifiques (ex: empoisonnement) ?",
     "type": "radio",
     "required": true,
+    "todo_action": "continuous_monitoring",
     "tooltip": {
       "title": "Exactitude, robustesse et cybersécurité",
       "shortContent": "Exactitude, Robustesse et Cybersécurité (Art. 15) : Selon l'AI Act, ces trois éléments forment le socle indissociable de la fiabilité technique d'une IA.",
@@ -1333,6 +1339,7 @@
     "question": "Avez-vous intégré des mesures techniques d'atténuation des risques (ex : garde-fous, filtres, instructions système/prompts) dès la conception de votre IA ?",
     "type": "radio",
     "required": true,
+    "todo_action": "risk_management",
     "tooltip": {
       "title": "Instructions et garde-fous",
       "shortContent": "Instructions et garde-fous (Art. 9 et 15) : L'AI Act exige d'éliminer ou de réduire les risques dès la conception du système, y compris face à une mauvaise utilisation raisonnablement prévisible.",
@@ -1360,6 +1367,7 @@
     "question": "Le système d'IA est-il conçu pour que les personnes physiques soient clairement informées qu'elles interagissent avec une machine ?",
     "type": "radio",
     "required": true,
+    "todo_action": "transparency_marking",
     "tooltip": {
       "title": "Transparence de l'interaction",
       "shortContent": "Transparence de l'interaction (Art. 50.1) : L'AI Act exige que l'IA soit conçue pour signaler sa nature artificielle aux personnes physiques, sauf si le contexte d'utilisation rend la chose évidente (ex: un chatbot d'assistance classique).",
@@ -1387,6 +1395,7 @@
     "question": "Les contenus générés ou manipulés par l'IA (textes, images, audios, vidéos) intègrent-ils un marquage technique permettant de détecter leur origine artificielle (ex : watermarking, métadonnées) ?",
     "type": "radio",
     "required": true,
+    "todo_action": "transparency_marking",
     "tooltip": {
       "title": "Marquage des contenus",
       "shortContent": "Marquage des contenus (Art. 50.2) : Les systèmes génératifs doivent marquer leurs sorties dans un format lisible par machine pour assurer leur traçabilité. Exception : cette obligation ne s'applique pas aux simples outils d'assistance qui ne modifient pas substantiellement le sens du contenu.",
@@ -1414,6 +1423,7 @@
     "question": "Les contenus générés par l'IA (hypertrucages vidéo/audio/image ou textes d'intérêt public) sont-ils accompagnés d'une mention visible indiquant clairement au public leur origine artificielle ?",
     "type": "radio",
     "required": true,
+    "todo_action": "transparency_marking",
     "tooltip": {
       "title": "Étiquetage des contenus",
       "shortContent": "Étiquetage des contenus (Art. 50.4) : mention visible de l'origine artificielle pour hypertrucages et textes d'intérêt public, avec exemptions prévues par l'AI Act.",

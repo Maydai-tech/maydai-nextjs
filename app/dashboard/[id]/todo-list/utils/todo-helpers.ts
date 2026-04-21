@@ -1,5 +1,5 @@
 import { getListRiskBadgeStyle } from '@/lib/classification-risk-display'
-import { getTodoActionMapping } from '@/lib/todo-action-sync'
+import { getTodoActionMappings, type TodoActionMapping } from '@/lib/todo-action-sync'
 import { normalizeScoreTo100 } from '@/lib/score-calculator-simple'
 import {
   resolveCanonicalDocType,
@@ -147,6 +147,24 @@ export const DIRECT_BONUS_DOC_TYPES: readonly string[] = getDirectBonusCanonical
  */
 export const DIRECT_BONUS_RAW_POINTS = getDossierDirectBonusRawPointsAmount()
 
+function responseIncludesCode(response: { single_value?: unknown; conditional_main?: unknown; multiple_codes?: unknown }, code: string | null): boolean {
+  if (!code || !response) return false
+  if (response.single_value === code) return true
+  if (response.conditional_main === code) return true
+  if (Array.isArray(response.multiple_codes) && response.multiple_codes.includes(code)) return true
+  return false
+}
+
+function isPositiveForMapping(response: { single_value?: unknown; conditional_main?: unknown; multiple_codes?: unknown } | undefined, mapping: TodoActionMapping): boolean {
+  if (!response) return false
+  return responseIncludesCode(response, mapping.positiveAnswerCode)
+}
+
+function isNegativeForMapping(response: { single_value?: unknown; conditional_main?: unknown; multiple_codes?: unknown } | undefined, mapping: TodoActionMapping): boolean {
+  if (!response || !mapping.negativeAnswerCode) return false
+  return responseIncludesCode(response, mapping.negativeAnswerCode)
+}
+
 /**
  * Gets the potential score points that can be gained by completing a document action.
  * Returns the NORMALIZED points (as they appear in final score) only if points
@@ -154,7 +172,7 @@ export const DIRECT_BONUS_RAW_POINTS = getDossierDirectBonusRawPointsAmount()
  * Returns 0 if points are already earned.
  *
  * Handles 3 types of actions:
- * 1. Standard questionnaire-linked actions (e.g., technical_documentation)
+ * 1. Standard questionnaire-linked actions (somme des questions `todo_action` liées au dossier)
  * 2. Conditional question actions (e.g., data_quality, continuous_monitoring)
  * 3. Direct bonus actions (system_prompt, training_plan) - no questionnaire link
  *
@@ -170,35 +188,31 @@ export const getPotentialPoints = (docType: string, responses: any[]): number =>
     return normalizeScoreTo100(DIRECT_BONUS_RAW_POINTS)
   }
 
-  // Get the mapping dynamically from questions-with-scores.json
-  const mapping = getTodoActionMapping(canonical)
-  if (!mapping) return 0
+  const mappings = getTodoActionMappings(canonical)
+  if (mappings.length === 0) return 0
 
-  // Find the current response for this question
-  const response = responses.find((r: any) => r.question_code === mapping.questionCode)
+  let rawPotentialSum = 0
+  for (const mapping of mappings) {
+    const response = responses.find((r: { question_code?: string }) => r.question_code === mapping.questionCode)
 
-  // If no response yet, user can gain points by completing the dossier → show potential
-  if (!response) {
-    return normalizeScoreTo100(mapping.expectedPointsGained)
+    if (isPositiveForMapping(response, mapping)) {
+      continue
+    }
+
+    if (!response) {
+      rawPotentialSum += mapping.expectedPointsGained
+      continue
+    }
+
+    if (isNegativeForMapping(response, mapping)) {
+      rawPotentialSum += mapping.expectedPointsGained
+      continue
+    }
+
+    rawPotentialSum += mapping.expectedPointsGained
   }
 
-  // If current answer is positive (already have points), no potential to show
-  const isPositive =
-    response.single_value === mapping.positiveAnswerCode ||
-    response.conditional_main === mapping.positiveAnswerCode
-  if (isPositive) return 0
-
-  // Negative answer or other: check single_value (radio/synced) and conditional_main (conditional questions)
-  // Actions 6 (data_quality) and 8 (continuous_monitoring) use conditional questions → value in conditional_main
-  const isNegative =
-    response.single_value === mapping.negativeAnswerCode ||
-    response.conditional_main === mapping.negativeAnswerCode
-  if (isNegative) {
-    return normalizeScoreTo100(mapping.expectedPointsGained)
-  }
-
-  // No clear positive → still potential to gain (e.g. partial answer)
-  return normalizeScoreTo100(mapping.expectedPointsGained)
+  return normalizeScoreTo100(rawPotentialSum)
 }
 
 /**
@@ -224,25 +238,20 @@ export const getEarnedPoints = (docType: string, responses: any[], isCompleted: 
     return normalizeScoreTo100(DIRECT_BONUS_RAW_POINTS)
   }
 
-  // Get the mapping dynamically from questions-with-scores.json
-  const mapping = getTodoActionMapping(canonical)
-  if (!mapping) return 0
-  if (!mapping.negativeAnswerCode) return 0 // No negative answer = no points to earn
+  const mappings = getTodoActionMappings(canonical)
+  if (mappings.length === 0) return 0
 
-  // Find the current response for this question
-  const response = responses.find((r: any) => r.question_code === mapping.questionCode)
+  let rawEarnedSum = 0
+  for (const mapping of mappings) {
+    if (!mapping.negativeAnswerCode) continue
 
-  // Return points if the current answer is the positive one
-  // For radio questions: positive answer is in single_value
-  // For conditional questions: positive answer may be in conditional_main
-  if (
-    response?.single_value === mapping.positiveAnswerCode ||
-    response?.conditional_main === mapping.positiveAnswerCode
-  ) {
-    return normalizeScoreTo100(mapping.expectedPointsGained)
+    const response = responses.find((r: { question_code?: string }) => r.question_code === mapping.questionCode)
+    if (isPositiveForMapping(response, mapping)) {
+      rawEarnedSum += mapping.expectedPointsGained
+    }
   }
 
-  return 0
+  return normalizeScoreTo100(rawEarnedSum)
 }
 
 /**
