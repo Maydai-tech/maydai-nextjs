@@ -28,13 +28,6 @@ import {
 } from '@/lib/score-calculator-simple';
 import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses';
 import { recordUseCaseHistory } from '@/lib/usecase-history';
-import {
-  resolveCanonicalDocType,
-  getDossierDirectBonusSupabaseQueryDocTypes,
-  getDossierDirectBonusRawPointsAmount,
-  getDirectBonusCanonicalDocTypes,
-} from '@/lib/canonical-actions';
-
 import { deriveRiskLevelFromResponses } from '@/lib/risk-level';
 import {
   normalizeQuestionnaireVersion,
@@ -321,61 +314,6 @@ export async function POST(
     } catch (error) {
       console.warn('⚠️ Erreur lors de la récupération du score modèle:', error);
       // Continuer sans le score modèle
-    }
-    
-    // ===== ÉTAPE 6.5: CALCUL DU BONUS DIRECT (DOSSIERS) =====
-    // system_prompt and training_plan give +3 raw points each when their dossier is completed
-    // This bonus is separate from questionnaire impacts
-    console.log('📁 Vérification des bonus dossiers (catalogue canonique)...');
-    
-    let todoBonus = 0;
-    const DIRECT_BONUS_RAW_POINTS = getDossierDirectBonusRawPointsAmount();
-    const DIRECT_BONUS_QUERY_TYPES = getDossierDirectBonusSupabaseQueryDocTypes();
-    const DIRECT_BONUS_CANONICAL = new Set(getDirectBonusCanonicalDocTypes());
-    
-    try {
-      // Get the dossier for this use case
-      const { data: dossier } = await supabase
-        .from('dossiers')
-        .select('id')
-        .eq('usecase_id', finalUsecaseId)
-        .maybeSingle();
-      
-      if (dossier?.id) {
-        const { data: bonusDocs } = await supabase
-          .from('dossier_documents')
-          .select('doc_type, status')
-          .eq('dossier_id', dossier.id)
-          .in('doc_type', DIRECT_BONUS_QUERY_TYPES);
-
-        const completedCanonical = new Set<string>();
-        if (bonusDocs) {
-          for (const doc of bonusDocs) {
-            if (doc.status === 'complete' || doc.status === 'validated') {
-              const c = resolveCanonicalDocType(doc.doc_type);
-              if (DIRECT_BONUS_CANONICAL.has(c)) {
-                completedCanonical.add(c);
-              }
-            }
-          }
-        }
-        for (const c of completedCanonical) {
-          todoBonus += DIRECT_BONUS_RAW_POINTS;
-          console.log(`📁 Bonus direct +${DIRECT_BONUS_RAW_POINTS} pts bruts pour ${c}`);
-        }
-      }
-      
-      console.log(`📁 Total bonus dossiers: +${todoBonus} pts bruts`);
-    } catch (error) {
-      console.warn('⚠️ Erreur lors de la vérification des bonus dossiers:', error);
-      // Continue without bonus
-    }
-    
-    // Apply the todo bonus to the base score before final calculation
-    if (todoBonus > 0 && !baseScoreResult.is_eliminated) {
-      baseScoreResult.score_base += todoBonus;
-      baseScoreResult.calculation_details.final_base_score += todoBonus;
-      console.log(`📈 Score de base après bonus dossiers: ${baseScoreResult.score_base}`);
     }
     
     // ===== ÉTAPE 7: CALCUL DU SCORE FINAL =====

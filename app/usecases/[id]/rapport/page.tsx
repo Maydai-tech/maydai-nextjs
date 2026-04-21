@@ -116,7 +116,7 @@ function UseCaseRapportMainContent({
     ? useCase.active_question_codes.filter((c): c is string => typeof c === 'string')
     : []
 
-  const { slotStatuses } = useQuestionnaireSlotStatuses(
+  const { slotStatuses, questionnaireResponses } = useQuestionnaireSlotStatuses(
     useCaseId,
     Boolean(useCase.id && nextSteps && !isUnacceptableCase),
     {
@@ -698,6 +698,7 @@ function UseCaseRapportMainContent({
                   maydaiAsRegistry={maydaiAsRegistry}
                   companyId={useCase.company_id}
                   useCaseId={useCaseId}
+                  questionnaireResponses={questionnaireResponses}
                   riskLevel={riskLevel}
                   classificationStatus={classificationStatus}
                 />

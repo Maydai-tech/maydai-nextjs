@@ -54,8 +54,8 @@ interface TodoItem {
   useCaseId: string
   docType: DocumentType | 'registry_proof'
   registryCase?: 'A' | 'B' | 'C' // For registry-related todos
-  potentialPoints?: number // Points that can be gained by completing this action
-  earnedPoints?: number // Points that were earned by completing this action
+  potentialPoints?: number // Points à récupérer (malus questionnaire), 0 si aucun
+  earnedPoints?: number // Points récupérés une fois la preuve complétée
   actionNumber?: number // Optional numbering for ordered actions (1-8)
   /** Cas inacceptable : true = action prioritaire selon la date, false = seconde action (toujours requise) */
   isUnacceptablePrimary?: boolean
@@ -395,8 +395,8 @@ export default function TodoListPage({ params }: TodoListPageProps) {
         docType: 'registry_proof',
         registryCase: effectiveRegistryCase,
         actionNumber: 1,
-        potentialPoints: registryPotentialPoints > 0 ? registryPotentialPoints : undefined,
-        earnedPoints: registryEarnedPoints > 0 ? registryEarnedPoints : undefined
+        potentialPoints: registryPotentialPoints,
+        earnedPoints: registryEarnedPoints
       })
 
       // Add todos for each of the 8 compliance documents with hierarchical numbering (2–9)
@@ -413,8 +413,8 @@ export default function TodoListPage({ params }: TodoListPageProps) {
           completed,
           useCaseId: useCase.id,
           docType: docType as DocumentType,
-          potentialPoints: potentialPoints > 0 ? potentialPoints : undefined,
-          earnedPoints: earnedPoints > 0 ? earnedPoints : undefined,
+          potentialPoints,
+          earnedPoints,
           actionNumber: startNumber + index // Numbering continues from startNumber
         })
       })

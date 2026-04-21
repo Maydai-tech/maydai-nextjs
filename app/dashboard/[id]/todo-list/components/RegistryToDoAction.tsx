@@ -17,6 +17,7 @@ import {
 import RegistryProofUpload from '@/components/RegistryProofUpload'
 import RegistreMaydaiBadge from '@/app/dashboard/[id]/components/RegistreMaydaiBadge'
 import { getRegistryTodoHelpExplanation } from '@/lib/canonical-actions'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
 
 interface TodoItem {
   id: string
@@ -51,6 +52,8 @@ export default function RegistryToDoAction({
 }: RegistryToDoActionProps) {
   const router = useRouter()
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const p = todo.potentialPoints ?? 0
+  const e = todo.earnedPoints ?? 0
 
   // Navigate to registry settings
   const handleGoToSettings = () => {
@@ -204,18 +207,40 @@ export default function RegistryToDoAction({
           {todo.actionNumber ? `${todo.actionNumber}. ${todo.text}` : todo.text}
         </span>
 
-        {/* Points badges - different styles for earned vs potential */}
-        {todo.earnedPoints && todo.earnedPoints > 0 ? (
-          // Pastille "Gagné" - Vert foncé avec icône Check (action complétée avec gain de points)
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-600 text-white text-xs font-semibold rounded-full flex-shrink-0">
-            <Check className="w-3 h-3" />
-            +{todo.earnedPoints} pts
+        {!todo.completed && p > 0 ? (
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full flex-shrink-0"
+            title={DECLARATION_PROOF_FLOW_COPY.todoPointsToRecoverTitle}
+          >
+            <TrendingUp className="w-3 h-3" aria-hidden />
+            +{p} pt à récupérer
           </span>
-        ) : todo.potentialPoints && todo.potentialPoints > 0 ? (
-          // Pastille "Potentiel" - Vert clair avec icône TrendingUp (points à gagner)
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full flex-shrink-0">
-            <TrendingUp className="w-3 h-3" />
-            +{todo.potentialPoints} pts
+        ) : null}
+        {todo.completed && e > 0 ? (
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-600 text-white text-xs font-semibold rounded-full flex-shrink-0"
+            title={DECLARATION_PROOF_FLOW_COPY.todoPointsRecoveredTitle}
+          >
+            <Check className="w-3 h-3" aria-hidden />
+            +{e} pt récupérés
+          </span>
+        ) : null}
+        {todo.completed && e === 0 && p === 0 ? (
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-800 text-xs font-semibold rounded-full border border-slate-200 flex-shrink-0"
+            title={DECLARATION_PROOF_FLOW_COPY.todoValidatedBadge}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" aria-hidden />
+            {DECLARATION_PROOF_FLOW_COPY.todoValidatedBadge}
+          </span>
+        ) : null}
+        {todo.completed && e === 0 && p > 0 ? (
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-900 text-xs font-semibold rounded-full border border-amber-200 flex-shrink-0"
+            title={DECLARATION_PROOF_FLOW_COPY.todoPointsToRecoverTitle}
+          >
+            <TrendingUp className="w-3 h-3" aria-hidden />
+            +{p} pt à récupérer
           </span>
         ) : null}
 

@@ -18,11 +18,13 @@ export function useQuestionnaireSlotStatuses(
 ) {
   const { session } = useAuth()
   const [slotStatuses, setSlotStatuses] = useState<SlotStatusMap | null>(null)
+  const [questionnaireResponses, setQuestionnaireResponses] = useState<unknown[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!enabled || !usecaseId || !session?.access_token) {
       setSlotStatuses(null)
+      setQuestionnaireResponses([])
       return
     }
 
@@ -38,6 +40,7 @@ export function useQuestionnaireSlotStatuses(
         const responses = (await res.json()) as unknown
         const list = Array.isArray(responses) ? responses : []
         if (!cancelled) {
+          setQuestionnaireResponses(list)
           setSlotStatuses(
             computeSlotStatuses(list as Parameters<typeof computeSlotStatuses>[0], {
               questionnaireVersion: options?.questionnaireVersion,
@@ -46,7 +49,10 @@ export function useQuestionnaireSlotStatuses(
           )
         }
       } catch {
-        if (!cancelled) setSlotStatuses(null)
+        if (!cancelled) {
+          setSlotStatuses(null)
+          setQuestionnaireResponses([])
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -63,5 +69,5 @@ export function useQuestionnaireSlotStatuses(
     JSON.stringify(options?.activeQuestionCodes ?? []),
   ])
 
-  return { slotStatuses, loading }
+  return { slotStatuses, loading, questionnaireResponses }
 }

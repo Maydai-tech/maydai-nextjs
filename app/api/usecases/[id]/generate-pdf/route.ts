@@ -364,6 +364,7 @@ export async function GET(
         maydaiAsRegistry: companyRow?.maydai_as_registry === true,
         companyId: useCase.company_id,
         useCaseId,
+        questionnaireResponses: mergedPdfResponses,
       })
 
       if (canonicalPlanItems.length !== REPORT_STANDARD_SLOT_KEYS_ORDERED.length) {

@@ -9,10 +9,9 @@ import {
   buildDashboardDossierDeepLink,
   buildDashboardTodoListDeepLink,
   getCanonicalActionByReportSlot,
-  getComplianceNormalizedPointsForDocType,
-  getRegistryNormalizedPointsFromCatalog,
   resolveCanonicalDocType,
 } from '@/lib/canonical-actions'
+import { getEarnedPoints, getPotentialPoints } from '@/app/dashboard/[id]/todo-list/utils/todo-helpers'
 import { getReportPlanNarrativeLine } from '@/lib/report-plan-ui'
 import type { RiskLevelCode } from '@/lib/risk-level'
 import type { SlotStatus, SlotStatusMap } from '@/lib/slot-statuses'
@@ -22,16 +21,16 @@ import { DECLARATION_PROOF_FLOW_COPY } from '@/lib/declaration-proof-flow-copy'
 /** Réexport — ordre des 9 slots = `REPORT_STANDARD_SLOT_KEYS_ORDERED` (catalogue). */
 export const STANDARD_PLAN_SLOT_KEYS_ORDERED: readonly string[] = [...REPORT_STANDARD_SLOT_KEYS_ORDERED]
 
-function reportCtaPointsAndDocType(action: {
-  doc_type_canonique: string
-  todo_action_label: string
-}): { title: string; points: number; docType: string } {
-  const docType = action.doc_type_canonique
-  const points =
-    docType === 'registry_proof'
-      ? getRegistryNormalizedPointsFromCatalog()
-      : getComplianceNormalizedPointsForDocType(docType)
-  return { title: action.todo_action_label, points, docType }
+function reportCtaPointsFromQuestionnaire(params: {
+  docType: string
+  questionnaireResponses: unknown[]
+  docCompleted: boolean
+}): number {
+  const rows = params.questionnaireResponses as any[]
+  if (params.docCompleted) {
+    return getEarnedPoints(params.docType, rows, true)
+  }
+  return getPotentialPoints(params.docType, rows)
 }
 
 function isDocumentActionCompleted(
@@ -335,6 +334,8 @@ export function buildReportCanonicalItemForSlot(params: {
   maydaiAsRegistry?: boolean
   companyId: string
   useCaseId: string
+  /** Réponses questionnaire — même base que la todo dashboard (`getPotentialPoints` / `getEarnedPoints`). */
+  questionnaireResponses?: unknown[]
 }): ReportCanonicalItem | null {
   const {
     reportSlotKey,
@@ -345,12 +346,14 @@ export function buildReportCanonicalItemForSlot(params: {
     maydaiAsRegistry,
     companyId,
     useCaseId,
+    questionnaireResponses = [],
   } = params
 
   const action = getCanonicalActionByReportSlot(reportSlotKey)
   if (!action) return null
 
-  const metadata = reportCtaPointsAndDocType(action)
+  const docType = action.doc_type_canonique
+  const title = action.todo_action_label
   const llmText = slotNarrativeFromNextSteps(nextSteps, reportSlotKey)
   const declaration_status = slotStatuses?.[reportSlotKey as keyof SlotStatusMap] ?? null
   const narrative_text = getReportPlanNarrativeLine(llmText, declaration_status, action)
@@ -361,20 +364,25 @@ export function buildReportCanonicalItemForSlot(params: {
     `Cadre AI Act — exigences applicables selon la qualification du risque pour : ${action.label}.`
   const business_rationale = action.todo_explanation
 
-  const docCompleted = isDocumentActionCompleted(metadata.docType, documentStatuses, maydaiAsRegistry)
+  const docCompleted = isDocumentActionCompleted(docType, documentStatuses, maydaiAsRegistry)
+  const points = reportCtaPointsFromQuestionnaire({
+    docType,
+    questionnaireResponses,
+    docCompleted,
+  })
   const isHorsPerimetre = declaration_status === 'Hors périmètre'
   const evidence_status: EvidenceStatusValue = isHorsPerimetre
     ? 'not_applicable'
     : resolveEvidenceStatus(
         legal_status,
-        metadata.docType,
+        docType,
         documentStatuses,
         maydaiAsRegistry,
         docCompleted
       )
 
-  const dossierUrl = buildDashboardDossierDeepLink(companyId, useCaseId, metadata.docType)
-  const todoUrl = buildDashboardTodoListDeepLink(companyId, useCaseId, metadata.docType)
+  const dossierUrl = buildDashboardDossierDeepLink(companyId, useCaseId, docType)
+  const todoUrl = buildDashboardTodoListDeepLink(companyId, useCaseId, docType)
 
   return {
     identity: {
@@ -398,8 +406,8 @@ export function buildReportCanonicalItemForSlot(params: {
       ctaOmitted: isHorsPerimetre,
       dossierUrl,
       todoUrl,
-      label: metadata.title,
-      points: metadata.points,
+      label: title,
+      points,
     },
   }
 }
@@ -414,6 +422,7 @@ export function buildAllStandardPlanCanonicalItems(params: {
   maydaiAsRegistry?: boolean
   companyId: string
   useCaseId: string
+  questionnaireResponses?: unknown[]
 }): ReportCanonicalItem[] {
   const out: ReportCanonicalItem[] = []
   for (const reportSlotKey of params.slotKeysOrdered) {
@@ -426,6 +435,7 @@ export function buildAllStandardPlanCanonicalItems(params: {
       maydaiAsRegistry: params.maydaiAsRegistry,
       companyId: params.companyId,
       useCaseId: params.useCaseId,
+      questionnaireResponses: params.questionnaireResponses,
     })
     if (item) out.push(item)
   }

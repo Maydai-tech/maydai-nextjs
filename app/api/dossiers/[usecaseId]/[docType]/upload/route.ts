@@ -351,41 +351,40 @@ export async function PUT(
       console.log("[PUT /upload] Document inserted successfully");
     }
 
-    // Check if this docType has a todo_action mapping and sync the response
+    // Malus récupérable uniquement : sync questionnaire → ajuste score_base si et seulement si gain > 0
     let scoreChange = null;
-    
-    // Direct bonus document types (formation = training_plan canonique)
-    const DIRECT_BONUS_DOC_TYPES = ["system_prompt", "training_plan"];
-    const DIRECT_BONUS_RAW_POINTS = 3;
-    
-    if (DIRECT_BONUS_DOC_TYPES.includes(storageDocType)) {
-      console.log("[PUT /upload] Direct bonus docType:", storageDocType, "+", DIRECT_BONUS_RAW_POINTS, "raw points");
-      
-      // Only add bonus if this is a NEW completion (document was not already complete)
-      // existingDoc was fetched BEFORE our update, so its status reflects the previous state
-      const wasAlreadyCompleted = existingDoc?.status === "complete" || existingDoc?.status === "validated";
-      
-      if (wasAlreadyCompleted) {
-        console.log("[PUT /upload] Document was already completed, no bonus to add (re-upload)");
-      } else {
-        // Get the current score
+
+    const todoMapping = getTodoActionMapping(storageDocType);
+    if (todoMapping) {
+      console.log("[PUT /upload] Found todo_action mapping for docType:", storageDocType);
+
+      const syncResult = await syncTodoActionToResponse(
+        supabase,
+        usecaseId,
+        storageDocType,
+        user.email || user.id
+      );
+
+      if (syncResult.shouldRecalculate && syncResult.expectedPointsGained > 0) {
+        console.log("[PUT /upload] Malus récupérable : mise à jour score (gain brut)", syncResult.expectedPointsGained);
+
         const { data: currentUsecase } = await supabase
           .from("usecases")
           .select("score_final, score_base, score_model")
           .eq("id", usecaseId)
           .single();
-        
+
         const previousScore = currentUsecase?.score_final ?? null;
         const previousBaseScore = currentUsecase?.score_base ?? 0;
         const scoreModel = currentUsecase?.score_model ?? 0;
-        
+
         if (previousScore !== null) {
           const COMPL_AI_WEIGHT = 2.5;
-          const newBaseScore = previousBaseScore + DIRECT_BONUS_RAW_POINTS;
+          const newBaseScore = previousBaseScore + syncResult.expectedPointsGained;
           const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
-          
-          console.log(`[PUT /upload] Direct bonus score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
-          
+
+          console.log(`[PUT /upload] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
+
           const { error: updateError } = await supabase
             .from("usecases")
             .update({
@@ -394,89 +393,24 @@ export async function PUT(
               last_calculation_date: new Date().toISOString(),
             })
             .eq("id", usecaseId);
-          
+
           if (!updateError) {
             const pointsGainedFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
             scoreChange = {
-              previousScore,
+              previousScore: previousScore,
               newScore: newFinalScore,
               pointsGained: pointsGainedFinal,
-              reason: storageDocType === "system_prompt" 
-                ? "Instructions systeme et prompts definis"
-                : "Formations AI Act recensees",
+              reason: todoMapping.reason,
             };
-            console.log("[PUT /upload] Direct bonus score changed:", scoreChange);
+            console.log("[PUT /upload] Score changed:", scoreChange);
           } else {
             console.error("[PUT /upload] Error updating score:", updateError);
           }
         }
-      }
-    } else {
-      // Standard todo_action mapping (questionnaire-linked)
-      const todoMapping = getTodoActionMapping(storageDocType);
-      if (todoMapping) {
-        console.log("[PUT /upload] Found todo_action mapping for docType:", storageDocType);
-
-        // Sync the questionnaire response
-        const syncResult = await syncTodoActionToResponse(
-          supabase,
-          usecaseId,
-          storageDocType,
-          user.email || user.id
-        );
-
-        // Only update score if the previous answer was the NEGATIVE one
-        // (e.g., changing from "Non" to "Oui" gives +10 points)
-        // If previous was null or already positive, don't update score (delta = 0)
-        if (syncResult.shouldRecalculate && syncResult.expectedPointsGained > 0) {
-          console.log("[PUT /upload] Previous answer was negative, updating score");
-          console.log("[PUT /upload] Expected points gained:", syncResult.expectedPointsGained);
-
-          // Get the current score from the database
-          const { data: currentUsecase } = await supabase
-            .from("usecases")
-            .select("score_final, score_base, score_model")
-            .eq("id", usecaseId)
-            .single();
-
-          const previousScore = currentUsecase?.score_final ?? null;
-          const previousBaseScore = currentUsecase?.score_base ?? 0;
-          const scoreModel = currentUsecase?.score_model ?? 0;
-
-          if (previousScore !== null) {
-            const COMPL_AI_WEIGHT = 2.5;
-            const newBaseScore = previousBaseScore + syncResult.expectedPointsGained;
-            const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
-
-            console.log(`[PUT /upload] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
-
-            const { error: updateError } = await supabase
-              .from("usecases")
-              .update({
-                score_base: newBaseScore,
-                score_final: newFinalScore,
-                last_calculation_date: new Date().toISOString(),
-              })
-              .eq("id", usecaseId);
-
-            if (!updateError) {
-              const pointsGainedFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
-              scoreChange = {
-                previousScore: previousScore,
-                newScore: newFinalScore,
-                pointsGained: pointsGainedFinal,
-                reason: todoMapping.reason,
-              };
-              console.log("[PUT /upload] Score changed:", scoreChange);
-            } else {
-              console.error("[PUT /upload] Error updating score:", updateError);
-            }
-          }
-        } else if (syncResult.changed) {
-          console.log("[PUT /upload] Response was updated but previous was null, no score update needed (delta = 0)");
-        } else {
-          console.log("[PUT /upload] Response was already set to positive value, no score update needed");
-        }
+      } else if (syncResult.changed) {
+        console.log("[PUT /upload] Réponse questionnaire mise à jour sans impact score (delta = 0)");
+      } else {
+        console.log("[PUT /upload] Pas de sync score : pas de malus récupérable sur cet upload");
       }
     }
 
@@ -610,110 +544,59 @@ export async function DELETE(
       );
     }
 
-    // === Score decrease and history when deleting a previously completed document ===
+    // === Score decrease : uniquement reverse malus questionnaire (pas de forfait dossier) ===
     let scoreChange = null;
-    
-    // Direct bonus document types
-    const DIRECT_BONUS_DOC_TYPES = ["system_prompt", "training_plan"];
-    const DIRECT_BONUS_RAW_POINTS = 3;
-    
+
     if (previousStatus === "complete" || previousStatus === "validated") {
       console.log("[DELETE /upload] Document was", previousStatus, "- reversing score for docType:", storageDocType);
 
-      if (DIRECT_BONUS_DOC_TYPES.includes(storageDocType)) {
-        // Direct bonus type: subtract the bonus from score_base
-        console.log("[DELETE /upload] Direct bonus docType, removing", DIRECT_BONUS_RAW_POINTS, "raw points");
-        
-        const { data: currentUsecase } = await supabase
-          .from("usecases")
-          .select("score_final, score_base, score_model")
-          .eq("id", usecaseId)
-          .single();
+      const todoMapping = getTodoActionMapping(storageDocType);
+      if (todoMapping) {
+        const reverseResult = await reverseTodoActionResponse(
+          supabase,
+          usecaseId,
+          storageDocType,
+          user.email || user.id,
+        );
 
-        const previousScore = currentUsecase?.score_final ?? null;
-        const previousBaseScore = currentUsecase?.score_base ?? 0;
-        const scoreModel = currentUsecase?.score_model ?? 0;
+        if (reverseResult.shouldRecalculate && reverseResult.expectedPointsLost > 0) {
+          console.log("[DELETE /upload] Decreasing score by", reverseResult.expectedPointsLost, "points");
 
-        if (previousScore !== null) {
-          const COMPL_AI_WEIGHT = 2.5;
-          const newBaseScore = Math.max(0, previousBaseScore - DIRECT_BONUS_RAW_POINTS);
-          const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
-
-          console.log(`[DELETE /upload] Direct bonus score decrease: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
-
-          const { error: scoreUpdateError } = await supabase
+          const { data: currentUsecase } = await supabase
             .from("usecases")
-            .update({
-              score_base: newBaseScore,
-              score_final: newFinalScore,
-              last_calculation_date: new Date().toISOString(),
-            })
-            .eq("id", usecaseId);
+            .select("score_final, score_base, score_model")
+            .eq("id", usecaseId)
+            .single();
 
-          if (!scoreUpdateError) {
-            const pointsLostFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
-            scoreChange = {
-              previousScore,
-              newScore: newFinalScore,
-              pointsGained: pointsLostFinal,
-              reason: storageDocType === "system_prompt"
-                ? "Instructions systeme reintialisees"
-                : "Formations AI Act reintialisees",
-            };
-            console.log("[DELETE /upload] Direct bonus score decreased:", scoreChange);
-          }
-        }
-      } else {
-        // Standard todo_action mapping (questionnaire-linked)
-        const todoMapping = getTodoActionMapping(storageDocType);
-        if (todoMapping) {
-          // Reverse the questionnaire response (set back to "Non")
-          const reverseResult = await reverseTodoActionResponse(
-            supabase,
-            usecaseId,
-            storageDocType,
-            user.email || user.id,
-          );
+          const previousScore = currentUsecase?.score_final ?? null;
+          const previousBaseScore = currentUsecase?.score_base ?? 0;
+          const scoreModel = currentUsecase?.score_model ?? 0;
 
-          if (reverseResult.shouldRecalculate && reverseResult.expectedPointsLost > 0) {
-            console.log("[DELETE /upload] Decreasing score by", reverseResult.expectedPointsLost, "points");
+          if (previousScore !== null) {
+            const newBaseScore = Math.max(0, previousBaseScore - reverseResult.expectedPointsLost);
+            const COMPL_AI_WEIGHT = 2.5;
+            const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
 
-            const { data: currentUsecase } = await supabase
+            console.log(`[DELETE /upload] Score decrease: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
+
+            const { error: scoreUpdateError } = await supabase
               .from("usecases")
-              .select("score_final, score_base, score_model")
-              .eq("id", usecaseId)
-              .single();
+              .update({
+                score_base: newBaseScore,
+                score_final: newFinalScore,
+                last_calculation_date: new Date().toISOString(),
+              })
+              .eq("id", usecaseId);
 
-            const previousScore = currentUsecase?.score_final ?? null;
-            const previousBaseScore = currentUsecase?.score_base ?? 0;
-            const scoreModel = currentUsecase?.score_model ?? 0;
-
-            if (previousScore !== null) {
-              const newBaseScore = Math.max(0, previousBaseScore - reverseResult.expectedPointsLost);
-              const COMPL_AI_WEIGHT = 2.5;
-              const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
-
-              console.log(`[DELETE /upload] Score decrease: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
-
-              const { error: scoreUpdateError } = await supabase
-                .from("usecases")
-                .update({
-                  score_base: newBaseScore,
-                  score_final: newFinalScore,
-                  last_calculation_date: new Date().toISOString(),
-                })
-                .eq("id", usecaseId);
-
-              if (!scoreUpdateError) {
-                const pointsLostFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
-                scoreChange = {
-                  previousScore,
-                  newScore: newFinalScore,
-                  pointsGained: pointsLostFinal,
-                  reason: reverseResult.reason,
-                };
-                console.log("[DELETE /upload] Score decreased:", scoreChange);
-              }
+            if (!scoreUpdateError) {
+              const pointsLostFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
+              scoreChange = {
+                previousScore,
+                newScore: newFinalScore,
+                pointsGained: pointsLostFinal,
+                reason: reverseResult.reason,
+              };
+              console.log("[DELETE /upload] Score decreased:", scoreChange);
             }
           }
         }

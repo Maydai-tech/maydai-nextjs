@@ -5,8 +5,6 @@ import {
   resolveCanonicalDocType,
   getCanonicalActionByDocType,
   getStandardComplianceDocTypesExcludingRegistry,
-  getDirectBonusCanonicalDocTypes,
-  getDossierDirectBonusRawPointsAmount,
   getComplianceNormalizedPointsForDocType,
   getRegistryNormalizedPointsFromCatalog,
 } from '@/lib/canonical-actions'
@@ -133,20 +131,6 @@ export const getDocumentExplanation = (docType: DocumentType | string): string =
   return "Veuillez fournir le document requis pour ce cas d'usage."
 }
 
-/**
- * List of document types that give a DIRECT BONUS when completed.
- * These types don't have questionnaire questions - the bonus is added
- * directly to score_base when the dossier is completed.
- * Each gives +3 raw points = 2 normalized points.
- */
-/** Types bonus dossier — source : `dossier_direct_bonus_raw_points` du catalogue. */
-export const DIRECT_BONUS_DOC_TYPES: readonly string[] = getDirectBonusCanonicalDocTypes()
-
-/**
- * Raw bonus points given per direct bonus document type
- */
-export const DIRECT_BONUS_RAW_POINTS = getDossierDirectBonusRawPointsAmount()
-
 function responseIncludesCode(response: { single_value?: unknown; conditional_main?: unknown; multiple_codes?: unknown }, code: string | null): boolean {
   if (!code || !response) return false
   if (response.single_value === code) return true
@@ -166,27 +150,16 @@ function isNegativeForMapping(response: { single_value?: unknown; conditional_ma
 }
 
 /**
- * Gets the potential score points that can be gained by completing a document action.
- * Returns the NORMALIZED points (as they appear in final score) only if points
- * can still be gained (response is "negative" or dossier not yet completed).
- * Returns 0 if points are already earned.
- *
- * Handles 3 types of actions:
- * 1. Standard questionnaire-linked actions (somme des questions `todo_action` liées au dossier)
- * 2. Conditional question actions (e.g., data_quality, continuous_monitoring)
- * 3. Direct bonus actions (system_prompt, training_plan) - no questionnaire link
+ * Points normalisés encore récupérables sur une action dossier, d’après le questionnaire
+ * (questions `todo_action` / malus récupérable). Aucun forfait catalogue : sans mapping
+ * questionnaire → 0.
  *
  * @param docType - The document type (e.g., 'technical_documentation')
  * @param responses - Array of questionnaire responses for the use case
- * @returns The potential normalized points to gain (0 if no points can be gained)
+ * @returns The potential normalized points to recover (0 if none)
  */
 export const getPotentialPoints = (docType: string, responses: any[]): number => {
   const canonical = resolveCanonicalDocType(docType)
-  // Direct bonus types: always return 2 normalized points as potential
-  // (the actual check for completion is done by the caller via earnedPoints)
-  if ((DIRECT_BONUS_DOC_TYPES as readonly string[]).includes(canonical)) {
-    return normalizeScoreTo100(DIRECT_BONUS_RAW_POINTS)
-  }
 
   const mappings = getTodoActionMappings(canonical)
   if (mappings.length === 0) return 0
@@ -216,27 +189,18 @@ export const getPotentialPoints = (docType: string, responses: any[]): number =>
 }
 
 /**
- * Gets the points that were EARNED by completing a document action.
- * Returns points only if the document is completed AND points are applicable.
- *
- * Handles 3 types of actions:
- * 1. Standard questionnaire-linked: checks if response is positive (single_value)
- * 2. Conditional question actions: checks both single_value AND conditional_main
- * 3. Direct bonus actions (system_prompt, training_plan): returns points if completed
+ * Points normalisés effectivement récupérés (preuve dossier complétée + réponses
+ * questionnaire alignées sur les codes « positifs » du mapping malus).
  *
  * @param docType - The document type (e.g., 'technical_documentation')
  * @param responses - Array of questionnaire responses for the use case
  * @param isCompleted - Whether the document is completed
- * @returns The normalized points that were earned (0 if no points were earned)
+ * @returns The normalized points recovered (0 if none)
  */
 export const getEarnedPoints = (docType: string, responses: any[], isCompleted: boolean): number => {
   if (!isCompleted) return 0
 
   const canonical = resolveCanonicalDocType(docType)
-  // Direct bonus types: if dossier is completed, points are earned
-  if ((DIRECT_BONUS_DOC_TYPES as readonly string[]).includes(canonical)) {
-    return normalizeScoreTo100(DIRECT_BONUS_RAW_POINTS)
-  }
 
   const mappings = getTodoActionMappings(canonical)
   if (mappings.length === 0) return 0
