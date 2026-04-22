@@ -166,6 +166,8 @@ export async function syncSubscriptionFromStripe(stripeSubscription: Stripe.Subs
   // 1. Essayer les métadonnées de la subscription
   if (stripeSubscription.metadata?.user_id) {
     userId = stripeSubscription.metadata.user_id
+  } else if (stripeSubscription.metadata?.userId) {
+    userId = stripeSubscription.metadata.userId
   }
   // 2. Essayer les métadonnées du customer
   else if (stripeSubscription.customer) {

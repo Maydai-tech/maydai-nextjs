@@ -51,8 +51,10 @@ export async function POST(request: NextRequest) {
       ],
       success_url: `${process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : process.env.NEXT_PUBLIC_APP_URL}/settings?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings`,
+      // Référence utilisateur pour webhooks / LTV (métadonnées Stripe = chaînes)
+      ...(userId && { client_reference_id: userId }),
       metadata: {
-        ...(userId && { user_id: userId }),
+        ...(userId && { user_id: userId, userId }),
       },
       automatic_tax: { enabled: true },
       customer_update: { address: 'auto' },
