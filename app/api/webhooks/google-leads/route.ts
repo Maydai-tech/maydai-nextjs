@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     console.error('[google-leads] Erreur insertion leads:', error)
     return NextResponse.json(
-      { error: 'Erreur base de données', details: error.message },
+      { error: 'Erreur base de données', details: error },
       { status: 500 }
     )
   }
