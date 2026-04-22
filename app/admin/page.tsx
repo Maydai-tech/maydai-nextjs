@@ -170,6 +170,17 @@ export default function AdminDashboard() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Link
+              href="/admin/marketing"
+              className="block p-4 border border-gray-200 rounded-lg hover:border-[#0080A3] hover:shadow-md transition-colors"
+            >
+              <TrendingUp className="h-6 w-6 text-[#0080A3] mb-2" />
+              <h3 className="font-medium text-gray-900">Marketing & LTV</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Leads, cohortes mensuelles et revenus (Google Ads / Stripe)
+              </p>
+            </Link>
+
+            <Link
               href="/admin/analytics"
               className="block p-4 border border-gray-200 rounded-lg hover:border-[#0080A3] hover:shadow-md transition-colors"
             >

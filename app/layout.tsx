@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import Script from "next/script";
@@ -10,6 +11,7 @@ import SmartLoader from "@/components/SmartLoader";
 import { getNonce } from "@/lib/csp-nonce";
 import GTMPageViewTracker from "@/components/GTMPageViewTracker";
 import HubSpotTrigger from "@/components/tracking/HubSpotTrigger";
+import AttributionCapture from "@/components/tracking/AttributionCapture";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -161,6 +163,9 @@ export default async function RootLayout({
         )}
 
         <AuthProvider>
+          <Suspense fallback={null}>
+            <AttributionCapture />
+          </Suspense>
           <GTMPageViewTracker />
           <HubSpotTrigger />
           <SmartLoader>

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth'
@@ -10,6 +10,11 @@ import { sendSignUpEvent } from '@/lib/gtm'
 import OTPVerification from '@/components/auth/OTPVerification'
 import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
 import { User, Building2, ArrowRight, Mail, Info } from 'lucide-react'
+import {
+  readStoredAttribution,
+  hasMeaningfulAttribution,
+  clearStoredAttribution,
+} from '@/lib/tracking/capture-params'
 
 type SignupStep = 'form' | 'otp' | 'processing'
 
@@ -25,7 +30,17 @@ interface SignupFormData {
 export default function SignupPage() {
   // Router and auth
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { signInWithOtp, verifyOtp, user, loading } = useAuth()
+
+  /** `lead_id` depuis l’URL d’invitation (figé au montage pour éviter les courses avec l’URL). */
+  const leadIdFromInviteRef = useRef<string | null>(null)
+  useEffect(() => {
+    const id = searchParams.get('lead_id')?.trim()
+    if (id) {
+      leadIdFromInviteRef.current = id
+    }
+  }, [searchParams])
 
   // Wizard steps
   const [signupStep, setSignupStep] = useState<SignupStep>('form')
@@ -252,6 +267,56 @@ export default function SignupPage() {
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || 'Erreur lors de la création du profil')
+      }
+
+      const leadId = leadIdFromInviteRef.current
+      if (leadId && session.user?.id) {
+        try {
+          const linkRes = await fetch('/api/leads/link-to-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ leadId }),
+          })
+          if (!linkRes.ok) {
+            const errText = await linkRes.text().catch(() => '')
+            console.error(
+              '[signup] Liaison lead ignorée (non bloquant):',
+              linkRes.status,
+              errText
+            )
+          }
+        } catch (linkErr) {
+          console.error('[signup] Liaison lead ignorée (non bloquant):', linkErr)
+        }
+      } else {
+        const attribution = readStoredAttribution()
+        if (attribution && hasMeaningfulAttribution(attribution)) {
+          try {
+            const wdRes = await fetch('/api/leads/website-direct', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({ attribution }),
+            })
+            if (wdRes.ok) {
+              clearStoredAttribution()
+            } else {
+              const t = await wdRes.text().catch(() => '')
+              console.error(
+                '[signup] Lead website_direct ignoré (non bloquant):',
+                wdRes.status,
+                t
+              )
+            }
+          } catch (wdErr) {
+            console.error('[signup] Lead website_direct ignoré (non bloquant):', wdErr)
+          }
+        }
       }
 
       if (typeof window !== 'undefined') {
