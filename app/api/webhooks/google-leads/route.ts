@@ -39,6 +39,38 @@ function getServiceSupabase() {
   return createClient(url, key)
 }
 
+/** PostgREST peut renvoyer un objet minimal ; PostgrestError étend Error (message sur l’instance). */
+function formatDbInsertError(error: unknown): {
+  message: string
+  code?: string
+  hint?: string
+  details?: string
+} {
+  if (error instanceof Error) {
+    const e = error as Error & { code?: string; hint?: string; details?: string }
+    return {
+      message: e.message || '(message vide)',
+      code: e.code,
+      hint: e.hint,
+      details: e.details,
+    }
+  }
+  if (error && typeof error === 'object') {
+    const o = error as Record<string, unknown>
+    const str = (v: unknown) =>
+      typeof v === 'string' ? v : v != null ? String(v) : undefined
+    const message = str(o.message)
+    return {
+      message:
+        message && message.length > 0 ? message : JSON.stringify(error),
+      code: str(o.code),
+      hint: str(o.hint),
+      details: str(o.details),
+    }
+  }
+  return { message: String(error) }
+}
+
 export async function POST(request: NextRequest) {
   if (!process.env.GOOGLE_WEBHOOK_SECRET) {
     console.error('[google-leads] GOOGLE_WEBHOOK_SECRET non configuré')
@@ -83,7 +115,7 @@ export async function POST(request: NextRequest) {
   }
 
   const insertRow = {
-    email: parsed.email,
+    email: parsed.email.trim().toLowerCase(),
     first_name: parsed.first_name,
     last_name: parsed.last_name,
     phone: parsed.phone,
@@ -93,6 +125,9 @@ export async function POST(request: NextRequest) {
     campaign_name: parsed.campaign_name,
     ad_group_name: parsed.ad_group_name,
     source: 'google_ads_form',
+    /** Aligné sur les autres inserts (`website_direct`) : colonnes souvent NOT NULL en base. */
+    funnel_stage: 0,
+    total_revenue: 0,
   }
 
   // La table `leads` peut être absente des types DB générés jusqu'au prochain `supabase gen types`.
@@ -116,15 +151,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.error('[google-leads] Erreur insertion leads:', error)
+    const err = formatDbInsertError(error)
+    console.error('[google-leads] Erreur insertion leads:', err, error)
     return NextResponse.json(
       {
         error: 'Erreur base de données',
-        details: {
-          message: error?.message || 'Aucun message',
-          code: error?.code || 'Aucun code',
-          hint: error?.hint || 'Aucun hint',
-        },
+        details: err,
       },
       { status: 500 }
     )
@@ -135,7 +167,7 @@ export async function POST(request: NextRequest) {
   const firstNameForEmail = (parsed.first_name ?? '').trim()
 
   const mailResult = await sendLeadInviteEmail({
-    leadEmail: parsed.email.trim(),
+    leadEmail: insertRow.email,
     firstName: firstNameForEmail,
     leadId,
   })
