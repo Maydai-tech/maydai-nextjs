@@ -6,6 +6,9 @@ const TEMPLATES = {
   ACCOUNT_COLLABORATION_INVITE: 7576574 // Template pour invitation au niveau compte
 } as const;
 
+/** Template Mailjet — campagne acquisition (lead Google Ads). */
+const MAILJET_LEAD_INVITE_TEMPLATE_ID = '7948763';
+
 const FROM_EMAIL = 'tech@maydai.io';
 const FROM_NAME = 'MaydAI';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.maydai.io';
@@ -173,19 +176,7 @@ export async function sendLeadInviteEmail({
   leadId: string;
 }) {
   const safeFirstName = (firstName ?? '').trim();
-  const templateIdRaw = process.env.MAILJET_LEAD_INVITE_TEMPLATE_ID;
-  if (!templateIdRaw) {
-    console.warn(
-      '⚠️ [Mailjet] MAILJET_LEAD_INVITE_TEMPLATE_ID non défini — email lead ignoré'
-    );
-    return { success: false, error: new Error('MAILJET_LEAD_INVITE_TEMPLATE_ID manquant') };
-  }
-
-  const templateId = Number.parseInt(templateIdRaw, 10);
-  if (Number.isNaN(templateId)) {
-    console.error('❌ [Mailjet] MAILJET_LEAD_INVITE_TEMPLATE_ID invalide:', templateIdRaw);
-    return { success: false, error: new Error('MAILJET_LEAD_INVITE_TEMPLATE_ID invalide') };
-  }
+  const templateId = Number.parseInt(MAILJET_LEAD_INVITE_TEMPLATE_ID, 10);
 
   const ctaLink = `${leadInviteSignupBaseUrl()}/signup?lead_id=${encodeURIComponent(leadId)}`;
 
