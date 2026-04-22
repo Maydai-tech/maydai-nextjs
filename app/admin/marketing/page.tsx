@@ -2,6 +2,9 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import MarketingDashboard from './MarketingDashboard'
 import type { LeadRow } from './types'
 
+/** Données sensibles au temps réel : évite un cache RSC obsolète (nouveaux leads invisibles après capture). */
+export const dynamic = 'force-dynamic'
+
 const LEAD_COLUMNS = [
   'id',
   'email',

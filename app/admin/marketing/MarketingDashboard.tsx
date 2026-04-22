@@ -22,7 +22,7 @@ import { NativeSelect } from '@/components/ui/select'
 import { Users, Percent, CircleDollarSign, TrendingUp, Filter } from 'lucide-react'
 
 const FUNNEL_LABELS: Record<number, string> = {
-  0: 'Lead',
+  0: 'Nouveau lead',
   1: 'Inscrit',
   2: 'Registre',
   3: 'Cas',
