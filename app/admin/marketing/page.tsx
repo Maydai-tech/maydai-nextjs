@@ -38,6 +38,17 @@ export default async function AdminMarketingPage() {
       .select(LEAD_COLUMNS)
       .order('created_at', { ascending: false })
 
+    console.log('[admin/marketing/leads] env', {
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '(absent)',
+    })
+    if (error) {
+      console.log('[admin/marketing/leads] error', JSON.stringify(error))
+    }
+    console.log('[admin/marketing/leads] data', {
+      length: data?.length,
+      first: data?.[0],
+    })
+
     if (error) {
       serverError = error.message
     } else {
