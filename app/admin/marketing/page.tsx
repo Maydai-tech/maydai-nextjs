@@ -33,6 +33,11 @@ export default async function AdminMarketingPage() {
 
   try {
     const supabase = await createSupabaseServerClient()
+    const { data: authData, error: authError } = await supabase.auth.getUser()
+    console.log('[admin/marketing/auth] session state:', {
+      userId: authData?.user?.id ?? 'NO_USER',
+      error: authError?.message,
+    })
     const { data, error } = await supabase
       .from('leads')
       .select(LEAD_COLUMNS)
