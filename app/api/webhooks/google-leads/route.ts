@@ -178,5 +178,5 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json(inserted, { status: 201 })
+  return NextResponse.json(inserted, { status: 200 })
 }
