@@ -2,7 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  // Création d'une réponse modifiable pour y injecter les futurs cookies
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -15,23 +14,27 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet) {
-          // Mise à jour de la requête interceptée
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          // Clonage de la réponse pour y attacher les cookies rafraîchis
+        setAll(
+          cookiesToSet: {
+            name: string
+            value: string
+            options?: Record<string, unknown>
+          }[]
+        ) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          
           supabaseResponse = NextResponse.next({
             request,
           })
-          // Écriture finale vers le navigateur
+          
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, options as any)
           )
         },
       },
     }
   )
 
-  // Appel crucial : Déclenche le rafraîchissement silencieux de la session si le JWT est expiré
   await supabase.auth.getUser()
 
   return supabaseResponse
