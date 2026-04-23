@@ -1,15 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/lib/auth'
 import OTPVerification from '@/components/auth/OTPVerification'
 import { sendLoginEvent } from '@/lib/gtm'
-import { Mail, ArrowRight } from 'lucide-react'
+import { Mail, ArrowRight, Clock } from 'lucide-react'
 
 type LoginStep = 'email' | 'otp'
+
+function isAuthRateLimited(err: unknown): boolean {
+    if (!err || typeof err !== 'object') return false
+    const { status, code } = err as { status?: number; code?: string }
+    return status === 429 || code === 'over_email_send_rate_limit'
+}
 
 export default function LoginPage() {
     const router = useRouter()
@@ -24,6 +30,17 @@ export default function LoginPage() {
     const [error, setError] = useState('')
     const [formLoading, setFormLoading] = useState(false)
     const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+    const [isRateLimited, setIsRateLimited] = useState(false)
+    const rateLimitResetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    const clearRateLimitTimer = () => {
+        if (rateLimitResetTimeoutRef.current) {
+            clearTimeout(rateLimitResetTimeoutRef.current)
+            rateLimitResetTimeoutRef.current = null
+        }
+    }
+
+    useEffect(() => () => clearRateLimitTimer(), [])
 
     // Redirect authenticated users
     useEffect(() => {
@@ -48,30 +65,32 @@ export default function LoginPage() {
         }
 
         try {
-            // Send OTP
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/517bfc0e-be36-45ac-a3ee-60c7f4fa816a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4e3066'},body:JSON.stringify({sessionId:'4e3066',location:'LoginPage.tsx:50',message:'Before signInWithOtp',data:{email:email.substring(0,3)+'***'},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
             const { error: otpError } = await signInWithOtp(email, false)
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/517bfc0e-be36-45ac-a3ee-60c7f4fa816a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'4e3066'},body:JSON.stringify({sessionId:'4e3066',location:'LoginPage.tsx:53',message:'After signInWithOtp',data:{hasError:!!otpError,errorMessage:otpError?.message,errorName:otpError?.name,errorStatus:(otpError as any)?.status,errorCode:(otpError as any)?.code},timestamp:Date.now(),hypothesisId:'A,B'})}).catch(()=>{});
-            // #endregion
 
             if (otpError) {
-                // #region agent log
-                const debugMsg = `[DEBUG] ${otpError.message || 'no message'} | name=${otpError.name} | status=${(otpError as any).status || 'n/a'} | code=${(otpError as any).code || 'n/a'}`
-                console.error('OTP ERROR DETAILS:', otpError, JSON.stringify(otpError))
-                // #endregion
-                setError(`Erreur lors de l'envoi du code: ${debugMsg}`)
+                if (isAuthRateLimited(otpError)) {
+                    setError('')
+                    setIsRateLimited(true)
+                    clearRateLimitTimer()
+                    rateLimitResetTimeoutRef.current = setTimeout(() => {
+                        setIsRateLimited(false)
+                        rateLimitResetTimeoutRef.current = null
+                    }, 60_000)
+                } else {
+                    console.error('OTP send error:', otpError)
+                    setError("Erreur lors de l'envoi du code. Veuillez réessayer.")
+                }
                 setFormLoading(false)
                 return
             }
 
+            clearRateLimitTimer()
+            setIsRateLimited(false)
             setStep('otp')
             setFormLoading(false)
         } catch (err) {
             console.error('Login error:', err)
-            setError(`Une erreur est survenue: ${(err as any)?.message || 'unknown'}`)
+            setError('Une erreur est survenue. Veuillez réessayer.')
             setFormLoading(false)
         }
     }
@@ -130,6 +149,22 @@ export default function LoginPage() {
                 {/* Form */}
                 <div className="bg-white rounded-xl shadow-lg p-8">
                     <form className="space-y-6" onSubmit={handleEmailSubmit}>
+                        {isRateLimited && (
+                            <div
+                                role="alert"
+                                aria-live="assertive"
+                                className="flex items-start gap-3 p-4 mb-6 rounded-md bg-amber-50 border border-amber-200 text-amber-800 font-sans"
+                            >
+                                <Clock className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                                <div className="flex flex-col gap-1">
+                                    <p className="text-sm font-medium">Veuillez patienter quelques instants</p>
+                                    <p className="text-sm text-amber-700">
+                                        Pour des raisons de sécurité, nous avons temporairement suspendu l&apos;envoi de
+                                        nouveaux codes. Réessayez d&apos;ici quelques minutes.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         {error && (
                             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                                 <p className="text-red-600 text-sm">{error}</p>
@@ -163,18 +198,19 @@ export default function LoginPage() {
 
                         <button
                             type="submit"
-                            disabled={formLoading || !email}
-                            className="w-full bg-[#0080A3] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#006280] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0080A3] flex items-center justify-center gap-2"
+                            disabled={isRateLimited || formLoading || !email}
+                            aria-busy={formLoading}
+                            className="w-full bg-[#0080A3] text-white py-2.5 px-4 rounded-md font-medium transition-colors hover:bg-[#006b88] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0080A3] flex items-center justify-center gap-2"
                         >
                             {formLoading ? (
                                 <>
-                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                    Envoi en cours...
+                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" aria-hidden="true" />
+                                    Connexion en cours...
                                 </>
                             ) : (
                                 <>
                                     Se connecter
-                                    <ArrowRight className="h-5 w-5" />
+                                    <ArrowRight className="h-5 w-5" aria-hidden="true" />
                                 </>
                             )}
                         </button>

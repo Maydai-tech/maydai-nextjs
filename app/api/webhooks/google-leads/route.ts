@@ -39,6 +39,15 @@ function getServiceSupabase() {
   return createClient(url, key)
 }
 
+/** Valeur texte optionnelle à la racine du JSON (complète `user_column_data` si absente). */
+function trimmedRootString(body: unknown, key: string): string | null {
+  if (!body || typeof body !== 'object') return null
+  const v = (body as Record<string, unknown>)[key]
+  if (typeof v !== 'string') return null
+  const t = v.trim()
+  return t.length ? t : null
+}
+
 /** PostgREST peut renvoyer un objet minimal ; PostgrestError étend Error (message sur l’instance). */
 function formatDbInsertError(error: unknown): {
   message: string
@@ -93,6 +102,11 @@ export async function POST(request: NextRequest) {
 
   const parsed = extractGoogleLeadFields(body, request.nextUrl.searchParams)
 
+  const first_name =
+    parsed.first_name ?? trimmedRootString(body, 'first_name')
+  const last_name = parsed.last_name ?? trimmedRootString(body, 'last_name')
+  const phone = parsed.phone ?? trimmedRootString(body, 'phone')
+
   if (!parsed.email) {
     return NextResponse.json(
       {
@@ -116,9 +130,9 @@ export async function POST(request: NextRequest) {
 
   const insertRow = {
     email: parsed.email.trim().toLowerCase(),
-    first_name: parsed.first_name,
-    last_name: parsed.last_name,
-    phone: parsed.phone,
+    first_name,
+    last_name,
+    phone,
     company_name: parsed.company_name,
     gclid: parsed.gclid,
     click_id: parsed.gclid,
@@ -161,7 +175,7 @@ export async function POST(request: NextRequest) {
 
   const row = inserted as { id: string; first_name: string | null }
   const leadId = row.id
-  const firstNameForEmail = (parsed.first_name ?? '').trim()
+  const firstNameForEmail = (first_name ?? '').trim()
 
   const mailResult = await sendLeadInviteEmail({
     leadEmail: insertRow.email,
