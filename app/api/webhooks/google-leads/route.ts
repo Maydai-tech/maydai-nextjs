@@ -162,14 +162,20 @@ export async function POST(request: NextRequest) {
   const leadId = row.id
   const firstNameForEmail = (first_name ?? '').trim()
 
-  const mailResult = await sendLeadInviteEmail({
-    leadEmail: insertRow.email,
-    firstName: firstNameForEmail,
-    leadId,
-  })
+  if (payload.is_test === true) {
+    console.log(
+      '[Google Webhook] Mode test Google détecté : envoi Mailjet ignoré.'
+    )
+  } else {
+    const mailResult = await sendLeadInviteEmail({
+      leadEmail: insertRow.email,
+      firstName: firstNameForEmail,
+      leadId,
+    })
 
-  if (!mailResult.success) {
-    console.error('[google-leads] Mailjet non envoyé (lead créé):', leadId)
+    if (!mailResult.success) {
+      console.error('[google-leads] Mailjet non envoyé (lead créé):', leadId)
+    }
   }
 
   return NextResponse.json(inserted, { status: 201 })
