@@ -1,27 +1,44 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  
-  // Middleware simplifié pour tester la connexion Supabase
-  console.log('Middleware - Processing request:', pathname);
-  
-  // Laisser passer toutes les requêtes pour l'instant
-  const response = NextResponse.next();
-  
-  return response;
+  // Création d'une réponse modifiable pour y injecter les futurs cookies
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          // Mise à jour de la requête interceptée
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          // Clonage de la réponse pour y attacher les cookies rafraîchis
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          // Écriture finale vers le navigateur
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // Appel crucial : Déclenche le rafraîchissement silencieux de la session si le JWT est expiré
+  await supabase.auth.getUser()
+
+  return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
-}; 
+}
