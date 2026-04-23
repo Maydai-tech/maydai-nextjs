@@ -9,7 +9,9 @@ import { supabase } from '@/lib/supabase'
 import { sendSignUpEvent } from '@/lib/gtm'
 import OTPVerification from '@/components/auth/OTPVerification'
 import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
-import { User, Building2, ArrowRight, Mail, Info } from 'lucide-react'
+import SecurityLogosGrid from '@/components/ui/SecurityLogosGrid'
+import { User, Building2, ArrowRight, Mail, Info, Lock, ShieldCheck } from 'lucide-react'
+import { useAIActCountdown } from '@/app/conformite-ia/hooks/useAIActCountdown'
 import {
   readStoredAttribution,
   hasMeaningfulAttribution,
@@ -72,6 +74,13 @@ export default function SignupPage() {
   const [checkingEmail, setCheckingEmail] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [acceptTerms, setAcceptTerms] = useState(false)
+
+  const daysLeft = useAIActCountdown()
+
+  const inputFocusClass =
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:border-transparent'
+
+  const signupHeadingAccentClass = 'text-3xl font-bold text-[#0080A3]'
 
   // Redirect authenticated users
   useEffect(() => {
@@ -367,24 +376,42 @@ export default function SignupPage() {
 
   // Form step (default)
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-2xl w-full space-y-8">
-        {/* Header */}
-        <div className="text-center">
+        <div className="flex justify-center">
           <Image
             src="/logos/logo-maydai/logo-maydai-complet.png"
             alt="MaydAI Logo"
             width={200}
             height={50}
-            className="w-auto mb-6 mx-auto"
+            className="w-auto"
             priority
           />
-          <h2 className="text-3xl font-bold text-primary">
-            Créer un compte
-          </h2>
-          <p className="mt-2 text-gray-600">
+        </div>
+
+        <div className="text-center flex flex-col gap-2 mb-8">
+          <h1 className={signupHeadingAccentClass}>Créer un compte</h1>
+          <p className="text-base font-bold text-slate-900">
             Commencez votre parcours de conformité AI Act.
           </p>
+          {step === 1 && (
+            <>
+              <p className="text-base font-bold text-slate-900">
+                Évaluation rapide, intuitive et strictement confidentielle.
+              </p>
+              <p
+                className="text-base font-bold text-slate-900"
+                role="timer"
+                aria-live="polite"
+              >
+                Plus que{' '}
+                <span className={signupHeadingAccentClass}>
+                  {daysLeft} jours
+                </span>{' '}
+                avant le plein déploiement de l&apos;AI Act
+              </p>
+            </>
+          )}
         </div>
 
         {/* Form */}
@@ -421,7 +448,7 @@ export default function SignupPage() {
                       required
                       value={formData.firstName}
                       onChange={(e) => handleInputChange('firstName', e.target.value)}
-                      className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+                      className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 transition-colors ${inputFocusClass}`}
                       placeholder="Jean"
                     />
                   </div>
@@ -443,7 +470,7 @@ export default function SignupPage() {
                       required
                       value={formData.lastName}
                       onChange={(e) => handleInputChange('lastName', e.target.value)}
-                      className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+                      className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 transition-colors ${inputFocusClass}`}
                       placeholder="Dupont"
                     />
                   </div>
@@ -451,9 +478,9 @@ export default function SignupPage() {
               </div>
 
               <div className="flex items-start gap-2 text-sm text-gray-500">
-                <Info className="h-4 w-4 mt-0.5 text-gray-400 flex-shrink-0" />
-                <p>
-                  L'adresse email permet de créer le compte et de recevoir votre code d'activation.
+                <Info className="h-4 w-4 mt-0.5 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                <p id="signup-email-description">
+                  L&apos;adresse email permet de créer le compte et de recevoir votre code d&apos;activation.
                 </p>
               </div>
 
@@ -475,9 +502,13 @@ export default function SignupPage() {
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     onBlur={handleEmailBlur}
-                    className={`w-full px-4 py-3 pl-10 pr-10 border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:outline-none transition-colors ${emailError
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:border-[#0080A3] focus:ring-[#0080A3]'
+                    aria-describedby={
+                      emailError
+                        ? 'signup-email-description signup-email-error'
+                        : 'signup-email-description'
+                    }
+                    aria-invalid={emailError ? true : undefined}
+                    className={`w-full px-4 py-3 pl-10 pr-10 border rounded-lg bg-white text-gray-900 placeholder-gray-500 transition-colors ${inputFocusClass} ${emailError ? 'border-red-300' : 'border-gray-300'
                       }`}
                     placeholder="votre@email.com"
                   />
@@ -488,7 +519,9 @@ export default function SignupPage() {
                   )}
                 </div>
                 {emailError && (
-                  <p className="mt-1 text-sm text-red-600">{emailError}</p>
+                  <p id="signup-email-error" className="mt-1 text-sm text-red-600" role="alert">
+                    {emailError}
+                  </p>
                 )}
               </div>
 
@@ -496,7 +529,7 @@ export default function SignupPage() {
                 type="button"
                 onClick={handleNextStep}
                 disabled={checkingEmail || !!emailError}
-                className="w-full bg-[#0080A3] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#006280] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0080A3] flex items-center justify-center gap-2"
+                className="w-full bg-[#0080A3] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#006280] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0080A3] flex items-center justify-center gap-2"
               >
                 Suivant
                 <ArrowRight className="h-5 w-5" />
@@ -505,7 +538,7 @@ export default function SignupPage() {
           ) : (
             <form className="space-y-6" onSubmit={handleFormSubmit}>
               <p className="text-sm text-gray-600">
-                Ces informations permettent de créer des rapports de conformité plus précis et adaptés à votre secteur vis-à-vis de l'IA Act.
+                Ces informations permettent de créer des rapports de conformité plus précis et adaptés à votre secteur vis-à-vis de l&apos;IA Act.
               </p>
 
               {/* Company Name */}
@@ -525,7 +558,7 @@ export default function SignupPage() {
                     required
                     value={formData.companyName}
                     onChange={(e) => handleInputChange('companyName', e.target.value)}
-                    className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+                    className={`w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 transition-colors ${inputFocusClass}`}
                     placeholder="Nom de votre entreprise"
                   />
                 </div>
@@ -558,18 +591,18 @@ export default function SignupPage() {
                   type="checkbox"
                   checked={acceptTerms}
                   onChange={(e) => setAcceptTerms(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-gray-300 text-[#0080A3] focus:ring-[#0080A3] cursor-pointer"
+                  className={`mt-1 h-4 w-4 rounded border-gray-300 text-[#0080A3] cursor-pointer focus-visible:ring-offset-2 ${inputFocusClass}`}
                   required
                 />
                 <label htmlFor="acceptTerms" className="text-sm text-gray-700">
-                  J'accepte les{' '}
+                  J&apos;accepte les{' '}
                   <Link
                     href="/conditions-generales"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-medium text-[#0080A3] hover:text-[#006280] underline transition-colors"
                   >
-                    Conditions Générales d'Utilisation
+                    Conditions Générales d&apos;Utilisation
                   </Link>
                   {' '}<span className="text-red-500">*</span>
                 </label>
@@ -618,6 +651,27 @@ export default function SignupPage() {
               </Link>
             </p>
           </div>
+
+          {step === 1 ? (
+            <div className="mt-8 w-full max-w-full">
+              <SecurityLogosGrid />
+            </div>
+          ) : (
+            <div className="mt-8 w-full flex justify-center items-center gap-6 text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <Lock size={14} aria-hidden="true" />
+                <span className="text-[11px] uppercase tracking-wider font-semibold">
+                  Données chiffrées
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck size={14} aria-hidden="true" />
+                <span className="text-[11px] uppercase tracking-wider font-semibold">
+                  Conforme RGPD
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

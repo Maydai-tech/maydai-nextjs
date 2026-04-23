@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth } from '@/lib/auth'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import AdminProtectedRoute from '@/components/AdminProtectedRoute'
 import { LogOut, User } from 'lucide-react'
@@ -28,9 +29,14 @@ export default function AdminLayout({
               {/* Logo/Title */}
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <h1 className="text-xl font-bold text-[#0080A3]">
-                    Maydai Admin
-                  </h1>
+                  <Link
+                    href="/admin"
+                    className="inline-block text-inherit no-underline"
+                  >
+                    <h1 className="text-xl font-bold text-[#0080A3]">
+                      MaydAI Admin
+                    </h1>
+                  </Link>
                 </div>
               </div>
 

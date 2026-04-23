@@ -3,24 +3,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, AppWindow } from 'lucide-react'
-import { useMemo } from 'react'
 import TrustBadges from '@/components/ui/TrustBadges'
-
-const AI_ACT_FULL_APPLICABILITY_DATE = new Date('2026-08-02')
-
-function useDaysUntil(target: Date) {
-  return useMemo(() => {
-    const now = new Date()
-    now.setHours(0, 0, 0, 0)
-    const t = new Date(target)
-    t.setHours(0, 0, 0, 0)
-    const diff = t.getTime() - now.getTime()
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
-  }, [target])
-}
+import { useAIActCountdown } from '@/app/conformite-ia/hooks/useAIActCountdown'
 
 export default function Hero() {
-  const daysLeft = useDaysUntil(AI_ACT_FULL_APPLICABILITY_DATE)
+  const daysLeft = useAIActCountdown()
 
   const handleHeroFreeTrialClick = () => {
     if (typeof window !== 'undefined') {

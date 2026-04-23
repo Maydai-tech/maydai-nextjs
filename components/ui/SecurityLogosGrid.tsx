@@ -35,22 +35,24 @@ const securityLogos = [
 
 export default function SecurityLogosGrid() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-10 lg:gap-8 items-center justify-items-center">
+    <div className="grid w-full max-w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-4 items-center justify-items-center">
       {securityLogos.map((logo) => (
         <div
           key={logo.label}
           className="flex flex-col items-center group transition-transform hover:scale-105"
         >
-          <div className="w-16 h-16 md:w-20 md:h-20 relative mb-2 grayscale group-hover:grayscale-0 transition-all duration-300">
+          <div className="relative mb-1.5 h-10 w-10 sm:h-12 sm:w-12 grayscale transition-all duration-300 group-hover:grayscale-0">
             <Image
               src={logo.src}
               alt={logo.alt}
               fill
-              sizes="80px"
+              sizes="(max-width: 640px) 40px, 48px"
               className="object-contain"
             />
           </div>
-          <span className="text-xs text-gray-500 font-medium">{logo.label}</span>
+          <span className="text-[11px] font-medium leading-tight text-gray-500 sm:text-xs">
+            {logo.label}
+          </span>
         </div>
       ))}
     </div>
