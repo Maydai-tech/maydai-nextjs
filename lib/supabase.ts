@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 import type { PathMode } from '@/lib/journey-path-mode'
 
 // Fonction pour créer le client Supabase avec validation à l'exécution
@@ -12,7 +12,7 @@ function createSupabaseClient() {
     )
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey)
+  return createBrowserClient(supabaseUrl, supabaseAnonKey)
 }
 
 // Export du client avec lazy initialization
