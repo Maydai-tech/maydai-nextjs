@@ -1,4 +1,3 @@
-import { timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendLeadInviteEmail } from '@/lib/email/mailjet'
@@ -6,27 +5,6 @@ import {
   extractGoogleLeadFields,
   GOOGLE_LEAD_FORM_COLUMN_ID_EMAIL,
 } from '@/lib/google-ads/utils'
-
-function verifyGoogleWebhookBearer(request: NextRequest): boolean {
-  const secret = process.env.GOOGLE_WEBHOOK_SECRET
-  if (!secret) {
-    return false
-  }
-
-  const authHeader = request.headers.get('authorization') ?? ''
-  const expected = `Bearer ${secret}`
-
-  try {
-    const a = Buffer.from(authHeader, 'utf8')
-    const b = Buffer.from(expected, 'utf8')
-    if (a.length !== b.length) {
-      return false
-    }
-    return timingSafeEqual(a, b)
-  } catch {
-    return false
-  }
-}
 
 function getServiceSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -89,16 +67,23 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  if (!verifyGoogleWebhookBearer(request)) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-  }
-
   let body: unknown
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'JSON invalide' }, { status: 400 })
   }
+
+  if (!body || typeof body !== 'object') {
+    return NextResponse.json({ error: 'JSON invalide' }, { status: 400 })
+  }
+
+  const payload = body as Record<string, unknown>
+  if (payload.google_key !== process.env.GOOGLE_WEBHOOK_SECRET) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+  }
+
+  console.log('[DEBUG] Payload Google Ads brut entrant :', JSON.stringify(body, null, 2))
 
   const parsed = extractGoogleLeadFields(body, request.nextUrl.searchParams)
 
