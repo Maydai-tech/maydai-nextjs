@@ -44,12 +44,22 @@ function toTrimmedString(value: unknown): string | null {
   return null
 }
 
-function stringFromUserColumnData(
-  rows: GoogleUserColumnRow[],
-  columnId: string
-): string | null {
-  const hit = rows.find((r) => r.column_id === columnId)
-  return toTrimmedString(hit?.string_value)
+/**
+ * Parcourt `user_column_data` (payload officiel Google : `{ column_id, string_value, ... }[]`)
+ * et retient la première `string_value` non vide pour chaque `column_id`.
+ */
+function valuesByColumnIdFromUserColumnData(
+  rows: GoogleUserColumnRow[]
+): Map<string, string> {
+  const byId = new Map<string, string>()
+  for (const row of rows) {
+    if (typeof row.column_id !== 'string' || !row.column_id.trim()) continue
+    const value = toTrimmedString(row.string_value)
+    if (!value) continue
+    const id = row.column_id
+    if (!byId.has(id)) byId.set(id, value)
+  }
+  return byId
 }
 
 function firstNonNull(...candidates: (string | null)[]): string | null {
@@ -67,12 +77,20 @@ export function extractGoogleLeadFields(
   raw: unknown,
   urlSearchParams: URLSearchParams
 ): GoogleAdsLeadInsertPayload {
-  const rows: GoogleUserColumnRow[] =
+  const rowsUnknown = (
     raw &&
     typeof raw === 'object' &&
     Array.isArray((raw as GoogleAdsWebhookBody).user_column_data)
-      ? ((raw as GoogleAdsWebhookBody).user_column_data as GoogleUserColumnRow[])
+      ? (raw as GoogleAdsWebhookBody).user_column_data
       : []
+  ) as unknown[]
+
+  const rows: GoogleUserColumnRow[] = rowsUnknown.filter(
+    (r): r is GoogleUserColumnRow =>
+      r !== null && typeof r === 'object' && !Array.isArray(r)
+  )
+
+  const byColumnId = valuesByColumnIdFromUserColumnData(rows)
 
   const root =
     raw && typeof raw === 'object' ? (raw as GoogleAdsWebhookBody) : null
@@ -97,11 +115,11 @@ export function extractGoogleLeadFields(
   )
 
   return {
-    email: stringFromUserColumnData(rows, GOOGLE_LEAD_FORM_COLUMN_ID_EMAIL),
-    first_name: stringFromUserColumnData(rows, COLUMN_ID_FIRST_NAME),
-    last_name: stringFromUserColumnData(rows, COLUMN_ID_LAST_NAME),
-    phone: stringFromUserColumnData(rows, COLUMN_ID_PHONE_NUMBER),
-    company_name: stringFromUserColumnData(rows, COLUMN_ID_COMPANY_NAME),
+    email: byColumnId.get(GOOGLE_LEAD_FORM_COLUMN_ID_EMAIL) ?? null,
+    first_name: byColumnId.get(COLUMN_ID_FIRST_NAME) ?? null,
+    last_name: byColumnId.get(COLUMN_ID_LAST_NAME) ?? null,
+    phone: byColumnId.get(COLUMN_ID_PHONE_NUMBER) ?? null,
+    company_name: byColumnId.get(COLUMN_ID_COMPANY_NAME) ?? null,
     gclid,
     campaign_name,
     ad_group_name,
