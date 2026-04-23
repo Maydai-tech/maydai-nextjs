@@ -154,10 +154,7 @@ export async function POST(request: NextRequest) {
     const err = formatDbInsertError(error)
     console.error('[google-leads] Erreur insertion leads:', err, error)
     return NextResponse.json(
-      {
-        error: 'Erreur base de données',
-        details: err,
-      },
+      { error: 'Erreur interne du serveur' },
       { status: 500 }
     )
   }
