@@ -17,6 +17,45 @@ interface UseCaseResponse {
   updated_at: string
 }
 
+function isE4E5E6QuestionCode(code: string): boolean {
+  return code.startsWith('E4.') || code.startsWith('E5.') || code.startsWith('E6.')
+}
+
+function extractOptionCodesFromAnswer(raw: unknown): string[] {
+  if (typeof raw === 'string' && raw.length > 0) return [raw]
+  if (Array.isArray(raw)) {
+    return raw.filter((x): x is string => typeof x === 'string' && x.length > 0)
+  }
+  if (raw && typeof raw === 'object' && 'selected' in (raw as Record<string, unknown>)) {
+    const s = (raw as { selected?: unknown }).selected
+    if (typeof s === 'string' && s.length > 0) return [s]
+  }
+  return []
+}
+
+function collectConsolidatedChecklistsFromAnswers(answers: Record<string, any>): {
+  checklist_gov_enterprise: string[]
+  checklist_gov_usecase: string[]
+} {
+  const ent = new Set<string>()
+  const uc = new Set<string>()
+
+  for (const [qid, raw] of Object.entries(answers)) {
+    if (!isE4E5E6QuestionCode(qid)) continue
+    const codes = extractOptionCodesFromAnswer(raw)
+    for (const c of codes) {
+      if (typeof c !== 'string' || c.length === 0) continue
+      if (c.startsWith('E5.')) ent.add(c)
+      else if (c.startsWith('E4.') || c.startsWith('E6.')) uc.add(c)
+    }
+  }
+
+  return {
+    checklist_gov_enterprise: [...ent],
+    checklist_gov_usecase: [...uc],
+  }
+}
+
 interface UseQuestionnaireResponsesReturn {
   // État
   responses: UseCaseResponse[]
@@ -107,6 +146,13 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
       setSaving(true)
       setError(null)
 
+      // Migration E4/E5/E6 : ne plus écrire `usecase_responses`, envoyer un payload consolidé.
+      if (isE4E5E6QuestionCode(questionCode)) {
+        throw new Error(
+          "Les blocs E4/E5/E6 doivent être persistés via `checklist_gov_enterprise` / `checklist_gov_usecase` (payload consolidé), pas via saveResponse(questionCode)."
+        )
+      }
+
       const response = await fetch(`/api/usecases/${usecaseId}/responses`, {
         method: 'POST',
         headers: {
@@ -160,7 +206,29 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
       setSaving(true)
       setError(null)
 
-      const responsesToSave = Object.entries(answers).map(([questionCode, answer]) => {
+      // 1) E4/E5/E6 => payload consolidé direct sur usecases
+      const consolidated = collectConsolidatedChecklistsFromAnswers(answers)
+      if (
+        consolidated.checklist_gov_enterprise.length > 0 ||
+        consolidated.checklist_gov_usecase.length > 0
+      ) {
+        const checklistResp = await fetch(`/api/usecases/${usecaseId}/responses`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(consolidated),
+        })
+        if (!checklistResp.ok) {
+          throw new Error('Failed to save consolidated checklists')
+        }
+      }
+
+      // 2) Autres blocs => table `usecase_responses`
+      const responsesToSave = Object.entries(answers)
+        .filter(([questionCode]) => !isE4E5E6QuestionCode(questionCode))
+        .map(([questionCode, answer]) => {
         // Si la réponse est un objet complexe, la traiter selon son type
         if (typeof answer === 'object' && answer !== null) {
           if (Array.isArray(answer)) {
@@ -184,6 +252,11 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
           }
         }
       })
+
+      if (responsesToSave.length === 0) {
+        lastFetchId.current = ''
+        return
+      }
 
       const response = await fetch(`/api/usecases/${usecaseId}/responses`, {
         method: 'PUT',

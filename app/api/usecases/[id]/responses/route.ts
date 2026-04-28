@@ -11,6 +11,10 @@ function normalizeStringArray(v: unknown): string[] {
   return v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
 }
 
+function isE4E5E6QuestionCode(code: string): boolean {
+  return code.startsWith('E4.') || code.startsWith('E5.') || code.startsWith('E6.')
+}
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -166,16 +170,22 @@ export async function POST(
     } catch {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
     }
-    const { question_code, response_value, response_data, bpgv_keys, transparency_keys } = body as {
+    const {
+      question_code,
+      response_value,
+      response_data,
+      bpgv_keys,
+      transparency_keys,
+      checklist_gov_enterprise,
+      checklist_gov_usecase,
+    } = body as {
       question_code?: string
       response_value?: string
       response_data?: Record<string, unknown>
       bpgv_keys?: string[]
       transparency_keys?: string[]
-    }
-
-    if (!question_code) {
-      return NextResponse.json({ error: 'question_code is required' }, { status: 400 })
+      checklist_gov_enterprise?: unknown
+      checklist_gov_usecase?: unknown
     }
 
     // Vérifier que l'utilisateur a accès à ce use case
@@ -199,6 +209,52 @@ export async function POST(
 
     if (userCompanyError || !userCompany) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    /**
+     * Nouveau payload consolidé E4/E5/E6 :
+     * - { checklist_gov_enterprise: string[], checklist_gov_usecase: string[] }
+     * => UPDATE direct sur `usecases`, aucun upsert dans `usecase_responses`.
+     */
+    if (checklist_gov_enterprise !== undefined || checklist_gov_usecase !== undefined) {
+      const ent = normalizeStringArray(checklist_gov_enterprise)
+      const uc = normalizeStringArray(checklist_gov_usecase)
+      const { error: upErr } = await supabase
+        .from('usecases')
+        .update({
+          checklist_gov_enterprise: ent,
+          checklist_gov_usecase: uc,
+          updated_at: new Date().toISOString(),
+          updated_by: user.id,
+        })
+        .eq('id', usecaseId)
+      if (upErr) {
+        return NextResponse.json(
+          { error: 'Erreur mise à jour checklists', details: upErr.message },
+          { status: 500 }
+        )
+      }
+      return NextResponse.json({
+        updated: 'usecase_checklists',
+        checklist_gov_enterprise: ent,
+        checklist_gov_usecase: uc,
+        checklist_field: 'both',
+      })
+    }
+
+    if (!question_code) {
+      return NextResponse.json({ error: 'question_code is required' }, { status: 400 })
+    }
+
+    // Migration E4/E5/E6 : ne plus persister ces blocs dans `usecase_responses`.
+    if (isE4E5E6QuestionCode(question_code)) {
+      return NextResponse.json(
+        {
+          error:
+            "Les blocs E4/E5/E6 sont désormais persistés via `usecases.checklist_gov_enterprise` / `usecases.checklist_gov_usecase` (payload consolidé).",
+        },
+        { status: 400 }
+      )
     }
 
     /** Checklists gouvernance : UPDATE direct sur `usecases`, pas de ligne dans `usecase_responses`. */
@@ -434,7 +490,11 @@ export async function PUT(
     } catch {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
     }
-    const { responses } = body as { responses?: unknown }
+    const { responses, checklist_gov_enterprise, checklist_gov_usecase } = body as {
+      responses?: unknown
+      checklist_gov_enterprise?: unknown
+      checklist_gov_usecase?: unknown
+    }
 
     if (!Array.isArray(responses)) {
       return NextResponse.json({ error: 'responses must be an array' }, { status: 400 })
@@ -463,6 +523,27 @@ export async function PUT(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
+    // Payload consolidé (optionnel) : mise à jour directe avant batch.
+    if (checklist_gov_enterprise !== undefined || checklist_gov_usecase !== undefined) {
+      const ent = normalizeStringArray(checklist_gov_enterprise)
+      const uc = normalizeStringArray(checklist_gov_usecase)
+      const { error: upErr } = await supabase
+        .from('usecases')
+        .update({
+          checklist_gov_enterprise: ent,
+          checklist_gov_usecase: uc,
+          updated_at: new Date().toISOString(),
+          updated_by: user.id,
+        })
+        .eq('id', usecaseId)
+      if (upErr) {
+        return NextResponse.json(
+          { error: 'Erreur mise à jour checklists', details: upErr.message },
+          { status: 500 }
+        )
+      }
+    }
+
     const savedResponses = []
 
     // Traiter chaque réponse
@@ -471,6 +552,11 @@ export async function PUT(
 
       if (!question_code) {
         continue // Skip invalid responses
+      }
+
+      // Migration E4/E5/E6 : ne plus persister ces blocs dans `usecase_responses`.
+      if (isE4E5E6QuestionCode(question_code)) {
+        continue
       }
 
       // Préparer les données selon le type de réponse

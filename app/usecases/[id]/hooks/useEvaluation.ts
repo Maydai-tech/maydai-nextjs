@@ -51,6 +51,47 @@ import {
 } from '../utils/bpgv-transparency-checklist-save'
 import { deriveMissingPenaltiesForShortPath } from '@/lib/derive-missing-penalties-short-path'
 
+function isE4E5E6QuestionCode(code: string): boolean {
+  return code.startsWith('E4.') || code.startsWith('E5.') || code.startsWith('E6.')
+}
+
+function extractOptionCodesFromAnswer(raw: unknown): string[] {
+  if (typeof raw === 'string' && raw.length > 0) return [raw]
+  if (Array.isArray(raw)) {
+    return raw.filter((x): x is string => typeof x === 'string' && x.length > 0)
+  }
+  if (raw && typeof raw === 'object' && 'selected' in (raw as Record<string, unknown>)) {
+    const s = (raw as { selected?: unknown }).selected
+    if (typeof s === 'string' && s.length > 0) return [s]
+  }
+  return []
+}
+
+function collectE4DeclaredOptionCodes(answers: Record<string, unknown>): string[] {
+  const out = new Set<string>()
+  for (const [qid, raw] of Object.entries(answers)) {
+    if (!qid.startsWith('E4.')) continue
+    for (const code of extractOptionCodesFromAnswer(raw)) {
+      if (code.startsWith('E4.')) out.add(code)
+    }
+  }
+  return [...out]
+}
+
+function buildConsolidatedChecklistsFromAnswers(answers: Record<string, unknown>): {
+  checklist_gov_enterprise: string[]
+  checklist_gov_usecase: string[]
+} {
+  // Convention : E5 -> enterprise ; E4+E6 -> usecase
+  const e5 = collectE5DeclaredOptionCodes(answers)
+  const e4 = collectE4DeclaredOptionCodes(answers)
+  const e6 = collectE6DeclaredOptionCodes(answers)
+  return {
+    checklist_gov_enterprise: e5,
+    checklist_gov_usecase: [...new Set([...e4, ...e6])],
+  }
+}
+
 function normalizeStringArrayForChecklist(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value.filter((x): x is string => typeof x === 'string' && x.length > 0)
@@ -367,6 +408,33 @@ export function useEvaluation({
         return
       }
 
+      // Migration E4/E5/E6 : persistance consolidée uniquement via `usecases.checklist_gov_*`.
+      if (isE4E5E6QuestionCode(questionId)) {
+        const merged = { ...questionnaireData.answers, [questionId]: answer } as Record<string, unknown>
+        const consolidated = buildConsolidatedChecklistsFromAnswers(merged)
+
+        const res = await fetch(`/api/usecases/${usecaseId}/responses`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
+          body: JSON.stringify(consolidated),
+        })
+        if (!res.ok) {
+          throw new Error('Échec sauvegarde checklists consolidées')
+        }
+        const payload = (await res.json()) as Record<string, unknown>
+        applyChecklistSaveResult(payload)
+
+        setQuestionnaireData((prev) => ({
+          ...prev,
+          checklist_gov_enterprise: consolidated.checklist_gov_enterprise,
+          checklist_gov_usecase: consolidated.checklist_gov_usecase,
+        }))
+        return
+      }
+
       // Use the proper saveResponse method from useQuestionnaireResponses
       const questions = loadQuestions()
       const question = questions[questionId]
@@ -423,7 +491,7 @@ export function useEvaluation({
       console.error('❌ Error in saveIndividualResponse:', error)
       throw error
     }
-  }, [saveResponse])
+  }, [questionnaireData.answers, saveResponse, session?.access_token, usecaseId])
 
   const handleProcessingComplete = useCallback(() => {
     setShowProcessingAnimation(false)

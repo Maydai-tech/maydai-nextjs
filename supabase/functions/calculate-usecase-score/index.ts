@@ -70,6 +70,25 @@ function getSelectedCodesForScoring(response: any): string[] {
   return []
 }
 
+function coerceStringArray(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  return v.filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+}
+
+function isGovernanceOrQualificationQuestionCode(questionCode: string): boolean {
+  return (
+    questionCode.startsWith('E4.') ||
+    questionCode.startsWith('E5.') ||
+    questionCode.startsWith('E6.')
+  )
+}
+
+/** Ex: `E5.N9.Q6.B` -> `E5.N9.Q6` */
+function optionCodeToQuestionCode(optionCode: string): string {
+  const idx = optionCode.lastIndexOf('.')
+  return idx >= 0 ? optionCode.slice(0, idx) : optionCode
+}
+
 // ===== FONCTION PRINCIPALE =====
 Deno.serve(async (req) => {
   // Configuration CORS pour permettre les appels depuis le frontend
@@ -114,15 +133,15 @@ Deno.serve(async (req) => {
     if (!responses || responses.length === 0) {
       return createErrorResponse('Aucune réponse trouvée pour ce use case', 404, corsHeaders);
     }
-    // ===== ÉTAPE 4: CALCUL DU SCORE DE BASE =====
-    // Calculer le score basé sur les réponses
-    const baseScoreResult = calculateBaseScore(responses);
-    // ===== ÉTAPE 5: RÉCUPÉRATION DU MODÈLE COMPL-AI =====
-    // Récupérer les informations du modèle IA associé au use case
+
+    // ===== ÉTAPE 4: RÉCUPÉRATION DU USE CASE (MODÈLE + CHECKLISTS CONSOLIDÉES) =====
+    // Récupérer les informations du modèle IA associé au use case + checklists E4/E5/E6 consolidées
     const { data: usecase, error: usecaseError } = await supabase
       .from('usecases')
       .select(`
         primary_model_id,
+        checklist_gov_enterprise,
+        checklist_gov_usecase,
         compl_ai_models (
           model_name,
           compl_ai_evaluations (
@@ -136,6 +155,15 @@ Deno.serve(async (req) => {
     if (usecaseError) {
       console.warn('Impossible de récupérer les infos du modèle:', usecaseError);
     }
+
+    // ===== ÉTAPE 5: CALCUL DU SCORE DE BASE =====
+    // Calculer le score basé sur les réponses (hors E4/E5/E6) + checklists consolidées E4/E5/E6
+    const baseScoreResult = calculateBaseScore({
+      responses,
+      checklist_gov_enterprise: usecase?.checklist_gov_enterprise,
+      checklist_gov_usecase: usecase?.checklist_gov_usecase,
+    });
+
     // ===== ÉTAPE 6: CALCUL DU SCORE DU MODÈLE =====
     let modelScore = null;
     let hasValidModelScore = false;
@@ -241,13 +269,50 @@ Deno.serve(async (req) => {
  * Score de maturité (base /100) : toutes les réponses référencées dans le JSON
  * (E4, E5, E6, packs `V3_*`, etc.) — aucun filtrage par bloc opérationnel.
  */
-function calculateBaseScore(responses: any[]) {
+function calculateBaseScore(input: {
+  responses: any[]
+  checklist_gov_enterprise?: unknown
+  checklist_gov_usecase?: unknown
+}) {
   let totalImpact = 0;
   let isEliminated = false;
   let eliminationReason = '';
 
-  for (const response of responses) {
+  const checklistCodes = new Set<string>([
+    ...coerceStringArray(input.checklist_gov_enterprise),
+    ...coerceStringArray(input.checklist_gov_usecase),
+  ])
+
+  // 1) Appliquer impacts via checklists consolidées (E4/E5/E6)
+  for (const optionCode of checklistCodes) {
+    const questionCode = optionCodeToQuestionCode(optionCode)
+    const question = QUESTIONS_DATA[questionCode as keyof typeof QUESTIONS_DATA]
+    if (!question) {
+      console.warn(`Question ${questionCode} non trouvée (depuis checklist, option=${optionCode})`)
+      continue
+    }
+
+    const option = (question as any).options?.find((opt: any) => opt.code === optionCode)
+    if (!option) {
+      console.warn(`Option ${optionCode} non trouvée (depuis checklist)`)
+      continue
+    }
+
+    if (option.is_eliminatory) {
+      isEliminated = true
+      eliminationReason = `Réponse éliminatoire: ${option.label}`
+      break
+    }
+
+    if (option.score_impact) {
+      totalImpact += option.score_impact
+    }
+  }
+
+  // 2) Appliquer impacts depuis les réponses brutes, en ignorant E4/E5/E6 (désormais consolidés)
+  for (const response of input.responses) {
     const qc = response.question_code as string;
+    if (isGovernanceOrQualificationQuestionCode(qc)) continue
 
     const question = QUESTIONS_DATA[qc as keyof typeof QUESTIONS_DATA];
 
