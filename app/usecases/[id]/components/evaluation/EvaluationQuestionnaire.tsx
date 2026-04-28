@@ -6,6 +6,10 @@ import { QuestionRenderer } from './QuestionRenderer'
 import { UseCaseScore } from '../UseCaseScore'
 import { CheckCircle, ChevronLeft, ChevronRight, AlertCircle, Edit3, Eye, X } from 'lucide-react'
 
+function isE4E5E6QuestionCode(code: string): boolean {
+  return code.startsWith('E4.') || code.startsWith('E5.') || code.startsWith('E6.')
+}
+
 interface EvaluationQuestionnaireProps {
   useCase: UseCase
   onComplete: () => void
@@ -52,7 +56,7 @@ function QuestionEditModal({ question, currentAnswer, isOpen, onClose, onSave }:
     if (typeof answer === 'object' && answer.selected) {
       const option = question.options?.find((opt: any) => opt.code === answer.selected)
       let result = option?.label || answer.selected
-      if (answer.conditionalValues) {
+      if (!isE4E5E6QuestionCode(question.id) && answer.conditionalValues) {
         const details = Object.values(answer.conditionalValues).filter(Boolean).join(', ')
         if (details) result += ` (${details})`
       }
@@ -192,7 +196,7 @@ export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnai
     if (typeof answer === 'object' && answer.selected) {
       const option = question.options?.find((opt: any) => opt.code === answer.selected)
       let result = option?.label || answer.selected
-      if (answer.conditionalValues) {
+      if (!isE4E5E6QuestionCode(question.id) && answer.conditionalValues) {
         const details = Object.values(answer.conditionalValues).filter(Boolean).join(', ')
         if (details) result += ` (${details})`
       }
@@ -208,6 +212,11 @@ export const EvaluationQuestionnaire = React.memo(function EvaluationQuestionnai
 
   const handleSaveAnswer = async (questionId: string, answer: any) => {
     try {
+      // Migration E4/E5/E6 : ces blocs ne se sauvegardent plus via `usecase_responses` (API /responses).
+      if (isE4E5E6QuestionCode(questionId)) {
+        console.warn('E4/E5/E6 ne sont plus éditables via ce flux (persistés via checklists consolidées).')
+        return
+      }
       const questions = loadQuestions()
       const question = questions[questionId]
       if (question.type === 'radio') {
