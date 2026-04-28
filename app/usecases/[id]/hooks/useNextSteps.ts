@@ -1,15 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { UseCaseNextSteps } from '@/lib/supabase'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 import { shouldPollForNextSteps } from '../utils/nextsteps-ux-state'
 
 /** Délai max d’attente de la ligne `usecase_nextsteps` après un rapport persisté (évite loader infini). */
 const NEXTSTEPS_SYNC_POLL_MAX_MS = 2 * 60 * 1000
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 interface UseNextStepsProps {
   usecaseId: string
@@ -77,6 +72,7 @@ export function useNextSteps({
         } = await supabase.auth.getSession()
 
         if (!session?.access_token) {
+          console.error('[useNextSteps] No session found for token propagation')
           setError('Non authentifié')
           return
         }
