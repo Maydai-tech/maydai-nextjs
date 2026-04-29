@@ -7,6 +7,7 @@ import {
 } from '@/lib/questionnaire-version'
 import { dbResponsesToQuestionnaireAnswers } from '@/lib/scoring-v2-server'
 import { resolveQualificationOutcomeV3 } from '@/lib/qualification-v3-decision'
+import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -44,9 +45,15 @@ export async function GET(
     const { id: usecaseId } = await params
 
     // Vérifier que l'utilisateur a accès à ce use case
+    // (les colonnes JSONB `checklist_gov_*` portent les pivots E4 / E5 / E6 du parcours V3 :
+    // elles doivent être fusionnées avec `usecase_responses` AVANT le calcul du risque,
+    // sinon les cas dont la qualification n'est portée QUE par les checklists — bug RH /
+    // Éducation, cf. `usecases.id = de3f4108-…` — retombent à tort sur « minimal »).
     const { data: usecase, error: usecaseError } = await supabase
       .from('usecases')
-      .select('company_id, questionnaire_version, system_type')
+      .select(
+        'company_id, questionnaire_version, system_type, checklist_gov_enterprise, checklist_gov_usecase'
+      )
       .eq('id', usecaseId)
       .single()
 
@@ -76,19 +83,44 @@ export async function GET(
       return NextResponse.json({ error: 'Error fetching responses' }, { status: 500 })
     }
 
-    if (!responses || responses.length === 0) {
+    const checklistEnterprise =
+      (usecase as { checklist_gov_enterprise?: string[] | null }).checklist_gov_enterprise ?? null
+    const checklistUsecase =
+      (usecase as { checklist_gov_usecase?: string[] | null }).checklist_gov_usecase ?? null
+
+    const hasResponseRows = Array.isArray(responses) && responses.length > 0
+    const hasChecklistEntries =
+      (Array.isArray(checklistEnterprise) && checklistEnterprise.length > 0) ||
+      (Array.isArray(checklistUsecase) && checklistUsecase.length > 0)
+
+    if (!hasResponseRows && !hasChecklistEntries) {
       return NextResponse.json({
         risk_level: 'minimal' as RiskLevelCode,
         classification_status: 'qualified' as const,
       })
     }
 
+    /**
+     * Hydratation amont : fusionne `usecase_responses` (DB) et les pivots stockés
+     * dans `usecases.checklist_gov_*` (JSONB) en un flux unique. C'est le seul
+     * point d'entrée vers les moteurs de décision (V3 + V1/V2). Sans cette étape,
+     * les cas dont la qualification est portée UNIQUEMENT par les checklists
+     * (parcours V3 long, dossiers RH / Éducation) sont systématiquement classés
+     * « minimal » alors que l'Annexe III est cochée — ce qui produit un faux
+     * négatif réglementaire (cf. bug `Assistant RH Trieur de CV`).
+     */
+    const unifiedResponses = mergeChecklistIntoDbResponseRows(
+      responses ?? [],
+      checklistEnterprise,
+      checklistUsecase
+    )
+
     const qv = normalizeQuestionnaireVersion(
       (usecase as { questionnaire_version?: number | null }).questionnaire_version
     )
 
     if (qv === QUESTIONNAIRE_VERSION_V3) {
-      const answers = dbResponsesToQuestionnaireAnswers(responses)
+      const answers = dbResponsesToQuestionnaireAnswers(unifiedResponses)
       const out = resolveQualificationOutcomeV3(
         answers,
         (usecase as { system_type?: string | null }).system_type
@@ -99,7 +131,7 @@ export async function GET(
       })
     }
 
-    const highestRiskLevel: RiskLevelCode = deriveRiskLevelFromResponses(responses)
+    const highestRiskLevel: RiskLevelCode = deriveRiskLevelFromResponses(unifiedResponses)
 
     return NextResponse.json({
       risk_level: highestRiskLevel,
