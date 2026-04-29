@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { transformToOpenAIFormatComplete } from '@/lib/openai-data-transformer'
+import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
 import { openAIClient } from '@/lib/openai-client'
 import {
   extractNextStepsFromReport,
@@ -236,11 +237,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch questionnaire responses' }, { status: 500 })
     }
 
+    /**
+     * Hydratation amont (Early Stage Hydration).
+     *
+     * Les pivots de qualification (E4) et de gouvernance (E5/E6) peuvent être
+     * portés UNIQUEMENT par les colonnes JSONB `usecases.checklist_gov_*` —
+     * notamment dans le parcours V3 long où l'utilisateur valide une checklist
+     * sans alimenter `usecase_responses`. Sans fusion, le moteur V3 et le
+     * formateur OpenAI ne voient que la moitié de la vérité, ce qui produit
+     * des classifications « minimal » erronées (cf. bug `Assistant RH Trieur de CV`,
+     * Annexe III « Emploi » cochée mais badge minimal côté UI et amnésie LLM).
+     *
+     * `unifiedResponses` devient la source de vérité unique en aval :
+     * recalcul du `authoritativeRiskCode`, calcul des slot_statuses, payload LLM.
+     * Le score numérique reste calculé hors de cette route (calculate-usecase-score
+     * Edge Function et `lib/score-calculator-simple`), inchangé.
+     */
+    const unifiedResponses = mergeChecklistIntoDbResponseRows(
+      responses ?? [],
+      (usecase as { checklist_gov_enterprise?: string[] | null }).checklist_gov_enterprise ?? null,
+      (usecase as { checklist_gov_usecase?: string[] | null }).checklist_gov_usecase ?? null
+    )
+
     let authoritativeRiskCode: RiskLevelCode | null
     let classificationStatusUpdate: string | null = null
 
     if (questionnaireVersion === QUESTIONNAIRE_VERSION_V3) {
-      const answers = dbResponsesToQuestionnaireAnswers(responses || [])
+      const answers = dbResponsesToQuestionnaireAnswers(unifiedResponses)
       const v3Out = resolveQualificationOutcomeV3(
         answers,
         (usecase as { system_type?: string | null }).system_type
@@ -258,7 +281,7 @@ export async function POST(req: NextRequest) {
       authoritativeRiskCode = v3Out.risk_level ?? 'minimal'
       classificationStatusUpdate = 'qualified'
     } else {
-      authoritativeRiskCode = deriveRiskLevelFromResponses(responses || [])
+      authoritativeRiskCode = deriveRiskLevelFromResponses(unifiedResponses)
     }
 
     const { error: riskLevelUpdateError } = await supabase
@@ -335,7 +358,10 @@ export async function POST(req: NextRequest) {
       usecaseWithAuthoritativeRisk as any,
       company,
       model,
-      responses || [],
+      // Hydraté avec les pivots `checklist_gov_*` : le formateur (et le grounding LLM
+      // construit en aval) lit donc les questions E4 / E5 / E6 « comme si elles
+      // venaient de `usecase_responses` », même quand la base n'en contient aucune.
+      unifiedResponses,
       respondentEmail,
       questionnaireParcours
     )
