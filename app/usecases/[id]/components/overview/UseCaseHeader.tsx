@@ -1,15 +1,16 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { UseCase, Progress } from '../../types/usecase'
 import { ComplAIModel } from '@/lib/supabase'
-import { getStatusColor, getUseCaseStatusInFrench } from '../../utils/questionnaire'
+import { getUseCaseStatusInFrench } from '../../utils/questionnaire'
+import { cn } from '@/lib/utils/cn'
 import { useCaseRoutes, withEvaluationEntree } from '../../utils/routes'
 import { useUseCaseNavigation } from '../../utils/navigation'
+import { Badge, type BadgeVariant } from '@/components/ui/badge'
 import {
   ArrowLeft,
   CheckCircle,
-  CheckCircle2,
   Clock,
   Edit3,
   RefreshCcw,
@@ -52,6 +53,24 @@ interface UseCaseHeaderProps {
   progress?: Progress | null
   onUpdateUseCase?: (updates: Partial<UseCase>) => Promise<UseCase | null>
   updating?: boolean
+}
+
+/** Libellé statut d'avancement : uniquement à partir de `useCase.status` (API / base). */
+function getAdvancementLabelFromStatus(status: string | undefined): string {
+  return getUseCaseStatusInFrench(status ?? '')
+}
+
+/** Variante Badge pour le statut d'avancement. */
+function advancementVariantForStatus(status: string | undefined): BadgeVariant {
+  const s = status?.toLowerCase() ?? ''
+  if (s === 'completed' || s === 'active') return 'success'
+  if (s === 'in_progress' || s === 'under_review') return 'warning'
+  return 'secondary'
+}
+
+/** Type de parcours persisté : défaut « Complet » si `path_mode` absent (rétrocompatibilité). */
+function getPathModeDisplayLabel(pathMode: UseCase['path_mode']): string {
+  return pathMode === 'short' ? 'Parcours Express' : 'Parcours Complet'
 }
 
 const getStatusIcon = (status: string) => {
@@ -163,7 +182,9 @@ function HeaderScore({ useCaseId }: { useCaseId: string }) {
 }
 
 export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = false }: UseCaseHeaderProps) {
-  const frenchStatus = getUseCaseStatusInFrench(useCase.status)
+  const frenchStatus = getAdvancementLabelFromStatus(useCase.status)
+  const advancementVariant = advancementVariantForStatus(useCase.status)
+  const pathTypeLabel = getPathModeDisplayLabel(useCase.path_mode)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -210,30 +231,10 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         : 'Télécharger le rapport PDF'
   const { isOwner } = useCompanyInfo(useCase.company_id)
   const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
   const { session } = useAuth()
 
-  const parcoursQuery = searchParams.get('parcours')
-
-  /** Parcours long : évaluation sans `parcours=court`, cas terminé, ou progression persistée côté graphe long (E5 / déclaration Q12). */
-  const showParcoursCompletBadge = useMemo(() => {
-    if (!showV3DualPath) return false
-    const onEval = pathname === useCaseRoutes.evaluation(useCase.id)
-    if (onEval && parcoursQuery !== 'court') return true
-    if (useCase.score_final != null && useCase.score_final !== undefined) return true
-    if (String(useCase.status || '').toLowerCase() === 'completed') return true
-    const ac = useCase.active_question_codes ?? []
-    return ac.some((c) => /^E5\./.test(c) || c === 'E4.N8.Q12')
-  }, [
-    showV3DualPath,
-    pathname,
-    useCase.id,
-    parcoursQuery,
-    useCase.score_final,
-    useCase.status,
-    useCase.active_question_codes,
-  ])
+  const showPasserAuParcoursCompletCta =
+    showV3DualPath && useCase.path_mode === 'short'
 
   // Memoize deployment countries to prevent WorldMap flickering
   const deploymentCountries = useMemo(
@@ -418,15 +419,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
             <div className="flex flex-wrap items-center justify-between gap-4 mt-4 mb-6 border-b border-gray-200 pb-4">
               <div className="flex flex-wrap items-center gap-3 min-w-0">
                 {showV3DualPath ? (
-                  showParcoursCompletBadge ? (
-                    <span
-                      role="status"
-                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-100 text-[#0080A3] border border-sky-200"
-                    >
-                      <CheckCircle2 className="h-[14px] w-[14px] shrink-0" aria-hidden />
-                      Parcours Complet
-                    </span>
-                  ) : (
+                  showPasserAuParcoursCompletCta ? (
                     <Link
                       href={withEvaluationEntree(useCaseRoutes.evaluation(useCase.id), 'header_v3_refine_long')}
                       onClick={() =>
@@ -444,7 +437,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                       <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
                       Passer au Parcours Complet
                     </Link>
-                  )
+                  ) : null
                 ) : (
                   <button
                     type="button"
@@ -538,21 +531,30 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           {/* Colonne gauche - Blocs empilés */}
           <div className="xl:col-span-3 space-y-4">
-            {/* Ligne 2: Badge statut */}
-            <div className="flex flex-wrap gap-2">
-              <div
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
-                style={frenchStatus === 'Complété' ? {
-                  backgroundColor: '#f1fdfa',
-                  color: '#0080a3'
-                } : frenchStatus === 'À compléter' ? {
-                  backgroundColor: '#fefce8',
-                  color: '#713f12'
-                } : {}}
+            {/* Ligne 2 : statut d'avancement et type de parcours (badges distincts) */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant={advancementVariant}
+                role="status"
+                aria-label="Statut d'avancement du cas d'usage"
+                className="rounded-full px-3 py-1 text-sm font-medium gap-1.5 shrink-0"
               >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                {frenchStatus}
-              </div>
+                {getStatusIcon(useCase.status)}
+                <span className="tabular-nums">{frenchStatus}</span>
+              </Badge>
+              <Badge
+                variant="outline"
+                role="status"
+                aria-label="Type de parcours questionnaire"
+                className={cn(
+                  'rounded-full px-3 py-1 text-sm font-medium shrink-0 border',
+                  useCase.path_mode === 'short'
+                    ? 'border-sky-200 bg-sky-50 text-[#0080A3]'
+                    : 'border-slate-200 bg-slate-50 text-slate-800'
+                )}
+              >
+                {pathTypeLabel}
+              </Badge>
               {(() => {
                 const deploymentStatus = getDeploymentStatus(
                   useCase.deployment_date,

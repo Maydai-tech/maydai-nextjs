@@ -212,23 +212,32 @@ test.describe('Registry Creation', () => {
     // 5. Fill in registry name
     await page.fill('input[type="text"]', TEST_REGISTRY.name)
 
-    // 6. Select registry type
-    await page.selectOption('select', TEST_REGISTRY.type)
+    // 6. Select registry type (target the "Type de registre" select explicitly)
+    await page
+      .locator('label:has-text("Type de registre")')
+      .locator('..')
+      .locator('select')
+      .selectOption(TEST_REGISTRY.type)
 
-    // 7. Submit form
+    // 7. Select industry (CompanySectorSelector)
+    // These fields are optional (API fallback exists), but we select them to validate the new UI.
+    await page.selectOption('#mainIndustry', TEST_USER.mainIndustryId)
+    await page.selectOption('#subCategory', TEST_USER.subCategoryId)
+
+    // 8. Submit form
     await page.click('button[type="submit"]')
 
-    // 8. Wait for redirect to dashboard
+    // 9. Wait for redirect to dashboard
     await page.waitForURL(/\/dashboard\/[a-f0-9-]+/, { timeout: 10000 })
 
-    // 9. Verify we're on the registry dashboard
+    // 10. Verify we're on the registry dashboard
     const currentUrl = page.url()
     const registryIdMatch = currentUrl.match(/\/dashboard\/([a-f0-9-]+)/)
 
     expect(registryIdMatch).not.toBeNull()
     testRegistryId = registryIdMatch![1]
 
-    // 10. Wait for page to fully load and verify registry name is displayed
+    // 11. Wait for page to fully load and verify registry name is displayed
     await page.waitForLoadState('networkidle')
 
     // Use getByText for more robust text matching and increase timeout

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
@@ -285,7 +286,8 @@ export default function TodoListPage({ params }: TodoListPageProps) {
   }, [user, hasFetched, companyId])
 
   // Auto-expand use case and action from URL parameters
-  const highlightUseCase = searchParams.get('usecase')
+  const sourceUseCaseId = searchParams.get('usecase')
+  const highlightUseCase = sourceUseCaseId
   const highlightAction = searchParams.get('action')
   const highlightActionCanonical = highlightAction
     ? resolveCanonicalDocType(highlightAction)
@@ -597,9 +599,17 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                     {/* Use case header */}
                     <div className="flex items-start justify-between gap-3 mb-4">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <FileText className="w-6 h-6 text-[#0080A3] flex-shrink-0" />
-                          <h3 className="text-xl font-semibold text-gray-900">{useCase.name}</h3>
+                        <div className="flex items-start gap-3 mb-2">
+                          <FileText className="w-6 h-6 text-[#0080A3] flex-shrink-0 mt-0.5" aria-hidden />
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-xl font-semibold text-gray-900">{useCase.name}</h3>
+                            <Link
+                              href={`/usecases/${useCase.id}`}
+                              className="mt-1 inline-block text-xs sm:text-sm font-medium text-[#0080A3] hover:text-[#006280] underline-offset-2 hover:underline"
+                            >
+                              Retour au cas d&apos;usage
+                            </Link>
+                          </div>
                         </div>
                         <p className="text-gray-600 line-clamp-2">{useCase.description}</p>
                       </div>
