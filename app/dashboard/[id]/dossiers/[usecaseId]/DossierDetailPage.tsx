@@ -787,19 +787,26 @@ export default function DossierDetailPage() {
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <button
+              type="button"
               onClick={() => router.push(`/dashboard/${companyId}/dossiers`)}
               className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ArrowLeft className="w-4 h-4 mr-2 shrink-0" />
               Retour aux dossiers
             </button>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h1 className="text-3xl font-bold text-gray-900">{usecaseName}</h1>
-                <p className="text-gray-600 mt-1">Dossier — cas à risque inacceptable</p>
+                <Link
+                  href={`/usecases/${usecaseId}`}
+                  className="mt-2 inline-block text-sm font-medium text-[#0080A3] hover:text-[#006280] underline-offset-2 hover:underline"
+                >
+                  Retour au cas d&apos;usage
+                </Link>
+                <p className="text-gray-600 mt-2">Dossier — cas à risque inacceptable</p>
               </div>
             </div>
           </div>
@@ -1147,17 +1154,24 @@ export default function DossierDetailPage() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <button
+            type="button"
             onClick={() => router.push(`/dashboard/${companyId}/dossiers`)}
             className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="w-4 h-4 mr-2 shrink-0" />
             Retour aux dossiers
           </button>
           <div className="flex items-center gap-3">
-            <FileText className="w-8 h-8 text-[#0080A3]" />
-            <div>
+            <FileText className="w-8 h-8 text-[#0080A3] shrink-0" />
+            <div className="min-w-0">
               <h1 className="text-3xl font-bold text-gray-900">{usecaseName}</h1>
-              <p className="text-gray-600">{DECLARATION_PROOF_FLOW_COPY.dossierDetailSubtitle}</p>
+              <Link
+                href={`/usecases/${usecaseId}`}
+                className="mt-2 inline-block text-sm font-medium text-[#0080A3] hover:text-[#006280] underline-offset-2 hover:underline"
+              >
+                Retour au cas d&apos;usage
+              </Link>
+              <p className="text-gray-600 mt-2">{DECLARATION_PROOF_FLOW_COPY.dossierDetailSubtitle}</p>
               <p className="mt-2 text-sm text-gray-600 max-w-3xl leading-relaxed">
                 {DECLARATION_PROOF_FLOW_COPY.filRougeBody}{' '}
                 <a

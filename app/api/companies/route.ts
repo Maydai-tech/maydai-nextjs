@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { canCreateCompany } from '@/lib/collaborators'
+import { validateIndustrySelection } from '@/lib/validation/industries'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -196,7 +197,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, type } = body
+    const { name, type, mainIndustryId, subCategoryId } = body
     if (!name) {
       return NextResponse.json({ error: 'Champ name manquant' }, { status: 400 })
     }
@@ -205,11 +206,90 @@ export async function POST(request: NextRequest) {
     // Authentication is already verified above, so this is safe
     const serviceClient = getServiceRoleClient()
 
+    // ----------------------------
+    // Industry selection resolution
+    // ----------------------------
+    // Business rules:
+    // - Payload may optionally include mainIndustryId + subCategoryId.
+    // - If absent, derive defaults from the "Global Owner" profile:
+    //   1) Check whether caller is an invited user in user_profiles (invited_user_id = user.id),
+    //      take most recent (created_at DESC).
+    //   2) If found, global owner = inviter_user_id else global owner = user.id.
+    //   3) Select (industry, sub_category_id) from profiles for that global owner.
+    let resolvedMainIndustryId: string | null = null
+    let resolvedSubCategoryId: string | null = null
+
+    const payloadHasIndustry =
+      typeof mainIndustryId === 'string' && mainIndustryId.trim().length > 0 &&
+      typeof subCategoryId === 'string' && subCategoryId.trim().length > 0
+
+    if (payloadHasIndustry) {
+      const validation = validateIndustrySelection(mainIndustryId.trim(), subCategoryId.trim())
+      if (!validation.valid) {
+        return NextResponse.json({ error: validation.error || 'Secteur d\'activité invalide' }, { status: 400 })
+      }
+      resolvedMainIndustryId = mainIndustryId.trim()
+      resolvedSubCategoryId = subCategoryId.trim()
+    } else if (mainIndustryId !== undefined || subCategoryId !== undefined) {
+      // One provided without the other (or non-string): reject explicitly
+      return NextResponse.json(
+        { error: 'Les champs mainIndustryId et subCategoryId doivent être fournis ensemble (ou omis).' },
+        { status: 400 }
+      )
+    } else {
+      // Fallback Multi-Tenant: resolve global owner and read their profile industry defaults
+      const { data: invitation, error: invitationError } = await serviceClient
+        .from('user_profiles')
+        .select('inviter_user_id')
+        .eq('invited_user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (invitationError) {
+        const context = createRequestContext(request)
+        logger.error('Failed to resolve user invitation (user_profiles)', invitationError, {
+          ...context,
+          invitedUserId: user.id,
+        })
+        return NextResponse.json({ error: 'Erreur lors de la résolution du propriétaire du compte' }, { status: 500 })
+      }
+
+      const globalOwnerId = invitation?.inviter_user_id || user.id
+
+      const { data: ownerProfile, error: ownerProfileError } = await serviceClient
+        .from('profiles')
+        .select('industry, sub_category_id')
+        .eq('id', globalOwnerId)
+        .maybeSingle()
+
+      if (ownerProfileError) {
+        const context = createRequestContext(request)
+        logger.error('Failed to fetch global owner profile (industry defaults)', ownerProfileError, {
+          ...context,
+          globalOwnerId,
+          invitedUserId: user.id,
+        })
+        return NextResponse.json({ error: 'Erreur lors de la récupération des préférences secteur' }, { status: 500 })
+      }
+
+      resolvedMainIndustryId =
+        typeof ownerProfile?.industry === 'string' && ownerProfile.industry.trim()
+          ? ownerProfile.industry.trim()
+          : null
+      resolvedSubCategoryId =
+        typeof ownerProfile?.sub_category_id === 'string' && ownerProfile.sub_category_id.trim()
+          ? ownerProfile.sub_category_id.trim()
+          : null
+    }
+
     // Build insert data
-    const insertData: { name: string; type?: string } = { name }
+    const insertData: { name: string; type?: string; industry?: string | null; sub_category_id?: string | null } = { name }
     if (type) {
       insertData.type = type
     }
+    insertData.industry = resolvedMainIndustryId
+    insertData.sub_category_id = resolvedSubCategoryId
 
     // Créer la compagnie
     const { data, error } = await serviceClient

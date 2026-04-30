@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { isOwner } from '@/lib/collaborators'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { updateUseCaseRegistryResponses } from '@/lib/registry-sync'
+import { validateIndustrySelection } from '@/lib/validation/industries'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -147,21 +148,62 @@ export async function PUT(
 
     // Parse request body
     const body = await request.json()
-    const { name, industry, city, country, type, maydai_as_registry } = body
+    const { name, city, country, type, maydai_as_registry, mainIndustryId, subCategoryId } = body
 
     // Validate at least one field is provided
-    if (!name && !industry && !city && !country && !type && maydai_as_registry === undefined) {
+    const hasIndustryUpdate = mainIndustryId !== undefined || subCategoryId !== undefined
+    if (!name && !city && !country && !type && maydai_as_registry === undefined && !hasIndustryUpdate) {
       return NextResponse.json({ error: 'At least one field must be provided' }, { status: 400 })
     }
 
     // Build update object with only provided fields
-    const updateData: Record<string, string | boolean> = {}
+    const updateData: Record<string, string | boolean | null> = {}
     if (name !== undefined) updateData.name = name
-    if (industry !== undefined) updateData.industry = industry
     if (city !== undefined) updateData.city = city
     if (country !== undefined) updateData.country = country
     if (type !== undefined) updateData.type = type
     if (maydai_as_registry !== undefined) updateData.maydai_as_registry = maydai_as_registry
+
+    // Map new business fields:
+    // - mainIndustryId -> companies.industry
+    // - subCategoryId  -> companies.sub_category_id
+    //
+    // Backward compatibility note:
+    // We intentionally do NOT accept a raw `industry` free-text field anymore.
+    // Clients must send (mainIndustryId, subCategoryId) when updating the sector.
+    if (hasIndustryUpdate) {
+      const mainIsNullish = mainIndustryId === null || mainIndustryId === ''
+      const subIsNullish = subCategoryId === null || subCategoryId === ''
+
+      // Allow clearing both at once (e.g., admin wants to force re-selection)
+      if (mainIsNullish && subIsNullish) {
+        updateData.industry = null
+        updateData.sub_category_id = null
+      } else {
+        if (typeof mainIndustryId !== 'string' || typeof subCategoryId !== 'string') {
+          return NextResponse.json(
+            { error: 'Les champs mainIndustryId et subCategoryId doivent être des chaînes (ou null pour effacer).' },
+            { status: 400 }
+          )
+        }
+        const main = mainIndustryId.trim()
+        const sub = subCategoryId.trim()
+        if (!main || !sub) {
+          return NextResponse.json(
+            { error: 'Les champs mainIndustryId et subCategoryId doivent être fournis ensemble (ou tous deux null/vides pour effacer).' },
+            { status: 400 }
+          )
+        }
+
+        const validation = validateIndustrySelection(main, sub)
+        if (!validation.valid) {
+          return NextResponse.json({ error: validation.error || 'Secteur d\'activité invalide' }, { status: 400 })
+        }
+
+        updateData.industry = main
+        updateData.sub_category_id = sub
+      }
+    }
 
     // Update the company
     const { data: updatedCompany, error: updateError } = await supabase

@@ -8,11 +8,14 @@ import DeleteRegistryModal from '../components/DeleteRegistryModal'
 import ConfirmCentralizedRegistryModal from '../components/ConfirmCentralizedRegistryModal'
 import EditCentralizedRegistryModal from '../components/EditCentralizedRegistryModal'
 import { REGISTRY_TYPES, isCustomType, getTypeLabel } from '@/lib/registry-types'
+import CompanySectorSelector, { type IndustrySelection } from '@/components/CompanySectorSelector'
+import { getIndustryDisplayText, getIndustryLabel, getSubCategoryLabel } from '@/lib/constants/industries'
 
 interface Company {
   id: string
   name: string
   industry: string
+  sub_category_id?: string | null
   city: string
   country: string
   type?: string
@@ -34,9 +37,12 @@ export default function RegistrySettingsPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
-    industry: '',
     city: '',
     country: ''
+  })
+  const [industrySelection, setIndustrySelection] = useState<IndustrySelection>({
+    mainIndustryId: '',
+    subCategoryId: '',
   })
   const [selectedType, setSelectedType] = useState('')
   const [customType, setCustomType] = useState('')
@@ -97,9 +103,12 @@ export default function RegistrySettingsPage() {
         setCompany(data)
         setFormData({
           name: data.name || '',
-          industry: data.industry || '',
           city: data.city || '',
           country: data.country || ''
+        })
+        setIndustrySelection({
+          mainIndustryId: data.industry || '',
+          subCategoryId: data.sub_category_id || ''
         })
         // Initialize type state
         if (data.type) {
@@ -135,9 +144,12 @@ export default function RegistrySettingsPage() {
     if (company) {
       setFormData({
         name: company.name || '',
-        industry: company.industry || '',
         city: company.city || '',
         country: company.country || ''
+      })
+      setIndustrySelection({
+        mainIndustryId: company.industry || '',
+        subCategoryId: company.sub_category_id || ''
       })
       // Reset type state
       if (company.type) {
@@ -177,6 +189,9 @@ export default function RegistrySettingsPage() {
         body: JSON.stringify({
           ...formData,
           type: typeValue || null
+          ,
+          mainIndustryId: industrySelection.mainIndustryId,
+          subCategoryId: industrySelection.subCategoryId
         })
       })
 
@@ -412,15 +427,20 @@ export default function RegistrySettingsPage() {
                   Secteur d'activité
                 </label>
                 {isEditing ? (
-                  <input
-                    type="text"
-                    value={formData.industry}
-                    onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
-                    placeholder="Ex: Technologie, Santé, Finance..."
+                  <CompanySectorSelector
+                    value={industrySelection}
+                    onChange={setIndustrySelection}
+                    required={false}
                   />
                 ) : (
-                  <p className="text-gray-900 py-2">{company.industry || '-'}</p>
+                  <p className="text-gray-900 py-2">
+                    {company.industry && company.sub_category_id
+                      ? getIndustryDisplayText(company.industry, company.sub_category_id) ||
+                        `${getIndustryLabel(company.industry) || company.industry} > ${getSubCategoryLabel(company.industry, company.sub_category_id) || company.sub_category_id}`
+                      : company.industry
+                        ? getIndustryLabel(company.industry) || company.industry
+                        : '-'}
+                  </p>
                 )}
               </div>
 

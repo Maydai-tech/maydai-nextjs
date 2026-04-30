@@ -233,6 +233,11 @@ test.describe('Registry Settings', () => {
     await cityInput.clear()
     await cityInput.fill('Paris')
 
+    // Modify industry selection (CompanySectorSelector)
+    // Use the stable IDs from the component: #mainIndustry and #subCategory
+    await page.selectOption('#mainIndustry', TEST_USER.mainIndustryId)
+    await page.selectOption('#subCategory', TEST_USER.subCategoryId)
+
     // Save changes
     await page.click('button:has-text("Enregistrer")')
     await page.waitForTimeout(1000)

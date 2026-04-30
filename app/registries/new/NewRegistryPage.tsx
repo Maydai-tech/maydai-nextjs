@@ -8,11 +8,16 @@ import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { Building2, ArrowLeft } from "lucide-react"
 import { REGISTRY_TYPES } from '@/lib/registry-types'
 import { trackRegistryCreation, type PlanName } from '@/lib/gtm'
+import CompanySectorSelector, { type IndustrySelection } from '@/components/CompanySectorSelector'
 
 export default function NewRegistryPage() {
   const [name, setName] = useState("")
   const [selectedType, setSelectedType] = useState("")
   const [customType, setCustomType] = useState("")
+  const [industrySelection, setIndustrySelection] = useState<IndustrySelection>({
+    mainIndustryId: '',
+    subCategoryId: '',
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [existingRegistryCount, setExistingRegistryCount] = useState<number | null>(null)
@@ -45,10 +50,19 @@ export default function NewRegistryPage() {
     setError(null)
     try {
       const typeValue = selectedType === 'autre' ? customType : selectedType
+      const hasIndustry =
+        Boolean(industrySelection.mainIndustryId?.trim()) &&
+        Boolean(industrySelection.subCategoryId?.trim())
 
       const result = await api.post('/api/companies', {
         name,
         type: typeValue || undefined,
+        ...(hasIndustry
+          ? {
+              mainIndustryId: industrySelection.mainIndustryId.trim(),
+              subCategoryId: industrySelection.subCategoryId.trim(),
+            }
+          : {}),
       })
       if (result.data && result.data.id) {
         const planName = (plan.name || 'freemium') as PlanName
@@ -127,6 +141,15 @@ export default function NewRegistryPage() {
               />
             </div>
           )}
+
+          <div>
+            <CompanySectorSelector
+              value={industrySelection}
+              onChange={setIndustrySelection}
+              // Optional on registry creation: API fallback will apply if omitted.
+              required={false}
+            />
+          </div>
 
           {error && <div className="text-red-600 text-sm">{error}</div>}
           <button
