@@ -1,6 +1,14 @@
+import { createHash } from 'node:crypto'
+
 import { GoogleAdsApi, type Customer } from 'google-ads-api'
 
 const LOG_PREFIX = '[google-ads-api]'
+
+function hashEmailForGoogleAdsClickConversion(email: string): string | null {
+  const normalized = email.trim().toLowerCase()
+  if (!normalized) return null
+  return createHash('sha256').update(normalized, 'utf8').digest('hex')
+}
 
 type GoogleAdsEnv = {
   developerToken: string
@@ -140,6 +148,11 @@ export type SendGoogleAdsConversionInput = {
   currencyCode?: string
   /** Déduplication côté Google Ads (ex. id Stripe + lead). Max ~100 car. */
   orderId?: string
+  /**
+   * Email utilisateur (sera normalisé puis haché SHA-256 hex pour `user_identifiers`).
+   * Optionnel : les appels existants (Stripe, leads) restent inchangés si omis.
+   */
+  email?: string
 }
 
 /**
@@ -154,6 +167,7 @@ export async function sendGoogleAdsConversion({
   conversionValue,
   currencyCode = 'EUR',
   orderId,
+  email,
 }: SendGoogleAdsConversionInput): Promise<boolean> {
   try {
     const env = readGoogleAdsEnv()
@@ -193,6 +207,9 @@ export async function sendGoogleAdsConversion({
         ? orderIdTrimmed.slice(0, GOOGLE_ADS_ORDER_ID_MAX_LEN)
         : undefined
 
+    const hashedEmail =
+      typeof email === 'string' ? hashEmailForGoogleAdsClickConversion(email) : null
+
     const clickPayload: Record<string, unknown> = {
       gclid,
       conversion_action: conversionAction,
@@ -202,6 +219,9 @@ export async function sendGoogleAdsConversion({
     }
     if (order_id) {
       clickPayload.order_id = order_id
+    }
+    if (hashedEmail) {
+      clickPayload.user_identifiers = [{ hashed_email: hashedEmail }]
     }
 
     const response = await customer.conversionUploads.uploadClickConversions(

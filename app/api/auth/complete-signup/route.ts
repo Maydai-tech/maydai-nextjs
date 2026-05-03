@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
+import { sendGoogleAdsConversion } from '@/lib/google-ads/conversions'
 import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 
@@ -183,6 +184,28 @@ export async function POST(request: NextRequest) {
         { error: 'Erreur lors de la création du profil' },
         { status: 500 }
       )
+    }
+
+    if (gclid) {
+      const emailForConversion =
+        (user.email?.trim().toLowerCase() ||
+          (typeof body.email === 'string' ? body.email.trim().toLowerCase() : '')) ||
+        ''
+      void (async () => {
+        try {
+          await sendGoogleAdsConversion({
+            clickId: gclid,
+            conversionName: 'hors connexion (importation)',
+            conversionValue: 0,
+            ...(emailForConversion ? { email: emailForConversion } : {}),
+          })
+        } catch (err) {
+          console.error(
+            '[complete-signup] Google Ads offline conversion (non bloquant):',
+            err
+          )
+        }
+      })()
     }
 
     return NextResponse.json({ profile }, { status: 200 })
