@@ -12,6 +12,8 @@ const UTM_PARAM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign'] as const
 
 export type StoredAttribution = {
   click_id: string | null
+  /** GCLID explicite (Google Ads) ; peut coexister avec d’autres click ids dans `click_id`. */
+  gclid: string | null
   utm_source: string | null
   utm_medium: string | null
   utm_campaign: string | null
@@ -21,6 +23,7 @@ export type StoredAttribution = {
 function emptyAttribution(): StoredAttribution {
   return {
     click_id: null,
+    gclid: null,
     utm_source: null,
     utm_medium: null,
     utm_campaign: null,
@@ -49,6 +52,11 @@ export function parseAttributionFromSearchParams(
     }
   }
 
+  const gclidOnly = trimOrNull(sp.get('gclid'))
+  if (gclidOnly) {
+    out.gclid = gclidOnly
+  }
+
   for (const key of UTM_PARAM_KEYS) {
     const v = trimOrNull(sp.get(key))
     if (v) {
@@ -60,6 +68,7 @@ export function parseAttributionFromSearchParams(
 
   if (
     out.click_id ||
+    out.gclid ||
     out.utm_source ||
     out.utm_medium ||
     out.utm_campaign
@@ -77,6 +86,7 @@ export function hasMeaningfulAttribution(
   if (!a) return false
   return Boolean(
     a.click_id ||
+      a.gclid ||
       a.utm_source ||
       a.utm_medium ||
       a.utm_campaign
@@ -89,6 +99,7 @@ function mergeAttribution(
 ): StoredAttribution {
   return {
     click_id: incoming.click_id ?? base.click_id,
+    gclid: incoming.gclid ?? base.gclid,
     utm_source: incoming.utm_source ?? base.utm_source,
     utm_medium: incoming.utm_medium ?? base.utm_medium,
     utm_campaign: incoming.utm_campaign ?? base.utm_campaign,
@@ -105,6 +116,7 @@ function readFromLocalStorage(): StoredAttribution | null {
     if (!parsed || typeof parsed !== 'object') return null
     return {
       click_id: trimOrNull(parsed.click_id as string | null),
+      gclid: trimOrNull((parsed as { gclid?: string | null }).gclid ?? null),
       utm_source: trimOrNull(parsed.utm_source as string | null),
       utm_medium: trimOrNull(parsed.utm_medium as string | null),
       utm_campaign: trimOrNull(parsed.utm_campaign as string | null),
@@ -146,6 +158,7 @@ export function readStoredAttribution(): StoredAttribution | null {
     if (!parsed || typeof parsed !== 'object') return null
     return {
       click_id: trimOrNull(parsed.click_id as string | null),
+      gclid: trimOrNull((parsed as { gclid?: string | null }).gclid ?? null),
       utm_source: trimOrNull(parsed.utm_source as string | null),
       utm_medium: trimOrNull(parsed.utm_medium as string | null),
       utm_campaign: trimOrNull(parsed.utm_campaign as string | null),

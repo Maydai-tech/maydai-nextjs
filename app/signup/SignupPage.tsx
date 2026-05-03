@@ -6,7 +6,11 @@ import Link from 'next/link'
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
-import { sendSignUpEvent } from '@/lib/gtm'
+import {
+  sendGoogleAdsSignupConversionWithUserData,
+  sendSignUpEvent,
+} from '@/lib/gtm'
+import type { CompleteSignUpAcquisitionFields } from '@/lib/types/complete-signup-payload'
 import OTPVerification from '@/components/auth/OTPVerification'
 import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
 import SecurityLogosGrid from '@/components/ui/SecurityLogosGrid'
@@ -256,6 +260,17 @@ export default function SignupPage() {
         return
       }
 
+      const storedAttr = readStoredAttribution()
+      const acquisition: CompleteSignUpAcquisitionFields = {}
+      if (storedAttr && hasMeaningfulAttribution(storedAttr)) {
+        if (storedAttr.gclid?.trim()) acquisition.gclid = storedAttr.gclid.trim()
+        if (storedAttr.utm_source?.trim()) acquisition.utm_source = storedAttr.utm_source.trim()
+        if (storedAttr.utm_medium?.trim()) acquisition.utm_medium = storedAttr.utm_medium.trim()
+        if (storedAttr.utm_campaign?.trim()) {
+          acquisition.utm_campaign = storedAttr.utm_campaign.trim()
+        }
+      }
+
       // Call complete-signup API with fresh token
       const response = await fetch('/api/auth/complete-signup', {
         method: 'POST',
@@ -270,6 +285,7 @@ export default function SignupPage() {
           companyName: formData.companyName,
           mainIndustryId: formData.mainIndustryId,
           subCategoryId: formData.subCategoryId,
+          ...acquisition,
         }),
       })
 
@@ -331,6 +347,7 @@ export default function SignupPage() {
       sendSignUpEvent('formulaire_landing', {
         userId: session.user?.id,
       })
+      sendGoogleAdsSignupConversionWithUserData(formData.email)
 
       setTimeout(() => {
         router.push('/dashboard/registries')
