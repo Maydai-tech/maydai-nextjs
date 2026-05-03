@@ -328,12 +328,7 @@ export default function SignupPage() {
         }
       }
 
-      if (typeof window !== 'undefined') {
-        window.dataLayer = window.dataLayer || []
-        window.dataLayer.push({ event: 'sign_up', method: 'formulaire_landing' })
-      }
-
-      sendSignUpEvent('email', {
+      sendSignUpEvent('formulaire_landing', {
         userId: session.user?.id,
       })
 

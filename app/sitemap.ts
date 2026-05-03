@@ -15,6 +15,7 @@ const publicPages = [
   '/ia-act-ue/risques',
   '/politique-confidentialite',
   '/tarifs',
+  '/audit-ia-act',
 ]
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -75,6 +76,7 @@ function getPriority(path: string): number {
       return 0.9 // Pages importantes pour la conversion
     case '/a-propos':
     case '/ia-act-ue':
+    case '/audit-ia-act':
       return 0.8 // Pages de contenu principal
     case '/ia-act-ue/calendrier':
     case '/ia-act-ue/risques':
