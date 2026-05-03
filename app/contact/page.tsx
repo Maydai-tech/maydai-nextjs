@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Script from 'next/script';
 import Header from '@/components/site-vitrine/Header';
 import Footer from '@/components/site-vitrine/Footer';
+import { sendGenerateLeadHubspotDemo } from '@/lib/gtm';
 import { useState, useEffect, useRef } from 'react';
 
 export default function ContactPage() {
@@ -60,10 +61,7 @@ export default function ContactPage() {
         },
         onFormSubmitted: function() {
           console.log('Formulaire Hubspot soumis avec succès');
-          if (typeof window !== 'undefined') {
-            window.dataLayer = window.dataLayer || [];
-            window.dataLayer.push({ event: 'generate_lead', lead_type: 'demande_demo', method: 'hubspot_form' });
-          }
+          sendGenerateLeadHubspotDemo();
         },
       });
     } catch (error) {

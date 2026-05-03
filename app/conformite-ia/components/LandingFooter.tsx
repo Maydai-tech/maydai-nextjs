@@ -1,28 +1,21 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
+import { sendLandingCtaClick } from '@/lib/gtm'
 
 export default function LandingFooter() {
   const handleFooterFreeTrialClick = () => {
-    if (typeof window !== 'undefined') {
-      window.dataLayer = window.dataLayer || []
-      window.dataLayer.push({
-        event: 'click_button',
-        button_intent: 'essai_gratuit',
-        button_location: 'footer',
-      })
-    }
+    sendLandingCtaClick({
+      button_intent: 'essai_gratuit',
+      button_location: 'footer',
+    })
   }
 
   const handleFooterDemoClick = () => {
-    if (typeof window !== 'undefined') {
-      window.dataLayer = window.dataLayer || []
-      window.dataLayer.push({
-        event: 'click_button',
-        button_intent: 'demande_demo',
-        button_location: 'footer',
-      })
-    }
+    sendLandingCtaClick({
+      button_intent: 'demande_demo',
+      button_location: 'footer',
+    })
   }
 
   return (

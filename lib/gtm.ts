@@ -1,4 +1,9 @@
-export type SignUpMethod = 'email' | 'google' | 'linkedin' | 'github'
+export type SignUpMethod =
+  | 'email'
+  | 'google'
+  | 'linkedin'
+  | 'github'
+  | 'formulaire_landing'
 export type RegistryType = 'entreprise' | 'filiale' | 'service' | string
 export type PlanName = 'freemium' | 'starter' | 'pro' | 'enterprise'
 export type CollaboratorRole = 'admin' | 'editor' | 'viewer'
@@ -61,6 +66,23 @@ interface HubSpotFormSuccessEvent {
   form_id: string
 }
 
+/** CTA landing conformité IA (header / hero / footer). */
+export type LandingCtaIntent = 'essai_gratuit' | 'demande_demo'
+export type LandingCtaLocation = 'header' | 'hero' | 'footer'
+
+interface ClickButtonLandingEvent {
+  event: 'click_button'
+  button_intent: LandingCtaIntent
+  button_location: LandingCtaLocation
+}
+
+/** Lead généré depuis le formulaire HubSpot « demande démo » (page contact). */
+interface GenerateLeadHubspotDemoEvent {
+  event: 'generate_lead'
+  lead_type: 'demande_demo'
+  method: 'hubspot_form'
+}
+
 interface CustomEvent {
   event: string
   [key: string]: unknown
@@ -77,11 +99,13 @@ export type GTMEvent =
   | LimitReachedEvent
   | StorageAlertEvent
   | HubSpotFormSuccessEvent
+  | ClickButtonLandingEvent
+  | GenerateLeadHubspotDemoEvent
   | CustomEvent
 
 function getDataLayer(): GTMEvent[] | undefined {
   if (typeof window === 'undefined') return undefined
-  const raw = (window as Window & { dataLayer?: unknown }).dataLayer
+  const raw = window.dataLayer
   if (!Array.isArray(raw)) return undefined
   return raw as GTMEvent[]
 }
@@ -94,6 +118,37 @@ export function sendGTMEvent(event: GTMEvent): void {
   const dataLayer = getDataLayer()
   if (!dataLayer) return
   dataLayer.push(event)
+}
+
+/**
+ * Événement dataLayer arbitraire mais typé au minimum par `event`.
+ * Préférer des entrées explicites dans {@link GTMEvent} lorsque le contrat est stable.
+ */
+export function sendCustomGTMEvent(
+  payload: Record<string, unknown> & { event: string },
+): void {
+  sendGTMEvent(payload as GTMEvent)
+}
+
+/** Tracking CTA landing conformité IA (essai gratuit / démo). */
+export function sendLandingCtaClick(params: {
+  button_intent: LandingCtaIntent
+  button_location: LandingCtaLocation
+}): void {
+  sendGTMEvent({
+    event: 'click_button',
+    button_intent: params.button_intent,
+    button_location: params.button_location,
+  })
+}
+
+/** Soumission réussie du formulaire HubSpot « demande démo » (page contact). */
+export function sendGenerateLeadHubspotDemo(): void {
+  sendGTMEvent({
+    event: 'generate_lead',
+    lead_type: 'demande_demo',
+    method: 'hubspot_form',
+  })
 }
 
 const CONSENT_DELAY_MS = 1000

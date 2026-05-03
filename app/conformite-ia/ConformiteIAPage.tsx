@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { sendLandingCtaClick } from '@/lib/gtm'
 import Hero from './components/Hero'
 import VideoSection from './components/VideoSection'
 import TrustLogos from './components/TrustLogos'
@@ -11,14 +12,10 @@ import LandingFooter from './components/LandingFooter'
 
 export default function ConformiteIAPage() {
   const handleHeaderCtaClick = () => {
-    if (typeof window !== 'undefined') {
-      window.dataLayer = window.dataLayer || []
-      window.dataLayer.push({
-        event: 'click_button',
-        button_intent: 'essai_gratuit',
-        button_location: 'header',
-      })
-    }
+    sendLandingCtaClick({
+      button_intent: 'essai_gratuit',
+      button_location: 'header',
+    })
   }
 
   return (
