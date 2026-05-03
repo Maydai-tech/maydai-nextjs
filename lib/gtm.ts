@@ -83,6 +83,17 @@ interface GenerateLeadHubspotDemoEvent {
   method: 'hubspot_form'
 }
 
+/**
+ * Événement dataLayer pour Enhanced Conversions (Google Ads via GTM).
+ * Le conteneur GTM doit mapper `conversion` + `user_data` vers le tag Ads.
+ */
+interface GoogleAdsEnhancedConversionDataLayerEvent {
+  event: 'conversion'
+  user_data: {
+    email: string
+  }
+}
+
 interface CustomEvent {
   event: string
   [key: string]: unknown
@@ -101,6 +112,7 @@ export type GTMEvent =
   | HubSpotFormSuccessEvent
   | ClickButtonLandingEvent
   | GenerateLeadHubspotDemoEvent
+  | GoogleAdsEnhancedConversionDataLayerEvent
   | CustomEvent
 
 function getDataLayer(): GTMEvent[] | undefined {
@@ -173,6 +185,21 @@ export function sendSignUpEvent(
     event: 'sign_up',
     method,
     ...(options?.userId && { user_id: options.userId }),
+  })
+}
+
+const EMAIL_FOR_ADS_MAX_LEN = 320
+
+/**
+ * Push `conversion` + `user_data.email` sur le dataLayer (après délai consentement),
+ * pour Enhanced Conversions côté GTM / Google Ads.
+ */
+export function sendGoogleAdsSignupConversionWithUserData(email: string): void {
+  const trimmed = email.trim().toLowerCase()
+  if (!trimmed || trimmed.length > EMAIL_FOR_ADS_MAX_LEN) return
+  sendGTMEventAfterConsentDelay({
+    event: 'conversion',
+    user_data: { email: trimmed },
   })
 }
 

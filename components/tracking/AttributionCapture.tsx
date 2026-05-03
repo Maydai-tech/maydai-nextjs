@@ -1,20 +1,12 @@
 'use client'
 
-import { useEffect } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
-import { captureAttributionFromCurrentUrl } from '@/lib/tracking/capture-params'
+import { usePersistAcquisitionFromSearchParams } from '@/hooks/usePersistAcquisitionFromSearchParams'
 
 /**
- * Monté une fois dans le layout : à chaque navigation avec query string,
- * fusionne gclid / fbclid / UTM dans localStorage + cookie.
+ * Monté une fois dans le layout : à chaque navigation,
+ * fusionne gclid / autres click ids / UTM (useSearchParams) dans localStorage + cookie.
  */
 export default function AttributionCapture() {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-
-  useEffect(() => {
-    captureAttributionFromCurrentUrl()
-  }, [pathname, searchParams])
-
+  usePersistAcquisitionFromSearchParams()
   return null
 }

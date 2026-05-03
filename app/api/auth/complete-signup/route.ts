@@ -3,6 +3,16 @@ import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 
+const ACQUISITION_FIELD_MAX_LEN = 512
+
+function sanitizeAcquisitionField(value: unknown): string | null {
+  if (value === undefined || value === null) return null
+  if (typeof value !== 'string') return null
+  const t = value.trim()
+  if (!t) return null
+  return t.length > ACQUISITION_FIELD_MAX_LEN ? t.slice(0, ACQUISITION_FIELD_MAX_LEN) : t
+}
+
 /**
  * Complete signup API endpoint
  *
@@ -20,6 +30,7 @@ import { validateIndustrySelection } from '@/lib/validation/industries'
  *   subCategoryId: string (required, custom sub-category ID)
  *   phone: string (required, min 10 digits)
  *   siren?: string (optional, validated with Luhn algorithm)
+ *   gclid?, utm_source?, utm_medium?, utm_campaign?: string (optional, acquisition)
  * }
  *
  * Response:
@@ -35,7 +46,19 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
-    const { firstName, lastName, companyName, mainIndustryId, subCategoryId, phone, siren } = body
+    const {
+      firstName,
+      lastName,
+      companyName,
+      mainIndustryId,
+      subCategoryId,
+      phone,
+      siren,
+      gclid: rawGclid,
+      utm_source: rawUtmSource,
+      utm_medium: rawUtmMedium,
+      utm_campaign: rawUtmCampaign,
+    } = body
 
     // Validate required fields
     if (!firstName || typeof firstName !== 'string' || firstName.trim() === '') {
@@ -122,6 +145,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const gclid = sanitizeAcquisitionField(rawGclid)
+    const utm_source = sanitizeAcquisitionField(rawUtmSource)
+    const utm_medium = sanitizeAcquisitionField(rawUtmMedium)
+    const utm_campaign = sanitizeAcquisitionField(rawUtmCampaign)
+
     // Create/update profile with all signup data
     // Note: email is stored in auth.users, not in profiles table
     // Store mainIndustryId in industry field and subCategoryId in sub_category_id field
@@ -134,6 +162,10 @@ export async function POST(request: NextRequest) {
       sub_category_id: subCategoryId.trim(),
       phone: cleanedPhone,
       siren: cleanedSiren,
+      gclid,
+      utm_source,
+      utm_medium,
+      utm_campaign,
       updated_at: new Date().toISOString(),
     }
 
