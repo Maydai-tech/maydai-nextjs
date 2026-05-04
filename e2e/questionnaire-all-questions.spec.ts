@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { authenticateUser } from './auth-helper'
 
 /**
  * E2E : parcours questionnaire V2 (ORS E4.N7 puis E4.N8, sans E5/E6).
@@ -121,6 +122,7 @@ async function createTestData(testId: string): Promise<TestData> {
       description: 'E2E parcours V2 sans E5/E6',
       company_id: registryId,
       status: 'draft',
+      deployment_phase: 'En projet (Non déployé)',
       deployment_date: new Date().toISOString(),
       questionnaire_version: 2,
       primary_model_id: GEMINI_FLASH_MODEL_ID,
@@ -297,21 +299,7 @@ async function completeQuestionnaireAndTrackQuestions(page: Page): Promise<strin
 }
 
 async function authenticateAndNavigate(page: Page, testData: TestData): Promise<void> {
-  const supabase = getAdminClient()
-
-  const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
-  const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-    type: 'magiclink',
-    email: testData.email,
-    options: { redirectTo: baseUrl },
-  })
-
-  if (linkError) {
-    throw new Error(`Failed to generate magic link: ${linkError.message}`)
-  }
-
-  await page.goto(linkData.properties.action_link)
-  await page.waitForTimeout(3000)
+  await authenticateUser(page, testData.email)
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     await page.goto(`/usecases/${testData.usecaseId}/evaluation`)

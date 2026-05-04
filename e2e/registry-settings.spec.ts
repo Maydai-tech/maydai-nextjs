@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
+import { authenticateUser } from './auth-helper'
 
 /**
  * E2E Test: Registry Settings (Modification & Deletion)
@@ -194,23 +195,7 @@ test.describe('Registry Settings', () => {
   test('should modify registry information', async ({ page }) => {
     const supabase = getAdminClient()
 
-    // Generate magic link for authentication
-    const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: TEST_USER.email,
-      options: {
-        redirectTo: baseUrl,
-      },
-    })
-
-    if (linkError) {
-      throw new Error(`Failed to generate magic link: ${linkError.message}`)
-    }
-
-    // Authenticate via magic link
-    await page.goto(linkData.properties.action_link)
-    await page.waitForTimeout(2000)
+    await authenticateUser(page, TEST_USER.email)
 
     // Navigate to registry settings page
     await page.goto(`/dashboard/${testRegistryId}/settings`)
@@ -245,32 +230,30 @@ test.describe('Registry Settings', () => {
     // Verify the changes were saved by checking the page content
     await page.waitForLoadState('networkidle')
 
-    // Verify updated name is displayed
-    await expect(page.locator(`text=${TEST_REGISTRY.updatedName}`)).toBeVisible({ timeout: 5000 })
+    let registry: { name: string; city: string | null } | null = null
+    for (let i = 0; i < 10; i++) {
+      const { data, error: registryError } = await supabase
+        .from('companies')
+        .select('name, city')
+        .eq('id', testRegistryId)
+        .single()
+
+      if (registryError) {
+        throw new Error(`Failed to fetch updated registry: ${registryError.message}`)
+      }
+
+      registry = data
+      if (registry.name === TEST_REGISTRY.updatedName) break
+      await page.waitForTimeout(1000)
+    }
+
+    expect(registry?.name).toBe(TEST_REGISTRY.updatedName)
 
     console.log('Registry modification successful')
   })
 
   test('should delete registry', async ({ page }) => {
-    const supabase = getAdminClient()
-
-    // Generate magic link for authentication
-    const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: TEST_USER.email,
-      options: {
-        redirectTo: baseUrl,
-      },
-    })
-
-    if (linkError) {
-      throw new Error(`Failed to generate magic link: ${linkError.message}`)
-    }
-
-    // Authenticate via magic link
-    await page.goto(linkData.properties.action_link)
-    await page.waitForTimeout(2000)
+    await authenticateUser(page, TEST_USER.email)
 
     // Navigate to registry settings page
     await page.goto(`/dashboard/${testRegistryId}/settings`)

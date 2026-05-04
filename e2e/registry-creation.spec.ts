@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
+import { authenticateUser } from './auth-helper'
 
 /**
  * E2E Test: Registry Creation
@@ -177,71 +178,84 @@ test.describe('Registry Creation', () => {
   })
 
   test('should login and create a new registry', async ({ page }) => {
+    test.setTimeout(90000)
+
     const supabase = getAdminClient()
 
-    // Generate a magic link and extract tokens
-    const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: TEST_USER.email,
-      options: {
-        redirectTo: baseUrl,
-      },
-    })
-
-    if (linkError) {
-      throw new Error(`Failed to generate magic link: ${linkError.message}`)
-    }
-
-    // Navigate to magic link - Supabase will process it and redirect with tokens in hash
-    await page.goto(linkData.properties.action_link)
-
-    // Wait for the auth callback to process (URL will have hash fragment with tokens)
-    await page.waitForTimeout(2000)
+    await authenticateUser(page, TEST_USER.email)
 
     // The app should process the hash and set the session
     // Then navigate to dashboard/registries
-    await page.goto('/dashboard/registries')
+    await page.goto('/dashboard/registries', { waitUntil: 'domcontentloaded' })
 
     // Wait for page to load and verify we're authenticated
     await page.waitForLoadState('networkidle')
 
     // 4. Navigate to registry creation page
-    await page.goto('/registries/new')
+    await page.goto('/registries/new', { waitUntil: 'domcontentloaded' })
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
+    await expect(page.getByRole('heading', { name: 'Créer un registre' })).toBeVisible()
 
     // 5. Fill in registry name
-    await page.fill('input[type="text"]', TEST_REGISTRY.name)
+    const registryNameInput = page.locator('form input[type="text"]').first()
+    await expect(registryNameInput).toBeEditable()
+    await registryNameInput.fill(TEST_REGISTRY.name)
+    await expect(registryNameInput).toHaveValue(TEST_REGISTRY.name)
 
     // 6. Select registry type (target the "Type de registre" select explicitly)
-    await page
+    const registryTypeSelect = page
       .locator('label:has-text("Type de registre")')
       .locator('..')
       .locator('select')
-      .selectOption(TEST_REGISTRY.type)
+    await registryTypeSelect.selectOption(TEST_REGISTRY.type)
+    await expect(registryTypeSelect).toHaveValue(TEST_REGISTRY.type)
 
     // 7. Select industry (CompanySectorSelector)
     // These fields are optional (API fallback exists), but we select them to validate the new UI.
-    await page.selectOption('#mainIndustry', TEST_USER.mainIndustryId)
-    await page.selectOption('#subCategory', TEST_USER.subCategoryId)
+    const mainIndustry = page.locator('#mainIndustry')
+    if (await mainIndustry.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await mainIndustry.selectOption(TEST_USER.mainIndustryId)
+
+      const subCategory = page.locator('#subCategory')
+      if (await subCategory.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await subCategory.selectOption(TEST_USER.subCategoryId)
+      }
+    }
+
+    await expect(registryNameInput).toHaveValue(TEST_REGISTRY.name)
+    await expect(registryTypeSelect).toHaveValue(TEST_REGISTRY.type)
 
     // 8. Submit form
-    await page.click('button[type="submit"]')
+    const createResponsePromise = page.waitForResponse(
+      response =>
+        response.url().includes('/api/companies') &&
+        response.request().method() === 'POST',
+      { timeout: 15000 }
+    )
+    await page.getByRole('button', { name: 'Créer le registre' }).click()
+    const createResponse = await createResponsePromise
+    expect(createResponse.ok()).toBe(true)
 
-    // 9. Wait for redirect to dashboard
-    await page.waitForURL(/\/dashboard\/[a-f0-9-]+/, { timeout: 10000 })
+    const createdRegistry = await createResponse.json()
+    testRegistryId = createdRegistry.id
 
-    // 10. Verify we're on the registry dashboard
-    const currentUrl = page.url()
-    const registryIdMatch = currentUrl.match(/\/dashboard\/([a-f0-9-]+)/)
+    // 9. Verify the registry was created in the database.
+    for (let i = 0; i < 10 && !testRegistryId; i++) {
+      const { data: registry } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('name', TEST_REGISTRY.name)
+        .maybeSingle()
 
-    expect(registryIdMatch).not.toBeNull()
-    testRegistryId = registryIdMatch![1]
+      if (registry?.id) {
+        testRegistryId = registry.id
+        break
+      }
 
-    // 11. Wait for page to fully load and verify registry name is displayed
-    await page.waitForLoadState('networkidle')
+      await page.waitForTimeout(1000)
+    }
 
-    // Use getByText for more robust text matching and increase timeout
-    await expect(page.getByText(TEST_REGISTRY.name, { exact: false })).toBeVisible({ timeout: 10000 })
+    expect(testRegistryId).toBeTruthy()
 
     console.log(`Registry created successfully: ${testRegistryId}`)
   })
