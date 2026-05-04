@@ -59,6 +59,7 @@ interface ModelPrincipleMatrix {
     avg_rang_compar_ia?: number
   }>
   avg_score: number
+  total_maydai_score: number
   evaluation_count: number
   latest_date: number
 }
@@ -1019,9 +1020,13 @@ export default function ComplAIScoresPage() {
           notes_long: group.notes_long,
           variants: group.variants,
           principle_scores: group.principle_scores,
-          avg_score: group.all_scores.length > 0 
-            ? group.all_scores.reduce((sum, score) => sum + score, 0) / group.all_scores.length 
+          avg_score: group.all_scores.length > 0
+            ? group.all_scores.reduce((sum, score) => sum + score, 0) / group.all_scores.length
             : 0,
+          total_maydai_score: Object.values(group.principle_scores)
+            .map(p => p.avg_maydai_score)
+            .filter((s): s is number => s !== undefined && s !== null)
+            .reduce((sum, s) => sum + s, 0),
           evaluation_count: group.all_scores.length,
           latest_date: group.all_dates.length > 0 
             ? Math.max(...group.all_dates.map(d => new Date(d).getTime()))
@@ -1537,11 +1542,14 @@ export default function ComplAIScoresPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50 sticky top-0 z-20">
               <tr>
-                <th className="sticky left-0 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 z-30 border-r border-gray-200 min-w-[200px]">
+                <th className="sticky left-0 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 z-30 border-r border-gray-200 w-[170px] max-w-[170px]">
                   Modèle
                 </th>
                 <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
                   Score Moyen
+                </th>
+                <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[110px]">
+                  Score MaydAI
                 </th>
                 {principles.map((principle) => (
                   <th key={principle.code} className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[280px] border-l border-gray-300">
@@ -1563,19 +1571,19 @@ export default function ComplAIScoresPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {modelPrincipleMatrix.map((model) => (
                 <tr key={`${model.model_name}-${model.model_provider}-${model.version}`} className="hover:bg-gray-50">
-                  <td className="sticky left-0 px-3 py-3 whitespace-nowrap bg-white z-10 border-r border-gray-200 min-w-[200px]">
+                  <td className="sticky left-0 px-3 py-3 bg-white z-10 border-r border-gray-200 w-[170px] max-w-[170px]">
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
                           <span className="text-sm font-medium text-gray-900 truncate" title={model.long_name || model.model_name}>
                             {model.short_name || model.model_name}
                           </span>
-                          <ModelTooltip 
-                            notesShort={model.notes_short} 
+                          <ModelTooltip
+                            notesShort={model.notes_short}
                             notesLong={model.notes_long}
                           />
                         </div>
-                        <div className="text-xs text-gray-600" title={model.model_provider}>
+                        <div className="text-xs text-gray-600 truncate" title={model.model_provider}>
                           {model.model_provider}
                         </div>
                         {model.launch_date && (
@@ -1584,7 +1592,7 @@ export default function ComplAIScoresPage() {
                           </div>
                         )}
                         {model.variants && model.variants.length > 0 && (
-                          <div className="text-[10px] text-gray-500 italic mt-1 leading-tight">
+                          <div className="text-[10px] text-gray-500 italic mt-1 leading-tight truncate" title={`Variantes : ${model.variants.join(', ')}`}>
                             Variantes : {model.variants.join(', ')}
                           </div>
                         )}
@@ -1613,6 +1621,15 @@ export default function ComplAIScoresPage() {
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getScoreColor(model.avg_score, model.evaluation_count > 0)}`}>
                       {model.evaluation_count > 0 ? model.avg_score.toFixed(3) : 'N/A'}
                     </span>
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap text-center">
+                    {model.evaluation_count > 0 ? (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                        {model.total_maydai_score.toFixed(2)} / {principles.length * 4}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">N/A</span>
+                    )}
                   </td>
                   {principles.map((principle) => (
                     <td key={principle.code} className="px-3 py-3 text-center min-w-[280px] border-l border-gray-300">
