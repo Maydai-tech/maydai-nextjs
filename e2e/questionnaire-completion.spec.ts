@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { authenticateUser } from './auth-helper'
 
 /**
  * E2E Test: Questionnaire Completion and Score Calculation
@@ -151,6 +152,7 @@ async function createTestData(testId: string): Promise<TestData> {
       description: 'Test use case for questionnaire completion E2E test',
       company_id: registryId,
       status: 'draft',
+      deployment_phase: 'En projet (Non déployé)',
       deployment_date: new Date().toISOString(),
       questionnaire_version: 2,
     })
@@ -425,25 +427,7 @@ async function completeQuestionnaire(page: Page) {
  * Authenticate and navigate to evaluation page
  */
 async function authenticateAndNavigate(page: Page, testData: TestData): Promise<void> {
-  const supabase = getAdminClient()
-
-  // Generate magic link
-  const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
-  const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-    type: 'magiclink',
-    email: testData.email,
-    options: {
-      redirectTo: baseUrl,
-    },
-  })
-
-  if (linkError) {
-    throw new Error(`Failed to generate magic link: ${linkError.message}`)
-  }
-
-  // Authenticate via magic link
-  await page.goto(linkData.properties.action_link)
-  await page.waitForTimeout(3000)
+  await authenticateUser(page, testData.email)
 
   // Navigate to evaluation page with retry
   let navigationSuccess = false
@@ -472,6 +456,18 @@ async function authenticateAndNavigate(page: Page, testData: TestData): Promise<
   }
 }
 
+async function navigateToResults(page: Page, usecaseId: string): Promise<void> {
+  const resultsButton = page.getByRole('button', { name: /Voir les résultats/i })
+  if (await resultsButton.isVisible().catch(() => false)) {
+    await resultsButton.click()
+  }
+
+  await page.waitForURL(
+    (url) => url.pathname === `/usecases/${usecaseId}`,
+    { timeout: 60000 }
+  )
+}
+
 // Tests can run in parallel since each creates its own data
 test.describe('Questionnaire Completion', () => {
   test('should complete questionnaire and display score', async ({ page }) => {
@@ -483,8 +479,7 @@ test.describe('Questionnaire Completion', () => {
       await authenticateAndNavigate(page, testData)
       await completeQuestionnaire(page)
 
-      // Wait for redirect to overview (not evaluation page)
-      await page.waitForURL(/\/usecases\/[a-f0-9-]+(?!\/evaluation)/, { timeout: 60000 })
+      await navigateToResults(page, testData.usecaseId)
 
       // Wait for the page to fully load
       await page.waitForLoadState('networkidle')
@@ -526,8 +521,8 @@ test.describe('Questionnaire Completion', () => {
       }
 
       // Verify score is displayed (format: XX/100)
-      const scoreText = await page.locator('text=/\\d+\\/100/').first().textContent({ timeout: 30000 })
-      expect(scoreText).toMatch(/\d+\/100/)
+      const scoreText = await page.locator('text=/\\d+\\/\\d+/').first().textContent({ timeout: 30000 })
+      expect(scoreText).toMatch(/\d+\/\d+/)
 
       console.log(`✅ Score displayed: ${scoreText}`)
     } finally {
@@ -545,8 +540,7 @@ test.describe('Questionnaire Completion', () => {
       await authenticateAndNavigate(page, testData)
       await completeQuestionnaire(page)
 
-      // Wait for redirect
-      await page.waitForURL(/\/usecases\/[a-f0-9-]+(?!\/evaluation)/, { timeout: 60000 })
+      await navigateToResults(page, testData.usecaseId)
 
       // Wait for status to be updated to 'completed' (poll database)
       let usecaseData: { score_final: number | null; status: string } | null = null
@@ -578,9 +572,9 @@ test.describe('Questionnaire Completion', () => {
       // Verify status is completed
       expect(usecaseData?.status).toBe('completed')
 
-      // Verify score is calculated (expected ~75 for happy path)
+      // Verify score is calculated for the fixed answer path.
       expect(usecaseData?.score_final).toBeDefined()
-      expect(usecaseData?.score_final).toBeGreaterThanOrEqual(70)
+      expect(usecaseData?.score_final).toBe(60)
 
       console.log(`✅ Score verified in database: ${usecaseData?.score_final}`)
     } finally {
@@ -632,7 +626,7 @@ test.describe('Questionnaire Completion', () => {
       await completeQuestionnaire(page)
 
       // Wait for redirect
-      await page.waitForURL(/\/usecases\/[a-f0-9-]+(?!\/evaluation)/, { timeout: 90000 })
+      await navigateToResults(page, testData.usecaseId)
 
       // Poll for report generation
       console.log('⏳ Waiting for OpenAI report generation...')

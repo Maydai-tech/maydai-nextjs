@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
+import { authenticateUser } from './auth-helper'
 
 /**
  * E2E Test: UseCase Deletion
@@ -153,6 +154,8 @@ test.describe('UseCase Deletion', () => {
         responsible_service: TEST_USECASE.responsible_service,
         company_id: testRegistryId,
         status: 'draft',
+        deployment_phase: 'En projet (Non déployé)',
+        deployment_date: new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         updated_by: testUserId,
@@ -224,23 +227,7 @@ test.describe('UseCase Deletion', () => {
   test('should delete a use case via the 3-dot menu and show toast notification', async ({ page }) => {
     const supabase = getAdminClient()
 
-    // Generate magic link for authentication
-    const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: TEST_USER.email,
-      options: {
-        redirectTo: baseUrl,
-      },
-    })
-
-    if (linkError) {
-      throw new Error(`Failed to generate magic link: ${linkError.message}`)
-    }
-
-    // Authenticate via magic link
-    await page.goto(linkData.properties.action_link)
-    await page.waitForTimeout(2000)
+    await authenticateUser(page, TEST_USER.email)
 
     // Navigate to registry dashboard
     await page.goto(`/dashboard/${testRegistryId}`)
@@ -283,8 +270,30 @@ test.describe('UseCase Deletion', () => {
     await expect(toast).toBeVisible({ timeout: 5000 })
     await expect(toast.locator(`text=supprimé avec succès`)).toBeVisible()
 
-    // Verify the use case is no longer in the list
-    await expect(page.locator(`text=${TEST_USECASE.name}`)).not.toBeVisible({ timeout: 5000 })
+    // Verify the use case was deleted. The success toast still contains the deleted name.
+    const deletedUseCaseId = testUseCaseId
+    let isDeleted = false
+
+    for (let i = 0; i < 10; i++) {
+      const { data: useCase, error: useCaseError } = await supabase
+        .from('usecases')
+        .select('id')
+        .eq('id', deletedUseCaseId)
+        .maybeSingle()
+
+      if (useCaseError) {
+        throw new Error(`Failed to verify use case deletion: ${useCaseError.message}`)
+      }
+
+      if (!useCase) {
+        isDeleted = true
+        break
+      }
+
+      await page.waitForTimeout(500)
+    }
+
+    expect(isDeleted).toBe(true)
 
     // Mark use case as deleted so cleanup doesn't fail
     testUseCaseId = null
