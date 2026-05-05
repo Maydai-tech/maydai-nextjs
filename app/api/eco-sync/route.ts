@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 
-import type { Database } from '@/types/supabase'
+import type { Database } from '../../../types/supabase'
 
 const ECOLOGITS_BASE_URL = 'https://api.ecologits.ai'
 const HTTP_TIMEOUT_MS = 30_000
@@ -200,14 +200,9 @@ function extractMidpointValues(resp: EcoEstimationResponse): Record<`${Kpi}_${Sp
 // DB helpers
 // -----------------------------
 
-// NOTE: nos types `Database` sont "manuels" et ne définissent pas `Relationships`,
-// ce qui casse l'inférence type-safe de supabase-js (tables inférées en `never` en build Vercel).
-// Ici on garde `Database` uniquement pour typer nos objets (Insert/Row),
-// et on laisse le client Supabase non-générique.
-type Supabase = ReturnType<typeof createClient>
 type MethodologyVersionIdRow = Pick<Database['public']['Tables']['eco_methodology_versions']['Row'], 'id'>
 
-async function getCurrentMethodologyVersionId(supabase: Supabase): Promise<string> {
+async function getCurrentMethodologyVersionId(supabase: SupabaseClient<Database>): Promise<string> {
   const { data, error } = (await supabase
     .from('eco_methodology_versions')
     .select('id')
@@ -239,7 +234,7 @@ type CoveredModel = Pick<
   'id' | 'model_name' | 'eco_provider' | 'eco_model' | 'eco_status'
 >
 
-async function getCoveredModels(supabase: Supabase): Promise<CoveredModel[]> {
+async function getCoveredModels(supabase: SupabaseClient<Database>): Promise<CoveredModel[]> {
   const { data, error } = await supabase
     .from('compl_ai_models')
     .select('id, model_name, eco_provider, eco_model, eco_status')
@@ -287,7 +282,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Missing env vars SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY' }, { status: 500 })
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey)
+  const supabase = createClient<Database>(supabaseUrl, serviceRoleKey)
 
   try {
     const methodologyVersionId = await getCurrentMethodologyVersionId(supabase)
