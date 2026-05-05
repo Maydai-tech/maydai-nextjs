@@ -201,24 +201,25 @@ function extractMidpointValues(resp: EcoEstimationResponse): Record<`${Kpi}_${Sp
 // -----------------------------
 
 type Supabase = ReturnType<typeof createClient<Database>>
+type MethodologyVersionIdRow = Pick<Database['public']['Tables']['eco_methodology_versions']['Row'], 'id'>
 
 async function getCurrentMethodologyVersionId(supabase: Supabase): Promise<string> {
-  const { data, error } = await supabase
+  const { data, error } = (await supabase
     .from('eco_methodology_versions')
     .select('id')
     .order('captured_at', { ascending: false })
     .limit(1)
-    .maybeSingle()
+    .maybeSingle()) as { data: MethodologyVersionIdRow | null; error: Error | null }
 
   if (error) throw error
   if (data?.id) return data.id
 
   const today = new Date().toISOString().slice(0, 10)
-  const { data: created, error: upsertErr } = await supabase
+  const { data: created, error: upsertErr } = (await supabase
     .from('eco_methodology_versions')
     .upsert({ ecologits_version: `ecologits-api-snapshot-${today}`, methodology_date: today }, { onConflict: 'ecologits_version,methodology_date' })
     .select('id')
-    .single()
+    .single()) as { data: MethodologyVersionIdRow; error: Error | null }
 
   if (upsertErr) throw upsertErr
   return created.id
