@@ -200,7 +200,11 @@ function extractMidpointValues(resp: EcoEstimationResponse): Record<`${Kpi}_${Sp
 // DB helpers
 // -----------------------------
 
-type Supabase = ReturnType<typeof createClient<Database>>
+// NOTE: nos types `Database` sont "manuels" et ne définissent pas `Relationships`,
+// ce qui casse l'inférence type-safe de supabase-js (tables inférées en `never` en build Vercel).
+// Ici on garde `Database` uniquement pour typer nos objets (Insert/Row),
+// et on laisse le client Supabase non-générique.
+type Supabase = ReturnType<typeof createClient>
 type MethodologyVersionIdRow = Pick<Database['public']['Tables']['eco_methodology_versions']['Row'], 'id'>
 
 async function getCurrentMethodologyVersionId(supabase: Supabase): Promise<string> {
@@ -278,7 +282,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Missing env vars SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY' }, { status: 500 })
   }
 
-  const supabase = createClient<Database>(supabaseUrl, serviceRoleKey)
+  const supabase = createClient(supabaseUrl, serviceRoleKey)
 
   try {
     const methodologyVersionId = await getCurrentMethodologyVersionId(supabase)
