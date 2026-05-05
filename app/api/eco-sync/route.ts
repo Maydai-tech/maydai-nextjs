@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 
+import {
+  ecoImpactMidpointFromApi,
+  extractArchitectureParametersBillionsFromCatalog
+} from '@/lib/ecologits-sync-parsing'
 import type { Database } from '../../../types/supabase'
 
 const ECOLOGITS_BASE_URL = 'https://api.ecologits.ai'
@@ -61,8 +65,9 @@ interface EcoEstimationRequest {
   country: string
 }
 
+/** `value` peut être `{ min, max }`, un nombre, etc. (voir `ecoImpactMidpointFromApi`). */
 interface EcoImpactValue {
-  value: { min: number; max: number }
+  value?: unknown
 }
 
 interface EcoImpactsBlock {
@@ -84,10 +89,6 @@ interface EcoEstimationResponse {
 // -----------------------------
 // Stats helpers
 // -----------------------------
-
-function midpoint(min: number, max: number): number {
-  return (min + max) / 2
-}
 
 function mean(xs: number[]): number {
   return xs.reduce((a, b) => a + b, 0) / xs.length
@@ -190,7 +191,7 @@ function extractMidpointValues(resp: EcoEstimationResponse): Record<`${Kpi}_${Sp
     for (const split of SPLITS) {
       const impact = bySplit[split]?.[kpi]
       const key = `${kpi}_${split}` as const
-      out[key] = impact ? midpoint(impact.value.min, impact.value.max) : null
+      out[key] = ecoImpactMidpointFromApi(impact)
     }
   }
   return out
@@ -397,6 +398,8 @@ export async function POST(request: NextRequest) {
               region_code: regionCode,
               runsPerModel,
               request_latency: requestLatency,
+              architecture_parameters_billions:
+                extractArchitectureParametersBillionsFromCatalog(catalogEntry.architecture),
               runsWithWarnings,
               aggregated
             },

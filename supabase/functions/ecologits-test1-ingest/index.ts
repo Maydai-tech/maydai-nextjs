@@ -5,6 +5,10 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { z } from "npm:zod@3.23.8"
 
+import {
+  ecoImpactMidpointFromApi,
+  extractArchitectureParametersBillionsFromCatalog,
+} from "../../../lib/ecologits-sync-parsing.ts"
 import type { Database } from "../../../types/supabase.ts"
 
 const ECOLOGITS_BASE_URL = "https://api.ecologits.ai"
@@ -65,7 +69,7 @@ interface EcoEstimationRequest {
 }
 
 interface EcoImpactValue {
-  value: { min: number; max: number }
+  value?: unknown
 }
 
 interface EcoImpactsBlock {
@@ -87,10 +91,6 @@ interface EcoEstimationResponse {
 // -----------------------------
 // Stats helpers
 // -----------------------------
-
-function midpoint(min: number, max: number): number {
-  return (min + max) / 2
-}
 
 function mean(xs: number[]): number {
   return xs.reduce((a, b) => a + b, 0) / xs.length
@@ -206,12 +206,7 @@ function extractMidpointValues(resp: EcoEstimationResponse): Record<`${Kpi}_${Sp
       const block = bySplit[split]
       const impact = block?.[kpi]
       const key = `${kpi}_${split}` as const
-      if (!impact) {
-        out[key] = null
-        continue
-      }
-      // contrainte #3: value = (min + max) / 2 AVANT agrégation/insertion
-      out[key] = midpoint(impact.value.min, impact.value.max)
+      out[key] = ecoImpactMidpointFromApi(impact)
     }
   }
   return out
@@ -434,6 +429,8 @@ serve(async (req) => {
               region_code: regionCode,
               runsPerModel,
               request_latency: requestLatency,
+              architecture_parameters_billions:
+                extractArchitectureParametersBillionsFromCatalog(catalogEntry.architecture),
               runsWithWarnings,
               aggregated,
             },
