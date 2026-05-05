@@ -275,14 +275,14 @@ export async function POST(request: NextRequest) {
   const runsPerModel = payload.runsPerModel
   const dryRun = payload.dryRun === true
 
-  const supabaseUrl = process.env.SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!supabaseUrl || !serviceRoleKey) {
-    return NextResponse.json({ ok: false, error: 'Missing env vars SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY' }, { status: 500 })
+  if (!supabaseUrl || !supabaseKey) {
+    return NextResponse.json({ ok: false, error: 'Missing env vars NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY' }, { status: 500 })
   }
 
-  const supabase = createClient<Database>(supabaseUrl, serviceRoleKey)
+  const supabase = createClient<Database>(supabaseUrl, supabaseKey)
 
   try {
     const methodologyVersionId = await getCurrentMethodologyVersionId(supabase)
