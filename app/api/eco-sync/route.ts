@@ -200,33 +200,24 @@ function extractMidpointValues(resp: EcoEstimationResponse): Record<`${Kpi}_${Sp
 // DB helpers
 // -----------------------------
 
-type MethodologyVersionIdRow = Pick<Database['public']['Tables']['eco_methodology_versions']['Row'], 'id'>
-
 async function getCurrentMethodologyVersionId(supabase: SupabaseClient<Database>): Promise<string> {
-  const { data, error } = (await supabase
+  const { data, error } = await supabase
     .from('eco_methodology_versions')
     .select('id')
-    .order('captured_at', { ascending: false })
+    .order('methodology_date', { ascending: false })
     .limit(1)
-    .maybeSingle()) as { data: MethodologyVersionIdRow | null; error: Error | null }
+    .maybeSingle()
 
-  if (error) throw error
-  if (data?.id) return data.id
-
-  const today = new Date().toISOString().slice(0, 10)
-  // IMPORTANT: certains environnements (Vercel build) infèrent `never` sur les overloads supabase-js
-  // avec nos types DB manuels. On force donc ici un payload "any" pour garantir la compilation.
-  const { data: created, error: upsertErr } = (await supabase
-    .from('eco_methodology_versions')
-    .upsert(
-      { ecologits_version: `ecologits-api-snapshot-${today}`, methodology_date: today } as any,
-      { onConflict: 'ecologits_version,methodology_date' } as any
+  if (error) {
+    throw new Error(`Erreur Supabase (Méthodologie): ${error.message}`)
+  }
+  if (!data) {
+    throw new Error(
+      'Aucune méthodologie trouvée dans eco_methodology_versions. Veuillez en créer une dans Supabase.'
     )
-    .select('id')
-    .single()) as { data: MethodologyVersionIdRow; error: Error | null }
+  }
 
-  if (upsertErr) throw upsertErr
-  return created.id
+  return data.id
 }
 
 type CoveredModel = Pick<
@@ -240,7 +231,9 @@ async function getCoveredModels(supabase: SupabaseClient<Database>): Promise<Cov
     .select('id, model_name, eco_provider, eco_model, eco_status')
     .in('eco_status', [...ALLOWED_ECO_STATUS] as unknown as EcoStatus[])
 
-  if (error) throw error
+  if (error) {
+    throw new Error(`Supabase Fetch Error: ${error.message}`)
+  }
   const rows = (data ?? []) as CoveredModel[]
   return rows.filter((m) => !!m.eco_provider && !!m.eco_model)
 }
@@ -275,12 +268,23 @@ export async function POST(request: NextRequest) {
   const runsPerModel = payload.runsPerModel
   const dryRun = payload.dryRun === true
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !supabaseKey) {
-    return NextResponse.json({ ok: false, error: 'Missing env vars NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY' }, { status: 500 })
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    (!process.env.SUPABASE_SERVICE_ROLE_KEY && !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  ) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          'Missing env vars: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY)'
+      },
+      { status: 500 }
+    )
   }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  // Utilise la clé Service Role (Admin) pour le backend ; repli sur la clé anon si absente
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
   const supabase = createClient<Database>(supabaseUrl, supabaseKey)
 
@@ -404,13 +408,14 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      const { error: upsertErr } = await supabase
-        .from('eco_evaluations_aggregated')
-        .upsert(aggregated as any, { onConflict: 'model_id,region_code,methodology_version_id,mode' })
+      const cleanPayload = JSON.parse(JSON.stringify(aggregated))
 
-      if (upsertErr) {
-        errors.push({ modelId: model.id, error: `upsert: ${upsertErr.message}` })
-        continue
+      const { error: upsertError } = await supabase
+        .from('eco_evaluations_aggregated')
+        .upsert(cleanPayload, { onConflict: 'model_id, region_code, methodology_version_id, mode' })
+
+      if (upsertError) {
+        throw new Error(`upsert: ${upsertError.message || JSON.stringify(upsertError)}`)
       }
 
       upserted.push({ modelId: model.id, ecoProvider: String(ecoProvider), ecoModel: String(ecoModelName) })
@@ -431,9 +436,24 @@ export async function POST(request: NextRequest) {
       errors,
       elapsedMs
     })
-  } catch (e) {
-    const elapsedMs = Date.now() - startedAt
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e), elapsedMs }, { status: 500 })
+  } catch (error) {
+    let errorDetail: string = 'Unknown error'
+    if (error instanceof Error) {
+      errorDetail = error.message
+    } else if (error && typeof error === 'object') {
+      if ('status' in error && typeof (error as any).text === 'function') {
+        // Extraction du body d'une erreur HTTP
+        const status = (error as any).status
+        const body = await (error as any).text().catch(() => 'Unreadable body')
+        errorDetail = `HTTP ${status} - ${body}`
+      } else {
+        errorDetail = JSON.stringify(error, Object.getOwnPropertyNames(error))
+      }
+    } else {
+      errorDetail = String(error)
+    }
+
+    return NextResponse.json({ ok: false, error: errorDetail }, { status: 500 })
   }
 }
 
