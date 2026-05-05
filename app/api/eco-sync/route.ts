@@ -217,7 +217,7 @@ async function getCurrentMethodologyVersionId(supabase: SupabaseClient<Database>
     )
   }
 
-  return data.id
+  return (data as any).id
 }
 
 type CoveredModel = Pick<
@@ -234,7 +234,7 @@ async function getCoveredModels(supabase: SupabaseClient<Database>): Promise<Cov
   if (error) {
     throw new Error(`Supabase Fetch Error: ${error.message}`)
   }
-  const rows = (data ?? []) as CoveredModel[]
+  const rows = ((data as any) ?? []) as CoveredModel[]
   return rows.filter((m) => !!m.eco_provider && !!m.eco_model)
 }
 
