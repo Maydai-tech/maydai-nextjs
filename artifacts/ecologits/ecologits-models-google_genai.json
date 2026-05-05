@@ -1,0 +1,649 @@
+{
+  "models": [
+    {
+      "provider": "google_genai",
+      "name": "gemini-2.0-flash",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 440,
+          "active": {
+            "min": 44,
+            "max": 132
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 70.6,
+        "ttft": 0.4
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-2.0-flash-001",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 440,
+          "active": {
+            "min": 44,
+            "max": 132
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 70.6,
+        "ttft": 0.4
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-2.0-flash-lite",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 8,
+          "max": 28
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 71.5,
+        "ttft": 0.56
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-2.0-flash-lite-001",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 8,
+          "max": 28
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 65.6,
+        "ttft": 0.69
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-2.5-flash",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 440,
+          "active": {
+            "min": 44,
+            "max": 132
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 66.9,
+        "ttft": 0.74
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-2.5-flash-image",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 440,
+          "active": {
+            "min": 44,
+            "max": 132
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 110.8,
+        "ttft": 5.87
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-2.5-flash-lite",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 8,
+          "max": 28
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 71.5,
+        "ttft": 0.56
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-2.5-pro",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 2000,
+          "active": {
+            "min": 200,
+            "max": 600
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 91.1,
+        "ttft": 2.83
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-3-flash-preview",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 300,
+          "active": {
+            "min": 100,
+            "max": 300
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 59.1,
+        "ttft": 1.66
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-3.1-flash-lite-preview",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 30,
+          "max": 105
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 67.5,
+        "ttft": 1.08
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-3-pro-image-preview",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 1200,
+          "active": {
+            "min": 120,
+            "max": 360
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 49.4,
+        "ttft": 24.29
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-3-pro-preview",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 1200,
+          "active": {
+            "min": 120,
+            "max": 360
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 65.1,
+        "ttft": 7.71
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-3.1-flash-image-preview",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 1200,
+          "active": {
+            "min": 120,
+            "max": 360
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 69.8,
+        "ttft": 15.29
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-3.1-pro-preview",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 1200,
+          "active": {
+            "min": 120,
+            "max": 360
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 53.2,
+        "ttft": 5.02
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-3.1-pro-preview-customtools",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 1200,
+          "active": {
+            "min": 120,
+            "max": 360
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": null,
+        "ttft": null
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-flash-latest",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 440,
+          "active": {
+            "min": 44,
+            "max": 132
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 67.5,
+        "ttft": 1.08
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-flash-lite-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 8,
+          "max": 28
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 136.9,
+        "ttft": 0.75
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemini-pro-latest",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 2000,
+          "active": {
+            "min": 200,
+            "max": 600
+          }
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 67.5,
+        "ttft": 1.08
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemma-3-12b-it",
+      "architecture": {
+        "type": "dense",
+        "parameters": 12.2
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": null,
+        "ttft": null
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemma-3-1b-it",
+      "architecture": {
+        "type": "dense",
+        "parameters": 1
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": null,
+        "ttft": null
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemma-3-27b-it",
+      "architecture": {
+        "type": "dense",
+        "parameters": 27.4
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": null,
+        "ttft": null
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemma-3-4b-it",
+      "architecture": {
+        "type": "dense",
+        "parameters": 4.3
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": null,
+        "ttft": null
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemma-3n-e2b-it",
+      "architecture": {
+        "type": "dense",
+        "parameters": 5.44
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": null,
+        "ttft": null
+      }
+    },
+    {
+      "provider": "google_genai",
+      "name": "gemma-3n-e4b-it",
+      "architecture": {
+        "type": "dense",
+        "parameters": 7.85
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        },
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": null,
+        "ttft": null
+      }
+    }
+  ]
+}

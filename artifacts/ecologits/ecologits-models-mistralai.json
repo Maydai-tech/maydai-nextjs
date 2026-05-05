@@ -1,0 +1,872 @@
+{
+  "models": [
+    {
+      "provider": "mistralai",
+      "name": "codestral-2405",
+      "architecture": {
+        "type": "dense",
+        "parameters": 22.2
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 54.4,
+        "ttft": 0.23
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "codestral-2411-rc5",
+      "architecture": {
+        "type": "dense",
+        "parameters": 22.2
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 54.4,
+        "ttft": 0.23
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "codestral-2412",
+      "architecture": {
+        "type": "dense",
+        "parameters": 22.2
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 61,
+        "ttft": 0.46
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "codestral-2501",
+      "architecture": {
+        "type": "dense",
+        "parameters": 22.2
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 54.4,
+        "ttft": 0.23
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "codestral-2508",
+      "architecture": {
+        "type": "dense",
+        "parameters": 22.2
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 54.4,
+        "ttft": 0.23
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "codestral-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 22.2
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 54.4,
+        "ttft": 0.23
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "devstral-2512",
+      "architecture": {
+        "type": "dense",
+        "parameters": 125
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 61,
+        "ttft": 0.46
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "devstral-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 125
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 61,
+        "ttft": 0.46
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "devstral-medium-2507",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 70,
+          "max": 120
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 48.5,
+        "ttft": 0.41
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "devstral-medium-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 70,
+          "max": 120
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 48.6,
+        "ttft": 0.41
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "devstral-small-2507",
+      "architecture": {
+        "type": "dense",
+        "parameters": 23.6
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 115.2,
+        "ttft": 0.21
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "devstral-small-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 23.6
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 115.2,
+        "ttft": 0.21
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "labs-devstral-small-2512",
+      "architecture": {
+        "type": "dense",
+        "parameters": 24
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 115.2,
+        "ttft": 0.21
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "labs-mistral-small-creative",
+      "architecture": {
+        "type": "dense",
+        "parameters": 23.6
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 45.1,
+        "ttft": 0.18
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "magistral-medium-2509",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 70,
+          "max": 120
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 44.8,
+        "ttft": 0.45
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "magistral-medium-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 70,
+          "max": 120
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 48.6,
+        "ttft": 0.41
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "magistral-small-2509",
+      "architecture": {
+        "type": "dense",
+        "parameters": 23.6
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 109.7,
+        "ttft": 0.33
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "magistral-small-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 23.6
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 115.2,
+        "ttft": 0.21
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "ministral-14b-2512",
+      "architecture": {
+        "type": "dense",
+        "parameters": 14
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 72.1,
+        "ttft": 0.4
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "ministral-14b-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 14
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 71.6,
+        "ttft": 0.4
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "ministral-3b-2512",
+      "architecture": {
+        "type": "dense",
+        "parameters": 3.32
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 65.2,
+        "ttft": 0.23
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "ministral-3b-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 3.32
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 65.2,
+        "ttft": 0.23
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "ministral-8b-2512",
+      "architecture": {
+        "type": "dense",
+        "parameters": 8.02
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 87.8,
+        "ttft": 0.27
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "ministral-8b-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 8.02
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 87.8,
+        "ttft": 0.27
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-large-2411",
+      "architecture": {
+        "type": "dense",
+        "parameters": 123
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 39.2,
+        "ttft": 0.73
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-large-2512",
+      "architecture": {
+        "type": "dense",
+        "parameters": 123
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 37.8,
+        "ttft": 0.51
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-large-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 123
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 35.6,
+        "ttft": 0.45
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-large-pixtral-2411",
+      "architecture": {
+        "type": "dense",
+        "parameters": 123
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 39.2,
+        "ttft": 0.73
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-medium",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 70,
+          "max": 120
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 45.1,
+        "ttft": 0.59
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-medium-2505",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 70,
+          "max": 120
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 44.8,
+        "ttft": 0.45
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-medium-2508",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 70,
+          "max": 120
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 44.8,
+        "ttft": 0.45
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-medium-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": {
+          "min": 70,
+          "max": 120
+        }
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 44.8,
+        "ttft": 0.45
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-small-2506",
+      "architecture": {
+        "type": "dense",
+        "parameters": 23.6
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 89.5,
+        "ttft": 0.39
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-small-2603",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 119,
+          "active": 8
+        }
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 89.5,
+        "ttft": 0.39
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-small-latest",
+      "architecture": {
+        "type": "moe",
+        "parameters": {
+          "total": 119,
+          "active": 8
+        }
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 109.7,
+        "ttft": 0.33
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-tiny-2407",
+      "architecture": {
+        "type": "dense",
+        "parameters": 7.3
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 109.7,
+        "ttft": 0.33
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "mistral-tiny-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 7.3
+      },
+      "warnings": [
+        {
+          "code": "model-arch-not-released",
+          "message": "The model architecture has not been released, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 109.7,
+        "ttft": 0.33
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "open-mistral-7b",
+      "architecture": {
+        "type": "dense",
+        "parameters": 7.3
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 109.7,
+        "ttft": 0.33
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "open-mistral-nemo",
+      "architecture": {
+        "type": "dense",
+        "parameters": 12.2
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 100.6,
+        "ttft": 0.3
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "open-mistral-nemo-2407",
+      "architecture": {
+        "type": "dense",
+        "parameters": 12.2
+      },
+      "warnings": [],
+      "sources": [],
+      "deployment": {
+        "tps": 100.5,
+        "ttft": 0.3
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "pixtral-12b",
+      "architecture": {
+        "type": "dense",
+        "parameters": 12
+      },
+      "warnings": [
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 50.4,
+        "ttft": 0.5
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "pixtral-12b-2409",
+      "architecture": {
+        "type": "dense",
+        "parameters": 12
+      },
+      "warnings": [
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 50.4,
+        "ttft": 0.5
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "pixtral-12b-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 12
+      },
+      "warnings": [
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 50.4,
+        "ttft": 0.5
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "pixtral-large-2411",
+      "architecture": {
+        "type": "dense",
+        "parameters": 123
+      },
+      "warnings": [
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 50.4,
+        "ttft": 0.5
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "pixtral-large-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 123
+      },
+      "warnings": [
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 35.6,
+        "ttft": 0.45
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "voxtral-mini-2507",
+      "architecture": {
+        "type": "dense",
+        "parameters": 4.68
+      },
+      "warnings": [
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 78.4,
+        "ttft": 0.25
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "voxtral-mini-2509",
+      "architecture": {
+        "type": "dense",
+        "parameters": 4.68
+      },
+      "warnings": [
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 77.6,
+        "ttft": 0.24
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "voxtral-mini-2602",
+      "architecture": {
+        "type": "dense",
+        "parameters": 4.68
+      },
+      "warnings": [
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 77.6,
+        "ttft": 0.24
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "voxtral-mini-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 4.68
+      },
+      "warnings": [
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 35.6,
+        "ttft": 0.45
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "voxtral-mini-transcribe-2507",
+      "architecture": {
+        "type": "dense",
+        "parameters": 4.68
+      },
+      "warnings": [
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 77.6,
+        "ttft": 0.24
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "voxtral-small-2507",
+      "architecture": {
+        "type": "dense",
+        "parameters": 24.3
+      },
+      "warnings": [
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 77.6,
+        "ttft": 0.24
+      }
+    },
+    {
+      "provider": "mistralai",
+      "name": "voxtral-small-latest",
+      "architecture": {
+        "type": "dense",
+        "parameters": 24.3
+      },
+      "warnings": [
+        {
+          "code": "model-arch-multimodal",
+          "message": "The model architecture is multimodal, expect lower precision."
+        }
+      ],
+      "sources": [],
+      "deployment": {
+        "tps": 109.7,
+        "ttft": 0.33
+      }
+    }
+  ]
+}

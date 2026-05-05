@@ -1,0 +1,92 @@
+mayday_model_id,mayday_provider,mayday_model_name,eco_provider,eco_model_resolved,eco_status,eco_total_params,eco_active_params_min,eco_active_params_max,eco_warnings
+bdc0e99f-6657-46cb-b3e4-ae632e9fd4ca,Alibaba (Qwen),qwen-1.5-72b-chat,,,not_covered,,,,
+e6e74ba3-91b7-43d8-9303-d86e55dd600f,Alibaba (Qwen),qwen2.5-14b-instruct,,,not_covered,,,,
+32eb763f-b1e9-4d02-b273-a82f0cbbb605,Alibaba (Qwen),qwen2.5-32b-instruct,,,not_covered,,,,
+58a76f7c-77f0-4e48-ad82-a9c18bea253a,Alibaba (Qwen),qwen2.5-72b-instruct,,,not_covered,,,,
+f47b12fc-07c2-4d23-9706-ee0c2c9bb285,Alibaba (Qwen),qwen2.5-vl-32b-instruct,,,not_covered,,,,
+c53b06ab-9723-4761-8f09-900a9e553fc5,Alibaba (Qwen),qwen3-235b-a22b,,,not_covered,,,,
+8295a5b0-c535-4025-9017-9820d2b2c962,Alibaba (Qwen),qwen3-30b-a3b,,,not_covered,,,,
+85325d32-e37a-44c4-9877-0e292b552fd1,Alibaba (Qwen),qwen3-32b,,,not_covered,,,,
+51d08fff-fae2-4f9a-b9f2-4c7a91be92ea,Alibaba (Qwen),Qwen 3.5,,,not_covered,,,,
+5e6e629a-0fec-4619-b3d6-59f83fba6ac0,Alibaba (Qwen),Qwen 3.6,,,not_covered,,,,
+d655e3d2-165f-43c3-84a6-b1f7fb3d4842,Alibaba (Qwen),qwen3-next-80b-a3b,,,not_covered,,,,
+eee0257a-d799-4a63-884e-51760c4c55fc,Alibaba (Qwen),qwen3-vl-30b-a3b,,,not_covered,,,,
+29cfdff2-d0fb-48d4-835f-66b29dd82d35,Alibaba (Qwen),qwen3-vl-32b,,,not_covered,,,,
+21ee73db-b03d-4610-9b84-26e2a187769b,Alibaba (Qwen),qwen3-vl-4b-thinking,,,not_covered,,,,
+623b74f3-eb36-4348-baad-2a47fb776d7c,Alibaba (Qwen),qwen3-vl-8b-thinking,,,not_covered,,,,
+a4c7c173-27bf-4d36-b1e0-5cf42e9f6acc,Alibaba (Qwen),qwq-32b,,,not_covered,,,,
+87dc4c7d-57bc-4d54-80a4-4a25b5c9ab5c,Anthropic,claude-haiku-4.5,anthropic,claude-haiku-4-5,covered,35,,,"model-arch-not-released:The model architecture has not been released, expect lower precision."
+e5b5f006-cf5a-4979-ba49-74d3c1609d5c,Anthropic,claude-opus-3,anthropic,,not_covered,,,,
+82bf81a9-2804-4736-be5b-2727ae28db6c,Anthropic,claude-opus-4,anthropic,claude-opus-4-0,covered_via_alias,2000,200,600,"model-arch-not-released:The model architecture has not been released, expect lower precision."
+2f065a9a-aee3-4289-a1f1-0be0b52e6cc9,Anthropic,claude-opus-4.1,anthropic,claude-opus-4-1,covered,2000,200,600,"model-arch-not-released:The model architecture has not been released, expect lower precision."
+e741d6b9-41d0-494d-82bc-98535171a609,Anthropic,claude-opus-4.5,anthropic,claude-opus-4-5,covered,670,67,200,"model-arch-not-released:The model architecture has not been released, expect lower precision."
+99e77621-b19f-4ee5-a91d-4c0d0cd7e7db,Anthropic,claude-opus-4.6,anthropic,claude-opus-4-6,covered,670,67,200,"model-arch-not-released:The model architecture has not been released, expect lower precision."
+b0fc094d-a74c-4562-9c8b-d18191248c37,Anthropic,claude-sonnet-3.7,anthropic,,not_covered,,,,
+2542b57e-af2a-4d60-be1b-833c9a91553d,Anthropic,claude-sonnet-4,anthropic,claude-sonnet-4-0,covered_via_alias,440,44,132,"model-arch-not-released:The model architecture has not been released, expect lower precision."
+2d7ee342-f8dd-461b-b701-3256ffd62e2f,Anthropic,claude-sonnet-4.5,anthropic,claude-sonnet-4-5,covered,440,44,132,"model-arch-not-released:The model architecture has not been released, expect lower precision."
+7c86055e-2359-42b6-8f2f-f2037a5b8d7b,Anthropic,claude-sonnet-4.6,anthropic,claude-sonnet-4-6,covered,440,44,132,"model-arch-not-released:The model architecture has not been released, expect lower precision."
+55587fc0-d945-4a3f-84f7-bebe696569cb,DeepSeek,deepseek-r1-0528,,,not_covered,,,,
+749122c0-51a5-4416-a117-99ec3391175c,DeepSeek,deepseek-r1-distill-llama-70b,,,not_covered,,,,
+b29e09f1-6449-439b-8b9e-1cb29d867813,DeepSeek,deepseek-r1-distill-llama-8b,,,not_covered,,,,
+619af27a-b199-445a-bc04-84756d26245f,DeepSeek,deepseek-r1-distill-qwen-14b,,,not_covered,,,,
+50e61ede-b696-43fa-b11d-ce413009cb08,DeepSeek,deepseek-r1-distill-qwen-32b,,,not_covered,,,,
+797bc0c5-26df-4163-85de-93b7e75ad020,DeepSeek,deepseek-r1-distill-qwen-7b,,,not_covered,,,,
+5c8d216f-ff80-44a0-aac5-66000c8800ca,DeepSeek,deepseek-r1-zero,,,not_covered,,,,
+fb5e1679-2bf2-4965-a87b-3c41253ed774,DeepSeek,deepseek-v3,,,not_covered,,,,
+2aa1945d-43fe-487b-96bc-65c8e08415f7,DeepSeek,DeepSeek-V3.2,,,not_covered,,,,
+c4ebe815-b69b-4da2-b366-20dce7349782,Google,gemini-1.5-flash,google_genai,,not_covered,,,,
+c6681e9c-19d1-4774-ab47-01adfbe8c46e,Google,gemini-1.5-pro,google_genai,,not_covered,,,,
+86fc4836-b68a-41ae-a044-be25d2abf523,Google,gemini-2.0-flash,google_genai,gemini-2.0-flash,covered,440,44,132,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+f04a9215-6f5a-46f6-9cbd-42a9401d37a2,Google,gemini-2.5-flash,google_genai,gemini-2.5-flash,covered,440,44,132,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+edac05ac-de29-4884-b49c-ed94b4c62fcd,Google,gemini-2.5-pro,google_genai,gemini-2.5-pro,covered,2000,200,600,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+22bbfbe9-f80f-403a-b28d-0fffba108677,Google,Gemini 3.1 Pro,google_genai,,not_covered,,,,
+93151a23-21f5-4f17-b218-507b264b8f03,Google,gemini-3-pro,google_genai,,not_covered,,,,
+5ced23a1-c296-4e84-9bfe-6e8e097d74b5,Google,gemma-2-9B,google_genai,,not_covered,,,,
+365a50e7-2797-470b-b585-635be60cd26e,Google,gemma-3-27b,google_genai,,not_covered,,,,
+05e04f96-9a03-41a8-b976-263ccc766c19,Google,Gemma 4,google_genai,,not_covered,,,,
+7d8b3111-8711-4dd4-85f5-def0e93c7f20,Meta,llama-2,,,not_covered,,,,
+7f1b448b-5746-4c88-a2d9-3a4baa7d41ed,Meta,llama-3.1-405b-instruct,,,not_covered,,,,
+00b4cb5f-8e77-4288-ad6a-1958c1447acf,Meta,llama-3.1-70b-instruct,,,not_covered,,,,
+59862f45-41fd-43b0-be0a-55a0faac2f18,Meta,llama-3.1-8b-instruct,,,not_covered,,,,
+d9b30d35-11d2-4006-8aa7-c121f0eff48d,Meta,llama-3.2-90b-instruct,,,not_covered,,,,
+b665b44d-1dbd-48aa-8926-df87bff90d1a,Meta,llama-3.3-70b-instruct,,,not_covered,,,,
+da869f75-477a-4115-b896-1c97678da0fc,Meta,llama-4-maverick,,,not_covered,,,,
+6c79a4f6-d51d-4211-9c33-779002514886,Meta,llama-4-scout,,,not_covered,,,,
+f254477b-5b80-4158-be3e-3ad64871199a,Meta,Muse Spark,,,not_covered,,,,
+524a4237-4b5d-4c71-b69d-76709b6778cf,Microsoft,phi-4,,,not_covered,,,,
+d1992d4f-ced3-4d38-a5f8-2b8e49086edf,Microsoft,phi-4-mini,,,not_covered,,,,
+8426b846-1a2a-41ef-86ed-fd5bc05abb2e,Microsoft,Phi-4 Multimodal,,,not_covered,,,,
+866551a3-65a5-41cb-b3e7-cd39292c6ac5,Mistral AI,magistral-medium,mistralai,magistral-medium-latest,covered_via_alias,120,,,"model-arch-not-released:The model architecture has not been released, expect lower precision."
+64a42ba2-7431-463b-b0e2-d519d5e2e61f,Mistral AI,magistral-small-2506,mistralai,magistral-small-latest,covered_via_alias,23.6,,,
+f776dfc1-6d7e-42e3-8b4d-d0a8c70c6f08,Mistral AI,ministral-3,mistralai,ministral-3b-latest,covered_via_alias,3.32,,,
+0e1f3603-f6cf-4df1-9a15-d4f1a9914c24,Mistral AI,mistral-7b-instruct-v0.2,mistralai,open-mistral-7b,covered,7.3,,,
+f62d2ec4-bea7-44c1-91bf-7de043855541,Mistral AI,mistral-7b-v0.3,mistralai,open-mistral-7b,covered,7.3,,,
+13de2df2-7fda-4d69-a007-3f5e58b449df,Mistral AI,mistral-large-3-675b,mistralai,mistral-large-latest,covered_via_alias,123,,,
+443a45f1-e78f-4573-ad5e-f780fe28f96d,Mistral AI,mistral-small-3-24b,mistralai,mistral-small-latest,covered_via_alias,119,,,
+e682f260-792a-477e-83c5-b2ec373a6003,Mistral AI,Mistral Small 4,mistralai,mistral-small-latest,covered_via_alias,119,,,
+e4df3897-deca-4fbb-a19d-7c7e8cbd33c2,OpenAI,gpt-3.5-turbo,openai,gpt-3.5-turbo,covered,70,,,"model-arch-not-released:The model architecture has not been released, expect lower precision."
+70614081-558f-4e5b-81ad-9aa0b7790c0b,OpenAI,gpt-4,openai,gpt-4,covered,1760,176,528,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+a1922a35-dfab-4aea-ad3a-38b76402b8a5,OpenAI,gpt-4.1,openai,gpt-4.1,covered,352,35,106,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+7f6fb05b-cbaa-494f-ae40-509063102662,OpenAI,gpt-4.5,openai,,not_covered,,,,
+922aa8c2-e18b-4433-8ca3-951d549e23da,OpenAI,gpt-4o,openai,gpt-4o,covered,440,44,132,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+b90de811-9c55-4571-8472-3f58ec36266c,OpenAI,gpt-4-turbo,openai,gpt-4-turbo,covered,880,88,264,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+b0d3c769-5294-4fd0-be8b-fcb50d4ad9c1,OpenAI,gpt-5,openai,gpt-5,covered,300,30,90,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+e565fdb0-0ba9-4c5e-bc5e-5805d8c2d5b7,OpenAI,gpt-5.1,openai,gpt-5.1,covered,300,30,90,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+6c3a7049-b6c4-436e-b5cf-83ecd7c968c6,OpenAI,gpt-5.2,openai,gpt-5.2,covered,420,42,126,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+a038651f-e010-4ee8-ad7b-03890192710a,OpenAI,GPT-5.2,openai,gpt-5.2,covered,420,42,126,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+c87bd5d6-48fe-4078-bd79-252892bbace8,OpenAI,GPT-5.3,openai,,not_covered,,,,
+6661e89c-ddbb-4732-ba50-4a5cde63a9e8,OpenAI,GPT-5.4,openai,gpt-5.4,covered,450,45,150,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+8c8810db-643f-4126-9db8-5ede01f9f759,OpenAI,gpt-oss-120b,openai,,not_covered,,,,
+74f7d94f-0998-4558-be1b-05c91c8f9edc,OpenAI,gpt-oss-20b,openai,,not_covered,,,,
+5d431475-7bb7-4987-914d-7a90f97504ec,OpenAI,o1,openai,o1,covered,440,44,132,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+17d027f4-54ca-43ed-b850-e5cc0abd0dbb,OpenAI,o3,openai,o3-mini,covered,28,,,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+7e5435bc-403d-46aa-8be0-159c23c931e8,OpenAI,o3-mini,openai,o3-mini,covered,28,,,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+296407b8-922e-451b-834a-0a6198a313ec,OpenAI,o4-mini,openai,o4-mini,covered,28,,,"model-arch-not-released:The model architecture has not been released, expect lower precision.|model-arch-multimodal:The model architecture is multimodal, expect lower precision."
+dc610fb9-ed6f-435f-a44e-bc7a1a4cb345,Perplexity,sonar,,,not_covered,,,,
+d34259b0-e086-4e0f-ab92-cc1a16f16fde,Perplexity,sonar-deep-research,,,not_covered,,,,
+f069ba0a-6e0b-4e8a-8c21-1cd9d25a1b10,Perplexity,sonar-pro,,,not_covered,,,,
+192be062-68b8-4de0-9d9c-cfe86654d741,Perplexity,sonar-reasoning,,,not_covered,,,,
+f4423565-9c56-4b25-bd1f-db799d468e90,xAI,grok-2,,,not_covered,,,,
+0a0f9e5d-143a-4412-8e78-104a7fa63a6e,xAI,grok-3,,,not_covered,,,,
+4c2a8b4e-5e93-4346-aa4f-004ece8e6a93,xAI,grok-4,,,not_covered,,,,
+b465db58-daa4-470f-811d-61ff415e6874,xAI,Grok-4.20,,,not_covered,,,,

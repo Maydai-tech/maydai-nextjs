@@ -167,6 +167,10 @@ export interface ComplAIModel {
   long_name?: string
   launch_date?: string
   model_provider_id?: number
+  eco_provider?: string | null
+  eco_model?: string | null
+  eco_status?: string | null
+  eco_resolved_at?: string | null
   notes_short?: string
   notes_long?: string
   variants?: string[]
