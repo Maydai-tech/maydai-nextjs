@@ -406,7 +406,7 @@ export async function POST(request: NextRequest) {
 
       const { error: upsertErr } = await supabase
         .from('eco_evaluations_aggregated')
-        .upsert(aggregated, { onConflict: 'model_id,region_code,methodology_version_id,mode' })
+        .upsert(aggregated as any, { onConflict: 'model_id,region_code,methodology_version_id,mode' })
 
       if (upsertErr) {
         errors.push({ modelId: model.id, error: `upsert: ${upsertErr.message}` })
