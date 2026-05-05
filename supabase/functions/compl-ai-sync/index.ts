@@ -270,6 +270,46 @@ function parseModelScores(data: any, categoryCode: string): ModelScore[] {
 }
 
 async function upsertModelScores(supabase: any, categoryCode: string, modelScores: ModelScore[], evaluationDate: string) {
+  const providerIdCache = new Map<string, number>();
+
+  async function getOrCreateProviderId(providerName: string): Promise<number> {
+    const normalized = providerName?.trim();
+    if (!normalized) {
+      throw new Error('Model provider name is empty');
+    }
+
+    const cached = providerIdCache.get(normalized);
+    if (cached !== undefined) return cached;
+
+    const { data: existingProvider, error: providerSelectError } = await supabase
+      .from('model_providers')
+      .select('id')
+      .eq('name', normalized)
+      .maybeSingle();
+
+    if (providerSelectError) {
+      throw new Error(`Failed to fetch provider "${normalized}": ${providerSelectError.message ?? String(providerSelectError)}`);
+    }
+
+    if (existingProvider?.id !== undefined && existingProvider?.id !== null) {
+      providerIdCache.set(normalized, existingProvider.id);
+      return existingProvider.id;
+    }
+
+    const { data: createdProvider, error: providerInsertError } = await supabase
+      .from('model_providers')
+      .insert({ name: normalized })
+      .select('id')
+      .single();
+
+    if (providerInsertError || !createdProvider) {
+      throw new Error(`Failed to create provider "${normalized}": ${providerInsertError?.message ?? String(providerInsertError)}`);
+    }
+
+    providerIdCache.set(normalized, createdProvider.id);
+    return createdProvider.id;
+  }
+
   // Récupérer l'ID de la catégorie
   const { data: principle, error: principleError } = await supabase
     .from('compl_ai_principles')
@@ -293,16 +333,25 @@ async function upsertModelScores(supabase: any, categoryCode: string, modelScore
 
   // Insérer les nouveaux scores pour chaque modèle
   for (const modelScore of modelScores) {
+    let providerId: number | null = null;
+    try {
+      providerId = await getOrCreateProviderId(modelScore.modelProvider);
+    } catch (e) {
+      console.error(`Failed to resolve provider id for "${modelScore.modelProvider}":`, e);
+      continue;
+    }
+
     // Upsert model
     const { data: model, error: modelError } = await supabase
       .from('compl_ai_models')
       .upsert([{
         model_name: modelScore.modelName,
         model_provider: modelScore.modelProvider,
+        model_provider_id: providerId,
         model_type: null,
         version: null
       }], {
-        onConflict: 'model_name'
+        onConflict: 'model_provider_id, model_name'
       })
       .select()
       .single();
