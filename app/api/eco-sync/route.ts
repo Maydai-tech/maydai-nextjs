@@ -219,9 +219,14 @@ async function getCurrentMethodologyVersionId(supabase: Supabase): Promise<strin
   if (data?.id) return data.id
 
   const today = new Date().toISOString().slice(0, 10)
+  // IMPORTANT: certains environnements (Vercel build) infèrent `never` sur les overloads supabase-js
+  // avec nos types DB manuels. On force donc ici un payload "any" pour garantir la compilation.
   const { data: created, error: upsertErr } = (await supabase
     .from('eco_methodology_versions')
-    .upsert({ ecologits_version: `ecologits-api-snapshot-${today}`, methodology_date: today }, { onConflict: 'ecologits_version,methodology_date' })
+    .upsert(
+      { ecologits_version: `ecologits-api-snapshot-${today}`, methodology_date: today } as any,
+      { onConflict: 'ecologits_version,methodology_date' } as any
+    )
     .select('id')
     .single()) as { data: MethodologyVersionIdRow; error: Error | null }
 
