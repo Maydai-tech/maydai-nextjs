@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import HeroAudit from './components/HeroAudit'
@@ -12,7 +13,12 @@ import FaqAudit from './components/FaqAudit'
 import CtaFinalAudit from './components/CtaFinalAudit'
 import { SIGNUP_AUDIT_HREF } from './signup-audit-href'
 
-export default function AuditIAActPage() {
+type AuditIAActPageProps = {
+  /** Contenu SSR inséré entre la vidéo « MaydAI en action » et la FAQ (ex. tarifs). */
+  children?: ReactNode
+}
+
+export default function AuditIAActPage({ children }: AuditIAActPageProps) {
   return (
     <div className="min-h-screen bg-white">
       <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-30">
@@ -45,6 +51,7 @@ export default function AuditIAActPage() {
         <SecurityAudit />
         <TargetAudit />
         <VideoAudit />
+        {children}
         <FaqAudit />
         <CtaFinalAudit />
       </main>

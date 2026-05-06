@@ -21,6 +21,8 @@ import {
   hasMeaningfulAttribution,
   clearStoredAttribution,
 } from '@/lib/tracking/capture-params'
+import { planIdSchema } from '@/lib/validations/pricing'
+import type { PlanId } from '@/lib/stripe/config/plans'
 
 type SignupStep = 'form' | 'otp' | 'processing'
 
@@ -45,6 +47,22 @@ export default function SignupPage() {
     const id = searchParams.get('lead_id')?.trim()
     if (id) {
       leadIdFromInviteRef.current = id
+    }
+  }, [searchParams])
+
+  /** Intention d’achat depuis `?plan=` (validée) ; valeur invalide ignorée silencieusement. */
+  const [intentPlan, setIntentPlan] = useState<PlanId | null>(null)
+  useEffect(() => {
+    const raw = searchParams.get('plan')
+    if (raw == null || raw === '') {
+      setIntentPlan(null)
+      return
+    }
+    const parsed = planIdSchema.safeParse(raw.trim())
+    if (parsed.success) {
+      setIntentPlan(parsed.data)
+    } else {
+      setIntentPlan(null)
     }
   }, [searchParams])
 
@@ -286,6 +304,7 @@ export default function SignupPage() {
           mainIndustryId: formData.mainIndustryId,
           subCategoryId: formData.subCategoryId,
           ...acquisition,
+          ...(intentPlan ? { planIntent: intentPlan } : {}),
         }),
       })
 

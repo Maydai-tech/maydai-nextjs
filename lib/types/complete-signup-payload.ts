@@ -18,4 +18,6 @@ export type CompleteSignUpRequestBody = CompleteSignUpAcquisitionFields & {
   subCategoryId: string
   phone?: string | null
   siren?: string | null
+  /** Intention d’achat (forfait), validée côté API avec `planIdSchema`. */
+  planIntent?: string | null
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import PricingSummaryCard from '@/components/site-vitrine/PricingSummaryCard'
 import ConformiteIAPage from './ConformiteIAPage'
 
 export const metadata: Metadata = {
@@ -35,5 +36,5 @@ export const metadata: Metadata = {
 }
 
 export default function ConformiteIA() {
-  return <ConformiteIAPage />
+  return <ConformiteIAPage pricingNode={<PricingSummaryCard />} />
 }
