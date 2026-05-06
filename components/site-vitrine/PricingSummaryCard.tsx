@@ -135,7 +135,8 @@ export default async function PricingSummaryCard() {
     orderedPlans = PLAN_IDS.map((id) => byId.get(id)).filter(
       (p): p is MaydAIPlan => p != null
     )
-  } catch {
+  } catch (error: unknown) {
+    console.error('[PricingSummaryCard] Erreur SSR fetchPlans:', error)
     orderedPlans = []
   }
 

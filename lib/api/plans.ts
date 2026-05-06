@@ -115,7 +115,7 @@ function getPlansFetchUrl(): string {
  * Note: L'API /api/plans est publique (les tarifs sont visibles par tous)
  */
 export async function fetchPlans(): Promise<MaydAIPlan[]> {
-  const response = await fetch(getPlansFetchUrl())
+  const response = await fetch(getPlansFetchUrl(), { cache: 'no-store' })
 
   if (!response.ok) {
     throw new Error(`Failed to fetch plans: ${response.statusText}`)
