@@ -93,6 +93,7 @@ export default function TarifsPricingClient() {
           const plan = planById.get(planId)
           const label = LABELS_BY_PLAN_ID[planId]
           const isPro = planId === 'pro'
+          const ctaHref = planId === 'enterprise' ? '/contact' : '/signup'
 
           const isLoading = plans === null
           const isMissing = !isLoading && !plan
@@ -189,7 +190,7 @@ export default function TarifsPricingClient() {
               <p className="text-gray-600 mb-6 h-20">{plan.description}</p>
 
               <a
-                href="/contact"
+                href={ctaHref}
                 className={isPro ? CTA_CLASS_PRO : CTA_CLASS_DEFAULT}
                 onClick={() => trackPricingClick(planId as PlanName)}
               >

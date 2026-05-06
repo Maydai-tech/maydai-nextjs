@@ -3,6 +3,7 @@ import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { sendGoogleAdsConversion } from '@/lib/google-ads/conversions'
 import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
+import { planIdSchema } from '@/lib/validations/pricing'
 
 const ACQUISITION_FIELD_MAX_LEN = 512
 
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
       utm_source: rawUtmSource,
       utm_medium: rawUtmMedium,
       utm_campaign: rawUtmCampaign,
+      planIntent: rawPlanIntent,
     } = body
 
     // Validate required fields
@@ -184,6 +186,24 @@ export async function POST(request: NextRequest) {
         { error: 'Erreur lors de la création du profil' },
         { status: 500 }
       )
+    }
+
+    // Intention de forfait (URL ?plan=) — re-valider, ignorer si invalide (ne bloque pas l’inscription)
+    if (rawPlanIntent !== undefined && rawPlanIntent !== null && rawPlanIntent !== '') {
+      const planParsed = planIdSchema.safeParse(
+        typeof rawPlanIntent === 'string' ? rawPlanIntent.trim() : rawPlanIntent
+      )
+      if (planParsed.success) {
+        const { error: metaError } = await supabase.auth.updateUser({
+          data: { signup_plan_intent: planParsed.data },
+        })
+        if (metaError) {
+          console.error(
+            '[complete-signup] Impossible d’enregistrer signup_plan_intent (non bloquant):',
+            metaError
+          )
+        }
+      }
     }
 
     if (gclid) {

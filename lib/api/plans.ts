@@ -97,11 +97,25 @@ function generateDynamicFeatures(maxRegistries: number, maxCollaborators: number
 }
 
 /**
+ * URL de l’endpoint plans : relatif en navigateur, absolu en SSR / RSC (fetch sans host invalide).
+ */
+function getPlansFetchUrl(): string {
+  if (typeof window !== 'undefined') {
+    return '/api/plans'
+  }
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+    'http://localhost:3000'
+  return `${base}/api/plans`
+}
+
+/**
  * Récupère les plans depuis l'API
  * Note: L'API /api/plans est publique (les tarifs sont visibles par tous)
  */
 export async function fetchPlans(): Promise<MaydAIPlan[]> {
-  const response = await fetch('/api/plans')
+  const response = await fetch(getPlansFetchUrl())
 
   if (!response.ok) {
     throw new Error(`Failed to fetch plans: ${response.statusText}`)

@@ -26,7 +26,7 @@ export default function VideoSection() {
           }}
         >
           <LiteYouTubeEmbed
-            id="r5uoW_Hbwok"
+            id="I8xNeoariwg"
             title="Présentation de la plateforme Maydai - Conformité AI Act"
             poster="maxresdefault"
             params="rel=0"
