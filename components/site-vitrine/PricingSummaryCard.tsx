@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { createClient } from '@supabase/supabase-js'
 import type { LucideIcon } from 'lucide-react'
 import {
   Building,
@@ -10,7 +11,11 @@ import {
   User,
   Zap,
 } from 'lucide-react'
-import { fetchPlans, type MaydAIPlan } from '@/lib/api/plans'
+import {
+  mapDBPlanToMaydAIPlan,
+  type MaydAIPlan,
+  type PlanFromDB,
+} from '@/lib/api/plans'
 import { PLAN_IDS } from '@/lib/stripe/config/plans'
 import {
   buildPricingCardDisplay,
@@ -130,13 +135,33 @@ export default async function PricingSummaryCard() {
   let orderedPlans: MaydAIPlan[] = []
 
   try {
-    const fetched = await fetchPlans()
-    const byId = new Map(fetched.map((p) => [p.id, p]))
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error(
+        'NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être définies'
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const { data: plansFromDB, error: plansError } = await supabase
+      .from('plans')
+      .select('*')
+      .order('display_order', { ascending: true })
+
+    if (plansError) {
+      throw plansError
+    }
+
+    const mapped = (plansFromDB ?? []).map((row) =>
+      mapDBPlanToMaydAIPlan(row as PlanFromDB)
+    )
+    const byId = new Map(mapped.map((p) => [p.id, p]))
     orderedPlans = PLAN_IDS.map((id) => byId.get(id)).filter(
       (p): p is MaydAIPlan => p != null
     )
   } catch (error: unknown) {
-    console.error('[PricingSummaryCard] Erreur SSR fetchPlans:', error)
+    console.error('[PricingSummaryCard] Erreur chargement plans Supabase:', error)
     orderedPlans = []
   }
 
