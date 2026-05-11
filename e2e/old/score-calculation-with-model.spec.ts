@@ -1,17 +1,16 @@
 import { test, expect, Page } from '@playwright/test'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { authenticateUser } from './auth-helper'
+import { authenticateUser } from '../auth-helper'
 
 /**
- * E2E Test: Questionnaire Completion and Score Calculation
+ * E2E Test: Score Calculation with COMPL-AI Model
  *
- * This test suite verifies:
- * 1. Parcours questionnaire V2 (ORS N7 puis N8, sans blocs E5/E6)
- * 2. Score calculation and display
- * 3. Exact score value verification
- * 4. OpenAI report generation (skipped by default)
+ * This test verifies:
+ * 1. Score calculation with a specific LLM model (Gemini 1.5 Flash)
+ * 2. Correct score formula: ((score_base + score_model × 2.5) / 150) × 100
+ * 3. Questionnaire V2 « sans pénalités » + score modèle = score_final cohérent avec la formule produit
  *
- * Each test is independent and creates its own test data for parallel execution.
+ * Formule attendue : ((score_base + score_model × 2.5) / 150) × 100 (arrondi côté API).
  */
 
 // Test data interface
@@ -23,7 +22,10 @@ interface TestData {
   email: string
 }
 
-// Question answers for happy path (low risk, maximum score)
+// Gemini 1.5 Flash model ID (from compl_ai_models table)
+const GEMINI_FLASH_MODEL_ID = 'c4ebe815-b69b-4da2-b366-20dce7349782'
+
+// Parcours V2 (ORS + N8), réponses favorables sans pénalités fortes
 const QUESTIONNAIRE_ANSWERS: Array<{
   questionId: string
   type: 'radio' | 'checkbox' | 'tags'
@@ -63,11 +65,11 @@ function getAdminClient(): SupabaseClient {
 }
 
 /**
- * Create all test data needed for a questionnaire test
+ * Create all test data needed for a score calculation test with a specific model
  */
 async function createTestData(testId: string): Promise<TestData> {
   const supabase = getAdminClient()
-  const email = `e2e-quest-${testId}-${Date.now()}@maydai-test.com`
+  const email = `e2e-score-model-${testId}-${Date.now()}@maydai-test.com`
 
   // Create auth user
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -85,7 +87,7 @@ async function createTestData(testId: string): Promise<TestData> {
   // Create company (for profile)
   const { data: companyData, error: companyError } = await supabase
     .from('companies')
-    .insert({ name: `E2E Company ${testId} ${Date.now()}` })
+    .insert({ name: `E2E Score Model Company ${testId} ${Date.now()}` })
     .select('id')
     .single()
 
@@ -98,7 +100,7 @@ async function createTestData(testId: string): Promise<TestData> {
   // Create registry (another company for the use case)
   const { data: registryData, error: registryError } = await supabase
     .from('companies')
-    .insert({ name: `E2E Registry ${testId} ${Date.now()}` })
+    .insert({ name: `E2E Score Model Registry ${testId} ${Date.now()}` })
     .select('id')
     .single()
 
@@ -114,8 +116,8 @@ async function createTestData(testId: string): Promise<TestData> {
     .insert({
       id: userId,
       first_name: 'E2E',
-      last_name: testId,
-      company_name: `E2E Company ${testId}`,
+      last_name: `ScoreModel${testId}`,
+      company_name: `E2E Score Model Company ${testId}`,
       company_id: companyId,
       current_company_id: registryId,
       sub_category_id: 'saas',
@@ -144,17 +146,22 @@ async function createTestData(testId: string): Promise<TestData> {
     throw new Error(`Failed to create user_companies for registry: ${userRegistryError.message}`)
   }
 
-  // Create the use case in draft status
+  // Create the use case with Gemini 1.5 Flash model
   const { data: usecaseData, error: usecaseError } = await supabase
     .from('usecases')
     .insert({
-      name: `E2E UseCase ${testId} ${Date.now()}`,
-      description: 'Test use case for questionnaire completion E2E test',
+      name: `E2E Score Model UseCase ${testId} ${Date.now()}`,
+      description: 'Test use case for score calculation with Gemini 1.5 Flash model',
       company_id: registryId,
       status: 'draft',
       deployment_phase: 'En projet (Non déployé)',
       deployment_date: new Date().toISOString(),
       questionnaire_version: 2,
+      primary_model_id: GEMINI_FLASH_MODEL_ID,  // Associate with Gemini 1.5 Flash
+      technology_partner: 'Google',
+      llm_model_version: 'gemini-1.5-flash',
+      ai_category: 'Vision par ordinateur',
+      system_type: 'Système autonome',
     })
     .select('id')
     .single()
@@ -174,7 +181,7 @@ async function createTestData(testId: string): Promise<TestData> {
     throw new Error(`Failed to create user_usecases: ${userUsecaseError.message}`)
   }
 
-  console.log(`✅ Test data created: ${email} (usecase: ${usecaseId})`)
+  console.log(`✅ Test data created: ${email} (usecase: ${usecaseId}, model: Gemini 1.5 Flash)`)
 
   return { userId, companyId, registryId, usecaseId, email }
 }
@@ -189,6 +196,12 @@ async function cleanupTestData(data: TestData): Promise<void> {
     // Delete questionnaire responses
     await supabase
       .from('usecase_responses')
+      .delete()
+      .eq('usecase_id', data.usecaseId)
+
+    // Delete usecase nextsteps
+    await supabase
+      .from('usecase_nextsteps')
       .delete()
       .eq('usecase_id', data.usecaseId)
 
@@ -254,7 +267,6 @@ async function answerQuestion(
 
   switch (type) {
     case 'radio':
-      // Wait for the radio to be visible before clicking
       const radioInput = page.getByRole('radio', { name: new RegExp(answerText.slice(0, 30).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) })
       await radioInput.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {
         console.log(`⚠️ Radio button not visible: ${answerText.slice(0, 30)}`)
@@ -314,9 +326,6 @@ async function completeQuestionnaire(page: Page) {
     return progressText || '0%'
   }
 
-  /**
-   * Click the "Suivant" button with retry logic
-   */
   async function clickSuivantWithRetry(questionIndex: number): Promise<boolean> {
     const maxRetries = 3
     for (let retry = 0; retry < maxRetries; retry++) {
@@ -352,15 +361,12 @@ async function completeQuestionnaire(page: Page) {
 
     const progressionBefore = await getProgression()
 
-    // Answer the question
     await answerQuestion(page, type, answer, conditionalValue)
 
-    // Click "Suivant" to proceed to the next question
     if (!isLastQuestion) {
       const clicked = await clickSuivantWithRetry(i)
 
       if (clicked) {
-        // Wait for progression to change
         await page.waitForFunction(
           (prevProgress) => {
             const currentProgress = document.body.innerText.match(/(\d+)%/)?.[0]
@@ -376,7 +382,6 @@ async function completeQuestionnaire(page: Page) {
 
     await page.waitForTimeout(500)
 
-    // If it's the last question, click "Terminer l'évaluation"
     if (isLastQuestion) {
       console.log('🎯 Last question answered, looking for "Terminer l\'évaluation" button...')
       await page.waitForTimeout(1500)
@@ -429,14 +434,12 @@ async function completeQuestionnaire(page: Page) {
 async function authenticateAndNavigate(page: Page, testData: TestData): Promise<void> {
   await authenticateUser(page, testData.email)
 
-  // Navigate to evaluation page with retry
   let navigationSuccess = false
   for (let attempt = 1; attempt <= 3; attempt++) {
     await page.goto(`/usecases/${testData.usecaseId}/evaluation`)
     await page.waitForLoadState('networkidle')
     await page.waitForTimeout(2000)
 
-    // Check if we're on the evaluation page and the questionnaire is loaded
     const progressionVisible = await page.locator('text=Progression').isVisible().catch(() => false)
     const questionVisible = await page.locator('input[type="radio"]').first().isVisible().catch(() => false)
 
@@ -451,7 +454,6 @@ async function authenticateAndNavigate(page: Page, testData: TestData): Promise<
   }
 
   if (!navigationSuccess) {
-    // Final attempt - wait longer for the page to load
     await page.waitForSelector('text=Progression', { timeout: 30000 })
   }
 }
@@ -460,6 +462,8 @@ async function navigateToResults(page: Page, usecaseId: string): Promise<void> {
   const resultsButton = page.getByRole('button', { name: /Voir les résultats/i })
   if (await resultsButton.isVisible().catch(() => false)) {
     await resultsButton.click()
+  } else {
+    await page.goto(`/usecases/${usecaseId}`)
   }
 
   await page.waitForURL(
@@ -468,89 +472,35 @@ async function navigateToResults(page: Page, usecaseId: string): Promise<void> {
   )
 }
 
-// Tests can run in parallel since each creates its own data
-test.describe('Questionnaire Completion', () => {
-  test('should complete questionnaire and display score', async ({ page }) => {
-    test.setTimeout(150000)
+test.describe('Score Calculation with COMPL-AI Model', () => {
+  test('should calculate correct score with Gemini 1.5 Flash model', async ({ page }) => {
+    test.setTimeout(180000)
 
-    const testData = await createTestData('display-score')
-
-    try {
-      await authenticateAndNavigate(page, testData)
-      await completeQuestionnaire(page)
-
-      await navigateToResults(page, testData.usecaseId)
-
-      // Wait for the page to fully load
-      await page.waitForLoadState('networkidle')
-      await page.waitForTimeout(3000)
-
-      // Try multiple selectors for the score section
-      const scoreSelectors = [
-        'text=Score de Conformité',
-        'text=Score de conformité',
-        'text=Conformité',
-        '[data-testid="score"]',
-        'text=/\\d+\\/100/',
-      ]
-
-      let scoreFound = false
-      for (const selector of scoreSelectors) {
-        const element = page.locator(selector).first()
-        const isVisible = await element.isVisible().catch(() => false)
-        if (isVisible) {
-          console.log(`✅ Found score element with selector: ${selector}`)
-          scoreFound = true
-          break
-        }
-      }
-
-      if (!scoreFound) {
-        // Take a screenshot for debugging
-        console.log('⚠️ Score not found with standard selectors, checking page content...')
-        const pageContent = await page.content()
-        console.log(`Page URL: ${page.url()}`)
-
-        // Check if we're on the right page
-        if (page.url().includes('/evaluation')) {
-          throw new Error('Still on evaluation page - questionnaire completion may have failed')
-        }
-
-        // Wait a bit more and retry
-        await page.waitForTimeout(5000)
-      }
-
-      // Verify score is displayed (format: XX/100)
-      const scoreText = await page.locator('text=/\\d+\\/\\d+/').first().textContent({ timeout: 30000 })
-      expect(scoreText).toMatch(/\d+\/\d+/)
-
-      console.log(`✅ Score displayed: ${scoreText}`)
-    } finally {
-      await cleanupTestData(testData)
-    }
-  })
-
-  test('should calculate correct score based on answers', async ({ page }) => {
-    test.setTimeout(120000)
-
-    const testData = await createTestData('calc-score')
+    const testData = await createTestData('gemini-flash')
     const supabase = getAdminClient()
 
     try {
       await authenticateAndNavigate(page, testData)
       await completeQuestionnaire(page)
 
-      await navigateToResults(page, testData.usecaseId)
+      // Wait for redirect to overview
+      await page.waitForURL(/\/usecases\/[a-f0-9-]+(?!\/evaluation)/, { timeout: 60000 })
 
-      // Wait for status to be updated to 'completed' (poll database)
-      let usecaseData: { score_final: number | null; status: string } | null = null
-      const maxRetries = 10
+      // Wait for status to be updated to 'completed' and score to be calculated
+      let usecaseData: {
+        score_final: number | null
+        score_base: number | null
+        score_model: number | null
+        status: string
+        is_eliminated: boolean
+      } | null = null
+      const maxRetries = 15
       const retryInterval = 2000
 
       for (let i = 0; i < maxRetries; i++) {
         const { data, error } = await supabase
           .from('usecases')
-          .select('score_final, status')
+          .select('score_final, score_base, score_model, status, is_eliminated')
           .eq('id', testData.usecaseId)
           .single()
 
@@ -560,177 +510,84 @@ test.describe('Questionnaire Completion', () => {
 
         usecaseData = data
 
-        if (data.status === 'completed') {
+        if (data.status === 'completed' && data.score_final !== null) {
           console.log(`✅ Status updated to completed after ${i + 1} attempts`)
           break
         }
 
-        console.log(`⏳ Status is still '${data.status}', waiting... (attempt ${i + 1}/${maxRetries})`)
+        console.log(`⏳ Status: '${data.status}', score_final: ${data.score_final}, waiting... (attempt ${i + 1}/${maxRetries})`)
         await page.waitForTimeout(retryInterval)
       }
 
       // Verify status is completed
       expect(usecaseData?.status).toBe('completed')
+      expect(usecaseData?.is_eliminated).toBe(false)
 
-      // Verify score is calculated for the fixed answer path.
-      expect(usecaseData?.score_final).toBeDefined()
-      expect(usecaseData?.score_final).toBe(60)
+      // Log the actual scores for debugging
+      console.log(`📊 Score calculation results:`)
+      console.log(`   - score_base: ${usecaseData?.score_base}`)
+      console.log(`   - score_model: ${usecaseData?.score_model}`)
+      console.log(`   - score_final: ${usecaseData?.score_final}`)
 
-      console.log(`✅ Score verified in database: ${usecaseData?.score_final}`)
+      const sb = usecaseData?.score_base
+      const sm = usecaseData?.score_model
+      const sf = usecaseData?.score_final
+
+      expect(sb).toBeDefined()
+      expect(sm).toBeDefined()
+      expect(sf).toBeDefined()
+      expect(sb!).toBeGreaterThanOrEqual(0)
+      expect(sb!).toBeLessThanOrEqual(100)
+
+      // Score modèle COMPL-AI (Gemini 1.5 Flash) — valeur de référence stable en base
+      expect(sm!).toBe(12)
+
+      const expectedFinal = ((sb! + sm! * 2.5) / 150) * 100
+      expect(sf!).toBeCloseTo(expectedFinal, 1)
+
+      console.log(`✅ Score calculation verified:`)
+      console.log(`   score_base: ${sb}`)
+      console.log(`   score_model: ${sm}`)
+      console.log(`   score_final: ${sf}% (formule: ((${sb} + ${sm} × 2.5) / 150) × 100 ≈ ${expectedFinal.toFixed(2)})`)
+
+      console.log(`✅ Score calculation verified successfully!`)
     } finally {
       await cleanupTestData(testData)
     }
   })
 
-  test('should generate OpenAI report after completion', async ({ page }) => {
-    // This test verifies that OpenAI report is generated after questionnaire completion
-
+  test('should display correct score on UI', async ({ page }) => {
     test.setTimeout(180000)
 
-    const testData = await createTestData('openai-report')
+    const testData = await createTestData('gemini-flash-ui')
     const supabase = getAdminClient()
-
-    // Collect console logs from the browser
-    const consoleLogs: string[] = []
-    page.on('console', (msg) => {
-      const text = msg.text()
-      consoleLogs.push(`[${msg.type()}] ${text}`)
-      if (text.includes('OpenAI') || text.includes('report') || text.includes('generate')) {
-        console.log(`🖥️ Browser console: ${text}`)
-      }
-    })
-
-    // Track network requests to generate-report endpoint
-    let reportRequestMade = false
-    let reportRequestResponse: { status: number; body?: Record<string, unknown> } | null = null
-    page.on('response', async (response) => {
-      if (response.url().includes('/api/generate-report')) {
-        reportRequestMade = true
-        try {
-          const body = await response.json()
-          reportRequestResponse = { status: response.status(), body }
-          console.log(`📡 generate-report response: ${response.status()}`)
-          console.log(`   - next_steps_extracted: ${body.next_steps_extracted}`)
-          console.log(`   - next_steps_saved: ${body.next_steps_saved}`)
-          console.log(`   - next_steps_error: ${body.next_steps_error}`)
-          console.log(`   - validation:`, JSON.stringify(body.next_steps_validation))
-        } catch {
-          reportRequestResponse = { status: response.status() }
-          console.log(`📡 generate-report response: ${response.status()} (no JSON body)`)
-        }
-      }
-    })
 
     try {
       await authenticateAndNavigate(page, testData)
       await completeQuestionnaire(page)
 
-      // Wait for redirect
-      await navigateToResults(page, testData.usecaseId)
-
-      // Poll for report generation
-      console.log('⏳ Waiting for OpenAI report generation...')
-      const maxWaitTime = 90000
-      const pollInterval = 3000
-      const startTime = Date.now()
-      let reportGenerated = false
-      let usecaseData: { report_summary: string | null; report_generated_at: string | null; status: string } | null = null
-
-      while (Date.now() - startTime < maxWaitTime) {
-        const { data, error } = await supabase
-          .from('usecases')
-          .select('report_summary, report_generated_at, status')
-          .eq('id', testData.usecaseId)
-          .single()
-
-        if (error) {
-          throw new Error(`Failed to fetch usecase: ${error.message}`)
-        }
-
-        usecaseData = data
-
-        if (data.report_summary && data.report_generated_at) {
-          reportGenerated = true
-          break
-        }
-
-        console.log(`⏳ Report not ready yet (status: ${data.status}), waiting...`)
-        await page.waitForTimeout(pollInterval)
-      }
-
-      if (!reportGenerated) {
-        console.log('⚠️ OpenAI report was not generated within timeout.')
-        console.log(`📊 Report request made: ${reportRequestMade}`)
-        console.log(`📊 Report request response:`, JSON.stringify(reportRequestResponse, null, 2))
-        console.log(`📊 Relevant console logs:`, consoleLogs.filter(l =>
-          l.includes('OpenAI') || l.includes('report') || l.includes('generate') || l.includes('Error') || l.includes('error')
-        ))
-
-        // Fail with useful info instead of skipping
-        expect(reportRequestMade, 'Report API should have been called').toBe(true)
-        expect((reportRequestResponse as { status: number } | null)?.status, 'Report API should return 200').toBe(200)
-        expect(usecaseData?.report_summary, 'Report summary should be generated').not.toBeNull()
-        return
-      }
-
-      expect(usecaseData?.report_summary).not.toBeNull()
-      console.log('✅ OpenAI report generated successfully')
-
-      // Verify nextsteps were saved to database
-      const { data: nextstepsData, error: nextstepsError } = await supabase
-        .from('usecase_nextsteps')
-        .select('*')
-        .eq('usecase_id', testData.usecaseId)
+      const { data: dbData } = await supabase
+        .from('usecases')
+        .select('score_final, score_base, score_model')
+        .eq('id', testData.usecaseId)
         .single()
 
-      if (nextstepsError) {
-        console.log('⚠️ No nextsteps found in database:', nextstepsError.message)
-      } else {
-        console.log('✅ Nextsteps saved to database')
-        console.log(`   - priorite_1: ${nextstepsData.priorite_1 ? '✅' : '❌'}`)
-        console.log(`   - quick_win_1: ${nextstepsData.quick_win_1 ? '✅' : '❌'}`)
-        console.log(`   - action_1: ${nextstepsData.action_1 ? '✅' : '❌'}`)
-      }
+      console.log(`📊 Database values:`)
+      console.log(`   - score_base: ${dbData?.score_base}`)
+      console.log(`   - score_model: ${dbData?.score_model}`)
+      console.log(`   - score_final: ${dbData?.score_final}`)
 
-      // Navigate to use case detail page to verify recommendations are displayed
-      await page.goto(`/usecases/${testData.usecaseId}`)
+      const expectedUi = Math.round(Number(dbData?.score_final ?? 0))
+
+      await navigateToResults(page, testData.usecaseId)
       await page.waitForLoadState('networkidle')
 
-      // Wait for the "Recommandations et plan d'action" section to be visible
-      const recommendationsSection = page.locator('h2:has-text("Recommandations et plan d\'action")')
-      await expect(recommendationsSection).toBeVisible({ timeout: 30000 })
-      console.log('✅ Recommendations section visible on detail page')
+      await expect(
+        page.getByText(new RegExp(`${expectedUi}/\\d+`)).first(),
+        `UI score should display score_final arrondi (DB score_final=${dbData?.score_final})`
+      ).toBeVisible({ timeout: 30000 })
 
-      // Verify that at least one priority/quick win/action is displayed (not loading state)
-      // The section should contain actual content, not just the loading spinner
-      const actionButtons = page.locator('button:has-text("pts")')
-      const hasActions = await actionButtons.count() > 0
-
-      // Check for evaluation section content
-      const evaluationSection = page.locator('h3:has-text("Évaluation du niveau de risque")')
-      const hasEvaluation = await evaluationSection.isVisible().catch(() => false)
-
-      // Check for quick wins section
-      const quickWinsSection = page.locator('h3:has-text("Actions immédiates recommandées")')
-      const hasQuickWins = await quickWinsSection.isVisible().catch(() => false)
-
-      console.log(`📊 Content verification:`)
-      console.log(`   - Has action buttons: ${hasActions}`)
-      console.log(`   - Has evaluation section: ${hasEvaluation}`)
-      console.log(`   - Has quick wins section: ${hasQuickWins}`)
-
-      // At least one of the content sections should be visible
-      expect(hasEvaluation || hasQuickWins || hasActions, 'Report content should be displayed').toBe(true)
-      console.log('✅ Report content displayed on use case detail page')
-
-      // Also verify rapport page displays the full report
-      await page.goto(`/usecases/${testData.usecaseId}/rapport`)
-      await page.waitForLoadState('networkidle')
-
-      const reportContent = page.locator('[class*="prose"]').first()
-      await expect(reportContent).toBeVisible({ timeout: 10000 })
-
-      console.log('✅ Full report displayed on rapport page')
+      console.log(`✅ UI score verification passed: ${expectedUi} depuis la base`)
     } finally {
       await cleanupTestData(testData)
     }

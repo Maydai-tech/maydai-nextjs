@@ -3,6 +3,7 @@ name: E2E Tests
 on:
   push:
     branches:
+      - main
       - preprod
   workflow_dispatch:
 
@@ -36,6 +37,9 @@ jobs:
           # JSON output goes to test-results.json, HTML to playwright-report/
           npx playwright test
           echo "Tests completed"
+        # ==============================================================================
+        # WARNING: ARCHITECTURE RULE. The secrets used here MUST point to a STAGING or PREPROD Supabase environment. Since E2E tests bypass the UI and directly inject/delete data via the SERVICE_ROLE_KEY, running this against the real PRODUCTION database will corrupt user data and metrics.
+        # ==============================================================================
         env:
           # Supabase config
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
