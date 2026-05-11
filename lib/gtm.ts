@@ -90,7 +90,7 @@ interface GenerateLeadHubspotDemoEvent {
 interface GoogleAdsEnhancedConversionDataLayerEvent {
   event: 'conversion'
   user_data: {
-    email: string
+    sha256_email_address: string
   }
 }
 
@@ -170,44 +170,51 @@ const CONSENT_DELAY_MS = 1000
  * laissant le temps à CookieYes de mettre à jour le Consent Mode
  * via gtag('consent','update') avant que GTM ne traite l'événement.
  */
-function sendGTMEventAfterConsentDelay(event: GTMEvent): void {
-  if (!isDataLayerAvailable()) return
-  setTimeout(() => {
-    getDataLayer()?.push(event)
-  }, CONSENT_DELAY_MS)
+function sendGTMEventAfterConsentDelay(event: GTMEvent): Promise<void> {
+  if (!isDataLayerAvailable()) {
+    return Promise.resolve()
+  }
+  return new Promise<void>((resolve) => {
+    setTimeout(() => {
+      getDataLayer()?.push(event)
+      resolve()
+    }, CONSENT_DELAY_MS)
+  })
 }
 
 export function sendSignUpEvent(
   method: SignUpMethod,
   options?: { userId?: string }
-): void {
-  sendGTMEventAfterConsentDelay({
+): Promise<void> {
+  return sendGTMEventAfterConsentDelay({
     event: 'sign_up',
     method,
     ...(options?.userId && { user_id: options.userId }),
   })
 }
 
-const EMAIL_FOR_ADS_MAX_LEN = 320
-
 /**
- * Push `conversion` + `user_data.email` sur le dataLayer (après délai consentement),
+ * Push `conversion` + `user_data.sha256_email_address` sur le dataLayer (après délai consentement),
  * pour Enhanced Conversions côté GTM / Google Ads.
  */
-export function sendGoogleAdsSignupConversionWithUserData(email: string): void {
-  const trimmed = email.trim().toLowerCase()
-  if (!trimmed || trimmed.length > EMAIL_FOR_ADS_MAX_LEN) return
-  sendGTMEventAfterConsentDelay({
+export function sendGoogleAdsSignupConversionWithUserData(
+  hashedEmail: string,
+): Promise<void> {
+  const trimmed = hashedEmail.trim()
+  if (!trimmed) {
+    return Promise.resolve()
+  }
+  return sendGTMEventAfterConsentDelay({
     event: 'conversion',
-    user_data: { email: trimmed },
+    user_data: { sha256_email_address: trimmed },
   })
 }
 
 export function sendLoginEvent(
   method: SignUpMethod,
   options?: { userId?: string }
-): void {
-  sendGTMEventAfterConsentDelay({
+): Promise<void> {
+  return sendGTMEventAfterConsentDelay({
     event: 'login',
     method,
     ...(options?.userId && { user_id: options.userId }),
