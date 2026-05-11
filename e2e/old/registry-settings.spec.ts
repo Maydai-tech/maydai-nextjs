@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from './auth-helper'
+import { authenticateUser } from '../auth-helper'
 
 /**
  * E2E Test: Registry Settings (Modification & Deletion)

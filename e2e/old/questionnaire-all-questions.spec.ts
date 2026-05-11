@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { authenticateUser } from './auth-helper'
+import { authenticateUser } from '../auth-helper'
 
 /**
  * E2E : parcours questionnaire V2 (ORS E4.N7 puis E4.N8, sans E5/E6).
