@@ -68,11 +68,18 @@ function calculateRiskUseCaseByReverseEngineering(
     const riskUseCasePoints = targetPoints - principlesPoints
     const riskUseCasePercentRaw = riskUseCasePoints / BASE_RISQUE_USE_CASE
     const riskUseCasePercentClamped = Math.max(0, Math.min(1, riskUseCasePercentRaw))
-    const riskUseCasePercentage = Math.round(riskUseCasePercentClamped * 10000) / 100
-    const riskUseCasePointsClamped = Math.max(0, Math.min(BASE_RISQUE_USE_CASE, riskUseCasePoints))
+    // Calcul du pourcentage initial (celui qui peut tomber à 0 à tort)
+    const calculatedPercentage = Math.round(riskUseCasePercentClamped * 10000) / 100
+
+    // Plancher de sécurité : le risque ne peut pas être inférieur au score global
+    const safePercentage = Math.max(Math.round(globalScorePercent * 10000) / 100, calculatedPercentage)
+
+    // Recalcul strict des points basés sur ce pourcentage sécurisé
+    const safePointsRaw = (safePercentage / 100) * BASE_RISQUE_USE_CASE
+
     return {
-      points: Math.round(riskUseCasePointsClamped * 100) / 100,
-      percentage: riskUseCasePercentage,
+      points: Math.round(safePointsRaw * 100) / 100,
+      percentage: safePercentage,
       max_points: BASE_RISQUE_USE_CASE
     }
   }
@@ -84,11 +91,18 @@ function calculateRiskUseCaseByReverseEngineering(
   const riskUseCasePoints = targetPoints - principlesPoints
   const riskUseCasePercentRaw = riskUseCasePoints / BASE_RISQUE_USE_CASE
   const riskUseCasePercentClamped = Math.max(0, Math.min(1, riskUseCasePercentRaw))
-  const riskUseCasePercentage = Math.round(riskUseCasePercentClamped * 10000) / 100
-  const riskUseCasePointsClamped = Math.max(0, Math.min(BASE_RISQUE_USE_CASE, riskUseCasePoints))
+  // Calcul du pourcentage initial (celui qui peut tomber à 0 à tort)
+  const calculatedPercentage = Math.round(riskUseCasePercentClamped * 10000) / 100
+
+  // Plancher de sécurité : le risque ne peut pas être inférieur au score global
+  const safePercentage = Math.max(Math.round(globalScorePercent * 10000) / 100, calculatedPercentage)
+
+  // Recalcul strict des points basés sur ce pourcentage sécurisé
+  const safePointsRaw = (safePercentage / 100) * BASE_RISQUE_USE_CASE
+
   return {
-    points: Math.round(riskUseCasePointsClamped * 100) / 100,
-    percentage: riskUseCasePercentage,
+    points: Math.round(safePointsRaw * 100) / 100,
+    percentage: safePercentage,
     max_points: BASE_RISQUE_USE_CASE
   }
 }

@@ -117,7 +117,7 @@ export function ReportCanonicalItemRow({ item }: { item: ReportCanonicalItem }) 
             <div className="flex justify-end">
               <CompletedAction
                 title={item.cta.label}
-                points={item.cta.points}
+                points={item.cta.points ?? 0}
                 onClick={() => router.push(item.cta.dossierUrl)}
               />
             </div>
@@ -131,7 +131,7 @@ export function ReportCanonicalItemRow({ item }: { item: ReportCanonicalItem }) 
               >
                 <span>{item.cta.label}</span>
                 <div className="flex items-center gap-2">
-                  {item.cta.points > 0 && (
+                  {(item.cta.points ?? 0) > 0 && (
                     <span
                       className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-semibold"
                       title={DECLARATION_PROOF_FLOW_COPY.todoPointsToRecoverTitle}

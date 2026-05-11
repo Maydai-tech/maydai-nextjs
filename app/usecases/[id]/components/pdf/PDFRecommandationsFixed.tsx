@@ -54,12 +54,12 @@ function PDFCanonicalItemBlock({
       </Text>
       <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.35, marginBottom: 3 }]}>• {item.narrative.text}</Text>
       <Text style={[styles.text, { fontSize: 8, lineHeight: 1.35, color: '#006280' }]}>{ctaLine}</Text>
-      {item.cta.points > 0 ? (
+      {(item.cta.points ?? 0) > 0 ? (
         <Text style={[styles.text, { fontSize: 8, marginTop: 2 }]}>
           {DECLARATION_PROOF_FLOW_COPY.reportPdfPointsToRecoverPrefix} : +{item.cta.points} pt
         </Text>
       ) : null}
-      {item.cta.completed && item.cta.points === 0 && !item.cta.ctaOmitted ? (
+      {item.cta.completed && (item.cta.points ?? 0) === 0 && !item.cta.ctaOmitted ? (
         <Text style={[styles.text, { fontSize: 8, marginTop: 2, color: '#334155' }]}>
           {DECLARATION_PROOF_FLOW_COPY.reportPdfValidatedNoPointsLine}
         </Text>
