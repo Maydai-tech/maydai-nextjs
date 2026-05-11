@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BarChart3, TrendingUp, Database, RefreshCw, Trash2, Plus, Save, X, Check, Edit, Calculator, Download, Upload, FileText } from 'lucide-react'
+import { BarChart3, TrendingUp, Database, RefreshCw, Trash2, Plus, Save, X, Check, Edit, Calculator, Download, Upload, FileText, ChevronDown, ChevronUp, ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import ModelTooltip from '@/components/ModelTooltip'
 
 
@@ -133,9 +133,70 @@ export default function ComplAIScoresPage() {
   const [importValidationErrors, setImportValidationErrors] = useState<string[]>([])
   const [csvPreview, setCsvPreview] = useState<{ headers: string[], rowCount: number } | null>(null)
 
+  const [expandedPrinciples, setExpandedPrinciples] = useState<Set<string>>(new Set())
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null)
+
+  const togglePrinciple = (principleId: string) => {
+    setExpandedPrinciples((prev) => {
+      const next = new Set(prev)
+      if (next.has(principleId)) next.delete(principleId)
+      else next.add(principleId)
+      return next
+    })
+  }
+
+  const handleSort = (key: string) => {
+    setSortConfig((prev) => {
+      if (!prev || prev.key !== key) return { key, direction: 'asc' }
+      if (prev.direction === 'asc') return { key, direction: 'desc' }
+      return null
+    })
+  }
+
   useEffect(() => {
     fetchScores()
   }, [])
+
+  // 1. Isoler le principe en ignorant la casse (majuscules/minuscules)
+  const agencyPrinciple = principles.find(p => (p.code || '').toLowerCase().includes('human'))
+
+  // 2. Garder tous les autres principes
+  const otherPrinciples = principles.filter(p => !(p.code || '').toLowerCase().includes('human'))
+
+  // 3. Reconstruire le tableau avec Human Agency STRICTEMENT à la fin
+  const sortedPrinciples = agencyPrinciple ? [...otherPrinciples, agencyPrinciple] : principles
+
+  const sortedModels = (() => {
+    if (!sortConfig) return modelPrincipleMatrix
+
+    const getSortableValue = (model: ModelPrincipleMatrix) => {
+      if (sortConfig.key === 'avg_score') {
+        return model.evaluation_count > 0 ? model.avg_score : null
+      }
+      if (sortConfig.key === 'total_maydai_score') {
+        return model.evaluation_count > 0 ? model.total_maydai_score : null
+      }
+      return null
+    }
+
+    const directionFactor = sortConfig.direction === 'asc' ? 1 : -1
+
+    return [...modelPrincipleMatrix].sort((a, b) => {
+      const aVal = getSortableValue(a)
+      const bVal = getSortableValue(b)
+
+      const aMissing = aVal === null || aVal === undefined || Number.isNaN(aVal)
+      const bMissing = bVal === null || bVal === undefined || Number.isNaN(bVal)
+
+      // Les valeurs manquantes (N/A) vont toujours à la fin, quel que soit le sens.
+      if (aMissing && bMissing) return 0
+      if (aMissing) return 1
+      if (bMissing) return -1
+
+      if (aVal === bVal) return 0
+      return aVal < bVal ? -1 * directionFactor : 1 * directionFactor
+    })
+  })()
 
 
   const handleSyncData = async () => {
@@ -1540,42 +1601,103 @@ export default function ComplAIScoresPage() {
         </div>
         <div className="overflow-x-auto max-h-screen">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50 sticky top-0 z-20">
+            <thead className="bg-white sticky top-0 z-20">
               <tr>
-                <th className="sticky left-0 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 z-30 border-r border-gray-200 w-[170px] max-w-[170px]">
+                <th className="sticky left-0 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-white z-20 border-r border-gray-200 min-w-[280px] max-w-[320px] whitespace-normal break-words">
                   Modèle
                 </th>
-                <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
-                  Score Moyen
+                <th
+                  className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] bg-white z-10"
+                  aria-sort={
+                    sortConfig?.key === 'avg_score'
+                      ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending')
+                      : 'none'
+                  }
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort('avg_score')}
+                    className="flex items-center gap-1.5 justify-center w-full group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] rounded"
+                  >
+                    <span>Score Moyen</span>
+                    {sortConfig?.key === 'avg_score' ? (
+                      sortConfig.direction === 'asc' ? (
+                        <ArrowUp className="w-4 h-4 text-[#0080A3]" />
+                      ) : (
+                        <ArrowDown className="w-4 h-4 text-[#0080A3]" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                    )}
+                  </button>
                 </th>
-                <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[110px]">
-                  Score MaydAI
+                <th
+                  className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[110px] bg-white z-10"
+                  aria-sort={
+                    sortConfig?.key === 'total_maydai_score'
+                      ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending')
+                      : 'none'
+                  }
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort('total_maydai_score')}
+                    className="flex items-center gap-1.5 justify-center w-full group focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] rounded"
+                  >
+                    <span>Score MaydAI</span>
+                    {sortConfig?.key === 'total_maydai_score' ? (
+                      sortConfig.direction === 'asc' ? (
+                        <ArrowUp className="w-4 h-4 text-[#0080A3]" />
+                      ) : (
+                        <ArrowDown className="w-4 h-4 text-[#0080A3]" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                    )}
+                  </button>
                 </th>
-                {principles.map((principle) => (
-                  <th key={principle.code} className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[280px] border-l border-gray-300">
+                {sortedPrinciples.map((principle) => (
+                  <th
+                    key={principle.code}
+                    className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-[130px] max-w-[140px] border-l border-gray-300 bg-white z-10"
+                  >
                     <div className="space-y-1">
-                      <div className="font-bold text-[12px] text-purple-600">
-                        {principle.code}
+                      <div className="flex items-center justify-center">
+                        <button
+                          type="button"
+                          aria-expanded={expandedPrinciples.has(principle.code)}
+                          aria-label="Afficher/Masquer les détails des benchmarks pour ce principe"
+                          onClick={() => togglePrinciple(principle.code)}
+                          className="inline-flex items-center justify-center p-1 rounded hover:bg-gray-100 text-gray-500 focus-visible:ring-2 focus-visible:ring-[#0080A3] focus:outline-none transition-colors ml-2"
+                        >
+                          {expandedPrinciples.has(principle.code) ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </button>
                       </div>
-                      <div className="text-[10px] text-gray-700 normal-case font-medium px-2">
+                      <div className="whitespace-normal break-words max-w-[140px] mx-auto text-xs leading-tight text-center text-gray-700 font-semibold">
                         {principle.name}
                       </div>
-                      <div className="text-[9px] text-gray-500 normal-case italic">
-                        {principle.category}
-                      </div>
+                      {principle.category ? (
+                        <div className="text-[9px] text-gray-500 normal-case italic">
+                          {principle.category}
+                        </div>
+                      ) : null}
                     </div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {modelPrincipleMatrix.map((model) => (
-                <tr key={`${model.model_name}-${model.model_provider}-${model.version}`} className="hover:bg-gray-50">
-                  <td className="sticky left-0 px-3 py-3 bg-white z-10 border-r border-gray-200 w-[170px] max-w-[170px]">
+              {sortedModels.map((model) => (
+                <tr key={`${model.model_name}-${model.model_provider}-${model.version}`} className="group hover:bg-gray-50 transition-colors">
+                  <td className="sticky left-0 px-3 py-3 bg-white group-hover:bg-gray-50 transition-colors z-10 border-r border-gray-200 min-w-[280px] max-w-[320px] whitespace-normal break-words">
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
-                          <span className="text-sm font-medium text-gray-900 truncate" title={model.long_name || model.model_name}>
+                          <span className="text-sm font-medium text-gray-900" title={model.long_name || model.model_name}>
                             {model.short_name || model.model_name}
                           </span>
                           <ModelTooltip
@@ -1631,20 +1753,12 @@ export default function ComplAIScoresPage() {
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">N/A</span>
                     )}
                   </td>
-                  {principles.map((principle) => (
-                    <td key={principle.code} className="px-3 py-3 text-center min-w-[280px] border-l border-gray-300">
+                  {sortedPrinciples.map((principle) => (
+                    <td key={principle.code} className="px-3 py-3 text-center min-w-[140px] border-l border-gray-300">
                       <div className="space-y-2">
                         
                         {/* Scores moyens MaydAI et Rang Compar:IA du principe */}
-                        <div className="flex justify-center gap-2 mt-1 flex-wrap">
-                          {model.principle_scores[principle.code]?.avg_maydai_score !== undefined ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
-                              MaydAI: {model.principle_scores[principle.code].avg_maydai_score!.toFixed(2)}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-xs italic">MaydAI: N/A</span>
-                          )}
-                          
+                        <div className="flex flex-col items-center gap-1.5 mt-1">
                           {/* Édition du score Rang Compar:IA */}
                           {model.principle_scores[principle.code] && (
                             editingRangComparIa?.modelId === model.model_id && editingRangComparIa?.principleCode === principle.code ? (
@@ -1680,172 +1794,212 @@ export default function ComplAIScoresPage() {
                                 </button>
                               </div>
                             ) : (
-                              <button
-                                onClick={() => {
-                                  // Trouver une évaluation de ce principe pour ce modèle
-                                  const benchmarkScores = Object.values(model.principle_scores[principle.code]?.benchmark_scores || {})
-                                  const firstEvaluation = benchmarkScores.find(bs => bs.evaluation_id)
-                                  
-                                  if (firstEvaluation?.evaluation_id) {
-                                    setEditingRangComparIa({
-                                      evaluationId: firstEvaluation.evaluation_id,
-                                      modelId: model.model_id!,
-                                      principleCode: principle.code,
-                                      score: model.principle_scores[principle.code]?.avg_rang_compar_ia ?? null
-                                    })
-                                  }
-                                }}
-                                disabled={!model.model_id || saving}
-                                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200 transition-colors cursor-pointer disabled:opacity-50"
-                                title="Cliquer pour éditer le score Rang Compar:IA"
-                              >
-                                {model.principle_scores[principle.code]?.avg_rang_compar_ia !== undefined 
-                                  ? `Compar:IA: ${model.principle_scores[principle.code].avg_rang_compar_ia!.toFixed(2)}`
-                                  : 'Compar:IA: --'}
-                              </button>
+                              model.principle_scores[principle.code]?.avg_rang_compar_ia !== undefined ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    // Trouver une évaluation de ce principe pour ce modèle
+                                    const benchmarkScores = Object.values(model.principle_scores[principle.code]?.benchmark_scores || {})
+                                    const firstEvaluation = benchmarkScores.find(bs => bs.evaluation_id)
+                                    
+                                    if (firstEvaluation?.evaluation_id) {
+                                      setEditingRangComparIa({
+                                        evaluationId: firstEvaluation.evaluation_id,
+                                        modelId: model.model_id!,
+                                        principleCode: principle.code,
+                                        score: model.principle_scores[principle.code]?.avg_rang_compar_ia ?? null
+                                      })
+                                    }
+                                  }}
+                                  disabled={!model.model_id || saving}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200 transition-colors cursor-pointer disabled:opacity-50"
+                                  title="Cliquer pour éditer le score Rang Compar:IA"
+                                >
+                                  <span>
+                                    Compar:IA:{' '}
+                                    <span className="font-mono">
+                                      {model.principle_scores[principle.code].avg_rang_compar_ia!.toFixed(2)}
+                                    </span>
+                                  </span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-medium bg-transparent text-gray-400 border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+                                  onClick={() => {
+                                    // Trouver une évaluation de ce principe pour ce modèle
+                                    const benchmarkScores = Object.values(model.principle_scores[principle.code]?.benchmark_scores || {})
+                                    const firstEvaluation = benchmarkScores.find(bs => bs.evaluation_id)
+                                    
+                                    if (firstEvaluation?.evaluation_id) {
+                                      setEditingRangComparIa({
+                                        evaluationId: firstEvaluation.evaluation_id,
+                                        modelId: model.model_id!,
+                                        principleCode: principle.code,
+                                        score: model.principle_scores[principle.code]?.avg_rang_compar_ia ?? null
+                                      })
+                                    }
+                                  }}
+                                  disabled={!model.model_id || saving}
+                                  aria-label="Ajouter un score Compar:IA"
+                                  title="Cliquer pour éditer le score Rang Compar:IA"
+                                >
+                                  Compar:IA: --
+                                </button>
+                              )
                             )
+                          )}
+
+                          {model.principle_scores[principle.code]?.avg_maydai_score !== undefined ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                              MaydAI: <span className="font-mono ml-1">{model.principle_scores[principle.code].avg_maydai_score!.toFixed(2)}</span>
+                            </span>
+                          ) : (
+                            <span className="text-gray-300 italic text-[11px] cursor-help select-none" title="Évaluation manquante">— N/A —</span>
                           )}
                         </div>
                         
                         {/* Benchmarks du principe */}
-                        <div className="space-y-0.5">
-                          {principle.benchmarks.map((benchmark) => (
-                            <div key={benchmark.code} className="border-t border-gray-100 pt-1">
-                              {editingScore?.modelId === model.model_id && editingScore?.benchmarkCode === benchmark.code ? (
-                                <div className="space-y-1">
-                                  <div className="text-[8px] font-medium text-gray-600">{benchmark.name}</div>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max="1"
-                                    step="0.001"
-                                    value={editingScore.score}
-                                    onChange={(e) => setEditingScore({
-                                      ...editingScore,
-                                      score: parseFloat(e.target.value) || 0
-                                    })}
-                                    className="w-16 px-1 py-0.5 text-xs border rounded text-center"
-                                    autoFocus
-                                  />
-                                  <div className="flex justify-center space-x-1">
-                                    <button
-                                      onClick={handleSaveScore}
-                                      disabled={saving}
-                                      className="p-0.5 text-green-600 hover:text-green-800"
-                                      title="Sauvegarder"
-                                    >
-                                      <Save className="h-2 w-2" />
-                                    </button>
-                                    <button
-                                      onClick={() => setEditingScore(null)}
-                                      className="p-0.5 text-gray-600 hover:text-gray-800"
-                                      title="Annuler"
-                                    >
-                                      <X className="h-2 w-2" />
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : model.principle_scores[principle.code]?.benchmark_scores[benchmark.code] ? (
-                                <div className="flex items-center gap-1">
-                                  <div 
-                                    className="cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 flex-1 space-y-1"
-                                    onClick={() => model.model_id && handleEditScore(
-                                      model.model_id, 
-                                      benchmark.code, 
-                                      model.principle_scores[principle.code].benchmark_scores[benchmark.code].score,
-                                      model.principle_scores[principle.code].benchmark_scores[benchmark.code].evaluation_id
-                                    )}
-                                    title={`${benchmark.name} - Cliquer pour modifier`}
-                                  >
-                                    {/* Benchmark name */}
-                                    <div className="text-[9px] text-gray-600 truncate text-center" title={benchmark.name}>
-                                      {benchmark.name.length > 18 ? benchmark.name.substring(0, 18) + '...' : benchmark.name}
-                                    </div>
-                                    
-                                    {/* Original score */}
-                                    <div className="flex justify-center">
-                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${model.principle_scores[principle.code].benchmark_scores[benchmark.code].score == null ? 'bg-gray-100 text-gray-500' : getScoreColor(model.principle_scores[principle.code].benchmark_scores[benchmark.code].score)}`}>
-                                        {model.principle_scores[principle.code].benchmark_scores[benchmark.code].score == null
-                                          ? ''
-                                          : model.principle_scores[principle.code].benchmark_scores[benchmark.code].score.toFixed(3)}
-                                      </span>
-                                    </div>
-                                    
-                                    {/* MaydAI score */}
-                                    <div className="flex justify-center">
-                                      {(() => {
-                                        const maydaiScore = model.principle_scores[principle.code].benchmark_scores[benchmark.code].maydai_score;
-                                        console.log('Debug render MaydAI:', {
-                                          model: model.model_name,
-                                          benchmark: benchmark.code,
-                                          maydaiScore,
-                                          type: typeof maydaiScore,
-                                          isNull: maydaiScore === null,
-                                          isUndefined: maydaiScore === undefined
-                                        });
-                                        
-                                        if (maydaiScore !== null && maydaiScore !== undefined) {
-                                          return (
-                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                                              MaydAI: {maydaiScore.toFixed(2)}
-                                            </span>
-                                          );
-                                        } else {
-                                          return (
-                                            <span className="text-[9px] text-gray-400 italic">MaydAI: N/A</span>
-                                          );
-                                        }
-                                      })()}
-                                    </div>
-                                  </div>
-                                  {model.principle_scores[principle.code].benchmark_scores[benchmark.code].evaluation_id && (
-                                    deletingScore?.evaluationId === model.principle_scores[principle.code].benchmark_scores[benchmark.code].evaluation_id ? (
-                                      <div className="flex items-center space-x-1">
-                                        <button
-                                          onClick={confirmDeleteScore}
-                                          disabled={saving}
-                                          className="p-0.5 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
-                                          title="Confirmer la suppression"
-                                        >
-                                          <Check className="h-2.5 w-2.5" />
-                                        </button>
-                                        <button
-                                          onClick={() => setDeletingScore(null)}
-                                          disabled={saving}
-                                          className="p-0.5 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded"
-                                          title="Annuler"
-                                        >
-                                          <X className="h-2.5 w-2.5" />
-                                        </button>
-                                      </div>
-                                    ) : (
+                        {expandedPrinciples.has(principle.code) && (
+                          <div className="space-y-0.5 mt-3 pt-2 border-t border-gray-100 bg-gray-50/50 rounded-b-md">
+                            {principle.benchmarks.map((benchmark) => (
+                              <div key={benchmark.code} className="border-t border-gray-100 pt-1">
+                                {editingScore?.modelId === model.model_id && editingScore?.benchmarkCode === benchmark.code ? (
+                                  <div className="space-y-1">
+                                    <div className="text-[8px] font-medium text-gray-600">{benchmark.name}</div>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="1"
+                                      step="0.001"
+                                      value={editingScore.score}
+                                      onChange={(e) => setEditingScore({
+                                        ...editingScore,
+                                        score: parseFloat(e.target.value) || 0
+                                      })}
+                                      className="w-16 px-1 py-0.5 text-xs border rounded text-center"
+                                      autoFocus
+                                    />
+                                    <div className="flex justify-center space-x-1">
                                       <button
-                                        onClick={() => handleDeleteScore(
-                                          model.principle_scores[principle.code].benchmark_scores[benchmark.code].evaluation_id!,
-                                          model.model_name,
-                                          benchmark.code
-                                        )}
-                                        className="p-0.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
-                                        title="Supprimer ce score"
+                                        onClick={handleSaveScore}
+                                        disabled={saving}
+                                        className="p-0.5 text-green-600 hover:text-green-800"
+                                        title="Sauvegarder"
                                       >
-                                        <Trash2 className="h-2.5 w-2.5" />
+                                        <Save className="h-2 w-2" />
                                       </button>
-                                    )
-                                  )}
-                                </div>
-                              ) : (
-                                <div 
-                                  className="cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 flex items-center gap-1"
-                                  onClick={() => model.model_id && handleEditScore(model.model_id, benchmark.code, 0.5)}
-                                  title={`${benchmark.name} - Cliquer pour ajouter un score`}
-                                >
-                                  <span className="text-gray-400 text-[9px]">+ Score</span>
-                                  <span className="text-[9px] text-gray-500">{benchmark.name.length > 15 ? benchmark.name.substring(0, 15) + '...' : benchmark.name}</span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                                      <button
+                                        onClick={() => setEditingScore(null)}
+                                        className="p-0.5 text-gray-600 hover:text-gray-800"
+                                        title="Annuler"
+                                      >
+                                        <X className="h-2 w-2" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : model.principle_scores[principle.code]?.benchmark_scores[benchmark.code] ? (
+                                  <div className="flex items-center gap-1">
+                                    <div 
+                                      className="cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 flex-1 space-y-1"
+                                      onClick={() => model.model_id && handleEditScore(
+                                        model.model_id, 
+                                        benchmark.code, 
+                                        model.principle_scores[principle.code].benchmark_scores[benchmark.code].score,
+                                        model.principle_scores[principle.code].benchmark_scores[benchmark.code].evaluation_id
+                                      )}
+                                      title={`${benchmark.name} - Cliquer pour modifier`}
+                                    >
+                                      {/* Benchmark name */}
+                                      <div className="text-[9px] text-gray-600 truncate text-center" title={benchmark.name}>
+                                        {benchmark.name.length > 18 ? benchmark.name.substring(0, 18) + '...' : benchmark.name}
+                                      </div>
+                                      
+                                      {/* Original score */}
+                                      <div className="flex justify-center">
+                                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${model.principle_scores[principle.code].benchmark_scores[benchmark.code].score == null ? 'bg-gray-100 text-gray-500' : getScoreColor(model.principle_scores[principle.code].benchmark_scores[benchmark.code].score)}`}>
+                                          {model.principle_scores[principle.code].benchmark_scores[benchmark.code].score == null
+                                            ? ''
+                                            : model.principle_scores[principle.code].benchmark_scores[benchmark.code].score.toFixed(3)}
+                                        </span>
+                                      </div>
+                                      
+                                      {/* MaydAI score */}
+                                      <div className="flex justify-center">
+                                        {(() => {
+                                          const maydaiScore = model.principle_scores[principle.code].benchmark_scores[benchmark.code].maydai_score;
+                                          console.log('Debug render MaydAI:', {
+                                            model: model.model_name,
+                                            benchmark: benchmark.code,
+                                            maydaiScore,
+                                            type: typeof maydaiScore,
+                                            isNull: maydaiScore === null,
+                                            isUndefined: maydaiScore === undefined
+                                          });
+                                          
+                                          if (maydaiScore !== null && maydaiScore !== undefined) {
+                                            return (
+                                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                                                MaydAI: <span className="font-mono ml-1">{maydaiScore.toFixed(2)}</span>
+                                              </span>
+                                            );
+                                          } else {
+                                            return (
+                                              <span className="text-[9px] text-gray-300 italic cursor-help select-none" title="Évaluation manquante">— N/A —</span>
+                                            );
+                                          }
+                                        })()}
+                                      </div>
+                                    </div>
+                                    {model.principle_scores[principle.code].benchmark_scores[benchmark.code].evaluation_id && (
+                                      deletingScore?.evaluationId === model.principle_scores[principle.code].benchmark_scores[benchmark.code].evaluation_id ? (
+                                        <div className="flex items-center space-x-1">
+                                          <button
+                                            onClick={confirmDeleteScore}
+                                            disabled={saving}
+                                            className="p-0.5 text-green-600 hover:text-green-800 hover:bg-green-50 rounded"
+                                            title="Confirmer la suppression"
+                                          >
+                                            <Check className="h-2.5 w-2.5" />
+                                          </button>
+                                          <button
+                                            onClick={() => setDeletingScore(null)}
+                                            disabled={saving}
+                                            className="p-0.5 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded"
+                                            title="Annuler"
+                                          >
+                                            <X className="h-2.5 w-2.5" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleDeleteScore(
+                                            model.principle_scores[principle.code].benchmark_scores[benchmark.code].evaluation_id!,
+                                            model.model_name,
+                                            benchmark.code
+                                          )}
+                                          className="p-0.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                                          title="Supprimer ce score"
+                                        >
+                                          <Trash2 className="h-2.5 w-2.5" />
+                                        </button>
+                                      )
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div 
+                                    className="cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 flex items-center gap-1"
+                                    onClick={() => model.model_id && handleEditScore(model.model_id, benchmark.code, 0.5)}
+                                    title={`${benchmark.name} - Cliquer pour ajouter un score`}
+                                  >
+                                    <span className="text-gray-400 text-[9px]">+ Score</span>
+                                    <span className="text-[9px] text-gray-500">{benchmark.name.length > 15 ? benchmark.name.substring(0, 15) + '...' : benchmark.name}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </td>
                   ))}

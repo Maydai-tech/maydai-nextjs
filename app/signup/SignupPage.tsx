@@ -10,6 +10,7 @@ import {
   sendGoogleAdsSignupConversionWithUserData,
   sendSignUpEvent,
 } from '@/lib/gtm'
+import { hashEmailForGoogleAds } from '@/lib/utils/crypto'
 import type { CompleteSignUpAcquisitionFields } from '@/lib/types/complete-signup-payload'
 import OTPVerification from '@/components/auth/OTPVerification'
 import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
@@ -363,14 +364,15 @@ export default function SignupPage() {
         }
       }
 
-      sendSignUpEvent('formulaire_landing', {
-        userId: session.user?.id,
-      })
-      sendGoogleAdsSignupConversionWithUserData(formData.email)
+      const hashedEmail = await hashEmailForGoogleAds(session.user?.email || '')
+      await Promise.all([
+        sendSignUpEvent('formulaire_landing', {
+          userId: session.user?.id,
+        }),
+        sendGoogleAdsSignupConversionWithUserData(hashedEmail),
+      ])
 
-      setTimeout(() => {
-        router.push('/dashboard/registries')
-      }, 500)
+      router.push('/dashboard/registries')
     } catch (err) {
       console.error('Complete signup error:', err)
       setError(err instanceof Error ? err.message : 'Erreur lors de la création du profil')
