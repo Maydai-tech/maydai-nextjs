@@ -1107,6 +1107,7 @@
     "question": "Votre personnel et les personnes chargées du fonctionnement de l'IA ont-ils reçu une formation adéquate (littératie en IA) pour comprendre les risques et utiliser le système de manière responsable ?",
     "type": "radio",
     "required": true,
+    "todo_action": "training_plan",
     "tooltip": {
       "title": "Littératie en IA (Art. 4)",
       "shortContent": "L'AI Act impose des mesures pour assurer un niveau suffisant de connaissances en matière d'IA au sein des équipes.",

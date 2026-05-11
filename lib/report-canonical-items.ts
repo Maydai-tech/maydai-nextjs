@@ -187,7 +187,8 @@ export interface ReportItemCta {
   todoUrl: string
   dossierUrl: string
   label: string
-  points: number
+  /** Points malus / récupération (questionnaire) ; `undefined` = masquer la pastille (ex. déclaration OUI, preuve encore à compléter). */
+  points: number | undefined
 }
 
 /**
@@ -365,7 +366,7 @@ export function buildReportCanonicalItemForSlot(params: {
   const business_rationale = action.todo_explanation
 
   const docCompleted = isDocumentActionCompleted(docType, documentStatuses, maydaiAsRegistry)
-  const points = reportCtaPointsFromQuestionnaire({
+  const calculatedPoints = reportCtaPointsFromQuestionnaire({
     docType,
     questionnaireResponses,
     docCompleted,
@@ -383,6 +384,13 @@ export function buildReportCanonicalItemForSlot(params: {
 
   const dossierUrl = buildDashboardDossierDeepLink(companyId, useCaseId, docType)
   const todoUrl = buildDashboardTodoListDeepLink(companyId, useCaseId, docType)
+
+  // `SlotStatus` n'a pas de valeur `complete`. Quand la déclaration questionnaire est déjà « Oui »
+  // mais la preuve dossier n'est pas finalisée, on masque la pastille « +N pt » (gain questionnaire)
+  // pour éviter une incohérence avec « À documenter ».
+  const suppressCtaQuestionnairePoints =
+    !docCompleted && declaration_status === 'OUI'
+  const ctaPoints = suppressCtaQuestionnairePoints ? undefined : calculatedPoints
 
   return {
     identity: {
@@ -407,7 +415,7 @@ export function buildReportCanonicalItemForSlot(params: {
       dossierUrl,
       todoUrl,
       label: title,
-      points,
+      points: ctaPoints,
     },
   }
 }
