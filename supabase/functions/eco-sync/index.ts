@@ -26,7 +26,6 @@ interface EcoEstimationRequest {
   input_token_count: number
   output_token_count: number
   request_latency: number
-  country: string
 }
 
 interface EcoImpactsBlock {
@@ -141,9 +140,11 @@ async function upsertMethodologyVersion(supabase: SupabaseClient): Promise<{ id:
   return data
 }
 
+/** Valeur figée pour `region_code` lorsque cette fonction écrira en base (aligné app/api/eco-sync). */
+const REGION_CODE_FOR_DB = "FRA"
+
 serve(async (req) => {
-  const body = await req.json().catch(() => ({}))
-  const region = body.region ?? "WOR"
+  await req.json().catch(() => ({}))
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)
 
   const methodologyVersion = await upsertMethodologyVersion(supabase)
@@ -161,8 +162,16 @@ serve(async (req) => {
     results.push(m.id)
   }
 
-  return new Response(JSON.stringify({ ok: true, methodologyVersion, modelsProcessed: results.length }), {
-    headers: { "Content-Type": "application/json" },
-  })
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      methodologyVersion,
+      modelsProcessed: results.length,
+      region: REGION_CODE_FOR_DB,
+    }),
+    {
+      headers: { "Content-Type": "application/json" },
+    }
+  )
 })
 

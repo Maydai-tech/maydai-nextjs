@@ -32,7 +32,6 @@ type EcoProvider = 'openai' | 'anthropic' | 'google_genai' | 'mistralai' | strin
 
 const IngestPayloadSchema = z
   .object({
-    region: z.string().min(1),
     runsPerModel: z.number().int().positive(),
     dryRun: z.boolean().optional()
   })
@@ -62,7 +61,6 @@ interface EcoEstimationRequest {
   input_token_count: number
   output_token_count: number
   request_latency: number
-  country: string
 }
 
 /** `value` peut être `{ min, max }`, un nombre, etc. (voir `ecoImpactMidpointFromApi`). */
@@ -265,7 +263,8 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const regionCode = payload.region
+  /** Trace unique en base ; la comparaison par région n’est plus utilisée côté produit. */
+  const regionCode = 'FRA'
   const runsPerModel = payload.runsPerModel
   const dryRun = payload.dryRun === true
 
@@ -339,8 +338,7 @@ export async function POST(request: NextRequest) {
           model_name: ecoModelName,
           input_token_count: DEFAULT_INPUT_TOKENS,
           output_token_count: DEFAULT_OUTPUT_TOKENS,
-          request_latency: requestLatency,
-          country: regionCode
+          request_latency: requestLatency
         }
 
         let resp: EcoEstimationResponse
