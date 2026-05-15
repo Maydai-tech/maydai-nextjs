@@ -122,6 +122,7 @@ async function resolveConversionActionResourceName(
     SELECT conversion_action.resource_name
     FROM conversion_action
     WHERE conversion_action.name = '${escapeGaqlString(nameKey)}'
+    AND conversion_action.status = 'ENABLED'
     LIMIT 1
   `
 
