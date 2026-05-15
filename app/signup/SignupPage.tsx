@@ -558,6 +558,23 @@ export default function SignupPage() {
                 )}
               </div>
 
+              <div
+                className="flex items-center justify-center gap-2 mb-4 p-3 bg-slate-50 rounded-md border border-slate-100"
+                role="note"
+                aria-label="Information sur la gratuité du compte"
+              >
+                <ShieldCheck
+                  className="w-5 h-5 text-[#0080A3] shrink-0"
+                  aria-hidden="true"
+                />
+                <p className="text-sm text-slate-600 font-medium">
+                  Inscription gratuite.{' '}
+                  <span className="text-slate-500 font-normal">
+                    Aucune carte bancaire requise pour votre 1er registre.
+                  </span>
+                </p>
+              </div>
+
               <button
                 type="button"
                 onClick={handleNextStep}
@@ -686,7 +703,7 @@ export default function SignupPage() {
           </div>
 
           {step === 1 ? (
-            <div className="mt-8 w-full max-w-full">
+            <div className="mt-8 pt-6 border-t border-slate-100 w-full max-w-full">
               <SecurityLogosGrid />
             </div>
           ) : (
