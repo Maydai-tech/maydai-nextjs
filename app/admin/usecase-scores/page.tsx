@@ -75,6 +75,15 @@ function getScoreBgColor(score: number): string {
   return 'bg-red-100'
 }
 
+function getJoinedCompanyName(companies: unknown): string {
+  if (!companies) return 'Unknown'
+  if (Array.isArray(companies)) {
+    const first = companies[0] as { name?: string } | undefined
+    return first?.name ?? 'Unknown'
+  }
+  return (companies as { name?: string }).name ?? 'Unknown'
+}
+
 function getAICategoryLabel(category: string | null): string {
   switch (category) {
     case 'nlp': return 'Traitement du langage'
@@ -160,7 +169,7 @@ export default function UseCaseScoresPage() {
         name: uc.name,
         description: uc.description,
         company_id: uc.company_id,
-        company_name: Array.isArray(uc.companies) ? uc.companies[0]?.name : uc.companies?.name || 'Unknown',
+        company_name: getJoinedCompanyName(uc.companies),
         risk_level: uc.risk_level,
         classification_status: uc.classification_status ?? null,
         ai_category: uc.ai_category,
