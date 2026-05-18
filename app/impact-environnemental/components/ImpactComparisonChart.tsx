@@ -204,8 +204,8 @@ function YAxisTickWithNa({
   payload,
   rowsByKey,
 }: {
-  x?: number
-  y?: number
+  x?: string | number
+  y?: string | number
   payload?: { value: string }
   rowsByKey: Map<string, HorizontalRow>
 }) {
@@ -289,7 +289,7 @@ function HorizontalMetricChart({
             tick={(props) => <YAxisTickWithNa {...props} rowsByKey={rowsByKey} />}
           />
           <Tooltip
-            formatter={(value: number | string, _name, item) => {
+            formatter={(value, _name, item) => {
               const row = item?.payload as HorizontalRow | undefined
               if (row?.isIncompatible) return INCOMPATIBLE_TEXT_ONLY_LABEL
               return formatBarLabel(value, theme.unit)
@@ -307,9 +307,8 @@ function HorizontalMetricChart({
               position: 'right',
               fontSize: 11,
               fill: '#334155',
-              formatter: (value: number, _label, item) => {
-                const row = item?.payload as HorizontalRow | undefined
-                if (row?.isIncompatible) return 'N/A'
+              formatter: (value) => {
+                if (Number(value) === 0 && rows.some((row) => row.isIncompatible)) return 'N/A'
                 return formatBarLabel(value, theme.unit)
               },
             }}
