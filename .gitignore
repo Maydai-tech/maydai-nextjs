@@ -56,5 +56,3 @@ next-env.d.ts
 
 # Claude config
 /.claude
-
-/scripts

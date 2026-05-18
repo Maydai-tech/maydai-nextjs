@@ -10,6 +10,7 @@ const execAsync = promisify(exec)
 const DEFAULT_PROD_DISK_JSON_URL = 'http://57.130.47.254/monitoring/disk.json'
 const DEFAULT_PROD_EMAIL_STATUS_JSON_URL = 'http://57.130.47.254/monitoring/email-status.json'
 const MONITORING_FETCH_TIMEOUT_MS = 15_000
+const DEFAULT_PROD_DOCKER_PURGES_JSON_URL = 'http://57.130.47.254/monitoring/docker-purges.json'
 
 function getProdDiskJsonUrl(): string {
   return (
@@ -21,6 +22,13 @@ function getProdEmailStatusJsonUrl(): string {
   return (
     process.env.MONITORING_PROD_EMAIL_STATUS_JSON_URL?.trim() ||
     DEFAULT_PROD_EMAIL_STATUS_JSON_URL
+  )
+}
+
+function getProdDockerPurgesJsonUrl(): string {
+  return (
+    process.env.MONITORING_PROD_DOCKER_PURGES_JSON_URL?.trim() ||
+    DEFAULT_PROD_DOCKER_PURGES_JSON_URL
   )
 }
 
@@ -285,6 +293,69 @@ async function getProductionEmailStatus() {
   }
 }
 
+// Type local intentionnellement (pattern existant du fichier). Redéfini côté composant.
+type DockerPurge = {
+  ranAt: string
+  systemPruneReclaimedBytes: number
+  builderPruneReclaimedBytes: number
+  totalReclaimedBytes: number
+  diskFreeBeforeBytes: number
+  diskFreeAfterBytes: number
+  exitCode: number
+  errorMessage: string | null
+}
+
+function isDockerPurge(value: unknown): value is DockerPurge {
+  if (!value || typeof value !== 'object') return false
+  const v = value as Record<string, unknown>
+  return (
+    typeof v.ranAt === 'string' &&
+    typeof v.systemPruneReclaimedBytes === 'number' &&
+    typeof v.builderPruneReclaimedBytes === 'number' &&
+    typeof v.totalReclaimedBytes === 'number' &&
+    typeof v.diskFreeBeforeBytes === 'number' &&
+    typeof v.diskFreeAfterBytes === 'number' &&
+    typeof v.exitCode === 'number' &&
+    (v.errorMessage === null || typeof v.errorMessage === 'string')
+  )
+}
+
+async function getProductionDockerPurges(): Promise<DockerPurge[]> {
+  const url = getProdDockerPurgesJsonUrl()
+  const response = await monitoringFetch(url)
+  if (!response.ok) {
+    throw new Error(`Source purges Docker indisponible (${response.status})`)
+  }
+  let json: unknown
+  try {
+    json = await response.json()
+  } catch {
+    throw new Error('Réponse purges Docker : JSON illisible')
+  }
+  if (!Array.isArray(json)) {
+    throw new Error('Réponse purges Docker : tableau attendu')
+  }
+  // Entrées invalides ignorées plutôt que de faire échouer toute la requête.
+  return json.filter(isDockerPurge)
+}
+
+type DockerPurgesResult = {
+  purges: DockerPurge[]
+  purgesError: string | null
+}
+
+async function getDockerPurgesResult(): Promise<DockerPurgesResult> {
+  // Pas de fallback local : docker-purges.json n'a pas d'équivalent local.
+  try {
+    const purges = await getProductionDockerPurges()
+    return { purges, purgesError: null }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('Erreur lecture purges Docker (prod):', error)
+    return { purges: [], purgesError: message }
+  }
+}
+
 // GET: Obtenir les statistiques de monitoring
 export async function GET(req: NextRequest) {
   try {
@@ -294,7 +365,10 @@ export async function GET(req: NextRequest) {
 
     switch (action) {
       case 'stats': {
-        const { disk: diskUsage, diskError } = await getDiskUsageResult()
+        const [{ disk: diskUsage, diskError }, { purges, purgesError }] = await Promise.all([
+          getDiskUsageResult(),
+          getDockerPurgesResult(),
+        ])
         let emailStatus = null
         try {
           emailStatus = await getProductionEmailStatus()
@@ -308,21 +382,28 @@ export async function GET(req: NextRequest) {
           disk: diskUsage,
           diskError,
           email: emailStatus,
+          purges,
+          purgesError,
         })
       }
 
       case 'disk': {
+        const [{ disk, diskError }, { purges, purgesError }] = await Promise.all([
+          getDiskUsageResult(),
+          getDockerPurgesResult(),
+        ])
         let emailForDisk = null
         try {
           emailForDisk = await getProductionEmailStatus()
         } catch {
           emailForDisk = null
         }
-        const { disk, diskError } = await getDiskUsageResult()
         return NextResponse.json({
           disk,
           diskError,
           email: emailForDisk,
+          purges,
+          purgesError,
         })
       }
 
