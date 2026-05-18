@@ -3,7 +3,7 @@ name: E2E Tests
 on:
   pull_request:
     branches:
-      - dev
+      - main
     types:
       - opened
       - synchronize
@@ -28,7 +28,10 @@ jobs:
     timeout-minutes: 30
     if: >
       github.event_name == 'workflow_dispatch' ||
-      github.event.pull_request.draft == false
+      (
+        github.event.pull_request.draft == false &&
+        github.event.pull_request.head.ref == 'dev'
+      )
 
     steps:
       - name: Resolve preview context
