@@ -95,9 +95,17 @@ test.describe('Création de registre', () => {
 
     await page.locator('form').getByRole('combobox').first().selectOption('entreprise')
 
-    await page.locator('#mainIndustry').selectOption('tech_data')
-    await expect(page.locator('#subCategory')).toBeVisible({ timeout: 10_000 })
-    await page.locator('#subCategory').selectOption('saas')
+    const mainIndustry = page.locator('#mainIndustry')
+    await expect(mainIndustry).toBeEnabled()
+    await mainIndustry.selectOption('tech_data')
+
+    const subCategory = page.locator('#subCategory')
+    await page.waitForFunction(() => {
+      const select = document.querySelector<HTMLSelectElement>('#subCategory')
+      return Boolean(select?.querySelector('option[value="saas"]'))
+    })
+    await expect(subCategory).toBeEnabled()
+    await subCategory.selectOption('saas')
 
     const submit = page.locator('button[type="submit"]')
     await expect(submit).toBeEnabled()
