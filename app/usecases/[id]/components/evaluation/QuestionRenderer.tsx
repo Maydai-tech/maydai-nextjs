@@ -347,6 +347,7 @@ export function V3ShortPathStageQuestion({
       >
         <input
           type="checkbox"
+          data-testid={`answer-${question.id}-${opt.code}`}
           checked={isChecked}
           onChange={(e) => applyCheckboxChange(opt, e.target.checked)}
           disabled={isReadOnly || dimOtherOptions}
@@ -399,6 +400,7 @@ export function V3ShortPathStageQuestion({
               >
                 <input
                   type="checkbox"
+                  data-testid={`answer-${question.id}-${opt.code}`}
                   checked={isChecked}
                   onChange={(e) => handleToggle(row, e.target.checked)}
                   disabled={isReadOnly || dimOtherOptions}
@@ -446,6 +448,7 @@ export function V3ShortPathStageQuestion({
           >
             <input
               type="checkbox"
+              data-testid={`answer-${question.id}-${opt.code}`}
               checked={isChecked}
               onChange={(e) => applyCheckboxChange(opt, e.target.checked)}
               disabled={isReadOnly}
@@ -487,6 +490,7 @@ export function V3ShortPathStageQuestion({
 
   return (
     <div
+      data-testid={`question-${question.id}`}
       data-v3-short-path-stage={question.id}
       className="w-full max-w-3xl mx-auto"
     >
@@ -631,6 +635,7 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
               >
                 <input
                   type="radio"
+                  data-testid={`answer-${question.id}-${option.code}`}
                   name={question.id}
                   value={option.code}
                   checked={isChecked}
@@ -697,6 +702,7 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
         >
           <input
             type="checkbox"
+            data-testid={`answer-${question.id}-${option.code}`}
             name={`${question.id}-${option.code}`}
             value={option.code}
             checked={isChecked}
@@ -749,6 +755,7 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
           {renderQuestionDescription()}
           <div
             className={segmentWrapperClass}
+            data-testid={`question-${question.id}`}
             data-e4n7-segment={seg ?? undefined}
             data-e4n7-grouped="true"
           >
@@ -764,6 +771,7 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
               return (
                 <section
                   key={group.key}
+                  data-testid={`question-${question.id}--${group.key}`}
                   className={`space-y-3 ${hideHeading ? 'mt-4 border-t border-gray-200 pt-4' : ''}`}
                   {...(hideHeading
                     ? { 'aria-label': 'Option sans autre choix' }
@@ -802,12 +810,12 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
       flatCount > 3 ? 'mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-4' : 'mb-6 space-y-3'
 
     return (
-      <>
+      <div data-testid={`question-${question.id}`}>
         {renderQuestionDescription()}
         <div className={flatListClass}>
           {question.options.map((option, index) => renderCheckboxRow(option, index))}
         </div>
-      </>
+      </div>
     )
   }
 
@@ -816,7 +824,7 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
     const tagAnswers = Array.isArray(currentAnswer) ? currentAnswer : []
     
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" data-testid={`question-${question.id}`}>
         {renderQuestionDescription()}
         <div className="flex flex-wrap gap-2">
           {question.options.map((option, index) => {
@@ -893,14 +901,16 @@ export const QuestionRenderer = React.memo(function QuestionRenderer({
   // Rendu principal selon le type de question
   switch (question.type) {
     case 'radio':
-      return renderRadioQuestion()
+      return (
+        <div data-testid={`question-${question.id}`}>{renderRadioQuestion()}</div>
+      )
     case 'checkbox':
       return renderCheckboxQuestion()
     case 'tags':
       return renderTagsQuestion()
     default:
       return (
-        <div className="text-red-600">
+        <div className="text-red-600" data-testid={`question-${question.id}`}>
           Type de question non supporté: {question.type}
         </div>
       )

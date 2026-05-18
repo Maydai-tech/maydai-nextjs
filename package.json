@@ -18,10 +18,10 @@
     "supabase:ovh": "node scripts/supabase-ovh.mjs",
     "supabase:ovh:tunnel": "bash scripts/supabase-ovh-tunnel.sh",
     "supabase:ovh:mcp:tunnel": "bash scripts/supabase-ovh-mcp-tunnel.sh",
-    "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui",
-    "e2e:headed": "playwright test --headed",
-    "e2e:debug": "playwright test --debug"
+    "e2e": "npx kill-port 3000 && playwright test",
+    "e2e:ui": "npx kill-port 3000 && playwright test --ui",
+    "e2e:headed": "npx kill-port 3000 && playwright test --headed",
+    "e2e:debug": "npx kill-port 3000 && playwright test --debug"
   },
   "dependencies": {
     "@next/third-parties": "^15.5.7",
@@ -60,7 +60,7 @@
     "remark-gfm": "^4.0.1",
     "stripe": "^18.5.0",
     "topojson-client": "^3.1.0",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   },
   "overrides": {
     "js-yaml": "4.1.1"

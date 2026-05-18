@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { canCreateCompany } from '@/lib/collaborators'
 import { validateIndustrySelection } from '@/lib/validation/industries'
+import { RegistrySchema } from '@/lib/validations/registry'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -197,10 +198,38 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, type, mainIndustryId, subCategoryId } = body
-    if (!name) {
-      return NextResponse.json({ error: 'Champ name manquant' }, { status: 400 })
+
+    const registryPayload: Record<string, unknown> = {
+      name: body.name,
+      city: typeof body.city === 'string' ? body.city : '',
+      country: typeof body.country === 'string' ? body.country : '',
+      maydai_as_registry: body.maydai_as_registry ?? false,
     }
+    if (body.type !== undefined) registryPayload.type = body.type
+    if (body.role !== undefined) registryPayload.role = body.role
+    const industry = body.industry ?? body.mainIndustryId
+    if (industry !== undefined) registryPayload.industry = industry
+    const subCategory = body.sub_category_id ?? body.subCategoryId
+    if (subCategory !== undefined) registryPayload.sub_category_id = subCategory
+
+    const validation = RegistrySchema.partial({
+      industry: true,
+      city: true,
+      country: true,
+      sub_category_id: true,
+      type: true,
+      role: true,
+      maydai_as_registry: true,
+    })
+      .required({ name: true })
+      .safeParse(registryPayload)
+
+    if (!validation.success) {
+      return NextResponse.json(validation.error.flatten().fieldErrors, { status: 400 })
+    }
+
+    const { mainIndustryId, subCategoryId } = body
+    const validated = validation.data
 
     // Use service role client for write operations (bypasses RLS)
     // Authentication is already verified above, so this is safe
@@ -284,12 +313,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Build insert data
-    const insertData: { name: string; type?: string; industry?: string | null; sub_category_id?: string | null } = { name }
-    if (type) {
-      insertData.type = type
+    const insertData: {
+      name: string
+      city?: string
+      country?: string
+      maydai_as_registry: boolean
+      type?: string
+      industry?: string | null
+      sub_category_id?: string | null
+      role?: string
+    } = {
+      name: validated.name,
+      maydai_as_registry: validated.maydai_as_registry ?? false,
+      industry: resolvedMainIndustryId,
+      sub_category_id: resolvedSubCategoryId,
     }
-    insertData.industry = resolvedMainIndustryId
-    insertData.sub_category_id = resolvedSubCategoryId
+    if (validated.city !== undefined) {
+      insertData.city = validated.city
+    }
+    if (validated.country !== undefined) {
+      insertData.country = validated.country
+    }
+    if (validated.type !== undefined) {
+      insertData.type = validated.type
+    }
+    if (validated.role !== undefined) {
+      insertData.role = validated.role
+    }
 
     // Créer la compagnie
     const { data, error } = await serviceClient
@@ -313,6 +363,7 @@ export async function POST(request: NextRequest) {
       }])
 
     if (userCompanyError) {
+      console.error("🚨 SUPABASE DB ERROR (user_companies):", userCompanyError);
       return NextResponse.json({ error: "Erreur lors de la création de la relation utilisateur-entreprise" }, { status: 500 })
     }
 

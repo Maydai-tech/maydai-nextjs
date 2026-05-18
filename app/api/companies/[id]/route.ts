@@ -4,6 +4,7 @@ import { isOwner } from '@/lib/collaborators'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { updateUseCaseRegistryResponses } from '@/lib/registry-sync'
 import { validateIndustrySelection } from '@/lib/validation/industries'
+import { RegistrySchema } from '@/lib/validations/registry'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -148,6 +149,32 @@ export async function PUT(
 
     // Parse request body
     const body = await request.json()
+
+    const registryUpdatePayload: Record<string, unknown> = {}
+    if (body.name !== undefined) registryUpdatePayload.name = body.name
+    if (body.city !== undefined) registryUpdatePayload.city = body.city
+    if (body.country !== undefined) registryUpdatePayload.country = body.country
+    if (body.type !== undefined) registryUpdatePayload.type = body.type
+    if (body.role !== undefined) registryUpdatePayload.role = body.role
+    if (body.maydai_as_registry !== undefined) {
+      registryUpdatePayload.maydai_as_registry = body.maydai_as_registry
+    }
+    if (body.industry !== undefined) {
+      registryUpdatePayload.industry = body.industry
+    } else if (body.mainIndustryId !== undefined) {
+      registryUpdatePayload.industry = body.mainIndustryId
+    }
+    if (body.sub_category_id !== undefined) {
+      registryUpdatePayload.sub_category_id = body.sub_category_id
+    } else if (body.subCategoryId !== undefined) {
+      registryUpdatePayload.sub_category_id = body.subCategoryId
+    }
+
+    const validation = RegistrySchema.partial().safeParse(registryUpdatePayload)
+    if (!validation.success) {
+      return NextResponse.json(validation.error.flatten().fieldErrors, { status: 400 })
+    }
+
     const { name, city, country, type, maydai_as_registry, mainIndustryId, subCategoryId } = body
 
     // Validate at least one field is provided

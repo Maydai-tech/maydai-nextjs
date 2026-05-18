@@ -187,6 +187,7 @@
       {
         "code": "E4.N7.Q2.A",
         "label": "Emploi, gestion des travailleurs et accès à l'emploi indépendant",
+        "is_eliminatory": false,
         "score_impact": -30,
         "risk": "high",
         "category_impacts": {
