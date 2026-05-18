@@ -63,6 +63,20 @@ test.describe('Questionnaire V3 — parcours court (scoring)', () => {
     }
     testCompanyId = companyRow.id
 
+    const { error: profileError } = await admin.from('profiles').insert({
+      id: testUserId,
+      first_name: 'E2E',
+      last_name: 'ShortPath',
+      company_name: `E2E ShortPath ${Date.now()}`,
+      company_id: testCompanyId,
+      current_company_id: testCompanyId,
+      industry: 'tech_data',
+      sub_category_id: 'saas',
+    })
+    if (profileError) {
+      throw new Error(`profiles: ${profileError.message}`)
+    }
+
     const usecaseId = await seedV2Usecase(admin, {
       companyId: testCompanyId,
       pathMode: 'short',

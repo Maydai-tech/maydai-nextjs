@@ -7,6 +7,11 @@ dotenv.config({ path: path.resolve(__dirname, '.env.local') })
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
 const shouldStartLocalServer = baseURL.startsWith('http://localhost') || baseURL.startsWith('http://127.0.0.1')
+const extraHTTPHeaders = process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+  ? {
+      'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+    }
+  : undefined
 
 export default defineConfig({
   testDir: './e2e',
@@ -25,6 +30,7 @@ export default defineConfig({
 
   use: {
     baseURL,
+    extraHTTPHeaders,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
