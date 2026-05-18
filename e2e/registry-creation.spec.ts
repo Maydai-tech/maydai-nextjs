@@ -91,8 +91,6 @@ test.describe('Création de registre', () => {
     await page.goto('/registries/new', { waitUntil: 'domcontentloaded' })
     await expect(page.getByRole('heading', { name: /Créer un registre/i })).toBeVisible({ timeout: 30_000 })
 
-    await page.getByPlaceholder('Ex : Acme').fill(registryName)
-
     await page.locator('form').getByRole('combobox').first().selectOption('entreprise')
 
     const mainIndustry = page.locator('#mainIndustry')
@@ -106,6 +104,10 @@ test.describe('Création de registre', () => {
     })
     await expect(subCategory).toBeEnabled()
     await subCategory.selectOption('saas')
+
+    const registryNameInput = page.getByPlaceholder('Ex : Acme')
+    await registryNameInput.fill(registryName)
+    await expect(registryNameInput).toHaveValue(registryName)
 
     const submit = page.locator('button[type="submit"]')
     await expect(submit).toBeEnabled()
