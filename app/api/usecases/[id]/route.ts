@@ -413,7 +413,10 @@ export async function PUT(
         const host = request.headers.get('host') || 'localhost:3000'
         const calculateUrl = `${protocol}://${host}/api/usecases/${useCaseId}/calculate-score`
         
-        logger.info(`Calling calculate score endpoint: ${calculateUrl}`, { useCaseId, primary_model_id })
+        logger.info(`Calling calculate score endpoint: ${calculateUrl}`, {
+          useCaseId,
+          primary_model_id: primary_model_id ?? undefined,
+        })
         
         // Appel à l'endpoint de calcul de score avec authentification
         const calcResponse = await fetch(calculateUrl, {
@@ -432,7 +435,7 @@ export async function PUT(
             status: calcResponse.status, 
             error: errorText,
             useCaseId,
-            primary_model_id 
+            primary_model_id: primary_model_id ?? undefined,
           })
           throw new Error(`Score calculation failed: ${calcResponse.status}`)
         }
@@ -440,7 +443,7 @@ export async function PUT(
         const calcResult = await calcResponse.json()
         logger.info(`Score recalculated successfully after model update - Final score: ${calcResult.scores?.score_final}`, { 
           useCaseId, 
-          primary_model_id
+          primary_model_id: primary_model_id ?? undefined,
         })
         
         // Récupération du use case avec les scores fraîchement calculés
@@ -504,7 +507,7 @@ export async function PUT(
         logger.error('Failed to recalculate score after model update', scoreError, { 
           ...context, 
           useCaseId, 
-          primary_model_id 
+          primary_model_id: primary_model_id ?? undefined,
         })
         // Retour du use case avec le nouveau modèle mais sans les scores mis à jour
         return NextResponse.json(updatedUseCase)
