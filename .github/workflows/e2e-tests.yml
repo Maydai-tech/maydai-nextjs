@@ -1,6 +1,9 @@
 name: E2E Tests
 
 on:
+  push:
+    branches:
+      - dev
   pull_request:
     branches:
       - main
@@ -28,6 +31,7 @@ jobs:
     timeout-minutes: 30
     if: >
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
       (
         github.event.pull_request.draft == false &&
         github.event.pull_request.head.ref == 'dev'
@@ -61,7 +65,19 @@ jobs:
             exit 0
           fi
 
-          echo "Waiting for successful Vercel preview deployment for ${PR_HEAD_SHA}..."
+          if [ "$EVENT_NAME" = "push" ]; then
+            target_sha="$GITHUB_SHA"
+            target_ref="$GITHUB_REF_NAME"
+            pr_number="push"
+            pr_title="Push to dev"
+          else
+            target_sha="$PR_HEAD_SHA"
+            target_ref="$PR_HEAD_REF"
+            pr_number="$PR_NUMBER"
+            pr_title="$PR_TITLE"
+          fi
+
+          echo "Waiting for successful Vercel preview deployment for ${target_sha}..."
           deadline=$((SECONDS + 900))
           preview_url=""
 
@@ -69,7 +85,7 @@ jobs:
             deployments=$(gh api \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              "/repos/${GITHUB_REPOSITORY}/deployments?sha=${PR_HEAD_SHA}&environment=Preview&per_page=20")
+              "/repos/${GITHUB_REPOSITORY}/deployments?sha=${target_sha}&environment=Preview&per_page=20")
 
             while IFS= read -r deployment_id; do
               [ -n "$deployment_id" ] || continue
@@ -95,16 +111,16 @@ jobs:
           done
 
           if [ -z "$preview_url" ]; then
-            echo "No successful Vercel preview deployment found for ${PR_HEAD_SHA} after 15 minutes." >&2
+            echo "No successful Vercel preview deployment found for ${target_sha} after 15 minutes." >&2
             exit 1
           fi
 
           {
             echo "preview_url=$preview_url"
-            echo "pr_number=$PR_NUMBER"
-            echo "pr_title=$PR_TITLE"
-            echo "head_ref=$PR_HEAD_REF"
-            echo "head_sha=$PR_HEAD_SHA"
+            echo "pr_number=$pr_number"
+            echo "pr_title=$pr_title"
+            echo "head_ref=$target_ref"
+            echo "head_sha=$target_sha"
           } >> "$GITHUB_OUTPUT"
 
       - name: Checkout code
