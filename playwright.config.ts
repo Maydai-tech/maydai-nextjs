@@ -5,6 +5,9 @@ import path from 'path'
 // Load .env.local for E2E tests
 dotenv.config({ path: path.resolve(__dirname, '.env.local') })
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
+const shouldStartLocalServer = baseURL.startsWith('http://localhost') || baseURL.startsWith('http://127.0.0.1')
+
 export default defineConfig({
   testDir: './e2e',
   testIgnore: '**/old/**',
@@ -21,7 +24,7 @@ export default defineConfig({
     : 'html',
 
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -33,11 +36,13 @@ export default defineConfig({
     },
   ],
 
-  // Run dev server before tests
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000, // 2 minutes for CI
-  },
+  // Run the dev server only when tests target a local URL.
+  webServer: shouldStartLocalServer
+    ? {
+        command: 'npm run dev',
+        url: baseURL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120000, // 2 minutes for CI
+      }
+    : undefined,
 })
