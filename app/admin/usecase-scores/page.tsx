@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import AdminProtectedRoute from '@/components/AdminProtectedRoute'
-import Header from '@/components/site-vitrine/Header'
 import { 
   AlertCircle, 
   TrendingUp, 
@@ -47,6 +46,8 @@ interface UseCaseWithScore {
   ai_category: string | null
   system_type: string | null
   status: string
+  created_at: string
+  updated_at: string | null
   score: number | null
   max_score: number
   category_scores: CategoryScore[]
@@ -82,7 +83,7 @@ function getAICategoryLabel(category: string | null): string {
     case 'generation': return 'Génération de contenu'
     case 'decision': return 'Aide à la décision'
     case 'other': return 'Autre'
-    default: return 'Non défini'
+    default: return category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Non défini'
   }
 }
 
@@ -144,9 +145,11 @@ export default function UseCaseScoresPage() {
           ai_category,
           system_type,
           status,
+          score_final,
           created_at,
+          updated_at,
           companies!inner(name),
-          usecase_responses(responses)
+          usecase_responses(*)
         `)
         .order('created_at', { ascending: false })
 
@@ -157,19 +160,21 @@ export default function UseCaseScoresPage() {
         name: uc.name,
         description: uc.description,
         company_id: uc.company_id,
-        company_name: uc.companies?.[0]?.name || 'Unknown',
+        company_name: Array.isArray(uc.companies) ? uc.companies[0]?.name : uc.companies?.name || 'Unknown',
         risk_level: uc.risk_level,
         classification_status: uc.classification_status ?? null,
         ai_category: uc.ai_category,
         system_type: uc.system_type,
         status: uc.status,
-        score: null,
+        created_at: uc.created_at,
+        updated_at: uc.updated_at ?? null,
+        score: typeof uc.score_final === 'number' ? uc.score_final : null,
         max_score: 100,
         category_scores: [],
         score_breakdown: [],
         calculated_at: null,
-        response_count: uc.usecase_responses?.[0]?.responses?.length || 0,
-        responses: uc.usecase_responses?.[0]?.responses || []
+        response_count: uc.usecase_responses?.length || 0,
+        responses: uc.usecase_responses || []
       }))
 
       setUsecases(formattedUsecases)
@@ -296,8 +301,6 @@ export default function UseCaseScoresPage() {
   return (
     <AdminProtectedRoute>
       <div className="min-h-screen bg-gray-50">
-        <Header />
-        
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Scores des Usecases</h1>
@@ -422,6 +425,9 @@ export default function UseCaseScoresPage() {
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date MAJ
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Entreprise / Usecase
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -448,6 +454,9 @@ export default function UseCaseScoresPage() {
                         className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 cursor-pointer`}
                         onClick={() => toggleRow(usecase.id)}
                       >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(usecase.updated_at || usecase.created_at).toLocaleDateString('fr-FR')}
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center">
                             {expandedRows.has(usecase.id) ? (
@@ -506,7 +515,7 @@ export default function UseCaseScoresPage() {
                       {/* Expanded Details */}
                       {expandedRows.has(usecase.id) && (
                         <tr>
-                          <td colSpan={6} className="px-6 py-4 bg-gray-50">
+                          <td colSpan={7} className="px-6 py-4 bg-gray-50">
                             <div className="space-y-4">
                               {/* Score Details */}
                               {usecase.score !== null ? (
