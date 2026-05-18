@@ -50,7 +50,7 @@ system_exit=0
 builder_exit=0
 error_message=""
 
-if ! docker system prune -f --filter "until=168h" > "$system_log" 2>&1; then
+if ! docker system prune -af --filter "until=168h" > "$system_log" 2>&1; then
   system_exit=$?
   error_message+="docker system prune exit=$system_exit. "
 fi
