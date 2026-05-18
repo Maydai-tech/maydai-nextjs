@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { AlertTriangle, Bell, HardDrive, RefreshCw, ShieldCheck } from 'lucide-react'
+import { formatGo, nextPurgeFr, parseUsePercent, usageBarClass } from './utils/format'
 
 interface DiskUsage {
   total: string | number
@@ -22,11 +23,24 @@ interface EmailStatus {
   lastSentAt: string
 }
 
+interface DockerPurge {
+  ranAt: string
+  systemPruneReclaimedBytes: number
+  builderPruneReclaimedBytes: number
+  totalReclaimedBytes: number
+  diskFreeBeforeBytes: number
+  diskFreeAfterBytes: number
+  exitCode: number
+  errorMessage: string | null
+}
+
 export default function AdminMonitoringPage() {
   const [diskUsage, setDiskUsage] = useState<DiskUsage | null>(null)
   const [diskError, setDiskError] = useState<string | null>(null)
   const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null)
   const [loadingDiskUsage, setLoadingDiskUsage] = useState(true)
+  const [purges, setPurges] = useState<DockerPurge[]>([])
+  const [purgesError, setPurgesError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -45,6 +59,12 @@ export default function AdminMonitoringPage() {
         }
         if (!cancelled && data?.email) {
           setEmailStatus(data.email as EmailStatus)
+        }
+        if (!cancelled && Array.isArray(data?.purges)) {
+          setPurges(data.purges as DockerPurge[])
+        }
+        if (!cancelled) {
+          setPurgesError(typeof data?.purgesError === 'string' ? data.purgesError : null)
         }
       } catch (error) {
         console.error('Erreur chargement occupation disque:', error)
@@ -97,12 +117,15 @@ export default function AdminMonitoringPage() {
     },
   ]
 
-  const usePercentNumber = diskUsage ? parseInt(diskUsage.usePercent.replace('%', ''), 10) : 0
+  const usePercentNumber = parseUsePercent(diskUsage?.usePercent)
   const usageColorClass =
     usePercentNumber >= 85 ? 'text-red-700' : usePercentNumber >= 70 ? 'text-orange-700' : 'text-emerald-700'
 
   const usageRingClass =
     usePercentNumber >= 85 ? 'stroke-red-600' : usePercentNumber >= 70 ? 'stroke-orange-600' : 'stroke-emerald-600'
+
+  const usageSegmentClass = usageBarClass(usePercentNumber)
+  const freePercent = Math.max(0, 100 - usePercentNumber)
 
   const sanitizeToNumber = (value: unknown) => {
     if (typeof value === 'number') return value
@@ -110,10 +133,14 @@ export default function AdminMonitoringPage() {
     return Number.parseFloat(value.toString().replace(/[^\d.]/g, ''))
   }
 
-  const totalValue = sanitizeToNumber(diskUsage?.total)
-  const usedValue = sanitizeToNumber(diskUsage?.used)
-  const freeValue = sanitizeToNumber(diskUsage?.free ?? diskUsage?.available)
-  const maxBarValue = Math.max(totalValue, usedValue, freeValue, 1)
+  // Les valeurs reçues sont en Go (numériques) ou en string suffixée ("50G").
+  // On convertit toujours en bytes via 10^9 pour formatGo.
+  const totalGo = sanitizeToNumber(diskUsage?.total)
+  const usedGo = sanitizeToNumber(diskUsage?.used)
+  const freeGo = sanitizeToNumber(diskUsage?.free ?? diskUsage?.available)
+  const totalBytes = totalGo * 1_000_000_000
+  const usedBytes = usedGo * 1_000_000_000
+  const freeBytes = freeGo * 1_000_000_000
 
   const formatUpdatedAtFr = (iso: string) => {
     const date = new Date(iso)
@@ -123,6 +150,10 @@ export default function AdminMonitoringPage() {
     const timePart = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h')
     return `${datePart} à ${timePart}`
   }
+
+  const sortedPurges = [...purges].sort((a, b) => b.ranAt.localeCompare(a.ranAt))
+  const totalReclaimedBytes = sortedPurges.reduce((sum, p) => sum + p.totalReclaimedBytes, 0)
+  const nextPurgeLabel = nextPurgeFr()
 
   return (
     <div className="space-y-6">
@@ -186,30 +217,38 @@ export default function AdminMonitoringPage() {
               </div>
             </div>
 
-            <div className="lg:col-span-2 space-y-4">
-              {[
-                { label: 'Total', value: diskUsage.total, numeric: totalValue, color: 'bg-[#0080A3]' },
-                { label: 'Utilise', value: diskUsage.used, numeric: usedValue, color: 'bg-orange-500' },
-                {
-                  label: 'Libre',
-                  value: diskUsage.free ?? diskUsage.available ?? '—',
-                  numeric: freeValue,
-                  color: 'bg-emerald-500',
-                },
-              ].map((item) => (
-                <div key={item.label}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-gray-700 font-medium">{item.label}</span>
-                    <span className="text-gray-900">{item.value}</span>
-                  </div>
-                  <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-3 rounded-full ${item.color} transition-all duration-500`}
-                      style={{ width: `${Math.max(6, (item.numeric / maxBarValue) * 100)}%` }}
-                    />
-                  </div>
+            <div className="lg:col-span-2 flex flex-col justify-center gap-4">
+              <div className="flex items-baseline justify-between">
+                <span className="text-base font-semibold text-gray-900">Total : {formatGo(totalBytes)}</span>
+              </div>
+
+              <div className="h-3 w-full rounded-full bg-gray-100 overflow-hidden flex">
+                <div
+                  className={`${usageSegmentClass} h-3 transition-all duration-500`}
+                  style={{ width: `${usePercentNumber}%` }}
+                />
+                <div
+                  className="bg-gray-200 h-3 transition-all duration-500"
+                  style={{ width: `${freePercent}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className={`inline-block w-2 h-2 rounded-full ${usageSegmentClass}`} aria-hidden="true" />
+                  <span className="text-gray-700">
+                    Utilisé <span className="font-medium text-gray-900">{formatGo(usedBytes)}</span>{' '}
+                    <span className="text-gray-500">({usePercentNumber}%)</span>
+                  </span>
                 </div>
-              ))}
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 rounded-full bg-gray-200" aria-hidden="true" />
+                  <span className="text-gray-700">
+                    Libre <span className="font-medium text-gray-900">{formatGo(freeBytes)}</span>{' '}
+                    <span className="text-gray-500">({freePercent}%)</span>
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -232,6 +271,63 @@ export default function AdminMonitoringPage() {
           )
         })}
       </div>
+
+      <section className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <h2 className="text-lg font-semibold text-gray-900">Historique des purges Docker</h2>
+          <p className="text-xs text-gray-400 whitespace-nowrap">
+            Prochaine purge : {nextPurgeLabel}
+          </p>
+        </div>
+
+        {loadingDiskUsage ? (
+          <p className="mt-4 text-sm text-gray-500">Chargement...</p>
+        ) : purgesError ? (
+          <p className="mt-3 text-sm text-amber-700">{purgesError}</p>
+        ) : sortedPurges.length === 0 ? (
+          <p className="mt-4 text-sm text-gray-500">
+            Pas encore d&apos;historique. Prochaine purge : {nextPurgeLabel}.
+          </p>
+        ) : (
+          <>
+            <p className="mt-2 text-sm text-gray-600">
+              <span className="font-semibold text-gray-900">{formatGo(totalReclaimedBytes)}</span>{' '}
+              libérés au total · {sortedPurges.length} purge{sortedPurges.length > 1 ? 's' : ''} enregistrée{sortedPurges.length > 1 ? 's' : ''}
+            </p>
+
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase text-gray-500">
+                    <th scope="col" className="py-2 pr-4">Date</th>
+                    <th scope="col" className="py-2 px-4 text-right">Récupéré</th>
+                    <th scope="col" className="py-2 px-4 text-right hidden md:table-cell">Détail</th>
+                    <th scope="col" className="py-2 pl-4 text-right hidden lg:table-cell">Avant → après (libre)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedPurges.map((p) => (
+                    <tr key={p.ranAt} className="border-t border-gray-100">
+                      <td className="py-2 pr-4 text-gray-700">{formatUpdatedAtFr(p.ranAt)}</td>
+                      <td className="py-2 px-4 text-right font-medium text-gray-900">
+                        {formatGo(p.totalReclaimedBytes)}
+                        {p.exitCode !== 0 && <span className="ml-2 text-xs text-amber-700">(échec)</span>}
+                      </td>
+                      <td className="py-2 px-4 text-right text-gray-500 hidden md:table-cell">
+                        system : {formatGo(p.systemPruneReclaimedBytes)} · builder :{' '}
+                        {formatGo(p.builderPruneReclaimedBytes)}
+                      </td>
+                      <td className="py-2 pl-4 text-right text-gray-500 hidden lg:table-cell">
+                        {formatGo(p.diskFreeBeforeBytes)} → {formatGo(p.diskFreeAfterBytes)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </section>
 
     </div>
   )
