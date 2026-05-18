@@ -4,6 +4,7 @@ import { sendGoogleAdsConversion } from '@/lib/google-ads/conversions'
 import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { planIdSchema } from '@/lib/validations/pricing'
+import { CompleteSignupSchema } from '@/lib/validations/signup'
 
 const ACQUISITION_FIELD_MAX_LEN = 512
 
@@ -48,6 +49,15 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json()
+
+    const validation = CompleteSignupSchema.safeParse(body)
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Payload invalide', details: validation.error.format() },
+        { status: 400 }
+      )
+    }
+
     const {
       firstName,
       lastName,
@@ -61,52 +71,24 @@ export async function POST(request: NextRequest) {
       utm_medium: rawUtmMedium,
       utm_campaign: rawUtmCampaign,
       planIntent: rawPlanIntent,
-    } = body
+    } = validation.data
 
-    // Validate required fields
-    if (!firstName || typeof firstName !== 'string' || firstName.trim() === '') {
-      return NextResponse.json(
-        { error: 'Le prénom est obligatoire' },
-        { status: 400 }
-      )
-    }
+    // Validation sectorielle uniquement si au moins un champ secteur est fourni (payload partiel autorisé)
+    const hasIndustryInput =
+      (mainIndustryId !== undefined && mainIndustryId !== '') ||
+      (subCategoryId !== undefined && subCategoryId !== '')
 
-    if (!lastName || typeof lastName !== 'string' || lastName.trim() === '') {
-      return NextResponse.json(
-        { error: 'Le nom est obligatoire' },
-        { status: 400 }
+    if (hasIndustryInput) {
+      const industryValidation = validateIndustrySelection(
+        mainIndustryId ?? '',
+        subCategoryId ?? ''
       )
-    }
-
-    if (!companyName || typeof companyName !== 'string' || companyName.trim() === '') {
-      return NextResponse.json(
-        { error: 'Le nom de l\'entreprise est obligatoire' },
-        { status: 400 }
-      )
-    }
-
-    // Validate industry selection
-    if (!mainIndustryId || typeof mainIndustryId !== 'string' || mainIndustryId.trim() === '') {
-      return NextResponse.json(
-        { error: 'Le secteur d\'activité principal est obligatoire' },
-        { status: 400 }
-      )
-    }
-
-    if (!subCategoryId || typeof subCategoryId !== 'string' || subCategoryId.trim() === '') {
-      return NextResponse.json(
-        { error: 'La sous-catégorie est obligatoire' },
-        { status: 400 }
-      )
-    }
-
-    // Validate industry and sub-category combination
-    const industryValidation = validateIndustrySelection(mainIndustryId, subCategoryId)
-    if (!industryValidation.valid) {
-      return NextResponse.json(
-        { error: industryValidation.error || 'Secteur d\'activité invalide' },
-        { status: 400 }
-      )
+      if (!industryValidation.valid) {
+        return NextResponse.json(
+          { error: industryValidation.error || 'Secteur d\'activité invalide' },
+          { status: 400 }
+        )
+      }
     }
 
     // Validate SIREN if provided
@@ -158,11 +140,11 @@ export async function POST(request: NextRequest) {
     // Store mainIndustryId in industry field and subCategoryId in sub_category_id field
     const profileData = {
       id: user.id,
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      company_name: companyName.trim(),
-      industry: mainIndustryId.trim(),
-      sub_category_id: subCategoryId.trim(),
+      first_name: firstName?.trim() ?? null,
+      last_name: lastName?.trim() ?? null,
+      company_name: companyName?.trim() ?? null,
+      industry: mainIndustryId?.trim() ?? null,
+      sub_category_id: subCategoryId?.trim() ?? null,
       phone: cleanedPhone,
       siren: cleanedSiren,
       gclid,

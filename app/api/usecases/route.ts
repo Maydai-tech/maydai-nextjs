@@ -5,6 +5,7 @@ import { getRegistryOwnerPlan } from '@/lib/subscription/user-plan'
 import { QUESTIONNAIRE_VERSION_V1, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 import { convertDeploymentDateForDb } from '@/lib/convert-deployment-date'
 import { resolvePathModeFromBody } from '@/lib/journey-path-mode'
+import { CreateUsecaseSchema } from '@/lib/validations/usecase'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -106,38 +107,35 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const body = await request.json()
 
+    const validation = CreateUsecaseSchema.safeParse(body)
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Payload invalide', details: validation.error.format() },
+        { status: 400 }
+      )
+    }
+
     const {
       name,
       deployment_date,
       deployment_phase,
       responsible_service,
-      technology_partner,
-      llm_model_version,
       primary_model_id,
       ai_category,
-      system_type,
       deployment_countries,
       description,
       status,
       risk_level,
       company_id,
-      BLOCK_E5_GOVERNANCE,
-      BLOCK_E6_TRANSPARENCE,
-    } = body
+      block_e5_governance,
+      block_e6_transparence,
+    } = validation.data
 
-    // Validate required fields
-    if (!name || !description || !ai_category || !responsible_service || !company_id) {
-      const missingFields = []
-      if (!name) missingFields.push('name')
-      if (!description) missingFields.push('description')
-      if (!ai_category) missingFields.push('ai_category')
-      if (!responsible_service) missingFields.push('responsible_service')
-      if (!company_id) missingFields.push('company_id')
-
-      return NextResponse.json({ 
-        error: 'Missing required fields: name, description, ai_category, responsible_service, company_id',
-        missing: missingFields 
-      }, { status: 400 })
+    // Champs hors schéma Zod (rétrocompatibilité payloads existants)
+    const { technology_partner, llm_model_version, system_type } = body as {
+      technology_partner?: string
+      llm_model_version?: string
+      system_type?: string
     }
 
     // Verify user has access to this company via user_companies
@@ -199,21 +197,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const blockE5Governance = Array.isArray(BLOCK_E5_GOVERNANCE)
-      ? BLOCK_E5_GOVERNANCE.filter((item: unknown): item is string => typeof item === 'string')
-      : []
-    const blockE6Transparence = Array.isArray(BLOCK_E6_TRANSPARENCE)
-      ? BLOCK_E6_TRANSPARENCE.filter((item: unknown): item is string => typeof item === 'string')
-      : []
-
     // Create the use case
     const insertData: Record<string, unknown> = {
       name,
       deployment_date: convertDeploymentDateForDb(deployment_date),
-      deployment_phase:
-        typeof deployment_phase === 'string' && deployment_phase.trim()
-          ? deployment_phase.trim()
-          : null,
+      deployment_phase,
       responsible_service,
       technology_partner,
       llm_model_version,
@@ -222,11 +210,11 @@ export async function POST(request: NextRequest) {
       system_type,
       deployment_countries: countriesArray,
       description,
-      status: status || 'draft',
+      status,
       risk_level,
       company_id,
-      block_e5_governance: blockE5Governance,
-      block_e6_transparence: blockE6Transparence,
+      block_e5_governance,
+      block_e6_transparence,
       questionnaire_version: QUESTIONNAIRE_VERSION_V3,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

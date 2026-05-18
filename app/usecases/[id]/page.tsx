@@ -250,7 +250,10 @@ function UseCaseOverviewSections({
                       className={`${getScoreStyle(score.score).bg} rounded-xl p-4 border ${getScoreStyle(score.score).border} ${getScoreStyle(score.score).shadow} shadow-sm hover:shadow-md transition-all duration-200`}
                     >
                       <div className="text-center">
-                        <div className={`text-3xl font-bold ${getScoreStyle(score.score).text} mb-2`}>
+                        <div
+                          className={`text-3xl font-bold ${getScoreStyle(score.score).text} mb-2`}
+                          data-testid="final-score-value"
+                        >
                           {Math.round(score.score)}
                         </div>
                       </div>

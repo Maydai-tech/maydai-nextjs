@@ -145,12 +145,18 @@ function HeaderScore({ useCaseId }: { useCaseId: string }) {
 
       <div className={`${scoreStyle.bg} rounded-xl p-4 border ${scoreStyle.border} ${scoreStyle.shadow} shadow-sm hover:shadow-md transition-all duration-200`}>
         <div className="text-center relative">
-          <div className={`text-3xl font-bold ${scoreStyle.text} mb-2`}>
+          <div
+            className={`text-3xl font-bold ${scoreStyle.text} mb-2`}
+            data-testid="final-score-value"
+          >
             {displayScore}
           </div>
 
           {score.is_eliminated && (
-            <div className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold border border-red-200">
+            <div
+              className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold border border-red-200"
+              data-testid="elimination-warning-badge"
+            >
               <AlertTriangle className="h-3 w-3 mr-1" />
               Éliminé
             </div>

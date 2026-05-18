@@ -9,6 +9,8 @@ import {
   type PathMode,
 } from '@/lib/journey-path-mode'
 import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
+import { UpdateUsecaseSchema } from '@/lib/validations/usecase'
+import { z } from 'zod'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -144,6 +146,16 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params
+    const useCaseId = resolvedParams.id
+
+    if (!z.string().uuid().safeParse(useCaseId).success) {
+      return NextResponse.json(
+        { error: 'Identifiant de cas d\'usage malformé' },
+        { status: 400 }
+      )
+    }
+
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
       return NextResponse.json({ error: 'No authorization header' }, { status: 401 })
@@ -166,19 +178,25 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Resolve params
-    const resolvedParams = await params
-    const useCaseId = resolvedParams.id
-
-    // Parse request body
     const body = await request.json()
+    const validation = UpdateUsecaseSchema.safeParse(body)
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: 'Modification interdite ou payload invalide',
+          details: validation.error.format(),
+        },
+        { status: 400 }
+      )
+    }
+
     const {
       primary_model_id,
       deployment_countries,
       deployment_date,
       deployment_phase,
       description,
-    } = body
+    } = validation.data
 
     const shouldApplyPathMode = bodyHasPathModeFields(body)
     const resolvedPathMode = shouldApplyPathMode ? resolvePathModeFromBody(body) : undefined
@@ -226,18 +244,23 @@ export async function PUT(
       updated_at: new Date().toISOString(),
       updated_by: user.id
     }
-    if (primary_model_id !== undefined) updateData.primary_model_id = primary_model_id
-    if (deployment_countries !== undefined) updateData.deployment_countries = deployment_countries
-    if (deployment_date !== undefined) {
-      updateData.deployment_date = convertDeploymentDateForDb(deployment_date)
+    if (validation.data.primary_model_id !== undefined) {
+      updateData.primary_model_id = validation.data.primary_model_id
     }
-    if (deployment_phase !== undefined) {
-      updateData.deployment_phase =
-        typeof deployment_phase === 'string' && deployment_phase.trim()
-          ? deployment_phase.trim()
-          : null
+    if (validation.data.deployment_countries !== undefined) {
+      updateData.deployment_countries = validation.data.deployment_countries
     }
-    if (description !== undefined) updateData.description = description
+    if (validation.data.deployment_date !== undefined) {
+      updateData.deployment_date = convertDeploymentDateForDb(
+        validation.data.deployment_date
+      )
+    }
+    if (validation.data.deployment_phase !== undefined) {
+      updateData.deployment_phase = validation.data.deployment_phase
+    }
+    if (validation.data.description !== undefined) {
+      updateData.description = validation.data.description
+    }
 
     if (shouldApplyPathMode) {
       if (resolvedPathMode === 'short') {
@@ -332,16 +355,12 @@ export async function PUT(
     }
     if (
       deployment_phase !== undefined &&
-      existingUseCase.deployment_phase !==
-        (typeof deployment_phase === 'string' && deployment_phase.trim() ? deployment_phase.trim() : null)
+      existingUseCase.deployment_phase !== deployment_phase
     ) {
       changes.push({
         fieldName: 'deployment_phase',
         oldValue: valueToString(existingUseCase.deployment_phase),
-        newValue:
-          typeof deployment_phase === 'string' && deployment_phase.trim()
-            ? deployment_phase.trim()
-            : null,
+        newValue: deployment_phase,
       })
     }
     if (description !== undefined && existingUseCase.description !== description) {
@@ -394,7 +413,10 @@ export async function PUT(
         const host = request.headers.get('host') || 'localhost:3000'
         const calculateUrl = `${protocol}://${host}/api/usecases/${useCaseId}/calculate-score`
         
-        logger.info(`Calling calculate score endpoint: ${calculateUrl}`, { useCaseId, primary_model_id })
+        logger.info(`Calling calculate score endpoint: ${calculateUrl}`, {
+          useCaseId,
+          primary_model_id: primary_model_id ?? undefined,
+        })
         
         // Appel à l'endpoint de calcul de score avec authentification
         const calcResponse = await fetch(calculateUrl, {
@@ -413,7 +435,7 @@ export async function PUT(
             status: calcResponse.status, 
             error: errorText,
             useCaseId,
-            primary_model_id 
+            primary_model_id: primary_model_id ?? undefined,
           })
           throw new Error(`Score calculation failed: ${calcResponse.status}`)
         }
@@ -421,7 +443,7 @@ export async function PUT(
         const calcResult = await calcResponse.json()
         logger.info(`Score recalculated successfully after model update - Final score: ${calcResult.scores?.score_final}`, { 
           useCaseId, 
-          primary_model_id
+          primary_model_id: primary_model_id ?? undefined,
         })
         
         // Récupération du use case avec les scores fraîchement calculés
@@ -485,7 +507,7 @@ export async function PUT(
         logger.error('Failed to recalculate score after model update', scoreError, { 
           ...context, 
           useCaseId, 
-          primary_model_id 
+          primary_model_id: primary_model_id ?? undefined,
         })
         // Retour du use case avec le nouveau modèle mais sans les scores mis à jour
         return NextResponse.json(updatedUseCase)

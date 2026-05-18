@@ -38,8 +38,8 @@ jobs:
       )
 
     steps:
-      - name: Resolve preview context
-        id: preview-context
+      - name: Check Vercel preview build
+        id: vercel-preview
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
@@ -62,6 +62,9 @@ jobs:
             echo "pr_title=Manual workflow dispatch" >> "$GITHUB_OUTPUT"
             echo "head_ref=${GITHUB_REF_NAME:-manual}" >> "$GITHUB_OUTPUT"
             echo "head_sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            echo "vercel_state=success" >> "$GITHUB_OUTPUT"
+            echo "vercel_description=Manual preview URL provided" >> "$GITHUB_OUTPUT"
+            echo "vercel_target_url=$MANUAL_PREVIEW_URL" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -80,6 +83,10 @@ jobs:
           echo "Waiting for successful Vercel preview deployment for ${target_sha}..."
           deadline=$((SECONDS + 900))
           preview_url=""
+          vercel_state="pending"
+          vercel_description="Waiting for Vercel preview deployment."
+          vercel_target_url=""
+          vercel_deployment_id=""
 
           while [ "$SECONDS" -lt "$deadline" ]; do
             deployments=$(gh api \
@@ -90,19 +97,43 @@ jobs:
             while IFS= read -r deployment_id; do
               [ -n "$deployment_id" ] || continue
 
-              status=$(gh api \
+              status_json=$(gh api \
                 -H "Accept: application/vnd.github+json" \
                 -H "X-GitHub-Api-Version: 2022-11-28" \
                 "/repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses" \
-                --jq '[.[] | select(.state == "success" and ((.environment_url // .target_url // "") != ""))] | first // empty')
+                --jq '[.[]] | first // empty')
 
-              if [ -n "$status" ]; then
-                preview_url=$(echo "$status" | jq -r '.environment_url // .target_url')
+              if [ -z "$status_json" ]; then
+                continue
+              fi
+
+              state=$(echo "$status_json" | jq -r '.state // "pending"')
+              description=$(echo "$status_json" | jq -r '.description // ""')
+              target_url=$(echo "$status_json" | jq -r '.target_url // .log_url // .environment_url // ""')
+              environment_url=$(echo "$status_json" | jq -r '.environment_url // ""')
+
+              vercel_state="$state"
+              vercel_description="${description:-Vercel deployment status: ${state}}"
+              vercel_target_url="$target_url"
+              vercel_deployment_id="$deployment_id"
+
+              if [ "$state" = "success" ] && [ -n "$environment_url" ]; then
+                preview_url="$environment_url"
+                vercel_target_url="${target_url:-$environment_url}"
+                break
+              fi
+
+              if [ "$state" = "failure" ] || [ "$state" = "error" ]; then
                 break
               fi
             done < <(echo "$deployments" | jq -r '.[].id')
 
             if [ -n "$preview_url" ]; then
+              vercel_state="success"
+              break
+            fi
+
+            if [ "$vercel_state" = "failure" ] || [ "$vercel_state" = "error" ]; then
               break
             fi
 
@@ -111,8 +142,12 @@ jobs:
           done
 
           if [ -z "$preview_url" ]; then
-            echo "No successful Vercel preview deployment found for ${target_sha} after 15 minutes." >&2
-            exit 1
+            if [ "$vercel_state" != "failure" ] && [ "$vercel_state" != "error" ]; then
+              vercel_state="timeout"
+              vercel_description="No successful Vercel preview deployment found for ${target_sha} after 15 minutes."
+            fi
+
+            echo "Vercel preview deployment did not complete successfully: ${vercel_state} - ${vercel_description}" >&2
           fi
 
           {
@@ -121,26 +156,46 @@ jobs:
             echo "pr_title=$pr_title"
             echo "head_ref=$target_ref"
             echo "head_sha=$target_sha"
+            echo "vercel_state=$vercel_state"
+            echo "vercel_target_url=$vercel_target_url"
+            echo "vercel_deployment_id=$vercel_deployment_id"
+            echo "vercel_description<<EOF"
+            echo "$vercel_description"
+            echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Resolve preview context
+        if: steps.vercel-preview.outputs.vercel_state == 'success'
+        run: |
+          echo "Preview URL: ${{ steps.vercel-preview.outputs.preview_url }}"
+          echo "Branch: ${{ steps.vercel-preview.outputs.head_ref }}"
+          echo "Commit: ${{ steps.vercel-preview.outputs.head_sha }}"
+
       - name: Checkout code
+        if: steps.vercel-preview.outputs.vercel_state == 'success'
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.preview-context.outputs.head_sha }}
+          ref: ${{ steps.vercel-preview.outputs.head_sha }}
 
       - name: Setup Node.js
+        if: steps.vercel-preview.outputs.vercel_state == 'success'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        if: steps.vercel-preview.outputs.vercel_state == 'success'
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
+        if: steps.vercel-preview.outputs.vercel_state == 'success'
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
+        if: steps.vercel-preview.outputs.vercel_state == 'success'
         id: e2e-tests
         continue-on-error: true
         run: |
@@ -157,14 +212,73 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           # Playwright config
-          PLAYWRIGHT_BASE_URL: ${{ steps.preview-context.outputs.preview_url }}
+          PLAYWRIGHT_BASE_URL: ${{ steps.vercel-preview.outputs.preview_url }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
           # Optional - for features that need these
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
 
+      - name: Build Slack Vercel failure payload
+        if: always() && steps.vercel-preview.outputs.vercel_state != 'success'
+        id: slack-vercel-payload
+        env:
+          PR_NUMBER: ${{ steps.vercel-preview.outputs.pr_number }}
+          PR_TITLE: ${{ steps.vercel-preview.outputs.pr_title }}
+          BRANCH: ${{ steps.vercel-preview.outputs.head_ref }}
+          AUTHOR: ${{ github.actor }}
+          HEAD_SHA: ${{ steps.vercel-preview.outputs.head_sha }}
+          VERCEL_STATE: ${{ steps.vercel-preview.outputs.vercel_state }}
+          VERCEL_DESCRIPTION: ${{ steps.vercel-preview.outputs.vercel_description }}
+          VERCEL_TARGET_URL: ${{ steps.vercel-preview.outputs.vercel_target_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          short_sha="${HEAD_SHA:0:7}"
+          vercel_url="${VERCEL_TARGET_URL:-$RUN_URL}"
+
+          jq -n \
+            --arg pr_number "$PR_NUMBER" \
+            --arg pr_title "$PR_TITLE" \
+            --arg branch "$BRANCH" \
+            --arg author "$AUTHOR" \
+            --arg short_sha "$short_sha" \
+            --arg vercel_state "$VERCEL_STATE" \
+            --arg vercel_description "$VERCEL_DESCRIPTION" \
+            --arg vercel_url "$vercel_url" \
+            --arg run_url "$RUN_URL" \
+            '{
+              "blocks": [
+                {"type": "section", "text": {"type": "mrkdwn", "text": "<!here>"}},
+                {"type": "header", "text": {"type": "plain_text", "text": "❌ Vercel Preview Build Failed", "emoji": true}},
+                {"type": "section", "fields": [
+                  {"type": "mrkdwn", "text": ("*PR/Event:*\n#" + $pr_number + " " + $pr_title)},
+                  {"type": "mrkdwn", "text": ("*Branch:*\n" + $branch)}
+                ]},
+                {"type": "section", "fields": [
+                  {"type": "mrkdwn", "text": ("*Author:*\n" + $author)},
+                  {"type": "mrkdwn", "text": ("*Commit:*\n`" + $short_sha + "`")}
+                ]},
+                {"type": "section", "text": {"type": "mrkdwn", "text": ("*Vercel state:* `" + $vercel_state + "`\n*Erreur:*\n```" + $vercel_description + "```")}},
+                {"type": "actions", "elements": [
+                  {"type": "button", "text": {"type": "plain_text", "text": "Vercel Deployment"}, "style": "danger", "url": $vercel_url},
+                  {"type": "button", "text": {"type": "plain_text", "text": "GitHub Actions"}, "url": $run_url}
+                ]}
+              ]
+            }' > slack-vercel-payload.json
+
+      - name: Notify Slack on Vercel failure
+        if: always() && steps.vercel-preview.outputs.vercel_state != 'success'
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload-file-path: slack-vercel-payload.json
+
+      - name: Fail workflow on Vercel failure
+        if: always() && steps.vercel-preview.outputs.vercel_state != 'success'
+        run: exit 1
+
       - name: Parse test results
-        if: always()
+        if: always() && steps.vercel-preview.outputs.vercel_state == 'success' && steps.e2e-tests.outcome != 'skipped'
         id: parse-results
         run: |
           # Parse the JSON results file
@@ -312,7 +426,7 @@ jobs:
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.vercel-preview.outputs.vercel_state == 'success' && steps.e2e-tests.outcome != 'skipped'
         with:
           name: playwright-report
           path: |
@@ -322,7 +436,7 @@ jobs:
           retention-days: 7
 
       - name: Deploy report to OVH server
-        if: always()
+        if: always() && steps.vercel-preview.outputs.vercel_state == 'success' && steps.e2e-tests.outcome != 'skipped'
         env:
           OVH_SSH_KEY: ${{ secrets.OVH_SSH_KEY }}
         run: |
@@ -351,11 +465,11 @@ jobs:
           PASSED: ${{ steps.parse-results.outputs.PASSED }}
           FLAKY: ${{ steps.parse-results.outputs.FLAKY }}
           SKIPPED: ${{ steps.parse-results.outputs.SKIPPED }}
-          PR_NUMBER: ${{ steps.preview-context.outputs.pr_number }}
-          PR_TITLE: ${{ steps.preview-context.outputs.pr_title }}
-          BRANCH: ${{ steps.preview-context.outputs.head_ref }}
+          PR_NUMBER: ${{ steps.vercel-preview.outputs.pr_number }}
+          PR_TITLE: ${{ steps.vercel-preview.outputs.pr_title }}
+          BRANCH: ${{ steps.vercel-preview.outputs.head_ref }}
           AUTHOR: ${{ github.actor }}
-          PREVIEW_URL: ${{ steps.preview-context.outputs.preview_url }}
+          PREVIEW_URL: ${{ steps.vercel-preview.outputs.preview_url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           REPORT_URL: http://57.130.47.254:8080/${{ github.run_id }}/
         run: |
@@ -411,11 +525,11 @@ jobs:
           FAILED: ${{ steps.parse-results.outputs.FAILED }}
           FLAKY: ${{ steps.parse-results.outputs.FLAKY }}
           SKIPPED: ${{ steps.parse-results.outputs.SKIPPED }}
-          PR_NUMBER: ${{ steps.preview-context.outputs.pr_number }}
-          PR_TITLE: ${{ steps.preview-context.outputs.pr_title }}
-          BRANCH: ${{ steps.preview-context.outputs.head_ref }}
+          PR_NUMBER: ${{ steps.vercel-preview.outputs.pr_number }}
+          PR_TITLE: ${{ steps.vercel-preview.outputs.pr_title }}
+          BRANCH: ${{ steps.vercel-preview.outputs.head_ref }}
           AUTHOR: ${{ github.actor }}
-          PREVIEW_URL: ${{ steps.preview-context.outputs.preview_url }}
+          PREVIEW_URL: ${{ steps.vercel-preview.outputs.preview_url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           REPORT_URL: http://57.130.47.254:8080/${{ github.run_id }}/
         run: |

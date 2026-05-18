@@ -114,8 +114,8 @@ export default function UseCasesPage() {
   }
 
   const filteredUseCases = usecases.filter(usecase => {
-    const matchesSearch = usecase.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (usecase.description && usecase.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesSearch = (usecase.name || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+                         (usecase.description && (usecase.description || '').toLowerCase().includes((searchTerm || '').toLowerCase()))
     const matchesStatus = !statusFilter || usecase.status === statusFilter
     const matchesRisk =
       !riskFilter ||
@@ -124,7 +124,7 @@ export default function UseCasesPage() {
         usecase.classification_status,
         usecase.risk_level ?? null
       )
-    const matchesEmail = !emailFilter || (usecase.user_email && usecase.user_email.toLowerCase().includes(emailFilter.toLowerCase()))
+    const matchesEmail = !emailFilter || (usecase.user_email && (usecase.user_email || '').toLowerCase().includes((emailFilter || '').toLowerCase()))
     
     return matchesSearch && matchesStatus && matchesRisk && matchesEmail
   })
@@ -139,8 +139,8 @@ export default function UseCasesPage() {
     return 'bg-gray-100 text-gray-800 border border-gray-200'
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+  const getStatusColor = (status?: string | null) => {
+    switch ((status || '').toLowerCase()) {
       case 'draft':
         return 'bg-gray-100 text-gray-800'
       case 'in_progress':
@@ -165,7 +165,7 @@ export default function UseCasesPage() {
     if (label === 'Non évalué') return 'bg-gray-100 text-gray-800'
     const risk = usecase.risk_level
     if (!risk) return 'bg-gray-100 text-gray-800'
-    switch (risk.toLowerCase()) {
+    switch ((risk || '').toLowerCase()) {
       case 'minimal':
         return 'bg-green-100 text-green-800'
       case 'limited':

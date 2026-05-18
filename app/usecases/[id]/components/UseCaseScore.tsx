@@ -73,7 +73,9 @@ export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseC
           <div className="flex items-center space-x-3">
             <span className="text-2xl">{category.icon}</span>
             <div>
-              <div className="text-2xl font-bold">{Math.round(score.score)}/{getDisplayMaxScore()}</div>
+              <div className="text-2xl font-bold" data-testid="final-score-value">
+                {Math.round(score.score)}/{getDisplayMaxScore()}
+              </div>
               <div className="text-sm font-medium">{category.category}</div>
             </div>
           </div>

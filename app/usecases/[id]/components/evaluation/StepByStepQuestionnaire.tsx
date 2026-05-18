@@ -601,6 +601,8 @@ export function StepByStepQuestionnaire({
             {primaryActionIsFinish ? (
               /* Bouton Terminer (dernière question) */
               <button
+                type="button"
+                data-testid="submit-questionnaire-btn"
                 onClick={handleSubmit}
                 disabled={!canProceed || isSubmitting}
                 className={`inline-flex items-center px-6 py-2 text-sm font-medium rounded-lg transition-colors ${

@@ -456,12 +456,18 @@ function UseCaseRapportMainContent({
                     
                     <div className={`${getScoreStyle(score.score).bg} rounded-xl p-4 border ${getScoreStyle(score.score).border} ${getScoreStyle(score.score).shadow} shadow-sm hover:shadow-md transition-all duration-200`}>
                       <div className="text-center relative">
-                        <div className={`text-3xl font-bold ${getScoreStyle(score.score).text} mb-2`}>
+                        <div
+                          className={`text-3xl font-bold ${getScoreStyle(score.score).text} mb-2`}
+                          data-testid="final-score-value"
+                        >
                           {Math.round(score.score)}
                         </div>
                         
                         {score.is_eliminated && (
-                          <div className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold border border-red-200">
+                          <div
+                            className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold border border-red-200"
+                            data-testid="elimination-warning-badge"
+                          >
                             <AlertTriangle className="h-3 w-3 mr-1" />
                             Éliminé
                           </div>

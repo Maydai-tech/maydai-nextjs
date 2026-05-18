@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { authenticateUser } from './auth-helper'
 import { cleanupTestData } from './_helpers/db-cleanup'
 import { seedV2Usecase } from './_helpers/seed-usecase'
+import { CompleteSignupSchema } from '@/lib/validations/signup'
 import { ChecklistArraySchema } from '@/lib/validations/usecases'
 
 /**
@@ -52,6 +53,28 @@ test.describe('Questionnaire V3 — parcours court (scoring)', () => {
     }
     testUserId = authData.user.id
 
+    const mockProfile = CompleteSignupSchema.parse({
+      firstName: 'E2E',
+      lastName: 'ShortPath',
+      companyName: 'E2E ShortPath Company',
+      mainIndustryId: 'tech_data',
+      subCategoryId: 'saas',
+    })
+
+    const { error: profileError } = await admin.from('profiles').insert({
+      id: testUserId,
+      first_name: mockProfile.firstName,
+      last_name: mockProfile.lastName,
+      company_name: mockProfile.companyName,
+      industry: mockProfile.mainIndustryId,
+      sub_category_id: mockProfile.subCategoryId,
+      updated_at: new Date().toISOString(),
+    })
+
+    if (profileError) {
+      throw new Error(`Failed to create test profile: ${profileError.message}`)
+    }
+
     const { data: companyRow, error: companyError } = await admin
       .from('companies')
       .insert({ name: `E2E ShortPath ${Date.now()}` })
@@ -64,18 +87,12 @@ test.describe('Questionnaire V3 — parcours court (scoring)', () => {
     testCompanyId = companyRow.id
     const companyId = companyRow.id
 
-    const { error: profileError } = await admin.from('profiles').insert({
-      id: testUserId,
-      first_name: 'E2E',
-      last_name: 'ShortPath',
-      company_name: `E2E ShortPath ${Date.now()}`,
+    const { error: profileUpdateError } = await admin.from('profiles').update({
       company_id: companyId,
       current_company_id: companyId,
-      industry: 'tech_data',
-      sub_category_id: 'saas',
-    })
-    if (profileError) {
-      throw new Error(`profiles: ${profileError.message}`)
+    }).eq('id', testUserId)
+    if (profileUpdateError) {
+      throw new Error(`profiles: ${profileUpdateError.message}`)
     }
 
     const usecaseId = await seedV2Usecase(admin, {

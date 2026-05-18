@@ -154,7 +154,7 @@ function v3LongBaseScore(rows: Row[]) {
   return { base, ctx, merged }
 }
 
-/** Parcours court : chaîne E4 + E5.N9.Q5 (Annexe III « emploi » — haut risque, alignement scénarios 4–5). */
+/** Parcours court : chaîne E4 + E5.N9.Q5 (Annexe III — malus -30 ; E4.N7.Q2.A réservé à l’élimination maturité). */
 function shortPathRowsPrefix(): Row[] {
   return [
     { question_code: 'E4.N7.Q1', single_value: 'E4.N7.Q1.B', multiple_codes: null, conditional_main: null },
@@ -162,7 +162,7 @@ function shortPathRowsPrefix(): Row[] {
     { question_code: 'E4.N7.Q3', single_value: null, multiple_codes: ['E4.N7.Q3.E'], conditional_main: null },
     { question_code: 'E4.N7.Q3.1', single_value: null, multiple_codes: ['E4.N7.Q3.1.E'], conditional_main: null },
     { question_code: 'E4.N7.Q2.1', single_value: null, multiple_codes: ['E4.N7.Q2.1.E'], conditional_main: null },
-    { question_code: 'E4.N7.Q2', single_value: null, multiple_codes: ['E4.N7.Q2.A'], conditional_main: null },
+    { question_code: 'E4.N7.Q2', single_value: null, multiple_codes: ['E4.N7.Q2.B'], conditional_main: null },
     { question_code: 'E4.N8.Q9', single_value: 'E4.N8.Q9.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q9.1', single_value: 'E4.N8.Q9.1.B', multiple_codes: null, conditional_main: null },
     { question_code: 'E4.N8.Q11.0', single_value: 'E4.N8.Q11.0.B', multiple_codes: null, conditional_main: null },
@@ -324,8 +324,8 @@ describe('Crash-test PO — baseline scoring (scénarios 1–11)', () => {
       questionnairePathMode: 'long',
     })
 
-    // --- Scénarios 2 & 3 : long, emploi -30 ---
-    const annex = ['E4.N7.Q2.A']
+    // --- Scénarios 2 & 3 : long, Annexe III — malus -30 (B : même impact que A, sans élimination) ---
+    const annex = ['E4.N7.Q2.B']
     const { base: s2base, merged: s2merged } = v3LongBaseScore(longPathBestCore(annex))
     const s2score = await calculateScore(USECASE_ID, s2merged, undefined, {
       questionnaireVersion: QUESTIONNAIRE_VERSION_V3,
