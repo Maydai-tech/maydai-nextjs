@@ -107,7 +107,7 @@ describe('Score Calculator', () => {
       const responses: UserResponse[] = [
         {
           question_code: 'E4.N7.Q2',
-          multiple_codes: ['E4.N7.Q2.A'], // -30 impact (mis à jour selon CSV)
+          multiple_codes: ['E4.N7.Q2.B'], // -30 impact (E4.N7.Q2.A est éliminatoire — utiliser B pour ce cas)
         },
         {
           question_code: 'E4.N8.Q2',
@@ -137,7 +137,7 @@ describe('Score Calculator', () => {
       const responses: UserResponse[] = [
         {
           question_code: 'E4.N7.Q2',
-          multiple_codes: ['E4.N7.Q2.A', 'E4.N7.Q2.B', 'E4.N7.Q2.C'], // -90 total impact (3 × -30, mis à jour selon CSV)
+          multiple_codes: ['E4.N7.Q2.B', 'E4.N7.Q2.C', 'E4.N7.Q2.D'], // -90 total impact (3 × -30, sans E4.N7.Q2.A éliminatoire)
         },
       ];
       const result = calculateBaseScore(responses);

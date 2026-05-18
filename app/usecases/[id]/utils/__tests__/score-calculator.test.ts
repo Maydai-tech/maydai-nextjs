@@ -21,7 +21,7 @@ describe('Score Calculator', () => {
   const mockUsecaseId = 'test-usecase-123'
 
   describe('calculateScore', () => {
-    test('E5.N9.Q9 (radio long) : réponse NON applique -4 sur le breakdown (alignement Edge / maturité)', async () => {
+    test('E5.N9.Q9 (radio long) : réponse NON applique -10 sur le breakdown (alignement Edge / maturité)', async () => {
       const result = await calculateScore(mockUsecaseId, [
         {
           question_code: 'E5.N9.Q9',
@@ -31,7 +31,7 @@ describe('Score Calculator', () => {
         },
       ])
       const row = result.score_breakdown.find(b => b.question_id === 'E5.N9.Q9')
-      expect(row?.score_impact).toBe(-4)
+      expect(row?.score_impact).toBe(-10)
     })
 
     test('should return base score for no responses', async () => {
@@ -109,7 +109,7 @@ describe('Score Calculator', () => {
         {
           question_code: 'E4.N7.Q2', // Has category_impacts
           single_value: null,
-          multiple_codes: ['E4.N7.Q2.A'], // score_impact: -30
+          multiple_codes: ['E4.N7.Q2.B'], // score_impact: -30 (E4.N7.Q2.A = éliminatoire)
           conditional_main: null
         }
       ]
@@ -125,7 +125,7 @@ describe('Score Calculator', () => {
         {
           question_code: 'E4.N7.Q2',
           single_value: null,
-          multiple_codes: ['E4.N7.Q2.A', 'E4.N7.Q2.B', 'E4.N7.Q2.C', 'E4.N7.Q2.D'], // Multiple -30 impacts
+          multiple_codes: ['E4.N7.Q2.B', 'E4.N7.Q2.C', 'E4.N7.Q2.D', 'E4.N7.Q2.E'], // Multiple -30 impacts, sans A éliminatoire
           conditional_main: null
         }
       ]
