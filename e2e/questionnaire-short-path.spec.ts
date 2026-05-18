@@ -62,14 +62,15 @@ test.describe('Questionnaire V3 — parcours court (scoring)', () => {
       throw new Error(`Failed to create test company: ${companyError?.message ?? 'no id'}`)
     }
     testCompanyId = companyRow.id
+    const companyId = companyRow.id
 
     const { error: profileError } = await admin.from('profiles').insert({
       id: testUserId,
       first_name: 'E2E',
       last_name: 'ShortPath',
       company_name: `E2E ShortPath ${Date.now()}`,
-      company_id: testCompanyId,
-      current_company_id: testCompanyId,
+      company_id: companyId,
+      current_company_id: companyId,
       industry: 'tech_data',
       sub_category_id: 'saas',
     })
@@ -78,7 +79,7 @@ test.describe('Questionnaire V3 — parcours court (scoring)', () => {
     }
 
     const usecaseId = await seedV2Usecase(admin, {
-      companyId: testCompanyId,
+      companyId,
       pathMode: 'short',
       checklistGovEnterprise: [],
       checklistGovUsecase: [],
@@ -87,7 +88,7 @@ test.describe('Questionnaire V3 — parcours court (scoring)', () => {
 
     const { error: ucError } = await admin.from('user_companies').insert({
       user_id: testUserId,
-      company_id: testCompanyId,
+      company_id: companyId,
       role: 'owner',
     })
     if (ucError) {

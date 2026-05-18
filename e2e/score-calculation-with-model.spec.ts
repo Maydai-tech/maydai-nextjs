@@ -63,14 +63,15 @@ test.describe('Calcul de score avec modèle COMPL-AI', () => {
       throw new Error(`Failed to create test company: ${companyError?.message ?? 'no id'}`)
     }
     testCompanyId = companyRow.id
+    const companyId = companyRow.id
 
     const { error: profileError } = await supabaseAdmin.from('profiles').insert({
       id: testUserId,
       first_name: 'E2E',
       last_name: 'ScoreModel',
       company_name: `E2E ScoreModel ${Date.now()}`,
-      company_id: testCompanyId,
-      current_company_id: testCompanyId,
+      company_id: companyId,
+      current_company_id: companyId,
       industry: 'tech_data',
       sub_category_id: 'saas',
     })
@@ -79,7 +80,7 @@ test.describe('Calcul de score avec modèle COMPL-AI', () => {
     }
 
     const usecaseId = await seedV2Usecase(supabaseAdmin, {
-      companyId: testCompanyId,
+      companyId,
       pathMode: 'long',
       checklistGovEnterprise: [],
       checklistGovUsecase: [],
@@ -96,7 +97,7 @@ test.describe('Calcul de score avec modèle COMPL-AI', () => {
 
     const { error: ucError } = await supabaseAdmin.from('user_companies').insert({
       user_id: testUserId,
-      company_id: testCompanyId,
+      company_id: companyId,
       role: 'owner',
     })
     if (ucError) {

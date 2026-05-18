@@ -18,8 +18,10 @@ test.describe.configure({ mode: 'serial' })
 test.describe('Création de registre', () => {
   const testUserEmail = `e2e-registry-${Date.now()}@maydai-test.com`
   const registryName = `E2E Registre ${Date.now()}`
+  const initialCompanyName = `E2E Registry Owner ${Date.now()}`
 
   let testUserId: string | null = null
+  let initialCompanyId: string | null = null
   let createdRegistryCompanyId: string | null = null
 
   function getAdminClient() {
@@ -44,6 +46,39 @@ test.describe('Création de registre', () => {
       throw new Error(`Failed to create test user: ${error?.message ?? 'no user'}`)
     }
     testUserId = data.user.id
+
+    const { data: companyRow, error: companyError } = await supabase
+      .from('companies')
+      .insert({ name: initialCompanyName })
+      .select('id')
+      .single()
+    if (companyError || !companyRow?.id) {
+      throw new Error(`Failed to create initial test company: ${companyError?.message ?? 'no id'}`)
+    }
+    initialCompanyId = companyRow.id
+
+    const { error: profileError } = await supabase.from('profiles').insert({
+      id: testUserId,
+      first_name: 'E2E',
+      last_name: 'Registry',
+      company_name: initialCompanyName,
+      company_id: initialCompanyId,
+      current_company_id: initialCompanyId,
+      industry: 'tech_data',
+      sub_category_id: 'saas',
+    })
+    if (profileError) {
+      throw new Error(`Failed to create test profile: ${profileError.message}`)
+    }
+
+    const { error: ucError } = await supabase.from('user_companies').insert({
+      user_id: testUserId,
+      company_id: initialCompanyId,
+      role: 'owner',
+    })
+    if (ucError) {
+      throw new Error(`Failed to create initial user_companies: ${ucError.message}`)
+    }
   })
 
   test.beforeEach(async ({ page }) => {
@@ -110,5 +145,12 @@ test.describe('Création de registre', () => {
       userId: testUserId,
       companyId: companyId ?? undefined,
     })
+
+    if (initialCompanyId && initialCompanyId !== companyId) {
+      await cleanupTestData(supabase, {
+        userId: testUserId,
+        companyId: initialCompanyId,
+      })
+    }
   })
 })
