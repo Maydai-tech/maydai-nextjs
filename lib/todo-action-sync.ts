@@ -440,22 +440,27 @@ export async function recalculateScoreAndGetChange(
   supabase: SupabaseClient,
   usecaseId: string,
   token: string,
-  baseUrl: string
+  baseUrl: string,
+  options?: { path_mode?: 'short' }
 ): Promise<{
   previousScore: number | null
   newScore: number | null
   pointsGained: number
 } | null> {
-  // Get current score before recalculation
   const { data: usecase } = await supabase
     .from('usecases')
-    .select('score_final')
+    .select('score_final, short_path_initial_score, path_mode')
     .eq('id', usecaseId)
     .single()
 
-  const previousScore = usecase?.score_final ?? null
+  const useShortPathScore =
+    options?.path_mode === 'short' || usecase?.path_mode === 'short'
+  const previousScore = useShortPathScore
+    ? (usecase?.short_path_initial_score ?? usecase?.score_final ?? null)
+    : (usecase?.score_final ?? null)
 
-  // Call the score calculation endpoint
+  const pathModeForCalc = options?.path_mode === 'short' ? 'short' : undefined
+
   try {
     const response = await fetch(`${baseUrl}/api/usecases/${usecaseId}/calculate-score`, {
       method: 'POST',
@@ -463,7 +468,10 @@ export async function recalculateScoreAndGetChange(
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ usecase_id: usecaseId })
+      body: JSON.stringify({
+        usecase_id: usecaseId,
+        ...(pathModeForCalc === 'short' ? { path_mode: 'short' } : {}),
+      })
     })
 
     if (!response.ok) {
@@ -485,4 +493,33 @@ export async function recalculateScoreAndGetChange(
     console.error(`[TODO-SYNC] Error calling score calculation:`, error)
     return null
   }
+}
+
+/**
+ * Recalcule le score d'un cas d'usage après sync dossier/TODO,
+ * en lisant `path_mode` en base et en déléguant à `/calculate-score`.
+ */
+export async function recalculateDossierUseCaseScore(
+  supabase: SupabaseClient,
+  usecaseId: string,
+  token: string,
+  baseUrl: string
+): Promise<{
+  previousScore: number | null
+  newScore: number | null
+  pointsGained: number
+} | null> {
+  const { data: usecasePathRow } = await supabase
+    .from('usecases')
+    .select('path_mode')
+    .eq('id', usecaseId)
+    .single()
+
+  return recalculateScoreAndGetChange(
+    supabase,
+    usecaseId,
+    token,
+    baseUrl,
+    usecasePathRow?.path_mode === 'short' ? { path_mode: 'short' } : undefined
+  )
 }

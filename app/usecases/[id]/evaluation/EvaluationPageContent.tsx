@@ -7,7 +7,6 @@ import { useUseCaseData } from '../hooks/useUseCaseData'
 import { useUseCaseNavigation } from '../utils/navigation'
 import { UseCaseLoader } from '../components/shared/UseCaseLoader'
 import { StepByStepQuestionnaire } from '../components/evaluation/StepByStepQuestionnaire'
-import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
 import {
   normalizeQuestionnaireVersion,
   QUESTIONNAIRE_VERSION_V3,
@@ -30,8 +29,6 @@ function EvaluationInner() {
   const useCaseId = params.id as string
   const { useCase, loading: loadingData, error } = useUseCaseData(useCaseId)
   const { goToOverview } = useUseCaseNavigation(useCaseId, useCase?.company_id || '')
-
-  const { loading: loadingResponses } = useQuestionnaireResponses(useCaseId)
 
   const questionnairePathMode: QuestionnairePathMode =
     normalizeQuestionnaireVersion(useCase?.questionnaire_version) === QUESTIONNAIRE_VERSION_V3 &&
@@ -138,7 +135,7 @@ function EvaluationInner() {
     return null
   }
 
-  if (loadingData || loadingResponses) {
+  if (loadingData) {
     return <UseCaseLoader message="Chargement du cas d'usage..." />
   }
 

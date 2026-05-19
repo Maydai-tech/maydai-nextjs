@@ -4,6 +4,7 @@ import {
   getTodoActionMapping,
   syncTodoActionToResponse,
   reverseTodoActionResponse,
+  recalculateDossierUseCaseScore,
 } from "@/lib/todo-action-sync";
 import { recordUseCaseHistory } from "@/lib/usecase-history";
 import {
@@ -17,6 +18,16 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const allowedDocTypes = getAcceptedDossierApiDocTypeParams();
+
+function buildScoreRecalcBaseUrl(request: NextRequest): string {
+  const protocol = process.env.NODE_ENV === "production" ? "https" : "http";
+  const host = request.headers.get("host") || "localhost:3000";
+  return `${protocol}://${host}`;
+}
+
+function getAuthToken(request: NextRequest): string {
+  return request.headers.get("authorization")?.replace("Bearer ", "") ?? "";
+}
 
 // Formats acceptés par type de document
 const allowedFormats: Record<
@@ -351,66 +362,37 @@ export async function PUT(
       console.log("[PUT /upload] Document inserted successfully");
     }
 
-    // Malus récupérable uniquement : sync questionnaire → ajuste score_base si et seulement si gain > 0
+    // Sync questionnaire puis recalcul centralisé du score
     let scoreChange = null;
 
     const todoMapping = getTodoActionMapping(storageDocType);
     if (todoMapping) {
       console.log("[PUT /upload] Found todo_action mapping for docType:", storageDocType);
 
-      const syncResult = await syncTodoActionToResponse(
+      await syncTodoActionToResponse(
         supabase,
         usecaseId,
         storageDocType,
         user.email || user.id
       );
 
-      if (syncResult.shouldRecalculate && syncResult.expectedPointsGained > 0) {
-        console.log("[PUT /upload] Malus récupérable : mise à jour score (gain brut)", syncResult.expectedPointsGained);
+      const scoreRecalc = await recalculateDossierUseCaseScore(
+        supabase,
+        usecaseId,
+        token ?? getAuthToken(request),
+        buildScoreRecalcBaseUrl(request)
+      );
 
-        const { data: currentUsecase } = await supabase
-          .from("usecases")
-          .select("score_final, score_base, score_model")
-          .eq("id", usecaseId)
-          .single();
-
-        const previousScore = currentUsecase?.score_final ?? null;
-        const previousBaseScore = currentUsecase?.score_base ?? 0;
-        const scoreModel = currentUsecase?.score_model ?? 0;
-
-        if (previousScore !== null) {
-          const COMPL_AI_WEIGHT = 2.5;
-          const newBaseScore = previousBaseScore + syncResult.expectedPointsGained;
-          const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
-
-          console.log(`[PUT /upload] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
-
-          const { error: updateError } = await supabase
-            .from("usecases")
-            .update({
-              score_base: newBaseScore,
-              score_final: newFinalScore,
-              last_calculation_date: new Date().toISOString(),
-            })
-            .eq("id", usecaseId);
-
-          if (!updateError) {
-            const pointsGainedFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
-            scoreChange = {
-              previousScore: previousScore,
-              newScore: newFinalScore,
-              pointsGained: pointsGainedFinal,
-              reason: todoMapping.reason,
-            };
-            console.log("[PUT /upload] Score changed:", scoreChange);
-          } else {
-            console.error("[PUT /upload] Error updating score:", updateError);
-          }
-        }
-      } else if (syncResult.changed) {
-        console.log("[PUT /upload] Réponse questionnaire mise à jour sans impact score (delta = 0)");
+      if (scoreRecalc && scoreRecalc.newScore !== null) {
+        scoreChange = {
+          previousScore: scoreRecalc.previousScore,
+          newScore: scoreRecalc.newScore,
+          pointsGained: scoreRecalc.pointsGained,
+          reason: todoMapping.reason,
+        };
+        console.log("[PUT /upload] Score recalculated via calculate-score:", scoreChange);
       } else {
-        console.log("[PUT /upload] Pas de sync score : pas de malus récupérable sur cet upload");
+        console.error("[PUT /upload] Score recalculation failed after todo sync");
       }
     }
 
@@ -447,7 +429,7 @@ export async function DELETE(
   { params }: { params: Promise<{ usecaseId: string; docType: string }> },
 ) {
   try {
-    const { supabase, user, error } = (await getClientFromAuth(request)) as any;
+    const { supabase, user, token, error } = (await getClientFromAuth(request)) as any;
     if (error) return NextResponse.json({ error }, { status: 401 });
 
     const { usecaseId, docType } = await params;
@@ -552,53 +534,30 @@ export async function DELETE(
 
       const todoMapping = getTodoActionMapping(storageDocType);
       if (todoMapping) {
-        const reverseResult = await reverseTodoActionResponse(
+        await reverseTodoActionResponse(
           supabase,
           usecaseId,
           storageDocType,
           user.email || user.id,
         );
 
-        if (reverseResult.shouldRecalculate && reverseResult.expectedPointsLost > 0) {
-          console.log("[DELETE /upload] Decreasing score by", reverseResult.expectedPointsLost, "points");
+        const scoreRecalc = await recalculateDossierUseCaseScore(
+          supabase,
+          usecaseId,
+          token ?? getAuthToken(request),
+          buildScoreRecalcBaseUrl(request)
+        );
 
-          const { data: currentUsecase } = await supabase
-            .from("usecases")
-            .select("score_final, score_base, score_model")
-            .eq("id", usecaseId)
-            .single();
-
-          const previousScore = currentUsecase?.score_final ?? null;
-          const previousBaseScore = currentUsecase?.score_base ?? 0;
-          const scoreModel = currentUsecase?.score_model ?? 0;
-
-          if (previousScore !== null) {
-            const newBaseScore = Math.max(0, previousBaseScore - reverseResult.expectedPointsLost);
-            const COMPL_AI_WEIGHT = 2.5;
-            const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100;
-
-            console.log(`[DELETE /upload] Score decrease: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`);
-
-            const { error: scoreUpdateError } = await supabase
-              .from("usecases")
-              .update({
-                score_base: newBaseScore,
-                score_final: newFinalScore,
-                last_calculation_date: new Date().toISOString(),
-              })
-              .eq("id", usecaseId);
-
-            if (!scoreUpdateError) {
-              const pointsLostFinal = Math.round((newFinalScore - previousScore) * 100) / 100;
-              scoreChange = {
-                previousScore,
-                newScore: newFinalScore,
-                pointsGained: pointsLostFinal,
-                reason: reverseResult.reason,
-              };
-              console.log("[DELETE /upload] Score decreased:", scoreChange);
-            }
-          }
+        if (scoreRecalc && scoreRecalc.newScore !== null) {
+          scoreChange = {
+            previousScore: scoreRecalc.previousScore,
+            newScore: scoreRecalc.newScore,
+            pointsGained: scoreRecalc.pointsGained,
+            reason: todoMapping.reason,
+          };
+          console.log("[DELETE /upload] Score recalculated via calculate-score after reset:", scoreChange);
+        } else {
+          console.error("[DELETE /upload] Score recalculation failed after todo reverse");
         }
       }
 

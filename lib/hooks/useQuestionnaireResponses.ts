@@ -71,7 +71,7 @@ interface UseQuestionnaireResponsesReturn {
     responseData?: any
   ) => Promise<Record<string, unknown> | void>
   saveMultiple: (answers: Record<string, any>) => Promise<void>
-  refreshResponses: () => Promise<void>
+  refreshResponses: (options?: { force?: boolean }) => Promise<void>
   getResponse: (questionCode: string) => UseCaseResponse | null
   hasResponse: (questionCode: string) => boolean
 }
@@ -89,7 +89,7 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
   const accessToken = session?.access_token || ''
 
   // Charger les réponses - STABILISÉ
-  const refreshResponses = useCallback(async () => {
+  const refreshResponses = useCallback(async (options?: { force?: boolean }) => {
     if (!accessToken || !usecaseId || isFetching.current) {
       if (!accessToken || !usecaseId) {
         setLoading(false)
@@ -97,7 +97,11 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
       return
     }
 
-    // Éviter les fetch dupliqués
+    if (options?.force) {
+      lastFetchId.current = ''
+    }
+
+    // Éviter les fetch dupliqués (sauf refresh forcé ci-dessus)
     const fetchId = `${usecaseId}-${accessToken.slice(-8)}`
     if (lastFetchId.current === fetchId && !isFetching.current) {
       return

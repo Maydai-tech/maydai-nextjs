@@ -242,6 +242,59 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const showPasserAuParcoursCompletCta =
     showV3DualPath && useCase.path_mode === 'short'
 
+  const [isSwitchingToLongPath, setIsSwitchingToLongPath] = useState(false)
+  const longEvaluationHref = withEvaluationEntree(
+    useCaseRoutes.evaluation(useCase.id),
+    'header_v3_refine_long'
+  )
+
+  const handlePasserAuParcoursComplet = async () => {
+    if (isSwitchingToLongPath) return
+    const token = session?.access_token
+    if (!token) return
+
+    setIsSwitchingToLongPath(true)
+    try {
+      trackV3ShortPathCta({
+        usecase_id: useCase.id,
+        system_type_bucket: v3ShortPathSystemTypeBucket(useCase.system_type),
+        cta: 'evaluation_long',
+        cta_placement: 'header_v3_refine_long',
+        ...(headerFunnelKey && { outcome_funnel_key: headerFunnelKey }),
+      })
+
+      if (onUpdateUseCase) {
+        await onUpdateUseCase({ path_mode: 'long' })
+      } else {
+        const response = await fetch(`/api/usecases/${useCase.id}`, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ path_mode: 'long' }),
+        })
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => ({}))) as { error?: string }
+          throw new Error(payload.error || 'Impossible d’enregistrer le parcours complet.')
+        }
+      }
+
+      const onEvaluationPage =
+        typeof window !== 'undefined' &&
+        window.location.pathname.includes(`/usecases/${useCase.id}/evaluation`)
+
+      if (onEvaluationPage) {
+        router.refresh()
+      }
+      router.push(longEvaluationHref)
+    } catch (err) {
+      console.error('Passage au parcours complet:', err)
+    } finally {
+      setIsSwitchingToLongPath(false)
+    }
+  }
+
   // Memoize deployment countries to prevent WorldMap flickering
   const deploymentCountries = useMemo(
     () => useCase.deployment_countries || [],
@@ -426,23 +479,21 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
               <div className="flex flex-wrap items-center gap-3 min-w-0">
                 {showV3DualPath ? (
                   showPasserAuParcoursCompletCta ? (
-                    <Link
-                      href={withEvaluationEntree(useCaseRoutes.evaluation(useCase.id), 'header_v3_refine_long')}
-                      onClick={() =>
-                        trackV3ShortPathCta({
-                          usecase_id: useCase.id,
-                          system_type_bucket: v3ShortPathSystemTypeBucket(useCase.system_type),
-                          cta: 'evaluation_long',
-                          cta_placement: 'header_v3_refine_long',
-                          ...(headerFunnelKey && { outcome_funnel_key: headerFunnelKey }),
-                        })
-                      }
+                    <button
+                      type="button"
+                      onClick={() => void handlePasserAuParcoursComplet()}
+                      disabled={isSwitchingToLongPath || updating}
                       aria-label="Passer à l'évaluation détaillée du parcours complet"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#0080A3] text-[#0080A3] bg-white hover:bg-sky-50 transition-colors text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3]"
+                      aria-busy={isSwitchingToLongPath}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#0080A3] text-[#0080A3] bg-white hover:bg-sky-50 transition-colors text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3] disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                      {isSwitchingToLongPath ? (
+                        <RefreshCcw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                      ) : (
+                        <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                      )}
                       Passer au Parcours Complet
-                    </Link>
+                    </button>
                   ) : null
                 ) : (
                   <button

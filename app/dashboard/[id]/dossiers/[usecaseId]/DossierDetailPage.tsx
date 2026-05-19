@@ -1139,8 +1139,8 @@ export default function DossierDetailPage() {
             pointsGained={scoreChangePopup.pointsGained}
             reason={scoreChangePopup.reason}
             onClose={() => setScoreChangePopup(null)}
-            todoListUrl={`/dashboard/${companyId}/dossiers`}
-            usecaseDossierUrl={`/dashboard/${companyId}/dossiers/${usecaseId}`}
+            todoListUrl={`/dashboard/${companyId}/todo-list`}
+            usecaseDossierUrl={`/usecases/${usecaseId}`}
           />
         )}
       </div>
@@ -1672,8 +1672,8 @@ export default function DossierDetailPage() {
           pointsGained={scoreChangePopup.pointsGained}
           reason={scoreChangePopup.reason}
           onClose={() => setScoreChangePopup(null)}
-          todoListUrl={`/dashboard/${companyId}/dossiers`}
-          usecaseDossierUrl={`/dashboard/${companyId}/dossiers/${usecaseId}`}
+          todoListUrl={`/dashboard/${companyId}/todo-list`}
+          usecaseDossierUrl={`/usecases/${usecaseId}`}
         />
       )}
     </div>

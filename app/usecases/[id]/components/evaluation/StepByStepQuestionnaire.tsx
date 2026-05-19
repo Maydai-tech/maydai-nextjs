@@ -47,7 +47,7 @@ interface StepByStepQuestionnaireProps {
   onComplete: () => void
   /** V3 : `short` = même questionnaire avec périmètre actif réduit (graphe + scoring) ; fin identique au long. */
   questionnairePathMode?: QuestionnairePathMode
-  /** Run first-party (Supabase) pour mesurer fin parcours long. */
+  /** Run first-party (Supabase) pour clôturer la session analytics (court et long). */
   evaluationRunId?: string | null
 }
 
@@ -79,7 +79,7 @@ export function StepByStepQuestionnaire({
   const [inviteScope, setInviteScope] = useState<'company' | 'registry'>('registry')
 
   const shortPathSegmentsSeen = useRef<Set<number>>(new Set())
-  const longPathRunCompletedSent = useRef(false)
+  const pathRunCompletedSent = useRef(false)
   const router = useRouter()
 
   // Récupérer le nom de la company si non disponible dans useCase.companies
@@ -119,6 +119,7 @@ export function StepByStepQuestionnaire({
     isCalculatingScore,  // Indique si le calcul du score est en cours
     isGeneratingReport,  // Indique si la génération du rapport est en cours
     showProcessingAnimation, // Contrôle l'affichage de l'animation de traitement
+    isHydratingAnswers,  // GET /responses + première hydratation locale
     error,               // Message d'erreur éventuel
     handleAnswerSelect,  // Fonction pour sélectionner une réponse
     setAnswerForQuestion,
@@ -217,10 +218,10 @@ export function StepByStepQuestionnaire({
   }, [isCompleted, router, useCase.id])
 
   useEffect(() => {
-    if (!isCompleted || questionnairePathMode !== 'long') return
+    if (!isCompleted) return
     if (!evaluationRunId || !session?.access_token) return
-    if (longPathRunCompletedSent.current) return
-    longPathRunCompletedSent.current = true
+    if (pathRunCompletedSent.current) return
+    pathRunCompletedSent.current = true
     const body: Record<string, string | null> = {}
     if (useCase.classification_status != null) {
       body.classification_status = useCase.classification_status
@@ -240,7 +241,6 @@ export function StepByStepQuestionnaire({
     })
   }, [
     isCompleted,
-    questionnairePathMode,
     evaluationRunId,
     session?.access_token,
     useCase.id,
@@ -277,8 +277,8 @@ export function StepByStepQuestionnaire({
     )
   }
 
-  // État de chargement : en attente de la première question
-  if (!currentQuestion) {
+  // État de chargement : GET réponses + hydratation (évite radios vides au montage long)
+  if (isHydratingAnswers || !currentQuestion) {
     return (
       <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
         {/* Animation de chargement avec skeleton */}

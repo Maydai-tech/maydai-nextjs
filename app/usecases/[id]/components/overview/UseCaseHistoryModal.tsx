@@ -81,9 +81,16 @@ export const UseCaseHistoryModal: React.FC<UseCaseHistoryModalProps> = ({
   }
 
   const getEventTitle = (entry: UseCaseHistoryEntry): string => {
-    if (entry.event_type === 'field_updated' && entry.field_name) {
-      const fieldLabel = FIELD_LABELS[entry.field_name] || entry.field_name
-      return `${fieldLabel} modifié`
+    if (entry.event_type === 'field_updated') {
+      const questionLabel = entry.metadata?.question_label
+      if (typeof questionLabel === 'string' && questionLabel.trim().length > 0) {
+        return `${questionLabel} modifié`
+      }
+      if (entry.field_name) {
+        const fieldLabel = FIELD_LABELS[entry.field_name] || entry.field_name
+        return `${fieldLabel} modifié`
+      }
+      return EVENT_TYPE_LABELS.field_updated
     }
     if (entry.event_type === 'document_uploaded' && entry.metadata?.doc_type) {
       const docTypeLabel = DOC_TYPE_LABELS[String(entry.metadata.doc_type)] || String(entry.metadata.doc_type)

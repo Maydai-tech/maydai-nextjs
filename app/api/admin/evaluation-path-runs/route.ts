@@ -104,18 +104,28 @@ async function fetchLongRunsForUsecases(
   return out
 }
 
+async function fetchCompanyNameMap(
+  supabase: SupabaseClient,
+  companyIds: string[]
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  if (companyIds.length === 0) return map
+  const { data, error } = await supabase.from('companies').select('id, name').in('id', companyIds)
+  if (error || !data?.length) return map
+  for (const c of data as { id: string; name: string }[]) {
+    map.set(c.id, c.name)
+  }
+  return map
+}
+
 async function attachCompanyNamesToSegmentRows(
   supabase: SupabaseClient,
   rows: SegmentConversionRow[]
 ): Promise<SegmentConversionRow[]> {
   if (rows.length === 0) return rows
   const ids = [...new Set(rows.map((r) => r.segment))]
-  const { data, error } = await supabase.from('companies').select('id, name').in('id', ids)
-  if (error || !data?.length) {
-    return rows.map((r) => ({ ...r, company_name: r.company_name ?? null }))
-  }
-  const map = new Map((data as { id: string; name: string }[]).map((c) => [c.id, c.name]))
-  return rows.map((r) => ({ ...r, company_name: map.get(r.segment) ?? null }))
+  const map = await fetchCompanyNameMap(supabase, ids)
+  return rows.map((r) => ({ ...r, company_name: map.get(r.segment) ?? r.company_name ?? null }))
 }
 
 export async function GET(request: NextRequest) {
@@ -285,7 +295,7 @@ export async function GET(request: NextRequest) {
     })
     .sort((a, b) => b.count - a.count)
 
-  const recent_completions = [...completed]
+  const recent_completions_base = [...completed]
     .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''))
     .slice(0, 25)
     .map((r) => ({
@@ -301,6 +311,14 @@ export async function GET(request: NextRequest) {
       classification_status: r.classification_status,
       risk_level: r.risk_level,
     }))
+
+  const recentCompanyNameMap = await fetchCompanyNameMap(supabase, [
+    ...new Set(recent_completions_base.map((r) => r.company_id)),
+  ])
+  const recent_completions = recent_completions_base.map((r) => ({
+    ...r,
+    company_name: recentCompanyNameMap.get(r.company_id) ?? null,
+  }))
 
   const payload = {
     meta: {

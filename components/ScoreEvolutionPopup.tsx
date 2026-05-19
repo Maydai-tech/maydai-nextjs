@@ -2,7 +2,7 @@
 
 import { TrendingUp, X, ArrowLeft, FileText } from 'lucide-react'
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 interface ScoreEvolutionPopupProps {
   previousScore: number | null
@@ -12,7 +12,7 @@ interface ScoreEvolutionPopupProps {
   onClose: () => void
   autoCloseDelay?: number // in milliseconds, default 0 (no auto-close)
   todoListUrl?: string // URL to go back to the todo list
-  usecaseDossierUrl?: string // URL to view the use case dossier
+  usecaseDossierUrl?: string // URL to view the use case overview (/usecases/[id])
 }
 
 export default function ScoreEvolutionPopup({
@@ -25,7 +25,6 @@ export default function ScoreEvolutionPopup({
   todoListUrl,
   usecaseDossierUrl
 }: ScoreEvolutionPopupProps) {
-  const router = useRouter()
 
   // Auto-close after delay (disabled by default)
   useEffect(() => {
@@ -102,28 +101,24 @@ export default function ScoreEvolutionPopup({
           {/* Action buttons */}
           <div className="space-y-3">
             {todoListUrl && (
-              <button
-                onClick={() => {
-                  onClose()
-                  router.push(todoListUrl)
-                }}
+              <Link
+                href={todoListUrl}
+                onClick={onClose}
                 className="w-full px-6 py-3 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Retour a la todo list
-              </button>
+              </Link>
             )}
             {usecaseDossierUrl && (
-              <button
-                onClick={() => {
-                  onClose()
-                  router.push(usecaseDossierUrl)
-                }}
+              <Link
+                href={usecaseDossierUrl}
+                onClick={onClose}
                 className="w-full px-6 py-3 bg-[#0080A3] text-white hover:bg-[#006d8a] rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
               >
                 <FileText className="w-4 h-4" />
                 Voir le dossier du cas d&apos;usage
-              </button>
+              </Link>
             )}
             {!todoListUrl && !usecaseDossierUrl && (
               <button

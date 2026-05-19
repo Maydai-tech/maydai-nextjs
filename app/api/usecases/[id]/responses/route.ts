@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import {
   isChecklistGovEnterpriseQuestionCode,
   isChecklistGovUsecaseQuestionCode,
 } from '@/app/usecases/[id]/utils/bpgv-transparency-checklist-save'
 import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
+import { recordUseCaseHistory } from '@/lib/usecase-history'
 
 function normalizeStringArray(v: unknown): string[] {
   if (!Array.isArray(v)) return []
@@ -13,6 +14,105 @@ function normalizeStringArray(v: unknown): string[] {
 
 function isE4E5E6QuestionCode(code: string): boolean {
   return code.startsWith('E4.') || code.startsWith('E5.') || code.startsWith('E6.')
+}
+
+/** Questions pivots AI Act à tracer dans `usecase_history` lors d'une modification. */
+const CRITICAL_QUESTIONS_HISTORY: Record<string, string> = {
+  'E4.N7.Q1': 'Rôle de votre entreprise (Déployeur/Fournisseur)',
+  V3_SHORT_ENTREPRISE: 'Rôle de votre entreprise — parcours express (Déployeur/Fournisseur)',
+  'E4.N7.Q2': 'Domaines à haut risque (Annexe III)',
+  'E4.N7.Q3.1': 'Situations à risque inacceptable (interdit)',
+  // TODO: E4.N7.Q3 — finalités interdites si traçage distinct requis en conformité.
+}
+
+type ResponseValueSnapshot = {
+  single_value?: string | null
+  multiple_codes?: string[] | null
+  multiple_labels?: string[] | null
+  conditional_main?: string | null
+  conditional_keys?: string[] | null
+  conditional_values?: unknown[] | null
+}
+
+const RESPONSE_VALUE_SELECT =
+  'id, single_value, multiple_codes, multiple_labels, conditional_main, conditional_keys, conditional_values'
+
+function normalizeResponseSnapshot(row: ResponseValueSnapshot): ResponseValueSnapshot {
+  return {
+    single_value: row.single_value ?? null,
+    multiple_codes: row.multiple_codes ?? null,
+    multiple_labels: row.multiple_labels ?? null,
+    conditional_main: row.conditional_main ?? null,
+    conditional_keys: row.conditional_keys ?? null,
+    conditional_values: row.conditional_values ?? null,
+  }
+}
+
+function serializeResponseValue(snapshot: ResponseValueSnapshot): string {
+  const row = normalizeResponseSnapshot(snapshot)
+
+  if (row.multiple_codes !== null) {
+    const codes = Array.isArray(row.multiple_codes) ? [...row.multiple_codes].sort() : []
+    return JSON.stringify({ type: 'multiple', codes })
+  }
+  if (row.conditional_main !== null) {
+    const keys = Array.isArray(row.conditional_keys) ? row.conditional_keys : []
+    const values = Array.isArray(row.conditional_values) ? row.conditional_values : []
+    return JSON.stringify({ type: 'conditional', main: row.conditional_main, keys, values })
+  }
+  if (row.single_value !== null) {
+    return JSON.stringify({ type: 'single', value: row.single_value })
+  }
+  return JSON.stringify({ type: 'empty' })
+}
+
+function formatResponseValueForHistory(snapshot: ResponseValueSnapshot): string {
+  const row = normalizeResponseSnapshot(snapshot)
+
+  if (row.multiple_codes !== null) {
+    const codes = Array.isArray(row.multiple_codes) ? row.multiple_codes : []
+    if (codes.length === 0) return '(vide)'
+    const labels = Array.isArray(row.multiple_labels) ? row.multiple_labels : []
+    if (labels.length === codes.length && labels.some((l) => l.trim().length > 0)) {
+      return labels.join(', ')
+    }
+    return codes.join(', ')
+  }
+  if (row.conditional_main != null) {
+    const main = row.conditional_main
+    const keys = Array.isArray(row.conditional_keys) ? row.conditional_keys : []
+    const values = Array.isArray(row.conditional_values) ? row.conditional_values : []
+    if (keys.length === 0) return main
+    const pairs = keys.map((key, index) => `${key}=${String(values[index] ?? '')}`)
+    return `${main} (${pairs.join('; ')})`
+  }
+  if (row.single_value != null) {
+    return row.single_value
+  }
+  return '(vide)'
+}
+
+async function maybeRecordCriticalQuestionHistory(
+  supabase: SupabaseClient,
+  usecaseId: string,
+  userId: string,
+  questionCode: string,
+  existingResponse: ResponseValueSnapshot,
+  updateData: ResponseValueSnapshot
+): Promise<void> {
+  const questionLabel = CRITICAL_QUESTIONS_HISTORY[questionCode]
+  if (!questionLabel) return
+
+  const oldSnapshot = normalizeResponseSnapshot(existingResponse)
+  const newSnapshot = normalizeResponseSnapshot(updateData)
+  if (serializeResponseValue(oldSnapshot) === serializeResponseValue(newSnapshot)) return
+
+  await recordUseCaseHistory(supabase, usecaseId, userId, 'field_updated', {
+    fieldName: questionCode,
+    oldValue: formatResponseValueForHistory(oldSnapshot),
+    newValue: formatResponseValueForHistory(newSnapshot),
+    metadata: { question_label: questionLabel },
+  })
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -408,13 +508,21 @@ export async function POST(
     // This avoids PostgREST schema cache issues with onConflict
     const { data: existingResponse } = await supabase
       .from('usecase_responses')
-      .select('id')
+      .select(RESPONSE_VALUE_SELECT)
       .eq('usecase_id', usecaseId)
       .eq('question_code', question_code)
       .single()
 
     let data, error
     if (existingResponse) {
+      await maybeRecordCriticalQuestionHistory(
+        supabase,
+        usecaseId,
+        user.id,
+        question_code,
+        existingResponse,
+        updateData
+      )
       // Update existing record
       const result = await supabase
         .from('usecase_responses')
@@ -680,13 +788,21 @@ export async function PUT(
       // Manual upsert: first check if record exists, then insert or update
       const { data: existingResponse } = await supabase
         .from('usecase_responses')
-        .select('id')
+        .select(RESPONSE_VALUE_SELECT)
         .eq('usecase_id', usecaseId)
         .eq('question_code', question_code)
         .single()
 
       let data, error
       if (existingResponse) {
+        await maybeRecordCriticalQuestionHistory(
+          supabase,
+          usecaseId,
+          user.id,
+          question_code,
+          existingResponse,
+          updateData
+        )
         // Update existing record
         const result = await supabase
           .from('usecase_responses')

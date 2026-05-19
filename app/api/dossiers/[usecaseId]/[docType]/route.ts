@@ -4,6 +4,7 @@ import {
   getTodoActionMapping,
   syncTodoActionToResponse,
   reverseTodoActionResponse,
+  recalculateDossierUseCaseScore,
 } from '@/lib/todo-action-sync'
 import { recordUseCaseHistory } from '@/lib/usecase-history'
 import {
@@ -18,6 +19,16 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 const allowedDocTypes = getAcceptedDossierApiDocTypeParams()
+
+function buildScoreRecalcBaseUrl(request: NextRequest): string {
+  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+  const host = request.headers.get('host') || 'localhost:3000'
+  return `${protocol}://${host}`
+}
+
+function getAuthToken(request: NextRequest): string {
+  return request.headers.get('authorization')?.replace('Bearer ', '') ?? ''
+}
 
 async function getClientFromAuth(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
@@ -228,69 +239,36 @@ export async function POST(
       const isFirstCompletion = previousStatus !== 'complete' && previousStatus !== 'validated'
       const isModification = previousStatus === 'complete' || previousStatus === 'validated'
 
-      // Sync questionnaire response and update score (only on first completion)
+      // Sync questionnaire response and recalculate score (only on first completion)
       if (isFirstCompletion) {
         const todoMapping = getTodoActionMapping(storageDocType)
         if (todoMapping) {
           console.log('[POST /dossiers] Found todo_action mapping for docType:', storageDocType)
 
-          const syncResult = await syncTodoActionToResponse(
+          await syncTodoActionToResponse(
             supabase,
             usecaseId,
             storageDocType,
             user.email || user.id
           )
 
-          // Only update score if the previous answer was the NEGATIVE one
-          if (syncResult.shouldRecalculate && syncResult.expectedPointsGained > 0) {
-            console.log('[POST /dossiers] Previous answer was negative, updating score')
-            console.log('[POST /dossiers] Expected points gained:', syncResult.expectedPointsGained)
+          const scoreRecalc = await recalculateDossierUseCaseScore(
+            supabase,
+            usecaseId,
+            getAuthToken(request),
+            buildScoreRecalcBaseUrl(request)
+          )
 
-            const { data: currentUsecase } = await supabase
-              .from('usecases')
-              .select('score_final, score_base, score_model')
-              .eq('id', usecaseId)
-              .single()
-
-            const previousScore = currentUsecase?.score_final ?? null
-            const previousBaseScore = currentUsecase?.score_base ?? 0
-            const scoreModel = currentUsecase?.score_model ?? 0
-
-            if (previousScore !== null) {
-              const newBaseScore = previousBaseScore + syncResult.expectedPointsGained
-              // IMPORTANT: score_model en DB est le score brut (0-20), il faut appliquer le multiplicateur 2.5
-              const COMPL_AI_WEIGHT = 2.5
-              const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100
-
-              console.log(`[POST /dossiers] Score update: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`)
-
-              const { error: updateError } = await supabase
-                .from('usecases')
-                .update({
-                  score_base: newBaseScore,
-                  score_final: newFinalScore,
-                  last_calculation_date: new Date().toISOString(),
-                })
-                .eq('id', usecaseId)
-
-              if (!updateError) {
-                const pointsGainedFinal = Math.round((newFinalScore - previousScore) * 100) / 100
-
-                scoreChange = {
-                  previousScore: previousScore,
-                  newScore: newFinalScore,
-                  pointsGained: pointsGainedFinal,
-                  reason: todoMapping.reason,
-                }
-                console.log('[POST /dossiers] Score changed:', scoreChange)
-              } else {
-                console.error('[POST /dossiers] Error updating score:', updateError)
-              }
+          if (scoreRecalc && scoreRecalc.newScore !== null) {
+            scoreChange = {
+              previousScore: scoreRecalc.previousScore,
+              newScore: scoreRecalc.newScore,
+              pointsGained: scoreRecalc.pointsGained,
+              reason: todoMapping.reason,
             }
-          } else if (syncResult.changed) {
-            console.log('[POST /dossiers] Response was updated but previous was null, no score update needed')
+            console.log('[POST /dossiers] Score recalculated via calculate-score:', scoreChange)
           } else {
-            console.log('[POST /dossiers] Response was already set to positive value, no score update needed')
+            console.error('[POST /dossiers] Score recalculation failed after todo sync')
           }
         }
 
@@ -320,62 +298,30 @@ export async function POST(
         console.log('[POST /dossiers] Found todo_action mapping for reset, docType:', storageDocType)
 
         // Reverse the questionnaire response (set back to "Non")
-        const reverseResult = await reverseTodoActionResponse(
+        await reverseTodoActionResponse(
           supabase,
           usecaseId,
           storageDocType,
           user.email || user.id
         )
 
-        // Only decrease score if the previous answer was the POSITIVE one
-        if (reverseResult.shouldRecalculate && reverseResult.expectedPointsLost > 0) {
-          console.log('[POST /dossiers] Previous answer was positive, decreasing score')
-          console.log('[POST /dossiers] Expected points lost:', reverseResult.expectedPointsLost)
+        const scoreRecalc = await recalculateDossierUseCaseScore(
+          supabase,
+          usecaseId,
+          getAuthToken(request),
+          buildScoreRecalcBaseUrl(request)
+        )
 
-          const { data: currentUsecase } = await supabase
-            .from('usecases')
-            .select('score_final, score_base, score_model')
-            .eq('id', usecaseId)
-            .single()
-
-          const previousScore = currentUsecase?.score_final ?? null
-          const previousBaseScore = currentUsecase?.score_base ?? 0
-          const scoreModel = currentUsecase?.score_model ?? 0
-
-          if (previousScore !== null) {
-            // Decrease the base score (subtract the points that were gained)
-            const newBaseScore = Math.max(0, previousBaseScore - reverseResult.expectedPointsLost)
-            // IMPORTANT: score_model en DB est le score brut (0-20), il faut appliquer le multiplicateur 2.5
-            const COMPL_AI_WEIGHT = 2.5
-            const newFinalScore = Math.round(((newBaseScore + scoreModel * COMPL_AI_WEIGHT) / 150) * 100 * 100) / 100
-
-            console.log(`[POST /dossiers] Score decrease: base ${previousBaseScore} -> ${newBaseScore}, final ${previousScore} -> ${newFinalScore}`)
-
-            const { error: updateError } = await supabase
-              .from('usecases')
-              .update({
-                score_base: newBaseScore,
-                score_final: newFinalScore,
-                last_calculation_date: new Date().toISOString(),
-              })
-              .eq('id', usecaseId)
-
-            if (!updateError) {
-              const pointsLostFinal = Math.round((newFinalScore - previousScore) * 100) / 100
-
-              scoreChange = {
-                previousScore: previousScore,
-                newScore: newFinalScore,
-                pointsGained: pointsLostFinal, // Will be negative
-                reason: reverseResult.reason,
-              }
-              console.log('[POST /dossiers] Score decreased:', scoreChange)
-            } else {
-              console.error('[POST /dossiers] Error updating score:', updateError)
-            }
+        if (scoreRecalc && scoreRecalc.newScore !== null) {
+          scoreChange = {
+            previousScore: scoreRecalc.previousScore,
+            newScore: scoreRecalc.newScore,
+            pointsGained: scoreRecalc.pointsGained,
+            reason: todoMapping.reason,
           }
+          console.log('[POST /dossiers] Score recalculated via calculate-score after reset:', scoreChange)
         } else {
-          console.log('[POST /dossiers] No score decrease needed (response was not positive or no mapping)')
+          console.error('[POST /dossiers] Score recalculation failed after todo reverse')
         }
       }
 
