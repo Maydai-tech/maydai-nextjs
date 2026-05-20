@@ -181,7 +181,7 @@ jobs:
         if: steps.vercel-preview.outputs.vercel_state == 'success'
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install dependencies
         if: steps.vercel-preview.outputs.vercel_state == 'success'
