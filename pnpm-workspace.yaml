@@ -1,0 +1,13 @@
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - protobufjs
+  - puppeteer
+  - sharp
+  - unrs-resolver
+
+allowBuilds:
+  '@parcel/watcher': true
+  protobufjs: true
+  puppeteer: true
+  sharp: true
+  unrs-resolver: true
