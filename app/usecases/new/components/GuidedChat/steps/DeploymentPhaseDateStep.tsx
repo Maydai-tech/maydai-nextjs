@@ -3,7 +3,7 @@
 import { useId } from 'react'
 import { Send, SkipForward } from 'lucide-react'
 import {
-  DEPLOYMENT_PHASE_OPTIONS,
+  DEPLOYMENT_PHASE_UI_OPTIONS,
   getDeploymentDateFieldLabel,
 } from '@/lib/deployment-status'
 
@@ -43,11 +43,11 @@ export default function DeploymentPhaseDateStep({
         aria-labelledby={phaseHeadingId}
         className="grid grid-cols-1 gap-2"
       >
-        {DEPLOYMENT_PHASE_OPTIONS.map((option) => (
+        {DEPLOYMENT_PHASE_UI_OPTIONS.map((option) => (
           <label
-            key={option}
+            key={option.value}
             className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3 transition-colors ${
-              phaseValue === option
+              phaseValue === option.value
                 ? 'border-[#0080A3] bg-[#0080A3]/5'
                 : 'border-gray-200 hover:border-[#0080A3]/60'
             }`}
@@ -55,12 +55,12 @@ export default function DeploymentPhaseDateStep({
             <input
               type="radio"
               name="guided-deployment-phase"
-              value={option}
-              checked={phaseValue === option}
-              onChange={() => onPhaseChange(option)}
+              value={option.value}
+              checked={phaseValue === option.value}
+              onChange={() => onPhaseChange(option.value)}
               className="mt-0.5 h-4 w-4 shrink-0 border-gray-300 text-[#0080A3] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus:ring-offset-0"
             />
-            <span className="text-sm text-gray-900">{option}</span>
+            <span className="text-sm text-gray-900">{option.label}</span>
           </label>
         ))}
       </div>

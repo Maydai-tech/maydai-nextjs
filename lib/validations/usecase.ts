@@ -1,4 +1,8 @@
 import { z } from 'zod'
+import {
+  deploymentPhaseKeySchema,
+  normalizeDeploymentPhaseInput,
+} from '@/lib/deployment-phase'
 
 /**
  * Rétrocompatibilité Frontend : clés UPPER_SNAKE → snake_case attendu par PostgreSQL.
@@ -29,12 +33,15 @@ function normalizeLegacyE5E6Keys(val: unknown): unknown {
   return out
 }
 
-const deploymentPhaseCreateSchema = z
-  .string()
-  .trim()
-  .optional()
-  .transform((v) => (!v ? 'en_projet' : v))
-  .default('en_projet')
+const deploymentPhaseCreateSchema = z.preprocess(
+  normalizeDeploymentPhaseInput,
+  deploymentPhaseKeySchema
+).default('en_projet')
+
+const deploymentPhaseUpdateSchema = z.preprocess(
+  normalizeDeploymentPhaseInput,
+  deploymentPhaseKeySchema
+)
 
 const deploymentCountriesSchema = z.union([
   z.string(),
@@ -71,11 +78,7 @@ export const UpdateUsecaseSchema = z
     deployment_countries: z.any().optional(),
     deployment_date: z.string().optional().nullable(),
     description: z.string().trim().min(1).optional(),
-    deployment_phase: z
-      .string()
-      .trim()
-      .min(1, { message: 'La phase ne peut pas être vidée' })
-      .optional(),
+    deployment_phase: deploymentPhaseUpdateSchema.optional(),
     /** Passe-droit réseau — résolution métier via `resolvePathModeFromBody` dans la route. */
     path_mode: z.string().optional(),
     journey_type: z.string().optional(),

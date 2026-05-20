@@ -52,7 +52,8 @@ import { useModelProviders } from './hooks/useModelProviders'
 import { useCreateUseCase } from './hooks/useCreateUseCase'
 import { validateDeploymentDateFlexible } from './lib/validators'
 import {
-  DEPLOYMENT_PHASE_OPTIONS,
+  DEPLOYMENT_PHASE_UI_OPTIONS,
+  getDeploymentPhaseLabel,
   getDeploymentDateFieldLabel,
 } from '@/lib/deployment-status'
 import { resolvePrimaryModelId, isCustomPartner as isCustomPartnerCheck } from './lib/model-resolver'
@@ -1158,11 +1159,11 @@ function CreateUseCasePageContent() {
                   aria-labelledby={deploymentPhaseHeadingId}
                   className="grid grid-cols-1 gap-3"
                 >
-                  {DEPLOYMENT_PHASE_OPTIONS.map((option) => (
+                  {DEPLOYMENT_PHASE_UI_OPTIONS.map((option) => (
                     <label
-                      key={option}
+                      key={option.value}
                       className={`group flex cursor-pointer flex-col rounded-xl border-2 p-4 transition-all duration-200 ${
-                        formData.deployment_phase === option
+                        formData.deployment_phase === option.value
                           ? 'border-[#0080A3] bg-[#0080A3]/5'
                           : 'border-gray-200 hover:border-[#0080A3] hover:bg-[#0080A3]/5'
                       }`}
@@ -1172,16 +1173,16 @@ function CreateUseCasePageContent() {
                           <input
                             type="radio"
                             name="deployment_phase"
-                            value={option}
-                            checked={formData.deployment_phase === option}
+                            value={option.value}
+                            checked={formData.deployment_phase === option.value}
                             onChange={() => {
-                              setFormData((prev) => ({ ...prev, deployment_phase: option }))
+                              setFormData((prev) => ({ ...prev, deployment_phase: option.value }))
                               if (error) setError('')
                             }}
                             className="h-5 w-5 border-2 border-gray-300 text-[#0080A3] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus:ring-offset-0"
                           />
                         </div>
-                        <span className="text-lg font-semibold text-gray-900">{option}</span>
+                        <span className="text-lg font-semibold text-gray-900">{option.label}</span>
                       </div>
                     </label>
                   ))}
@@ -2094,8 +2095,14 @@ function CreateUseCasePageContent() {
                   <span className="text-gray-600">{q.question}</span>
                   <span className="ml-2 font-medium text-gray-900 truncate">
                     {q.id === 'deployment_date'
-                      ? [formData.deployment_phase, formData.deployment_date].filter(Boolean).join(' — ') ||
-                        '—'
+                      ? [
+                          formData.deployment_phase
+                            ? getDeploymentPhaseLabel(formData.deployment_phase)
+                            : '',
+                          formData.deployment_date,
+                        ]
+                          .filter(Boolean)
+                          .join(' — ') || '—'
                       : formData[q.id]}
                   </span>
                 </div>

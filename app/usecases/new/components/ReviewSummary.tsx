@@ -1,5 +1,6 @@
 'use client'
 
+import { getDeploymentPhaseLabel } from '@/lib/deployment-status'
 import { isoCodeToFrenchName } from '../lib/countries'
 import { CHAT_STEP_LABELS } from '../types'
 import type { ChatStepId, GuidedChatDraft } from '../types'
@@ -17,7 +18,12 @@ const REVIEW_FIELDS: { stepId: ChatStepId; getValue: (d: GuidedChatDraft) => str
   {
     stepId: 'deployment_date',
     getValue: d => {
-      const parts = [d.deployment_phase?.trim(), d.deployment_date?.trim()].filter(Boolean)
+      const parts = [
+        d.deployment_phase?.trim()
+          ? getDeploymentPhaseLabel(d.deployment_phase)
+          : '',
+        d.deployment_date?.trim(),
+      ].filter(Boolean)
       return parts.length ? parts.join(' — ') : '(Non renseigné)'
     },
   },

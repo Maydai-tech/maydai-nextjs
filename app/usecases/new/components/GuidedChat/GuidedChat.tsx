@@ -12,6 +12,7 @@ import { validateDraft, validateFinalClosedFieldsAgainstReferentials, validateDe
 import { isCustomPartner as isCustomPartnerCheck } from '../../lib/model-resolver'
 import { buildCreateUseCasePayload } from '../../lib/payload-builder'
 import { getResponsibleServiceOptions, getAiCategoryOptions, getSystemTypeOptions } from '../../lib/referentials'
+import { getDeploymentPhaseLabel } from '@/lib/deployment-status'
 import { isoCodeToFrenchName } from '../../lib/countries'
 import { CHAT_STEP_ORDER } from '../../types'
 import type { ChatStepId, GuidedChatDraft } from '../../types'
@@ -70,7 +71,12 @@ export default function GuidedChat({ companyId, company }: GuidedChatProps) {
       case 'deployment_countries':
         return draft.deployment_countries.map(c => isoCodeToFrenchName(c)).join(', ')
       case 'deployment_date': {
-        const parts = [draft.deployment_phase?.trim(), draft.deployment_date?.trim()].filter(Boolean)
+        const parts = [
+          draft.deployment_phase?.trim()
+            ? getDeploymentPhaseLabel(draft.deployment_phase)
+            : '',
+          draft.deployment_date?.trim(),
+        ].filter(Boolean)
         return parts.length ? parts.join(' — ') : '(Non renseigné)'
       }
       default: {
