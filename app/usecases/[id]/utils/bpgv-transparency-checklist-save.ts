@@ -42,6 +42,26 @@ export function expandE6TransparencyPackToLegacyOptionCodes(code: string): strin
   return [code]
 }
 
+function e5QuestionIdFromOptionCode(code: string): string | null {
+  const m = /^E5\.N9\.(Q\d+)/.exec(code)
+  return m ? `E5.N9.${m[1]}` : null
+}
+
+function e6QuestionIdFromOptionCode(code: string): string | null {
+  const m = /^E6\.N10\.(Q\d+)/.exec(code)
+  return m ? `E6.N10.${m[1]}` : null
+}
+
+/** Réponse radio E5 déjà dépliée (ex. `E5.N9.Q3` → `E5.N9.Q3.B`) : prime sur les tags pack. */
+function getUnfoldedRadioOptionCode(
+  answers: Record<string, unknown>,
+  questionId: string
+): string | null {
+  const raw = answers[questionId]
+  if (typeof raw === 'string' && raw.length > 0) return raw
+  return null
+}
+
 /** Codes d’options E5.N9.* (hors ligne sentinelle) présents dans `answers`. */
 export function collectE5DeclaredOptionCodes(answers: Record<string, unknown>): string[] {
   const out = new Set<string>()
@@ -52,13 +72,19 @@ export function collectE5DeclaredOptionCodes(answers: Record<string, unknown>): 
       if (code.startsWith('E5.N9.')) out.add(code)
     }
   }
+  const addPackCode = (code: string) => {
+    if (!/^E5\.N9\.Q/.test(code)) return
+    const qid = e5QuestionIdFromOptionCode(code)
+    if (qid && getUnfoldedRadioOptionCode(answers, qid)) return
+    out.add(code)
+  }
   for (const code of extractOptionCodesFromValue(answers[V3_SHORT_MINIPACK_ID])) {
-    if (code.startsWith('E5.N9.')) out.add(code)
+    addPackCode(code)
   }
   for (const [k, raw] of Object.entries(answers)) {
     if (!isV3ShortSyntheticQuestionId(k)) continue
     for (const code of extractOptionCodesFromValue(raw)) {
-      if (/^E5\.N9\.Q/.test(code)) out.add(code)
+      addPackCode(code)
     }
   }
   return [...out]
@@ -92,6 +118,8 @@ export function collectE6DeclaredOptionCodes(answers: Record<string, unknown>): 
         code === E6_TRANSPARENCY_PACK_CONTENT_CODE ||
         /^E6\.N10\.Q/.test(code)
       ) {
+        const qid = e6QuestionIdFromOptionCode(code)
+        if (qid && getUnfoldedRadioOptionCode(answers, qid)) continue
         addE6(code)
       }
     }

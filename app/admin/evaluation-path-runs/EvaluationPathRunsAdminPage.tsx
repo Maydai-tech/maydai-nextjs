@@ -110,6 +110,7 @@ type ApiResponse = {
     id: string
     usecase_id: string
     company_id: string
+    company_name?: string | null
     path_mode: string
     questionnaire_version: number
     entry_surface: string | null
@@ -437,7 +438,7 @@ export default function EvaluationPathRunsAdminPage() {
               </summary>
               <p className="mt-3 text-xs leading-relaxed text-gray-700">{data.methodology.period_note}</p>
               <h4 className="mt-3 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                Conversion court → long
+                Taux d&apos;approfondissement (Court → Long)
               </h4>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-gray-700">
                 {Object.entries(data.methodology.short_to_long).map(([key, text]) => (
@@ -464,7 +465,7 @@ export default function EvaluationPathRunsAdminPage() {
                 className="text-lg font-semibold text-gray-900 flex items-center gap-2"
               >
                 <GitBranch className="h-5 w-5 text-[#0080A3]" aria-hidden />
-                Conversion court → long
+                Taux d&apos;approfondissement (Court → Long)
               </h2>
               <p className="text-xs text-gray-600 max-w-3xl">
                 Indicateurs basés sur la <strong>cohorte des parcours courts terminés</strong> dans
@@ -543,7 +544,7 @@ export default function EvaluationPathRunsAdminPage() {
               {data.short_to_long.summary_windows ? (
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
                   <h3 className="text-sm font-semibold text-gray-900">
-                    Conversion dans une fenêtre après la fin du court
+                    Approfondissement dans une fenêtre après la fin du court
                   </h3>
                   <p className="mt-1 text-xs text-gray-600 max-w-3xl">
                     Tous les pourcentages ci-dessous sont rapportés à la <strong>cohorte</strong>{' '}
@@ -601,32 +602,32 @@ export default function EvaluationPathRunsAdminPage() {
 
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                 <ConversionSegmentTable
-                  title="Conversion par surface d’entrée (issue du run court)"
+                  title="Approfondissement par surface d’entrée (issue du run court)"
                   rows={data.short_to_long.by_entry_surface}
                   segmentColumnLabel="Surface"
                 />
                 <ConversionSegmentTable
-                  title="Conversion par type de cas (system_type au démarrage du court)"
+                  title="Approfondissement par type de cas (system_type au démarrage du court)"
                   rows={data.short_to_long.by_system_type}
                   segmentColumnLabel="Type de cas"
                 />
                 <ConversionSegmentTable
-                  title="Conversion par classification (résultat du court)"
+                  title="Approfondissement par classification (résultat du court)"
                   rows={data.short_to_long.by_classification_status}
                   segmentColumnLabel="Classification"
                 />
                 <ConversionSegmentTable
-                  title="Conversion par niveau / risque (résultat du court)"
+                  title="Approfondissement par niveau / risque (résultat du court)"
                   rows={data.short_to_long.by_risk_level}
                   segmentColumnLabel="Niveau"
                 />
                 <ConversionSegmentTable
-                  title="Conversion par version questionnaire (run court)"
+                  title="Approfondissement par version questionnaire (run court)"
                   rows={data.short_to_long.by_questionnaire_version}
                   segmentColumnLabel="Version"
                 />
                 <ConversionSegmentTable
-                  title="Conversion par entreprise (max 35 lignes, nom issu de la table companies)"
+                  title="Approfondissement par entreprise (max 35 lignes, nom issu de la table companies)"
                   rows={data.short_to_long.by_company_id}
                   segmentColumnLabel="Entreprise"
                   companySegment
@@ -717,6 +718,7 @@ export default function EvaluationPathRunsAdminPage() {
                   <tr>
                     <th className="px-4 py-2 font-medium">Fin</th>
                     <th className="px-4 py-2 font-medium">Mode</th>
+                    <th className="px-4 py-2 font-medium">Entreprise</th>
                     <th className="px-4 py-2 font-medium">Cas d’usage</th>
                     <th className="px-4 py-2 font-medium">Durée</th>
                     <th className="px-4 py-2 font-medium">Résultat</th>
@@ -725,7 +727,7 @@ export default function EvaluationPathRunsAdminPage() {
                 <tbody>
                   {data.recent_completions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
+                      <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
                         Aucune complétion récente.
                       </td>
                     </tr>
@@ -738,6 +740,12 @@ export default function EvaluationPathRunsAdminPage() {
                             : '—'}
                         </td>
                         <td className="px-4 py-2">{r.path_mode === 'short' ? 'Court' : 'Long'}</td>
+                        <td
+                          className="px-4 py-2 text-gray-800 max-w-[12rem] truncate"
+                          title={r.company_name ?? r.company_id}
+                        >
+                          {r.company_name?.trim() || '—'}
+                        </td>
                         <td className="px-4 py-2 font-mono text-xs text-gray-700">{r.usecase_id}</td>
                         <td className="px-4 py-2 tabular-nums">
                           {formatDurationSeconds(r.completion_seconds)}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { QuestionnaireData } from '../types/usecase'
 import { loadQuestions } from '../utils/questions-loader'
 import {
@@ -25,10 +25,7 @@ import {
   V3_SHORT_USAGE_ID,
 } from '../utils/questionnaire-v3-graph'
 import {
-  declarativeAnswersAfterEnterpriseStage,
-  declarativeAnswersAfterSocialEnvStage,
-  declarativeAnswersAfterTransparenceStage,
-  declarativeAnswersAfterUsageStage,
+  buildShortPathLongAnswerPatches,
   normalizeShortPathStageSelection,
 } from '../utils/v3-short-path-stages'
 import { useQuestionnaireResponses } from '@/lib/hooks/useQuestionnaireResponses'
@@ -55,42 +52,7 @@ function isE4E5E6QuestionCode(code: string): boolean {
   return code.startsWith('E4.') || code.startsWith('E5.') || code.startsWith('E6.')
 }
 
-function extractOptionCodesFromAnswer(raw: unknown): string[] {
-  if (typeof raw === 'string' && raw.length > 0) return [raw]
-  if (Array.isArray(raw)) {
-    return raw.filter((x): x is string => typeof x === 'string' && x.length > 0)
-  }
-  if (raw && typeof raw === 'object' && 'selected' in (raw as Record<string, unknown>)) {
-    const s = (raw as { selected?: unknown }).selected
-    if (typeof s === 'string' && s.length > 0) return [s]
-  }
-  return []
-}
-
-function collectE4DeclaredOptionCodes(answers: Record<string, unknown>): string[] {
-  const out = new Set<string>()
-  for (const [qid, raw] of Object.entries(answers)) {
-    if (!qid.startsWith('E4.')) continue
-    for (const code of extractOptionCodesFromAnswer(raw)) {
-      if (code.startsWith('E4.')) out.add(code)
-    }
-  }
-  return [...out]
-}
-
-function buildConsolidatedChecklistsFromAnswers(answers: Record<string, unknown>): {
-  checklist_gov_enterprise: string[]
-  checklist_gov_usecase: string[]
-} {
-  // Convention : E5 -> enterprise ; E4+E6 -> usecase
-  const e5 = collectE5DeclaredOptionCodes(answers)
-  const e4 = collectE4DeclaredOptionCodes(answers)
-  const e6 = collectE6DeclaredOptionCodes(answers)
-  return {
-    checklist_gov_enterprise: e5,
-    checklist_gov_usecase: [...new Set([...e4, ...e6])],
-  }
-}
+import { buildConsolidatedChecklistsFromAnswers } from '@/lib/consolidated-checklists-from-answers'
 
 function normalizeStringArrayForChecklist(value: unknown): string[] {
   if (!Array.isArray(value)) return []
@@ -130,6 +92,8 @@ interface UseEvaluationReturn {
   isCalculatingScore: boolean
   isGeneratingReport: boolean
   showProcessingAnimation: boolean
+  /** True tant que GET /responses ou première hydratation locale n’est pas terminée. */
+  isHydratingAnswers: boolean
   questionnairePathMode: QuestionnairePathMode
   error: string | null
   handleAnswerSelect: (answer: any) => void
@@ -193,85 +157,100 @@ export function useEvaluation({
     refreshResponses
   } = useQuestionnaireResponses(usecaseId)
 
-  // Load initial data once (réponses questionnaire + checklists gouvernance sur `usecases`)
-  useEffect(() => {
-    if (!initialDataLoaded && !loadingResponses) {
-      const run = async () => {
-        let govEnt: string[] = []
-        let govUc: string[] = []
-        if (session?.access_token) {
-          const { data: ucRow } = await supabase
-            .from('usecases')
-            .select('checklist_gov_enterprise, checklist_gov_usecase')
-            .eq('id', usecaseId)
-            .single()
-          if (ucRow) {
-            govEnt = Array.isArray(ucRow.checklist_gov_enterprise) ? ucRow.checklist_gov_enterprise : []
-            govUc = Array.isArray(ucRow.checklist_gov_usecase) ? ucRow.checklist_gov_usecase : []
-          }
-        }
+  const pathModeHydrationRef = useRef(questionnairePathModeProp)
 
-        if (savedAnswers && Object.keys(savedAnswers).length > 0) {
-          const navOpts =
-            questionnaireVersion === QUESTIONNAIRE_VERSION_V3
-              ? {
-                  systemType: systemTypeProp ?? null,
-                  pathMode: questionnairePathModeProp,
-                }
-              : undefined
-          let currentQuestionId = getResumeQuestionId(
-            savedAnswers,
-            questionnaireVersion,
-            navOpts
-          )
-          if (
-            questionnairePathModeProp === 'short' &&
-            questionnaireVersion === QUESTIONNAIRE_VERSION_V3 &&
-            currentQuestionId === V3_SHORT_MINIPACK_ID
-          ) {
-            currentQuestionId = V3_SHORT_ENTREPRISE_ID
-          }
-
-          setQuestionnaireData(prev => ({
-            ...prev,
-            answers: { ...savedAnswers },
-            currentQuestionId,
-            checklist_gov_enterprise: govEnt,
-            checklist_gov_usecase: govUc,
-          }))
-
-          const historyPath = buildQuestionPath(
-            currentQuestionId,
-            savedAnswers,
-            questionnaireVersion,
-            navOpts
-          )
-          setQuestionHistory(historyPath.length > 0 ? historyPath : ['E4.N7.Q1'])
-        } else {
-          setQuestionnaireData(prev => ({
-            ...prev,
-            currentQuestionId: 'E4.N7.Q1',
-            answers: {},
-            checklist_gov_enterprise: govEnt,
-            checklist_gov_usecase: govUc,
-          }))
-          setQuestionHistory(['E4.N7.Q1'])
-        }
-
-        setInitialDataLoaded(true)
+  const hydrateFromSavedAnswers = useCallback(async () => {
+    let govEnt: string[] = []
+    let govUc: string[] = []
+    if (session?.access_token) {
+      const { data: ucRow } = await supabase
+        .from('usecases')
+        .select('checklist_gov_enterprise, checklist_gov_usecase')
+        .eq('id', usecaseId)
+        .single()
+      if (ucRow) {
+        govEnt = Array.isArray(ucRow.checklist_gov_enterprise) ? ucRow.checklist_gov_enterprise : []
+        govUc = Array.isArray(ucRow.checklist_gov_usecase) ? ucRow.checklist_gov_usecase : []
       }
-      void run()
     }
+
+    const navOpts =
+      questionnaireVersion === QUESTIONNAIRE_VERSION_V3
+        ? {
+            systemType: systemTypeProp ?? null,
+            pathMode: questionnairePathModeProp,
+          }
+        : undefined
+
+    if (savedAnswers && Object.keys(savedAnswers).length > 0) {
+      let currentQuestionId = getResumeQuestionId(
+        savedAnswers,
+        questionnaireVersion,
+        navOpts
+      )
+      if (
+        questionnairePathModeProp === 'short' &&
+        questionnaireVersion === QUESTIONNAIRE_VERSION_V3 &&
+        currentQuestionId === V3_SHORT_MINIPACK_ID
+      ) {
+        currentQuestionId = V3_SHORT_ENTREPRISE_ID
+      }
+
+      setQuestionnaireData((prev) => ({
+        ...prev,
+        answers: { ...savedAnswers },
+        currentQuestionId,
+        checklist_gov_enterprise: govEnt,
+        checklist_gov_usecase: govUc,
+      }))
+
+      const historyPath = buildQuestionPath(
+        currentQuestionId,
+        savedAnswers,
+        questionnaireVersion,
+        navOpts
+      )
+      setQuestionHistory(historyPath.length > 0 ? historyPath : ['E4.N7.Q1'])
+    } else {
+      setQuestionnaireData((prev) => ({
+        ...prev,
+        currentQuestionId: 'E4.N7.Q1',
+        answers: {},
+        checklist_gov_enterprise: govEnt,
+        checklist_gov_usecase: govUc,
+      }))
+      setQuestionHistory(['E4.N7.Q1'])
+    }
+
+    setInitialDataLoaded(true)
   }, [
     savedAnswers,
-    loadingResponses,
-    initialDataLoaded,
     questionnaireVersion,
     systemTypeProp,
     questionnairePathModeProp,
     session?.access_token,
     usecaseId,
   ])
+
+  // Montage / changement de cas : refetch puis hydratation (montage direct en long inclus).
+  useEffect(() => {
+    setInitialDataLoaded(false)
+    void refreshResponses({ force: true })
+  }, [usecaseId, refreshResponses])
+
+  // Bascule court ↔ long sur une instance déjà montée.
+  useEffect(() => {
+    if (pathModeHydrationRef.current === questionnairePathModeProp) return
+    pathModeHydrationRef.current = questionnairePathModeProp
+    setInitialDataLoaded(false)
+    void refreshResponses({ force: true })
+  }, [questionnairePathModeProp, refreshResponses])
+
+  // Hydratation dès que formattedAnswers (GET + merge checklists) est disponible.
+  useEffect(() => {
+    if (initialDataLoaded || loadingResponses) return
+    void hydrateFromSavedAnswers()
+  }, [initialDataLoaded, loadingResponses, hydrateFromSavedAnswers])
 
   /** Parcours court : si Q1.B sans Q1.2 (reprise ou brouillon), compléter la valeur par défaut pour débloquer l’étape composite. */
   useEffect(() => {
@@ -493,6 +472,60 @@ export function useEvaluation({
     }
   }, [questionnaireData.answers, saveResponse, session?.access_token, usecaseId])
 
+  /**
+   * Persiste E4/E5/E6 en une seule écriture checklist (évite d’écraser les pivots
+   * quand plusieurs questions sont dépliées à la suite).
+   */
+  const persistConsolidatedChecklistsFromFullAnswers = useCallback(
+    async (fullAnswers: Record<string, unknown>) => {
+      const consolidated = buildConsolidatedChecklistsFromAnswers(fullAnswers)
+      const res = await fetch(`/api/usecases/${usecaseId}/responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify(consolidated),
+      })
+      if (!res.ok) {
+        throw new Error('Échec sauvegarde checklists consolidées (dépliage parcours court)')
+      }
+      const payload = (await res.json()) as Record<string, unknown>
+      if (payload?.updated === 'usecase_checklists') {
+        setQuestionnaireData((prev) => ({
+          ...prev,
+          checklist_gov_enterprise: consolidated.checklist_gov_enterprise,
+          checklist_gov_usecase: consolidated.checklist_gov_usecase,
+        }))
+      }
+      return consolidated
+    },
+    [session?.access_token, usecaseId]
+  )
+
+  /** Déplie packs courts + pivots E4, puis persiste (E7 en ligne ; E4/E5/E6 en lot checklist). */
+  const persistShortPathUnfoldAndMerge = useCallback(
+    async (
+      packId: string,
+      selection: string[],
+      baseAnswers: Record<string, unknown>
+    ): Promise<Record<string, unknown>> => {
+      const withPack = { ...baseAnswers, [packId]: selection }
+      const longPatches = buildShortPathLongAnswerPatches(withPack, { packId, selection })
+      const fullMerged = { ...withPack, ...longPatches } as Record<string, unknown>
+
+      for (const [qid, val] of Object.entries(longPatches)) {
+        if (isE4E5E6QuestionCode(qid)) continue
+        await saveIndividualResponse(qid, val)
+      }
+
+      await persistConsolidatedChecklistsFromFullAnswers(fullMerged)
+
+      return fullMerged
+    },
+    [saveIndividualResponse, persistConsolidatedChecklistsFromFullAnswers]
+  )
+
   const handleProcessingComplete = useCallback(() => {
     setShowProcessingAnimation(false)
     setQuestionnaireData(prev => ({ ...prev, isCompleted: true }))
@@ -609,18 +642,22 @@ export function useEvaluation({
         (currentId === V3_SHORT_ENTREPRISE_ID || currentId === V3_FULL_ENTREPRISE_ID)
       ) {
         const sel = normalizeShortPathStageSelection(currentAnswer)
-        const patches = declarativeAnswersAfterEnterpriseStage(sel)
-        const merged = {
-          ...questionnaireData.answers,
-          [currentId]: sel,
-          ...patches,
-        } as Record<string, unknown>
-
         await saveIndividualResponse(currentId, sel)
-        for (const [qid, val] of Object.entries(patches)) {
-          await saveIndividualResponse(qid, val)
+        const merged = await persistShortPathUnfoldAndMerge(
+          currentId,
+          sel,
+          questionnaireData.answers
+        )
+        let e5ChecklistKeys = collectE5DeclaredOptionCodes(merged)
+        if (questionnairePathModeProp === 'short') {
+          e5ChecklistKeys = [
+            ...new Set([
+              ...e5ChecklistKeys,
+              ...deriveMissingPenaltiesForShortPath(sel, V3_SHORT_ENTREPRISE_ID),
+            ]),
+          ]
         }
-        await saveIndividualResponse(CHECKLIST_GOV_ENTERPRISE_QUESTION_CODE, { bpgv_keys: sel })
+        await saveIndividualResponse(CHECKLIST_GOV_ENTERPRISE_QUESTION_CODE, e5ChecklistKeys)
 
         const fields = computeV3UsecaseQuestionnaireFields(
           merged,
@@ -669,17 +706,12 @@ export function useEvaluation({
         (currentId === V3_SHORT_USAGE_ID || currentId === V3_FULL_USAGE_ID)
       ) {
         const sel = normalizeShortPathStageSelection(currentAnswer)
-        const patches = declarativeAnswersAfterUsageStage(sel)
-        const merged = {
-          ...questionnaireData.answers,
-          [currentId]: sel,
-          ...patches,
-        } as Record<string, unknown>
-
         await saveIndividualResponse(currentId, sel)
-        for (const [qid, val] of Object.entries(patches)) {
-          await saveIndividualResponse(qid, val)
-        }
+        const merged = await persistShortPathUnfoldAndMerge(
+          currentId,
+          sel,
+          questionnaireData.answers
+        )
 
         const fields = computeV3UsecaseQuestionnaireFields(
           merged,
@@ -722,17 +754,12 @@ export function useEvaluation({
         (currentId === V3_SHORT_SOCIAL_ENV_ID || currentId === V3_FULL_SOCIAL_ENV_ID)
       ) {
         const sel = normalizeShortPathStageSelection(currentAnswer)
-        const patches = declarativeAnswersAfterSocialEnvStage(sel)
-        const merged = {
-          ...questionnaireData.answers,
-          [currentId]: sel,
-          ...patches,
-        } as Record<string, unknown>
-
         await saveIndividualResponse(currentId, sel)
-        for (const [qid, val] of Object.entries(patches)) {
-          await saveIndividualResponse(qid, val)
-        }
+        const merged = await persistShortPathUnfoldAndMerge(
+          currentId,
+          sel,
+          questionnaireData.answers
+        )
         let e5ChecklistKeys = collectE5DeclaredOptionCodes(merged)
         let e6ChecklistKeys = collectE6DeclaredOptionCodes(merged)
         if (questionnairePathModeProp === 'short') {
@@ -866,17 +893,12 @@ export function useEvaluation({
         (currentId === V3_SHORT_TRANSPARENCE_ID || currentId === V3_FULL_TRANSPARENCE_ID)
       ) {
         const sel = normalizeShortPathStageSelection(currentAnswer)
-        const patches = declarativeAnswersAfterTransparenceStage(sel)
-        const merged = {
-          ...questionnaireData.answers,
-          [currentId]: sel,
-          ...patches,
-        } as Record<string, unknown>
-
         await saveIndividualResponse(currentId, sel)
-        for (const [qid, val] of Object.entries(patches)) {
-          await saveIndividualResponse(qid, val)
-        }
+        const merged = await persistShortPathUnfoldAndMerge(
+          currentId,
+          sel,
+          questionnaireData.answers
+        )
         let e5ChecklistKeys = collectE5DeclaredOptionCodes(merged)
         let e6ChecklistKeys = collectE6DeclaredOptionCodes(merged)
         if (questionnairePathModeProp === 'short') {
@@ -1153,6 +1175,8 @@ export function useEvaluation({
     usecaseId,
     onComplete,
     saveIndividualResponse,
+    persistShortPathUnfoldAndMerge,
+    persistConsolidatedChecklistsFromFullAnswers,
     questionnaireVersion,
     systemTypeProp,
     questionnairePathModeProp,
@@ -1182,6 +1206,8 @@ export function useEvaluation({
     await handleNext()
   }
 
+  const isHydratingAnswers = loadingResponses || !initialDataLoaded
+
   return {
     questionnaireData,
     currentQuestion,
@@ -1196,6 +1222,7 @@ export function useEvaluation({
     isCalculatingScore,
     isGeneratingReport,
     showProcessingAnimation,
+    isHydratingAnswers,
     questionnairePathMode: questionnairePathModeProp,
     error,
     handleAnswerSelect,

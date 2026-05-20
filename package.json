@@ -13,6 +13,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:integration": "jest --config=tests/jest-e2e.config.js",
+    "debug:court-long": "jest debug-court-long.integration.test.ts --verbose",
     "test:e2e:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run test:e2e\"",
     "test:worldmap": "node scripts/test-worldmap-corrections.js",
     "supabase:ovh": "node scripts/supabase-ovh.mjs",

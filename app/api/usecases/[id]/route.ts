@@ -15,6 +15,25 @@ import { z } from 'zod'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+type SupabaseDeleteError = {
+  message?: string
+  details?: string
+  hint?: string
+  code?: string
+}
+
+function deleteStepErrorResponse(fallbackMessage: string, deleteError: SupabaseDeleteError) {
+  return NextResponse.json(
+    {
+      error: deleteError.message || fallbackMessage,
+      details: deleteError.details,
+      code: deleteError.code,
+      hint: deleteError.hint,
+    },
+    { status: 500 }
+  )
+}
+
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
     'Les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être définies'
@@ -580,6 +599,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseServiceRoleKey) {
+      const context = createRequestContext(request)
+      logger.error('SUPABASE_SERVICE_ROLE_KEY is not defined', undefined, context)
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl!, supabaseServiceRoleKey)
+
     const context = createRequestContext(request)
     logger.info('Deleting use case and associated data', {
       ...context,
@@ -588,86 +616,128 @@ export async function DELETE(
       deletedBy: user.email
     })
 
-    // Delete all related data in the correct order (respecting foreign key constraints)
+    // Delete all related data in the correct order (respecting foreign key constraints).
+    // Service role bypasses RLS on child tables that lack DELETE policies.
 
     // 1. Delete usecase_responses
-    const { error: deleteResponsesError } = await supabase
+    const { error: deleteResponsesError } = await supabaseAdmin
       .from('usecase_responses')
       .delete()
       .eq('usecase_id', useCaseId)
 
     if (deleteResponsesError) {
       logger.error('Failed to delete usecase_responses', deleteResponsesError, { ...context, useCaseId })
-      return NextResponse.json({ error: 'Error deleting use case responses' }, { status: 500 })
+      return deleteStepErrorResponse('Error deleting use case responses', deleteResponsesError)
     }
 
     // 2. Delete usecase_history
-    const { error: deleteHistoryError } = await supabase
+    const { error: deleteHistoryError } = await supabaseAdmin
       .from('usecase_history')
       .delete()
       .eq('usecase_id', useCaseId)
 
     if (deleteHistoryError) {
       logger.error('Failed to delete usecase_history', deleteHistoryError, { ...context, useCaseId })
-      return NextResponse.json({ error: 'Error deleting use case history' }, { status: 500 })
+      return deleteStepErrorResponse('Error deleting use case history', deleteHistoryError)
     }
 
     // 3. Delete usecase_nextsteps
-    const { error: deleteNextstepsError } = await supabase
+    const { error: deleteNextstepsError } = await supabaseAdmin
       .from('usecase_nextsteps')
       .delete()
       .eq('usecase_id', useCaseId)
 
     if (deleteNextstepsError) {
       logger.error('Failed to delete usecase_nextsteps', deleteNextstepsError, { ...context, useCaseId })
-      return NextResponse.json({ error: 'Error deleting use case nextsteps' }, { status: 500 })
+      return deleteStepErrorResponse('Error deleting use case nextsteps', deleteNextstepsError)
     }
 
     // 4. Delete user_usecases (collaborators)
-    const { error: deleteUserUsecasesError } = await supabase
+    const { error: deleteUserUsecasesError } = await supabaseAdmin
       .from('user_usecases')
       .delete()
       .eq('usecase_id', useCaseId)
 
     if (deleteUserUsecasesError) {
       logger.error('Failed to delete user_usecases', deleteUserUsecasesError, { ...context, useCaseId })
-      return NextResponse.json({ error: 'Error deleting use case collaborators' }, { status: 500 })
+      return deleteStepErrorResponse('Error deleting use case collaborators', deleteUserUsecasesError)
     }
 
     // 5. Delete contact_requests
-    const { error: deleteContactRequestsError } = await supabase
+    const { error: deleteContactRequestsError } = await supabaseAdmin
       .from('contact_requests')
       .delete()
       .eq('usecase_id', useCaseId)
 
     if (deleteContactRequestsError) {
       logger.error('Failed to delete contact_requests', deleteContactRequestsError, { ...context, useCaseId })
-      return NextResponse.json({ error: 'Error deleting contact requests' }, { status: 500 })
+      return deleteStepErrorResponse('Error deleting contact requests', deleteContactRequestsError)
     }
 
-    // 6. Delete dossiers
-    const { error: deleteDossiersError } = await supabase
+    // 6. Delete evaluation_path_runs
+    const { error: deleteEvaluationPathRunsError } = await supabaseAdmin
+      .from('evaluation_path_runs')
+      .delete()
+      .eq('usecase_id', useCaseId)
+
+    if (deleteEvaluationPathRunsError) {
+      logger.error('Failed to delete evaluation_path_runs', deleteEvaluationPathRunsError, {
+        ...context,
+        useCaseId,
+      })
+      return deleteStepErrorResponse('Error deleting evaluation path runs', deleteEvaluationPathRunsError)
+    }
+
+    // 7. Delete dossier_documents (before dossiers — FK dossier_id → dossiers.id)
+    const { data: dossierRows, error: fetchDossiersError } = await supabaseAdmin
+      .from('dossiers')
+      .select('id')
+      .eq('usecase_id', useCaseId)
+
+    if (fetchDossiersError) {
+      logger.error('Failed to fetch dossiers before delete', fetchDossiersError, { ...context, useCaseId })
+      return deleteStepErrorResponse('Error fetching dossiers for cleanup', fetchDossiersError)
+    }
+
+    const dossierIds = (dossierRows ?? []).map((row) => row.id as string).filter(Boolean)
+    if (dossierIds.length > 0) {
+      const { error: deleteDossierDocumentsError } = await supabaseAdmin
+        .from('dossier_documents')
+        .delete()
+        .in('dossier_id', dossierIds)
+
+      if (deleteDossierDocumentsError) {
+        logger.error('Failed to delete dossier_documents', deleteDossierDocumentsError, {
+          ...context,
+          useCaseId,
+        })
+        return deleteStepErrorResponse('Error deleting dossier documents', deleteDossierDocumentsError)
+      }
+    }
+
+    // 8. Delete dossiers
+    const { error: deleteDossiersError } = await supabaseAdmin
       .from('dossiers')
       .delete()
       .eq('usecase_id', useCaseId)
 
     if (deleteDossiersError) {
       logger.error('Failed to delete dossiers', deleteDossiersError, { ...context, useCaseId })
-      return NextResponse.json({ error: 'Error deleting dossiers' }, { status: 500 })
+      return deleteStepErrorResponse('Error deleting dossiers', deleteDossiersError)
     }
 
-    // Delete the use case itself
-    const { error: deleteUseCaseError } = await supabase
+    // 9. Delete the use case itself
+    const { error: deleteUseCaseError } = await supabaseAdmin
       .from('usecases')
       .delete()
       .eq('id', useCaseId)
 
     if (deleteUseCaseError) {
-      logger.error('Failed to delete use case', deleteUseCaseError, { 
-        ...context, 
-        useCaseId 
+      logger.error('Failed to delete use case', deleteUseCaseError, {
+        ...context,
+        useCaseId,
       })
-      return NextResponse.json({ error: 'Error deleting use case' }, { status: 500 })
+      return deleteStepErrorResponse('Error deleting use case', deleteUseCaseError)
     }
 
     logger.info('Successfully deleted use case and all associated data', { 

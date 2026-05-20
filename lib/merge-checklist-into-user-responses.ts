@@ -49,7 +49,8 @@ function emptyUserResponse(question_code: string): MergeableUserResponse {
 export function mergeChecklistIntoUserResponses(
   responses: MergeableUserResponse[],
   checklistGovEnterprise?: string[] | null,
-  checklistGovUsecase?: string[] | null
+  checklistGovUsecase?: string[] | null,
+  explicitQuestionIds?: ReadonlySet<string>
 ): MergeableUserResponse[] {
   const questions = loadQuestions() as Record<string, Question>
   const byQuestion = new Map<string, MergeableUserResponse>()
@@ -59,6 +60,15 @@ export function mergeChecklistIntoUserResponses(
     byQuestion.set(r.question_code, { ...r })
   }
 
+  const rowHasPersistedValue = (row: MergeableUserResponse): boolean => {
+    if (typeof row.single_value === 'string' && row.single_value.trim().length > 0) return true
+    if (Array.isArray(row.multiple_codes) && row.multiple_codes.length > 0) return true
+    if (typeof row.conditional_main === 'string' && row.conditional_main.trim().length > 0) {
+      return true
+    }
+    return false
+  }
+
   const ingestOptionCode = (optionCode: string) => {
     const trimmed = typeof optionCode === 'string' ? optionCode.trim() : ''
     if (!trimmed) return
@@ -66,6 +76,8 @@ export function mergeChecklistIntoUserResponses(
     if (!found) return
     const { questionId, question } = found
     const prev = byQuestion.get(questionId) ?? emptyUserResponse(questionId)
+    /** Ne pas écraser une réponse explicite ; hydrater depuis checklist si ligne vide / absente. */
+    if (explicitQuestionIds?.has(questionId) && rowHasPersistedValue(prev)) return
 
     if (question.type === 'radio') {
       byQuestion.set(questionId, {
@@ -110,6 +122,12 @@ export function mergeChecklistIntoDbResponseRows<
     conditional_values?: string[] | null
   },
 >(rows: T[], checklistGovEnterprise?: string[] | null, checklistGovUsecase?: string[] | null): T[] {
+  const explicitQuestionIds = new Set(
+    (rows ?? [])
+      .map((r) => r.question_code)
+      .filter((code): code is string => typeof code === 'string' && code.length > 0)
+  )
+
   const asUser: MergeableUserResponse[] = (rows ?? []).map((r) => ({
     question_code: r.question_code,
     single_value: r.single_value ?? undefined,
@@ -118,7 +136,12 @@ export function mergeChecklistIntoDbResponseRows<
     conditional_keys: r.conditional_keys ?? undefined,
     conditional_values: r.conditional_values ?? undefined,
   }))
-  const merged = mergeChecklistIntoUserResponses(asUser, checklistGovEnterprise, checklistGovUsecase)
+  const merged = mergeChecklistIntoUserResponses(
+    asUser,
+    checklistGovEnterprise,
+    checklistGovUsecase,
+    explicitQuestionIds
+  )
   const mergedByCode = new Map(merged.map((m) => [m.question_code, m]))
 
   const out: T[] = []
