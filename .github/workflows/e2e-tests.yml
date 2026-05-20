@@ -187,12 +187,12 @@ jobs:
         if: steps.vercel-preview.outputs.vercel_state == 'success'
         run: |
           corepack enable
-          corepack prepare pnpm@10.28.0 --activate
+          corepack prepare pnpm@11.1.3 --activate
           pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
         if: steps.vercel-preview.outputs.vercel_state == 'success'
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E tests
         if: steps.vercel-preview.outputs.vercel_state == 'success'
@@ -201,7 +201,7 @@ jobs:
         run: |
           # Run tests - reporters configured in playwright.config.ts
           # JSON output goes to test-results.json, HTML to playwright-report/
-          npx playwright test
+          pnpm exec playwright test
           echo "Tests completed"
         # ==============================================================================
         # WARNING: ARCHITECTURE RULE. The secrets used here MUST point to a STAGING or PREPROD Supabase environment. Since E2E tests bypass the UI and directly inject/delete data via the SERVICE_ROLE_KEY, running this against the real PRODUCTION database will corrupt user data and metrics.
