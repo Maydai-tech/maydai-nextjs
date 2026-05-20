@@ -9,7 +9,7 @@ import type { GuidedChatDraft } from '../../types'
 function makeValidDraft(overrides: Partial<GuidedChatDraft> = {}): GuidedChatDraft {
   return {
     name: 'Mon cas d\'usage',
-    deployment_phase: 'En production',
+    deployment_phase: 'en_production',
     deployment_date: '15/06/2025',
     responsible_service: 'Ressources Humaines (RH)',
     technology_partner: 'OpenAI',
@@ -134,7 +134,7 @@ describe('validateDraft', () => {
 
   test('reports invalid deployment_date format', () => {
     const result = validateDraft(
-      makeValidDraft({ deployment_date: 'ceci-n-est-pas-une-date', deployment_phase: 'En production' })
+      makeValidDraft({ deployment_date: 'ceci-n-est-pas-une-date', deployment_phase: 'en_production' })
     )
     expect(result.isValid).toBe(false)
     expect(result.errors).toContainEqual(
@@ -144,7 +144,7 @@ describe('validateDraft', () => {
 
   test('accepts ISO deployment_date when phase is set', () => {
     const result = validateDraft(
-      makeValidDraft({ deployment_date: '2025-06-15', deployment_phase: 'En production' })
+      makeValidDraft({ deployment_date: '2025-06-15', deployment_phase: 'en_production' })
     )
     expect(result.isValid).toBe(true)
   })

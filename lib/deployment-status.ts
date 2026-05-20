@@ -1,15 +1,27 @@
-/** Valeurs persistées pour `usecases.deployment_phase` (création / édition). */
-export const DEPLOYMENT_PHASE_PRODUCTION = 'En production' as const
-export const DEPLOYMENT_PHASE_TEST = 'En phase de test / Expérimentation' as const
-export const DEPLOYMENT_PHASE_PROJECT = 'En projet (Non déployé)' as const
-
-export const DEPLOYMENT_PHASE_OPTIONS = [
+import {
   DEPLOYMENT_PHASE_PRODUCTION,
-  DEPLOYMENT_PHASE_TEST,
   DEPLOYMENT_PHASE_PROJECT,
-] as const
+  DEPLOYMENT_PHASE_TEST,
+  DEPLOYMENT_PHASE_UI_OPTIONS,
+  normalizeDeploymentPhaseKey,
+  type DeploymentPhaseKey,
+} from '@/lib/deployment-phase'
 
-export type DeploymentPhaseValue = (typeof DEPLOYMENT_PHASE_OPTIONS)[number]
+export {
+  DEPLOYMENT_PHASE_KEYS,
+  DEPLOYMENT_PHASE_LABELS,
+  DEPLOYMENT_PHASE_UI_OPTIONS,
+  DEPLOYMENT_PHASE_PRODUCTION,
+  DEPLOYMENT_PHASE_PROJECT,
+  DEPLOYMENT_PHASE_TEST,
+  deploymentPhaseKeySchema,
+  getDeploymentPhaseLabel,
+  normalizeDeploymentPhaseKey,
+  type DeploymentPhaseKey,
+} from '@/lib/deployment-phase'
+
+/** @deprecated Utiliser `DEPLOYMENT_PHASE_UI_OPTIONS` (value = clé technique, label = libellé FR). */
+export const DEPLOYMENT_PHASE_OPTIONS = DEPLOYMENT_PHASE_UI_OPTIONS
 
 function inferActifInactifFromDateOnly(deploymentDate?: string | null): 'Actif' | 'Inactif' {
   if (!deploymentDate) return 'Inactif'
@@ -32,12 +44,12 @@ export function getDeploymentStatus(
   deploymentDate?: string | null,
   deploymentPhase?: string | null
 ): 'Actif' | 'Inactif' {
-  const phase = deploymentPhase?.trim()
-  if (phase) {
-    if (phase === DEPLOYMENT_PHASE_PROJECT) {
+  const key = normalizeDeploymentPhaseKey(deploymentPhase)
+  if (key) {
+    if (key === DEPLOYMENT_PHASE_PROJECT) {
       return 'Inactif'
     }
-    if (phase === DEPLOYMENT_PHASE_PRODUCTION || phase === DEPLOYMENT_PHASE_TEST) {
+    if (key === DEPLOYMENT_PHASE_PRODUCTION || key === DEPLOYMENT_PHASE_TEST) {
       const dateStr = deploymentDate?.trim()
       if (!dateStr) return 'Inactif'
       return inferActifInactifFromDateOnly(deploymentDate)
@@ -47,7 +59,8 @@ export function getDeploymentStatus(
 }
 
 export function getDeploymentDateFieldLabel(phase: string): string {
-  if (phase === DEPLOYMENT_PHASE_PROJECT) {
+  const key = normalizeDeploymentPhaseKey(phase)
+  if (key === DEPLOYMENT_PHASE_PROJECT) {
     return 'Date de déploiement prévue'
   }
   return 'Date de mise en service (exacte ou approximative)'

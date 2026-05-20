@@ -105,7 +105,7 @@ export async function seedV2Usecase(
       questionnaire_version: 2,
       ai_category: 'Large Language Model (LLM)',
       responsible_service: "Systèmes d'Information (SI) / IT",
-      deployment_phase: 'En production',
+      deployment_phase: 'en_production',
       updated_by: userId,
     })
     .select('id')

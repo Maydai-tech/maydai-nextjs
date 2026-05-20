@@ -28,7 +28,7 @@ export async function seedV2Usecase(
     .insert({
       company_id: companyId,
       name: 'E2E Test Usecase V2',
-      deployment_phase: 'En projet (Non déployé)',
+      deployment_phase: 'en_projet',
       path_mode: pathMode,
       questionnaire_version: 3,
       checklist_gov_enterprise: checklistGovEnterprise,
