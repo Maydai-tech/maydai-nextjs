@@ -253,7 +253,7 @@ interface Model {
   version?: string
 }
 
-interface UseCaseResponseComplete extends UseCaseResponse {
+export interface UseCaseResponseComplete extends UseCaseResponse {
   answered_by?: string
 }
 

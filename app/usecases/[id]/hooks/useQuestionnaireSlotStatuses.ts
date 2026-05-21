@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth'
-import { mergeShortPathPacksIntoResponses } from '@/lib/openai-data-transformer'
+import { mergeShortPathPacksIntoResponses, type UseCaseResponseComplete } from '@/lib/openai-data-transformer'
 import {
   computeSlotStatuses,
-  type ResponseInput,
   type SlotStatusMap,
 } from '@/lib/slot-statuses'
 
@@ -66,7 +65,7 @@ export function useQuestionnaireSlotStatuses(
         const list = Array.isArray(responses) ? responses : []
         const persistedQuestionCodes = persistedQuestionCodesFromApiRows(list)
         const slotReadyResponses = mergeShortPathPacksIntoResponses(
-          list as ResponseInput[]
+          list as unknown as UseCaseResponseComplete[]
         )
         if (!cancelled) {
           setQuestionnaireResponses(slotReadyResponses)
