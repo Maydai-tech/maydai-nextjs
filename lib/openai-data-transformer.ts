@@ -6,10 +6,20 @@ import {
   riskLevelCodeToReportLabel,
   type RiskLevelCode,
 } from '@/lib/risk-level'
-import type { SlotStatusMap } from '@/lib/slot-statuses'
+import { expandActiveQuestionCodesWithGovernanceAnswers, type SlotStatusMap } from '@/lib/slot-statuses'
 import { QUESTIONNAIRE_VERSION_V2, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 import { formatReportGroundingForPrompt } from '@/lib/report-llm-grounding'
 import type { UseCaseChecklistResponseFields } from '@/types/questions'
+import {
+  V3_SHORT_MINIPACK_ID,
+  V3_SHORT_USAGE_ID,
+  isV3ShortSyntheticQuestionId,
+} from '@/app/usecases/[id]/utils/questionnaire-v3-graph'
+import {
+  isEarlyE4PivotQuestionId,
+  normalizeShortPathStageSelection,
+  unfoldShortPathPackToLongAnswers,
+} from '@/app/usecases/[id]/utils/v3-short-path-stages'
 
 function normalizeChecklistStrings(v: unknown): string[] {
   if (!Array.isArray(v)) return []
@@ -41,6 +51,8 @@ export interface QuestionnaireParcoursMeta {
   bpgv_variant: string | null
   ors_exit: string | null
   active_question_codes: string[]
+  /** Codes présents dans `usecase_responses` avant fusion checklist (hydratation rapport). */
+  persisted_question_codes?: string[]
 }
 
 interface UseCaseResponse extends UseCaseChecklistResponseFields {
@@ -321,7 +333,20 @@ export function transformToOpenAIFormatComplete(
     (questionnaireParcours?.questionnaire_version === QUESTIONNAIRE_VERSION_V2 ||
       questionnaireParcours?.questionnaire_version === QUESTIONNAIRE_VERSION_V3) &&
     questionnaireParcours.active_question_codes.length > 0
-      ? new Set(questionnaireParcours.active_question_codes)
+      ? new Set(
+          expandActiveQuestionCodesWithGovernanceAnswers(
+            questionnaireParcours.active_question_codes,
+            responses,
+            questionnaireParcours.questionnaire_version,
+            questionnaireParcours.persisted_question_codes !== undefined
+              ? {
+                  persistedQuestionCodes: new Set(
+                    questionnaireParcours.persisted_question_codes
+                  ),
+                }
+              : undefined
+          )
+        )
       : null
 
   const { checklist_gouvernance_entreprise: lineEntreprise, checklist_gouvernance_cas_usage: lineCasUsage } =
@@ -440,6 +465,159 @@ export function transformToOpenAIFormatComplete(
   return base
 }
 
+const CANONICAL_OPTION_CODE_PATTERN = /^E\d+\.N\d+\./
+
+function isShortPathPackQuestionCode(questionCode: string): boolean {
+  return (
+    isV3ShortSyntheticQuestionId(questionCode) ||
+    questionCode === V3_SHORT_MINIPACK_ID ||
+    questionCode.startsWith('V3._SHORT') ||
+    questionCode.startsWith('V3_SHORT_')
+  )
+}
+
+function resolveQuestionCodeForOptionCode(optionCode: string): string | null {
+  for (const [questionCode, questionData] of Object.entries(QUESTIONS_DATA)) {
+    const options = (questionData as { options?: Array<{ code: string }> }).options
+    if (options?.some((opt) => opt.code === optionCode)) {
+      return questionCode
+    }
+  }
+  return null
+}
+
+function shouldPreserveExistingPivotResponse(questionCode: string, map: Map<string, UseCaseResponseComplete>): boolean {
+  if (!map.has(questionCode)) return false
+  return questionCode.startsWith('E4.N7.') || isEarlyE4PivotQuestionId(questionCode)
+}
+
+/**
+ * Tag parcours court `V3_SHORT_USAGE` : `E5.N9.Q3.A` coché = pratique en place (Oui radio = `.B`).
+ * Le moteur de statuts ne voit que les codes radio canoniques du catalogue.
+ */
+function canonicalizeShortPathPackOptionCode(
+  packQuestionCode: string,
+  optionCode: string
+): string {
+  if (packQuestionCode === V3_SHORT_USAGE_ID && optionCode === 'E5.N9.Q3.A') {
+    return 'E5.N9.Q3.B'
+  }
+  return optionCode
+}
+
+function virtualResponseFromUnfoldedAnswer(
+  questionCode: string,
+  optionCode: string
+): UseCaseResponseComplete {
+  const questionData = QUESTIONS_DATA[questionCode as keyof typeof QUESTIONS_DATA] as
+    | { type?: string }
+    | undefined
+  if (questionData?.type === 'checkbox' || questionData?.type === 'tags') {
+    return {
+      question_code: questionCode,
+      multiple_codes: [optionCode],
+      multiple_labels: [getOptionLabel(questionCode, optionCode)],
+    }
+  }
+  return {
+    question_code: questionCode,
+    single_value: optionCode,
+  }
+}
+
+/** Injecte des réponses canoniques à partir de codes d’options bruts (fallback pack legacy). */
+function injectCanonicalOptionCodesIntoMap(
+  map: Map<string, UseCaseResponseComplete>,
+  optionCodes: string[],
+  opts?: { sourcePackQuestionCode?: string }
+): void {
+  const grouped = new Map<string, string[]>()
+  for (const rawCode of optionCodes) {
+    if (!CANONICAL_OPTION_CODE_PATTERN.test(rawCode)) continue
+    const code = opts?.sourcePackQuestionCode
+      ? canonicalizeShortPathPackOptionCode(opts.sourcePackQuestionCode, rawCode)
+      : rawCode
+    const questionCode = resolveQuestionCodeForOptionCode(code)
+    if (!questionCode) continue
+    const list = grouped.get(questionCode) ?? []
+    list.push(code)
+    grouped.set(questionCode, list)
+  }
+
+  for (const [questionCode, codes] of grouped) {
+    if (shouldPreserveExistingPivotResponse(questionCode, map)) continue
+    const questionData = QUESTIONS_DATA[questionCode as keyof typeof QUESTIONS_DATA] as
+      | { type?: string }
+      | undefined
+    if (questionData?.type === 'checkbox' || questionData?.type === 'tags') {
+      map.set(questionCode, {
+        question_code: questionCode,
+        multiple_codes: codes,
+        multiple_labels: codes.map((c) => getOptionLabel(questionCode, c)),
+      })
+    } else {
+      map.set(questionCode, virtualResponseFromUnfoldedAnswer(questionCode, codes[0]!))
+    }
+  }
+}
+
+/**
+ * Déplie les packs parcours court (`V3_SHORT_*`) en réponses canoniques E4/E5/E6/E7
+ * pour que le grounding OpenAI voie les mêmes `question_code` qu’en parcours long.
+ */
+export function mergeShortPathPacksIntoResponses<
+  T extends UseCaseResponseComplete = UseCaseResponseComplete,
+>(responses: T[]): T[] {
+  const map = new Map<string, T>()
+
+  for (const response of responses) {
+    if (!response?.question_code || isShortPathPackQuestionCode(response.question_code)) continue
+    map.set(response.question_code, response)
+  }
+
+  for (const response of responses) {
+    if (!response?.question_code) continue
+
+    const selection = normalizeShortPathStageSelection(response.multiple_codes)
+    const hasCanonicalCodes = selection.some((code) => CANONICAL_OPTION_CODE_PATTERN.test(code))
+
+    if (isShortPathPackQuestionCode(response.question_code)) {
+      const unfolded = unfoldShortPathPackToLongAnswers(response.question_code, selection)
+      if (Object.keys(unfolded).length > 0) {
+        for (const [questionCode, optionCode] of Object.entries(unfolded)) {
+          if (shouldPreserveExistingPivotResponse(questionCode, map as Map<string, UseCaseResponseComplete>)) {
+            continue
+          }
+          const canonicalOptionCode = canonicalizeShortPathPackOptionCode(
+            response.question_code,
+            optionCode
+          )
+          map.set(
+            questionCode,
+            virtualResponseFromUnfoldedAnswer(questionCode, canonicalOptionCode) as T
+          )
+        }
+      } else if (hasCanonicalCodes) {
+        injectCanonicalOptionCodesIntoMap(map as Map<string, UseCaseResponseComplete>, selection, {
+          sourcePackQuestionCode: response.question_code,
+        })
+      }
+      continue
+    }
+
+    if (hasCanonicalCodes) {
+      injectCanonicalOptionCodesIntoMap(map as Map<string, UseCaseResponseComplete>, selection)
+    }
+  }
+
+  for (const response of responses) {
+    if (!response?.question_code || isShortPathPackQuestionCode(response.question_code)) continue
+    map.set(response.question_code, response)
+  }
+
+  return [...map.values()]
+}
+
 /**
  * Construit le questionnaire complet avec toutes les questions et réponses
  */
@@ -449,9 +627,9 @@ function buildQuestionnaireQuestions(
 ): Record<string, any> {
   const questionnaireQuestions: Record<string, any> = {}
   
-  // Créer un map des réponses pour un accès rapide
+  // Créer un map des réponses pour un accès rapide (packs court → questions canoniques)
   const responsesMap = new Map<string, UseCaseResponseComplete>()
-  responses.forEach(response => {
+  mergeShortPathPacksIntoResponses(responses).forEach((response) => {
     responsesMap.set(response.question_code, response)
   })
   

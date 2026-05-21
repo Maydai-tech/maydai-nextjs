@@ -5,13 +5,13 @@ describe('getReportPlanNarrativeLine', () => {
   const action = getCanonicalActionByReportSlot('priorite_2')
   if (!action) throw new Error('fixture action manquante')
 
-  test('texte LLM avec préfixe NON + slot Hors périmètre → préfixe réaligné (incohérence badge / narrative)', () => {
+  test('texte LLM avec préfixe NON + slot Information insuffisante → préfixe réaligné', () => {
     const out = getReportPlanNarrativeLine(
       'NON : Le contenu doit être marqué. Références : Art. 50.',
-      'Hors périmètre',
+      'Information insuffisante',
       action
     )
-    expect(out.startsWith('Hors périmètre : ')).toBe(true)
+    expect(out.startsWith('Information insuffisante : ')).toBe(true)
     expect(out).toContain('Le contenu doit être marqué')
     expect(out.startsWith('NON :')).toBe(false)
   })

@@ -1,11 +1,13 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import Sidebar from '@/components/Sidebar';
 import { useEffect, useState } from 'react';
 import { useCleanupBrowserExtensions } from '@/hooks/useCleanupBrowserExtensions';
-import NavBar from './NavBar/NavBar';
+
+/** Chargé à la demande — évite de bloquer l'hydratation sur les pages publiques / 404 */
+const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false });
 
 interface ConditionalLayoutProps {
   children: React.ReactNode;

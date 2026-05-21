@@ -5,8 +5,8 @@
  * Ce module remplace la logique auparavant déléguée au LLM :
  * le code décide du statut, le LLM ne rédige que le texte explicatif.
  *
- * Questionnaire V2 : si une question liée au slot n’est pas dans `active_question_codes`,
- * le statut est « Hors périmètre » (pas « Information insuffisante »).
+ * Questionnaire V2/V3 : si une question liée au slot n’est pas dans `active_question_codes`,
+ * le statut est « Information insuffisante » (données non disponibles pour ce slot).
  * Exception `priorite_2` : en scope dès qu’au moins une des questions E6.N10.Q1 / E6.N10.Q2 / E6.N10.Q3 est active.
  */
 
@@ -25,7 +25,6 @@ export type SlotStatus =
   | 'OUI'
   | 'NON'
   | 'Information insuffisante'
-  | 'Hors périmètre'
 
 export interface SlotStatusMap {
   quick_win_1: SlotStatus
@@ -64,6 +63,50 @@ export type ComputeSlotStatusesOptions = {
   /** Liste serveur `active_question_codes` (parcours V2 effectif). */
   activeQuestionCodes?: string[] | null
   questionnaireVersion?: number | null
+  /**
+   * Codes déjà présents dans `usecase_responses` avant fusion checklist.
+   * Les réponses hydratées depuis `checklist_gov_*` (absentes de cet ensemble)
+   * étendent le périmètre slot ; les lignes DB explicites hors chemin actif restent ignorées.
+   */
+  persistedQuestionCodes?: ReadonlySet<string> | null
+}
+
+/**
+ * V2/V3 : le graphe ORS peut ne lister que les pivots E4 dans `active_question_codes`
+ * alors que E5/E6/E4.N8.Q12 sont réellement répondues via checklists JSONB.
+ * N’étend pas les lignes déjà persistées dans `usecase_responses` hors chemin actif.
+ */
+export function expandActiveQuestionCodesWithGovernanceAnswers(
+  activeQuestionCodes: string[] | null | undefined,
+  responses: ResponseInput[],
+  questionnaireVersion?: number | null,
+  opts?: { persistedQuestionCodes?: ReadonlySet<string> | null }
+): string[] {
+  const base = Array.isArray(activeQuestionCodes) ? [...activeQuestionCodes] : []
+  const qv = normalizeQuestionnaireVersion(questionnaireVersion)
+  if (qv !== QUESTIONNAIRE_VERSION_V2 && qv !== QUESTIONNAIRE_VERSION_V3) {
+    return base
+  }
+  if (opts?.persistedQuestionCodes === undefined) {
+    return base
+  }
+  const persisted = opts.persistedQuestionCodes
+  const expanded = new Set(base)
+  for (const r of applyChecklistKeyOverlayToResponses(responses)) {
+    const qc = r.question_code
+    if (!qc) continue
+    if (!(qc.startsWith('E5.N9.') || qc.startsWith('E6.N10.') || qc === 'E4.N8.Q12')) {
+      continue
+    }
+    if (persisted?.has(qc)) continue
+    const answered =
+      legacyDirectRadioCode(r) ??
+      (typeof r.conditional_main === 'string' && r.conditional_main.trim()
+        ? r.conditional_main
+        : null)
+    if (answered) expanded.add(qc)
+  }
+  return [...expanded]
 }
 
 function slotQuestionsAllInActiveSet(
@@ -71,6 +114,56 @@ function slotQuestionsAllInActiveSet(
   questionCodes: readonly string[]
 ): boolean {
   return questionCodes.every(q => activeSet.has(q))
+}
+
+function isGovernanceQuestionCode(questionCode: string): boolean {
+  return questionCode.startsWith('E5.N9.') || questionCode.startsWith('E6.N10.')
+}
+
+function isGovernanceOnlySlot(questionCodes: readonly string[]): boolean {
+  return questionCodes.length > 0 && questionCodes.every(isGovernanceQuestionCode)
+}
+
+function governanceQuestionHasDeclaredAnswer(
+  questionCode: string,
+  map: Map<string, ResponseInput>,
+  bpgvKeys: string[],
+  transparencyKeys: string[]
+): boolean {
+  return (
+    resolveDeclaredOptionCodeForSlotQuestion(
+      questionCode,
+      bpgvKeys,
+      transparencyKeys,
+      map.get(questionCode)
+    ) != null
+  )
+}
+
+/** V2/V3 : bypass du filtre `active_question_codes` si les questions E5/E6 du slot ont une réponse. */
+function slotGovernanceQuestionsAnswered(
+  questionCodes: readonly string[],
+  map: Map<string, ResponseInput>,
+  bpgvKeys: string[],
+  transparencyKeys: string[]
+): boolean {
+  const governanceCodes = questionCodes.filter(isGovernanceQuestionCode)
+  if (governanceCodes.length === 0) return false
+  return governanceCodes.every((qc) =>
+    governanceQuestionHasDeclaredAnswer(qc, map, bpgvKeys, transparencyKeys)
+  )
+}
+
+function priorite2HasScopeOrGovernanceAnswers(
+  activeSet: Set<string>,
+  map: Map<string, ResponseInput>,
+  bpgvKeys: string[],
+  transparencyKeys: string[]
+): boolean {
+  if (priorite2InScopeV2(activeSet)) return true
+  return (['E6.N10.Q1', 'E6.N10.Q2', 'E6.N10.Q3'] as const).some((qc) =>
+    governanceQuestionHasDeclaredAnswer(qc, map, bpgvKeys, transparencyKeys)
+  )
 }
 
 /** V2 / V3 : le slot transparence est en scope dès qu’au moins une question E6.N10 du couple / fourche est dans le parcours actif. */
@@ -175,7 +268,7 @@ const OUI_CODES: Record<string, string> = {
 const NON_CODES: Record<string, string> = {
   'E5.N9.Q7':  'E5.N9.Q7.A',
   'E5.N9.Q8':  'E5.N9.Q8.A',
-  'E5.N9.Q3':  'E5.N9.Q3.B',
+  'E5.N9.Q3':  'E5.N9.Q3.A',
   'E5.N9.Q4':  'E5.N9.Q4.B',
   'E5.N9.Q6':  'E5.N9.Q6.A',
   'E5.N9.Q1':  'E5.N9.Q1.B',
@@ -482,21 +575,34 @@ export function computeSlotStatuses(
     (qv === QUESTIONNAIRE_VERSION_V2 || qv === QUESTIONNAIRE_VERSION_V3) &&
     Array.isArray(rawActive) &&
     rawActive.length > 0
-  const activeSet = useV2Scope ? new Set(rawActive) : null
+  const effectiveActive =
+    useV2Scope && options?.persistedQuestionCodes !== undefined
+      ? expandActiveQuestionCodesWithGovernanceAnswers(rawActive, responses, qv, {
+          persistedQuestionCodes: options.persistedQuestionCodes,
+        })
+      : rawActive
+  const activeSet = useV2Scope ? new Set(effectiveActive) : null
 
   const run = (
     slot: SlotKey,
     compute: (m: Map<string, ResponseInput>, bk: string[], tk: string[]) => SlotStatus
   ): SlotStatus => {
-    if (activeSet && !slotQuestionsAllInActiveSet(activeSet, SLOT_QUESTION_CODES[slot])) {
-      return 'Hors périmètre'
+    const slotQuestionCodes = SLOT_QUESTION_CODES[slot]
+    if (activeSet && !slotQuestionsAllInActiveSet(activeSet, slotQuestionCodes)) {
+      const governanceBypass =
+        isGovernanceOnlySlot(slotQuestionCodes) &&
+        slotGovernanceQuestionsAnswered(slotQuestionCodes, map, bpgvKeys, transparencyKeys)
+      if (!governanceBypass) {
+        return 'Information insuffisante'
+      }
     }
     return compute(map, bpgvKeys, transparencyKeys)
   }
 
   const priorite2 =
-    activeSet && !priorite2InScopeV2(activeSet)
-      ? ('Hors périmètre' as const)
+    activeSet &&
+    !priorite2HasScopeOrGovernanceAnswers(activeSet, map, bpgvKeys, transparencyKeys)
+      ? ('Information insuffisante' as const)
       : computePriorite2(map, activeSet, bpgvKeys, transparencyKeys)
 
   return {
@@ -518,15 +624,23 @@ const KNOWN_PREFIXES = [
   'OUI : ',
   'NON : ',
   'Information insuffisante : ',
+  /** Legacy — retiré des statuts moteur ; encore stripé si le LLM ou d’anciens rapports l’utilisent. */
   'Hors périmètre : ',
 ]
+
+/** Normalise un statut legacy éventuel avant post-correction. */
+function normalizeExpectedSlotStatus(status: SlotStatus | string): SlotStatus {
+  if (status === 'Hors périmètre') return 'Information insuffisante'
+  return status as SlotStatus
+}
 
 /**
  * Force le préfixe d'un texte de slot à correspondre au statut attendu.
  * Retire tout préfixe existant et remet le bon.
  */
 export function enforceStatusPrefix(text: string | null | undefined, expectedStatus: SlotStatus): string {
-  if (!text) return `${expectedStatus} : `
+  const status = normalizeExpectedSlotStatus(expectedStatus)
+  if (!text) return `${status} : `
 
   let cleaned = text
   for (const prefix of KNOWN_PREFIXES) {
@@ -536,5 +650,5 @@ export function enforceStatusPrefix(text: string | null | undefined, expectedSta
     }
   }
 
-  return `${expectedStatus} : ${cleaned}`
+  return `${status} : ${cleaned}`
 }

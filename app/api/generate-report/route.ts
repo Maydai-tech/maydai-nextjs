@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { transformToOpenAIFormatComplete } from '@/lib/openai-data-transformer'
+import {
+  mergeShortPathPacksIntoResponses,
+  transformToOpenAIFormatComplete,
+} from '@/lib/openai-data-transformer'
 import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
 import { openAIClient } from '@/lib/openai-client'
 import {
@@ -19,7 +22,7 @@ import {
 } from '@/lib/risk-level'
 import { dbResponsesToQuestionnaireAnswers } from '@/lib/scoring-v2-server'
 import { resolveQualificationOutcomeV3 } from '@/lib/qualification-v3-decision'
-import { computeSlotStatuses, enforceStatusPrefix, SLOT_KEYS } from '@/lib/slot-statuses'
+import { computeSlotStatuses } from '@/lib/slot-statuses'
 import {
   QUESTIONNAIRE_VERSION_V2,
   QUESTIONNAIRE_VERSION_V3,
@@ -336,9 +339,19 @@ export async function POST(req: NextRequest) {
       ? activeCodesRaw.filter((c): c is string => typeof c === 'string')
       : []
 
-    const slotStatuses = computeSlotStatuses(responses || [], {
+    const persistedQuestionCodes = new Set(
+      (responses ?? [])
+        .map((r) => r.question_code)
+        .filter((code): code is string => typeof code === 'string' && code.length > 0)
+    )
+
+    /** Packs V3_SHORT_* → clés canoniques E5/E6/E4 (aligné sur le payload OpenAI). */
+    const slotReadyResponses = mergeShortPathPacksIntoResponses(unifiedResponses)
+
+    const slotStatuses = computeSlotStatuses(slotReadyResponses, {
       questionnaireVersion: questionnaireVersion,
       activeQuestionCodes,
+      persistedQuestionCodes,
     })
     console.log(`[generate-report] Slot statuses (code) pour ${usecase_id}:`, slotStatuses)
 
@@ -351,6 +364,7 @@ export async function POST(req: NextRequest) {
               (usecase as { bpgv_variant?: string | null }).bpgv_variant ?? null,
             ors_exit: (usecase as { ors_exit?: string | null }).ors_exit ?? null,
             active_question_codes: activeQuestionCodes,
+            persisted_question_codes: [...persistedQuestionCodes],
           }
         : null
 
@@ -361,7 +375,7 @@ export async function POST(req: NextRequest) {
       // Hydraté avec les pivots `checklist_gov_*` : le formateur (et le grounding LLM
       // construit en aval) lit donc les questions E4 / E5 / E6 « comme si elles
       // venaient de `usecase_responses` », même quand la base n'en contient aucune.
-      unifiedResponses,
+      slotReadyResponses,
       respondentEmail,
       questionnaireParcours
     )
@@ -490,22 +504,10 @@ export async function POST(req: NextRequest) {
       }, { status: 500 })
     }
 
-    // Extraire les prochaines étapes structurées du rapport, puis désambiguïser les textes quasi identiques (LLM)
+    // Extraire les prochaines étapes structurées du rapport, puis désambiguïser les textes quasi identiques (LLM).
+    // Les préfixes OUI / NON / Information insuffisante sont imposés par le prompt et validés via slot_statuses
+    // injectés dans le payload OpenAI — on conserve le texte LLM tel quel (plus de post-correction enforceStatusPrefix).
     const extractedNextSteps = sanitizeNextStepsQuasiDuplicateTexts(extractNextStepsFromReport(analysis))
-
-    // Post-correction : forcer les préfixes OUI/NON/Information insuffisante
-    // d'après les statuts calculés par le code (filet de sécurité si le LLM désobéit)
-    for (const key of SLOT_KEYS) {
-      const expected = slotStatuses[key]
-      const raw = extractedNextSteps[key]
-      const corrected = enforceStatusPrefix(raw, expected)
-      if (raw !== corrected) {
-        console.warn(
-          `[generate-report] Post-correction ${key}: LLM="${raw?.substring(0, 40)}" → forcé="${corrected.substring(0, 40)}"`
-        )
-      }
-      extractedNextSteps[key] = corrected
-    }
 
     // Ajouter l'usecase_id et les métadonnées aux données extraites
     // IMPORTANT: cette structure doit rester compatible avec validateNextStepsData(...)

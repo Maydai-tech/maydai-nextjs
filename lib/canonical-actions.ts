@@ -12,7 +12,6 @@ export interface CanonicalActionDefinition {
   label: string
   legacy_aliases: readonly string[]
   report_slot_target: string | null
-  questionnaire_links: readonly string[]
   todo_doc_type_target: string
   dossier_section_target: string
   evidence_mode: EvidenceMode
@@ -35,8 +34,6 @@ export interface CanonicalActionDefinition {
   dossier_mixed_text_placeholder?: string
   dossier_mixed_file_label?: string
   dossier_mixed_file_help?: string
-  /** Bonus score brut (+3 typiquement) quand le dossier est complété, hors logique questionnaire. */
-  dossier_direct_bonus_raw_points?: number | null
   /** Points normalisés affichés pour l’action registre (todo / cartes). */
   registry_normalized_display_points?: number
   /** Titres todo registre selon le cas A/B/C (questionnaire Q7). */
@@ -83,7 +80,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     label: 'Registre centralisé des systèmes d’IA',
     legacy_aliases: ['registry_action', 'quick_win_1'],
     report_slot_target: 'quick_win_1',
-    questionnaire_links: ['E5.N9.Q7'],
     todo_doc_type_target: 'registry_proof',
     dossier_section_target: 'registry_proof',
     evidence_mode: 'file',
@@ -99,7 +95,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     dossier_help_info:
       'Document attestant de l’utilisation d’un registre centralisé conforme à l’AI Act pour le suivi de vos systèmes d’IA. Peut inclure : capture d’écran du registre, attestation du responsable, export de données du registre, ou tout autre élément prouvant son utilisation effective.',
     dossier_accepted_formats_ui: '.pdf,.png,.jpg,.jpeg',
-    dossier_direct_bonus_raw_points: null,
     registry_normalized_display_points: 3,
     registry_todo_title_by_case: {
       A: 'Initialiser le registre centralisé pour vos systèmes d\'IA',
@@ -131,7 +126,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     label: 'Instructions système, prompts et garde-fous',
     legacy_aliases: ['quick_win_3'],
     report_slot_target: 'quick_win_3',
-    questionnaire_links: ['E5.N9.Q3'],
     todo_doc_type_target: 'system_prompt',
     dossier_section_target: 'system_prompt',
     evidence_mode: 'text',
@@ -147,7 +141,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     dossier_help_info:
       'Tracer les instructions exactes données à l’IA (le "system prompt" ou les instructions de base) pour garantir la reproductibilité et l’auditabilité du comportement de l’IA. Si le prompt est dynamique, fournissez le modèle (template) et expliquez les variables.',
     dossier_accepted_formats_ui: '.txt,.md',
-    dossier_direct_bonus_raw_points: 3,
   },
   {
     canonical_action_code: 'MAYDAI_HUMAN_OVERSIGHT',
@@ -155,7 +148,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     label: 'Responsable de la surveillance humaine',
     legacy_aliases: ['quick_win_2'],
     report_slot_target: 'quick_win_2',
-    questionnaire_links: ['E5.N9.Q8'],
     todo_doc_type_target: 'human_oversight',
     dossier_section_target: 'human_oversight',
     evidence_mode: 'form',
@@ -178,7 +170,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     label: 'Documentation technique du système',
     legacy_aliases: ['priorite_1'],
     report_slot_target: 'priorite_1',
-    questionnaire_links: ['E5.N9.Q4'],
     todo_doc_type_target: 'technical_documentation',
     dossier_section_target: 'technical_documentation',
     evidence_mode: 'file',
@@ -201,7 +192,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     label: 'Information / marquage de transparence',
     legacy_aliases: ['priorite_2'],
     report_slot_target: 'priorite_2',
-    questionnaire_links: ['E6.N10.Q1', 'E6.N10.Q2', 'E6.N10.Q3'],
     todo_doc_type_target: 'transparency_marking',
     dossier_section_target: 'transparency_marking',
     evidence_mode: 'mixed',
@@ -228,7 +218,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     label: 'Qualité des données',
     legacy_aliases: ['priorite_3'],
     report_slot_target: 'priorite_3',
-    questionnaire_links: ['E5.N9.Q6'],
     todo_doc_type_target: 'data_quality',
     dossier_section_target: 'data_quality',
     evidence_mode: 'file',
@@ -251,7 +240,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     label: 'Plan de gestion des risques',
     legacy_aliases: ['action_1'],
     report_slot_target: 'action_1',
-    questionnaire_links: ['E5.N9.Q1', 'E5.N9.Q2', 'E5.N9.Q3'],
     todo_doc_type_target: 'risk_management',
     dossier_section_target: 'risk_management',
     evidence_mode: 'file',
@@ -273,7 +261,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     label: 'Plan de surveillance continue',
     legacy_aliases: ['action_2'],
     report_slot_target: 'action_2',
-    questionnaire_links: ['E5.N9.Q9'],
     todo_doc_type_target: 'continuous_monitoring',
     dossier_section_target: 'continuous_monitoring',
     evidence_mode: 'file',
@@ -296,7 +283,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     label: 'Formation / sensibilisation AI Act',
     legacy_aliases: ['training_census', 'action_3'],
     report_slot_target: 'action_3',
-    questionnaire_links: [],
     todo_doc_type_target: 'training_plan',
     dossier_section_target: 'training_plan',
     evidence_mode: 'mixed',
@@ -315,7 +301,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     dossier_mixed_text_placeholder: 'Décrivez le programme de formation des utilisateurs...',
     dossier_mixed_file_label: 'Document de formation (optionnel)',
     dossier_mixed_file_help: 'Plan de formation détaillé',
-    dossier_direct_bonus_raw_points: 3,
   },
   {
     canonical_action_code: 'MAYDAI_STOPPING_PROOF',
@@ -323,7 +308,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     label: 'Preuve d’arrêt ou de non-déploiement',
     legacy_aliases: [],
     report_slot_target: null,
-    questionnaire_links: [],
     todo_doc_type_target: 'stopping_proof',
     dossier_section_target: 'stopping_proof',
     evidence_mode: 'file',
@@ -447,33 +431,6 @@ export function getRegistryTodoHelpExplanation(
 
 export function getRegistryNormalizedPointsFromCatalog(): number {
   return getRegistryCatalogEntry()?.registry_normalized_display_points ?? 3
-}
-
-/** Types de documents donnant un bonus dossier (hors questionnaire), clés canoniques. */
-export function getDirectBonusCanonicalDocTypes(): string[] {
-  return CANONICAL_ACTIONS.filter(
-    a => a.dossier_direct_bonus_raw_points != null && (a.dossier_direct_bonus_raw_points as number) > 0
-  ).map(a => a.doc_type_canonique)
-}
-
-export function getDossierDirectBonusRawPointsAmount(): number {
-  const a = CANONICAL_ACTIONS.find(
-    x => x.dossier_direct_bonus_raw_points != null && (x.dossier_direct_bonus_raw_points as number) > 0
-  )
-  return (a?.dossier_direct_bonus_raw_points as number) ?? 3
-}
-
-/** Types `doc_type` à interroger en base (inclut `training_census` si bonus formation). */
-export function getDossierDirectBonusSupabaseQueryDocTypes(): string[] {
-  const set = new Set<string>()
-  for (const dt of getDirectBonusCanonicalDocTypes()) {
-    if (dt === 'training_plan') {
-      TRAINING_STORAGE_TYPES.forEach(t => set.add(t))
-    } else {
-      set.add(dt)
-    }
-  }
-  return [...set]
 }
 
 /** Points normalisés (affichage todo) pour une action du flux standard hors registre et hors preuve d’arrêt. */

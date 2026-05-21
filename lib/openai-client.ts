@@ -527,8 +527,12 @@ Chaque slot DOIT :
 1) commencer par le préfixe exact indiqué ci-dessous, suivi de " : " (espace-deux-points-espace) ;
 2) contenir au moins 2 phrases d'explication contextualisée (hors préfixe et hors la partie Références) ;
 3) se terminer obligatoirement dans la MÊME chaîne par une phrase commençant exactement : Références : (puis références AI Act ou principes pertinentes, alignées sur le thème du slot).
-Préfixes possibles : OUI, NON, Information insuffisante, Hors périmètre (Hors périmètre = question(s) liée(s) au slot non posée(s) dans le parcours V2 — expliquer sans exiger une action pour compléter une question hors parcours).
+Préfixes possibles : OUI, NON, Information insuffisante (uniquement ces trois préfixes en sortie ; ne jamais écrire « Hors périmètre » ni mentionner parcours V2/court/long ou « question non posée »).
 Ne pas changer le préfixe. Ne pas ajouter de nuance sur le statut. Ne pas contredire le statut dans le texte.
+
+RÈGLE ABSOLUE DE RÉDACTION : TU N'AS PLUS LE DROIT DE CALCULER LES STATUTS. LE SERVEUR L'A DÉJÀ FAIT POUR TOI.
+POUR CHAQUE SLOT CI-DESSOUS, TU DOIS IMPÉRATIVEMENT UTILISER EXACTEMENT LE STATUT FOURNI PAR LE SERVEUR CI-DESSOUS (OUI, NON, OU INFORMATION INSUFFISANTE) COMME PRÉFIXE EN GRAS DE TON PARAGRAPHE.
+MÊME SI LE QUESTIONNAIRE TE SEMBLE INCOMPLET, MÊME SI TES INSTRUCTIONS SYSTÈME EXIGENT PLUS DE DÉTAILS (COMME UN NOM OU UNE DATE), TU IGNORES TES INSTRUCTIONS SYSTÈME ET TU APPLIQUES AVEUGLÉMENT LE STATUT DU SERVEUR. LE BACKEND EST LA SEULE SOURCE DE VÉRITÉ POUR LE STATUT.
 
 quick_win_1 → ${statuses.quick_win_1}
 quick_win_2 → ${statuses.quick_win_2}
@@ -562,8 +566,8 @@ Exemple réservé à quick_win_2 uniquement (surveillance humaine — ne PAS app
       : (!isUnacceptable
           ? `
 MAPPING DES 9 SLOTS — statuts non fournis, déduire des réponses.
-Préfixe par slot : « OUI : », « NON : », « Information insuffisante : » ou si la question liée n'est pas dans le parcours V2 « Hors périmètre : ».
-Chaque slot : au moins 2 phrases d'explication puis fin obligatoire par « Références : ... » dans la même chaîne.`
+Préfixe par slot : « OUI : », « NON : » ou « Information insuffisante : » uniquement.
+Chaque slot : au moins 2 phrases d'explication métier puis fin obligatoire par « Références : ... » dans la même chaîne.`
           : `
 CAS RISQUE INACCEPTABLE (INTERDIT)
 - Ne PAS produire quick_win_1..3, priorite_1..3, action_1..3 (aucun plan d'action type cas standard).
@@ -618,7 +622,7 @@ SORTIE JSON
 - Toutes les valeurs chaîne non vides (espaces seuls interdits). impact_attendu et conclusion obligatoires même si plusieurs des 9 slots sont « Information insuffisante : ».
 - evaluation_risque.niveau : "${cas_usage.risk_level_label_fr}" exactement ; ne pas utiliser la formulation « Risque inacceptable » dans niveau (utiliser « Interdit » si cas maximal).
 - evaluation_risque.justification : respecter intégralement le bloc NIVEAU DE RISQUE ci-dessus (y compris les règles spécifiques « Risque élevé » si applicables).
-- quick_win_1, quick_win_2, quick_win_3, priorite_1, priorite_2, priorite_3, action_1, action_2, action_3 : chaque valeur doit commencer par le préfixe imposé (OUI / NON / Information insuffisante / Hors périmètre), contenir au moins 2 phrases explicatives, et se terminer obligatoirement par « Références : ... » (y compris pour Information insuffisante et Hors périmètre).
+- quick_win_1, quick_win_2, quick_win_3, priorite_1, priorite_2, priorite_3, action_1, action_2, action_3 : chaque valeur doit commencer par le préfixe imposé (OUI / NON / Information insuffisante uniquement), contenir au moins 2 phrases explicatives métier, et se terminer obligatoirement par « Références : ... » (y compris pour Information insuffisante).
 - DISTINCTION OBLIGATOIRE DES NEUF SLOTS : à l'intérieur de chaque triplet (quick_win_* entre eux, priorite_* entre eux, action_* entre eux), chaque texte DOIT être clairement distinct des deux autres (pas de copier-coller, pas de paraphrase quasi identique). Traiter la numérotation comme une priorité métier séquentielle unique : quick_win_1 / priorite_1 / action_1 = premier axe du groupe, … puis 2, puis 3 — angles, obligations et références différents.
 - Si tu utilises des tableaux JSON (quick_wins_actions_immediates, priorites_actions_reglementaires, actions_moyen_terme) avec des objets { "priority", "text" } (ou champs équivalents), chaque priorité numérique DOIT être unique et ordonnée (1, 2, 3 sans doublon) ; l'ordre des éléments doit refléter 1 puis 2 puis 3.`
 
@@ -635,7 +639,7 @@ SORTIE JSON
       for (const q of questions as any[]) {
         t += `[${q.code}] ${q.question_text}\n`
         if (q.hors_parcours_questionnaire_v2) {
-          t += `  (hors périmètre du parcours V2 — question non posée ; ne pas inférer de réponse.)\n`
+          t += `  (aucune réponse déclarée transmise pour cette question ; ne pas inférer de réponse utilisateur.)\n`
         } else if (q.user_response?.answered) {
           const code = String(q.code ?? '')
           const isE5E6 = code.startsWith('E5.N9') || code.startsWith('E6.N10')

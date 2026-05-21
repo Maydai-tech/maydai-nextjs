@@ -1,11 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ChecklistAnswer } from '@/lib/validations/usecases'
+import type { ChecklistCodeArray } from '@/lib/validations/usecases'
 
 export type SeedV2UsecaseParams = {
   companyId: string
   pathMode?: 'short' | 'long'
-  checklistGovEnterprise?: ChecklistAnswer[]
-  checklistGovUsecase?: ChecklistAnswer[]
+  checklistGovEnterprise?: ChecklistCodeArray
+  checklistGovUsecase?: ChecklistCodeArray
 }
 
 /**

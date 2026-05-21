@@ -8,6 +8,9 @@ interface SmartLoaderProps {
   children: React.ReactNode
 }
 
+/** Délai max avant retrait de l'overlay auth (évite UI figée si Supabase ne répond pas). */
+const SAFETY_TIMEOUT_MS = 5000
+
 export default function SmartLoader({ children }: SmartLoaderProps) {
   const pathname = usePathname()
   const { loading } = useAuth()
@@ -28,15 +31,24 @@ export default function SmartLoader({ children }: SmartLoaderProps) {
 
   const isPublicPage = publicPages.some(page => pathname === page || pathname.startsWith(page))
 
+  // Timeout de sécurité au montage : force l'affichage même si loading reste true indéfiniment
   useEffect(() => {
-    if (!loading) return
+    if (isPublicPage) return
 
     const timer = setTimeout(() => {
       setForceShow(true)
-      console.log('SmartLoader: Force affichage après timeout')
-    }, 3000)
+      console.warn(
+        `[SmartLoader] Timeout sécurité (${SAFETY_TIMEOUT_MS}ms) — overlay retiré (loading=${loading})`
+      )
+    }, SAFETY_TIMEOUT_MS)
 
     return () => clearTimeout(timer)
+  }, [isPublicPage, loading])
+
+  useEffect(() => {
+    if (!loading) {
+      setForceShow(true)
+    }
   }, [loading])
 
   // Pour les pages publiques, ne pas bloquer l'affichage

@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 /**
  * Contrat JSONB pour `usecases.checklist_gov_enterprise` et `usecases.checklist_gov_usecase`.
- * Aligné sur le sous-ensemble utile de `UserResponse` (scoring V2/V3), sans champs conditionnels hérités.
+ * En base : tableau plat de codes d’options (ex. `["E5.N9.Q7.B"]`).
  */
 
 export const ChecklistAnswerSchema = z
@@ -13,6 +13,10 @@ export const ChecklistAnswerSchema = z
   })
   .strict()
 
+/** Structure ligne réponse (scoring / API) — distinct du format JSONB checklist. */
 export type ChecklistAnswer = z.infer<typeof ChecklistAnswerSchema>
 
-export const ChecklistArraySchema = z.array(ChecklistAnswerSchema)
+/** Codes d’options persistés dans `usecases.checklist_gov_*` (JSONB string[]). */
+export const ChecklistArraySchema = z.array(z.string())
+
+export type ChecklistCodeArray = z.infer<typeof ChecklistArraySchema>

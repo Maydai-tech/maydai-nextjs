@@ -279,7 +279,6 @@ export function declarationStatusPdfLabel(d: DeclarationStatusValue | null): str
   if (d == null) return DECLARATION_PROOF_FLOW_COPY.declarativePdfNull
   if (d === 'OUI') return DECLARATION_PROOF_FLOW_COPY.declarativeYes
   if (d === 'NON') return DECLARATION_PROOF_FLOW_COPY.declarativeNo
-  if (d === 'Hors périmètre') return DECLARATION_PROOF_FLOW_COPY.declarativeOut
   return DECLARATION_PROOF_FLOW_COPY.declarativeInsufficient
 }
 
@@ -371,16 +370,13 @@ export function buildReportCanonicalItemForSlot(params: {
     questionnaireResponses,
     docCompleted,
   })
-  const isHorsPerimetre = declaration_status === 'Hors périmètre'
-  const evidence_status: EvidenceStatusValue = isHorsPerimetre
-    ? 'not_applicable'
-    : resolveEvidenceStatus(
-        legal_status,
-        docType,
-        documentStatuses,
-        maydaiAsRegistry,
-        docCompleted
-      )
+  const evidence_status: EvidenceStatusValue = resolveEvidenceStatus(
+    legal_status,
+    docType,
+    documentStatuses,
+    maydaiAsRegistry,
+    docCompleted
+  )
 
   const dossierUrl = buildDashboardDossierDeepLink(companyId, useCaseId, docType)
   const todoUrl = buildDashboardTodoListDeepLink(companyId, useCaseId, docType)
@@ -411,7 +407,7 @@ export function buildReportCanonicalItemForSlot(params: {
     narrative: { text: narrative_text, source_slot_key: reportSlotKey },
     cta: {
       completed: docCompleted,
-      ctaOmitted: isHorsPerimetre,
+      ctaOmitted: false,
       dossierUrl,
       todoUrl,
       label: title,

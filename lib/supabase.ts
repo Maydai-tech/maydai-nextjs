@@ -1,21 +1,69 @@
 import { createBrowserClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { PathMode } from '@/lib/journey-path-mode'
 
-// Fonction pour créer le client Supabase avec validation à l'exécution
-function createSupabaseClient() {
+const SUPABASE_ENV_ERROR =
+  'Les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être définies dans .env.local'
+
+function logSupabaseEnvError(): void {
+  console.error(
+    [
+      '',
+      '═'.repeat(80),
+      '🚨 ERREUR CRITIQUE — Configuration Supabase manquante',
+      '═'.repeat(80),
+      SUPABASE_ENV_ERROR,
+      '',
+      'Variables détectées :',
+      `  NEXT_PUBLIC_SUPABASE_URL      → ${process.env.NEXT_PUBLIC_SUPABASE_URL ? '✓ définie' : '✗ MANQUANTE'}`,
+      `  NEXT_PUBLIC_SUPABASE_ANON_KEY → ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✓ définie' : '✗ MANQUANTE'}`,
+      '',
+      'Le client Supabase tourne en mode dégradé (mock) pour ne pas bloquer l\'hydratation React.',
+      '═'.repeat(80),
+      '',
+    ].join('\n')
+  )
+}
+
+/** Client mock minimal : auth no-op pour que AuthProvider puisse monter sans crash. */
+function createMockSupabaseClient(): SupabaseClient {
+  const configError = new Error(`[Supabase mock] ${SUPABASE_ENV_ERROR}`)
+  const noopSubscription = { unsubscribe: () => undefined }
+  const authUnavailable = async () => ({
+    data: { user: null, session: null },
+    error: configError,
+  })
+
+  return {
+    auth: {
+      getSession: async () => ({ data: { session: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: noopSubscription } }),
+      signInWithPassword: authUnavailable,
+      signUp: authUnavailable,
+      signInWithOtp: authUnavailable,
+      verifyOtp: authUnavailable,
+      signOut: async () => ({ error: null }),
+    },
+  } as unknown as SupabaseClient
+}
+
+function createSupabaseClient(): SupabaseClient {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      'Les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY doivent être définies dans .env.local'
-    )
+    logSupabaseEnvError()
+    return createMockSupabaseClient()
   }
 
   return createBrowserClient(supabaseUrl, supabaseAnonKey)
 }
 
-// Export du client avec lazy initialization
+export const isSupabaseConfigured = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+)
+
+// Export du client — ne throw plus au import : mode mock si env manquante
 export const supabase = createSupabaseClient()
 
 // Export de la fonction createClient pour les API routes
