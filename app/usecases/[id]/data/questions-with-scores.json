@@ -1341,7 +1341,7 @@
     "question": "Avez-vous intégré des mesures techniques d'atténuation des risques (ex : garde-fous, filtres, instructions système/prompts) dès la conception de votre IA ?",
     "type": "radio",
     "required": true,
-    "todo_action": "risk_management",
+    "todo_action": "system_prompt",
     "tooltip": {
       "title": "Instructions et garde-fous",
       "shortContent": "Instructions et garde-fous (Art. 9 et 15) : L'AI Act exige d'éliminer ou de réduire les risques dès la conception du système, y compris face à une mauvaise utilisation raisonnablement prévisible.",

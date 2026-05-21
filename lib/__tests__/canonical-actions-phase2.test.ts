@@ -1,8 +1,5 @@
 import {
   getComplianceNormalizedPointsForDocType,
-  getDirectBonusCanonicalDocTypes,
-  getDossierDirectBonusRawPointsAmount,
-  getDossierDirectBonusSupabaseQueryDocTypes,
   getRegistryNormalizedPointsFromCatalog,
   getRegistryTodoHelpExplanation,
   getRegistryTodoTitleForCase,
@@ -10,14 +7,6 @@ import {
 } from '@/lib/canonical-actions'
 
 describe('canonical-actions phase 2 — todo / score / registre', () => {
-  test('bonus dossier : types et montant alignés catalogue', () => {
-    expect(getDirectBonusCanonicalDocTypes().sort()).toEqual(['system_prompt', 'training_plan'].sort())
-    expect(getDossierDirectBonusRawPointsAmount()).toBe(3)
-    expect(getDossierDirectBonusSupabaseQueryDocTypes().sort()).toEqual(
-      ['system_prompt', 'training_census', 'training_plan'].sort()
-    )
-  })
-
   test('points normalisés hors registre depuis le flux standard', () => {
     expect(getComplianceNormalizedPointsForDocType('technical_documentation')).toBe(2)
     expect(getComplianceNormalizedPointsForDocType('registry_proof')).toBe(0)

@@ -1,17 +1,7 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
-import { headers } from "next/headers";
-import Script from "next/script";
 import "./globals.css";
-import { AuthProvider } from "@/lib/auth";
-import ConditionalLayout from "@/components/ConditionalLayout";
-import DeferredGoogleTagManager from "@/components/DeferredGoogleTagManager";
-import SmartLoader from "@/components/SmartLoader";
-import { getNonce } from "@/lib/csp-nonce";
-import GTMPageViewTracker from "@/components/GTMPageViewTracker";
-import HubSpotTrigger from "@/components/tracking/HubSpotTrigger";
-import AttributionCapture from "@/components/tracking/AttributionCapture";
+import RootProviders from "@/components/RootProviders";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -69,111 +59,21 @@ export const metadata: Metadata = {
   },
 };
 
-/** Conteneur GTM unique — Analytics / Ads sont chargés via ce conteneur uniquement. */
-const GTM_CONTAINER_ID = "GTM-KLSD6BXG";
-
-/** Hôtes considérés comme la prod « officielle » (hors Vercel). */
-const OFFICIAL_GTM_HOSTS = new Set(["maydai.io", "www.maydai.io"]);
-
 /**
- * GTM uniquement sur la prod réelle : déploiement Vercel « Production » ou domaine canonique,
- * pour exclure preview (.vercel.app), localhost et next start local.
+ * Layout racine — providers client (auth, tracking, layout) via RootProviders.
  */
-async function shouldLoadOfficialGTM(): Promise<boolean> {
-  if (process.env.NODE_ENV !== "production") return false;
-
-  if (process.env.VERCEL) {
-    return process.env.VERCEL_ENV === "production";
-  }
-
-  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "production") {
-    return true;
-  }
-
-  const headersList = await headers();
-  const rawHost =
-    headersList.get("x-forwarded-host")?.split(",")[0]?.trim() ??
-    headersList.get("host") ??
-    "";
-  const host = rawHost.split(":")[0]?.toLowerCase() ?? "";
-  if (!host) return false;
-  return OFFICIAL_GTM_HOSTS.has(host);
-}
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const nonce = await getNonce();
-  const loadOfficialGTM = await shouldLoadOfficialGTM();
-
   return (
     <html lang="fr">
-      <head>
-        {/* Meta pour exposer le nonce au client */}
-        {nonce && <meta name="csp-nonce" content={nonce} />}
-        {/* Google Consent Mode (dataLayer uniquement, sans gtag.js GA/Ads) — avant GTM et CookieYes */}
-        {loadOfficialGTM && (
-          <Script
-            id="google-consent-mode"
-            strategy="beforeInteractive"
-            nonce={nonce}
-            dangerouslySetInnerHTML={{
-              __html: `
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('consent', 'default', {
-                  ad_storage: 'denied',
-                  ad_user_data: 'denied', 
-                  ad_personalization: 'denied',
-                  analytics_storage: 'denied',
-                  functionality_storage: 'denied',
-                  personalization_storage: 'denied',
-                  security_storage: 'granted',
-                  wait_for_update: 2000,
-                });
-                gtag('set', 'ads_data_redaction', true);
-                gtag('set', 'url_passthrough', true);
-              `,
-            }}
-          />
-        )}
-        {/* CookieYes — lazyOnload pour ne pas bloquer le LCP ; le consentement par défaut est déjà appliqué ci-dessus */}
-        {loadOfficialGTM && process.env.NEXT_PUBLIC_COOKIEYES_ID && (
-          <Script
-            id="cookieyes"
-            src={`https://cdn-cookieyes.com/client_data/${process.env.NEXT_PUBLIC_COOKIEYES_ID}/script.js`}
-            strategy="lazyOnload"
-            nonce={nonce}
-          />
-        )}
-
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
-        {loadOfficialGTM && (
-          <DeferredGoogleTagManager
-            gtmId={GTM_CONTAINER_ID}
-            nonce={nonce}
-            safetyTimeoutMs={3000}
-          />
-        )}
-
-        <AuthProvider>
-          <Suspense fallback={null}>
-            <AttributionCapture />
-          </Suspense>
-          <GTMPageViewTracker />
-          <HubSpotTrigger />
-          <SmartLoader>
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
-          </SmartLoader>
-        </AuthProvider>
+        <RootProviders>{children}</RootProviders>
       </body>
     </html>
   );

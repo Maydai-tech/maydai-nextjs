@@ -48,11 +48,6 @@ function declarationLabel(
       text: DECLARATION_PROOF_FLOW_COPY.declarativeNo,
       className: `${TAG_BASE} bg-red-50 text-red-700 border-red-100`,
     }
-  if (d === 'Hors périmètre')
-    return {
-      text: DECLARATION_PROOF_FLOW_COPY.declarativeOut,
-      className: `${TAG_BASE} bg-slate-50 text-slate-700 border-slate-100`,
-    }
   return {
     text: DECLARATION_PROOF_FLOW_COPY.declarativeInsufficient,
     className: `${TAG_BASE} bg-amber-50 text-amber-800 border-amber-100`,

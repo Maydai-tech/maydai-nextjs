@@ -4,15 +4,15 @@ import { QUESTIONNAIRE_VERSION_V2 } from '@/lib/questionnaire-version'
 const V2 = QUESTIONNAIRE_VERSION_V2
 
 describe('priorite_2 — parcours V2 (E6.N10.Q1 et/ou Q2 actifs)', () => {
-  test('ni Q1 ni Q2 dans active_question_codes → Hors périmètre', () => {
+  test('ni Q1 ni Q2 dans active_question_codes → Information insuffisante', () => {
     const s = computeSlotStatuses(
       [{ question_code: 'E6.N10.Q2', single_value: 'E6.N10.Q2.A' }],
       { questionnaireVersion: V2, activeQuestionCodes: ['E4.N7.Q1'] }
     )
-    expect(s.priorite_2).toBe('Hors périmètre')
+    expect(s.priorite_2).toBe('Information insuffisante')
   })
 
-  test('seulement E6.N10.Q2 actif + réponse Oui → OUI (plus de faux Hors périmètre)', () => {
+  test('seulement E6.N10.Q2 actif + réponse Oui → OUI', () => {
     const s = computeSlotStatuses(
       [{ question_code: 'E6.N10.Q2', single_value: 'E6.N10.Q2.B' }],
       { questionnaireVersion: V2, activeQuestionCodes: ['E4.N8.Q12', 'E6.N10.Q2'] }

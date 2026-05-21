@@ -31,15 +31,15 @@ function allSlotsOui(): SlotStatusMap {
   }
 }
 
-describe('V2 restitution — slots hors périmètre', () => {
-  test('sans codes E5/E6/E4 actifs, les slots dépendants sont Hors périmètre (pas Information insuffisante)', () => {
+describe('V2 restitution — slots hors scope actif', () => {
+  test('sans codes E5/E6/E4 actifs, les slots dépendants sont Information insuffisante', () => {
     const active = ['E4.N7.Q2']
     const statuses = computeSlotStatuses([], {
       questionnaireVersion: QUESTIONNAIRE_VERSION_V2,
       activeQuestionCodes: active,
     })
-    expect(statuses.quick_win_1).toBe('Hors périmètre')
-    expect(statuses.action_3).toBe('Hors périmètre')
+    expect(statuses.quick_win_1).toBe('Information insuffisante')
+    expect(statuses.action_3).toBe('Information insuffisante')
   })
 
   test('V1 inchangé : sans options, réponses vides → Information insuffisante sur les slots', () => {
@@ -98,27 +98,27 @@ describe('V2 restitution — transformer OpenAI (hors parcours)', () => {
 })
 
 describe('V2 restitution — items canoniques rapport / PDF', () => {
-  test('declarationStatusPdfLabel pour Hors périmètre', () => {
-    expect(declarationStatusPdfLabel('Hors périmètre')).toContain('hors périmètre')
+  test('declarationStatusPdfLabel pour Information insuffisante', () => {
+    expect(declarationStatusPdfLabel('Information insuffisante')).toContain('à préciser')
   })
 
-  test('slot Hors périmètre → preuve N/A et CTA omis', () => {
+  test('slot Information insuffisante → preuve résolue normalement (pas N/A systématique)', () => {
     const item = buildReportCanonicalItemForSlot({
       reportSlotKey: 'quick_win_1',
       riskLevel: 'limited',
-      nextSteps: { quick_win_1: 'Hors périmètre : texte. Références : Article 16.' },
-      slotStatuses: { ...allSlotsOui(), quick_win_1: 'Hors périmètre' },
+      nextSteps: { quick_win_1: 'Information insuffisante : texte. Références : Article 16.' },
+      slotStatuses: { ...allSlotsOui(), quick_win_1: 'Information insuffisante' },
       documentStatuses: {},
       companyId: 'c1',
       useCaseId: 'uc1',
     })
     expect(item).not.toBeNull()
-    expect(item!.declaration.status).toBe('Hors périmètre')
-    expect(item!.evidence.status).toBe('not_applicable')
-    expect(item!.cta.ctaOmitted).toBe(true)
+    expect(item!.declaration.status).toBe('Information insuffisante')
+    expect(item!.evidence.status).not.toBe('not_applicable')
+    expect(item!.cta.ctaOmitted).toBe(false)
   })
 
-  test('tri : Hors périmètre après les autres priorités dans un même groupe légal', () => {
+  test('tri : Information insuffisante classée avec les statuts à clarifier', () => {
     const mk = (slot: string, decl: ReportCanonicalItem['declaration']['status']): ReportCanonicalItem => {
       const it = buildReportCanonicalItemForSlot({
         reportSlotKey: slot,
@@ -134,9 +134,10 @@ describe('V2 restitution — items canoniques rapport / PDF', () => {
     }
 
     const a = mk('quick_win_1', 'NON')
-    const b = mk('quick_win_2', 'Hors périmètre')
+    const b = mk('quick_win_2', 'Information insuffisante')
     const sorted = sortItemsWithinLegalGroup([b, a])
-    expect(sorted[sorted.length - 1].declaration.status).toBe('Hors périmètre')
+    expect(sorted[0].declaration.status).toBe('NON')
+    expect(sorted[1].declaration.status).toBe('Information insuffisante')
   })
 })
 
