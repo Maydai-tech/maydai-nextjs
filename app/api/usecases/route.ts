@@ -6,9 +6,21 @@ import { QUESTIONNAIRE_VERSION_V1, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questi
 import { convertDeploymentDateForDb } from '@/lib/convert-deployment-date'
 import { resolvePathModeFromBody } from '@/lib/journey-path-mode'
 import { CreateUsecaseSchema } from '@/lib/validations/usecase'
+import {
+  LEAD_FUNNEL_STAGE,
+  updateLeadFunnelStage,
+} from '@/lib/leads/lead-funnel-service'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+const getServiceRoleClient = () => {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not defined')
+  }
+  return createClient(supabaseUrl, supabaseServiceRoleKey)
+}
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
@@ -241,6 +253,17 @@ export async function POST(request: NextRequest) {
 
     // Enregistrer l'événement de création dans l'historique
     await recordUseCaseHistory(supabase, usecase.id, user.id, 'created')
+
+    try {
+      const supabaseAdmin = getServiceRoleClient()
+      await updateLeadFunnelStage(
+        user.id,
+        LEAD_FUNNEL_STAGE.USE_CASE,
+        supabaseAdmin
+      )
+    } catch (leadFunnelError) {
+      console.error('[LeadFunnel] Échec stage USE_CASE (non bloquant):', leadFunnelError)
+    }
 
     // V1 : si la company a MaydAI comme registre par défaut, préremplir E5.N9.Q7.
     // V2 : le bloc E5 est après l’ORS — pas de réponse créée à la création du cas.

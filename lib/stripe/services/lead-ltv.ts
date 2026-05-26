@@ -3,6 +3,7 @@ import {
   leadQualifiesForGoogleAdsClickConversion,
   sendGoogleAdsConversion,
 } from '@/lib/google-ads/conversions'
+import { LEAD_FUNNEL_STAGE } from '@/lib/leads/lead-funnel-service'
 
 export type StripeLeadAttributionInput = {
   /** Libellé pour les logs (ex. type d’événement + id Stripe). */
@@ -19,7 +20,7 @@ export type StripeLeadAttributionInput = {
 }
 
 /**
- * Incrémente `total_revenue` et porte `funnel_stage` à au moins **4** (converti payant)
+ * Incrémente `total_revenue` et porte `funnel_stage` à au moins **5** (Payé)
  * pour tout lead dont l’email ou `converted_to_user_id` correspond.
  * Client **service role** — ne lève pas d’erreur (webhook Stripe).
  */
@@ -108,7 +109,7 @@ export async function applyStripePaymentToLeads(
       const currentRev = Number(row.total_revenue) || 0
       const newRev = currentRev + amountEuros
       const prevStage = Number(row.funnel_stage) || 0
-      const newStage = Math.max(prevStage, 4)
+      const newStage = Math.max(prevStage, LEAD_FUNNEL_STAGE.PAID)
 
       const { error: upErr } = await admin
         .from('leads')

@@ -29,6 +29,10 @@ import {
   normalizeQuestionnaireVersion,
 } from '@/lib/questionnaire-version'
 import type { QuestionnaireParcoursMeta } from '@/lib/openai-data-transformer'
+import {
+  LEAD_FUNNEL_STAGE,
+  updateLeadFunnelStage,
+} from '@/lib/leads/lead-funnel-service'
 
 // Fonction de retry automatique pour la génération d'analyse avec timeout
 async function generateAnalysisWithRetry(transformedData: any, usecaseId: string, maxRetries: number = 3): Promise<string> {
@@ -591,6 +595,20 @@ export async function POST(req: NextRequest) {
 
       nextStepsError = `Extraction incomplète ou corrompue — données non sauvegardées. ${reason}`
       nextStepsStatus = 'parse_failed'
+    }
+
+    try {
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (supabaseUrl && serviceRoleKey) {
+        const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
+        await updateLeadFunnelStage(
+          user.id,
+          LEAD_FUNNEL_STAGE.FINISHED,
+          supabaseAdmin
+        )
+      }
+    } catch (leadFunnelError) {
+      console.error('[LeadFunnel] Échec stage FINISHED (non bloquant):', leadFunnelError)
     }
 
     return NextResponse.json({

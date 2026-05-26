@@ -5,6 +5,7 @@ import {
   extractGoogleLeadFields,
   GOOGLE_LEAD_FORM_COLUMN_ID_EMAIL,
 } from '@/lib/google-ads/utils'
+import { LeadInsertSchema } from '@/lib/validations/leads'
 
 function getServiceSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -85,14 +86,15 @@ export async function POST(request: NextRequest) {
 
   console.log('[DEBUG] Payload Google Ads brut entrant :', JSON.stringify(body, null, 2))
 
-  const parsed = extractGoogleLeadFields(body, request.nextUrl.searchParams)
+  const extractedLead = extractGoogleLeadFields(body, request.nextUrl.searchParams)
 
   const first_name =
-    parsed.first_name ?? trimmedRootString(body, 'first_name')
-  const last_name = parsed.last_name ?? trimmedRootString(body, 'last_name')
-  const phone = parsed.phone ?? trimmedRootString(body, 'phone')
+    extractedLead.first_name ?? trimmedRootString(body, 'first_name')
+  const last_name =
+    extractedLead.last_name ?? trimmedRootString(body, 'last_name')
+  const phone = extractedLead.phone ?? trimmedRootString(body, 'phone')
 
-  if (!parsed.email) {
+  if (!extractedLead.email) {
     return NextResponse.json(
       {
         error: 'Champ obligatoire manquant',
@@ -113,7 +115,7 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const gclidForClickId = parsed.gclid?.trim() || null
+  const gclidForClickId = extractedLead.gclid?.trim() || null
   if (!gclidForClickId) {
     console.warn(
       '[google-leads] Aucun gclid dans le payload Google — click_id non renseigné pour ce lead'
@@ -121,32 +123,44 @@ export async function POST(request: NextRequest) {
   }
 
   const insertRow = {
-    email: parsed.email.trim().toLowerCase(),
+    email: extractedLead.email.trim().toLowerCase(),
     first_name,
     last_name,
     phone,
-    company_name: parsed.company_name,
+    company_name: extractedLead.company_name,
     gclid: gclidForClickId,
     click_id: gclidForClickId,
-    campaign_name: parsed.campaign_name,
-    ad_group_name: parsed.ad_group_name,
+    campaign_name: extractedLead.campaign_name,
+    ad_group_name: extractedLead.ad_group_name,
     source: 'google_ads_form',
     /** Aligné sur les autres inserts (`website_direct`) : colonnes souvent NOT NULL en base. */
     funnel_stage: 0,
     total_revenue: 0,
   }
 
+  const { funnel_stage, total_revenue, ...leadInsertPayload } = insertRow
+
+  const leadValidation = LeadInsertSchema.safeParse(leadInsertPayload)
+  if (!leadValidation.success) {
+    console.error('[Leads API] Validation Error', leadValidation.error)
+    return NextResponse.json({ error: 'Payload lead invalide' }, { status: 400 })
+  }
+
   // La table `leads` peut être absente des types DB générés jusqu'au prochain `supabase gen types`.
   const { data: inserted, error } = await (supabase as any)
     .from('leads')
-    .insert(insertRow)
+    .insert({
+      ...leadValidation.data,
+      funnel_stage,
+      total_revenue,
+    })
     .select()
     .single()
 
   if (error) {
     if (error.code === '23505') {
       console.info('[google-leads] Lead déjà existant (email unique), ignoré:', {
-        email: parsed.email,
+        email: extractedLead.email,
       })
       return NextResponse.json(
         {
