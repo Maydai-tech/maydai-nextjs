@@ -78,35 +78,6 @@ export async function cleanupTestData(
 
   if (usecaseId) {
     try {
-      const { data: dossierRows, error: selectDossiersError } = await supabase
-        .from('dossiers')
-        .select('id')
-        .eq('usecase_id', usecaseId)
-
-      if (selectDossiersError) {
-        console.warn('[cleanupTestData] dossiers (select):', selectDossiersError.message)
-      } else {
-        const dossierIds = (dossierRows ?? []).map((row) => row.id).filter(Boolean)
-        if (dossierIds.length > 0) {
-          const { error: deleteDocsError } = await supabase
-            .from('dossier_documents')
-            .delete()
-            .in('dossier_id', dossierIds)
-          if (deleteDocsError) {
-            console.warn('[cleanupTestData] dossier_documents:', deleteDocsError.message)
-          }
-        }
-      }
-    } catch (err) {
-      console.warn(
-        '[cleanupTestData] dossier_documents:',
-        err instanceof Error ? err.message : String(err)
-      )
-    }
-  }
-
-  if (usecaseId) {
-    try {
       const { error } = await supabase.from('dossiers').delete().eq('usecase_id', usecaseId)
       if (error) console.warn('[cleanupTestData] dossiers:', error.message)
     } catch (err) {
