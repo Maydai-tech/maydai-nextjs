@@ -7,6 +7,7 @@ import {
 } from '@/lib/tracking/capture-params'
 import { leadQualifiesForGoogleAdsClickConversion } from '@/lib/google-ads/conversions'
 import { sendGoogleAdsOfflineSignupConversion } from '@/lib/google-ads/offline-signup-conversion'
+import { LeadInsertSchema } from '@/lib/validations/leads'
 
 type Body = {
   attribution?: Partial<StoredAttribution> | null
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
       last_name: (profile?.last_name as string | null)?.trim() || null,
       company_name: (profile?.company_name as string | null)?.trim() || null,
       source: 'website_direct',
+      gclid: attribution!.gclid?.trim() || null,
       click_id: attribution!.click_id?.trim() || null,
       utm_source: attribution!.utm_source?.trim() || null,
       utm_medium: attribution!.utm_medium?.trim() || null,
@@ -72,9 +74,29 @@ export async function POST(request: NextRequest) {
       total_revenue: 0,
     }
 
+    const {
+      converted_to_user_id,
+      funnel_stage,
+      converted_at,
+      total_revenue,
+      ...leadInsertPayload
+    } = row
+
+    const leadValidation = LeadInsertSchema.safeParse(leadInsertPayload)
+    if (!leadValidation.success) {
+      console.error('[Leads API] Validation Error', leadValidation.error)
+      return NextResponse.json({ error: 'Payload lead invalide' }, { status: 400 })
+    }
+
     const { data: inserted, error } = await (admin as any)
       .from('leads')
-      .insert(row)
+      .insert({
+        ...leadValidation.data,
+        converted_to_user_id,
+        funnel_stage,
+        converted_at,
+        total_revenue,
+      })
       .select('id')
       .single()
 

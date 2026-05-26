@@ -7,7 +7,19 @@ export const ATTRIBUTION_STORAGE_KEY = 'maydai_acquisition_v1'
 export const ATTRIBUTION_COOKIE_NAME = 'maydai_acquisition_v1'
 const COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 90 // 90 jours
 
-const CLICK_PARAM_KEYS = ['gclid', 'fbclid', 'msclkid', 'ttclid'] as const
+/** Premier paramètre trouvé devient `click_id` (ordre = priorité plateforme). */
+const CLICK_PARAM_KEYS = [
+  'gclid',
+  'wbraid',
+  'gbraid',
+  'fbclid',
+  'msclkid',
+  'li_fat_id',
+  'twclid',
+  'ttclid',
+] as const
+
+const GOOGLE_CLICK_PARAM_KEYS = ['gclid', 'wbraid', 'gbraid'] as const
 const UTM_PARAM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign'] as const
 
 export type StoredAttribution = {
@@ -37,6 +49,50 @@ function trimOrNull(v: string | null): string | null {
   return t.length ? t : null
 }
 
+function hasClickParam(sp: URLSearchParams, key: string): boolean {
+  return trimOrNull(sp.get(key)) !== null
+}
+
+/**
+ * Si aucun UTM explicite dans l’URL : déduit source/medium à partir des IDs de clic présents.
+ */
+function applyActiveUtmFallback(
+  out: Partial<StoredAttribution>,
+  sp: URLSearchParams
+): void {
+  if (out.utm_source || out.utm_medium) return
+
+  const hasGoogleClick =
+    Boolean(out.gclid) ||
+    GOOGLE_CLICK_PARAM_KEYS.some((key) => hasClickParam(sp, key))
+
+  if (hasGoogleClick) {
+    out.utm_source = 'google'
+    out.utm_medium = 'cpc'
+    return
+  }
+  if (hasClickParam(sp, 'fbclid')) {
+    out.utm_source = 'facebook'
+    out.utm_medium = 'social'
+    return
+  }
+  if (hasClickParam(sp, 'msclkid')) {
+    out.utm_source = 'bing'
+    out.utm_medium = 'cpc'
+    return
+  }
+  if (hasClickParam(sp, 'li_fat_id')) {
+    out.utm_source = 'linkedin'
+    out.utm_medium = 'cpc'
+    return
+  }
+  if (hasClickParam(sp, 'twclid')) {
+    out.utm_source = 'x'
+    out.utm_medium = 'social'
+    return
+  }
+}
+
 /** Extrait les paramètres d’attribution depuis une query string ou un URLSearchParams. */
 export function parseAttributionFromSearchParams(
   params: URLSearchParams | string
@@ -52,9 +108,12 @@ export function parseAttributionFromSearchParams(
     }
   }
 
-  const gclidOnly = trimOrNull(sp.get('gclid'))
-  if (gclidOnly) {
-    out.gclid = gclidOnly
+  for (const key of GOOGLE_CLICK_PARAM_KEYS) {
+    const v = trimOrNull(sp.get(key))
+    if (v) {
+      out.gclid = v
+      break
+    }
   }
 
   for (const key of UTM_PARAM_KEYS) {
@@ -65,6 +124,8 @@ export function parseAttributionFromSearchParams(
       if (key === 'utm_campaign') out.utm_campaign = v
     }
   }
+
+  applyActiveUtmFallback(out, sp)
 
   if (
     out.click_id ||
