@@ -12,9 +12,12 @@ type GoogleUserColumnRow = {
 
 type GoogleAdsWebhookBody = {
   gclid?: unknown
+  gcl_id?: unknown
+  google_click_id?: unknown
   campaign_id?: unknown
   campaign_name?: unknown
   ad_group_name?: unknown
+  lead_data?: unknown
   user_column_data?: unknown
   [key: string]: unknown
 }
@@ -69,6 +72,61 @@ function firstNonNull(...candidates: (string | null)[]): string | null {
   return null
 }
 
+/** Clés connues du payload Google Lead Form / webhook Ads pour le GCLID. */
+const GCLID_ROOT_KEYS = [
+  'gclid',
+  'gcl_id',
+  'GCLID',
+  'google_click_id',
+  'GoogleClickId',
+] as const
+
+const GCLID_USER_COLUMN_IDS = ['GCLID', 'gclid', 'GOOGLE_CLICK_ID'] as const
+
+/**
+ * Extrait le GCLID depuis la racine JSON, les query params ou `user_column_data`.
+ */
+export function extractGclidFromGoogleLeadPayload(
+  raw: unknown,
+  urlSearchParams: URLSearchParams,
+  userColumnValuesById?: Map<string, string>
+): string | null {
+  const fromUrl = firstNonNull(
+    toTrimmedString(urlSearchParams.get('gclid')),
+    toTrimmedString(urlSearchParams.get('gcl_id')),
+    toTrimmedString(urlSearchParams.get('GCLID'))
+  )
+  if (fromUrl) return fromUrl
+
+  const root =
+    raw && typeof raw === 'object' ? (raw as GoogleAdsWebhookBody) : null
+
+  if (root) {
+    for (const key of GCLID_ROOT_KEYS) {
+      const value = toTrimmedString(root[key])
+      if (value) return value
+    }
+
+    const leadData = root.lead_data
+    if (leadData && typeof leadData === 'object' && !Array.isArray(leadData)) {
+      const nested = leadData as Record<string, unknown>
+      for (const key of GCLID_ROOT_KEYS) {
+        const value = toTrimmedString(nested[key])
+        if (value) return value
+      }
+    }
+  }
+
+  if (userColumnValuesById) {
+    for (const columnId of GCLID_USER_COLUMN_IDS) {
+      const value = userColumnValuesById.get(columnId)
+      if (value) return value
+    }
+  }
+
+  return null
+}
+
 /**
  * Extrait les champs formulaire depuis `user_column_data` (recherche par `column_id`)
  * et les champs marketing à la racine du JSON et/ou dans les query params de l’URL.
@@ -95,9 +153,10 @@ export function extractGoogleLeadFields(
   const root =
     raw && typeof raw === 'object' ? (raw as GoogleAdsWebhookBody) : null
 
-  const gclid = firstNonNull(
-    root ? toTrimmedString(root.gclid) : null,
-    toTrimmedString(urlSearchParams.get('gclid'))
+  const gclid = extractGclidFromGoogleLeadPayload(
+    raw,
+    urlSearchParams,
+    byColumnId
   )
 
   const campaign_name = firstNonNull(

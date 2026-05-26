@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth';
 import { linkLeadToUser } from '@/lib/leads/link-lead-to-user';
-import {
-  leadQualifiesForGoogleAdsClickConversion,
-  sendGoogleAdsConversion,
-} from '@/lib/google-ads/conversions';
+import { leadQualifiesForGoogleAdsClickConversion } from '@/lib/google-ads/conversions';
+import { sendGoogleAdsOfflineSignupConversion } from '@/lib/google-ads/offline-signup-conversion';
 
 /**
  * POST /api/leads/link-to-user
@@ -90,9 +88,8 @@ export async function POST(request: NextRequest) {
         click_id: leadAfter.click_id,
       })
     ) {
-      await sendGoogleAdsConversion({
+      await sendGoogleAdsOfflineSignupConversion({
         clickId: String(leadAfter.click_id),
-        conversionName: 'Inscription - MaydAI',
         conversionValue: 0,
       });
     }
