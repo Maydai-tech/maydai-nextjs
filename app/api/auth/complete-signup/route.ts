@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
-import { sendGoogleAdsConversion } from '@/lib/google-ads/conversions'
+import { sendGoogleAdsOfflineSignupConversion } from '@/lib/google-ads/offline-signup-conversion'
 import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { planIdSchema } from '@/lib/validations/pricing'
@@ -195,9 +195,8 @@ export async function POST(request: NextRequest) {
         ''
       void (async () => {
         try {
-          await sendGoogleAdsConversion({
+          await sendGoogleAdsOfflineSignupConversion({
             clickId: gclid,
-            conversionName: 'hors connexion (importation)',
             conversionValue: 0,
             ...(emailForConversion ? { email: emailForConversion } : {}),
           })

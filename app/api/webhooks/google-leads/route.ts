@@ -113,14 +113,21 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  const gclidForClickId = parsed.gclid?.trim() || null
+  if (!gclidForClickId) {
+    console.warn(
+      '[google-leads] Aucun gclid dans le payload Google — click_id non renseigné pour ce lead'
+    )
+  }
+
   const insertRow = {
     email: parsed.email.trim().toLowerCase(),
     first_name,
     last_name,
     phone,
     company_name: parsed.company_name,
-    gclid: parsed.gclid,
-    click_id: parsed.gclid,
+    gclid: gclidForClickId,
+    click_id: gclidForClickId,
     campaign_name: parsed.campaign_name,
     ad_group_name: parsed.ad_group_name,
     source: 'google_ads_form',

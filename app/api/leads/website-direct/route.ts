@@ -5,10 +5,8 @@ import {
   hasMeaningfulAttribution,
   type StoredAttribution,
 } from '@/lib/tracking/capture-params'
-import {
-  leadQualifiesForGoogleAdsClickConversion,
-  sendGoogleAdsConversion,
-} from '@/lib/google-ads/conversions'
+import { leadQualifiesForGoogleAdsClickConversion } from '@/lib/google-ads/conversions'
+import { sendGoogleAdsOfflineSignupConversion } from '@/lib/google-ads/offline-signup-conversion'
 
 type Body = {
   attribution?: Partial<StoredAttribution> | null
@@ -97,9 +95,8 @@ export async function POST(request: NextRequest) {
         click_id: row.click_id,
       })
     ) {
-      await sendGoogleAdsConversion({
+      await sendGoogleAdsOfflineSignupConversion({
         clickId: row.click_id as string,
-        conversionName: 'Inscription - MaydAI',
         conversionValue: 0,
       })
     }
