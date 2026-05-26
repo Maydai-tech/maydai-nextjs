@@ -4,6 +4,10 @@ import { logger, createRequestContext } from '@/lib/secure-logger'
 import { canCreateCompany } from '@/lib/collaborators'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { RegistrySchema } from '@/lib/validations/registry'
+import {
+  LEAD_FUNNEL_STAGE,
+  updateLeadFunnelStage,
+} from '@/lib/leads/lead-funnel-service'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -372,6 +376,16 @@ export async function POST(request: NextRequest) {
       .from('profiles')
       .update({ current_company_id: data.id })
       .eq('id', user.id)
+
+    try {
+      await updateLeadFunnelStage(
+        user.id,
+        LEAD_FUNNEL_STAGE.REGISTRY,
+        serviceClient
+      )
+    } catch (leadFunnelError) {
+      console.error('[LeadFunnel] Échec stage REGISTRY (non bloquant):', leadFunnelError)
+    }
 
     return NextResponse.json({ id: data.id })
   } catch (error) {

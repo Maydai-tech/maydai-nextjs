@@ -1,7 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import type { LeadRow } from './types'
+import { useCallback, useMemo, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { FunnelFilter } from './FunnelFilter'
+import { FunnelKPIs } from './FunnelKPIs'
+import { LeadsTableEmptyState } from './LeadsTableEmptyState'
+import { LeadFunnelProgress } from './LeadFunnelProgress'
+import { parseFunnelStage, parseLeadRevenue, type LeadRow } from './types'
 import {
   Card,
   CardContent,
@@ -19,34 +24,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { NativeSelect } from '@/components/ui/select'
-import { Users, Percent, CircleDollarSign, TrendingUp, Filter } from 'lucide-react'
-
-const FUNNEL_LABELS: Record<number, string> = {
-  0: 'Nouveau lead',
-  1: 'Inscrit',
-  2: 'Registre',
-  3: 'Cas',
-  4: 'Fini',
-  5: 'Payé',
-}
+import { Filter } from 'lucide-react'
 
 const eur = new Intl.NumberFormat('fr-FR', {
   style: 'currency',
   currency: 'EUR',
   maximumFractionDigits: 2,
 })
-
-function parseRevenue(value: string | number | null | undefined): number {
-  if (value === null || value === undefined) return 0
-  const n = typeof value === 'number' ? value : Number.parseFloat(String(value))
-  return Number.isFinite(n) ? n : 0
-}
-
-function stageNum(lead: LeadRow): number {
-  const s = lead.funnel_stage
-  if (s === null || s === undefined) return 0
-  return Number(s)
-}
 
 function na(v: string | null | undefined): string {
   const t = v?.trim()
@@ -58,11 +42,6 @@ function campaignKey(lead: LeadRow): string {
   const c = lead.campaign_name?.trim()
   const v = u || c || ''
   return v || '__none__'
-}
-
-function campaignLabel(lead: LeadRow): string {
-  const k = campaignKey(lead)
-  return k === '__none__' ? 'N/A' : k
 }
 
 function prospectDisplay(lead: LeadRow): string {
@@ -95,13 +74,6 @@ function sourceBadgeVariant(source: string | null): BadgeVariant {
   return 'outline'
 }
 
-function funnelBadgeVariant(stage: number): BadgeVariant {
-  if (stage >= 5) return 'success'
-  if (stage >= 4) return 'default'
-  if (stage >= 1) return 'secondary'
-  return 'outline'
-}
-
 function formatCreatedAt(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return 'N/A'
@@ -119,15 +91,40 @@ type PeriodFilter = 'all' | '7d' | '30d'
 type Props = {
   initialLeads: LeadRow[]
   serverError: string | null
+  newLeadsCount: number
+  inProgressCount: number
+  convertedCount: number
+  totalLtv: number
 }
 
 export default function MarketingDashboard({
   initialLeads,
   serverError,
+  newLeadsCount,
+  inProgressCount,
+  convertedCount,
+  totalLtv,
 }: Props) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [campaignFilter, setCampaignFilter] = useState<string>('all')
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all')
+
+  const hasActiveFilters =
+    Boolean(searchParams.get('stage')) ||
+    sourceFilter !== 'all' ||
+    campaignFilter !== 'all' ||
+    periodFilter !== 'all'
+
+  const handleResetAll = useCallback(() => {
+    setSourceFilter('all')
+    setCampaignFilter('all')
+    setPeriodFilter('all')
+    router.replace(pathname, { scroll: false })
+  }, [router, pathname])
 
   const sourceOptions = useMemo(() => {
     const set = new Set<string>()
@@ -173,18 +170,6 @@ export default function MarketingDashboard({
     })
   }, [initialLeads, sourceFilter, campaignFilter, periodFilter])
 
-  const kpis = useMemo(() => {
-    const total = filteredLeads.length
-    const converted = filteredLeads.filter((l) => stageNum(l) >= 4).length
-    const conversionPct = total > 0 ? (converted / total) * 100 : 0
-    const ltvTotal = filteredLeads.reduce(
-      (sum, l) => sum + parseRevenue(l.total_revenue),
-      0
-    )
-    const avgPerLead = total > 0 ? ltvTotal / total : 0
-    return { total, conversionPct, ltvTotal, avgPerLead }
-  }, [filteredLeads])
-
   return (
     <div className="space-y-8">
       <div>
@@ -204,69 +189,12 @@ export default function MarketingDashboard({
         </div>
       ) : null}
 
-      {/* KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Total leads
-            </CardTitle>
-            <Users className="h-4 w-4 text-[#0080A3]" aria-hidden />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-gray-900">{kpis.total}</p>
-            <CardDescription>Leads après filtres</CardDescription>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Taux de conversion
-            </CardTitle>
-            <Percent className="h-4 w-4 text-sky-600" aria-hidden />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-gray-900">
-              {kpis.conversionPct.toLocaleString('fr-FR', {
-                maximumFractionDigits: 1,
-              })}
-              %
-            </p>
-            <CardDescription>Stade funnel ≥ 4 (Fini ou Payé)</CardDescription>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              LTV totale
-            </CardTitle>
-            <CircleDollarSign className="h-4 w-4 text-emerald-600" aria-hidden />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-gray-900">
-              {eur.format(kpis.ltvTotal)}
-            </p>
-            <CardDescription>Somme des total_revenue</CardDescription>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Revenu moyen / lead
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-violet-600" aria-hidden />
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-gray-900">
-              {kpis.total > 0 ? eur.format(kpis.avgPerLead) : '—'}
-            </p>
-            <CardDescription>LTV totale ÷ total leads</CardDescription>
-          </CardContent>
-        </Card>
-      </div>
+      <FunnelKPIs
+        newLeadsCount={newLeadsCount}
+        inProgressCount={inProgressCount}
+        convertedCount={convertedCount}
+        totalLtv={totalLtv}
+      />
 
       {/* Filtres */}
       <Card>
@@ -275,10 +203,13 @@ export default function MarketingDashboard({
           <CardTitle className="text-base">Filtres</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+          <FunnelFilter />
+
           <NativeSelect
             label="Source"
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2"
           >
             <option value="all">Toutes les sources</option>
             {sourceOptions.map((s) => (
@@ -292,6 +223,7 @@ export default function MarketingDashboard({
             label="Campagne"
             value={campaignFilter}
             onChange={(e) => setCampaignFilter(e.target.value)}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2"
           >
             <option value="all">Toutes les campagnes</option>
             {campaignOptions.map((k) => (
@@ -305,6 +237,7 @@ export default function MarketingDashboard({
             label="Période"
             value={periodFilter}
             onChange={(e) => setPeriodFilter(e.target.value as PeriodFilter)}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2"
           >
             <option value="all">Toutes</option>
             <option value="7d">7 derniers jours</option>
@@ -322,6 +255,11 @@ export default function MarketingDashboard({
           </CardDescription>
         </CardHeader>
         <CardContent className="px-0 sm:px-6">
+          <div
+            className="overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] rounded-md"
+            tabIndex={0}
+            aria-label="Tableau des leads"
+          >
           <Table>
             <TableHeader>
               <TableRow>
@@ -335,13 +273,16 @@ export default function MarketingDashboard({
             <TableBody>
               {filteredLeads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-gray-500">
-                    Aucun lead pour ces filtres.
+                  <TableCell colSpan={5} className="p-0">
+                    <LeadsTableEmptyState
+                      hasActiveFilters={hasActiveFilters}
+                      onReset={handleResetAll}
+                    />
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredLeads.map((lead) => {
-                  const st = stageNum(lead)
+                  const funnelStage = parseFunnelStage(lead.funnel_stage)
                   const utmBits = [
                     `utm_source: ${na(lead.utm_source)}`,
                     `utm_medium: ${na(lead.utm_medium)}`,
@@ -368,12 +309,10 @@ export default function MarketingDashboard({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={funnelBadgeVariant(st)}>
-                          {FUNNEL_LABELS[st] ?? `Stade ${st}`}
-                        </Badge>
+                        <LeadFunnelProgress stage={funnelStage} />
                       </TableCell>
                       <TableCell className="text-right font-semibold tabular-nums">
-                        {eur.format(parseRevenue(lead.total_revenue))}
+                        {eur.format(parseLeadRevenue(lead.total_revenue))}
                       </TableCell>
                     </TableRow>
                   )
@@ -381,6 +320,7 @@ export default function MarketingDashboard({
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -1,6 +1,10 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import MarketingDashboard from './MarketingDashboard'
-import type { LeadRow } from './types'
+import {
+  computeFunnelGlobalKpis,
+  leadRowsSchema,
+  type LeadRow,
+} from './types'
 
 /** Données sensibles au temps réel : évite un cache RSC obsolète (nouveaux leads invisibles après capture). */
 export const dynamic = 'force-dynamic'
@@ -27,9 +31,29 @@ const LEAD_COLUMNS = [
   'converted_at',
 ].join(', ')
 
-export default async function AdminMarketingPage() {
+type PageProps = {
+  searchParams: Promise<{ stage?: string | string[] }>
+}
+
+function parseStageSearchParam(
+  stage: string | string[] | undefined
+): number | null {
+  const raw = Array.isArray(stage) ? stage[0] : stage
+  if (raw === undefined || raw === '') return null
+  const n = Number.parseInt(raw, 10)
+  if (!Number.isInteger(n) || n < 0 || n > 5) return null
+  return n
+}
+
+export default async function AdminMarketingPage({ searchParams }: PageProps) {
+  const { stage: stageParam } = await searchParams
+  const stageFilter = parseStageSearchParam(stageParam)
   let initialLeads: LeadRow[] = []
   let serverError: string | null = null
+  let newLeadsCount = 0
+  let inProgressCount = 0
+  let convertedCount = 0
+  let totalLtv = 0
 
   try {
     const supabase = await createSupabaseServerClient()
@@ -57,7 +81,26 @@ export default async function AdminMarketingPage() {
     if (error) {
       serverError = error.message
     } else {
-      initialLeads = (data as unknown as LeadRow[]) ?? []
+      const parsed = leadRowsSchema.safeParse(data ?? [])
+      if (!parsed.success) {
+        serverError = 'Format des leads invalide'
+        console.error('[admin/marketing/leads] validation', parsed.error.flatten())
+      } else {
+        const allLeads = parsed.data
+        const globalKpis = computeFunnelGlobalKpis(allLeads)
+        newLeadsCount = globalKpis.newLeadsCount
+        inProgressCount = globalKpis.inProgressCount
+        convertedCount = globalKpis.convertedCount
+        totalLtv = globalKpis.totalLtv
+
+        let leads = allLeads
+        if (stageFilter !== null) {
+          leads = leads.filter(
+            (lead) => lead.funnel_stage === stageFilter
+          )
+        }
+        initialLeads = leads
+      }
     }
   } catch (e) {
     serverError =
@@ -68,6 +111,10 @@ export default async function AdminMarketingPage() {
     <MarketingDashboard
       initialLeads={initialLeads}
       serverError={serverError}
+      newLeadsCount={newLeadsCount}
+      inProgressCount={inProgressCount}
+      convertedCount={convertedCount}
+      totalLtv={totalLtv}
     />
   )
 }
