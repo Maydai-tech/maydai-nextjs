@@ -78,14 +78,14 @@ export default function IaActAgendaPage() {
             Calendrier IA Act
           </div>
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
-            L'Agenda de l'AI Act
+            L&apos;Agenda de l&apos;AI Act
           </h1>
           <div className="text-xl text-gray-600 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed mb-8 space-y-4">
             <p>
-              L'AI Act européen représente la première réglementation mondiale complète de l'intelligence artificielle. Adopté le 13 mars 2024 et entré en vigueur le 1er août 2024, ce texte historique transforme radicalement le paysage de l'IA en Europe et au-delà.
+              L&apos;AI Act européen représente la première réglementation mondiale complète de l&apos;intelligence artificielle. Adopté le 13 mars 2024 et entré en vigueur le 1er août 2024, ce texte historique transforme radicalement le paysage de l&apos;IA en Europe et au-delà.
             </p>
             <p>
-              <strong>Pourquoi ce calendrier est-il crucial ?</strong> L'AI Act introduit un système de classification des risques unique au monde, avec des obligations proportionnelles au niveau de dangerosité des systèmes d'IA. Les entreprises qui négligent ces échéances s'exposent à des sanctions pouvant atteindre 7% de leur chiffre d'affaires mondial.
+              <strong>Pourquoi ce calendrier est-il crucial ?</strong> L&apos;AI Act introduit un système de classification des risques unique au monde, avec des obligations proportionnelles au niveau de dangerosité des systèmes d&apos;IA. Les entreprises qui négligent ces échéances s&apos;exposent à des sanctions pouvant atteindre 7% de leur chiffre d&apos;affaires mondial.
             </p>
             <p>
               Découvrez dans ce guide complet toutes les dates clés, les obligations spécifiques et les impacts concrets pour votre entreprise. Une roadmap indispensable pour naviguer dans cette nouvelle ère réglementaire.
@@ -212,7 +212,7 @@ export default function IaActAgendaPage() {
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">Sanctions financières majeures</h3>
                   </div>
                   <p className="text-gray-600 dark:text-gray-300">
-                    Non-conformité = jusqu'à 35M€ ou 7% du CA mondial. Les PME ne sont pas épargnées avec des sanctions pouvant atteindre 7,5M€ ou 1,5% du CA.
+                    Non-conformité = jusqu&apos;à 35M€ ou 7% du CA mondial. Les PME ne sont pas épargnées avec des sanctions pouvant atteindre 7,5M€ ou 1,5% du CA.
                   </p>
                 </div>
                 
@@ -226,7 +226,7 @@ export default function IaActAgendaPage() {
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">Délais courts et complexes</h3>
                   </div>
                   <p className="text-gray-600 dark:text-gray-300">
-                    Seulement 6 mois de transition pour les entreprises. Les processus de conformité peuvent prendre 6-12 mois selon la complexité de vos systèmes d'IA.
+                    Seulement 6 mois de transition pour les entreprises. Les processus de conformité peuvent prendre 6-12 mois selon la complexité de vos systèmes d&apos;IA.
                   </p>
                 </div>
                 
@@ -254,7 +254,7 @@ export default function IaActAgendaPage() {
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">Innovation responsable</h3>
                   </div>
                   <p className="text-gray-600 dark:text-gray-300">
-                    L'AI Act encourage l'innovation éthique. Vos produits IA seront plus sûrs, transparents et acceptés par le marché.
+                    L&apos;AI Act encourage l&apos;innovation éthique. Vos produits IA seront plus sûrs, transparents et acceptés par le marché.
                   </p>
                 </div>
               </div>
@@ -275,25 +275,25 @@ export default function IaActAgendaPage() {
                   🤔 Mon entreprise utilise ChatGPT et autres IA génératives. Quelles sont mes obligations ?
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  <strong>Dès août 2025 :</strong> Vérifiez que vos fournisseurs (OpenAI, Google, etc.) respectent les obligations de transparence (documentation technique, résumé des données d'entraînement). <strong>Dès août 2026 :</strong> Si vous utilisez ces IA pour des décisions automatisées affectant les personnes, vous devez vous conformer aux exigences des systèmes à haut risque. Cela inclut la traçabilité, la surveillance humaine et l'évaluation des risques.
+                  <strong>Dès août 2025 :</strong> Vérifiez que vos fournisseurs (OpenAI, Google, etc.) respectent les obligations de transparence (documentation technique, résumé des données d&apos;entraînement). <strong>Dès août 2026 :</strong> Si vous utilisez ces IA pour des décisions automatisées affectant les personnes, vous devez vous conformer aux exigences des systèmes à haut risque. Cela inclut la traçabilité, la surveillance humaine et l&apos;évaluation des risques.
                 </p>
               </div>
               
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                  ⏰ J'ai raté l'échéance du 2 février 2025. Que faire ?
+                  ⏰ J&apos;ai raté l&apos;échéance du 2 février 2025. Que faire ?
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  <strong>Action immédiate requise :</strong> Cessez immédiatement tout usage de systèmes d'IA inacceptables (manipulation subliminale, notation sociale, etc.). Contactez un expert en conformité AI Act pour un audit d'urgence. Les sanctions peuvent être appliquées dès le 2 février 2025. Plus vous agissez rapidement, plus vous réduisez les risques de sanctions et les coûts de mise en conformité.
+                  <strong>Action immédiate requise :</strong> Cessez immédiatement tout usage de systèmes d&apos;IA inacceptables (manipulation subliminale, notation sociale, etc.). Contactez un expert en conformité AI Act pour un audit d&apos;urgence. Les sanctions peuvent être appliquées dès le 2 février 2025. Plus vous agissez rapidement, plus vous réduisez les risques de sanctions et les coûts de mise en conformité.
                 </p>
               </div>
               
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                  💰 Combien coûte la conformité à l'AI Act pour une PME ?
+                  💰 Combien coûte la conformité à l&apos;AI Act pour une PME ?
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  <strong>Coûts variables selon la complexité :</strong> Pour une PME utilisant des IA standard (ChatGPT, outils de recrutement), comptez 15 000 à 50 000€ pour l'audit et la mise en conformité. Pour des systèmes d'IA développés en interne, les coûts peuvent atteindre 100 000 à 500 000€. <strong>ROI positif :</strong> La conformité précoce évite les sanctions (jusqu'à 7,5M€) et améliore la confiance clients. MaydAI propose des solutions automatisées réduisant ces coûts de 60-70%.
+                  <strong>Coûts variables selon la complexité :</strong> Pour une PME utilisant des IA standard (ChatGPT, outils de recrutement), comptez 15 000 à 50 000€ pour l&apos;audit et la mise en conformité. Pour des systèmes d&apos;IA développés en interne, les coûts peuvent atteindre 100 000 à 500 000€. <strong>ROI positif :</strong> La conformité précoce évite les sanctions (jusqu&apos;à 7,5M€) et améliore la confiance clients. MaydAI propose des solutions automatisées réduisant ces coûts de 60-70%.
                 </p>
               </div>
             </div>
@@ -313,10 +313,10 @@ export default function IaActAgendaPage() {
                 />
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-6">
-                Prêt pour l'AI Act ?
+                Prêt pour l&apos;AI Act ?
               </h2>
               <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
-                Ne laissez pas ces échéances vous surprendre. L'AI Act approche à grands pas et la conformité n'est plus une option. Anticipez dès maintenant avec MaydAI et transformez cette contrainte en avantage concurrentiel.
+                Ne laissez pas ces échéances vous surprendre. L&apos;AI Act approche à grands pas et la conformité n&apos;est plus une option. Anticipez dès maintenant avec MaydAI et transformez cette contrainte en avantage concurrentiel.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <a 
@@ -335,7 +335,7 @@ export default function IaActAgendaPage() {
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  En savoir plus sur l'AI Act
+                  En savoir plus sur l&apos;AI Act
                 </a>
               </div>
             </div>

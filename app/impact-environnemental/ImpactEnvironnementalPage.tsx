@@ -1,15 +1,24 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { ExternalLink, ArrowRight } from 'lucide-react'
+import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
 import Header from '@/components/site-vitrine/Header'
 import Footer from '@/components/site-vitrine/Footer'
+import HeroEco from './components/HeroEco'
+import AverageKpiBanner from './components/AverageKpiBanner'
 import UseCasePillSelector from './components/UseCasePillSelector'
 import ModelSelectDropdown from './components/ModelSelectDropdown'
 import ImpactRelativeGauges from './components/ImpactRelativeGauges'
 import FaceToFaceCards from './components/FaceToFaceCards'
+import MethodologySection from './components/MethodologySection'
+import FaqEnvironnement from './components/FaqEnvironnement'
 import {
   type EcoImpactModel,
+  type EquivalenceMetrics,
   type UseCaseId,
+  DEFAULT_IMPACT_MODEL_A_NAME,
+  DEFAULT_IMPACT_MODEL_B_NAME,
   USE_CASE_DEFINITIONS,
   computeImpactForModelWithCompatibility,
 } from '@/lib/impact-environnemental'
@@ -17,6 +26,11 @@ import {
 interface ImpactEnvironnementalPageProps {
   models: EcoImpactModel[]
   fetchError: string | null
+  averageMetrics: EquivalenceMetrics
+}
+
+function findModelIdByName(models: EcoImpactModel[], modelName: string): string | null {
+  return models.find((m) => m.modelName === modelName)?.id ?? null
 }
 
 function pickDefaultIds(models: EcoImpactModel[]): {
@@ -29,18 +43,29 @@ function pickDefaultIds(models: EcoImpactModel[]): {
   if (models.length === 1) {
     return { modelAId: models[0].id, modelBId: models[0].id }
   }
-  return { modelAId: models[0].id, modelBId: models[1].id }
+
+  const modelAId =
+    findModelIdByName(models, DEFAULT_IMPACT_MODEL_A_NAME) ?? models[0].id
+  const modelBId =
+    findModelIdByName(models, DEFAULT_IMPACT_MODEL_B_NAME) ??
+    models.find((m) => m.id !== modelAId)?.id ??
+    modelAId
+
+  return { modelAId, modelBId }
 }
 
 export default function ImpactEnvironnementalPage({
   models,
   fetchError,
+  averageMetrics,
 }: ImpactEnvironnementalPageProps) {
   const defaults = useMemo(() => pickDefaultIds(models), [models])
 
   const [modelAId, setModelAId] = useState(defaults.modelAId)
   const [modelBId, setModelBId] = useState(defaults.modelBId)
   const [useCaseId, setUseCaseId] = useState<UseCaseId>('email')
+  const [isCalculating, setIsCalculating] = useState(false)
+  const hasShownComparisonRef = useRef(false)
 
   useEffect(() => {
     setModelAId(defaults.modelAId)
@@ -73,23 +98,33 @@ export default function ImpactEnvironnementalPage({
   const hasModels = models.length > 0
   const canCompare = Boolean(modelA && modelB && impactA && impactB)
 
+  useLayoutEffect(() => {
+    if (!canCompare) {
+      setIsCalculating(false)
+      hasShownComparisonRef.current = false
+      return
+    }
+
+    if (!hasShownComparisonRef.current) {
+      hasShownComparisonRef.current = true
+      return
+    }
+
+    setIsCalculating(true)
+    const timer = window.setTimeout(() => setIsCalculating(false), 200)
+    return () => window.clearTimeout(timer)
+  }, [modelAId, modelBId, useCaseId, canCompare])
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       <Header />
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8 sm:py-12">
-        <header className="mb-8 border-b border-slate-200 pb-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#0080A3] mb-2">
-            Simulateur
-          </p>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
-            Impact Environnemental des IA
-          </h1>
-          <p className="mt-3 text-slate-600 text-sm sm:text-base max-w-2xl">
-            Comparez l&apos;empreinte énergétique (Wh) et l&apos;ADPe (ng Sb eq) de deux modèles
-            selon un cas d&apos;usage. Données EcoLogits — région France (FRA), base 1000 tokens.
-          </p>
-        </header>
+      <HeroEco />
+
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 pb-8 sm:pb-12 pt-8 sm:pt-10">
+        <div className="mb-8 sm:mb-10">
+          <AverageKpiBanner metrics={averageMetrics} />
+        </div>
 
         {fetchError ? (
           <div
@@ -111,34 +146,46 @@ export default function ImpactEnvironnementalPage({
           aria-labelledby="simulateur-controls"
           className="mb-8 rounded-lg border border-slate-200 bg-white p-4 sm:p-6 shadow-sm"
         >
-          <h2 id="simulateur-controls" className="text-lg font-semibold text-slate-900 mb-4">
-            Paramètres
+          <h2 id="simulateur-controls" className="text-2xl font-bold text-slate-900 mb-2">
+            Comparateur d&apos;empreinte LLM
           </h2>
+          <p className="text-sm text-slate-600 mb-6">
+            Simulez l&apos;impact de vos choix d&apos;architecture. Sélectionnez un cas d&apos;usage
+            et comparez deux modèles de langage (LLM) pour identifier le plus sobre
+            énergétiquement.
+          </p>
 
-          <div className="grid gap-6 sm:grid-cols-2">
-            <ModelSelectDropdown
-              label="Modèle A (référence)"
-              models={models}
-              value={modelAId}
-              onChange={setModelAId}
-              disabled={!hasModels}
-            />
-            <ModelSelectDropdown
-              label="Modèle B (comparaison)"
-              models={models}
-              value={modelBId}
-              onChange={setModelBId}
-              disabled={!hasModels}
-            />
-          </div>
-
-          <div className="mt-6">
-            <p className="text-xs font-medium text-slate-600 mb-2">Cas d&apos;usage</p>
+          <div className="mb-8">
+            <p className="text-xs font-medium text-slate-600 mb-2">
+              1. Définissez votre cas d&apos;usage
+            </p>
             <UseCasePillSelector
               useCases={USE_CASE_DEFINITIONS}
               value={useCaseId}
               onChange={setUseCaseId}
             />
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-slate-600 mb-2">
+              2. Comparez l&apos;impact de deux modèles
+            </p>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <ModelSelectDropdown
+                label="Modèle A (référence)"
+                models={models}
+                value={modelAId}
+                onChange={setModelAId}
+                disabled={!hasModels}
+              />
+              <ModelSelectDropdown
+                label="Modèle B (comparaison)"
+                models={models}
+                value={modelBId}
+                onChange={setModelBId}
+                disabled={!hasModels}
+              />
+            </div>
           </div>
         </section>
 
@@ -146,7 +193,13 @@ export default function ImpactEnvironnementalPage({
           <>
             <section
               aria-labelledby="comparison-section"
-              className="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 shadow-sm"
+              aria-busy={isCalculating}
+              aria-live="polite"
+              className={`rounded-lg border border-slate-200 bg-white p-4 sm:p-6 shadow-sm transition-opacity duration-200 ${
+                isCalculating
+                  ? 'opacity-50 pointer-events-none'
+                  : 'opacity-100'
+              }`}
             >
               <h2 id="comparison-section" className="text-lg font-semibold text-slate-900">
                 Comparaison des impacts
@@ -183,13 +236,49 @@ export default function ImpactEnvironnementalPage({
         <aside className="mt-8 rounded-lg border border-slate-200 bg-slate-100 px-4 py-3 text-xs text-slate-700 leading-relaxed">
           <p className="font-semibold text-slate-800 mb-1">Note méthodologique</p>
           <p>
-            Ces calculs (basés sur EcoLogits) mesurent l&apos;empreinte physique (fabrication ADPe
-            et usage électrique) au niveau du datacenter du fournisseur, en proportionnalité
-            stricte des tokens. Le cas Vision (~1500 tokens, multiplicateur ×1,5) ne s&apos;applique
-            qu&apos;aux modèles avec capacité Vision en base ; les modèles texte-only affichent N/A.
+            Ces calculs (basés sur{' '}
+            <a
+              href="https://ecologits.ai/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[#0080A3] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] rounded-sm transition-colors"
+            >
+              EcoLogits
+              <ExternalLink className="w-4 h-4" aria-hidden="true" />
+            </a>
+            ) mesurent l&apos;empreinte physique (fabrication ADPe et usage électrique) au niveau
+            du datacenter du fournisseur, en proportionnalité stricte des tokens. Le cas Vision
+            (~1500 tokens, multiplicateur ×1,5) ne s&apos;applique qu&apos;aux modèles avec capacité
+            Vision en base ; les modèles texte-only affichent N/A.
           </p>
         </aside>
+
+        <hr className="my-12 w-full border-0 border-t border-slate-200 dark:border-slate-600" />
+
+        <div className="max-w-4xl mx-auto mt-12 bg-gradient-to-r from-[#0080A3]/10 to-sky-50 rounded-xl p-8 text-center border border-[#0080A3]/20">
+          <span className="inline-block bg-white text-[#0080A3] text-xs font-semibold px-3 py-1 rounded-full border border-[#0080A3]/20 mb-4 shadow-sm">
+            Plateforme MaydAI
+          </span>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">
+            Passez de la simulation à l&apos;action
+          </h3>
+          <p className="text-slate-600 mb-6 max-w-lg mx-auto">
+            Réalisez un audit de conformité IA Act complet et intégrez ces métriques d&apos;impact
+            directement dans votre registre de traitements.
+          </p>
+          <a
+            href={SIGNUP_HREF.impact_environnemental}
+            className="inline-flex items-center justify-center px-6 py-3 text-sm font-medium text-white bg-[#0080A3] hover:bg-[#006682] rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2 shadow-sm"
+          >
+            Démarrer mon essai gratuit
+            <ArrowRight className="w-4 h-4 ml-2" aria-hidden="true" />
+          </a>
+        </div>
+
+        <MethodologySection />
       </main>
+
+      <FaqEnvironnement />
 
       <Footer />
     </div>

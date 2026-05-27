@@ -422,7 +422,7 @@ export async function POST(req: NextRequest) {
     const startTime = Date.now()
     let analysis: string
     let success = false
-    let attempt = 1
+    const attempt = 1
 
     try {
       analysis = await generateAnalysisWithRetry(transformedData, usecase_id)

@@ -87,8 +87,8 @@ export function ProcessingAnimation({ isVisible, onComplete }: ProcessingAnimati
     }
 
     let stepStartTime = Date.now()
-    let totalDuration = PROCESSING_STEPS.reduce((acc, step) => acc + step.duration, 0)
-    let currentStepDuration = 0
+    const totalDuration = PROCESSING_STEPS.reduce((acc, step) => acc + step.duration, 0)
+    const currentStepDuration = 0
 
     const updateProgress = () => {
       const now = Date.now()

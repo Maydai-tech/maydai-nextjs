@@ -49,7 +49,7 @@ export default function FonctionnalitesPage() {
                         Audits IA Act
                       </a>
                       <a href="#fiches-usage" className="block text-sm text-gray-600 hover:text-[#0080a3] hover:bg-white rounded-lg px-3 py-2 transition-colors">
-                        Fiches Cas d'Usage
+                        Fiches Cas d&apos;Usage
                       </a>
                       <a href="#transparence" className="block text-sm text-gray-600 hover:text-[#0080a3] hover:bg-white rounded-lg px-3 py-2 transition-colors">
                         Transparence et Conformité
@@ -81,12 +81,12 @@ export default function FonctionnalitesPage() {
 
                   {/* Section Introduction */}
                   <section id="introduction" className="mb-12">
-                    <h2 className="text-3xl font-bold text-[#0080a3] mb-6">Plateforme IA Act : L'Architecte de Confiance pour la Conformité IA</h2>
+                    <h2 className="text-3xl font-bold text-[#0080a3] mb-6">Plateforme IA Act : L&apos;Architecte de Confiance pour la Conformité IA</h2>
                     <p className="text-lg leading-relaxed mb-6 text-gray-800">
-                      MaydAI est la première <strong>plateforme conformité AI Act</strong> complète pour la conformité européenne avec une approche éthique. Notre solution pédagogique transforme la complexité réglementaire en avantage concurrentiel. Découvrez nos 6 fonctionnalités clés : registre IA Act, audits assistés, fiches pratiques cas d'usage, collaboration et transparence, dashboard entreprise et benchmarks des principaux LLM du marché.
+                      MaydAI est la première <strong>plateforme conformité AI Act</strong> complète pour la conformité européenne avec une approche éthique. Notre solution pédagogique transforme la complexité réglementaire en avantage concurrentiel. Découvrez nos 6 fonctionnalités clés : registre IA Act, audits assistés, fiches pratiques cas d&apos;usage, collaboration et transparence, dashboard entreprise et benchmarks des principaux LLM du marché.
                     </p>
                     <p className="text-lg leading-relaxed mb-6 text-gray-800">
-                      Imaginez une forteresse numérique où chaque système d'IA de votre entreprise est connu, compris, et maîtrisé. MaydAI, la <strong>Plateforme IA Act</strong>, vous offre cette quiétude. Au cœur de MaydAI, une approche méthodique et collaborative qui transforme l'obligation légale en opportunité stratégique.
+                      Imaginez une forteresse numérique où chaque système d&apos;IA de votre entreprise est connu, compris, et maîtrisé. MaydAI, la <strong>Plateforme IA Act</strong>, vous offre cette quiétude. Au cœur de MaydAI, une approche méthodique et collaborative qui transforme l&apos;obligation légale en opportunité stratégique.
                     </p>
                   </section>
 
@@ -97,14 +97,14 @@ export default function FonctionnalitesPage() {
                       <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Registre IA Act : Votre Carnet de Bord Numérique</h2>
                     </div>
                     <p className="text-lg leading-relaxed mb-6 text-gray-800">
-                      C'est le point de départ : un inventaire exhaustif de tous vos systèmes d'IA et de leurs usages. Notre <strong>Plateforme IA Act</strong> transforme ce registre en bien plus qu'une simple liste – c'est une cartographie vivante de votre patrimoine numérique. Vous oeuvrez ainsi contre le shadow IA de vos collaborateurs et assurez une maîtrise sur la transmission de données stratégiques et sensibles à des acteurs tiers.
+                      C&apos;est le point de départ : un inventaire exhaustif de tous vos systèmes d&apos;IA et de leurs usages. Notre <strong>Plateforme IA Act</strong> transforme ce registre en bien plus qu&apos;une simple liste – c&apos;est une cartographie vivante de votre patrimoine numérique. Vous oeuvrez ainsi contre le shadow IA de vos collaborateurs et assurez une maîtrise sur la transmission de données stratégiques et sensibles à des acteurs tiers.
                     </p>
                     
                     <div className="space-y-6">
                       <div>
                         <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Le Panthéon de vos IA</h3>
                         <ul className="list-disc pl-6 space-y-2 text-gray-800">
-                          <li><strong>Hiérarchisation intelligente par niveau de risque :</strong> Modèles prêts à l'emploi pour une mise en place accélérée, parce que le temps, c&apos;est de l'argent, même dans le monde de l&apos;IA</li>
+                          <li><strong>Hiérarchisation intelligente par niveau de risque :</strong> Modèles prêts à l&apos;emploi pour une mise en place accélérée, parce que le temps, c&apos;est de l&apos;argent, même dans le monde de l&apos;IA</li>
                           <li><strong>Suivi du cycle de vie des projets IA :</strong> Du balbutiement du projet jusqu&apos;au déploiement final, car même une IA a son enfance et sa maturité</li>
                           <li><strong>Gestion assistée des besoins d&apos;audits :</strong> Tâches et revues régulières avec des règles automatiques, pour que la conformité soit une mélodie continue et non un requiem</li>
                           <li><strong>Intégration cartographique de vos déploiements :</strong> Référentiels communs avec le registre des traitements de données et l&apos;association aux actifs logiciels</li>
@@ -117,10 +117,10 @@ export default function FonctionnalitesPage() {
                   <section id="audits" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/audit.png" alt="Icône audit IA Act - Évaluation conformité automatisée" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Audits IA Act : L'Examen de Conscience Numérique</h2>
+                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Audits IA Act : L&apos;Examen de Conscience Numérique</h2>
                     </div>
                     <p className="text-lg leading-relaxed mb-6 text-gray-800">
-                      Classification et évaluation de vos systèmes d'IA selon les standards européens. Nous combinons le niveau de risque avec l'évaluation des besoins de documentations techniques, pour que chaque effort soit mesuré.
+                      Classification et évaluation de vos systèmes d&apos;IA selon les standards européens. Nous combinons le niveau de risque avec l&apos;évaluation des besoins de documentations techniques, pour que chaque effort soit mesuré.
                     </p>
                     
                     <div className="space-y-6">
@@ -140,10 +140,10 @@ export default function FonctionnalitesPage() {
                   <section id="fiches-usage" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/tag.png" alt="Icône fiches cas d'usage IA - Documentation cas d'usage IA" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Fiches Cas d'Usage : La Carte d&apos;Identité de vos IA</h2>
+                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Fiches Cas d&apos;Usage : La Carte d&apos;Identité de vos IA</h2>
                     </div>
                     <p className="text-lg leading-relaxed mb-6 text-gray-800">
-                      Une approche structurée pour chaque cas d'usage, avec sa finalité, son périmètre, ses jalons, les réglementations applicables, et sa documentation technique. Chaque IA a son histoire, nous la racontons avec précision.
+                      Une approche structurée pour chaque cas d&apos;usage, avec sa finalité, son périmètre, ses jalons, les réglementations applicables, et sa documentation technique. Chaque IA a son histoire, nous la racontons avec précision.
                     </p>
                     
                     <div className="space-y-6">
@@ -190,7 +190,7 @@ export default function FonctionnalitesPage() {
                       <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Dashboard Entreprise : Le Tableau de Bord du Capitaine</h2>
                     </div>
                     <p className="text-lg leading-relaxed mb-6 text-gray-800">
-                      Un outil central pour assembler toutes les informations de votre patrimoine IA, avec une vision d'ensemble de l'avancement du programme de conformité. Parce que diriger, c'est d'abord comprendre les points de blocage.
+                      Un outil central pour assembler toutes les informations de votre patrimoine IA, avec une vision d&apos;ensemble de l&apos;avancement du programme de conformité. Parce que diriger, c&apos;est d&apos;abord comprendre les points de blocage.
                     </p>
                     
                     <div className="space-y-6">
@@ -214,14 +214,14 @@ export default function FonctionnalitesPage() {
                       <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Vérification et Validation : Le Sceau de l&apos;Excellence</h2>
                     </div>
                     <p className="text-lg leading-relaxed mb-6 text-gray-800">
-                      Classification et évaluation des risques, gouvernance des données, vérification des obligations de conformité. Notre <strong>Plateforme IA Act</strong> transforme l'incertitude en capacité d&apos;action, le doute en assurance.
+                      Classification et évaluation des risques, gouvernance des données, vérification des obligations de conformité. Notre <strong>Plateforme IA Act</strong> transforme l&apos;incertitude en capacité d&apos;action, le doute en assurance.
                     </p>
                     
                     <div className="space-y-6">
                       <div>
-                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">L'Excellence à Chaque Étape</h3>
+                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">L&apos;Excellence à Chaque Étape</h3>
                         <ul className="list-disc pl-6 space-y-2 text-gray-800">
-                          <li><strong>Classification et compréhension des risques :</strong> Évaluation et classification selon les exigences de l'AI Act UE, rationalisation de l&apos;évaluation IA tierce</li>
+                          <li><strong>Classification et compréhension des risques :</strong> Évaluation et classification selon les exigences de l&apos;AI Act UE, rationalisation de l&apos;évaluation IA tierce</li>
                           <li><strong>Gouvernance des données :</strong> Identification des risques dans les jeux de données, protection efficace du pipeline ML</li>
                           <li><strong>Conformité réglementaire :</strong> Documentation technique, supervision humaine, explicabilité et transparence</li>
                           <li><strong>Alertes intelligentes :</strong> Notifications de changements, mises à jour automatiques, déclenchement de tâches utilisateur</li>
@@ -237,37 +237,37 @@ export default function FonctionnalitesPage() {
                     
                     <div className="space-y-6">
                       <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                        <h3 className="text-xl font-semibold text-[#0080a3] mb-3">Qu'est-ce qu'un registre IA Act ?</h3>
+                        <h3 className="text-xl font-semibold text-[#0080a3] mb-3">Qu&apos;est-ce qu&apos;un registre IA Act ?</h3>
                         <p className="text-gray-800 leading-relaxed">
-                          Le <strong>registre IA Act</strong> est un inventaire obligatoire de tous vos systèmes d'IA selon le règlement européen. Notre plateforme MaydAI automatise la création et la gestion de ce registre, transformant une obligation légale en outil stratégique de gouvernance IA.
+                          Le <strong>registre IA Act</strong> est un inventaire obligatoire de tous vos systèmes d&apos;IA selon le règlement européen. Notre plateforme MaydAI automatise la création et la gestion de ce registre, transformant une obligation légale en outil stratégique de gouvernance IA.
                         </p>
                       </div>
                       
                       <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                        <h3 className="text-xl font-semibold text-[#0080a3] mb-3">Comment fonctionne l'audit IA Act automatisé ?</h3>
+                        <h3 className="text-xl font-semibold text-[#0080a3] mb-3">Comment fonctionne l&apos;audit IA Act automatisé ?</h3>
                         <p className="text-gray-800 leading-relaxed">
-                          Notre <strong>audit IA Act automatisé</strong> évalue vos systèmes d'IA selon les critères de l'AI Act européen. La plateforme analyse automatiquement vos cas d'usage, classe les niveaux de risque et génère des plans de remédiation personnalisés pour assurer votre conformité.
+                          Notre <strong>audit IA Act automatisé</strong> évalue vos systèmes d&apos;IA selon les critères de l&apos;AI Act européen. La plateforme analyse automatiquement vos cas d&apos;usage, classe les niveaux de risque et génère des plans de remédiation personnalisés pour assurer votre conformité.
                         </p>
                       </div>
                       
                       <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                         <h3 className="text-xl font-semibold text-[#0080a3] mb-3">Quels sont les avantages du dashboard entreprise ?</h3>
                         <p className="text-gray-800 leading-relaxed">
-                          Le <strong>dashboard entreprise MaydAI</strong> offre une vue d'ensemble de votre conformité IA en temps réel. Suivez l'avancement de vos audits, identifiez les risques et optimisez votre stratégie IA grâce à des tableaux de bord intelligents et des rapports exécutifs.
+                          Le <strong>dashboard entreprise MaydAI</strong> offre une vue d&apos;ensemble de votre conformité IA en temps réel. Suivez l&apos;avancement de vos audits, identifiez les risques et optimisez votre stratégie IA grâce à des tableaux de bord intelligents et des rapports exécutifs.
                         </p>
                       </div>
                       
                       <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                         <h3 className="text-xl font-semibold text-[#0080a3] mb-3">Pourquoi choisir MaydAI pour la conformité IA Act ?</h3>
                         <p className="text-gray-800 leading-relaxed">
-                          MaydAI est la première <strong>plateforme conformité AI Act</strong> complète qui combine registre, audit, transparence et validation dans une solution unifiée. Notre expertise de 2 ans dans l'AI Act vous garantit une conformité rigoureuse et une transformation de l'obligation légale en avantage concurrentiel.
+                          MaydAI est la première <strong>plateforme conformité AI Act</strong> complète qui combine registre, audit, transparence et validation dans une solution unifiée. Notre expertise de 2 ans dans l&apos;AI Act vous garantit une conformité rigoureuse et une transformation de l&apos;obligation légale en avantage concurrentiel.
                         </p>
                       </div>
                       
                       <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                         <h3 className="text-xl font-semibold text-[#0080a3] mb-3">Comment MaydAI gère-t-elle la transparence IA Act ?</h3>
                         <p className="text-gray-800 leading-relaxed">
-                          Notre <strong>solution de transparence IA Act</strong> génère automatiquement les notices de transparence, surveille les incidents post-déploiement et maintient une documentation technique complète. La plateforme facilite l'exportation de tous vos documents de conformité pour les autorités.
+                          Notre <strong>solution de transparence IA Act</strong> génère automatiquement les notices de transparence, surveille les incidents post-déploiement et maintient une documentation technique complète. La plateforme facilite l&apos;exportation de tous vos documents de conformité pour les autorités.
                         </p>
                       </div>
                     </div>
@@ -276,10 +276,10 @@ export default function FonctionnalitesPage() {
                   {/* Call to Action */}
                   <div className="text-center mt-16 p-8 bg-gradient-to-r from-[#0080a3]/10 to-blue-50 rounded-2xl">
                     <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                      Prêt à faire de l'AI Act votre avantage concurrentiel ?
+                      Prêt à faire de l&apos;AI Act votre avantage concurrentiel ?
                     </h3>
                     <p className="text-gray-600 mb-6">
-                      Découvrez comment notre Plateforme IA Act peut transformer votre approche de l'IA
+                      Découvrez comment notre Plateforme IA Act peut transformer votre approche de l&apos;IA
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                       <a 

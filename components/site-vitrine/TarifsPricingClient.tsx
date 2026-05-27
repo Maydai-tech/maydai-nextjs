@@ -5,6 +5,7 @@ import Image from 'next/image'
 import BillingToggle from '@/components/Subscriptions/BillingToggle'
 import { fetchPlans, type MaydAIPlan } from '@/lib/api/plans'
 import { trackPricingClick, type PlanName } from '@/lib/gtm'
+import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
 
 type BillingCycle = 'monthly' | 'yearly'
 
@@ -93,7 +94,7 @@ export default function TarifsPricingClient() {
           const plan = planById.get(planId)
           const label = LABELS_BY_PLAN_ID[planId]
           const isPro = planId === 'pro'
-          const ctaHref = planId === 'enterprise' ? '/contact' : '/signup'
+          const ctaHref = planId === 'enterprise' ? '/contact' : SIGNUP_HREF.tarifs
 
           const isLoading = plans === null
           const isMissing = !isLoading && !plan

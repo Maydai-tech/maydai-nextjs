@@ -210,8 +210,8 @@ export function logFormattedAnswersSnapshot(
     Object.fromEntries(
       Object.entries(formatted).filter(([k]) => k.startsWith(prefix) || k.startsWith('V3_SHORT'))
     )
-  // eslint-disable-next-line no-console
+   
   console.log(`\n=== ${label} ===`)
-  // eslint-disable-next-line no-console
+   
   console.log(JSON.stringify({ E4: pick('E4'), E5: pick('E5'), E6: pick('E6'), E7: pick('E7') }, null, 2))
 }

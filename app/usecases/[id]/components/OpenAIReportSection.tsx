@@ -26,7 +26,7 @@ export function OpenAIReportSection({ usecaseId }: OpenAIReportSectionProps) {
     let currentParagraph: string[] = []
     let listItems: string[] = []
     let inList = false
-    let inCodeBlock = false
+    const inCodeBlock = false
 
     const flushParagraph = () => {
       if (currentParagraph.length > 0) {

@@ -9,7 +9,9 @@ import VideoSection from './components/VideoSection'
 import TrustLogos from './components/TrustLogos'
 import Features from './components/Features'
 import Security from './components/Security'
+import FaqConformite from './components/FaqConformite'
 import LandingFooter from './components/LandingFooter'
+import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
 
 export interface ConformiteIAPageProps {
   pricingNode?: React.ReactNode
@@ -44,7 +46,7 @@ export default function ConformiteIAPage({ pricingNode }: ConformiteIAPageProps)
             </div>
           </Link>
           <Link
-            href="/signup"
+            href={SIGNUP_HREF.conformite_ia}
             className="text-sm font-semibold text-white bg-[#0080a3] px-5 py-2 rounded-full hover:bg-[#006280] transition-colors"
             onClick={handleHeaderCtaClick}
           >
@@ -76,6 +78,7 @@ export default function ConformiteIAPage({ pricingNode }: ConformiteIAPageProps)
         <Security />
       </main>
 
+      <FaqConformite />
       <LandingFooter />
     </div>
   )

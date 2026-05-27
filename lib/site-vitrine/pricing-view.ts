@@ -1,4 +1,5 @@
 import type { MaydAIPlan } from '@/lib/api/plans'
+import { signupHrefWithPlan } from '@/lib/signup-utm-hrefs'
 
 /** Clé pour associer une icône Lucide statique côté UI (voir `PricingSummaryCard`). */
 export type PricingPlanIconVariant = 'user' | 'zap' | 'building' | 'building2'
@@ -46,7 +47,7 @@ export function buildPricingCardDisplay(plan: MaydAIPlan): PricingCardDisplayMod
     features: plan.features ?? [],
     isRecommended: Boolean(plan.popular),
     primaryCtaLabel: 'Choisir ce forfait',
-    primaryHref: `/signup?plan=${encodeURIComponent(plan.id)}`,
+    primaryHref: signupHrefWithPlan(plan.id, 'tarifs'),
     iconVariant: mapPlanIdToIconVariant(plan.id),
     priceMonthlyForAria,
   }

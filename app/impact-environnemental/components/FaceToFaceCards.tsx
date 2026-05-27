@@ -136,7 +136,7 @@ export default function FaceToFaceCards({
               className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow"
             >
               <header className="flex flex-col items-center gap-3 text-center px-2 pt-2 pb-1">
-                <Icon className="w-12 h-12 text-[#0080A3]" strokeWidth={1.75} aria-hidden />
+                <Icon className="w-8 h-8 text-[#0080A3] mx-auto mb-3" aria-hidden="true" />
                 <h3 className="text-slate-600 font-medium text-sm">{title}</h3>
                 <span className="text-xs text-slate-500 font-normal mt-1">
                   {pedagogicalSubtitle}

@@ -21,7 +21,7 @@ export default function DateInputStep({
   const [focused, setFocused] = useState(false)
 
   const handleChange = (raw: string) => {
-    let digits = raw.replace(/[^\d]/g, '').substring(0, 8)
+    const digits = raw.replace(/[^\d]/g, '').substring(0, 8)
     let formatted = ''
 
     if (digits.length >= 1) {

@@ -69,10 +69,11 @@ export default function HeroAudit() {
           </h2>
 
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-10">
-            Les exigences de transparence et de sécurité deviennent légalement obligatoires pour la majorité des
-            systèmes d&apos;intelligence artificielle. N&apos;attendez pas les sanctions : cartographiez vos cas
-            d&apos;usage, évaluez vos niveaux de risque et obtenez un plan d&apos;action clair pour votre mise en
-            conformité.
+            Les exigences de transparence de la réglementation européenne deviennent obligatoires. Réaliser un{' '}
+            <strong className="font-semibold text-gray-800">audit IA Act</strong> (ou{' '}
+            <strong className="font-semibold text-gray-800">audit AI Act</strong>) vous permet de cartographier
+            immédiatement vos systèmes d&apos;intelligence artificielle, d&apos;évaluer vos niveaux de risque et
+            d&apos;obtenir une feuille de route claire pour garantir votre conformité sans attendre les sanctions.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

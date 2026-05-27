@@ -30,13 +30,13 @@ export default function PolitiqueConfidentialitePage() {
                 Article 1 : Préambule
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                La présente politique de confidentialité a pour but d'informer les utilisateurs du site 
+                La présente politique de confidentialité a pour but d&apos;informer les utilisateurs du site 
                 <strong> MaydAI.io</strong> sur la manière dont sont collectées, traitées et protégées 
                 les données à caractère personnel des utilisateurs, en conformité avec le Règlement 
                 Général sur la Protection des Données (RGPD) et la loi Informatique et Libertés.
               </p>
               <p className="text-gray-700 leading-relaxed">
-                Cette politique s'applique à l'ensemble des services proposés par MaydAI et peut être 
+                Cette politique s&apos;applique à l&apos;ensemble des services proposés par MaydAI et peut être 
                 amenée à évoluer en fonction des modifications réglementaires ou des évolutions de nos services.
               </p>
             </section>
@@ -47,7 +47,7 @@ export default function PolitiqueConfidentialitePage() {
                 Article 2 : Principes Relatifs à la Collecte et au Traitement des Données Personnelles
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                Conformément à l'article 5 du Règlement européen 2016/679, les données à caractère personnel sont :
+                Conformément à l&apos;article 5 du Règlement européen 2016/679, les données à caractère personnel sont :
               </p>
               <ul className="list-disc pl-6 space-y-2 text-gray-700">
                 <li>Traitées de manière licite, loyale et transparente au regard de la personne concernée</li>
@@ -57,7 +57,7 @@ export default function PolitiqueConfidentialitePage() {
                 <li>Conservées sous une forme permettant l&apos;identification des personnes concernées pendant une durée n&apos;excédant pas celle nécessaire</li>
                 <li>Traitées de façon à garantir une sécurité appropriée des données à caractère personnel</li>
                 <li>Ne sont pas transférées vers un pays tiers sans garanties appropriées</li>
-                <li>L'utilisateur est informé en cas de rectification ou d&apos;effacement de données</li>
+                <li>L&apos;utilisateur est informé en cas de rectification ou d&apos;effacement de données</li>
               </ul>
             </section>
 
@@ -166,7 +166,7 @@ export default function PolitiqueConfidentialitePage() {
             {/* Article 5 : Les Droits de l'Utilisateur */}
             <section className="mb-12">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Article 5 : Les Droits de l'Utilisateur
+                Article 5 : Les Droits de l&apos;Utilisateur
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
                 Tout utilisateur concerné par le traitement de ses données peut se prévaloir des droits suivants, 
@@ -189,8 +189,8 @@ export default function PolitiqueConfidentialitePage() {
                   Ou par email à : <a href="mailto:contact@maydai.io" className="text-[#0080a3] hover:underline font-semibold">contact@maydai.io</a>
                 </p>
                 <p className="text-gray-700 leading-relaxed mt-3">
-                  Vous disposez également du droit d'introduire une réclamation auprès de la CNIL 
-                  (Commission Nationale de l'Informatique et des Libertés).
+                  Vous disposez également du droit d&apos;introduire une réclamation auprès de la CNIL 
+                  (Commission Nationale de l&apos;Informatique et des Libertés).
                 </p>
               </div>
             </section>
@@ -201,13 +201,13 @@ export default function PolitiqueConfidentialitePage() {
                 Article 6 : Conditions de Modification
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                L'éditeur du site MaydAI.io se réserve le droit de pouvoir modifier la présente Politique 
-                à tout moment afin d'assurer aux utilisateurs du site sa conformité avec le droit en vigueur.
+                L&apos;éditeur du site MaydAI.io se réserve le droit de pouvoir modifier la présente Politique 
+                à tout moment afin d&apos;assurer aux utilisateurs du site sa conformité avec le droit en vigueur.
               </p>
               <p className="text-gray-700 leading-relaxed mb-4">
-                Les éventuelles modifications ne sauraient avoir d'incidence sur les achats antérieurement effectués 
-                sur le site, lesquels restent soumis à la Politique en vigueur au moment de l'achat et telle 
-                qu'acceptée par l'utilisateur lors de la validation de l'achat.
+                Les éventuelles modifications ne sauraient avoir d&apos;incidence sur les achats antérieurement effectués 
+                sur le site, lesquels restent soumis à la Politique en vigueur au moment de l&apos;achat et telle 
+                qu&apos;acceptée par l&apos;utilisateur lors de la validation de l&apos;achat.
               </p>
               <div className="bg-gray-50 rounded-lg p-6">
                 <p className="text-gray-700 leading-relaxed">
@@ -223,7 +223,7 @@ export default function PolitiqueConfidentialitePage() {
                 Contact
               </h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                Pour toute question concernant cette politique de confidentialité ou l'exercice de vos droits, 
+                Pour toute question concernant cette politique de confidentialité ou l&apos;exercice de vos droits, 
                 vous pouvez nous contacter :
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
