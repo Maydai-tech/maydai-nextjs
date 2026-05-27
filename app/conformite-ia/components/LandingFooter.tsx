@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 import { sendLandingCtaClick } from '@/lib/gtm'
+import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
 
 export default function LandingFooter() {
   const handleFooterFreeTrialClick = () => {
@@ -33,7 +34,7 @@ export default function LandingFooter() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
-                href="/signup"
+                href={SIGNUP_HREF.conformite_ia}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0080a3] text-white font-semibold text-lg px-8 py-4 rounded-full shadow-lg hover:bg-[#006280] hover:shadow-xl transition-all duration-300"
                 onClick={handleFooterFreeTrialClick}
               >

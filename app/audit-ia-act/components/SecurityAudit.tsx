@@ -41,7 +41,7 @@ export default function SecurityAudit() {
           {points.map((point) => {
             const Icon = point.icon
             return (
-              <div
+              <article
                 key={point.title}
                 className="bg-white rounded-2xl p-6 md:p-8 border border-gray-200 shadow-sm hover:shadow-lg transition-shadow duration-300"
               >
@@ -50,7 +50,7 @@ export default function SecurityAudit() {
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-3">{point.title}</h3>
                 <p className="text-gray-600 leading-relaxed text-sm">{point.description}</p>
-              </div>
+              </article>
             )
           })}
         </div>

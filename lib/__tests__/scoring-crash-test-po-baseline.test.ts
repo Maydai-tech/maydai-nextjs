@@ -451,7 +451,7 @@ describe('Crash-test PO — baseline scoring (scénarios 1–11)', () => {
       scenario11: snapshotScenario(s11base, s11score),
     }
 
-    // eslint-disable-next-line no-console
+     
     console.log('\n=== RAPPORT CRASH-TEST PO (score_base sur 90) ===\n', JSON.stringify(report, null, 2))
 
     expect(s1base.is_eliminated).toBe(true)

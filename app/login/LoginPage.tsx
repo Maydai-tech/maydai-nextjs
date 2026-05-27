@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/auth'
 import OTPVerification from '@/components/auth/OTPVerification'
 import { sendLoginEvent } from '@/lib/gtm'
 import { Mail, ArrowRight, Clock } from 'lucide-react'
+import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
 
 type LoginStep = 'email' | 'otp'
 
@@ -221,7 +222,7 @@ export default function LoginPage() {
                         <p className="text-sm text-gray-600">
                             Pas encore de compte ?{' '}
                             <Link
-                                href="/signup"
+                                href={SIGNUP_HREF.login}
                                 className="font-medium text-[#0080A3] hover:text-[#006280] transition-colors"
                             >
                                 Créer un compte

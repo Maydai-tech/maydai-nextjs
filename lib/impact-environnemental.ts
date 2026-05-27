@@ -25,6 +25,8 @@ export type UseCaseId =
 export interface UseCaseDefinition {
   id: UseCaseId
   label: string
+  /** Indication pédagogique du volume de tokens (affichage UI). */
+  tokenHint: string
   /** Multiplicateur appliqué au score de base (1000 tokens). */
   tokenMultiplier: number
 }
@@ -33,25 +35,36 @@ export const USE_CASE_DEFINITIONS: UseCaseDefinition[] = [
   {
     id: 'email',
     label: 'Email / Petit paragraphe',
+    /** 1 000 tokens (base EcoLogits) × 0,5 */
+    tokenHint: '~500 tokens',
     tokenMultiplier: 0.5,
   },
   {
     id: 'article',
     label: 'Article standard',
+    /** 1 000 tokens (base EcoLogits) × 2 */
+    tokenHint: '~2 000 tokens',
     tokenMultiplier: 2,
   },
   {
     id: 'synthese',
     label: 'Synthèse document (4 pages)',
+    /** 1 000 tokens (base EcoLogits) × 4 */
+    tokenHint: '~4 000 tokens',
     tokenMultiplier: 4,
   },
   {
     id: 'vision',
     label: 'Analyser une image complexe (Vision)',
-    /** ~1500 tokens lus : score de base × 1,5. */
+    /** 1 000 tokens (base EcoLogits) × 1,5 */
+    tokenHint: '~1 500 tokens',
     tokenMultiplier: 1.5,
   },
 ]
+
+/** Noms de modèles par défaut pour la comparaison sur la page impact environnemental. */
+export const DEFAULT_IMPACT_MODEL_A_NAME = 'gpt-4'
+export const DEFAULT_IMPACT_MODEL_B_NAME = 'claude-opus-4'
 
 export interface ComputedImpact {
   energyWh: number

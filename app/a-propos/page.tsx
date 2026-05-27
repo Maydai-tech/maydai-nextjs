@@ -154,7 +154,7 @@ export default function AProposPage() {
                         Notre Engagement
                       </h3>
                       <p className="text-gray-700 italic">
-                        "Rendre l'intelligence artificielle accessible, éthique et conforme aux réglementations européennes pour toutes les entreprises, quelle que soit leur taille."
+                        &quot;Rendre l&apos;intelligence artificielle accessible, éthique et conforme aux réglementations européennes pour toutes les entreprises, quelle que soit leur taille.&quot;
                       </p>
                     </div>
                   </div>

@@ -227,7 +227,7 @@ export async function POST(
     }
 
     // Metadata for history events
-    let historyMetadata: Record<string, unknown> = {
+    const historyMetadata: Record<string, unknown> = {
       doc_type: storageDocType,
       document_name: storageDocType.replace(/_/g, ' ')
     }

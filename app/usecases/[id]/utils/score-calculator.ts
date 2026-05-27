@@ -563,8 +563,8 @@ export async function calculateScore(
       const data = categoryData[categoryId]
       
       // Calculer le score questionnaire : maximum - points perdus
-      let maxQuestionnaireScore = categoryMaxScores[categoryId] || 0
-      let questionnaireScore = Math.max(0, maxQuestionnaireScore - data.lostPoints)
+      const maxQuestionnaireScore = categoryMaxScores[categoryId] || 0
+      const questionnaireScore = Math.max(0, maxQuestionnaireScore - data.lostPoints)
       let maydaiScore = 0
       let maxMaydaiScore = 0
 

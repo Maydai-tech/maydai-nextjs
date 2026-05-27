@@ -18,12 +18,12 @@ export default function RisquesIaActPage() {
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
               <h1 className="text-4xl md:text-6xl font-bold text-[#0080a3] mb-8 leading-tight">
-                Les Risques de l'IA Act : Une Approche Graduée par la Classification
+                Les Risques de l&apos;IA Act : Une Approche Graduée par la Classification
               </h1>
               
               <div className="max-w-4xl mx-auto space-y-6 text-lg text-gray-700 leading-relaxed">
                 <p>
-                  Pour mettre un peu d'ordre dans le formidable tumulte de l'intelligence artificielle, l'Europe a eu cette idée assez géniale : classer les systèmes d'IA selon leur niveau de risque. Comme un bibliothécaire méticuleux qui range ses ouvrages par ordre de dangerosité potentielle, l'AI Act a établi une pyramide de classification qui va du "totalement prohibé" au "faites-vous plaisir, mais restez polis".
+                  Pour mettre un peu d&apos;ordre dans le formidable tumulte de l&apos;intelligence artificielle, l&apos;Europe a eu cette idée assez géniale : classer les systèmes d&apos;IA selon leur niveau de risque. Comme un bibliothécaire méticuleux qui range ses ouvrages par ordre de dangerosité potentielle, l&apos;AI Act a établi une pyramide de classification qui va du &quot;totalement prohibé&quot; au &quot;faites-vous plaisir, mais restez polis&quot;.
                 </p>
                 
                 <div className="flex justify-center my-6">
@@ -37,7 +37,7 @@ export default function RisquesIaActPage() {
                 </div>
                 
                 <p>
-                  Il est donc devenu urgent, pour toute organisation qui se respecte, de comprendre où se situe son système d'IA dans cette hiérarchie. Car selon l'étage où vous vous trouvez, les obligations ne sont pas les mêmes. En haut, c'est l'interdiction pure et simple. En bas, c'est la liberté presque totale. Entre les deux, c'est tout un dégradé de contraintes, de surveillances et de paperasseries à respecter.
+                  Il est donc devenu urgent, pour toute organisation qui se respecte, de comprendre où se situe son système d&apos;IA dans cette hiérarchie. Car selon l&apos;étage où vous vous trouvez, les obligations ne sont pas les mêmes. En haut, c&apos;est l&apos;interdiction pure et simple. En bas, c&apos;est la liberté presque totale. Entre les deux, c&apos;est tout un dégradé de contraintes, de surveillances et de paperasseries à respecter.
                 </p>
                 
                 <div className="flex justify-center my-6">
@@ -51,7 +51,7 @@ export default function RisquesIaActPage() {
                 </div>
                 
                 <p>
-                  Cette pyramide, que vous voyez là, n'est pas qu'un schéma théorique. C'est votre boussole pour naviguer dans les méandres de la conformité européenne. Elle vous dit où vous en êtes, ce qu'on attend de vous, et surtout, ce que vous risquez si vous faites la sourde oreille.
+                  Cette pyramide, que vous voyez là, n&apos;est pas qu&apos;un schéma théorique. C&apos;est votre boussole pour naviguer dans les méandres de la conformité européenne. Elle vous dit où vous en êtes, ce qu&apos;on attend de vous, et surtout, ce que vous risquez si vous faites la sourde oreille.
                 </p>
                 
                 <div className="flex justify-center my-6">
@@ -210,7 +210,7 @@ export default function RisquesIaActPage() {
                   </h3>
                 </div>
                 <p className="text-gray-700 leading-relaxed">
-                  Au sommet de notre pyramide, dans la zone rouge sang, trônent les systèmes d'IA que l'Europe considère comme des parjures numériques. Ce sont les manipulateurs, les exploiteurs, les systèmes qui s'attaquent aux plus vulnérables d'entre nous. Ici, pas de demi-mesure : c'est l'interdiction pure et simple. Utiliser de tels systèmes, c'est s'exposer aux sanctions les plus lourdes de l'AI Act.
+                  Au sommet de notre pyramide, dans la zone rouge sang, trônent les systèmes d&apos;IA que l&apos;Europe considère comme des parjures numériques. Ce sont les manipulateurs, les exploiteurs, les systèmes qui s&apos;attaquent aux plus vulnérables d&apos;entre nous. Ici, pas de demi-mesure : c&apos;est l&apos;interdiction pure et simple. Utiliser de tels systèmes, c&apos;est s&apos;exposer aux sanctions les plus lourdes de l&apos;AI Act.
                 </p>
               </article>
 
@@ -223,7 +223,7 @@ export default function RisquesIaActPage() {
                   </h3>
                 </div>
                 <p className="text-gray-700 leading-relaxed mb-4">
-                  Juste en dessous, nous trouvons les systèmes d'IA à haut risque. Ce sont les poids lourds de l'intelligence artificielle, ceux qui ont le pouvoir d'affecter significativement la vie des gens. L'Europe les surveille de près et leur impose un cahier des charges strict :
+                  Juste en dessous, nous trouvons les systèmes d&apos;IA à haut risque. Ce sont les poids lourds de l&apos;intelligence artificielle, ceux qui ont le pouvoir d&apos;affecter significativement la vie des gens. L&apos;Europe les surveille de près et leur impose un cahier des charges strict :
                 </p>
                 <ul className="list-disc list-inside text-gray-700 space-y-2 ml-4">
                   <li>Système de gestion de la qualité rigoureux</li>
@@ -244,7 +244,7 @@ export default function RisquesIaActPage() {
                   </h3>
                 </div>
                 <p className="text-gray-700 leading-relaxed">
-                  Au troisième niveau, nous rencontrons les systèmes d'IA à risque limité. Ce sont les illusionnistes du monde numérique : chatbots, systèmes de reconnaissance d'émotions, ou générateurs de contenu. Leur obligation ? La politesse. Ils doivent prévenir l'utilisateur qu'il interagit avec une IA. Pas de tromperie, pas de manipulation silencieuse. Juste une information claire et honnête.
+                  Au troisième niveau, nous rencontrons les systèmes d&apos;IA à risque limité. Ce sont les illusionnistes du monde numérique : chatbots, systèmes de reconnaissance d&apos;émotions, ou générateurs de contenu. Leur obligation ? La politesse. Ils doivent prévenir l&apos;utilisateur qu&apos;il interagit avec une IA. Pas de tromperie, pas de manipulation silencieuse. Juste une information claire et honnête.
                 </p>
               </article>
 
@@ -257,7 +257,7 @@ export default function RisquesIaActPage() {
                   </h3>
                 </div>
                 <p className="text-gray-700 leading-relaxed">
-                  En bas de la pyramide, dans la verte prairie de la liberté, nous trouvons les systèmes d'IA à risque minimal. Filtres anti-spam, systèmes de recommandation de films, outils d'optimisation énergétique : autant de technologies qui peuvent s'épanouir sans contraintes particulières. Ici, l'Europe fait confiance et laisse l'innovation suivre son cours naturel.
+                  En bas de la pyramide, dans la verte prairie de la liberté, nous trouvons les systèmes d&apos;IA à risque minimal. Filtres anti-spam, systèmes de recommandation de films, outils d&apos;optimisation énergétique : autant de technologies qui peuvent s&apos;épanouir sans contraintes particulières. Ici, l&apos;Europe fait confiance et laisse l&apos;innovation suivre son cours naturel.
                 </p>
               </article>
             </div>
@@ -268,12 +268,12 @@ export default function RisquesIaActPage() {
         <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-100">
           <div className="max-w-7xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center text-[#0080a3] mb-8">
-              L'Heure des Comptes : Le Tic-tac de l'Horloge et le Poids du Portefeuille
+              L&apos;Heure des Comptes : Le Tic-tac de l&apos;Horloge et le Poids du Portefeuille
             </h2>
             
             <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
               <p className="text-lg text-gray-700 leading-relaxed mb-8">
-                Ne nous y trompons pas : cette pyramide n'est pas qu'un joli schéma théorique. Elle s'accompagne d'un calendrier précis et d'amendes qui peuvent faire très mal au portefeuille. L'Europe ne plaisante pas avec la conformité, et les sanctions peuvent aller jusqu'à des montants astronomiques.
+                Ne nous y trompons pas : cette pyramide n&apos;est pas qu&apos;un joli schéma théorique. Elle s&apos;accompagne d&apos;un calendrier précis et d&apos;amendes qui peuvent faire très mal au portefeuille. L&apos;Europe ne plaisante pas avec la conformité, et les sanctions peuvent aller jusqu&apos;à des montants astronomiques.
               </p>
               
               <div className="bg-red-50 border-l-4 border-red-400 p-6 rounded-r-lg mb-8">
@@ -287,7 +287,7 @@ export default function RisquesIaActPage() {
                       height={24} 
                       className="mr-3 mt-1"
                     />
-                    <span><strong>Jusqu&apos;à 35 millions d&apos;euros</strong> ou 7% du chiffre d'affaires annuel mondial pour les infractions aux systèmes d&apos;IA interdits</span>
+                    <span><strong>Jusqu&apos;à 35 millions d&apos;euros</strong> ou 7% du chiffre d&apos;affaires annuel mondial pour les infractions aux systèmes d&apos;IA interdits</span>
                   </li>
                   <li className="flex items-start">
                     <Image 
@@ -307,7 +307,7 @@ export default function RisquesIaActPage() {
                       height={24} 
                       className="mr-3 mt-1"
                     />
-                    <span><strong>Jusqu&apos;à 7,5 millions d&apos;euros</strong> ou 1,5% du chiffre d'affaires annuel mondial pour fourniture d&apos;informations incorrectes</span>
+                    <span><strong>Jusqu&apos;à 7,5 millions d&apos;euros</strong> ou 1,5% du chiffre d&apos;affaires annuel mondial pour fourniture d&apos;informations incorrectes</span>
                   </li>
                 </ul>
               </div>
@@ -323,21 +323,21 @@ export default function RisquesIaActPage() {
             </h2>
             
             <p className="text-xl text-white/90 mb-12 max-w-4xl mx-auto leading-relaxed">
-              Face à ce labyrinthe de devoirs et d'obligations, il est facile de se sentir perdu. C'est là que MaydAI entre en scène, avec deux solutions pensées pour vous accompagner dans cette transition vers la conformité.
+              Face à ce labyrinthe de devoirs et d&apos;obligations, il est facile de se sentir perdu. C&apos;est là que MaydAI entre en scène, avec deux solutions pensées pour vous accompagner dans cette transition vers la conformité.
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
               <div className="bg-white/10 backdrop-blur rounded-2xl p-8 text-white">
                 <h3 className="text-2xl font-bold mb-4">Identifier pour ne pas subir</h3>
                 <p className="leading-relaxed">
-                  Notre première mission : vous aider à identifier précisément où se situent vos systèmes d'IA dans cette pyramide des risques. Parce qu'on ne peut pas se conformer à quelque chose qu'on ne comprend pas.
+                  Notre première mission : vous aider à identifier précisément où se situent vos systèmes d&apos;IA dans cette pyramide des risques. Parce qu&apos;on ne peut pas se conformer à quelque chose qu&apos;on ne comprend pas.
                 </p>
               </div>
               
               <div className="bg-white/10 backdrop-blur rounded-2xl p-8 text-white">
                 <h3 className="text-2xl font-bold mb-4">Analyser pour comprendre</h3>
                 <p className="leading-relaxed">
-                  Notre seconde mission : analyser vos pratiques actuelles et vous proposer un plan d'action concret pour atteindre la conformité, sans vous noyer dans la complexité réglementaire.
+                  Notre seconde mission : analyser vos pratiques actuelles et vous proposer un plan d&apos;action concret pour atteindre la conformité, sans vous noyer dans la complexité réglementaire.
                 </p>
               </div>
             </div>

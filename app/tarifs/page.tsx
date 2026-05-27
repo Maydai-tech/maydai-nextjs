@@ -5,6 +5,7 @@ import Footer from '@/components/site-vitrine/Footer';
 import FaqSection from '@/components/site-vitrine/FaqSection';
 import FaqStructuredData from '@/components/site-vitrine/FaqStructuredData';
 import TarifsPricingClient from '@/components/site-vitrine/TarifsPricingClient'
+import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
 
 const TarifsPage: NextPage = () => {
   return (
@@ -62,11 +63,11 @@ const TarifsPage: NextPage = () => {
                   Prêt à accélérer votre <span className="text-[#0080a3]">conformité IA</span> ?
                 </h2>
                 <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-                  Choisissez votre rythme et démarrez dès aujourd'hui. Que vous souhaitiez tester gratuitement ou bénéficier d'un accompagnement complet, MaydAI s'adapte à vos besoins et à votre budget.
+                  Choisissez votre rythme et démarrez dès aujourd&apos;hui. Que vous souhaitiez tester gratuitement ou bénéficier d&apos;un accompagnement complet, MaydAI s&apos;adapte à vos besoins et à votre budget.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                   <a 
-                    href="/signup" 
+                    href={SIGNUP_HREF.tarifs} 
                     className="bg-white text-[#0080a3] border-2 border-[#0080a3] px-8 py-4 rounded-full font-semibold text-lg hover:bg-[#0080a3] hover:text-white transition-colors duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 no-underline flex items-center gap-2"
                   >
                     <Image src="/icons/space-rocket-launch.png" alt="Fusée" width={20} height={20} className="w-5 h-5" />

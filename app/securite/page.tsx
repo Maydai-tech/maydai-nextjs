@@ -7,6 +7,7 @@ import Header from '@/components/site-vitrine/Header';
 import Footer from '@/components/site-vitrine/Footer';
 import SecurityLogosGrid from '@/components/ui/SecurityLogosGrid';
 import { Server, Lock, Shield, ChevronDown } from 'lucide-react';
+import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs';
 
 // Données des blocs principaux
 const securityBlocks = [
@@ -205,7 +206,7 @@ export default function SecuritePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Link
-                  href="/signup"
+                  href={SIGNUP_HREF.securite}
                   className="bg-[#0080a3] text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-[#006d8a] transition-colors duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 no-underline flex items-center gap-2"
                 >
                   <Image src="/icons/space-rocket-launch.png" alt="Fusée" width={20} height={20} className="w-5 h-5" />

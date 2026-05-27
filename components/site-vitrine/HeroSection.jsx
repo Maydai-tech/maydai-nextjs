@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs';
 
 export default function HeroSection() {
   return (
@@ -11,7 +12,7 @@ export default function HeroSection() {
         <p className="text-lg md:text-xl mb-8 font-medium">
           Simplifiez et sécurisez la conformité de vos systèmes d&apos;IA avec MaydAI. Notre solution vous accompagne à chaque étape de l&apos;Audit AI Act, pour une conformité rapide, fiable et transparente.
         </p>
-        <Link href="/signup" className="inline-block bg-white text-primary font-bold px-8 py-3 rounded-lg shadow-lg hover:bg-gray-100 transition">
+        <Link href={SIGNUP_HREF.homepage_hero} className="inline-block bg-white text-primary font-bold px-8 py-3 rounded-lg shadow-lg hover:bg-gray-100 transition">
           Démarrer l&apos;Audit AI Act
         </Link>
       </div>

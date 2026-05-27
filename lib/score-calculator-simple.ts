@@ -469,7 +469,7 @@ export function calculateFinalScore(
   options?: CalculateFinalScoreOptions
 ): CompleteScoreResult {
   let finalScore = 0;
-  let hasValidModelScore = modelScore !== null && modelScore !== undefined;
+  const hasValidModelScore = modelScore !== null && modelScore !== undefined;
 
   const totalWeight = resolveTotalFinalWeight(options)
 

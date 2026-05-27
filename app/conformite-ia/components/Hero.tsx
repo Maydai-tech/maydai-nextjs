@@ -6,6 +6,7 @@ import { ArrowRight, AppWindow } from 'lucide-react'
 import TrustBadges from '@/components/ui/TrustBadges'
 import { useAIActCountdown } from '@/app/conformite-ia/hooks/useAIActCountdown'
 import { sendLandingCtaClick } from '@/lib/gtm'
+import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
 
 export default function Hero() {
   const daysLeft = useAIActCountdown()
@@ -36,10 +37,15 @@ export default function Hero() {
           </h1>
 
           <p className="text-lg md:text-xl font-medium text-white/95">
-            Plus que <strong className="text-3xl md:text-4xl lg:text-5xl font-extrabold">{daysLeft} jours</strong> avant le plein déploiement
-            de l&apos;AI Act, rendant légalement obligatoires les exigences de
-            transparence et de sécurité pour la majorité des systèmes
-            d&apos;intelligence artificielle.
+            Plus que{' '}
+            <strong className="text-3xl md:text-4xl lg:text-5xl font-extrabold">
+              {daysLeft} jours
+            </strong>{' '}
+            avant le plein déploiement du règlement européen. MaydAI automatise
+            votre démarche de <strong>conformité IA Act</strong> (ou{' '}
+            <strong>Conformité AI Act</strong>) en rendant simples et
+            collaboratives les exigences de transparence et de sécurité pour vos
+            systèmes d&apos;intelligence artificielle.
           </p>
         </div>
 
@@ -75,7 +81,7 @@ export default function Hero() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/signup"
+              href={SIGNUP_HREF.conformite_ia}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0080a3] text-white font-semibold text-lg px-8 py-4 rounded-full shadow-lg hover:bg-[#006280] hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
               onClick={handleHeroFreeTrialClick}
             >

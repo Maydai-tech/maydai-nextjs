@@ -95,7 +95,7 @@ describe('debug court → long (intégration pipeline)', () => {
     const afterMerge = simulateGetResponsesAfterMerge(saved.usecaseResponses, checklistsAfter)
     const scoreAfter = scoreShortPath(afterMerge.mergedRows, 'short')
 
-    // eslint-disable-next-line no-console
+     
     console.log('score_base avant/après contrôle humain:', scoreBefore.scoreBase, '→', scoreAfter.scoreBase)
 
     expect(scoreAfter.scoreBase).toBeGreaterThan(scoreBefore.scoreBase)

@@ -35,9 +35,58 @@ export const metadata: Metadata = {
   },
 }
 
+const auditIAActJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'MaydAI - Plateforme de conformité IA Act',
+  url: 'https://www.maydai.io/audit-ia-act',
+  applicationCategory: 'BusinessApplication',
+  browserRequirements: "Requires HTML5. Supporte l'expérience agentique.",
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'EUR',
+    description: "Version d'audit AI Act gratuit disponible pour les premiers cas d'usage.",
+  },
+  abstract:
+    "Réalisez votre Audit IA Act gratuit et évaluez la conformité de vos systèmes d'intelligence artificielle.",
+}
+
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: "Comment fonctionne l'audit IA Act gratuit de MaydAI ?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "L'audit IA Act gratuit vous permet de cartographier vos premiers systèmes d'intelligence artificielle et d'évaluer leur niveau de risque (faible, haut risque, interdit) selon les critères officiels du règlement européen.",
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Pourquoi faire un audit AI Act dès maintenant ?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Anticiper la réglementation européenne vous évite des sanctions lourdes et sécurise vos déploiements technologiques en définissant une feuille de route de conformité claire.',
+      },
+    },
+  ],
+}
+
 export default function AuditIAActRoutePage() {
   return (
-    <AuditIAActPage>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(auditIAActJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <AuditIAActPage>
       <section
         className="border-t border-gray-100 bg-gray-50/50 py-12 md:py-16 px-5 sm:px-6"
         aria-labelledby="audit-pricing-heading"
@@ -53,6 +102,7 @@ export default function AuditIAActRoutePage() {
           <PricingSummaryCard />
         </div>
       </section>
-    </AuditIAActPage>
+      </AuditIAActPage>
+    </>
   )
 }

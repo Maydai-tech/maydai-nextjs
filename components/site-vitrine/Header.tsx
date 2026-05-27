@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef, MouseEvent } from 'react';
 import { useAuth } from '@/lib/auth';
+import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs';
 
 export default function Header() {
   const { user, loading } = useAuth();
@@ -109,7 +110,7 @@ export default function Header() {
             <>
               <Link href="/login" className="px-5 py-2 rounded-lg font-normal text-sm transition text-primary">Connexion</Link>
               <Link
-                href="/signup"
+                href={SIGNUP_HREF.navbar_header}
                 className="px-5 py-2 rounded-lg font-semibold shadow transition text-white"
                 style={{ backgroundColor: '#ffab5a' }}
                 onMouseEnter={(e) => handleButtonHover(e, '#e6995a')}
@@ -243,7 +244,7 @@ export default function Header() {
                     Connexion
                   </Link>
                   <Link
-                    href="/signup"
+                    href={SIGNUP_HREF.navbar_header}
                     className="block w-full px-5 py-3 rounded-lg font-semibold shadow transition text-center text-white"
                     style={{ backgroundColor: '#ffab5a' }}
                     onMouseEnter={(e) => handleButtonHover(e, '#e6995a')}
