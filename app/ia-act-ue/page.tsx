@@ -33,10 +33,30 @@ export const metadata: Metadata = {
 };
 
 export default function IAActUEPage() {
+  const articleJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'TechArticle',
+    headline: "Qu'est-ce que l'IA Act UE ? Le guide complet du règlement européen",
+    description:
+      "Comprendre le règlement européen sur l'intelligence artificielle (IA Act UE). Analyse des niveaux de risques, obligations de conformité, modèles GPAI et sanctions financières.",
+    url: 'https://www.maydai.io/ia-act-ue',
+    inLanguage: 'fr-FR',
+    mainEntityOfPage: 'https://www.maydai.io/ia-act-ue',
+    publisher: {
+      '@type': 'Organization',
+      name: 'MaydAI',
+      url: 'https://www.maydai.io',
+    },
+  }
+
   return (
     <div className="bg-white">
       <Header />
       <main>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+        />
         <div className="container mx-auto px-4 py-8 sm:py-16">
           <div className="max-w-7xl mx-auto">
             {/* Layout avec sidebar */}
@@ -45,7 +65,7 @@ export default function IAActUEPage() {
               <aside className="hidden lg:block w-80 flex-shrink-0">
                 <div className="sticky top-8">
                   <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">Table des matières</h3>
+                    <p className="text-lg font-bold text-gray-900 mb-4">Table des matières</p>
                     <nav className="space-y-2">
                       <a href="#introduction" className="block text-sm text-gray-600 hover:text-[#0080a3] hover:bg-white rounded-lg px-3 py-2 transition-colors">
                         Introduction
@@ -98,9 +118,9 @@ export default function IAActUEPage() {
 
                   {/* Section Introduction */}
                   <section id="introduction" className="mb-12">
-                    <h2 className="text-3xl font-bold text-[#0080a3] mb-6">L&apos;AI Act : Le Gardien des principes éthiques dans le royaume débridés des IA(s)</h2>
+                    <h2 className="text-3xl font-bold text-[#0080a3] mb-6">L&apos;AI Act : Le Gardien des principes éthiques, le cadre réglementaire du marché européen</h2>
                     <p className="text-lg leading-relaxed mb-6">
-                      Ah, l&apos;Intelligence Artificielle ! Cette étrange créature, fruit de nos calculs et de nos aspirations les plus folles, qui, tel un goliath numérique, s&apos;apprête à transformer nos vies profodémment. Mais comme tout pouvoir naissant, l&apos;IA charrie avec elle son lot de mystères et de dangers. C&apos;est ici qu&apos;intervient l&apos;AI Act, ce texte singulier né du cerveau collectif européen, unique au monde en son genre, pour veiller au grain. Il n&apos;est pas question de brider l&apos;ingéniosité, mais de s&apos;assurer que notre âme, nos libertés, notre bonne vieille démocratie ne finissent pas en pâture algorithmique. C&apos;est l&apos;Europe qui, la première, ose regarder cette énigme en face, avec un mélange de sagesse et de cette pointe de mélancolie clairvoyante propre à ceux qui ont déjà vu quelques soleils se coucher.
+                      L&apos;<strong>IA Act UE</strong> (ou règlement européen sur l&apos;intelligence artificielle) est le premier cadre juridique complet au monde visant à encadrer le développement et le déploiement des systèmes d&apos;IA. Adopté par l&apos;Union européenne, ce texte classe les technologies selon quatre niveaux de risque et impose des obligations de transparence strictes pour garantir une IA éthique et sécurisée, sous peine de sanctions financières lourdes.
                     </p>
                   </section>
 
@@ -108,10 +128,10 @@ export default function IAActUEPage() {
                   <section id="coeur-reacteur" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/risk.png" alt="Risque" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="font-bold text-[17px] text-[#0080a3] mb-0">La Classification par Risques : Le Cœur du Réacteur</h2>
+                      <h2 className="font-bold text-[17px] text-[#0080a3] mb-0">La Classification par Risques : Une approche proportionnée</h2>
                     </div>
                     <p>
-                      L&apos;AI Act fonctionne comme une pyramide à quatre niveaux, chacun avec ses propres règles et obligations. Cette approche basée sur les risques permet d&apos;adapter les exigences à la criticité réelle des systèmes d&apos;IA.
+                      L&apos;IA Act s&apos;appuie sur une classification stricte en quatre niveaux de risque. Cette approche proportionnée permet d&apos;adapter les exigences de conformité à la criticité réelle des cas d&apos;usage et à leur impact potentiel sur les droits fondamentaux.
                     </p>
                     <ul className="list-disc pl-6 mt-4 space-y-2">
                       <li><strong>Risque Inacceptable :</strong> Systèmes interdits (manipulation comportementale, exploitation des vulnérabilités)</li>
@@ -133,52 +153,52 @@ export default function IAActUEPage() {
                   <section id="poesie-droit" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/target.png" alt="Objectif" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Objectifs et Principes : La Poésie du Droit</h2>
+                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Principes cardinaux de la gouvernance de l&apos;IA</h2>
                     </div>
                     <p className="text-lg leading-relaxed mb-8">
-                      L&apos;AI Act, ce n&apos;est pas seulement un carcan législatif ; c&apos;est une déclaration d&apos;intention, un poème juridique en six strophes, pour une IA à visage humain.
+                      Le cadre réglementaire européen définit six principes fondamentaux devant guider tout le cycle de vie des systèmes d&apos;intelligence artificielle :
                     </p>
 
                     <div className="space-y-8">
                       <div>
-                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Action et Contrôle Humain : Le Serviteur, non le Maître</h3>
+                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Contôle et supervision humaine</h3>
                         <p className="leading-relaxed text-gray-800">
-                          L&apos;IA doit rester un outil, au service de l&apos;homme, respectant sa dignité et son autonomie. Pas de marionnettes numériques, s&apos;il vous plaît !
+                          L&apos;IA doit être conçue comme un outil d&apos;assistance, maintenant l&apos;humain au centre de la validation et des décisions critiques.
                         </p>
                       </div>
 
                       <div>
-                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Robustesse Technique et Sécurité : La Cybersécurité, nouveau Cheval de Bataille</h3>
+                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Robustesse technique et Sécurité</h3>
                         <p className="leading-relaxed text-gray-800">
-                          Les systèmes doivent être infaillibles, résilients, et se prémunir contre les mauvaises intentions. On ne veut pas d&apos;une IA qui trébuche ou qui se laisse corrompre.
+                          Les architectures doivent être résilientes face aux pannes, aux erreurs de calcul et aux tentatives de cyberattaques.
                         </p>
                       </div>
 
                       <div>
-                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Respect de la Vie Privée et Gouvernance des Données : Le Gardien du Secret</h3>
+                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Gestion des données et Vie privée</h3>
                         <p className="leading-relaxed text-gray-800">
-                          Vos données sont précieuses. L&apos;IA doit les traiter avec déférence, les choyer, et n&apos;utiliser que des informations d&apos;une qualité irréprochable.
+                          Les jeux de données d&apos;entraînement doivent faire l&apos;objet d&apos;une gouvernance stricte, en totale conformité avec le RGPD.
                         </p>
                       </div>
 
                       <div>
-                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Transparence : Le Besoin de Confiance Exacerbé</h3>
+                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Transparence et Explicabilité</h3>
                         <p className="leading-relaxed text-gray-800">
-                          Que l&apos;IA nous dise ce qu&apos;elle fait, comment elle le fait. Pas de zones d&apos;ombre, pas de boîtes noires mystérieuses. On veut savoir à qui l&apos;on parle.
+                          Les boîtes noires sont proscrites. Les utilisateurs doivent être informés lorsqu&apos;ils interagissent avec une IA, et la logique des décisions doit être traçable.
                         </p>
                       </div>
 
                       <div>
-                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Diversité, Non-discrimination et Équité : Le Refus du Préjugé</h3>
+                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Équité et Non-discrimination</h3>
                         <p className="leading-relaxed text-gray-800">
-                          L&apos;IA ne doit pas reproduire nos vieilles bêtises humaines, nos discriminations, nos biais. Elle doit être le reflet de notre meilleure nature, et non de nos défauts.
+                          Les algorithmes doivent être optimisés pour identifier, minimiser et corriger les biais discriminatoires.
                         </p>
                       </div>
 
                       <div>
-                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Bien-être Sociétal et Environnemental : La Sentinelle d&apos;un Avenir plus Serein</h3>
+                        <h3 className="text-xl font-semibold text-[#0080a3] mb-4">Responsabilité environnementale et sociétale</h3>
                         <p className="leading-relaxed text-gray-800">
-                          L&apos;IA se doit d&apos;être une amie de la planète, durable, respectueuse, et œuvrant pour le bien de tous. Une vision à long terme, pour que l&apos;humanité ne se réveille pas un jour avec la gueule de bois.
+                          Le déploiement des modèles doit s&apos;inscrire dans une démarche de durabilité (Green IT) en évaluant leur empreinte carbone.
                         </p>
                       </div>
                     </div>
@@ -188,10 +208,13 @@ export default function IAActUEPage() {
                   <section id="applicabilite" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/compass-icon.png" alt="Boussole" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Applicabilité et Portée : Qui est Concerné ?</h2>
+                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Champ d&apos;application territorial et exemptions</h2>
                     </div>
                     <p className="text-lg leading-relaxed">
-                      Ce règlement a la vue large, balayant les frontières. Que vous soyez à Paris ou à l&apos;autre bout du monde, si votre IA touche un citoyen européen, l&apos;AI Act vous regarde. C&apos;est une portée universelle, à l&apos;image des rêves les plus audacieux. Mais comme toute règle, il y a des exceptions, des recoins où la loi ne s&apos;aventure pas, pour l&apos;instant : l&apos;IA militaire, la recherche pure, l&apos;usage strictement personnel (car notre jardin secret reste inviolable), et les systèmes en &quot;open source&quot; – à moins qu&apos;ils ne deviennent trop… menaçants.
+                      L&apos;IA Act adopte une portée extraterritoriale : tout fournisseur, distributeur ou déployeur de solutions IA est soumis au texte dès lors que son système est mis sur le marché ou utilisé au sein de l&apos;Union européenne, indépendamment de son lieu d&apos;établissement géographique.
+                      <br />
+                      <br />
+                      Les seules exemptions explicites concernent les systèmes d&apos;IA développés exclusivement à des fins militaires, de défense nationale ou de recherche scientifique fondamentale. Les modèles open-source bénéficient d&apos;allègements, sauf s&apos;ils présentent un risque systémique.
                     </p>
                   </section>
 
@@ -199,10 +222,10 @@ export default function IAActUEPage() {
                   <section id="gpai" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/technology.png" alt="Technologie" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Les Modèles GPAI : Les Géants sous Surveillance</h2>
+                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Régulation des modèles d&apos;IA à usage général (GPAI)</h2>
                     </div>
                     <p className="text-lg leading-relaxed">
-                      L&apos;AI Act a vu venir les grands modèles linguistiques (LLM), ces monstres polymorphes capables de tout et de rien. Pour eux, des règles spécifiques : documentation claire, transparence sur leurs capacités et leurs limites, et surtout, respect du droit d&apos;auteur. Pas question de piller les chefs-d&apos;œuvre sans vergogne ! Les modèles les plus puissants, ceux qui ont un &quot;risque systémique&quot;, sont soumis à un examen plus approfondi, sous l&apos;œil vigilant du nouveau Bureau de l&apos;IA, ce chef d&apos;orchestre des intelligences naissantes.
+                      Le texte encadre de manière spécifique les grands modèles de langage (LLM) et les modèles de fondation. Ces systèmes généralistes doivent fournir une documentation technique transparente, respecter le droit d&apos;auteur européen et publier un résumé clair des données utilisées pour leur entraînement. Les modèles les plus puissants, qualifiés à &quot;risque systémique&quot;, font l&apos;objet d&apos;audits et de rapports obligatoires sous la supervision directe du Bureau européen de l&apos;IA.
                     </p>
                   </section>
 
@@ -210,10 +233,13 @@ export default function IAActUEPage() {
                   <section id="gouvernance" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/withdraw.png" alt="Sanction" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">La Gouvernance et les Sanctions : La Main de Fer dans le Gant de Soie</h2>
+                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Autorités de contrôle et barème des sanctions</h2>
                     </div>
                     <p className="text-lg leading-relaxed">
-                      L&apos;Europe a mis en place une double sentinelle. Au niveau national, chaque État membre veille au grain. Au niveau de l&apos;Union, le Bureau européen de l&apos;IA, né en février 2024, surveille les plus puissants. Et pour ceux qui s&apos;aviseraient de ne pas jouer le jeu, les sanctions sont salées : jusqu&apos;à 35 millions d&apos;euros ou 7% du chiffre d&apos;affaires mondial pour les fautes les plus graves. De quoi faire réfléchir les plus audacieux.
+                      La conformité est surveillée à double échelle. Au niveau national, chaque État membre désigne ses propres autorités de contrôle. Au niveau de l&apos;Union, le Bureau européen de l&apos;IA centralise la régulation des technologies transverses.
+                      <br />
+                      <br />
+                      Le barème des sanctions en cas d&apos;infraction est hautement dissuasif : les violations des pratiques interdites peuvent entraîner des amendes administratives allant jusqu&apos;à 35 millions d&apos;euros ou 7% du chiffre d&apos;affaires mondial annuel global de l&apos;entreprise.
                     </p>
                     <div className="mt-6 text-center">
                       <a 
@@ -229,10 +255,10 @@ export default function IAActUEPage() {
                   <section id="bacs-a-sable" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/sandbox.png" alt="Bac à sable" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Les Bacs à Sable Réglementaires : Le Laboratoire de l&apos;Avenir</h2>
+                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Bacs à sable réglementaires : Stimuler l&apos;innovation</h2>
                     </div>
                     <p className="text-lg leading-relaxed">
-                      Pour éviter de brider la créativité, l&apos;AI Act a prévu des &quot;bacs à sable réglementaires&quot;. Des espaces protégés où l&apos;IA peut grandir, expérimenter, et se perfectionner, sous le regard bienveillant de la loi. Une sorte de jardin d&apos;enfants pour intelligences artificielles, pour qu&apos;elles apprennent à être sages avant de se jeter dans la grande mare aux requins.
+                      Afin de préserver la compétitivité et de soutenir les start-ups, l&apos;IA Act impose la création de bacs à sable réglementaires (regulatory sandboxes) au niveau national. Ces environnements d&apos;expérimentation sécurisés permettent aux entreprises de tester leurs innovations en conditions réelles sous la supervision bienveillante des régulateurs, facilitant leur mise en conformité avant commercialisation.
                     </p>
                   </section>
 
@@ -240,18 +266,18 @@ export default function IAActUEPage() {
                   <section id="defis" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/level-up.png" alt="Défi" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Défis et Impacts : L&apos;Art de l&apos;Équilibre</h2>
+                      <h2 className="text-3xl font-bold text-[#0080a3] mb-0">Défis opérationnels et perspectives d&apos;avenir</h2>
                     </div>
                     <p className="text-lg leading-relaxed">
-                      Certes, l&apos;AI Act est une avancée majeure. Mais le chemin est encore semé d&apos;embûches. Il faudra interpréter, affiner, inventer de nouveaux outils pour mesurer l&apos;ineffable, comme l&apos;explicabilité ou la corrigibilité de l&apos;IA. Les modèles actuels, avec leurs imperfections, nous rappellent que l&apos;IA a encore beaucoup à apprendre de l&apos;humanité. Cet Acte, en somme, est un appel à la dignité, un effort pour que l&apos;IA, cette créature de nos mains, ne finisse pas par nous échapper, mais devienne, un jour, une amie de l&apos;homme.
+                      L&apos;application de l&apos;IA Act implique des transformations opérationnelles profondes pour l&apos;écosystème tech. Standardiser et mesurer des critères complexes tels que l&apos;explicabilité algorithmique ou la traçabilité des données d&apos;entraînement reste un défi technique. L&apos;enjeu pour les organisations est de transformer cette contrainte légale en un actif stratégique, garantissant la confiance de leurs utilisateurs et la durabilité de leurs solutions.
                     </p>
                   </section>
 
                   {/* Call to Action */}
                   <div className="text-center mt-16 p-8 bg-gradient-to-r from-[#0080a3]/10 to-blue-50 rounded-2xl">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                    <p className="text-2xl font-bold text-gray-900 mb-4">
                       Prêt à naviguer dans l&apos;univers de l&apos;IA Act ?
-                    </h3>
+                    </p>
                     <p className="text-gray-600 mb-6">
                       Découvrez nos outils pour vous accompagner dans votre démarche de conformité
                     </p>
