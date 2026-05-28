@@ -13,6 +13,8 @@ const publicPages = [
   '/ia-act-ue',
   '/ia-act-ue/calendrier',
   '/ia-act-ue/risques',
+  '/conformite-ia',
+  '/impact-environnemental',
   '/politique-confidentialite',
   '/tarifs',
   '/audit-ia-act',
@@ -22,7 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Pages statiques du site vitrine
   const staticPages = publicPages.map((page) => ({
     url: `${baseUrl}${page}`,
-    lastModified: new Date(),
+    lastModified: getLastModified(page),
     changeFrequency: getChangeFrequency(page),
     priority: getPriority(page),
   }))
@@ -49,6 +51,10 @@ function getChangeFrequency(path: string): 'always' | 'hourly' | 'daily' | 'week
       return 'weekly' // Page d'accueil mise à jour régulièrement
     case '/contact':
       return 'monthly' // Informations de contact stables
+    case '/audit-ia-act':
+    case '/conformite-ia':
+    case '/impact-environnemental':
+      return 'weekly' // Pages de conversion, contenu susceptible d'évoluer souvent
     case '/ia-act-ue':
     case '/ia-act-ue/calendrier':
     case '/ia-act-ue/risques':
@@ -74,6 +80,9 @@ function getPriority(path: string): number {
     case '/tarifs':
     case '/fonctionnalites':
       return 0.9 // Pages importantes pour la conversion
+    case '/conformite-ia':
+    case '/impact-environnemental':
+      return 0.9 // Pages de conversion majeures
     case '/a-propos':
     case '/ia-act-ue':
     case '/audit-ia-act':
@@ -87,4 +96,15 @@ function getPriority(path: string): number {
     default:
       return 0.5
   }
-} 
+}
+
+function getLastModified(path: string): Date {
+  switch (path) {
+    case '/audit-ia-act':
+    case '/conformite-ia':
+    case '/impact-environnemental':
+      return new Date('2026-05-28')
+    default:
+      return new Date()
+  }
+}
