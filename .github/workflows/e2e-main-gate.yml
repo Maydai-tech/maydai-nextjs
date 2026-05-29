@@ -1,0 +1,20 @@
+name: E2E Main Gate
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  e2e:
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.ref == 'preprod'
+    uses: ./.github/workflows/e2e-reusable.yml
+    with:
+      base_url: 'https://preprod.maydai.io'
+      ref: ${{ github.event.pull_request.head.sha }}
+      use_bypass: true
+      grep_tag: '@prod'
+      grep_invert: '@nightly-only'
+      blocking: true
+      regime_label: main-gate
+    secrets: inherit
