@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { getAdminClient } from './_helpers/supabase-admin'
-import { seedV2Usecase, cleanupTestData, type V2TestData } from './_helpers/v2-test-data'
+import { getAdminClient } from '../_helpers/supabase-admin'
+import { seedV2Usecase, cleanupTestData, type V2TestData } from '../_helpers/v2-test-data'
 
 /**
  * Parcours V3 long cohérent avec {@link app/usecases/[id]/utils/questionnaire-v3-graph.ts} :
@@ -39,7 +39,7 @@ const V3_STANDARD_CHECKLIST_GOV_ENTERPRISE = [
   'E5.N9.Q3.B',
 ] as const
 
-test.describe.skip('Moteur de calcul — cas standard V3 (non éliminatoire)', () => {
+test.describe.skip('Moteur de calcul — cas standard V3 (non éliminatoire)', { tag: ['@prod'] }, () => {
   test('doit produire score_base > 0 et is_eliminated false via API @API @Scoring', async ({
     request,
   }) => {

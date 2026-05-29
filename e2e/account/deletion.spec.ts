@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { authenticateUser } from '@/e2e/auth-helper'
-import { getAdminClient } from './_helpers/supabase-admin'
-import { seedV2Usecase, cleanupTestData, type V2TestData } from './_helpers/v2-test-data'
+import { getAdminClient } from '../_helpers/supabase-admin'
+import { seedV2Usecase, cleanupTestData, type V2TestData } from '../_helpers/v2-test-data'
 
 const baseUrl = (process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000').replace(/\/$/, '')
 
-test.describe.skip('Account deletion (Settings › Zone de danger)', () => {
+test.describe.skip('Account deletion (Settings › Zone de danger)', { tag: ['@prod'] }, () => {
   const supabaseAdmin = getAdminClient()
   let ctx: V2TestData
   // Dossiers / fichiers Storage créés manuellement par un test (nettoyage best-effort)
