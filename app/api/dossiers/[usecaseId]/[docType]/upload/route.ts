@@ -8,10 +8,8 @@ import {
 } from "@/lib/todo-action-sync";
 import { recordUseCaseHistory } from "@/lib/usecase-history";
 import {
-  coalesceTrainingDocumentRows,
   getAcceptedDossierApiDocTypeParams,
   resolveCanonicalDocType,
-  trainingDocTypesForQuery,
 } from "@/lib/canonical-actions";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -57,10 +55,6 @@ const allowedFormats: Record<
   continuous_monitoring: {
     extensions: [".pdf", ".docx"],
     description: "Documents (.pdf, .docx)",
-  },
-  training_census: {
-    extensions: [".pdf", ".docx", ".xlsx"],
-    description: "Documents (.pdf, .docx, .xlsx)",
   },
   stopping_proof: {
     extensions: [".pdf", ".png", ".jpg", ".jpeg"],
@@ -161,7 +155,7 @@ export async function PUT(
       );
     }
 
-    // Validate file extension (règles du type canonique, ex. training_census → training_plan)
+    // Validate file extension (règles du type canonique)
     const formatKey = allowedFormats[docType] ? docType : storageDocType;
     if (allowedFormats[formatKey]) {
       const fileExtension = filename
@@ -298,13 +292,12 @@ export async function PUT(
       "storageDocType:",
       storageDocType,
     );
-    const trainingQ =
-      storageDocType === "training_plan" ? [...trainingDocTypesForQuery()] : null;
-    const { data: existingRows, error: existingDocError } = await supabase
+    const { data: existingDoc, error: existingDocError } = await supabase
       .from("dossier_documents")
       .select("id, status, doc_type, updated_at")
       .eq("dossier_id", dossierId)
-      .in("doc_type", trainingQ ?? [storageDocType]);
+      .eq("doc_type", storageDocType)
+      .maybeSingle();
 
     if (existingDocError) {
       console.error(
@@ -312,10 +305,6 @@ export async function PUT(
         existingDocError,
       );
     }
-    const existingDoc =
-      trainingQ && existingRows && existingRows.length > 0
-        ? coalesceTrainingDocumentRows(existingRows)
-        : existingRows?.[0] ?? null;
 
     console.log("[PUT /upload] Existing document:", existingDoc);
 
@@ -365,17 +354,15 @@ export async function PUT(
     // Sync questionnaire puis recalcul centralisé du score
     let scoreChange = null;
 
-    const todoMapping = getTodoActionMapping(storageDocType);
-    if (todoMapping) {
-      console.log("[PUT /upload] Found todo_action mapping for docType:", storageDocType);
+    const syncResult = await syncTodoActionToResponse(
+      supabase,
+      usecaseId,
+      storageDocType,
+      user.email || user.id
+    );
 
-      await syncTodoActionToResponse(
-        supabase,
-        usecaseId,
-        storageDocType,
-        user.email || user.id
-      );
-
+    if (syncResult.shouldRecalculate) {
+      const todoMapping = getTodoActionMapping(storageDocType);
       const scoreRecalc = await recalculateDossierUseCaseScore(
         supabase,
         usecaseId,
@@ -388,10 +375,10 @@ export async function PUT(
           previousScore: scoreRecalc.previousScore,
           newScore: scoreRecalc.newScore,
           pointsGained: scoreRecalc.pointsGained,
-          reason: todoMapping.reason,
+          reason: todoMapping?.reason ?? "Document de conformite ajoute",
         };
         console.log("[PUT /upload] Score recalculated via calculate-score:", scoreChange);
-      } else {
+      } else if (scoreRecalc === null) {
         console.error("[PUT /upload] Score recalculation failed after todo sync");
       }
     }
@@ -461,18 +448,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    const trainingQ =
-      storageDocType === "training_plan" ? [...trainingDocTypesForQuery()] : null;
-    const { data: docRows } = await supabase
+    const { data: doc } = await supabase
       .from("dossier_documents")
       .select("id, file_url, form_data, status, doc_type")
       .eq("dossier_id", dossier.id)
-      .in("doc_type", trainingQ ?? [storageDocType]);
-
-    let doc = docRows?.[0] ?? null;
-    if (trainingQ && docRows && docRows.length > 0) {
-      doc = coalesceTrainingDocumentRows(docRows);
-    }
+      .eq("doc_type", storageDocType)
+      .maybeSingle();
 
     if (!doc || (!doc.file_url && !doc.form_data)) {
       return NextResponse.json(
@@ -532,15 +513,15 @@ export async function DELETE(
     if (previousStatus === "complete" || previousStatus === "validated") {
       console.log("[DELETE /upload] Document was", previousStatus, "- reversing score for docType:", storageDocType);
 
-      const todoMapping = getTodoActionMapping(storageDocType);
-      if (todoMapping) {
-        await reverseTodoActionResponse(
-          supabase,
-          usecaseId,
-          storageDocType,
-          user.email || user.id,
-        );
+      const reverseResult = await reverseTodoActionResponse(
+        supabase,
+        usecaseId,
+        storageDocType,
+        user.email || user.id,
+      );
 
+      if (reverseResult.shouldRecalculate) {
+        const todoMapping = getTodoActionMapping(storageDocType);
         const scoreRecalc = await recalculateDossierUseCaseScore(
           supabase,
           usecaseId,
@@ -553,10 +534,13 @@ export async function DELETE(
             previousScore: scoreRecalc.previousScore,
             newScore: scoreRecalc.newScore,
             pointsGained: scoreRecalc.pointsGained,
-            reason: todoMapping.reason,
+            reason:
+              reverseResult.reason ||
+              todoMapping?.reason ||
+              "Document de conformite reinitialise",
           };
           console.log("[DELETE /upload] Score recalculated via calculate-score after reset:", scoreChange);
-        } else {
+        } else if (scoreRecalc === null) {
           console.error("[DELETE /upload] Score recalculation failed after todo reverse");
         }
       }

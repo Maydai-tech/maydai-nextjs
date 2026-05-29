@@ -107,17 +107,17 @@ describe('Score Calculator', () => {
       const responses: UserResponse[] = [
         {
           question_code: 'E4.N7.Q2',
-          multiple_codes: ['E4.N7.Q2.B'], // -30 impact (E4.N7.Q2.A est éliminatoire — utiliser B pour ce cas)
+          multiple_codes: ['E4.N7.Q2.B'], // -18 impact compressé (E4.N7.Q2.A est éliminatoire — utiliser B)
         },
         {
           question_code: 'E4.N8.Q2',
-          single_value: 'E4.N8.Q2.A', // -5 impact
+          single_value: 'E4.N8.Q2.A', // -3 impact compressé
         },
       ];
       const result = calculateBaseScore(responses);
-      expect(result.score_base).toBe(BASE_SCORE - 30 - 5); // 90 - 30 - 5 = 55
+      expect(result.score_base).toBe(BASE_SCORE - 18 - 3); // 90 - 21 = 69
       expect(result.is_eliminated).toBe(false);
-      expect(result.calculation_details.total_impact).toBe(-35);
+      expect(result.calculation_details.total_impact).toBe(-21);
     });
 
     it('should handle eliminatory responses', () => {
@@ -133,17 +133,17 @@ describe('Score Calculator', () => {
       expect(result.elimination_reason).toContain('Identification biométrique');
     });
 
-    it('should not go below 0 for non-eliminated cases', () => {
+    it('should not go below 1 for non-eliminated cases', () => {
       const responses: UserResponse[] = [
         {
           question_code: 'E4.N7.Q2',
-          multiple_codes: ['E4.N7.Q2.B', 'E4.N7.Q2.C', 'E4.N7.Q2.D'], // -90 total impact (3 × -30, sans E4.N7.Q2.A éliminatoire)
+          multiple_codes: ['E4.N7.Q2.B', 'E4.N7.Q2.C', 'E4.N7.Q2.D'], // -54 total impact (3 × -18, sans E4.N7.Q2.A éliminatoire)
         },
       ];
       const result = calculateBaseScore(responses);
-      expect(result.score_base).toBe(0); // Can't go below 0
+      expect(result.score_base).toBe(36); // Plancher défensif : max(1, 90 - 54)
       expect(result.is_eliminated).toBe(false);
-      expect(result.calculation_details.total_impact).toBe(-90);
+      expect(result.calculation_details.total_impact).toBe(-54);
     });
 
     it('should handle mixed response types', () => {
@@ -154,11 +154,11 @@ describe('Score Calculator', () => {
         },
         {
           question_code: 'E4.N8.Q9',
-          single_value: 'E4.N8.Q9.A', // -3 human_oversight
+          single_value: 'E4.N8.Q9.A', // -2 (compressé)
         },
         {
           question_code: 'E4.N8.Q11.M1',
-          single_value: 'E4.N8.Q11.M1.A', // -3 social_environmental
+          single_value: 'E4.N8.Q11.M1.A', // -2 (compressé)
         },
         {
           question_code: 'E5.N9.Q6',
@@ -168,7 +168,7 @@ describe('Score Calculator', () => {
         },
       ];
       const result = calculateBaseScore(responses);
-      expect(result.score_base).toBe(BASE_SCORE - 6); // 90 - 6 = 84
+      expect(result.score_base).toBe(BASE_SCORE - 4); // 90 - 4 = 86
       expect(result.is_eliminated).toBe(false);
     });
 
@@ -180,11 +180,11 @@ describe('Score Calculator', () => {
         },
         {
           question_code: 'E4.N8.Q2',
-          single_value: 'E4.N8.Q2.A', // -5 impact
+          single_value: 'E4.N8.Q2.A', // -3 impact compressé
         },
       ];
       const result = calculateBaseScore(responses);
-      expect(result.score_base).toBe(BASE_SCORE - 5); // Should only apply known impact
+      expect(result.score_base).toBe(BASE_SCORE - 3); // Should only apply known impact
     });
 
     it('should handle responses with no impact', () => {

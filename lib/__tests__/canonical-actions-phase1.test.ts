@@ -7,8 +7,8 @@ import {
 describe('canonical-actions phase 1 — alias & API', () => {
   test('resolveLegacyDocTypeAlias aligné sur les alias prioritaires', () => {
     expect(resolveLegacyDocTypeAlias('registry_action')).toBe('registry_proof')
-    expect(resolveLegacyDocTypeAlias('training_census')).toBe('training_plan')
     expect(resolveLegacyDocTypeAlias('registry_proof')).toBe('registry_proof')
+    expect(resolveLegacyDocTypeAlias('training_plan')).toBe('training_plan')
   })
 
   test('getAcceptedDossierApiDocTypeParams inclut canoniques + clés alias', () => {
@@ -16,7 +16,6 @@ describe('canonical-actions phase 1 — alias & API', () => {
     expect(s.has('registry_proof')).toBe(true)
     expect(s.has('registry_action')).toBe(true)
     expect(s.has('training_plan')).toBe(true)
-    expect(s.has('training_census')).toBe(true)
   })
 })
 

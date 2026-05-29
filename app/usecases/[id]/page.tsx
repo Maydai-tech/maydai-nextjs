@@ -76,7 +76,7 @@ function UseCaseOverviewSections({
     ? useCase.active_question_codes.filter((c): c is string => typeof c === 'string')
     : []
 
-  const { slotStatuses } = useQuestionnaireSlotStatuses(
+  const { slotStatuses, questionnaireResponses } = useQuestionnaireSlotStatuses(
     useCase.id,
     Boolean(useCase.id && nextSteps && !isUnacceptableCase),
     {
@@ -509,6 +509,8 @@ function UseCaseOverviewSections({
                     maydaiAsRegistry={maydaiAsRegistry}
                     companyId={useCase.company_id}
                     useCaseId={useCaseId}
+                    questionnaireResponses={questionnaireResponses}
+                    path_mode={useCase.path_mode}
                     riskLevel={riskLevel}
                     classificationStatus={classificationStatus}
                   />

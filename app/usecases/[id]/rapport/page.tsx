@@ -705,6 +705,7 @@ function UseCaseRapportMainContent({
                   companyId={useCase.company_id}
                   useCaseId={useCaseId}
                   questionnaireResponses={questionnaireResponses}
+                  path_mode={useCase?.path_mode}
                   riskLevel={riskLevel}
                   classificationStatus={classificationStatus}
                 />

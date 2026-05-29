@@ -37,6 +37,7 @@ interface UseCase {
   score_final?: number | null
   deployment_date?: string | null
   questionnaire_version?: string | number | null
+  path_mode?: string | null
   checklist_gov_enterprise?: string[] | null
   checklist_gov_usecase?: string[] | null
 }
@@ -387,8 +388,9 @@ export default function TodoListPage({ params }: TodoListPageProps) {
       const registryCase = determineRegistryCase(useCase)
       const effectiveRegistryCase: 'A' | 'B' | 'C' = registryCase
       const registryCompleted = isRegistryTodoCompleted(useCase.id, effectiveRegistryCase)
-      const registryPotentialPoints = getPotentialPoints('registry_proof', responses)
-      const registryEarnedPoints = getEarnedPoints('registry_proof', responses, registryCompleted)
+      const pathMode = useCase.path_mode ?? undefined
+      const registryPotentialPoints = getPotentialPoints('registry_proof', responses, pathMode)
+      const registryEarnedPoints = getEarnedPoints('registry_proof', responses, registryCompleted, pathMode)
       todos.push({
         id: `${useCase.id}-registry`,
         text: getRegistryTodoTitleForCase(effectiveRegistryCase),
@@ -407,8 +409,8 @@ export default function TodoListPage({ params }: TodoListPageProps) {
         const docStatus = useCaseDocs[docType]
         const completed = isTodoCompleted(docStatus)
         // Calculate potential points (if action not done) or earned points (if action done)
-        const potentialPoints = getPotentialPoints(docType, responses)
-        const earnedPoints = getEarnedPoints(docType, responses, completed)
+        const potentialPoints = getPotentialPoints(docType, responses, pathMode)
+        const earnedPoints = getEarnedPoints(docType, responses, completed, pathMode)
         todos.push({
           id: `${useCase.id}-${docType}`,
           text: getDocumentTodoText(docType),
@@ -470,6 +472,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
           ...prev,
           [useCaseId]: newStatus
         }))
+        router.refresh()
       } else {
         console.warn('[TODO] No document data returned')
       }
@@ -485,6 +488,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
         }
       }))
       console.log('[TODO] Set optimistic completion status')
+      router.refresh()
     }
 
     // Also refresh company data in case maydai_as_registry was updated
@@ -497,7 +501,7 @@ export default function TodoListPage({ params }: TodoListPageProps) {
     } catch (err) {
       console.error('[TODO] Error refetching company:', err)
     }
-  }, [api, companyId])
+  }, [api, companyId, router])
 
   const showTodoV3Orientation = useMemo(
     () =>
@@ -703,6 +707,8 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                                     maydaiAsRegistry={company?.maydai_as_registry === true}
                                     hasRegistryProofDocument={registryProofStatuses[todo.useCaseId]?.hasDocument || false}
                                     onDocumentUploaded={() => handleDocumentUploaded(todo.useCaseId)}
+                                    pathMode={useCase.path_mode}
+                                    questionnaireResponses={useCaseResponses[todo.useCaseId] ?? []}
                                   />
                                 ) : (
                                   <ToDoAction
@@ -710,8 +716,8 @@ export default function TodoListPage({ params }: TodoListPageProps) {
                                     isExpanded={expandedTodos[todo.id] || false}
                                     onToggle={toggleTodo}
                                     onActionClick={useCaseId => handleTodoClick(useCaseId, todo.docType)}
-                                    potentialPoints={todo.potentialPoints}
-                                    earnedPoints={todo.earnedPoints}
+                                    pathMode={useCase.path_mode}
+                                    questionnaireResponses={useCaseResponses[todo.useCaseId] ?? []}
                                   />
                                 )}
                               </div>

@@ -108,7 +108,7 @@ function getReasonForTodoAction(todoAction: string): string {
     registry_action: 'Preuve de registre ajoutee',
     human_oversight: 'Surveillance humaine mise en place',
     training_plan: 'Formations AI Act documentees',
-    training_census: 'Formations AI Act documentees',
+    system_prompt: 'Instructions systeme et garde-fous documentes',
   }
   return reasons[todoAction] || 'Document de conformite ajoute'
 }
@@ -127,7 +127,7 @@ function getReasonForTodoActionReset(todoAction: string): string {
     registry_action: 'Preuve de registre reintialisee',
     human_oversight: 'Surveillance humaine reintialisee',
     training_plan: 'Formations AI Act reintialisees',
-    training_census: 'Formations AI Act reintialisees',
+    system_prompt: 'Instructions systeme et garde-fous reinitialises',
   }
   return reasons[todoAction] || 'Document de conformite reinitialise'
 }

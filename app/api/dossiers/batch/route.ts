@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import {
-  coalesceTrainingDocumentRows,
   getAcceptedDossierApiDocTypeParams,
   resolveCanonicalDocType,
-  trainingDocTypesForQuery,
 } from '@/lib/canonical-actions'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -115,16 +113,9 @@ export async function GET(request: NextRequest) {
     // Get all dossier IDs
     const dossierIds = accessibleDossiers.map((d: any) => d.id)
 
-    const expandedDocTypeSet = new Set<string>()
-    for (const dt of docTypes) {
-      const c = resolveCanonicalDocType(dt)
-      if (c === 'training_plan') {
-        trainingDocTypesForQuery().forEach(t => expandedDocTypeSet.add(t))
-      } else {
-        expandedDocTypeSet.add(c)
-      }
-    }
-    const expandedDocTypes = [...expandedDocTypeSet]
+    const expandedDocTypes = [
+      ...new Set(docTypes.map((dt) => resolveCanonicalDocType(dt))),
+    ]
 
     // Fetch all documents in one query
     const { data: documents } = await supabase
@@ -157,14 +148,7 @@ export async function GET(request: NextRequest) {
 
       for (const docType of docTypes) {
         const canonical = resolveCanonicalDocType(docType)
-        let doc: any = null
-        if (canonical === 'training_plan') {
-          const a = documentMap.get(`${usecaseId}:training_plan`)
-          const b = documentMap.get(`${usecaseId}:training_census`)
-          doc = coalesceTrainingDocumentRows([a, b].filter(Boolean))
-        } else {
-          doc = documentMap.get(`${usecaseId}:${canonical}`) ?? null
-        }
+        const doc = documentMap.get(`${usecaseId}:${canonical}`) ?? null
 
         const st = doc?.status ?? 'incomplete'
         const status: 'incomplete' | 'complete' | 'validated' =

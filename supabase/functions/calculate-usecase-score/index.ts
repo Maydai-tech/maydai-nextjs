@@ -2,20 +2,22 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import QUESTIONS_DATA from './questions-data.json' assert { type: 'json' };
 
-// ===== CONSTANTES =====
-// Score de départ pour tous les cas d'usage
-// Répartition 2/3 (Questionnaire) - 1/3 (Modèle LLM)
-const BASE_SCORE = 100;
-// Multiplicateur pour convertir le score COMPL-AI (0-1) en score sur 50
-// 5 principes × 10 points = 50 points max
-const COMPL_AI_MULTIPLIER = 50;
-// Poids du score de base dans le calcul final
-const BASE_SCORE_WEIGHT = 100;
-// Poids du score modèle dans le calcul final
+// ===== CONSTANTES (miroir lib/score-calculator-simple.ts) =====
+/** Score de départ questionnaire — plafond sans modèle COMPL-AI. */
+const BASE_SCORE = 90;
+/** Plafond score_base sans contribution modèle (alias explicite). */
+const MAX_WITHOUT_COMPL_AI = BASE_SCORE;
+/** Convertit la moyenne COMPL-AI (0–1) en score brut modèle (0–20). */
+const COMPL_AI_MULTIPLIER = 20;
+/** Poids appliqué au score modèle brut : brut × 2,5 → contribution max 50. */
+const COMPL_AI_WEIGHT = 2.5;
+/** Poids questionnaire dans le dénominateur final (sur 150). */
+const BASE_SCORE_WEIGHT = 90;
+/** Poids emplacement modèle dans le dénominateur final (sur 150). */
 const MODEL_SCORE_WEIGHT = 50;
-// Marge fixe pour le calcul final (actuellement 0)
+/** Marge fixe pour le calcul final (actuellement 0). */
 const MARGIN_SCORE = 0;
-// Poids total pour le calcul final
+/** Dénominateur score_final : (score_base + score_model × 2,5) / TOTAL_WEIGHT × 100. */
 const TOTAL_WEIGHT = 150;
 
 // ===== FONCTIONS UTILITAIRES =====
@@ -186,18 +188,16 @@ Deno.serve(async (req) => {
       }
     }
     // ===== ÉTAPE 7: CALCUL DU SCORE FINAL =====
-    // Formule : ((Score_base + Score_model + Marge) / 150) * 100
-    // Exemple: base 60, modèle 40.25, marge 0 → ((60 + 40.25 + 0) / 150) * 100 = 66.83%
+    // Formule : ((score_base + score_model_brut × 2,5) / TOTAL_WEIGHT) × 100
+    // Exemple: base 60, modèle brut 15 → ((60 + 15 × 2,5) / 150) × 100 = 65%
     let finalScore = 0;
     
     if (baseScoreResult.is_eliminated) {
       // Si éliminé, le score final est toujours 0
       finalScore = 0;
     } else {
-      // Calculer le score brut (score_base + model_score + marge)
-      const scoreBrut = baseScoreResult.score_base + (modelScore || 0) + MARGIN_SCORE;
-      
-      // Formule finale : (score_brut / 150) * 100
+      const modelContribution = (modelScore || 0) * COMPL_AI_WEIGHT;
+      const scoreBrut = baseScoreResult.score_base + modelContribution + MARGIN_SCORE;
       finalScore = (scoreBrut / TOTAL_WEIGHT) * 100;
     }
     
@@ -239,8 +239,8 @@ Deno.serve(async (req) => {
         model_score: modelScore !== null ? roundToTwoDecimals(modelScore) : null,
         model_percentage: modelScore !== null ? roundToTwoDecimals(modelScore / COMPL_AI_MULTIPLIER * 100) : null,
         has_model_score: hasValidModelScore,
-        formula_used: hasValidModelScore && modelScore !== null 
-          ? `((${baseScoreResult.score_base} + (${roundToTwoDecimals(modelScore / COMPL_AI_MULTIPLIER * 100)}% * ${MODEL_SCORE_WEIGHT})) / ${TOTAL_WEIGHT}) * 100`
+        formula_used: hasValidModelScore && modelScore !== null
+          ? `((${baseScoreResult.score_base} + ${roundToTwoDecimals(modelScore)} × ${COMPL_AI_WEIGHT}) / ${TOTAL_WEIGHT}) * 100`
           : `((${baseScoreResult.score_base} + 0) / ${TOTAL_WEIGHT}) * 100`,
         weights: {
           base_score_weight: BASE_SCORE_WEIGHT,
@@ -362,7 +362,7 @@ function calculateBaseScore(input: {
     }
   }
 
-  const finalScore = isEliminated ? 0 : Math.max(0, BASE_SCORE + totalImpact);
+  const finalScore = isEliminated ? 0 : Math.max(1, BASE_SCORE + totalImpact);
 
   return {
     score_base: finalScore,

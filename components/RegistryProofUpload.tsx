@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { X, Loader2, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
@@ -20,6 +21,7 @@ export default function RegistryProofUpload({
   onUploadComplete,
   onClose
 }: RegistryProofUploadProps) {
+  const router = useRouter()
   const { getAccessToken } = useAuth()
   const { plan } = useUserPlan()
   const [uploading, setUploading] = useState(false)
@@ -104,6 +106,7 @@ export default function RegistryProofUpload({
       })
 
       if (res.ok) {
+        router.refresh()
         // Upload succeeded - show success and close
         setUploadSuccess(true)
 
@@ -149,6 +152,7 @@ export default function RegistryProofUpload({
       })
 
       if (res.ok) {
+        router.refresh()
         // Refresh document data
         const getRes = await fetch(`/api/dossiers/${usecaseId}/registry_proof`, {
           headers: { Authorization: `Bearer ${token}` }

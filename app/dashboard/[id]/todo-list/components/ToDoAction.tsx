@@ -1,7 +1,13 @@
 'use client'
 
+import { useMemo } from 'react'
 import { CheckSquare, Square, ChevronRight, ChevronDown, CheckCircle2, TrendingUp, Check } from 'lucide-react'
-import { getDocumentExplanation, type DocumentType } from '../utils/todo-helpers'
+import {
+  getDocumentExplanation,
+  getPotentialPoints,
+  getEarnedPoints,
+  type DocumentType,
+} from '../utils/todo-helpers'
 import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
 
 interface TodoItem {
@@ -19,8 +25,9 @@ interface ToDoActionProps {
   isExpanded: boolean
   onToggle: (todoId: string) => void
   onActionClick: (useCaseId: string) => void
-  potentialPoints?: number
-  earnedPoints?: number
+  /** Parcours actif du cas d’usage — dénominateur badge 140 (short) vs 150. */
+  pathMode?: string | null
+  questionnaireResponses?: unknown[]
 }
 
 export default function ToDoAction({
@@ -28,11 +35,19 @@ export default function ToDoAction({
   isExpanded,
   onToggle,
   onActionClick,
-  potentialPoints,
-  earnedPoints
+  pathMode,
+  questionnaireResponses = [],
 }: ToDoActionProps) {
-  const p = potentialPoints ?? 0
-  const e = earnedPoints ?? 0
+  const p = useMemo(
+    () => getPotentialPoints(todo.docType, questionnaireResponses, pathMode),
+    [todo.docType, questionnaireResponses, pathMode]
+  )
+  const e = useMemo(
+    () => getEarnedPoints(todo.docType, questionnaireResponses, todo.completed, pathMode),
+    [todo.docType, questionnaireResponses, todo.completed, pathMode]
+  )
+  const showRecoverableBadge = p > 0
+  const showEarnedBadge = e > 0
 
   return (
     <div className="space-y-2">
@@ -73,8 +88,8 @@ export default function ToDoAction({
           </span>
         )}
 
-        {/* Points malus récupérable — aligné questionnaire (pas de forfait) */}
-        {!todo.completed && p > 0 ? (
+        {/* Règle 6.3 : pas de badge si gain ≤ 0 */}
+        {!todo.completed && showRecoverableBadge ? (
           <span
             className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full flex-shrink-0"
             title={DECLARATION_PROOF_FLOW_COPY.todoPointsToRecoverTitle}
@@ -83,7 +98,7 @@ export default function ToDoAction({
             +{p} pt à récupérer
           </span>
         ) : null}
-        {todo.completed && e > 0 ? (
+        {todo.completed && showEarnedBadge ? (
           <span
             className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-600 text-white text-xs font-semibold rounded-full flex-shrink-0"
             title={DECLARATION_PROOF_FLOW_COPY.todoPointsRecoveredTitle}
@@ -101,7 +116,7 @@ export default function ToDoAction({
             {DECLARATION_PROOF_FLOW_COPY.todoValidatedBadge}
           </span>
         ) : null}
-        {todo.completed && e === 0 && p > 0 ? (
+        {todo.completed && !showEarnedBadge && showRecoverableBadge ? (
           <span
             className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-900 text-xs font-semibold rounded-full border border-amber-200 flex-shrink-0"
             title={DECLARATION_PROOF_FLOW_COPY.todoPointsToRecoverTitle}

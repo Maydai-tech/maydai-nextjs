@@ -22,12 +22,16 @@ for (const key of REPORT_STANDARD_SLOT_KEYS_ORDERED) {
  * @param actionKey - La clé de l'action (ex: 'quick_win_1', 'priorite_1')
  * @param responses - Réponses questionnaire du cas (défaut : tableau vide → 0 si pas de mapping malus)
  */
-export function getActionPoints(actionKey: string, responses: unknown[] = []): number {
+export function getActionPoints(
+  actionKey: string,
+  responses: unknown[] = [],
+  path_mode?: string | null
+): number {
   const docType = ACTION_TO_DOCTYPE[actionKey]
 
   if (!docType) return 0
 
-  return getPotentialPoints(docType, responses as any[])
+  return getPotentialPoints(docType, responses as any[], path_mode)
 }
 
 /**
@@ -42,10 +46,14 @@ export function getActionTitle(actionKey: string): string {
  * @param actionKey - La clé de l'action
  * @returns Un objet contenant le titre, les points et le type de document
  */
-export function getActionMetadata(actionKey: string, responses?: unknown[]) {
+export function getActionMetadata(
+  actionKey: string,
+  responses?: unknown[],
+  path_mode?: string | null
+) {
   return {
     title: getActionTitle(actionKey),
-    points: getActionPoints(actionKey, responses),
+    points: getActionPoints(actionKey, responses, path_mode),
     docType: ACTION_TO_DOCTYPE[actionKey] || '',
   }
 }

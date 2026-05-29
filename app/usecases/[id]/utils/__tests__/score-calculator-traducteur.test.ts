@@ -279,7 +279,7 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
 
       // Vérifie quelques impacts spécifiques
       const q7Impact = result.score_breakdown.find(b => b.question_id === 'E5.N9.Q7')
-      expect(q7Impact?.score_impact).toBe(-5)
+      expect(q7Impact?.score_impact).toBe(-4)
 
       const q12Impact = result.score_breakdown.find(b => b.question_id === 'E4.N8.Q12')
       expect(q12Impact?.score_impact).toBe(-3)
@@ -287,7 +287,7 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
   })
 
   describe('Validation des impacts mis à jour', () => {
-    test('E5.N9.Q7 NON should have -5 impact (was -10)', async () => {
+    test('E5.N9.Q7 NON should have -4 impact (compressé, ex. -7)', async () => {
       const responses = [
         { question_code: 'E5.N9.Q7', single_value: 'E5.N9.Q7.A', multiple_codes: null, conditional_main: null }
       ]
@@ -295,10 +295,10 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
       const result = await calculateScore(mockUsecaseId, responses)
       const breakdown = result.score_breakdown.find(b => b.question_id === 'E5.N9.Q7')
 
-      expect(breakdown?.score_impact).toBe(-5)
+      expect(breakdown?.score_impact).toBe(-4)
     })
 
-    test('E5.N9.Q4 NON should have -4 impact (human oversight)', async () => {
+    test('E5.N9.Q4 NON should have -5 impact (human oversight, compressé)', async () => {
       const responses = [
         { question_code: 'E5.N9.Q4', single_value: 'E5.N9.Q4.B', multiple_codes: null, conditional_main: null }
       ]
@@ -306,10 +306,10 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
       const result = await calculateScore(mockUsecaseId, responses)
       const breakdown = result.score_breakdown.find(b => b.question_id === 'E5.N9.Q4')
 
-      expect(breakdown?.score_impact).toBe(-4)
+      expect(breakdown?.score_impact).toBe(-5)
     })
 
-    test('E4.N8.Q12 NON should have -3 impact (governance)', async () => {
+    test('E4.N8.Q12 NON should have -3 impact (governance, compressé)', async () => {
       const responses = [
         { question_code: 'E4.N8.Q12', single_value: 'E4.N8.Q12.A', multiple_codes: null, conditional_main: null }
       ]
@@ -320,7 +320,7 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
       expect(breakdown?.score_impact).toBe(-3)
     })
 
-    test('E6.N10.Q1 NON should have -5 impact (transparency)', async () => {
+    test('E6.N10.Q1 NON should have -2 impact (transparency, compressé)', async () => {
       const responses = [
         { question_code: 'E6.N10.Q1', single_value: 'E6.N10.Q1.A', multiple_codes: null, conditional_main: null }
       ]
@@ -328,7 +328,7 @@ describe.skip('Score Calculator - Cas Traducteur (validation CSV)', () => {
       const result = await calculateScore(mockUsecaseId, responses)
       const breakdown = result.score_breakdown.find(b => b.question_id === 'E6.N10.Q1')
 
-      expect(breakdown?.score_impact).toBe(-5)
+      expect(breakdown?.score_impact).toBe(-2)
     })
   })
 })

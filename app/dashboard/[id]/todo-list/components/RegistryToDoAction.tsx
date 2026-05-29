@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   CheckSquare,
@@ -17,6 +17,7 @@ import {
 import RegistryProofUpload from '@/components/RegistryProofUpload'
 import RegistreMaydaiBadge from '@/app/dashboard/[id]/components/RegistreMaydaiBadge'
 import { getRegistryTodoHelpExplanation } from '@/lib/canonical-actions'
+import { getPotentialPoints, getEarnedPoints } from '../utils/todo-helpers'
 import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
 
 interface TodoItem {
@@ -39,6 +40,8 @@ interface RegistryToDoActionProps {
   onDocumentUploaded?: () => void
   maydaiAsRegistry?: boolean
   hasRegistryProofDocument?: boolean
+  pathMode?: string | null
+  questionnaireResponses?: unknown[]
 }
 
 export default function RegistryToDoAction({
@@ -48,12 +51,22 @@ export default function RegistryToDoAction({
   companyId,
   onDocumentUploaded,
   maydaiAsRegistry = false,
-  hasRegistryProofDocument = false
+  hasRegistryProofDocument = false,
+  pathMode,
+  questionnaireResponses = [],
 }: RegistryToDoActionProps) {
   const router = useRouter()
   const [showUploadModal, setShowUploadModal] = useState(false)
-  const p = todo.potentialPoints ?? 0
-  const e = todo.earnedPoints ?? 0
+  const p = useMemo(
+    () => getPotentialPoints('registry_proof', questionnaireResponses, pathMode),
+    [questionnaireResponses, pathMode]
+  )
+  const e = useMemo(
+    () => getEarnedPoints('registry_proof', questionnaireResponses, todo.completed, pathMode),
+    [questionnaireResponses, todo.completed, pathMode]
+  )
+  const showRecoverableBadge = p > 0
+  const showEarnedBadge = e > 0
 
   // Navigate to registry settings
   const handleGoToSettings = () => {
@@ -207,7 +220,7 @@ export default function RegistryToDoAction({
           {todo.actionNumber ? `${todo.actionNumber}. ${todo.text}` : todo.text}
         </span>
 
-        {!todo.completed && p > 0 ? (
+        {!todo.completed && showRecoverableBadge ? (
           <span
             className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full flex-shrink-0"
             title={DECLARATION_PROOF_FLOW_COPY.todoPointsToRecoverTitle}
@@ -216,7 +229,7 @@ export default function RegistryToDoAction({
             +{p} pt à récupérer
           </span>
         ) : null}
-        {todo.completed && e > 0 ? (
+        {todo.completed && showEarnedBadge ? (
           <span
             className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-600 text-white text-xs font-semibold rounded-full flex-shrink-0"
             title={DECLARATION_PROOF_FLOW_COPY.todoPointsRecoveredTitle}
@@ -234,7 +247,7 @@ export default function RegistryToDoAction({
             {DECLARATION_PROOF_FLOW_COPY.todoValidatedBadge}
           </span>
         ) : null}
-        {todo.completed && e === 0 && p > 0 ? (
+        {todo.completed && !showEarnedBadge && showRecoverableBadge ? (
           <span
             className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-900 text-xs font-semibold rounded-full border border-amber-200 flex-shrink-0"
             title={DECLARATION_PROOF_FLOW_COPY.todoPointsToRecoverTitle}
