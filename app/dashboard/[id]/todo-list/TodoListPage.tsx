@@ -16,6 +16,7 @@ import {
   getRiskLevelDisplayConfig,
   getPotentialPoints,
   getEarnedPoints,
+  mergeResponsesWithChecklists,
   COMPLIANCE_DOCUMENT_TYPES,
   getUnacceptableActionDocTypesOrdered,
   type DocumentType
@@ -184,7 +185,11 @@ export default function TodoListPage({ params }: TodoListPageProps) {
               const responsesResult = await api.get(`/api/usecases/${uc.id}/responses`)
               return {
                 id: uc.id,
-                data: responsesResult.data || []
+                data: mergeResponsesWithChecklists(
+                  responsesResult.data || [],
+                  uc.checklist_gov_enterprise,
+                  uc.checklist_gov_usecase
+                ),
               }
             } catch (err) {
               console.error(`Error fetching responses for ${uc.id}:`, err)

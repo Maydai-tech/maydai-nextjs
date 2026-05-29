@@ -259,20 +259,31 @@ export async function PUT(
 
     // If maydai_as_registry was updated, synchronize all use case responses for question E5.N9.Q7
     let useCasesUpdated = 0
+    let registryScoresRecalculated = 0
     if (maydai_as_registry !== undefined) {
+      const proto = request.headers.get('x-forwarded-proto') ?? 'http'
+      const host = request.headers.get('host') ?? 'localhost:3000'
+      const scoreRecalcBaseUrl = `${proto}://${host}`
+
       const syncResult = await updateUseCaseRegistryResponses(
         companyId,
         maydai_as_registry,
         user.email || 'unknown',
-        supabase
+        supabase,
+        {
+          scoreRecalcToken: token,
+          scoreRecalcBaseUrl,
+        }
       )
 
       if (syncResult.success) {
         useCasesUpdated = syncResult.updatedCount
+        registryScoresRecalculated = syncResult.scoresRecalculated
         logger.info('Use case registry responses synchronized', {
           ...context,
           companyId,
           useCasesUpdated,
+          registryScoresRecalculated,
           maydaiAsRegistry: maydai_as_registry
         })
       } else {
@@ -287,7 +298,8 @@ export async function PUT(
 
     return NextResponse.json({
       ...updatedCompany,
-      useCasesUpdated
+      useCasesUpdated,
+      registryScoresRecalculated,
     })
 
   } catch (error) {

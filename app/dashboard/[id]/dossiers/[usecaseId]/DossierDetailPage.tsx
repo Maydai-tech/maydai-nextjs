@@ -425,6 +425,8 @@ export default function DossierDetailPage() {
             setInitialSupervisorData(supervisorData)
           }
         }
+
+        router.refresh()
       }
     } catch (error) {
       console.error('Error saving text:', error)
@@ -508,6 +510,8 @@ export default function DossierDetailPage() {
           const data = await getRes.json()
           setDocuments({ ...documents, [docType]: data })
         }
+
+        router.refresh()
       } else {
         const errorData = await res.json().catch(() => ({ error: 'Unknown error' }))
         console.error('Upload error:', errorData)
