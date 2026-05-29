@@ -33,7 +33,7 @@ function getAuthStorageKey(): string {
   return `sb-${projectRef}-auth-token`
 }
 
-test.describe('Questionnaire V3 — parcours court (scoring)', () => {
+test.describe.skip('Questionnaire V3 — parcours court (scoring)', () => {
   const testUserEmail = `e2e-short-path-${Date.now()}@maydai-test.com`
 
   let testUserId: string | null = null

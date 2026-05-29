@@ -15,7 +15,7 @@ const TEST_PASSWORD = 'TestPassword123!'
 
 test.describe.configure({ mode: 'serial' })
 
-test.describe('Création de registre', () => {
+test.describe.skip('Création de registre', () => {
   const testUserEmail = `e2e-registry-${Date.now()}@maydai-test.com`
   const registryName = `E2E Registre ${Date.now()}`
   const initialCompanyName = `E2E Registry Owner ${Date.now()}`

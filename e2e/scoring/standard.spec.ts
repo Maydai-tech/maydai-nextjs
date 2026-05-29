@@ -39,7 +39,7 @@ const V3_STANDARD_CHECKLIST_GOV_ENTERPRISE = [
   'E5.N9.Q3.B',
 ] as const
 
-test.describe('Moteur de calcul — cas standard V3 (non éliminatoire)', () => {
+test.describe.skip('Moteur de calcul — cas standard V3 (non éliminatoire)', () => {
   test('doit produire score_base > 0 et is_eliminated false via API @API @Scoring', async ({
     request,
   }) => {

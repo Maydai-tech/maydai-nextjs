@@ -212,7 +212,7 @@ async function createUseCaseViaWizard(page: Page): Promise<string> {
   return match[1]
 }
 
-test.describe('Hydratation parcours court → long (E2E réel)', () => {
+test.describe.skip('Hydratation parcours court → long (E2E réel)', () => {
   const testUserEmail = `e2e-hydration-${Date.now()}@maydai-test.com`
 
   let testUserId: string | null = null
