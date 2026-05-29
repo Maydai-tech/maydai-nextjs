@@ -3,7 +3,6 @@ import {
   calculateFinalScore,
   getSelectedCodes,
   findQuestionOption,
-  roundToTwoDecimals,
   BASE_SCORE,
   COMPL_AI_MULTIPLIER,
   COMPL_AI_WEIGHT,
@@ -14,15 +13,6 @@ import {
 } from './score-calculator-simple';
 
 describe('Score Calculator', () => {
-  describe('roundToTwoDecimals', () => {
-    it('should round numbers to 2 decimal places', () => {
-      expect(roundToTwoDecimals(15.666)).toBe(15.67);
-      expect(roundToTwoDecimals(15.664)).toBe(15.66);
-      expect(roundToTwoDecimals(15)).toBe(15);
-      expect(roundToTwoDecimals(15.1)).toBe(15.1);
-    });
-  });
-
   describe('getSelectedCodes', () => {
     it('should extract single value from radio response', () => {
       const response: UserResponse = {
@@ -247,8 +237,8 @@ describe('Score Calculator', () => {
       const modelScore = 20; // raw score: 20/20 = 100%, contribution: 20 × 2.5 = 50
       const result = calculateFinalScore(baseResult, modelScore, 'test-123');
 
-      // Formula: (60 + 20 × 2.5) / 150 * 100 = (60 + 50) / 150 * 100 = 73.33%
-      expect(result.scores.score_final).toBe(73.33);
+      // Formula: (60 + 20 × 2.5) / 150 * 100 = (60 + 50) / 150 * 100 ≈ 73%
+      expect(result.scores.score_final).toBe(73);
       expect(result.calculation_details.model_percentage).toBe(100);
     });
 
@@ -292,8 +282,8 @@ describe('Score Calculator', () => {
       };
 
       const result = calculateFinalScore(maxBaseResult, 20, 'test-123'); // 20 = max raw model score
-      // Formula: (90 + 20 × 2.5) / 150 * 100 = (90 + 50) / 150 * 100 = 93.33%
-      expect(result.scores.score_final).toBe(93.33);
+      // Formula: (90 + 20 × 2.5) / 150 * 100 = (90 + 50) / 150 * 100 ≈ 93%
+      expect(result.scores.score_final).toBe(93);
     });
 
     it('should include correct formula in details', () => {
@@ -330,8 +320,8 @@ describe('Score Calculator', () => {
       const modelScore = 12.07; // 60.4% × 20 = 12.08 ≈ 12.07
       const result = calculateFinalScore(spreadsheetBaseResult, modelScore, 'test-spreadsheet');
 
-      // Formula: (90 + 12.07 × 2.5) / 150 * 100 = (90 + 30.175) / 150 * 100 = 80.12%
-      expect(result.scores.score_final).toBe(80.12);
+      // Formula: (90 + 12.07 × 2.5) / 150 * 100 = (90 + 30.175) / 150 * 100 ≈ 80%
+      expect(result.scores.score_final).toBe(80);
       expect(result.scores.score_base).toBe(90);
       expect(result.scores.score_model).toBe(12.07);
     });

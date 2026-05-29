@@ -1,5 +1,6 @@
 import { getListRiskBadgeStyle } from '@/lib/classification-risk-display'
 import { getTodoActionMappings, type TodoActionMapping } from '@/lib/todo-action-sync'
+import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
 import { normalizeScoreTo100 } from '@/lib/score-calculator-simple'
 import {
   resolveCanonicalDocType,
@@ -135,6 +136,26 @@ function responseIncludesCode(response: { single_value?: unknown; conditional_ma
   if (response.conditional_main === code) return true
   if (Array.isArray(response.multiple_codes) && response.multiple_codes.includes(code)) return true
   return false
+}
+
+/**
+ * Fusionne les lignes `usecase_responses` avec `checklist_gov_*` (aligné GET /api/usecases/.../responses).
+ */
+export function mergeResponsesWithChecklists(
+  responses: Array<{ question_code?: string; single_value?: unknown; multiple_codes?: unknown; conditional_main?: unknown }>,
+  checklist_gov_enterprise?: string[] | null,
+  checklist_gov_usecase?: string[] | null
+): Array<{ question_code?: string; single_value?: unknown; multiple_codes?: unknown; conditional_main?: unknown }> {
+  return mergeChecklistIntoDbResponseRows(
+    responses.map((r) => ({
+      question_code: r.question_code ?? '',
+      single_value: typeof r.single_value === 'string' ? r.single_value : null,
+      multiple_codes: Array.isArray(r.multiple_codes) ? r.multiple_codes : null,
+      conditional_main: typeof r.conditional_main === 'string' ? r.conditional_main : null,
+    })),
+    checklist_gov_enterprise,
+    checklist_gov_usecase
+  )
 }
 
 function isPositiveForMapping(response: { single_value?: unknown; conditional_main?: unknown; multiple_codes?: unknown } | undefined, mapping: TodoActionMapping): boolean {

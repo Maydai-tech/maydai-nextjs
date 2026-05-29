@@ -23,14 +23,6 @@ const TOTAL_WEIGHT = 150;
 // ===== FONCTIONS UTILITAIRES =====
 
 /**
- * Arrondit un nombre à 2 décimales
- * Exemple: 15.666 devient 15.67
- */
-function roundToTwoDecimals(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-/**
  * Crée une réponse d'erreur standardisée
  */
 function createErrorResponse(message: string, status: number, corsHeaders: any) {
@@ -208,9 +200,9 @@ Deno.serve(async (req) => {
     const { error: updateError } = await supabase
       .from('usecases')
       .update({
-        score_base: baseScoreResult.score_base,
-        score_model: modelScore !== null ? roundToTwoDecimals(modelScore) : null,
-        score_final: roundToTwoDecimals(finalScore),
+        score_base: Math.round(baseScoreResult.score_base),
+        score_model: modelScore !== null ? Math.round(modelScore) : null,
+        score_final: Math.round(finalScore),
         is_eliminated: baseScoreResult.is_eliminated,
         elimination_reason: baseScoreResult.elimination_reason,
         risk_level: riskLevel,
@@ -228,19 +220,20 @@ Deno.serve(async (req) => {
       success: true,
       usecase_id,
       scores: {
-        score_base: baseScoreResult.score_base,
-        score_model: modelScore !== null ? roundToTwoDecimals(modelScore) : null,
-        score_final: roundToTwoDecimals(finalScore),
+        score_base: Math.round(baseScoreResult.score_base),
+        score_model: modelScore !== null ? Math.round(modelScore) : null,
+        score_final: Math.round(finalScore),
         is_eliminated: baseScoreResult.is_eliminated,
         elimination_reason: baseScoreResult.elimination_reason
       },
       calculation_details: {
         ...baseScoreResult.calculation_details,
-        model_score: modelScore !== null ? roundToTwoDecimals(modelScore) : null,
-        model_percentage: modelScore !== null ? roundToTwoDecimals(modelScore / COMPL_AI_MULTIPLIER * 100) : null,
+        model_score: modelScore !== null ? modelScore : null,
+        model_percentage:
+          modelScore !== null ? Math.round((modelScore / COMPL_AI_MULTIPLIER) * 100) : null,
         has_model_score: hasValidModelScore,
         formula_used: hasValidModelScore && modelScore !== null
-          ? `((${baseScoreResult.score_base} + ${roundToTwoDecimals(modelScore)} × ${COMPL_AI_WEIGHT}) / ${TOTAL_WEIGHT}) * 100`
+          ? `((${baseScoreResult.score_base} + ${modelScore} × ${COMPL_AI_WEIGHT}) / ${TOTAL_WEIGHT}) * 100`
           : `((${baseScoreResult.score_base} + 0) / ${TOTAL_WEIGHT}) * 100`,
         weights: {
           base_score_weight: BASE_SCORE_WEIGHT,
