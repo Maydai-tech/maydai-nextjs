@@ -1,7 +1,7 @@
 import { UseCase } from '@/lib/supabase'
 import type { ReportCanonicalItem } from '@/lib/report-canonical-items'
 import type { CategoryScore } from '@/app/usecases/[id]/types/usecase'
-import type { ActivityHistoryItem, PdfDocumentItem } from '@/lib/validations/pdf.schema'
+import type { ActivityHistoryItem, PdfDocumentItem, PdfUseCase } from '@/lib/validations/pdf.schema'
 
 // Interface pour les prochaines étapes
 export interface UseCaseNextSteps {
@@ -54,7 +54,7 @@ export interface PDFReportData {
   pdfCtaBaseUrl?: string
   /** Plan d’action standard (9 items) — même logique que le rapport web (phase 5). Vide si cas inacceptable. */
   canonicalPlanItems?: ReportCanonicalItem[]
-  useCase: UseCase & {
+  useCase: UseCase & Pick<PdfUseCase, 'score_final' | 'score_model'> & {
     companies?: {
       id: string
       name: string
