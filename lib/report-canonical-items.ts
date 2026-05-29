@@ -190,6 +190,8 @@ export interface ReportItemCta {
   label: string
   /** Points malus / récupération (questionnaire) ; `undefined` = masquer la pastille (ex. déclaration OUI, preuve encore à compléter). */
   points: number | undefined
+  /** Ligne pré-calculée pour le PDF (règle 6.7 — synchronisation des points). */
+  pointsLine?: string | null
 }
 
 /**

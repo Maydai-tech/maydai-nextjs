@@ -119,6 +119,8 @@ export const DECLARATION_PROOF_FLOW_COPY = {
   todoValidatedBadge: 'Validé',
   /** PDF — ligne sous l’action lorsqu’il reste des points liés au questionnaire */
   reportPdfPointsToRecoverPrefix: 'Points à récupérer',
+  /** PDF — règle 6.7 : document complété dans le dossier, points synchronisés */
+  reportPdfPointsAcquiredPrefix: 'Acquis',
   /** PDF — action documentée sans créneau de récupération de score côté questionnaire */
   reportPdfValidatedNoPointsLine:
     'Validé : preuve documentée ; aucun point à récupérer sur cette action selon le questionnaire.',

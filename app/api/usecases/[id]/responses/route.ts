@@ -12,8 +12,24 @@ function normalizeStringArray(v: unknown): string[] {
   return v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
 }
 
+/** Fusionne les codes E6 entrants avec les codes non-E6 déjà persistés (ex. pivots E4.N7.*). */
+function mergeChecklistGovUsecaseKeys(
+  existing: unknown,
+  incomingE6Keys: string[]
+): string[] {
+  const preserved = normalizeStringArray(existing).filter((code) => !code.startsWith('E6.'))
+  return [...new Set([...preserved, ...normalizeStringArray(incomingE6Keys)])]
+}
+
 function isE4E5E6QuestionCode(code: string): boolean {
   return code.startsWith('E4.') || code.startsWith('E5.') || code.startsWith('E6.')
+}
+
+/** Pivot statut entreprise : persistance explicite dans `usecase_responses` (hors migration checklists). */
+const COMPANY_ROLE_PIVOT_QUESTION_CODE = 'E4.N7.Q1'
+
+function isMigratedOffUsecaseResponsesQuestionCode(code: string): boolean {
+  return isE4E5E6QuestionCode(code) && code !== COMPANY_ROLE_PIVOT_QUESTION_CODE
 }
 
 /** Questions pivots AI Act à tracer dans `usecase_history` lors d'une modification. */
@@ -347,7 +363,7 @@ export async function POST(
     }
 
     // Migration E4/E5/E6 : ne plus persister ces blocs dans `usecase_responses`.
-    if (isE4E5E6QuestionCode(question_code)) {
+    if (isMigratedOffUsecaseResponsesQuestionCode(question_code)) {
       return NextResponse.json(
         {
           error:
@@ -431,7 +447,7 @@ export async function POST(
       const keys = normalizeStringArray(rawKeys)
       const { data: current, error: curErr } = await supabase
         .from('usecases')
-        .select('checklist_gov_enterprise')
+        .select('checklist_gov_enterprise, checklist_gov_usecase')
         .eq('id', usecaseId)
         .single()
       if (curErr) {
@@ -441,11 +457,12 @@ export async function POST(
         )
       }
       const nextEnt = normalizeStringArray(current?.checklist_gov_enterprise)
+      const mergedUc = mergeChecklistGovUsecaseKeys(current?.checklist_gov_usecase, keys)
       const { error: upErr } = await supabase
         .from('usecases')
         .update({
           checklist_gov_enterprise: nextEnt,
-          checklist_gov_usecase: keys,
+          checklist_gov_usecase: mergedUc,
           updated_at: new Date().toISOString(),
           updated_by: user.id,
         })
@@ -459,7 +476,7 @@ export async function POST(
       return NextResponse.json({
         updated: 'usecase_checklists',
         checklist_gov_enterprise: nextEnt,
-        checklist_gov_usecase: keys,
+        checklist_gov_usecase: mergedUc,
         checklist_field: 'usecase',
       })
     }
@@ -663,7 +680,7 @@ export async function PUT(
       }
 
       // Migration E4/E5/E6 : ne plus persister ces blocs dans `usecase_responses`.
-      if (isE4E5E6QuestionCode(question_code)) {
+      if (isMigratedOffUsecaseResponsesQuestionCode(question_code)) {
         continue
       }
 
@@ -734,7 +751,7 @@ export async function PUT(
         const keys = normalizeStringArray(rawKeys)
         const { data: current, error: curErr } = await supabase
           .from('usecases')
-          .select('checklist_gov_enterprise')
+          .select('checklist_gov_enterprise, checklist_gov_usecase')
           .eq('id', usecaseId)
           .single()
         if (curErr) {
@@ -742,11 +759,12 @@ export async function PUT(
           continue
         }
         const nextEnt = normalizeStringArray(current?.checklist_gov_enterprise)
+        const mergedUc = mergeChecklistGovUsecaseKeys(current?.checklist_gov_usecase, keys)
         const { error: upErr } = await supabase
           .from('usecases')
           .update({
             checklist_gov_enterprise: nextEnt,
-            checklist_gov_usecase: keys,
+            checklist_gov_usecase: mergedUc,
             updated_at: new Date().toISOString(),
             updated_by: user.id,
           })
@@ -756,7 +774,7 @@ export async function PUT(
             question_code,
             updated: 'usecase_checklists',
             checklist_gov_enterprise: nextEnt,
-            checklist_gov_usecase: keys,
+            checklist_gov_usecase: mergedUc,
           })
         }
         continue

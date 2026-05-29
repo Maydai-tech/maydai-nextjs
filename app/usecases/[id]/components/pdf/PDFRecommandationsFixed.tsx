@@ -12,6 +12,7 @@ import { resolveAuthoritativeRiskCodeForPdf } from './pdf-risk-logic'
 import { styles } from './styles'
 import { PDFFooter } from './PDFFooter'
 import { DECLARATION_PROOF_FLOW_COPY } from '@/lib/declaration-proof-flow-copy'
+import { cleanPdfUrls } from '@/lib/pdf-payload-service'
 
 interface PDFRecommandationsFixedProps {
   data: PDFReportData
@@ -20,6 +21,11 @@ interface PDFRecommandationsFixedProps {
 function absUrl(base: string | undefined, path: string): string {
   const b = (base || '').replace(/\/$/, '')
   return b ? `${b}${path}` : path
+}
+
+function pdfText(value: string | null | undefined): string {
+  if (!value) return ''
+  return cleanPdfUrls(value)
 }
 
 function PDFCanonicalItemBlock({
@@ -31,11 +37,13 @@ function PDFCanonicalItemBlock({
 }) {
   const todoLink = absUrl(baseUrl, item.cta.todoUrl)
   const dossierLink = absUrl(baseUrl, item.cta.dossierUrl)
-  const ctaLine = item.cta.ctaOmitted
-    ? 'Hors périmètre du questionnaire pour ce cas — aucune action en todo conformité n’est requise pour une question non posée.'
-    : item.cta.completed
-      ? `Mesure documentée dans le dossier du cas — ouvrir : ${dossierLink}`
-      : `Action à mener : ${item.cta.label} — Todo conformité : ${todoLink} — Dossier du cas : ${dossierLink}`
+  const ctaLine = cleanPdfUrls(
+    item.cta.ctaOmitted
+      ? 'Hors périmètre du questionnaire pour ce cas — aucune action en todo conformité n’est requise pour une question non posée.'
+      : item.cta.completed
+        ? `Mesure documentée dans le dossier du cas — ouvrir : ${dossierLink}`
+        : `Action à mener : ${item.cta.label} — Todo conformité : ${todoLink} — Dossier du cas : ${dossierLink}`
+  )
 
   return (
     <View style={{ marginBottom: 10 }} wrap>
@@ -44,17 +52,21 @@ function PDFCanonicalItemBlock({
         {evidenceStatusPdfLabel(item.evidence.status)}
       </Text>
       <Text style={[styles.text, { fontSize: 8, lineHeight: 1.35, marginBottom: 2 }]}>
-        Mesure (catalogue) : {item.identity.action_label}
+        Mesure (catalogue) : {pdfText(item.identity.action_label)}
       </Text>
       <Text style={[styles.text, { fontSize: 8, lineHeight: 1.35, marginBottom: 2 }]}>
-        Fondement : {item.legal.basis_primary}
+        Fondement : {pdfText(item.legal.basis_primary)}
       </Text>
       <Text style={[styles.text, { fontSize: 8, lineHeight: 1.35, marginBottom: 3, fontStyle: 'italic' }]}>
-        Gouvernance : {item.governance.rationale}
+        Gouvernance : {pdfText(item.governance.rationale)}
       </Text>
-      <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.35, marginBottom: 3 }]}>• {item.narrative.text}</Text>
+      <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.35, marginBottom: 3 }]}>
+        • {pdfText(item.narrative.text)}
+      </Text>
       <Text style={[styles.text, { fontSize: 8, lineHeight: 1.35, color: '#006280' }]}>{ctaLine}</Text>
-      {(item.cta.points ?? 0) > 0 ? (
+      {item.cta.pointsLine ? (
+        <Text style={[styles.text, { fontSize: 8, marginTop: 2 }]}>{pdfText(item.cta.pointsLine)}</Text>
+      ) : (item.cta.points ?? 0) > 0 ? (
         <Text style={[styles.text, { fontSize: 8, marginTop: 2 }]}>
           {DECLARATION_PROOF_FLOW_COPY.reportPdfPointsToRecoverPrefix} : +{item.cta.points} pt
         </Text>
@@ -84,8 +96,8 @@ function PDFCanonicalPlanGroup({
     <View style={[styles.cardWhite, { marginBottom: 15 }]}>
       {/* Séparation visuelle au-dessus du bloc (aligné avec le web) */}
       <View style={{ height: 2, backgroundColor: '#0080A3', marginBottom: 10 }} />
-      <Text style={[styles.subsectionTitle, { marginBottom: 8, fontSize: 12 }]}>{title}</Text>
-      <Text style={[styles.text, styles.italic, { marginBottom: 10, fontSize: 9 }]}>{subtitle}</Text>
+      <Text style={[styles.subsectionTitle, { marginBottom: 8, fontSize: 12 }]}>{pdfText(title)}</Text>
+      <Text style={[styles.text, styles.italic, { marginBottom: 10, fontSize: 9 }]}>{pdfText(subtitle)}</Text>
       <View style={styles.list}>
         {items.map(item => (
           <PDFCanonicalItemBlock key={item.identity.report_slot_key} item={item} baseUrl={baseUrl} />
@@ -102,6 +114,42 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
   const baseUrl = data.pdfCtaBaseUrl
   const groups = groupStandardPlanItemsByLegalCode(items)
   const [g0, g1, g2] = groups
+
+  const introductionText = pdfText(
+    data.nextSteps?.introduction ||
+      (() => {
+        const introBase = `${data.useCase.companies?.name || "L'entreprise"} a prévu de déployer le ${
+          data.useCase.deployment_date
+            ? new Date(data.useCase.deployment_date).toLocaleDateString('fr-FR')
+            : 'prochainement'
+        } ${data.useCase.name}, un produit basé sur l'IA classé dans les ${
+          data.useCase.ai_category || "systèmes d'IA"
+        }. Ce cas d'usage, géré par le service ${
+          data.useCase.responsible_service || 'le service concerné'
+        }, utilise différents modèles dont ${
+          data.useCase.compl_ai_models?.model_name || "un modèle d'IA"
+        } de ${
+          data.useCase.compl_ai_models?.model_provider || 'un fournisseur'
+        } pour ${data.useCase.description || 'automatiser diverses tâches'}. Le déploiement concernera ${
+          data.useCase.deployment_countries?.join(', ') || 'la France'
+        }, pays membre de l'Union européenne, ce qui soumet ce cas d'usage à l'AI Act.`
+        if (!riskNorm) {
+          return `${introBase} Aucun niveau de risque AI Act qualifié n'est indiqué dans ce document PDF (donnée absente). Consultez MaydAI après recalcul du score pour une classification fiable.`
+        }
+        return `${introBase} L'évaluation de conformité indique un niveau de risque ${getRiskLevelLabel(
+          riskNorm
+        )}, impliquant des obligations spécifiques en matière de transparence et de gestion des risques.`
+      })()
+  )
+
+  const evaluationText = pdfText(
+    data.nextSteps?.evaluation ||
+      (!riskNorm
+        ? `Le niveau de risque AI Act de ${data.useCase.name} ne peut pas être présenté dans ce rapport PDF faute de donnée qualifiée. Utilisez MaydAI après recalcul du score pour connaître la classification.`
+        : `Le niveau de risque de ${data.useCase.name} est classé comme ${getRiskLevelLabel(
+            riskNorm
+          )}. Cette évaluation repose sur l'analyse des réponses au questionnaire et des caractéristiques spécifiques du système d'IA. Les obligations réglementaires applicables dépendent de ce niveau de risque et des articles pertinents de l'AI Act.`)
+  )
 
   return (
     <>
@@ -122,30 +170,7 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
           <View style={[styles.cardWhite, { marginBottom: 15 }]}>
             <Text style={[styles.subsectionTitle, { marginBottom: 8, fontSize: 12 }]}>Introduction</Text>
             <Text style={[styles.text, { lineHeight: 1.4, fontSize: 9 }]}>
-              {data.nextSteps?.introduction ||
-                (() => {
-                  const introBase = `${data.useCase.companies?.name || "L'entreprise"} a prévu de déployer le ${
-                    data.useCase.deployment_date
-                      ? new Date(data.useCase.deployment_date).toLocaleDateString('fr-FR')
-                      : 'prochainement'
-                  } ${data.useCase.name}, un produit basé sur l'IA classé dans les ${
-                    data.useCase.ai_category || "systèmes d'IA"
-                  }. Ce cas d'usage, géré par le service ${
-                    data.useCase.responsible_service || 'le service concerné'
-                  }, utilise différents modèles dont ${
-                    data.useCase.compl_ai_models?.model_name || "un modèle d'IA"
-                  } de ${
-                    data.useCase.compl_ai_models?.model_provider || 'un fournisseur'
-                  } pour ${data.useCase.description || 'automatiser diverses tâches'}. Le déploiement concernera ${
-                    data.useCase.deployment_countries?.join(', ') || 'la France'
-                  }, pays membre de l'Union européenne, ce qui soumet ce cas d'usage à l'AI Act.`
-                  if (!riskNorm) {
-                    return `${introBase} Aucun niveau de risque AI Act qualifié n'est indiqué dans ce document PDF (donnée absente). Consultez MaydAI après recalcul du score pour une classification fiable.`
-                  }
-                  return `${introBase} L'évaluation de conformité indique un niveau de risque ${getRiskLevelLabel(
-                    riskNorm
-                  )}, impliquant des obligations spécifiques en matière de transparence et de gestion des risques.`
-                })()}
+              {introductionText}
             </Text>
           </View>
 
@@ -155,12 +180,7 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
               Évaluation du niveau de risque AI Act
             </Text>
             <Text style={[styles.text, { lineHeight: 1.4, fontSize: 9 }]}>
-              {data.nextSteps?.evaluation ||
-                (!riskNorm
-                  ? `Le niveau de risque AI Act de ${data.useCase.name} ne peut pas être présenté dans ce rapport PDF faute de donnée qualifiée. Utilisez MaydAI après recalcul du score pour connaître la classification.`
-                  : `Le niveau de risque de ${data.useCase.name} est classé comme ${getRiskLevelLabel(
-                      riskNorm
-                    )}. Cette évaluation repose sur l'analyse des réponses au questionnaire et des caractéristiques spécifiques du système d'IA. Les obligations réglementaires applicables dépendent de ce niveau de risque et des articles pertinents de l'AI Act.`)}
+              {evaluationText}
             </Text>
           </View>
 
@@ -175,16 +195,18 @@ export const PDFRecommandationsFixed: React.FC<PDFRecommandationsFixedProps> = (
               </Text>
               {data.nextSteps?.interdit_1 ? (
                 <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.35, marginBottom: 4 }]}>
-                  • {data.nextSteps.interdit_1}
+                  • {pdfText(data.nextSteps.interdit_1)}
                 </Text>
               ) : null}
               {data.nextSteps?.interdit_2 ? (
                 <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.35, marginBottom: 4 }]}>
-                  • {data.nextSteps.interdit_2}
+                  • {pdfText(data.nextSteps.interdit_2)}
                 </Text>
               ) : null}
               {data.nextSteps?.interdit_3 ? (
-                <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.35 }]}>• {data.nextSteps.interdit_3}</Text>
+                <Text style={[styles.listItem, { fontSize: 9, lineHeight: 1.35 }]}>
+                  • {pdfText(data.nextSteps.interdit_3)}
+                </Text>
               ) : null}
             </View>
           ) : (

@@ -1,6 +1,7 @@
 import { UseCase } from '@/lib/supabase'
 import type { ReportCanonicalItem } from '@/lib/report-canonical-items'
 import type { CategoryScore } from '@/app/usecases/[id]/types/usecase'
+import type { ActivityHistoryItem, PdfDocumentItem } from '@/lib/validations/pdf.schema'
 
 // Interface pour les prochaines étapes
 export interface UseCaseNextSteps {
@@ -60,6 +61,7 @@ export interface PDFReportData {
       industry: string
       city: string
       country: string
+      maydai_as_registry?: boolean
     }
     compl_ai_models?: {
       id: string
@@ -68,6 +70,8 @@ export interface PDFReportData {
       model_type?: string
       version?: string
     }
+    history?: ActivityHistoryItem[]
+    documents?: PdfDocumentItem[]
   }
   riskLevel: RiskLevelData
   score: ScoreData
