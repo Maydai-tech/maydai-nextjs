@@ -13,6 +13,7 @@ interface AuthContextType {
   signInWithOtp: (email: string, shouldCreateUser?: boolean) => Promise<{ error: Error | null }>
   verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
+  deleteAccount: () => Promise<void>
   refreshSession: () => Promise<void>
   getAccessToken: () => string | null
 }
@@ -117,6 +118,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const deleteAccount = useCallback(async () => {
+    const token = session?.access_token
+    if (!token) {
+      throw new Error('No access token available')
+    }
+
+    const response = await fetch('/api/account', {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      let message = 'Failed to delete account'
+      try {
+        const data = await response.json()
+        message = data.error || message
+      } catch {
+        // réponse sans corps JSON
+      }
+      throw new Error(message)
+    }
+
+    // Compte supprimé : nettoyer la session locale
+    try {
+      await supabase.auth.signOut()
+    } catch (error) {
+      console.error('Error signing out after account deletion:', error)
+    }
+  }, [session])
+
   const refreshSession = useCallback(async () => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession()
@@ -167,11 +200,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
+    deleteAccount,
     refreshSession,
     signInWithOtp,
     verifyOtp,
     getAccessToken
-  }), [user, session, loading, signIn, signUp, signOut, refreshSession, signInWithOtp, verifyOtp, getAccessToken])
+  }), [user, session, loading, signIn, signUp, signOut, deleteAccount, refreshSession, signInWithOtp, verifyOtp, getAccessToken])
 
   return (
     <AuthContext.Provider value={value}>

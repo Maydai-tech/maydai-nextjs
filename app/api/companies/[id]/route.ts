@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { isOwner } from '@/lib/collaborators'
 import { logger, createRequestContext } from '@/lib/secure-logger'
+import { deleteCompanyCascade } from '@/lib/account-deletion'
 import { updateUseCaseRegistryResponses } from '@/lib/registry-sync'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { RegistrySchema } from '@/lib/validations/registry'
@@ -366,84 +367,12 @@ export async function DELETE(
       deletedBy: user.email
     })
 
-    // Get all usecases for this company
-    const { data: usecases } = await supabase
-      .from('usecases')
-      .select('id')
-      .eq('company_id', companyId)
-
-    // Delete all usecase_responses for each usecase
-    if (usecases && usecases.length > 0) {
-      for (const usecase of usecases) {
-        const { error: deleteResponsesError } = await supabase
-          .from('usecase_responses')
-          .delete()
-          .eq('usecase_id', usecase.id)
-
-        if (deleteResponsesError) {
-          logger.error('Failed to delete usecase responses', deleteResponsesError, {
-            ...context,
-            companyId,
-            usecaseId: usecase.id
-          })
-          return NextResponse.json({ error: 'Error deleting usecase responses' }, { status: 500 })
-        }
-      }
-
-      // Delete all usecases
-      const { error: deleteUsecasesError } = await supabase
-        .from('usecases')
-        .delete()
-        .eq('company_id', companyId)
-
-      if (deleteUsecasesError) {
-        logger.error('Failed to delete usecases', deleteUsecasesError, {
-          ...context,
-          companyId
-        })
-        return NextResponse.json({ error: 'Error deleting usecases' }, { status: 500 })
-      }
-    }
-
-    // Update profiles that reference this company (set to NULL)
-    const { error: updateProfilesError } = await supabase
-      .from('profiles')
-      .update({
-        company_id: null,
-        current_company_id: null
-      })
-      .or(`company_id.eq.${companyId},current_company_id.eq.${companyId}`)
-
-    if (updateProfilesError) {
-      logger.error('Failed to update profiles', updateProfilesError, {
-        ...context,
-        companyId
-      })
-      return NextResponse.json({ error: 'Error updating profiles' }, { status: 500 })
-    }
-
-    // Delete all user_companies relations (RLS allows owner to delete all)
-    const { error: deleteUserCompaniesError } = await supabase
-      .from('user_companies')
-      .delete()
-      .eq('company_id', companyId)
-
-    if (deleteUserCompaniesError) {
-      logger.error('Failed to delete user_companies relations', deleteUserCompaniesError, {
-        ...context,
-        companyId
-      })
-      return NextResponse.json({ error: 'Error deleting user_companies relations' }, { status: 500 })
-    }
-
-    // Finally, delete the company itself (RLS allows owner to delete)
-    const { error: deleteCompanyError } = await supabase
-      .from('companies')
-      .delete()
-      .eq('id', companyId)
-
-    if (deleteCompanyError) {
-      logger.error('Failed to delete company', deleteCompanyError, {
+    // Cascade: usecase_responses → usecases → NULL profiles → user_companies → company
+    // (logique partagée avec la suppression de compte, cf. lib/account-deletion.ts)
+    try {
+      await deleteCompanyCascade(supabase, companyId)
+    } catch (cascadeError) {
+      logger.error('Failed to delete company and associated data', cascadeError, {
         ...context,
         companyId
       })
@@ -454,8 +383,7 @@ export async function DELETE(
       ...context,
       companyId,
       companyName: existingCompany.name,
-      deletedBy: user.email,
-      usecasesDeleted: usecases?.length || 0
+      deletedBy: user.email
     })
 
     // Return 204 No Content on successful deletion
