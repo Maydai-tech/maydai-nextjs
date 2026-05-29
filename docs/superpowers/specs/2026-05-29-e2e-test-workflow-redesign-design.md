@@ -18,7 +18,8 @@ L'unique workflow CI de tests est `.github/workflows/e2e-tests.yml` (~600 lignes
 **Données importantes :**
 
 - **Une seule base Supabase** partagée par tous les environnements (preview, preprod, prod). Il n'y a pas de base prod isolée à protéger.
-- Les 13 specs `e2e/*.spec.ts` sont **toutes destructives** : elles créent des comptes/companies/usecases via `SUPABASE_SERVICE_ROLE_KEY` puis nettoient par ID (`e2e/_helpers/db-cleanup.ts`).
+- Les specs E2E ont été réorganisées en sous-dossiers par domaine (réorg en cours côté working tree) : `e2e/account/`, `e2e/auth/`, `e2e/questionnaire/`, `e2e/registry/`, `e2e/scoring/`, `e2e/usecase/`. 13 specs actifs (hors `e2e/old/`, ignoré). `playwright.config.ts` cible `./e2e` récursivement, donc la nouvelle arbo fonctionne sans changement de config.
+- Les specs sont **toutes destructives** : elles créent des comptes/companies/usecases via `SUPABASE_SERVICE_ROLE_KEY` puis nettoient par ID (`e2e/_helpers/db-cleanup.ts`).
 - Isolation des données de test : emails `e2e-*-<timestamp>@maydai-test.com`, entités préfixées `E2E`. Risque résiduel = orphelins en cas d'échec + pollution des métriques.
 - Playwright : un seul projet `chromium`, `testDir: ./e2e`, reporters JSON+HTML en CI, `retries: 2`, `failOnFlakyTests` en CI. **Aucun tag actuellement.**
 
@@ -42,7 +43,8 @@ Toute la logique partagée de `e2e-tests.yml` est extraite dans un workflow réu
 
 | Input | Type | Rôle |
 |-------|------|------|
-| `grep_tag` | string | Tag Playwright à filtrer (`@preprod`, `@prod`). Vide = toute la suite (nightly). |
+| `grep_tag` | string | Tag Playwright à inclure (`@prod`). Vide = pas de filtre d'inclusion. |
+| `grep_invert` | string | Tag Playwright à **exclure** (`@nightly-only`). Vide = aucune exclusion. |
 | `target` | string | `preview` (attend + résout le déploiement preview Vercel de la PR) ou `prod` (utilise directement `prod_url`). |
 | `prod_url` | string | URL cible quand `target=prod` (ex. `https://maydai.io`). |
 | `blocking` | boolean | `true` → le job échoue si des tests échouent (`exit 1` final). `false` → le job réussit toujours, seule la notif Slack signale l'échec. |
@@ -62,12 +64,12 @@ Secrets passés via `secrets: inherit` : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLI
 
 La commande de test devient :
 ```bash
-if [ -n "$GREP_TAG" ]; then
-  pnpm exec playwright test --grep "$GREP_TAG"
-else
-  pnpm exec playwright test
-fi
+ARGS=()
+[ -n "$GREP_TAG" ]    && ARGS+=(--grep "$GREP_TAG")
+[ -n "$GREP_INVERT" ] && ARGS+=(--grep-invert "$GREP_INVERT")
+pnpm exec playwright test "${ARGS[@]}"
 ```
+`--grep` et `--grep-invert` se combinent : on peut inclure un tag tout en en excluant un autre.
 
 Le libellé `regime_label` est injecté dans les titres Slack (ex. `✅ E2E [preprod] Passed`, `❌ E2E [main-gate] Failed`, `🌙 E2E [nightly] …`).
 
@@ -84,7 +86,8 @@ jobs:
     if: github.event.pull_request.draft == false
     uses: ./.github/workflows/e2e-reusable.yml
     with:
-      grep_tag: ''        # toute la suite (cf. §4 : seul @prod est taggé)
+      grep_tag: ''                 # toute la suite (cf. §4 : seul @prod est taggé)
+      grep_invert: '@nightly-only' # exclut les tests à API payante
       target: preview
       blocking: false
       regime_label: preprod
@@ -103,6 +106,7 @@ jobs:
     uses: ./.github/workflows/e2e-reusable.yml
     with:
       grep_tag: '@prod'
+      grep_invert: '@nightly-only' # par sécurité : un @prod ne doit jamais être payant
       target: preview
       blocking: true
       regime_label: main-gate
@@ -120,6 +124,7 @@ jobs:
     uses: ./.github/workflows/e2e-reusable.yml
     with:
       grep_tag: ''        # toute la suite
+      grep_invert: ''     # AUCUNE exclusion : les tests payants tournent ici
       target: prod
       prod_url: 'https://maydai.io'
       blocking: false     # informationnel : on veut la notif, pas un check rouge
@@ -131,19 +136,30 @@ jobs:
 
 ## 4. Mapping des tags (proposé — à valider)
 
-À ajouter dans les specs via le 3e argument de `test()` / `test.describe()` : `{ tag: ['@preprod'] }` (syntaxe Playwright moderne).
+Tags à poser via le 3e argument de `test()` / `test.describe()` : `{ tag: ['@prod'] }` (syntaxe Playwright moderne).
 
-**Un seul tag à poser dans le code : `@prod`.** Les deux autres régimes lancent la suite complète sans filtre (`grep_tag: ''`), ce qui évite de tagger les 13 specs et réduit le bruit.
+**Deux tags seulement :**
 
-- **`@nightly` :** aucun tag — le nightly lance toute la suite sans filtre.
-- **`@preprod` :** aucun tag — le caller preprod lance aussi toute la suite sans filtre (filet large, non-bloquant).
-- **`@prod`** (gate bloquant vers la prod — doit être rapide et fiable) — sous-ensemble **critique et stable**, plutôt API que UI, taggé `{ tag: ['@prod'] }` :
-  - `signup-api-lifecycle.spec.ts`
-  - `score-calculation-api.spec.ts`
-  - `usecases-api-lifecycle.spec.ts`
-  - `account-deletion.spec.ts`
+### `@prod` — gate bloquant vers la prod
+Posé sur un sous-ensemble **critique et stable** (plutôt API que UI, qui sont moins flaky), lancé en bloquant sur la PR `preprod → main`. Proposition (chemins de la nouvelle arbo) :
+- `e2e/auth/signup.spec.ts`
+- `e2e/scoring/standard.spec.ts`  *(ex score-calculation-api)*
+- `e2e/usecase/lifecycle.spec.ts`
+- `e2e/account/deletion.spec.ts`
 
-Rationale : le gate bloquant doit minimiser les faux négatifs (tests UI plus flaky) tout en couvrant les parcours critiques (inscription, scoring, cycle de vie use-case, suppression compte/RGPD). La couverture exhaustive est assurée non-bloquante (preprod) et la nuit (nightly).
+Rationale : le gate bloquant doit minimiser les faux négatifs tout en couvrant les parcours critiques (inscription, scoring, cycle de vie use-case, suppression compte/RGPD). La couverture exhaustive est assurée non-bloquante (preprod) et la nuit (nightly).
+
+### `@nightly-only` — tests à API payante
+Posé sur tout test qui consomme une **API payante** (OpenAI report generation via `POST /api/generate-report`, Stripe checkout, envoi d'email Mailjet via invitations collaborateur). Exclu de preprod et du gate main (`--grep-invert @nightly-only`), exécuté uniquement la nuit.
+
+> **Résultat de l'analyse du code (2026-05-29) : AUCUN spec actif ne consomme d'API payante aujourd'hui.**
+> - `/api/generate-report` (OpenAI) n'est appelé que par un test sous `e2e/old/` (ignoré par `testIgnore`). Aucun spec actif ne l'appelle.
+> - La page `/rapport` est en **lecture seule** : elle lit `usecase_nextsteps` en base, elle ne déclenche pas OpenAI. Les specs de scoring qui la visitent ne coûtent rien.
+> - Aucun spec actif ne touche Stripe ni n'envoie d'email Mailjet (pas d'invitation collaborateur dans les flux testés).
+>
+> **Donc on ne tague rien `@nightly-only` pour l'instant.** Le mécanisme est en place : dès qu'un futur test appellera réellement une API payante (ex. un vrai test de génération de rapport OpenAI), il suffira de lui ajouter `{ tag: ['@nightly-only'] }` et il sera automatiquement confiné au nightly.
+
+Les régimes preprod et nightly ne posent aucun tag d'inclusion : preprod lance « tout sauf `@nightly-only` », nightly lance absolument tout.
 
 > Seule décision ouverte pour la review : la liste exacte des specs `@prod`. La liste ci-dessus est une proposition à ajuster.
 
