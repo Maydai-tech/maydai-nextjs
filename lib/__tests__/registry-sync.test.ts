@@ -72,7 +72,9 @@ describe('updateUseCaseRegistryResponses', () => {
       expect(result.updatedCount).toBe(3)
       expect(result.error).toBeUndefined()
       expect(mockSupabase.from).toHaveBeenCalledWith('usecases')
-      expect(mockUseCasesSelect).toHaveBeenCalledWith('id')
+      expect(mockUseCasesSelect).toHaveBeenCalledWith(
+        'id, checklist_gov_enterprise, checklist_gov_usecase'
+      )
       expect(mockUseCasesEq).toHaveBeenCalledWith('company_id', companyId)
       expect(mockResponsesIn).toHaveBeenCalled()
       expect(mockUpsert).toHaveBeenCalledTimes(3)

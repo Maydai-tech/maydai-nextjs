@@ -47,9 +47,9 @@ export async function updateUseCaseRegistryResponses(
   options?: RegistrySyncOptions
 ): Promise<{ success: boolean; updatedCount: number; scoresRecalculated: number; error?: string }> {
   try {
-    const { data: useCaseIdRows, error: fetchError } = await supabase
+    const { data: useCases, error: fetchError } = await supabase
       .from('usecases')
-      .select('id')
+      .select('id, checklist_gov_enterprise, checklist_gov_usecase')
       .eq('company_id', companyId)
 
     if (fetchError) {
@@ -57,17 +57,11 @@ export async function updateUseCaseRegistryResponses(
       return { success: false, updatedCount: 0, scoresRecalculated: 0, error: fetchError.message }
     }
 
-    if (!useCaseIdRows?.length) {
+    if (!useCases?.length) {
       return { success: true, updatedCount: 0, scoresRecalculated: 0 }
     }
 
-    const { data: useCases } = await supabase
-      .from('usecases')
-      .select('id, checklist_gov_enterprise, checklist_gov_usecase')
-      .eq('company_id', companyId)
-
-    const useCasesForSync = useCases?.length ? useCases : useCaseIdRows.map((r) => ({ id: r.id }))
-    const usecaseIds = useCasesForSync.map((uc) => uc.id)
+    const usecaseIds = useCases.map((uc) => uc.id)
 
     const { data: existingResponses, error: responsesError } = await supabase
       .from('usecase_responses')
@@ -100,7 +94,7 @@ export async function updateUseCaseRegistryResponses(
 
     const toUpdate: Array<{ usecaseId: string; hadNegativeMalus: boolean }> = []
 
-    for (const useCase of useCasesForSync) {
+    for (const useCase of useCases) {
       const rawRow = responseByUsecase.get(useCase.id) ?? null
       const rowsForUc = (existingResponses ?? []).filter((r) => r.usecase_id === useCase.id)
       const merged = mergeChecklistIntoDbResponseRows(
@@ -135,7 +129,7 @@ export async function updateUseCaseRegistryResponses(
     const responseData = useMaydai
       ? {
           question_code: REGISTRY_QUESTION,
-          conditional_main: REGISTRY_POSITIVE_MAIN as const,
+          conditional_main: REGISTRY_POSITIVE_MAIN,
           conditional_keys: ['system_name'] as string[],
           conditional_values: ['MaydAI'] as string[],
           single_value: null as string | null,
