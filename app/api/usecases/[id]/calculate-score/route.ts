@@ -24,7 +24,6 @@ import {
   determineCompanyStatus,
   getCompanyStatusDefinition,
   COMPL_AI_MULTIPLIER,
-  roundToTwoDecimals,
   type UserResponse
 } from '@/lib/score-calculator-simple';
 import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses';
@@ -359,11 +358,11 @@ export async function POST(
     const nowIso = new Date().toISOString();
 
     const roundedScoreBase = Math.round(Number(finalResult.scores.score_base));
-    const roundedScoreFinal = roundToTwoDecimals(Number(finalResult.scores.score_final));
+    const roundedScoreFinal = Math.round(Number(finalResult.scores.score_final));
     const persistedScoreModel =
       finalResult.scores.score_model == null
         ? null
-        : roundToTwoDecimals(Number(finalResult.scores.score_model));
+        : Math.round(Number(finalResult.scores.score_model));
 
     // Même persistance `score_*` / risque pour tous les parcours (V3 court inclus). Le court conserve en plus les horodatages/trace « short path ».
     const updateData: Record<string, unknown> = {
