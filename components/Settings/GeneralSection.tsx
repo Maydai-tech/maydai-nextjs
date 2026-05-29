@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Mail, HardDrive, User, Building2, Phone, FileText, Pencil, X, Check, Loader2 } from 'lucide-react'
+import { Mail, HardDrive, User, Building2, Phone, FileText, Pencil, X, Check, Loader2, AlertTriangle, Trash2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { validateSIREN, cleanSIREN, formatSIREN } from '@/lib/validation/siren'
 import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
 import { getIndustryDisplayText, getIndustryLabel, getSubCategoryLabel } from '@/lib/constants/industries'
+import DeleteAccountModal from '@/components/Settings/DeleteAccountModal'
 
 interface GeneralSectionProps {
   userEmail: string | undefined
@@ -64,6 +65,7 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
   const [success, setSuccess] = useState('')
   const [sirenError, setSirenError] = useState('')
   const [industryError, setIndustryError] = useState('')
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false)
 
   // Fetch profile data
   useEffect(() => {
@@ -584,6 +586,35 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
           </div>
         )}
       </div>
+
+      {/* Zone de danger */}
+      <div className="bg-white border border-red-200 rounded-xl p-6 shadow-sm">
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-red-700 mb-2 flex items-center">
+            <AlertTriangle className="w-5 h-5 text-red-600 mr-2" />
+            Zone de danger
+          </h3>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-red-50/60 border border-red-100 rounded-lg">
+          <div>
+            <p className="text-sm font-medium text-gray-900">Supprimer mon compte</p>
+            <p className="text-xs text-gray-500">Profil, abonnement et entreprises possédées seront supprimés.</p>
+          </div>
+          <button
+            onClick={() => setShowDeleteAccountModal(true)}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex-shrink-0"
+          >
+            <Trash2 className="w-4 h-4" />
+            Supprimer mon compte
+          </button>
+        </div>
+      </div>
+
+      <DeleteAccountModal
+        isOpen={showDeleteAccountModal}
+        onClose={() => setShowDeleteAccountModal(false)}
+      />
     </div>
   )
 }
