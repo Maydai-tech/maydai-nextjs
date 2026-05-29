@@ -14,6 +14,6 @@ describe('phase 3 — slots rapport & deep links', () => {
 
   test('deep links encodent le doc_type canonique', () => {
     expect(buildDashboardDossierDeepLink('c1', 'u1', 'registry_action')).toContain('doc=registry_proof')
-    expect(buildDashboardTodoListDeepLink('c1', 'u1', 'training_census')).toContain('action=training_plan')
+    expect(buildDashboardTodoListDeepLink('c1', 'u1', 'training_plan')).toContain('action=training_plan')
   })
 })

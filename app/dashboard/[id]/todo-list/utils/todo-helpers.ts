@@ -5,8 +5,6 @@ import {
   resolveCanonicalDocType,
   getCanonicalActionByDocType,
   getStandardComplianceDocTypesExcludingRegistry,
-  getComplianceNormalizedPointsForDocType,
-  getRegistryNormalizedPointsFromCatalog,
 } from '@/lib/canonical-actions'
 interface UseCase {
   id: string
@@ -156,9 +154,14 @@ function isNegativeForMapping(response: { single_value?: unknown; conditional_ma
  *
  * @param docType - The document type (e.g., 'technical_documentation')
  * @param responses - Array of questionnaire responses for the use case
+ * @param path_mode - Parcours actif (`short` → dénominateur 140, sinon 150)
  * @returns The potential normalized points to recover (0 if none)
  */
-export const getPotentialPoints = (docType: string, responses: any[]): number => {
+export const getPotentialPoints = (
+  docType: string,
+  responses: any[],
+  path_mode?: string | null
+): number => {
   const canonical = resolveCanonicalDocType(docType)
 
   const mappings = getTodoActionMappings(canonical)
@@ -185,7 +188,7 @@ export const getPotentialPoints = (docType: string, responses: any[]): number =>
     rawPotentialSum += mapping.expectedPointsGained
   }
 
-  return normalizeScoreTo100(rawPotentialSum)
+  return normalizeScoreTo100(rawPotentialSum, path_mode ?? undefined)
 }
 
 /**
@@ -195,9 +198,15 @@ export const getPotentialPoints = (docType: string, responses: any[]): number =>
  * @param docType - The document type (e.g., 'technical_documentation')
  * @param responses - Array of questionnaire responses for the use case
  * @param isCompleted - Whether the document is completed
+ * @param path_mode - Parcours actif (`short` → dénominateur 140, sinon 150)
  * @returns The normalized points recovered (0 if none)
  */
-export const getEarnedPoints = (docType: string, responses: any[], isCompleted: boolean): number => {
+export const getEarnedPoints = (
+  docType: string,
+  responses: any[],
+  isCompleted: boolean,
+  path_mode?: string | null
+): number => {
   if (!isCompleted) return 0
 
   const canonical = resolveCanonicalDocType(docType)
@@ -215,30 +224,7 @@ export const getEarnedPoints = (docType: string, responses: any[], isCompleted: 
     }
   }
 
-  return normalizeScoreTo100(rawEarnedSum)
-}
-
-/**
- * Gets fixed action points for display purposes.
- * Returns the REAL normalized points (on the 100-basis scale) for each action.
- * 
- * Total: 19 normalized points from 9 actions
- * - Registry: 3 normalized points
- * - All 8 other compliance actions: 2 normalized points each (= 16)
- *
- * @param docType - The document type
- * @returns The normalized points for this action (0 if no points defined)
- */
-export const getFixedActionPoints = (docType: string): number => {
-  return getComplianceNormalizedPointsForDocType(resolveCanonicalDocType(docType))
-}
-
-/**
- * Gets fixed points for registry action (3 normalized points)
- * @returns 3 normalized points
- */
-export const getRegistryActionPoints = (): number => {
-  return getRegistryNormalizedPointsFromCatalog()
+  return normalizeScoreTo100(rawEarnedSum, path_mode ?? undefined)
 }
 
 /**

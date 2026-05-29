@@ -50,6 +50,8 @@ export interface ReportStandardPlanBlocksProps {
   useCaseId: string
   /** Réponses questionnaire — alignement points avec la todo dashboard. */
   questionnaireResponses?: unknown[]
+  /** Parcours V3 actif — dénominateur badges 140 (short) vs 150 (long). */
+  path_mode?: string | null
   /** Niveau de risque qualifié — requis si classificationStatus === 'qualified'. */
   riskLevel: RiskLevelCode | null
   /** qualified = niveau fiable attendu ; impossible géré en amont si le parent filtre correctement. */
@@ -64,6 +66,7 @@ export function ReportStandardPlanBlocks({
   companyId,
   useCaseId,
   questionnaireResponses = [],
+  path_mode,
   riskLevel,
   classificationStatus,
 }: ReportStandardPlanBlocksProps) {
@@ -114,6 +117,7 @@ export function ReportStandardPlanBlocks({
       companyId,
       useCaseId,
       questionnaireResponses,
+      path_mode,
     })
   ).filter(isItem)
 

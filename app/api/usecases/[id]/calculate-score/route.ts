@@ -359,7 +359,7 @@ export async function POST(
     const nowIso = new Date().toISOString();
 
     const roundedScoreBase = Math.round(Number(finalResult.scores.score_base));
-    const roundedScoreFinal = Math.round(Number(finalResult.scores.score_final));
+    const roundedScoreFinal = roundToTwoDecimals(Number(finalResult.scores.score_final));
     const persistedScoreModel =
       finalResult.scores.score_model == null
         ? null

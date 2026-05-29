@@ -597,7 +597,20 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: Record<string, never>
-    Enums: Record<string, never>
+    Enums: {
+      doc_status: 'incomplete' | 'complete' | 'validated'
+      doc_type:
+        | 'system_prompt'
+        | 'technical_documentation'
+        | 'human_oversight'
+        | 'transparency_marking'
+        | 'risk_management'
+        | 'data_quality'
+        | 'continuous_monitoring'
+        | 'stopping_proof'
+        | 'registry_proof'
+        | 'training_plan'
+    }
     CompositeTypes: Record<string, never>
   }
 }

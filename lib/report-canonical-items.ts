@@ -25,12 +25,13 @@ function reportCtaPointsFromQuestionnaire(params: {
   docType: string
   questionnaireResponses: unknown[]
   docCompleted: boolean
+  path_mode?: string | null
 }): number {
   const rows = params.questionnaireResponses as any[]
   if (params.docCompleted) {
-    return getEarnedPoints(params.docType, rows, true)
+    return getEarnedPoints(params.docType, rows, true, params.path_mode)
   }
-  return getPotentialPoints(params.docType, rows)
+  return getPotentialPoints(params.docType, rows, params.path_mode)
 }
 
 function isDocumentActionCompleted(
@@ -336,6 +337,8 @@ export function buildReportCanonicalItemForSlot(params: {
   useCaseId: string
   /** Réponses questionnaire — même base que la todo dashboard (`getPotentialPoints` / `getEarnedPoints`). */
   questionnaireResponses?: unknown[]
+  /** Parcours V3 (`short` | `long`) — dénominateur badges 140 vs 150. */
+  path_mode?: string | null
 }): ReportCanonicalItem | null {
   const {
     reportSlotKey,
@@ -347,6 +350,7 @@ export function buildReportCanonicalItemForSlot(params: {
     companyId,
     useCaseId,
     questionnaireResponses = [],
+    path_mode,
   } = params
 
   const action = getCanonicalActionByReportSlot(reportSlotKey)
@@ -369,6 +373,7 @@ export function buildReportCanonicalItemForSlot(params: {
     docType,
     questionnaireResponses,
     docCompleted,
+    path_mode,
   })
   const evidence_status: EvidenceStatusValue = resolveEvidenceStatus(
     legal_status,
@@ -427,6 +432,7 @@ export function buildAllStandardPlanCanonicalItems(params: {
   companyId: string
   useCaseId: string
   questionnaireResponses?: unknown[]
+  path_mode?: string | null
 }): ReportCanonicalItem[] {
   const out: ReportCanonicalItem[] = []
   for (const reportSlotKey of params.slotKeysOrdered) {
@@ -440,6 +446,7 @@ export function buildAllStandardPlanCanonicalItems(params: {
       companyId: params.companyId,
       useCaseId: params.useCaseId,
       questionnaireResponses: params.questionnaireResponses,
+      path_mode: params.path_mode,
     })
     if (item) out.push(item)
   }

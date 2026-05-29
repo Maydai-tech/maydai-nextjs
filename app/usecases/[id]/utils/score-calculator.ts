@@ -11,6 +11,10 @@ import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-use
 import { buildV2ScoringContextFromDbResponses } from '@/lib/scoring-v2-server'
 import { buildV3ScoringContextFromDbResponses } from '@/lib/scoring-v3-server'
 import {
+  calculateBaseScore,
+  type UserResponse as FlatScoreUserResponse,
+} from '@/lib/score-calculator-simple'
+import {
   QUESTIONNAIRE_VERSION_V1,
   QUESTIONNAIRE_VERSION_V2,
   QUESTIONNAIRE_VERSION_V3,
@@ -305,41 +309,20 @@ export async function calculateScore(
       ? mergedResponses.filter(r => pathContext.scoringActiveQuestionCodes.has(r.question_code))
       : mergedResponses
     const categoryMaxScores = pathContext?.categoryMaxScores ?? CATEGORY_MAX_SCORES
-    
-    let currentScore = BASE_SCORE
+
+    /** Score questionnaire plat (Σ score_impact) — source unique alignée sur `/calculate-score`. */
+    const flatBaseResult = calculateBaseScore(responsesForScoring as FlatScoreUserResponse[], {
+      checklistGovEnterprise: options?.checklistGovEnterprise ?? null,
+      checklistGovUsecase: options?.checklistGovUsecase ?? null,
+    })
+
+    let currentScore = flatBaseResult.score_base
     const breakdown: ScoreBreakdown[] = []
-    let isEliminated = false
-    
+    const isEliminated = flatBaseResult.is_eliminated
+
     // Charger les questions une seule fois
     const questions = loadQuestions()
 
-    // PREMIÈRE PASSE : Détecter les réponses éliminatoires (périmètre V1 = tout, V2 = questions actives répondues)
-    for (const response of responsesForScoring) {
-      const question = questions[response.question_code]
-      if (!question) continue
-
-      // Vérifier selon le type de réponse
-      if (question.type === 'radio') {
-        const radioCode = response.single_value || response.conditional_main
-        if (radioCode) {
-          const impacts = getAnswerImpactsFromJSON(response.question_code, radioCode)
-          if (impacts.is_eliminatory) {
-            isEliminated = true
-            break
-          }
-        }
-      } else if ((question.type === 'checkbox' || question.type === 'tags') && response.multiple_codes) {
-        for (const code of response.multiple_codes) {
-          const impacts = getAnswerImpactsFromJSON(response.question_code, code)
-          if (impacts.is_eliminatory) {
-            isEliminated = true
-            break
-          }
-        }
-        if (isEliminated) break
-      }
-    }
-    
     // Initialiser les compteurs par catégorie avec la logique points perdus
     const categoryData: Record<string, { 
       lostPoints: number,          // Points perdus par les réponses malus
@@ -354,7 +337,7 @@ export async function calculateScore(
       }
     })
 
-    // DEUXIÈME PASSE : Calculer les scores normalement (même si éliminé, pour le breakdown)
+    // Passe détaillée : breakdown + jauges catégorie (`category_impacts` n’alimentent pas score_base)
     for (const response of responsesForScoring) {
       // console.log('Processing response for question:', response.question_code)
       
@@ -452,10 +435,7 @@ export async function calculateScore(
         }
       }
 
-      // Ajouter l'impact au score total
-      currentScore += questionImpact
-      
-      // Calculer directement les points perdus par catégorie
+      // Calculer directement les points perdus par catégorie (affichage jauges uniquement)
       Object.entries(categoryImpactsForQuestion).forEach(([categoryId, impact]) => {
         if (categoryData[categoryId] && impact < 0) {
           categoryData[categoryId].lostPoints += Math.abs(impact)
@@ -502,14 +482,6 @@ export async function calculateScore(
           category_impacts: categoryImpactsForBreakdown
         })
       }
-    }
-
-    // S'assurer que le score ne descend pas en dessous de 0
-    currentScore = Math.max(0, currentScore)
-
-    // Si éliminé, forcer le score à zéro
-    if (isEliminated) {
-      currentScore = 0
     }
 
     // Calculer le score COMPL-AI et récupérer les scores MaydAI par principe

@@ -8,11 +8,9 @@ import {
 } from '@/lib/todo-action-sync'
 import { recordUseCaseHistory } from '@/lib/usecase-history'
 import {
-  coalesceTrainingDocumentRows,
   getAcceptedDossierApiDocTypeParams,
   normalizeHumanOversightFormData,
   resolveCanonicalDocType,
-  trainingDocTypesForQuery,
 } from '@/lib/canonical-actions'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -78,19 +76,13 @@ export async function GET(
     }
 
     const storageDocType = resolveCanonicalDocType(docType)
-    const queryTypes =
-      storageDocType === 'training_plan' ? [...trainingDocTypesForQuery()] : [storageDocType]
 
-    const { data: docRows } = await supabase
+    const { data: doc } = await supabase
       .from('dossier_documents')
       .select('form_data, file_url, status, updated_at, doc_type')
       .eq('dossier_id', dossierRow.id)
-      .in('doc_type', queryTypes)
-
-    let doc = docRows?.[0] ?? null
-    if (storageDocType === 'training_plan' && docRows && docRows.length > 0) {
-      doc = coalesceTrainingDocumentRows(docRows)
-    }
+      .eq('doc_type', storageDocType)
+      .maybeSingle()
 
     let formData = doc?.form_data ?? null
     if (storageDocType === 'human_oversight' && formData && typeof formData === 'object') {
@@ -186,7 +178,7 @@ export async function POST(
       }
     }
 
-    // Upsert doc (clé de stockage canonique ; training_census → training_plan)
+    // Upsert doc (clé de stockage canonique)
     const payload: any = {
       dossier_id: dossierId,
       doc_type: storageDocType,
@@ -196,19 +188,12 @@ export async function POST(
     if (formData !== undefined) payload.form_data = formData
     if (status) payload.status = status
 
-    const trainingQueryTypes =
-      storageDocType === 'training_plan' ? [...trainingDocTypesForQuery()] : null
-
-    const { data: existingRows } = await supabase
+    const { data: existingDoc } = await supabase
       .from('dossier_documents')
       .select('id, status, doc_type, updated_at')
       .eq('dossier_id', dossierId)
-      .in('doc_type', trainingQueryTypes ?? [storageDocType])
-
-    const existingDoc =
-      trainingQueryTypes && existingRows && existingRows.length > 0
-        ? coalesceTrainingDocumentRows(existingRows)
-        : existingRows?.[0] ?? null
+      .eq('doc_type', storageDocType)
+      .maybeSingle()
 
     const previousStatus: string | null = existingDoc?.status || null
 
@@ -239,19 +224,17 @@ export async function POST(
       const isFirstCompletion = previousStatus !== 'complete' && previousStatus !== 'validated'
       const isModification = previousStatus === 'complete' || previousStatus === 'validated'
 
-      // Sync questionnaire response and recalculate score (only on first completion)
+      // Sync questionnaire (si mappable) ; recalcul uniquement si gain de score attendu (Règle n°11)
       if (isFirstCompletion) {
-        const todoMapping = getTodoActionMapping(storageDocType)
-        if (todoMapping) {
-          console.log('[POST /dossiers] Found todo_action mapping for docType:', storageDocType)
+        const syncResult = await syncTodoActionToResponse(
+          supabase,
+          usecaseId,
+          storageDocType,
+          user.email || user.id
+        )
 
-          await syncTodoActionToResponse(
-            supabase,
-            usecaseId,
-            storageDocType,
-            user.email || user.id
-          )
-
+        if (syncResult.shouldRecalculate) {
+          const todoMapping = getTodoActionMapping(storageDocType)
           const scoreRecalc = await recalculateDossierUseCaseScore(
             supabase,
             usecaseId,
@@ -264,10 +247,10 @@ export async function POST(
               previousScore: scoreRecalc.previousScore,
               newScore: scoreRecalc.newScore,
               pointsGained: scoreRecalc.pointsGained,
-              reason: todoMapping.reason,
+              reason: todoMapping?.reason ?? 'Document de conformite ajoute',
             }
             console.log('[POST /dossiers] Score recalculated via calculate-score:', scoreChange)
-          } else {
+          } else if (scoreRecalc === null) {
             console.error('[POST /dossiers] Score recalculation failed after todo sync')
           }
         }
@@ -293,18 +276,15 @@ export async function POST(
     if (status === 'incomplete' && (previousStatus === 'complete' || previousStatus === 'validated')) {
       console.log('[POST /dossiers] Document being reset from', previousStatus, 'to incomplete')
 
-      const todoMapping = getTodoActionMapping(storageDocType)
-      if (todoMapping) {
-        console.log('[POST /dossiers] Found todo_action mapping for reset, docType:', storageDocType)
+      const reverseResult = await reverseTodoActionResponse(
+        supabase,
+        usecaseId,
+        storageDocType,
+        user.email || user.id
+      )
 
-        // Reverse the questionnaire response (set back to "Non")
-        await reverseTodoActionResponse(
-          supabase,
-          usecaseId,
-          storageDocType,
-          user.email || user.id
-        )
-
+      if (reverseResult.shouldRecalculate) {
+        const todoMapping = getTodoActionMapping(storageDocType)
         const scoreRecalc = await recalculateDossierUseCaseScore(
           supabase,
           usecaseId,
@@ -317,10 +297,10 @@ export async function POST(
             previousScore: scoreRecalc.previousScore,
             newScore: scoreRecalc.newScore,
             pointsGained: scoreRecalc.pointsGained,
-            reason: todoMapping.reason,
+            reason: reverseResult.reason || todoMapping?.reason || 'Document de conformite reinitialise',
           }
           console.log('[POST /dossiers] Score recalculated via calculate-score after reset:', scoreChange)
-        } else {
+        } else if (scoreRecalc === null) {
           console.error('[POST /dossiers] Score recalculation failed after todo reverse')
         }
       }

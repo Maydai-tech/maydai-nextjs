@@ -21,7 +21,7 @@ describe('Score Calculator', () => {
   const mockUsecaseId = 'test-usecase-123'
 
   describe('calculateScore', () => {
-    test('E5.N9.Q9 (radio long) : réponse NON applique -10 sur le breakdown (alignement Edge / maturité)', async () => {
+    test('E5.N9.Q9 (radio long) : réponse NON applique -4 sur le breakdown (alignement Edge / maturité, barème compressé)', async () => {
       const result = await calculateScore(mockUsecaseId, [
         {
           question_code: 'E5.N9.Q9',
@@ -31,7 +31,7 @@ describe('Score Calculator', () => {
         },
       ])
       const row = result.score_breakdown.find(b => b.question_id === 'E5.N9.Q9')
-      expect(row?.score_impact).toBe(-10)
+      expect(row?.score_impact).toBe(-4)
     })
 
     test('should return base score for no responses', async () => {
@@ -109,18 +109,18 @@ describe('Score Calculator', () => {
         {
           question_code: 'E4.N7.Q2', // Has category_impacts
           single_value: null,
-          multiple_codes: ['E4.N7.Q2.B'], // score_impact: -30 (E4.N7.Q2.A = éliminatoire)
+          multiple_codes: ['E4.N7.Q2.B'], // score_impact: -18 compressé (E4.N7.Q2.A = éliminatoire)
           conditional_main: null
         }
       ]
 
       const result = await calculateScore(mockUsecaseId, responses)
 
-      expect(result.score).toBe(60) // 90 - 30
+      expect(result.score).toBe(72) // 90 - 18
       expect(result.is_eliminated).toBe(false)
     })
 
-    test('should ensure score never goes below 0', async () => {
+    test('should ensure score never goes below 1', async () => {
       const responses = [
         {
           question_code: 'E4.N7.Q2',
@@ -132,7 +132,7 @@ describe('Score Calculator', () => {
 
       const result = await calculateScore(mockUsecaseId, responses)
 
-      expect(result.score).toBeGreaterThanOrEqual(0) // Should not go below 0
+      expect(result.score).toBeGreaterThanOrEqual(1) // Plancher défensif hors élimination
     })
 
     test('should handle negative impact questions correctly', async () => {

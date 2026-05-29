@@ -172,7 +172,6 @@ export const DOC_TYPE_LABELS: Record<string, string> = {
   risk_management: 'Gestion des risques',
   data_quality: 'Qualité des données',
   continuous_monitoring: 'Surveillance continue',
-  training_census: 'Recensement des formations',
   training_plan: 'Plan de formation',
   stopping_proof: 'Preuve d\'arrêt',
   registry_proof: 'Preuve de registre',

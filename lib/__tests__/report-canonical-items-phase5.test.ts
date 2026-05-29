@@ -89,10 +89,6 @@ describe('report-canonical-items (phase 5)', () => {
 })
 
 describe('resolveCanonicalDocType (alias critiques)', () => {
-  it('training_census → training_plan', () => {
-    expect(resolveCanonicalDocType('training_census')).toBe('training_plan')
-  })
-
   it('registry_action → registry_proof', () => {
     expect(resolveCanonicalDocType('registry_action')).toBe('registry_proof')
   })

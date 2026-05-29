@@ -4,12 +4,11 @@
  * Ce fichier contient la logique métier pure pour calculer le score d'un cas d'usage
  * basé sur les réponses de l'utilisateur au questionnaire IA Act.
  *
- * Principe :
- * 1. Score de base = 100 points (questionnaire = 2/3 du score)
- * 2. Les réponses peuvent diminuer le score (impacts négatifs)
- * 3. Certaines réponses sont éliminatoires (score = 0)
- * 4. Un bonus COMPL-AI peut être ajouté (jusqu'à 50 points = 1/3 du score)
- * 5. Score final = (score_base + bonus_model) / 150 * 100
+ * Principe (barème légal plat) :
+ * 1. score_base = BASE_SCORE (90) + somme stricte des `score_impact` des questions actives
+ *    — les `category_impacts` ne modifient PAS score_base (jauges catégorie uniquement).
+ * 2. Certaines réponses sont éliminatoires (score = 0)
+ * 3. score_final = (score_base + score_model × 2,5) / W × 100 avec W = 150 (long) ou 140 (court V3 actif)
  *
  * Répartition 2/3 - 1/3 :
  * - Questionnaire : 100 points max (2/3)
@@ -177,13 +176,16 @@ export function roundToTwoDecimals(value: number): number {
  * The final score formula is: ((score_base + score_model) / TOTAL_WEIGHT) * 100
  * This function applies the same ratio to any raw point value.
  *
- * Example: If TOTAL_WEIGHT=150 and rawPoints=10, result = (10/150)*100 = 6.67 → 7
+ * Example: long W=150, rawPoints=10 → (10/150)*100 ≈ 7 ; short W=140 → ≈ 7
  *
  * @param rawPoints - Raw score impact points (e.g., 10)
+ * @param path_mode - `short` → dénominateur 140 (aligné `resolveTotalFinalWeight`), sinon 150
  * @returns Normalized points as they appear in final score (e.g., 8)
  */
-export function normalizeScoreTo100(rawPoints: number): number {
-  return Math.round((rawPoints / TOTAL_WEIGHT) * 100);
+export function normalizeScoreTo100(rawPoints: number, path_mode?: string): number {
+  if (rawPoints <= 0) return 0
+  const W = path_mode === 'short' ? 140 : 150
+  return Math.round((rawPoints / W) * 100)
 }
 
 /**
@@ -339,16 +341,74 @@ export function getCompanyStatusDefinition(status: CompanyStatus): string {
 // ===== FONCTIONS PRINCIPALES =====
 
 /**
- * Calcule le score de base à partir des réponses de l'utilisateur
+ * Somme plate des `score_impact` (jamais `category_impacts`) sur le périmètre fourni.
+ * Une option à -5 retire exactement 5 points du score_base avant plancher à 1 (hors élimination).
+ */
+export function sumFlatQuestionnaireImpacts(
+  scopedResponses: UserResponse[]
+): { totalImpact: number; isEliminated: boolean; eliminationReason: string } {
+  let totalImpact = 0
+  let isEliminated = false
+  let eliminationReason = ''
+
+  for (const response of scopedResponses) {
+    const question = QUESTIONS_DATA[response.question_code]
+    if (!question) {
+      console.warn(`⚠️ Question ${response.question_code} non trouvée - ignorée`)
+      continue
+    }
+
+    const selectedCodes = getSelectedCodes(response)
+
+    for (const selectedCode of selectedCodes) {
+      const option = findQuestionOption(response.question_code, selectedCode)
+      if (!option) continue
+      if (option.is_eliminatory) {
+        isEliminated = true
+        eliminationReason = `Réponse éliminatoire: ${option.label}`
+        break
+      }
+    }
+    if (isEliminated) break
+
+    if (selectedCodes.length === 0) continue
+
+    if (question.impact_mode === 'any') {
+      const impacts: number[] = []
+      for (const selectedCode of selectedCodes) {
+        const option = findQuestionOption(response.question_code, selectedCode)
+        if (option && typeof option.score_impact === 'number') {
+          impacts.push(option.score_impact)
+        }
+      }
+      if (impacts.length > 0) {
+        const agg = Math.min(...impacts)
+        if (agg) {
+          totalImpact += agg
+        }
+      }
+    } else {
+      for (const selectedCode of selectedCodes) {
+        const option = findQuestionOption(response.question_code, selectedCode)
+        if (!option) continue
+        if (typeof option.score_impact === 'number' && option.score_impact !== 0) {
+          totalImpact += option.score_impact
+        }
+      }
+    }
+  }
+
+  return { totalImpact, isEliminated, eliminationReason }
+}
+
+/**
+ * Calcule le score de base à partir des réponses de l'utilisateur (barème légal plat).
  *
- * Logique :
- * 1. Commence avec BASE_SCORE (90 points)
- * 2. Vérifie d'abord les réponses éliminatoires
- * 3. Si pas éliminé, applique tous les impacts négatifs
- * 4. Le score ne peut pas descendre en dessous de 0
+ * Formule : score_base = max(1, BASE_SCORE + Σ score_impact) sur les questions actives (0 si éliminé).
+ * Les `category_impacts` du JSON ne sont pas agrégés ici (affichage jauges / calculateScore uniquement).
  *
  * @param responses - Toutes les réponses de l'utilisateur
- * @param options - Si `activeQuestionCodes` est défini (V2), seules ces questions comptent (hors périmètre ignoré).
+ * @param options - Si `activeQuestionCodes` est défini (V2/V3), seules ces questions comptent.
  * @returns Résultat du calcul avec détails
  */
 export function calculateBaseScore(
@@ -366,75 +426,10 @@ export function calculateBaseScore(
       ? enriched.filter(r => options.activeQuestionCodes!.has(r.question_code))
       : enriched
 
-  let totalImpact = 0;
-  let isEliminated = false;
-  let eliminationReason = '';
-  
-  // ÉTAPE 1 : Parcourir les réponses du périmètre (V1 = toutes)
-  for (const response of scoped) {
-    // Vérifier que la question existe dans nos données
-    const question = QUESTIONS_DATA[response.question_code];
-    if (!question) {
-      console.warn(`⚠️ Question ${response.question_code} non trouvée - ignorée`);
-      continue;
-    }
-    
-    // ÉTAPE 2 : Récupérer les codes de réponse sélectionnés
-    const selectedCodes = getSelectedCodes(response);
+  const { totalImpact, isEliminated, eliminationReason } = sumFlatQuestionnaireImpacts(scoped)
 
-    // ÉTAPE 3 : Élimination — toutes les options sélectionnées
-    for (const selectedCode of selectedCodes) {
-      const option = findQuestionOption(response.question_code, selectedCode);
-      if (!option) continue;
-      if (option.is_eliminatory) {
-        isEliminated = true;
-        eliminationReason = `Réponse éliminatoire: ${option.label}`;
-        break;
-      }
-    }
-    if (isEliminated) {
-      break;
-    }
+  const finalScore = isEliminated ? 0 : Math.max(1, BASE_SCORE + totalImpact)
 
-    if (selectedCodes.length === 0) continue;
-
-    // ÉTAPE 4 : Impacts — `impact_mode: any` = une seule prise en compte (min des impacts numériques)
-    if (question.impact_mode === 'any') {
-      const impacts: number[] = [];
-      for (const selectedCode of selectedCodes) {
-        const option = findQuestionOption(response.question_code, selectedCode);
-        if (option && typeof option.score_impact === 'number') {
-          impacts.push(option.score_impact);
-        }
-      }
-      if (impacts.length > 0) {
-        const agg = Math.min(...impacts);
-        if (agg) {
-          totalImpact += agg;
-        }
-      }
-    } else {
-      for (const selectedCode of selectedCodes) {
-        const option = findQuestionOption(response.question_code, selectedCode);
-        if (!option) continue;
-        if (option.score_impact) {
-          totalImpact += option.score_impact;
-        }
-      }
-    }
-  }
-  
-  // ÉTAPE 6 : Calculer le score final
-  let finalScore = 0;
-  
-  if (isEliminated) {
-    // Si éliminé, le score est toujours 0
-    finalScore = 0;
-  } else {
-    // Sinon, calculer : BASE_SCORE + impacts (minimum 0)
-    finalScore = Math.max(0, BASE_SCORE + totalImpact);
-  }
-  
   return {
     score_base: finalScore,
     is_eliminated: isEliminated,
@@ -442,9 +437,9 @@ export function calculateBaseScore(
     calculation_details: {
       base_score: BASE_SCORE,
       total_impact: totalImpact,
-      final_base_score: finalScore
-    }
-  };
+      final_base_score: finalScore,
+    },
+  }
 }
 
 /**

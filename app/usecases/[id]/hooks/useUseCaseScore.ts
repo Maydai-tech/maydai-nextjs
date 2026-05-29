@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { UseCaseScore } from '../types/usecase'
 import { useAuth } from '../../../../lib/auth'
 
@@ -8,26 +8,25 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
   const [error, setError] = useState<string | null>(null)
   const { user, session } = useAuth()
 
-  const fetchScore = async () => {
+  const fetchScore = useCallback(async () => {
     if (!user || !session?.access_token || !usecaseId || usecaseId === '') return
 
     setLoading(true)
     setError(null)
-    
+
     try {
       const url = `/api/usecases/${usecaseId}/score`
-      
+
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
       })
-      
+
       if (!response.ok) {
         let errorMessage = 'Erreur lors du calcul du score'
-        
-        // Vérifier si la réponse est du JSON
+
         const contentType = response.headers.get('content-type')
         if (contentType && contentType.includes('application/json')) {
           try {
@@ -37,10 +36,9 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
             console.error('Error parsing error response:', parseError)
           }
         } else {
-          // Si ce n'est pas du JSON, c'est probablement une page HTML d'erreur
           errorMessage = `Erreur ${response.status}: ${response.statusText}`
         }
-        
+
         throw new Error(errorMessage)
       }
 
@@ -52,27 +50,26 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, session?.access_token, usecaseId])
 
   const recalculateScore = async () => {
     if (!user || !session?.access_token || !usecaseId || usecaseId === '') return
 
     setLoading(true)
     setError(null)
-    
+
     try {
       const response = await fetch(`/api/usecases/${usecaseId}/score`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
       })
 
       if (!response.ok) {
         let errorMessage = 'Erreur lors du recalcul du score'
-        
-        // Vérifier si la réponse est du JSON
+
         const contentType = response.headers.get('content-type')
         if (contentType && contentType.includes('application/json')) {
           try {
@@ -82,10 +79,9 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
             console.error('Error parsing error response:', parseError)
           }
         } else {
-          // Si ce n'est pas du JSON, c'est probablement une page HTML d'erreur
           errorMessage = `Erreur ${response.status}: ${response.statusText}`
         }
-        
+
         throw new Error(errorMessage)
       }
 
@@ -103,9 +99,27 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
 
   useEffect(() => {
     if (autoFetch && usecaseId && user && session?.access_token) {
-      fetchScore()
+      void fetchScore()
     }
-  }, [usecaseId, user, session?.access_token, autoFetch])
+  }, [autoFetch, usecaseId, user, session?.access_token, fetchScore])
+
+  useEffect(() => {
+    if (!autoFetch || !usecaseId || !user || !session?.access_token) return
+
+    const refetchIfVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchScore()
+      }
+    }
+
+    document.addEventListener('visibilitychange', refetchIfVisible)
+    window.addEventListener('focus', refetchIfVisible)
+
+    return () => {
+      document.removeEventListener('visibilitychange', refetchIfVisible)
+      window.removeEventListener('focus', refetchIfVisible)
+    }
+  }, [autoFetch, usecaseId, user, session?.access_token, fetchScore])
 
   return {
     score,
@@ -113,8 +127,6 @@ export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) =>
     error,
     fetchScore,
     recalculateScore,
-    refetch: fetchScore
+    refetch: fetchScore,
   }
 }
-
- 

@@ -126,14 +126,15 @@ export function ReportCanonicalItemRow({ item }: { item: ReportCanonicalItem }) 
               >
                 <span>{item.cta.label}</span>
                 <div className="flex items-center gap-2">
-                  {(item.cta.points ?? 0) > 0 && (
+                  {/* Règle 6.3 : masquer la promesse de points si gain ≤ 0 */}
+                  {(item.cta.points ?? 0) > 0 ? (
                     <span
                       className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-semibold"
                       title={DECLARATION_PROOF_FLOW_COPY.todoPointsToRecoverTitle}
                     >
                       +{item.cta.points} pt à récupérer
                     </span>
-                  )}
+                  ) : null}
                   <ArrowRight className="w-4 h-4 shrink-0" />
                 </div>
               </button>

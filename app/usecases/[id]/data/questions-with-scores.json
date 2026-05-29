@@ -188,7 +188,7 @@
         "code": "E4.N7.Q2.A",
         "label": "Emploi, gestion des travailleurs et accès à l'emploi indépendant",
         "is_eliminatory": false,
-        "score_impact": -30,
+        "score_impact": -18,
         "risk": "high",
         "category_impacts": {
           "risk_level": -45
@@ -202,7 +202,7 @@
       {
         "code": "E4.N7.Q2.B",
         "label": "Administration de la justice et processus démocratiques",
-        "score_impact": -30,
+        "score_impact": -18,
         "risk": "high",
         "category_impacts": {
           "risk_level": -45
@@ -216,7 +216,7 @@
       {
         "code": "E4.N7.Q2.C",
         "label": "Migration, asile et gestion des contrôles aux frontières",
-        "score_impact": -30,
+        "score_impact": -18,
         "risk": "high",
         "category_impacts": {
           "risk_level": -45
@@ -230,7 +230,7 @@
       {
         "code": "E4.N7.Q2.D",
         "label": "Gestion et exploitation des infrastructures critiques",
-        "score_impact": -30,
+        "score_impact": -18,
         "risk": "high",
         "category_impacts": {
           "risk_level": -45
@@ -244,7 +244,7 @@
       {
         "code": "E4.N7.Q2.E",
         "label": "Éducation et formation professionnelle",
-        "score_impact": -30,
+        "score_impact": -18,
         "risk": "high",
         "category_impacts": {
           "risk_level": -45
@@ -258,7 +258,7 @@
       {
         "code": "E4.N7.Q2.F",
         "label": "Activités répressives (risque récidive, fiabilité preuves...)",
-        "score_impact": -30,
+        "score_impact": -18,
         "risk": "high",
         "category_impacts": {
           "risk_level": -45
@@ -501,7 +501,7 @@
       {
         "code": "E4.N7.Q4.A",
         "label": "Oui",
-        "score_impact": -10,
+        "score_impact": -6,
         "risk": "high",
         "category_impacts": {
           "risk_level": -30
@@ -540,7 +540,7 @@
       {
         "code": "E4.N7.Q5.B",
         "label": "Non",
-        "score_impact": -10,
+        "score_impact": -6,
         "risk": "high",
         "category_impacts": {
           "risk_level": -30
@@ -568,7 +568,7 @@
       {
         "code": "E4.N8.Q2.A",
         "label": "Oui",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
           "privacy_data": -2
         }
@@ -595,7 +595,7 @@
       {
         "code": "E4.N8.Q3.A",
         "label": "Oui",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
           "human_agency": -2
         }
@@ -622,7 +622,7 @@
       {
         "code": "E4.N8.Q4.A",
         "label": "Oui",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
           "technical_robustness": -2
         }
@@ -649,7 +649,7 @@
       {
         "code": "E4.N8.Q5.A",
         "label": "Oui",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
           "transparency": -2
         }
@@ -676,7 +676,7 @@
       {
         "code": "E4.N8.Q6.A",
         "label": "Oui",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
           "diversity_fairness": -2
         }
@@ -703,7 +703,7 @@
       {
         "code": "E4.N8.Q7.A",
         "label": "Oui",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
           "risk_level": -10
         }
@@ -730,7 +730,7 @@
       {
         "code": "E4.N8.Q8.A",
         "label": "Oui",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
           "human_agency": -2
         }
@@ -758,7 +758,7 @@
         "code": "E4.N8.Q9.A",
         "label": "Oui (Interlocuteur direct)",
         "description": "Chatbot client, assistant virtuel, appel automatisé où la personne pourrait ignorer qu'elle parle à une IA.",
-        "score_impact": -3,
+        "score_impact": -2,
         "risk": "limited",
         "category_impacts": {
           "human_oversight": -3
@@ -787,7 +787,7 @@
       {
         "code": "E4.N8.Q9.1.A",
         "label": "Oui (Catégorisation ou émotions)",
-        "score_impact": -2,
+        "score_impact": -1,
         "risk": "limited",
         "category_impacts": {
           "privacy_data": -2
@@ -828,7 +828,7 @@
       {
         "code": "E4.N8.Q10.C",
         "label": "De 1 000 à 9 999",
-        "score_impact": -2,
+        "score_impact": -1,
         "category_impacts": {
           "human_oversight": -2
         }
@@ -836,7 +836,7 @@
       {
         "code": "E4.N8.Q10.D",
         "label": "De 10 000 à 99 999",
-        "score_impact": -3,
+        "score_impact": -2,
         "category_impacts": {
           "human_oversight": -3
         }
@@ -844,7 +844,7 @@
       {
         "code": "E4.N8.Q10.E",
         "label": "De 100 000 à 999 999",
-        "score_impact": -3,
+        "score_impact": -2,
         "category_impacts": {
           "human_oversight": -3
         }
@@ -852,7 +852,7 @@
       {
         "code": "E4.N8.Q10.F",
         "label": "1 million ou plus",
-        "score_impact": -3,
+        "score_impact": -2,
         "category_impacts": {
           "human_oversight": -3
         }
@@ -932,7 +932,7 @@
         "code": "E4.N8.Q11.T1.A",
         "label": "A — Information d'intérêt public SANS validation humaine",
         "description": "Publication automatisée d'articles, de communiqués ou d'informations citoyennes.",
-        "score_impact": -2,
+        "score_impact": -1,
         "risk": "limited",
         "category_impacts": {
           "transparency": -2
@@ -1061,7 +1061,7 @@
       {
         "code": "E4.N8.Q11.M1.A",
         "label": "Oui",
-        "score_impact": -3,
+        "score_impact": -2,
         "risk": "limited",
         "category_impacts": {
           "social_environmental": -3
@@ -1151,7 +1151,7 @@
       {
         "code": "E5.N9.Q5.B",
         "label": "Personnelles",
-        "score_impact": -2,
+        "score_impact": -1,
         "category_impacts": {
           "privacy_data": -2
         }
@@ -1159,7 +1159,7 @@
       {
         "code": "E5.N9.Q5.C",
         "label": "Stratégiques / Confidentielles",
-        "score_impact": -2,
+        "score_impact": -1,
         "category_impacts": {
           "technical_robustness": -2
         }
@@ -1167,7 +1167,7 @@
       {
         "code": "E5.N9.Q5.D",
         "label": "Sensibles (Santé, Biométrie, etc.)",
-        "score_impact": -5,
+        "score_impact": -3,
         "category_impacts": {
           "privacy_data": -5
         }
@@ -1190,7 +1190,7 @@
       {
         "code": "E5.N9.Q6.A",
         "label": "Non",
-        "score_impact": -4,
+        "score_impact": -6,
         "category_impacts": {
           "privacy_data": -4
         }
@@ -1217,7 +1217,7 @@
       {
         "code": "E5.N9.Q1.B",
         "label": "Non",
-        "score_impact": -8,
+        "score_impact": -6,
         "category_impacts": {
           "technical_robustness": -8
         }
@@ -1240,7 +1240,7 @@
       {
         "code": "E5.N9.Q7.A",
         "label": "Non",
-        "score_impact": -8,
+        "score_impact": -4,
         "category_impacts": {
           "human_agency": -8
         }
@@ -1273,7 +1273,7 @@
       {
         "code": "E5.N9.Q4.B",
         "label": "Non",
-        "score_impact": -8,
+        "score_impact": -5,
         "category_impacts": {
           "human_agency": -8
         }
@@ -1301,7 +1301,7 @@
       {
         "code": "E5.N9.Q8.A",
         "label": "Non",
-        "score_impact": -10,
+        "score_impact": -5,
         "category_impacts": {
           "human_agency": -10
         }
@@ -1324,7 +1324,7 @@
       {
         "code": "E5.N9.Q9.A",
         "label": "Non",
-        "score_impact": -10,
+        "score_impact": -4,
         "category_impacts": {
           "technical_robustness": -10
         }
@@ -1352,7 +1352,8 @@
       {
         "code": "E5.N9.Q3.A",
         "label": "Non",
-        "score_impact": -4,
+        "score_impact": -6,
+        "todo_action": "system_prompt",
         "category_impacts": {
           "technical_robustness": -4
         }
@@ -1380,7 +1381,7 @@
       {
         "code": "E6.N10.Q1.A",
         "label": "Non",
-        "score_impact": -10,
+        "score_impact": -2,
         "category_impacts": {
           "transparency": -10
         }
@@ -1408,7 +1409,7 @@
       {
         "code": "E6.N10.Q2.A",
         "label": "Non",
-        "score_impact": -5,
+        "score_impact": -1,
         "category_impacts": {
           "transparency": -5
         }
@@ -1441,7 +1442,7 @@
       {
         "code": "E6.N10.Q3.A",
         "label": "Non",
-        "score_impact": -10,
+        "score_impact": -1,
         "category_impacts": {
           "transparency": -10
         }
@@ -1468,7 +1469,7 @@
       {
         "code": "E7.N11.Q1.A",
         "label": "Non",
-        "score_impact": -3,
+        "score_impact": -2,
         "category_impacts": {
           "social_environmental": -3
         }
@@ -1495,7 +1496,7 @@
       {
         "code": "E7.N11.Q2.A",
         "label": "Non",
-        "score_impact": -3,
+        "score_impact": -2,
         "category_impacts": {
           "social_environmental": -3
         }

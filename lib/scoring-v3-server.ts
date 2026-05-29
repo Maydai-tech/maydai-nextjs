@@ -40,14 +40,15 @@ export function buildV3ScoringContextFromDbResponses(
       scoringActiveQuestionCodes.add(code)
     }
   }
-  /** Parcours court : lignes E5/E6 / E4.N8.Q12 fusionnées (checklists, fantômes packs) doivent participer au score même hors `active_question_codes`. */
-  if (questionnairePathMode === 'short') {
-    for (const r of responses) {
-      const c = r.question_code
-      if (typeof c !== 'string' || !c) continue
-      if (c.startsWith('E5.N9.') || c.startsWith('E6.N10.') || c === 'E4.N8.Q12') {
-        scoringActiveQuestionCodes.add(c)
-      }
+  /**
+   * Lignes E5/E6 (checklists) et littératie `E4.N8.Q12` : réponses persistées doivent
+   * participer au score_base plat même si le graphe ORS n’les a pas listées dans `active_question_codes`.
+   */
+  for (const r of responses) {
+    const c = r.question_code
+    if (typeof c !== 'string' || !c) continue
+    if (c.startsWith('E5.N9.') || c.startsWith('E6.N10.') || c === 'E4.N8.Q12') {
+      scoringActiveQuestionCodes.add(c)
     }
   }
   const meta = computeV3UsecaseQuestionnaireFields(answers, systemType, questionnairePathMode)

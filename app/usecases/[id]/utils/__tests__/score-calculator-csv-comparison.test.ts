@@ -224,9 +224,9 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
       const humanAgency = result.category_scores.find(c => c.category_id === 'human_agency')
       expect(humanAgency?.percentage).toBe(100)
 
-      // Robustesse technique : max augmenté avec E5.N9.Q1 (malus B) + micro-mal T1.E sur le barème catégorie
+      // Robustesse technique : réponses positives du jeu Traducteur 1 (barème compressé)
       const technical = result.category_scores.find(c => c.category_id === 'technical_robustness')
-      expect(technical?.percentage).toBe(86)
+      expect(technical?.percentage).toBe(90)
 
       // Privacy & Data: Toutes les bonnes réponses = 100%
       const privacy = result.category_scores.find(c => c.category_id === 'privacy_data')
@@ -250,7 +250,7 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
       printComparisonTable('Traducteur HTML 2 (réponses négatives)', result, csvExpectedTraducteur2)
 
       // Pénalités issues des seules questions présentes dans questions-with-scores.json (E5/E6 hors JSON ignorés)
-      expect(result.score).toBeCloseTo(40, 1)
+      expect(result.score).toBeCloseTo(42, 1)
       expect(result.is_eliminated).toBe(false)
     })
 
@@ -259,14 +259,14 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
 
       const humanAgency = result.category_scores.find(c => c.category_id === 'human_agency')
       // Barème E4.N8.Q2–Q8 + E4.N8.Q11 (catégories simplifiées) : plafonds `human_agency` élargis sans réponses négatives sur Q2–Q8 → % human_agency plus élevé qu’avant (~24 %).
-      expect(humanAgency?.percentage).toBe(24)
+      expect(humanAgency?.percentage).toBe(15)
 
       const technical = result.category_scores.find(c => c.category_id === 'technical_robustness')
-      expect(technical?.percentage).toBe(33)
+      expect(technical?.percentage).toBe(23)
 
       const transparency = result.category_scores.find(c => c.category_id === 'transparency')
-      /** E6.N10 + barème E4.N8.Q11 (T2/M2 en transparence simplifiée) : plafond / pertes recalés. */
-      expect(transparency?.percentage).toBe(52)
+      /** E6.N10 + barème E4.N8.Q11 (T2/M2 en transparence simplifiée) : plafond / pertes recalés (compressé). */
+      expect(transparency?.percentage).toBe(35)
     })
 
     test('should have correct penalty breakdown', async () => {
@@ -274,16 +274,16 @@ describe('Score Calculator - Comparaison CSV détaillée', () => {
 
       // Seules les questions définies dans questions-with-scores.json produisent une ligne de breakdown
       const penalties = [
-        { id: 'E5.N9.Q1', expected: -4 },
-        { id: 'E5.N9.Q3', expected: -4 },
-        { id: 'E5.N9.Q4', expected: -4 },
+        { id: 'E5.N9.Q1', expected: -6 },
+        { id: 'E5.N9.Q3', expected: -6 },
+        { id: 'E5.N9.Q4', expected: -5 },
         { id: 'E5.N9.Q9', expected: -4 },
         { id: 'E4.N8.Q12', expected: -3 },
-        { id: 'E4.N8.Q9', expected: -3 },
+        { id: 'E4.N8.Q9', expected: -2 },
         { id: 'E4.N8.Q10', expected: -1 },
-        { id: 'E4.N8.Q11.M1', expected: -3 },
-        { id: 'E6.N10.Q1', expected: -5 },
-        { id: 'E6.N10.Q3', expected: -5 },
+        { id: 'E4.N8.Q11.M1', expected: -2 },
+        { id: 'E6.N10.Q1', expected: -2 },
+        { id: 'E6.N10.Q3', expected: -1 },
       ]
 
       penalties.forEach(({ id, expected }) => {

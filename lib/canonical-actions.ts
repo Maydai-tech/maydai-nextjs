@@ -34,8 +34,6 @@ export interface CanonicalActionDefinition {
   dossier_mixed_text_placeholder?: string
   dossier_mixed_file_label?: string
   dossier_mixed_file_help?: string
-  /** Points normalisés affichés pour l’action registre (todo / cartes). */
-  registry_normalized_display_points?: number
   /** Titres todo registre selon le cas A/B/C (questionnaire Q7). */
   registry_todo_title_by_case?: Readonly<Record<'A' | 'B' | 'C', string>>
   /** Textes d’aide sous la todo registre (variantes selon preuve / MaydAI). */
@@ -50,7 +48,6 @@ export interface CanonicalActionDefinition {
 /** Alias legacy → clé `doc_type` canonique stockée côté dossier / UI. */
 export const LEGACY_DOC_TYPE_ALIASES: Readonly<Record<string, string>> = {
   registry_action: 'registry_proof',
-  training_census: 'training_plan',
 }
 
 export const CANONICAL_DOC_TYPES = [
@@ -95,7 +92,6 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     dossier_help_info:
       'Document attestant de l’utilisation d’un registre centralisé conforme à l’AI Act pour le suivi de vos systèmes d’IA. Peut inclure : capture d’écran du registre, attestation du responsable, export de données du registre, ou tout autre élément prouvant son utilisation effective.',
     dossier_accepted_formats_ui: '.pdf,.png,.jpg,.jpeg',
-    registry_normalized_display_points: 3,
     registry_todo_title_by_case: {
       A: 'Initialiser le registre centralisé pour vos systèmes d\'IA',
       B: 'Initialiser le registre centralisé pour vos systèmes d\'IA',
@@ -281,7 +277,7 @@ export const CANONICAL_ACTIONS: readonly CanonicalActionDefinition[] = [
     canonical_action_code: 'MAYDAI_TRAINING_COMPLIANCE',
     doc_type_canonique: 'training_plan',
     label: 'Formation / sensibilisation AI Act',
-    legacy_aliases: ['training_census', 'action_3'],
+    legacy_aliases: ['action_3'],
     report_slot_target: 'action_3',
     todo_doc_type_target: 'training_plan',
     dossier_section_target: 'training_plan',
@@ -359,7 +355,6 @@ export function getCanonicalDocTypeForReportSlot(slotKey: string): string | null
   return getCanonicalActionByReportSlot(slotKey)?.doc_type_canonique ?? null
 }
 
-const TRAINING_STORAGE_TYPES = ['training_plan', 'training_census'] as const
 
 /** Actions du flux standard, dans l’ordre (registre + 8). */
 export function getStandardComplianceActionsOrdered(): CanonicalActionDefinition[] {
@@ -427,19 +422,6 @@ export function getRegistryTodoHelpExplanation(
     case 'C':
       return ctx.hasRegistryProofDocument ? help.C.withProof : help.C.withoutProof
   }
-}
-
-export function getRegistryNormalizedPointsFromCatalog(): number {
-  return getRegistryCatalogEntry()?.registry_normalized_display_points ?? 3
-}
-
-/** Points normalisés (affichage todo) pour une action du flux standard hors registre et hors preuve d’arrêt. */
-export function getComplianceNormalizedPointsForDocType(docType: string): number {
-  const a = getCanonicalActionByDocType(docType)
-  if (!a || a.doc_type_canonique === 'stopping_proof') return 0
-  if (a.registry_completion_special) return 0
-  if (a.standard_compliance_order !== null) return 2
-  return 0
 }
 
 /** Alias explicite phase 2 : mêmes types que `getStandardComplianceDocTypesExcludingRegistry`. */
@@ -549,48 +531,6 @@ export function buildDashboardTodoListDeepLink(
 ): string {
   const c = resolveCanonicalDocType(docType)
   return `/dashboard/${companyId}/todo-list?usecase=${encodeURIComponent(useCaseId)}&action=${encodeURIComponent(c)}`
-}
-
-export function isTrainingDocStorageGroup(docType: string): boolean {
-  return TRAINING_STORAGE_TYPES.includes(docType as (typeof TRAINING_STORAGE_TYPES)[number])
-}
-
-export function trainingDocTypesForQuery(): readonly string[] {
-  return TRAINING_STORAGE_TYPES
-}
-
-export type DossierDocumentRow = {
-  id?: string
-  doc_type?: string
-  form_data?: Record<string, unknown> | null
-  file_url?: string | null
-  status?: string | null
-  updated_at?: string | null
-}
-
-function statusRank(status: string | null | undefined): number {
-  if (status === 'validated') return 3
-  if (status === 'complete') return 2
-  return 1
-}
-
-export function coalesceTrainingDocumentRows(
-  rows: DossierDocumentRow[] | null | undefined
-): DossierDocumentRow | null {
-  if (!rows?.length) return null
-  let best: DossierDocumentRow | null = null
-  let bestRank = 0
-  let bestTs = ''
-  for (const row of rows) {
-    const r = statusRank(row.status)
-    const ts = row.updated_at || ''
-    if (!best || r > bestRank || (r === bestRank && ts > bestTs)) {
-      best = row
-      bestRank = r
-      bestTs = ts
-    }
-  }
-  return best
 }
 
 export function normalizeHumanOversightFormData(
