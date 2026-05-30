@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from './auth-helper'
-import { cleanupTestData } from './_helpers/db-cleanup'
-import { seedV2Usecase } from './_helpers/seed-usecase'
+import { authenticateUser } from '../auth-helper'
+import { cleanupTestData } from '../_helpers/db-cleanup'
+import { seedV2Usecase } from '../_helpers/seed-usecase'
 
 /**
  * UI — élimination AI Act (parcours V3, bloc ORS).
