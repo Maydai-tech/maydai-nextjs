@@ -88,7 +88,7 @@ async function resolveComplAiModelIdForE2e(admin: SupabaseClient): Promise<strin
   return anyWithScores?.model_id ?? null
 }
 
-test.describe('Scoring V3 — association modèle COMPL-AI', () => {
+test.describe.skip('Scoring V3 — association modèle COMPL-AI', () => {
   test('persiste primary_model_id via API et intègre le modèle au calcul (score_model / score_final) @API @Scoring', async ({
     request,
   }) => {

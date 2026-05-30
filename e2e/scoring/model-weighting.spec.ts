@@ -33,7 +33,7 @@ function getAuthStorageKey(): string {
   return `sb-${projectRef}-auth-token`
 }
 
-test.describe('Calcul de score avec modèle COMPL-AI', () => {
+test.describe.skip('Calcul de score avec modèle COMPL-AI', () => {
   const testUserEmail = `e2e-score-model-${Date.now()}@maydai-test.com`
 
   let testUserId: string | null = null

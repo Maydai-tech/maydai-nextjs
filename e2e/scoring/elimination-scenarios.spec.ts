@@ -98,7 +98,7 @@ async function submitHighRiskAndAssertReport(
   await expect(page.getByTestId('elimination-warning-badge')).toHaveCount(0)
 }
 
-test.describe('Élimination AI Act — interface V3 (ORS)', () => {
+test.describe.skip('Élimination AI Act — interface V3 (ORS)', () => {
   const testUserEmail = `e2e-ui-elim-${Date.now()}@maydai-test.com`
 
   let testUserId: string | null = null

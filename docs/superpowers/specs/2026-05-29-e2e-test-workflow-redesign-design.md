@@ -27,35 +27,39 @@ L'unique workflow CI de tests est `.github/workflows/e2e-tests.yml` (~600 lignes
 
 Trois régimes d'exécution distincts :
 
-| # | Déclencheur | Tests | Bloquant | Slack | Cible |
-|---|-------------|-------|----------|-------|-------|
-| 1 | PR vers `preprod` | sous-ensemble `@preprod` | **Non** | Oui | preview Vercel de la PR |
-| 2 | PR `preprod` → `main` | sous-ensemble `@prod` | **Oui** | Oui | preview Vercel de la PR |
-| 3 | Cron nocturne | **toute la suite** | n/a (informationnel) | Oui | prod `https://maydai.io` |
+| # | Déclencheur | Tests | Bloquant | Slack | Cible (URL testée) |
+|---|-------------|-------|----------|-------|--------------------|
+| 1 | **push** sur `preprod` (après merge de la PR dev→preprod) | tout sauf `@nightly-only` | **Non** | Oui | `https://preprod.maydai.io` (env preprod, header bypass) |
+| 2 | **PR** `preprod` → `main` | sous-ensemble `@prod` | **Non (pour l'instant)** | Oui | `https://preprod.maydai.io` (= code promu, header bypass) |
+| 3 | Cron nocturne | **toute la suite** | n/a (informationnel) | Oui | `https://maydai.io` (prod, sans bypass) |
 
-Flux de branches cible : push direct sur `dev` (aucun gate) → PR `dev → preprod` (régime 1) → PR `preprod → main` (régime 2) → nightly sur prod (régime 3).
+Flux de branches cible : push direct sur `dev` (aucun gate) → PR `dev → preprod` puis **merge** → le push sur `preprod` redéploie `preprod.maydai.io` et déclenche le régime 1 → PR `preprod → main` (régime 2, gate bloquant testant `preprod.maydai.io`) → nightly sur prod (régime 3).
+
+> Décision de timing : le régime 1 tourne **au push sur `preprod`** (post-merge), pas à l'ouverture de la PR dev→preprod. C'est le seul moment où `preprod.maydai.io` reflète réellement le code mergé. Tester l'URL preprod à l'ouverture de la PR validerait l'ancien état.
 
 ## 3. Architecture : reusable workflow + 3 callers
 
 ### 3.1 Reusable workflow `e2e-reusable.yml`
 
-Toute la logique partagée de `e2e-tests.yml` est extraite dans un workflow réutilisable (`on: workflow_call`), paramétré :
+Le workflow réutilisable (`on: workflow_call`) reprend les steps utiles de `e2e-tests.yml` — **moins** toute la logique d'attente/résolution du déploiement preview Vercel (poll deployments, timeout 15 min, notif Slack "build Vercel échoué"), qui devient inutile puisqu'on teste des URLs fixes. Inputs :
 
 | Input | Type | Rôle |
 |-------|------|------|
+| `base_url` | string | URL à tester (`https://preprod.maydai.io` ou `https://maydai.io`). Devient `PLAYWRIGHT_BASE_URL`. |
+| `ref` | string | Ref git à checkout pour le code des tests (ex. `preprod`, `main`). Doit correspondre au code déployé sur `base_url`. |
+| `use_bypass` | boolean | `true` → injecte le header `x-vercel-protection-bypass` via `VERCEL_AUTOMATION_BYPASS_SECRET` (env protégé). `false` → aucun header. |
 | `grep_tag` | string | Tag Playwright à inclure (`@prod`). Vide = pas de filtre d'inclusion. |
 | `grep_invert` | string | Tag Playwright à **exclure** (`@nightly-only`). Vide = aucune exclusion. |
-| `target` | string | `preview` (attend + résout le déploiement preview Vercel de la PR) ou `prod` (utilise directement `prod_url`). |
-| `prod_url` | string | URL cible quand `target=prod` (ex. `https://maydai.io`). |
 | `blocking` | boolean | `true` → le job échoue si des tests échouent (`exit 1` final). `false` → le job réussit toujours, seule la notif Slack signale l'échec. |
 | `regime_label` | string | Libellé affiché dans Slack/logs : `preprod`, `main-gate`, `nightly`. |
 
 Secrets passés via `secrets: inherit` : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `VERCEL_AUTOMATION_BYPASS_SECRET`, `OPENAI_API_KEY`, `STRIPE_SECRET_KEY`, `SLACK_WEBHOOK_URL`, `OVH_SSH_KEY`.
 
-**Comportement selon `target` :**
+**Steps :** `checkout (ref)` → setup Node 22 + pnpm → install deps → install Playwright chromium → run tests (`PLAYWRIGHT_BASE_URL=base_url`, header bypass si `use_bypass`) → parse `test-results.json` → upload artifact → déploie rapport HTML sur OVH → notif Slack (succès/échec) → fail conditionnel si `blocking`.
 
-- `preview` : conserve la logique actuelle d'attente du déploiement preview Vercel (poll deployments, timeout 15 min, notif Slack dédiée en cas d'échec build). Injecte le header `x-vercel-protection-bypass` via `VERCEL_AUTOMATION_BYPASS_SECRET`.
-- `prod` : **saute** entièrement l'étape d'attente preview ; `PLAYWRIGHT_BASE_URL = prod_url`. **N'injecte pas** le bypass secret (la prod n'a pas de protection Vercel preview).
+> `ref` est nécessaire car le code des specs doit matcher le code déployé : régime 1 (push preprod) checkout `preprod` ; régime 2 (PR preprod→main) checkout le head de la PR = `preprod` ; nightly checkout `main` (déployé sur prod).
+
+**Contexte Slack** (plus de step preview qui le calculait) : titre = `[regime_label]`, plus `branch` / `commit` (`github.sha`) / `author` (`github.actor`) / lien run. Pour le régime 2, on ajoute le n°/titre de PR depuis l'event.
 
 **Comportement selon `blocking` :**
 
@@ -75,26 +79,27 @@ Le libellé `regime_label` est injecté dans les titres Slack (ex. `✅ E2E [pre
 
 ### 3.2 Les 3 callers (fichiers courts ~15 lignes)
 
-**`e2e-preprod.yml`**
+**`e2e-preprod.yml`** — push sur preprod, non-bloquant
 ```yaml
 on:
-  pull_request:
+  push:
     branches: [preprod]
-    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:        # run à la demande
 jobs:
   e2e:
-    if: github.event.pull_request.draft == false
     uses: ./.github/workflows/e2e-reusable.yml
     with:
-      grep_tag: ''                 # toute la suite (cf. §4 : seul @prod est taggé)
-      grep_invert: '@nightly-only' # exclut les tests à API payante
-      target: preview
+      base_url: 'https://preprod.maydai.io'
+      ref: ${{ github.sha }}        # le commit poussé sur preprod
+      use_bypass: true              # env preprod protégé
+      grep_tag: ''                  # toute la suite (cf. §4 : seul @prod est taggé)
+      grep_invert: '@nightly-only'  # exclut les tests à API payante
       blocking: false
       regime_label: preprod
     secrets: inherit
 ```
 
-**`e2e-main-gate.yml`**
+**`e2e-main-gate.yml`** — PR preprod→main, bloquant
 ```yaml
 on:
   pull_request:
@@ -105,15 +110,17 @@ jobs:
     if: github.event.pull_request.draft == false && github.event.pull_request.head.ref == 'preprod'
     uses: ./.github/workflows/e2e-reusable.yml
     with:
+      base_url: 'https://preprod.maydai.io'         # = le code promu vers main
+      ref: ${{ github.event.pull_request.head.sha }} # head de la PR = preprod
+      use_bypass: true
       grep_tag: '@prod'
       grep_invert: '@nightly-only' # par sécurité : un @prod ne doit jamais être payant
-      target: preview
       blocking: true
       regime_label: main-gate
     secrets: inherit
 ```
 
-**`e2e-nightly.yml`**
+**`e2e-nightly.yml`** — cron, prod
 ```yaml
 on:
   schedule:
@@ -123,10 +130,11 @@ jobs:
   e2e:
     uses: ./.github/workflows/e2e-reusable.yml
     with:
+      base_url: 'https://maydai.io'
+      ref: 'main'         # le code déployé en prod
+      use_bypass: false   # prod public, pas de header
       grep_tag: ''        # toute la suite
       grep_invert: ''     # AUCUNE exclusion : les tests payants tournent ici
-      target: prod
-      prod_url: 'https://maydai.io'
       blocking: false     # informationnel : on veut la notif, pas un check rouge
       regime_label: nightly
     secrets: inherit
@@ -165,19 +173,19 @@ Les régimes preprod et nightly ne posent aucun tag d'inclusion : preprod lance 
 
 ## 5. Migration de l'existant
 
-- `e2e-tests.yml` (push dev + PR main) est **remplacé** par les 3 nouveaux fichiers. Sa logique migre dans `e2e-reusable.yml`. → **suppression** de `e2e-tests.yml`.
-- Conséquence : un push sur `dev` ne déclenche plus de tests (conforme au flux : push direct sur dev sans gate). Le feedback E2E arrive à la PR `dev → preprod`.
-- Branch protection à mettre à jour côté GitHub (hors code) : le check requis sur `main` devient le job de `e2e-main-gate.yml` ; retirer l'ancien check `e2e-tests` des règles de `main`.
+- `e2e-tests.yml` (push dev + PR main) est **remplacé** par les 3 nouveaux fichiers. Toute la logique réutilisable migre dans `e2e-reusable.yml`, **sauf** l'attente du preview Vercel qui disparaît (on teste des URLs fixes). → **suppression** de `e2e-tests.yml`.
+- Conséquences sur les triggers : un push sur `dev` ne déclenche plus rien (push direct sans gate) ; le feedback E2E large arrive au **push sur `preprod`** (post-merge) ; le gate bloquant arrive à la **PR `preprod → main`**.
+- Branch protection à mettre à jour côté GitHub (hors code) : **retirer l'ancien check `e2e-tests`** des règles de `main`. Pour l'instant **aucun check requis** n'est ajouté (régime 2 en `blocking: false` → décision « aucun test bloquant pour l'instant »). Quand on voudra activer le gate dur : passer `blocking: true` dans `e2e-main-gate.yml` ET ajouter `E2E Main Gate / E2E (main-gate)` comme required status check.
 
 ## 6. Secrets & variables requis
 
-Aucun nouveau secret obligatoire (réutilise l'existant). `prod_url` est passé en clair (`https://maydai.io`) dans le caller nightly — non sensible. Le serveur de rapport OVH et le webhook Slack restent inchangés.
+Aucun nouveau secret obligatoire (réutilise l'existant). `base_url` est passé en clair (`https://preprod.maydai.io`, `https://maydai.io`) dans les callers — non sensible. `VERCEL_AUTOMATION_BYPASS_SECRET` doit être un token de bypass **valide pour l'environnement preprod** (utilisé par les régimes 1 et 2). Le serveur de rapport OVH et le webhook Slack restent inchangés.
 
 ## 7. Validation des workflows
 
-- `workflow_dispatch` est conservé sur le nightly pour pouvoir le lancer à la demande et vérifier le run contre la prod.
+- `workflow_dispatch` est conservé sur le nightly **et** le preprod pour pouvoir les lancer à la demande sans attendre un push/cron.
 - Lint YAML / cohérence des expressions `if` vérifiée localement.
-- Test réel : déclencher manuellement le nightly, puis ouvrir une PR de test vers `preprod` et une vers `main` depuis `preprod` (côté Hugo — l'utilisateur lance et observe lui-même, cf. règle projet « je lance les tests moi-même »).
+- Test réel (côté Hugo — l'utilisateur lance et observe lui-même, cf. règle projet « je lance les tests moi-même ») : déclencher le preprod via `workflow_dispatch` (vérifie l'accès bypass à `preprod.maydai.io`), déclencher le nightly via `workflow_dispatch` (vérifie l'accès prod), puis ouvrir une PR de test `preprod → main` (vérifie le gate bloquant + le filtre `@prod`).
 
 ## 8. Hors périmètre
 

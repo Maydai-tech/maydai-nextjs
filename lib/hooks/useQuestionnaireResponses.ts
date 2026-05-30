@@ -151,7 +151,8 @@ export function useQuestionnaireResponses(usecaseId: string): UseQuestionnaireRe
       setError(null)
 
       // Migration E4/E5/E6 : ne plus écrire `usecase_responses`, envoyer un payload consolidé.
-      if (isE4E5E6QuestionCode(questionCode)) {
+      // Exception : E4.N7.Q1 (statut entreprise) — persistance explicite via POST classique.
+      if (isE4E5E6QuestionCode(questionCode) && questionCode !== 'E4.N7.Q1') {
         throw new Error(
           "Les blocs E4/E5/E6 doivent être persistés via `checklist_gov_enterprise` / `checklist_gov_usecase` (payload consolidé), pas via saveResponse(questionCode)."
         )

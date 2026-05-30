@@ -6,7 +6,7 @@ const TEST_PASSWORD = 'TestPassword123!'
 
 test.describe.configure({ mode: 'serial' })
 
-test.describe('Cas d\'usage — cycle de vie API (Zod POST / PUT)', () => {
+test.describe('Cas d\'usage — cycle de vie API (Zod POST / PUT)', { tag: ['@prod'] }, () => {
   const testUserEmail = `e2e-usecases-api-lifecycle-${Date.now()}@maydai-test.com`
 
   let testUserId: string | null = null
