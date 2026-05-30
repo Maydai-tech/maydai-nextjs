@@ -205,9 +205,9 @@ export default function ContactPage() {
             {/* Titre principal */}
             <div className="text-center mb-12">
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 leading-tight text-center">
-                <span className="text-[#0080a3]">Contactez MaydAI & Réalisez vos</span>
+                <span className="text-[#0080a3]">Contactez MaydAI pour la réalisation</span>
                 <br />
-                <span className="text-[#ffab5a]">Tests Gratuits Audit IA Act</span>
+                <span className="text-[#ffab5a]">de vos Audits IA Act</span>
               </h1>
 
               {/* Paragraphe d'introduction */}
