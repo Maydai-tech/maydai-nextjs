@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { RegistrySchema } from '@/lib/validations/registry'
-import { getAdminClient } from './_helpers/supabase-admin'
+import { getAdminClient } from '../_helpers/supabase-admin'
 
 const TEST_PASSWORD = 'TestPassword123!'
 

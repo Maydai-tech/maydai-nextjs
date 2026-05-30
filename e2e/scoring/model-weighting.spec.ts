@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from './auth-helper'
-import { cleanupTestData } from './_helpers/db-cleanup'
-import { seedV2Usecase } from './_helpers/seed-usecase'
+import { authenticateUser } from '../auth-helper'
+import { cleanupTestData } from '../_helpers/db-cleanup'
+import { seedV2Usecase } from '../_helpers/seed-usecase'
 
 /**
  * Calcul score avec modèle COMPL-AI (Gemini) : appel POST calculate-score,

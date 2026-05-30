@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getAdminClient } from './_helpers/supabase-admin'
-import { seedV2Usecase, cleanupTestData, type V2TestData } from './_helpers/v2-test-data'
+import { getAdminClient } from '../_helpers/supabase-admin'
+import { seedV2Usecase, cleanupTestData, type V2TestData } from '../_helpers/v2-test-data'
 
 /**
  * Impact modèle COMPL-AI sur le barème V3 : association via API (PUT /api/usecases/[id]),
