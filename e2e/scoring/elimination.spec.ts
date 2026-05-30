@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { getAdminClient } from './_helpers/supabase-admin'
-import { seedV2Usecase, cleanupTestData, type V2TestData } from './_helpers/v2-test-data'
+import { getAdminClient } from '../_helpers/supabase-admin'
+import { seedV2Usecase, cleanupTestData, type V2TestData } from '../_helpers/v2-test-data'
 
 /**
  * Élimination : option E4.N7.Q2.1.A sur la question E4.N7.Q2.1.

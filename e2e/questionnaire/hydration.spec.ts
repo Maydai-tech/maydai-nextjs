@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from './auth-helper'
-import { cleanupTestData } from './_helpers/db-cleanup'
+import { authenticateUser } from '../auth-helper'
+import { cleanupTestData } from '../_helpers/db-cleanup'
 import { CompleteSignupSchema } from '@/lib/validations/signup'
 
 /**
