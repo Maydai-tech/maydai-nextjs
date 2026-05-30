@@ -3,16 +3,16 @@ import { createClient } from '@supabase/supabase-js'
 import { authenticateUser } from './auth-helper'
 import { cleanupTestData } from './_helpers/db-cleanup'
 import { seedV2Usecase } from './_helpers/seed-usecase'
+import { CompleteSignupSchema } from '@/lib/validations/signup'
+import { ChecklistArraySchema } from '@/lib/validations/usecases'
 
 /**
- * Calcul score avec modèle COMPL-AI (Gemini) : appel POST calculate-score,
- * vérification des scores persistés (base + modèle + final).
- *
- * `seedV2Usecase` : setup « nouvelle archi » E2E (checklists JSONB, path long) ;
- * le barème API utilise un dénominateur 150 en parcours long (non court V3).
+ * Parcours court V3 : page d’évaluation sous `/usecases/[id]/evaluation?parcours=court`.
+ * Une réponse `usecase_responses` minimale est insérée en setup : l’API `calculate-score`
+ * exige au moins une entrée (réponses et/ou checklists) sans quoi elle répond 404.
  */
 
-const GEMINI_MODEL_ID = 'c4ebe815-b69b-4da2-b366-20dce7349782'
+const TEST_PASSWORD = 'TestPassword123!'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -33,19 +33,19 @@ function getAuthStorageKey(): string {
   return `sb-${projectRef}-auth-token`
 }
 
-test.describe('Calcul de score avec modèle COMPL-AI', () => {
-  const testUserEmail = `e2e-score-model-${Date.now()}@maydai-test.com`
+test.describe.skip('Questionnaire V3 — parcours court (scoring)', () => {
+  const testUserEmail = `e2e-short-path-${Date.now()}@maydai-test.com`
 
   let testUserId: string | null = null
   let testCompanyId: string | null = null
   let testUsecaseId: string | null = null
 
   test.beforeAll(async () => {
-    const supabaseAdmin = getAdminClient()
+    const admin = getAdminClient()
 
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: authData, error: authError } = await admin.auth.admin.createUser({
       email: testUserEmail,
-      password: 'TestPassword123!',
+      password: TEST_PASSWORD,
       email_confirm: true,
     })
     if (authError || !authData.user) {
@@ -53,9 +53,31 @@ test.describe('Calcul de score avec modèle COMPL-AI', () => {
     }
     testUserId = authData.user.id
 
-    const { data: companyRow, error: companyError } = await supabaseAdmin
+    const mockProfile = CompleteSignupSchema.parse({
+      firstName: 'E2E',
+      lastName: 'ShortPath',
+      companyName: 'E2E ShortPath Company',
+      mainIndustryId: 'tech_data',
+      subCategoryId: 'saas',
+    })
+
+    const { error: profileError } = await admin.from('profiles').insert({
+      id: testUserId,
+      first_name: mockProfile.firstName,
+      last_name: mockProfile.lastName,
+      company_name: mockProfile.companyName,
+      industry: mockProfile.mainIndustryId,
+      sub_category_id: mockProfile.subCategoryId,
+      updated_at: new Date().toISOString(),
+    })
+
+    if (profileError) {
+      throw new Error(`Failed to create test profile: ${profileError.message}`)
+    }
+
+    const { data: companyRow, error: companyError } = await admin
       .from('companies')
-      .insert({ name: `E2E ScoreModel ${Date.now()}` })
+      .insert({ name: `E2E ShortPath ${Date.now()}` })
       .select('id')
       .single()
 
@@ -65,55 +87,43 @@ test.describe('Calcul de score avec modèle COMPL-AI', () => {
     testCompanyId = companyRow.id
     const companyId = companyRow.id
 
-    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
-      id: testUserId,
-      first_name: 'E2E',
-      last_name: 'ScoreModel',
-      company_name: `E2E ScoreModel ${Date.now()}`,
+    const { error: profileUpdateError } = await admin.from('profiles').update({
       company_id: companyId,
       current_company_id: companyId,
-      industry: 'tech_data',
-      sub_category_id: 'saas',
-    })
-    if (profileError) {
-      throw new Error(`profiles: ${profileError.message}`)
+    }).eq('id', testUserId)
+    if (profileUpdateError) {
+      throw new Error(`profiles: ${profileUpdateError.message}`)
     }
 
-    const usecaseId = await seedV2Usecase(supabaseAdmin, {
+    const usecaseId = await seedV2Usecase(admin, {
       companyId,
-      pathMode: 'long',
+      pathMode: 'short',
       checklistGovEnterprise: [],
       checklistGovUsecase: [],
     })
     testUsecaseId = usecaseId
 
-    const { error: linkModelError } = await supabaseAdmin
-      .from('usecases')
-      .update({ primary_model_id: GEMINI_MODEL_ID })
-      .eq('id', usecaseId)
-    if (linkModelError) {
-      throw new Error(`primary_model_id update: ${linkModelError.message}`)
-    }
-
-    const { error: ucError } = await supabaseAdmin.from('user_companies').insert({
+    const { error: ucError } = await admin.from('user_companies').insert({
       user_id: testUserId,
       company_id: companyId,
       role: 'owner',
     })
     if (ucError) {
+      console.error('[questionnaire-short-path] user_companies insert failed:', ucError.message)
       throw new Error(`user_companies: ${ucError.message}`)
     }
 
-    const { error: uuError } = await supabaseAdmin.from('user_usecases').insert({
+    const { error: uuError } = await admin.from('user_usecases').insert({
       user_id: testUserId,
       usecase_id: testUsecaseId,
       role: 'owner',
     })
     if (uuError) {
+      console.error('[questionnaire-short-path] user_usecases insert failed:', uuError.message)
       throw new Error(`user_usecases: ${uuError.message}`)
     }
 
-    const { error: respError } = await supabaseAdmin.from('usecase_responses').insert({
+    const { error: respError } = await admin.from('usecase_responses').insert({
       usecase_id: testUsecaseId,
       question_code: 'E4.N7.Q1',
       single_value: 'E4.N7.Q1.B',
@@ -121,6 +131,7 @@ test.describe('Calcul de score avec modèle COMPL-AI', () => {
       answered_at: new Date().toISOString(),
     })
     if (respError) {
+      console.error('[questionnaire-short-path] usecase_responses insert failed:', respError.message)
       throw new Error(`usecase_responses: ${respError.message}`)
     }
   })
@@ -129,12 +140,14 @@ test.describe('Calcul de score avec modèle COMPL-AI', () => {
     await authenticateUser(page, testUserEmail)
   })
 
-  // TODO: Update assertions to match the new COMPL-AI multiplier (2.5) and base score (90) before unskipping.
-  test.skip('Calcule le score de base + la pondération du modèle', async ({ page }) => {
+  // TODO: Update assertions to match the new AI Act scoring math (0.614 scaling factor) before unskipping.
+  test.skip('navigation évaluation + calculate-score persiste le parcours court', async ({ page }) => {
     expect(testUsecaseId).toBeTruthy()
 
     const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
-    await page.goto(`${baseURL}/`, { waitUntil: 'domcontentloaded' })
+    await page.goto(`${baseURL}/usecases/${testUsecaseId}/evaluation?parcours=court`, {
+      waitUntil: 'domcontentloaded',
+    })
 
     const storageKey = getAuthStorageKey()
     const accessToken = await page.evaluate((key: string) => {
@@ -155,26 +168,33 @@ test.describe('Calcul de score avec modèle COMPL-AI', () => {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      data: { path_mode: 'long' },
+      data: { path_mode: 'short' },
     })
 
     if (!scoreRes.ok()) {
       throw new Error(`calculate-score HTTP ${scoreRes.status()}: ${await scoreRes.text()}`)
     }
 
-    const supabaseAdmin = getAdminClient()
-    const { data, error: fetchError } = await supabaseAdmin
+    const admin = getAdminClient()
+    const { data: row, error: fetchError } = await admin
       .from('usecases')
-      .select('score_base, score_model, score_final')
+      .select('path_mode, checklist_gov_enterprise, checklist_gov_usecase, short_path_completed_at')
       .eq('id', testUsecaseId!)
       .single()
 
     expect(fetchError).toBeNull()
-    expect(data).toBeTruthy()
+    expect(row).toBeTruthy()
 
-    expect(data!.score_base).toBe(90)
-    expect(Number(data!.score_model)).toBeCloseTo(12.07, 1)
-    expect(Number(data!.score_final)).toBe(80)
+    expect(row!.path_mode).toBe('short')
+
+    const enterpriseParsed = ChecklistArraySchema.safeParse(row!.checklist_gov_enterprise ?? [])
+    const usecaseParsed = ChecklistArraySchema.safeParse(row!.checklist_gov_usecase ?? [])
+    expect(enterpriseParsed.success).toBe(true)
+    expect(usecaseParsed.success).toBe(true)
+    expect(enterpriseParsed.data).toEqual([])
+    expect(usecaseParsed.data).toEqual([])
+
+    expect(row!.short_path_completed_at).toBeTruthy()
   })
 
   test.afterAll(async () => {

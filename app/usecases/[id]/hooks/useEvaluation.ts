@@ -388,7 +388,8 @@ export function useEvaluation({
       }
 
       // Migration E4/E5/E6 : persistance consolidée uniquement via `usecases.checklist_gov_*`.
-      if (isE4E5E6QuestionCode(questionId)) {
+      // Exception : E4.N7.Q1 (statut entreprise) reste une ligne explicite dans `usecase_responses`.
+      if (isE4E5E6QuestionCode(questionId) && questionId !== 'E4.N7.Q1') {
         const merged = { ...questionnaireData.answers, [questionId]: answer } as Record<string, unknown>
         const consolidated = buildConsolidatedChecklistsFromAnswers(merged)
 

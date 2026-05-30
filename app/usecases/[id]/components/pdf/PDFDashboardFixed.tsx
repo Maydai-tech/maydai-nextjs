@@ -1,5 +1,5 @@
 import React from 'react'
-import { Page, Text, View, StyleSheet } from '@react-pdf/renderer'
+import { Page, Text, View } from '@react-pdf/renderer'
 import { PDFReportData } from './types'
 import { styles, colors, getScoreColor, pdfRiskLevelUnavailableStyle, riskLevelStyles } from './styles'
 import { resolvePdfRiskTierOrUnavailable } from './pdf-risk-logic'
@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { PDFFooter } from './PDFFooter'
 import { getPdfCanonicalDescription } from './pdf-content-utils'
+import type { ActivityHistoryItem } from '@/lib/validations/pdf.schema'
 
 interface PDFDashboardFixedProps {
   data: PDFReportData
@@ -21,13 +22,39 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
     }
   }
 
-  const formatDateShort = (dateString: string) => {
+  const formatHistoryDate = (dateValue: string | Date) => {
     try {
-      return format(new Date(dateString), 'dd MMMM yyyy', { locale: fr })
+      return format(new Date(dateValue), 'dd/MM/yyyy HH:mm', { locale: fr })
     } catch {
       return 'Date non disponible'
     }
   }
+
+  const formatScoreImpactLabel = (impact: number): string => {
+    const rounded = Math.round(impact)
+    if (rounded === 0) return '0'
+    return rounded > 0 ? `+${rounded}` : `${rounded}`
+  }
+
+  const getScoreImpactStyle = (impact: number) => {
+    const rounded = Math.round(impact)
+    if (rounded > 0) {
+      return { backgroundColor: '#DCFCE7', color: '#166534' }
+    }
+    if (rounded < 0) {
+      return { backgroundColor: '#FEE2E2', color: '#991B1B' }
+    }
+    return { backgroundColor: colors.gray[100], color: colors.gray[600] }
+  }
+
+  const formatNullableScore = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return '—'
+    return `${Math.round(value)}`
+  }
+
+  const scoreFinal = data.useCase.score_final ?? data.score?.score ?? null
+  const scoreModel = data.useCase.score_model ?? null
+  const activityHistory = data.useCase.history ?? []
 
   // Trier et filtrer les scores par principes
   const categoryOrder = [
@@ -134,17 +161,31 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
             </View>
           </View>
 
-          {/* Score de conformité */}
+          {/* Score total */}
           <View style={[styles.card, { marginBottom: 15 }]}>
             <Text style={[styles.textSmall, styles.bold, { marginBottom: 5 }]}>
-              Score de conformité
+              Score total
             </Text>
-              <Text style={[styles.scoreValue, { 
-                color: getScoreColor(data.score?.score || 0), 
-                textAlign: 'center' 
-              }]}>
-                {Math.round(data.score?.score || 0)}
-              </Text>
+            <Text style={[styles.scoreValue, {
+              color: getScoreColor(scoreFinal ?? 0),
+              textAlign: 'center',
+            }]}>
+              {formatNullableScore(scoreFinal)}
+            </Text>
+          </View>
+
+          {/* Score du modèle */}
+          <View style={[styles.card, { marginBottom: 15 }]}>
+            <Text style={[styles.textSmall, styles.bold, { marginBottom: 5 }]}>
+              Score du modèle
+            </Text>
+            <Text style={[styles.scoreValue, {
+              color: scoreModel == null ? colors.gray[500] : getScoreColor(scoreModel),
+              textAlign: 'center',
+              fontSize: scoreModel == null ? 14 : undefined,
+            }]}>
+              {formatNullableScore(scoreModel)}
+            </Text>
           </View>
         </View>
       </View>
@@ -178,6 +219,48 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
             </Text>
           </View>
         </View>
+
+        {activityHistory.length > 0 ? (
+          <View style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${colors.gray[200]}` }}>
+            <Text style={[styles.textSmall, styles.bold, { marginBottom: 8 }]}>
+              Historique d'activité
+            </Text>
+            {activityHistory.map((entry: ActivityHistoryItem) => {
+              const impactStyle = getScoreImpactStyle(entry.metadata.score_impact)
+              return (
+                <View
+                  key={entry.id}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginBottom: 6,
+                  }}
+                >
+                  <Text style={[styles.textSmall, { width: 95, fontSize: 7, marginRight: 6 }]}>
+                    {formatHistoryDate(entry.created_at)}
+                  </Text>
+                  <Text style={[styles.textSmall, { flex: 1, fontSize: 7, lineHeight: 1.3, marginRight: 6 }]}>
+                    {entry.metadata.label}
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: impactStyle.backgroundColor,
+                      borderRadius: 10,
+                      paddingHorizontal: 6,
+                      paddingVertical: 2,
+                      minWidth: 28,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 7, color: impactStyle.color, fontFamily: 'Helvetica-Bold' }}>
+                      {formatScoreImpactLabel(entry.metadata.score_impact)}
+                    </Text>
+                  </View>
+                </View>
+              )
+            })}
+          </View>
+        ) : null}
       </View>
 
       {/* Scores par principes - Tableau conditionnel */}

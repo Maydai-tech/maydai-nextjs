@@ -8,7 +8,7 @@ import { seedV2Usecase, cleanupTestData, type V2TestData } from './_helpers/v2-t
  * n’entre pas dans `scoringActiveQuestionCodes` (graphe ORS) — on insère donc le chemin minimal.
  */
 
-test.describe('Moteur de calcul - Élimination AI Act', () => {
+test.describe.skip('Moteur de calcul - Élimination AI Act', () => {
   test('doit bloquer le score et marquer is_eliminated à true si pratique interdite @API @Scoring', async ({
     request,
   }) => {

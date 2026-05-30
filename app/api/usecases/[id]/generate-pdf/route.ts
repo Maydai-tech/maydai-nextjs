@@ -5,7 +5,7 @@ import React from 'react'
 import { PDFDocument } from '@/app/usecases/[id]/components/pdf/PDFDocument'
 import { PDFReportData } from '@/app/usecases/[id]/components/pdf/types'
 import { resolveAuthoritativeRiskCodeForPdf } from '@/app/usecases/[id]/components/pdf/pdf-risk-logic'
-import { REPORT_STANDARD_SLOT_KEYS_ORDERED, resolveCanonicalDocType } from '@/lib/canonical-actions'
+import { REPORT_STANDARD_SLOT_KEYS_ORDERED } from '@/lib/canonical-actions'
 import { buildAllStandardPlanCanonicalItems } from '@/lib/report-canonical-items'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { computeSlotStatuses } from '@/lib/slot-statuses'
@@ -16,6 +16,14 @@ import {
 } from '@/lib/questionnaire-version'
 import { buildV3ScoringContextFromDbResponses } from '@/lib/scoring-v3-server'
 import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
+import {
+  USECASE_PDF_SELECT,
+  applyRule67PointsSync,
+  extractPdfDocumentsFromUseCaseRow,
+  extractPdfHistoryFromUseCaseRow,
+  mergePdfDocumentsToStatusMap,
+  sanitizePdfReportData,
+} from '@/lib/pdf-payload-service'
 
 function stringSetsEqual(a: Set<string>, b: Set<string>): boolean {
   if (a.size !== b.size) return false
@@ -55,31 +63,6 @@ function inferV3PdfQuestionnairePathMode(
     return 'long'
   }
   return 'long'
-}
-
-function rankDocStatus(status: string | null | undefined): number {
-  if (status === 'validated') return 3
-  if (status === 'complete') return 2
-  return 1
-}
-
-function mergeDossierRowsToDocumentStatuses(
-  rows: { doc_type: string; status: string | null }[] | null | undefined
-): Record<string, { status: string }> {
-  const acc = new Map<string, { status: string; rank: number }>()
-  for (const row of rows || []) {
-    const canon = resolveCanonicalDocType(row.doc_type)
-    const rank = rankDocStatus(row.status)
-    const prev = acc.get(canon)
-    if (!prev || rank > prev.rank) {
-      acc.set(canon, { status: row.status || 'incomplete', rank })
-    }
-  }
-  const out: Record<string, { status: string }> = {}
-  acc.forEach((v, k) => {
-    out[k] = { status: v.status }
-  })
-  return out
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -127,27 +110,13 @@ export async function GET(
     const useCaseId = resolvedParams.id
     console.log('📋 UseCase ID:', useCaseId)
 
-    // Fetch the use case with all related data
+    // Fetch the use case with related audit/scoring data (history + dossier documents)
     const { data: useCase, error: useCaseError } = await supabase
       .from('usecases')
-      .select(`
-        *,
-        companies(
-          id,
-          name,
-          industry,
-          city,
-          country
-        ),
-        compl_ai_models(
-          id,
-          model_name,
-          model_provider,
-          model_type,
-          version
-        )
-      `)
+      .select(USECASE_PDF_SELECT)
       .eq('id', useCaseId)
+      .order('created_at', { foreignTable: 'usecase_history', ascending: false })
+      .limit(10, { foreignTable: 'usecase_history' })
       .single()
 
     if (useCaseError) {
@@ -321,6 +290,10 @@ export async function GET(
       ''
     ).replace(/\/$/, '')
 
+    const pdfDocuments = extractPdfDocumentsFromUseCaseRow(useCase)
+    const pdfHistory = extractPdfHistoryFromUseCaseRow(useCase)
+    const documentStatuses = mergePdfDocumentsToStatusMap(pdfDocuments)
+
     if (!isUnacceptableCase) {
       const activeCodesRaw = useCase.active_question_codes
       const activeQuestionCodes = Array.isArray(activeCodesRaw)
@@ -334,38 +307,24 @@ export async function GET(
         }
       )
 
-      let documentStatuses: Record<string, { status: string }> = {}
-      const { data: dossierRow } = await supabase
-        .from('dossiers')
-        .select('id')
-        .eq('usecase_id', useCaseId)
-        .maybeSingle()
+      const companyDataForRegistry = Array.isArray(useCase.companies)
+        ? useCase.companies[0]
+        : useCase.companies
 
-      if (dossierRow?.id) {
-        const { data: docRows } = await supabase
-          .from('dossier_documents')
-          .select('doc_type, status')
-          .eq('dossier_id', dossierRow.id)
-        documentStatuses = mergeDossierRowsToDocumentStatuses(docRows)
-      }
-
-      const { data: companyRow } = await supabase
-        .from('companies')
-        .select('maydai_as_registry')
-        .eq('id', useCase.company_id)
-        .maybeSingle()
-
-      canonicalPlanItems = buildAllStandardPlanCanonicalItems({
-        slotKeysOrdered: [...REPORT_STANDARD_SLOT_KEYS_ORDERED],
-        riskLevel: riskNormalized,
-        nextSteps: nextStepsData,
-        slotStatuses,
-        documentStatuses,
-        maydaiAsRegistry: companyRow?.maydai_as_registry === true,
-        companyId: useCase.company_id,
-        useCaseId,
-        questionnaireResponses: mergedPdfResponses,
-      })
+      canonicalPlanItems = applyRule67PointsSync(
+        buildAllStandardPlanCanonicalItems({
+          slotKeysOrdered: [...REPORT_STANDARD_SLOT_KEYS_ORDERED],
+          riskLevel: riskNormalized,
+          nextSteps: nextStepsData,
+          slotStatuses,
+          documentStatuses,
+          maydaiAsRegistry: companyDataForRegistry?.maydai_as_registry === true,
+          companyId: useCase.company_id,
+          useCaseId,
+          questionnaireResponses: mergedPdfResponses,
+        }),
+        pdfDocuments
+      )
 
       if (canonicalPlanItems.length !== REPORT_STANDARD_SLOT_KEYS_ORDERED.length) {
         logger.warn('PDF: nombre d’items plan canonique inattendu', {
@@ -391,20 +350,30 @@ export async function GET(
     console.log('🤖 Model data:', modelData)
 
     // Préparer les données useCase avec les relations sécurisées
+    const {
+      dossiers: _dossiers,
+      usecase_history: _usecaseHistory,
+      companies: _companies,
+      compl_ai_models: _complAiModels,
+      ...useCaseCore
+    } = useCase
+
     const safeUseCase = {
-      ...useCase,
+      ...useCaseCore,
       companies: companyData ? {
         id: companyData.id || '',
         name: companyData.name || 'Entreprise non spécifiée',
         industry: companyData.industry || 'Non spécifié',
         city: companyData.city || 'Non spécifié',
-        country: companyData.country || 'Non spécifié'
+        country: companyData.country || 'Non spécifié',
+        maydai_as_registry: companyData.maydai_as_registry === true,
       } : {
         id: '',
         name: 'Entreprise non spécifiée',
         industry: 'Non spécifié',
         city: 'Non spécifié',
-        country: 'Non spécifié'
+        country: 'Non spécifié',
+        maydai_as_registry: false,
       },
       compl_ai_models: modelData ? {
         id: modelData.id || '',
@@ -418,11 +387,13 @@ export async function GET(
         model_provider: 'Fournisseur non spécifié',
         model_type: 'Type non spécifié',
         version: 'Version non spécifiée'
-      }
+      },
+      history: pdfHistory,
+      documents: pdfDocuments,
     }
 
     // Prepare PDF data
-    const pdfData: PDFReportData = {
+    const pdfData: PDFReportData = sanitizePdfReportData({
       pdfCtaBaseUrl: pdfCtaBaseUrl || undefined,
       canonicalPlanItems,
       useCase: safeUseCase,
@@ -442,7 +413,7 @@ export async function GET(
         last_name: profileData.last_name,
       },
       generatedDate: new Date().toISOString(),
-    }
+    })
 
     // Generate PDF
     console.log('🔄 Génération PDF en cours...')

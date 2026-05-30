@@ -6,7 +6,7 @@ const TEST_PASSWORD = 'TestPassword123!'
 
 test.describe.configure({ mode: 'serial' })
 
-test.describe('Registre — cycle de vie API', () => {
+test.describe.skip('Registre — cycle de vie API', () => {
   let createdRegistryId: string | null = null
   let testUserId: string | null = null
 

@@ -243,6 +243,7 @@ export function findQuestionOption(questionCode: string, answerCode: string): Qu
  * Détermine le statut d'entreprise basé sur les labels des réponses au questionnaire
  * 
  * Logique basée sur les codes (E4.N7.Q1) puis les labels des réponses affinées :
+ * - E4.N7.Q1.A (Fournisseur) → "fournisseur"
  * - E4.N7.Q1.B (Déployeur) → "utilisateur"
  * - E4.N7.Q1.C (intégrateur / marque blanche) → "fournisseur"
  * - "Je suis fabricant d'un produit intégrant un système d'IA" → "fabriquant_produits"
@@ -266,6 +267,9 @@ export function determineCompanyStatus(responses: UserResponse[]): CompanyStatus
     // Analyser chaque réponse sélectionnée
     for (const selectedCode of selectedCodes) {
       if (response.question_code === 'E4.N7.Q1') {
+        if (selectedCode === 'E4.N7.Q1.A') {
+          return 'fournisseur';
+        }
         if (selectedCode === 'E4.N7.Q1.B') {
           return 'utilisateur';
         }
