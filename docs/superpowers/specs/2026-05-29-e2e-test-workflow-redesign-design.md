@@ -30,7 +30,7 @@ Trois régimes d'exécution distincts :
 | # | Déclencheur | Tests | Bloquant | Slack | Cible (URL testée) |
 |---|-------------|-------|----------|-------|--------------------|
 | 1 | **push** sur `preprod` (après merge de la PR dev→preprod) | tout sauf `@nightly-only` | **Non** | Oui | `https://preprod.maydai.io` (env preprod, header bypass) |
-| 2 | **PR** `preprod` → `main` | sous-ensemble `@prod` | **Oui** | Oui | `https://preprod.maydai.io` (= code promu, header bypass) |
+| 2 | **PR** `preprod` → `main` | sous-ensemble `@prod` | **Non (pour l'instant)** | Oui | `https://preprod.maydai.io` (= code promu, header bypass) |
 | 3 | Cron nocturne | **toute la suite** | n/a (informationnel) | Oui | `https://maydai.io` (prod, sans bypass) |
 
 Flux de branches cible : push direct sur `dev` (aucun gate) → PR `dev → preprod` puis **merge** → le push sur `preprod` redéploie `preprod.maydai.io` et déclenche le régime 1 → PR `preprod → main` (régime 2, gate bloquant testant `preprod.maydai.io`) → nightly sur prod (régime 3).
@@ -175,7 +175,7 @@ Les régimes preprod et nightly ne posent aucun tag d'inclusion : preprod lance 
 
 - `e2e-tests.yml` (push dev + PR main) est **remplacé** par les 3 nouveaux fichiers. Toute la logique réutilisable migre dans `e2e-reusable.yml`, **sauf** l'attente du preview Vercel qui disparaît (on teste des URLs fixes). → **suppression** de `e2e-tests.yml`.
 - Conséquences sur les triggers : un push sur `dev` ne déclenche plus rien (push direct sans gate) ; le feedback E2E large arrive au **push sur `preprod`** (post-merge) ; le gate bloquant arrive à la **PR `preprod → main`**.
-- Branch protection à mettre à jour côté GitHub (hors code) : le check requis sur `main` devient le job de `e2e-main-gate.yml` ; retirer l'ancien check `e2e-tests` des règles de `main`.
+- Branch protection à mettre à jour côté GitHub (hors code) : **retirer l'ancien check `e2e-tests`** des règles de `main`. Pour l'instant **aucun check requis** n'est ajouté (régime 2 en `blocking: false` → décision « aucun test bloquant pour l'instant »). Quand on voudra activer le gate dur : passer `blocking: true` dans `e2e-main-gate.yml` ET ajouter `E2E Main Gate / E2E (main-gate)` comme required status check.
 
 ## 6. Secrets & variables requis
 

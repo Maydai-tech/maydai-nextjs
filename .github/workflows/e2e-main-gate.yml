@@ -15,6 +15,6 @@ jobs:
       use_bypass: true
       grep_tag: '@prod'
       grep_invert: '@nightly-only'
-      blocking: true
+      blocking: false  # non-bloquant pour l'instant (aucun gate dur) — repasser à true pour activer le gate
       regime_label: main-gate
     secrets: inherit
