@@ -13,11 +13,35 @@ const FROM_EMAIL = 'tech@maydai.io';
 const FROM_NAME = 'MaydAI';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.maydai.io';
 
-// Client Mailjet
-const mailjet = Mailjet.apiConnect(
-  process.env.MAILJET_API_KEY!,
-  process.env.MAILJET_SECRET_KEY!
-);
+type MailjetClient = ReturnType<typeof Mailjet.apiConnect>;
+
+let mailjetClient: MailjetClient | null = null;
+
+function getMailjetClient(): MailjetClient | null {
+  const apiKey = process.env.MAILJET_API_KEY;
+  const apiSecret = process.env.MAILJET_API_SECRET;
+
+  if (!apiKey || !apiSecret) {
+    return null;
+  }
+
+  if (!mailjetClient) {
+    mailjetClient = Mailjet.apiConnect(apiKey, apiSecret);
+  }
+
+  return mailjetClient;
+}
+
+function mailjetNotConfiguredError(): { success: false; error: Error } {
+  console.error(
+    '❌ [Mailjet] Client non initialisé:',
+    'MAILJET_API_KEY ou MAILJET_API_SECRET manquant',
+  );
+  return {
+    success: false,
+    error: new Error('MAILJET_API_KEY ou MAILJET_API_SECRET manquant'),
+  };
+}
 
 // Fonction d'envoi pour invitation au niveau registre (registry-level)
 export async function sendRegistryCollaborationInvite({
@@ -31,6 +55,11 @@ export async function sendRegistryCollaborationInvite({
   inviterName: string;
   companyName: string;
 }) {
+  const mailjet = getMailjetClient();
+  if (!mailjet) {
+    return mailjetNotConfiguredError();
+  }
+
   const ctaLink = `${APP_URL}/login?email=${encodeURIComponent(collaboratorEmail)}`;
   const variables = {
     firstName: collaboratorFirstName,
@@ -98,6 +127,11 @@ export async function sendAccountCollaborationInvite({
   inviterName: string;
   orgName: string;
 }) {
+  const mailjet = getMailjetClient();
+  if (!mailjet) {
+    return mailjetNotConfiguredError();
+  }
+
   const ctaLink = `${APP_URL}/login?email=${encodeURIComponent(collaboratorEmail)}`;
   const variables = {
     firstName: collaboratorFirstName,
@@ -175,6 +209,11 @@ export async function sendLeadInviteEmail({
   firstName: string;
   leadId: string;
 }) {
+  const mailjet = getMailjetClient();
+  if (!mailjet) {
+    return mailjetNotConfiguredError();
+  }
+
   const safeFirstName = (firstName ?? '').trim();
   const templateId = Number.parseInt(MAILJET_LEAD_INVITE_TEMPLATE_ID, 10);
 
