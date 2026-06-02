@@ -6,7 +6,6 @@ import ConditionalLayout from '@/components/ConditionalLayout'
 import DeferredGoogleTagManager from '@/components/DeferredGoogleTagManager'
 import SmartLoader from '@/components/SmartLoader'
 import GTMPageViewTracker from '@/components/GTMPageViewTracker'
-import HubSpotTrigger from '@/components/tracking/HubSpotTrigger'
 import AttributionCapture from '@/components/tracking/AttributionCapture'
 
 const GTM_CONTAINER_ID = 'GTM-KLSD6BXG'
@@ -42,7 +41,6 @@ export default function RootProviders({
           <AttributionCapture />
         </Suspense>
         <GTMPageViewTracker />
-        <HubSpotTrigger />
         <SmartLoader>
           <ConditionalLayout>{children}</ConditionalLayout>
         </SmartLoader>
