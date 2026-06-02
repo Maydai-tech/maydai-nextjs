@@ -61,9 +61,8 @@ interface StorageAlertEvent {
   percentage: number
 }
 
-interface HubSpotFormSuccessEvent {
-  event: 'hubspot_form_success'
-  form_id: string
+interface ContactFormSuccessEvent {
+  event: 'contact_form_success'
 }
 
 /** CTA landing conformité IA (header / hero / footer). */
@@ -74,13 +73,6 @@ interface ClickButtonLandingEvent {
   event: 'click_button'
   button_intent: LandingCtaIntent
   button_location: LandingCtaLocation
-}
-
-/** Lead généré depuis le formulaire HubSpot « demande démo » (page contact). */
-interface GenerateLeadHubspotDemoEvent {
-  event: 'generate_lead'
-  lead_type: 'demande_demo'
-  method: 'hubspot_form'
 }
 
 /**
@@ -109,9 +101,8 @@ export type GTMEvent =
   | PricingClickEvent
   | LimitReachedEvent
   | StorageAlertEvent
-  | HubSpotFormSuccessEvent
+  | ContactFormSuccessEvent
   | ClickButtonLandingEvent
-  | GenerateLeadHubspotDemoEvent
   | GoogleAdsEnhancedConversionDataLayerEvent
   | CustomEvent
 
@@ -154,13 +145,10 @@ export function sendLandingCtaClick(params: {
   })
 }
 
-/** Soumission réussie du formulaire HubSpot « demande démo » (page contact). */
-export function sendGenerateLeadHubspotDemo(): void {
-  sendGTMEvent({
-    event: 'generate_lead',
-    lead_type: 'demande_demo',
-    method: 'hubspot_form',
-  })
+export const sendContactFormSuccess = () => {
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    window.dataLayer.push({ event: 'contact_form_success' })
+  }
 }
 
 const CONSENT_DELAY_MS = 1000

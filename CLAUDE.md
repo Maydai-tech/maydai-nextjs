@@ -409,7 +409,7 @@ AIRTABLE_BASE_ID=
 ### Next.js Configuration
 - ESLint disabled during production builds
 - Standalone output in production
-- CSP headers configured for GTM, CookieYes, Stripe, HubSpot
+- CSP headers configured for GTM, CookieYes, Stripe
 - Automatic redirects for favicon and duplicate content
 
 ## Key Principles
