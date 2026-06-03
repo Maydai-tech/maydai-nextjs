@@ -10,8 +10,14 @@ export default function GTMPageViewTracker() {
 
   useEffect(() => {
     if (pathname && pathname !== previousPathname.current) {
-      sendPageViewEvent(pathname, document.title)
       previousPathname.current = pathname
+      void (async () => {
+        try {
+          await sendPageViewEvent(pathname, document.title)
+        } catch (err) {
+          console.error('[gtm] Page view tracking failed:', err)
+        }
+      })()
     }
   }, [pathname])
 

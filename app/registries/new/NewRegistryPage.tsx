@@ -69,7 +69,11 @@ export default function NewRegistryPage() {
         const registryType = selectedType === 'autre' ? 'autre' : (selectedType || 'non_specifie')
         const isFirst = existingRegistryCount === 0
 
-        trackRegistryCreation(registryType, planName, isFirst)
+        try {
+          await trackRegistryCreation(registryType, planName, isFirst)
+        } catch (gtmErr) {
+          console.error('[gtm] Registry creation event tracking failed:', gtmErr)
+        }
 
         router.push(`/dashboard/${result.data.id}`)
       } else {

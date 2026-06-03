@@ -7,7 +7,7 @@ import { useCaseRoutes } from '@/app/usecases/[id]/utils/routes'
 import type { CreateUseCasePayload } from '../types'
 
 export interface UseCreateUseCaseOptions {
-  onSuccess?: (usecaseId: string) => void
+  onSuccess?: (usecaseId: string) => void | Promise<void>
 }
 
 export interface UseCreateUseCaseReturn {
@@ -51,7 +51,11 @@ export function useCreateUseCase(options?: UseCreateUseCaseOptions): UseCreateUs
       }
 
       if (response.data?.id) {
-        options?.onSuccess?.(response.data.id)
+        try {
+          await Promise.resolve(options?.onSuccess?.(response.data.id))
+        } catch (callbackErr) {
+          console.error('[gtm] Use case creation success callback failed:', callbackErr)
+        }
         router.push(useCaseRoutes.selectPath(response.data.id))
       }
     } catch (err: unknown) {

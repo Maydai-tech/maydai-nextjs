@@ -840,7 +840,11 @@ function CreateUseCasePageContent() {
       if (response.data?.id) {
         console.log('Redirection vers:', useCaseRoutes.selectPath(response.data.id))
         if (companyId && formData.ai_category) {
-          trackUseCaseCreation(companyId, formData.ai_category)
+          try {
+            await trackUseCaseCreation(companyId, formData.ai_category)
+          } catch (gtmErr) {
+            console.error('[gtm] Use case creation event tracking failed:', gtmErr)
+          }
         }
         router.push(useCaseRoutes.selectPath(response.data.id))
       }

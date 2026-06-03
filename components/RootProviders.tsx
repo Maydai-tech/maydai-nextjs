@@ -13,7 +13,7 @@ const GTM_CONTAINER_ID = 'GTM-KLSD6BXG'
 interface RootProvidersProps {
   children: React.ReactNode
   /** GTM prod uniquement — passé depuis le layout serveur */
-  loadOfficialGTM?: boolean
+  loadOfficialGTM: boolean
   nonce?: string
 }
 
@@ -23,7 +23,7 @@ interface RootProvidersProps {
  */
 export default function RootProviders({
   children,
-  loadOfficialGTM = false,
+  loadOfficialGTM,
   nonce,
 }: RootProvidersProps) {
   return (
