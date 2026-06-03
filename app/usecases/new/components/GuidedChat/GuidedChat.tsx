@@ -35,10 +35,14 @@ export default function GuidedChat({ companyId, company }: GuidedChatProps) {
   const { state, actions } = useGuidedChatState()
   const modelProviders = useModelProviders()
   const { submit, submitting, error: submitError, clearError } = useCreateUseCase({
-    onSuccess: () => {
+    onSuccess: async () => {
       const aiCategory = state.draft.ai_category
       if (companyId && aiCategory) {
-        trackUseCaseCreation(companyId, aiCategory)
+        try {
+          await trackUseCaseCreation(companyId, aiCategory)
+        } catch (gtmErr) {
+          console.error('[gtm] Use case creation event tracking failed:', gtmErr)
+        }
       }
     },
   })

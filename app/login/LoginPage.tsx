@@ -96,8 +96,12 @@ export default function LoginPage() {
         }
     }
 
-    const handleOtpSuccess = () => {
-        sendLoginEvent('email')
+    const handleOtpSuccess = async () => {
+        try {
+            await sendLoginEvent('email')
+        } catch (err) {
+            console.error('[gtm] Login event tracking failed:', err)
+        }
         router.push('/dashboard/registries')
     }
 

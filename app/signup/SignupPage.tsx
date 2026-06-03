@@ -365,12 +365,16 @@ export default function SignupPage() {
       }
 
       const hashedEmail = await hashEmailForGoogleAds(session.user?.email || '')
-      await Promise.all([
-        sendSignUpEvent('formulaire_landing', {
-          userId: session.user?.id,
-        }),
-        sendGoogleAdsSignupConversionWithUserData(hashedEmail),
-      ])
+      try {
+        await Promise.all([
+          sendSignUpEvent('formulaire_landing', {
+            userId: session.user?.id,
+          }),
+          sendGoogleAdsSignupConversionWithUserData(hashedEmail),
+        ])
+      } catch (gtmErr) {
+        console.error('[gtm] Signup event tracking failed:', gtmErr)
+      }
 
       router.push('/dashboard/registries')
     } catch (err) {
