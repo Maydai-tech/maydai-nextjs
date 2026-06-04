@@ -1,15 +1,33 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useTransition, useCallback } from 'react'
+import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { AlertTriangle, Save, Edit, X, CheckCircle, Settings, ArrowLeft } from 'lucide-react'
+import { AlertTriangle, Save, Edit, X, Settings, ArrowLeft, ShieldCheck } from 'lucide-react'
+import {
+  REGISTRE_MAYDAI_SEAL_ALT,
+  REGISTRE_MAYDAI_SEAL_SRC,
+} from '../components/RegistreMaydaiBadge'
 import DeleteRegistryModal from '../components/DeleteRegistryModal'
 import ConfirmCentralizedRegistryModal from '../components/ConfirmCentralizedRegistryModal'
 import EditCentralizedRegistryModal from '../components/EditCentralizedRegistryModal'
 import { REGISTRY_TYPES, isCustomType, getTypeLabel } from '@/lib/registry-types'
 import CompanySectorSelector, { type IndustrySelection } from '@/components/CompanySectorSelector'
+import RegistryCompletenessScore from '@/components/Registry/RegistryCompletenessScore'
+import Tooltip from '@/components/Tooltip'
 import { getIndustryDisplayText, getIndustryLabel, getSubCategoryLabel } from '@/lib/constants/industries'
+
+const REGISTRY_INPUT_BASE =
+  'w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent transition-colors'
+
+const HIGHLIGHT_RING_CLASS =
+  'ring-2 ring-[#ffab5a] border-transparent transition-all duration-300'
+
+function registryFieldClass(highlightMissing: boolean, isEmpty: boolean, extra = ''): string {
+  const highlight = highlightMissing && isEmpty ? HIGHLIGHT_RING_CLASS : ''
+  return `${REGISTRY_INPUT_BASE} ${highlight} ${extra}`.trim()
+}
 
 interface Company {
   id: string
@@ -19,14 +37,54 @@ interface Company {
   city: string
   country: string
   type?: string
-  role: string
+  role?: string | null
   maydai_as_registry?: boolean
+  is_centralized_registry?: boolean
+  completeness_score?: number | null
+  has_collaborators?: boolean
+}
+
+function isCompanyCentralized(company: Company): boolean {
+  return (
+    company.maydai_as_registry === true || company.is_centralized_registry === true
+  )
+}
+
+/** Réponse GET/PUT company (+ champs métier optionnels du PUT). */
+type CompanyApiPayload = Partial<Company> & {
+  useCasesUpdated?: number
+  registryScoresRecalculated?: number
+}
+
+/** Le PUT renvoie la ligne companies sans `role` ; on fusionne pour éviter un flash « accès refusé ». */
+function mergeCompanyFromApi(
+  previous: Company | null,
+  payload: CompanyApiPayload
+): Company {
+  return {
+    ...(previous ?? {}),
+    ...payload,
+    role:
+      typeof payload.role === 'string'
+        ? payload.role
+        : previous?.role ?? null,
+    has_collaborators:
+      typeof payload.has_collaborators === 'boolean'
+        ? payload.has_collaborators
+        : previous?.has_collaborators ?? false,
+  } as Company
+}
+
+function isAccessDeniedForSettings(company: Company | null): boolean {
+  if (!company || company.role == null) return false
+  return company.role !== 'owner'
 }
 
 export default function RegistrySettingsPage() {
   const router = useRouter()
   const resolvedParams = useParams()
   const { user, loading: authLoading, getAccessToken } = useAuth()
+  const [isRefreshPending, startRefreshTransition] = useTransition()
 
   const [mounted, setMounted] = useState(false)
   const [company, setCompany] = useState<Company | null>(null)
@@ -48,6 +106,7 @@ export default function RegistrySettingsPage() {
   const [customType, setCustomType] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [highlightMissing, setHighlightMissing] = useState(false)
 
   // Danger zone state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -71,6 +130,36 @@ export default function RegistrySettingsPage() {
     }
   }, [user, authLoading, router, mounted])
 
+  const applyOwnerFormFromCompany = useCallback((data: Company) => {
+    setFormData({
+      name: data.name || '',
+      city: data.city || '',
+      country: data.country || '',
+    })
+    setIndustrySelection({
+      mainIndustryId: data.industry || '',
+      subCategoryId: data.sub_category_id || '',
+    })
+    if (data.type) {
+      if (isCustomType(data.type)) {
+        setSelectedType('autre')
+        setCustomType(data.type)
+      } else {
+        setSelectedType(data.type)
+        setCustomType('')
+      }
+    } else {
+      setSelectedType('')
+      setCustomType('')
+    }
+  }, [])
+
+  const refreshServerData = useCallback(() => {
+    startRefreshTransition(() => {
+      router.refresh()
+    })
+  }, [router])
+
   // Fetch company data
   useEffect(() => {
     const fetchCompany = async () => {
@@ -81,48 +170,26 @@ export default function RegistrySettingsPage() {
         const token = getAccessToken()
         const response = await fetch(`/api/companies/${companyId}`, {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         })
 
         if (!response.ok) {
           if (response.status === 403) {
-            throw new Error('Vous n\'avez pas accès à ce registre')
+            throw new Error("Vous n'avez pas accès à ce registre")
           }
           throw new Error('Erreur lors du chargement du registre')
         }
 
-        const data = await response.json()
+        const data = (await response.json()) as Company
 
-        // Non-owners: store company data but don't populate form (restricted UI will show)
+        setCompany((prev) => mergeCompanyFromApi(prev, data))
+
         if (data.role !== 'owner') {
-          setCompany(data)
           return
         }
 
-        setCompany(data)
-        setFormData({
-          name: data.name || '',
-          city: data.city || '',
-          country: data.country || ''
-        })
-        setIndustrySelection({
-          mainIndustryId: data.industry || '',
-          subCategoryId: data.sub_category_id || ''
-        })
-        // Initialize type state
-        if (data.type) {
-          if (isCustomType(data.type)) {
-            setSelectedType('autre')
-            setCustomType(data.type)
-          } else {
-            setSelectedType(data.type)
-            setCustomType('')
-          }
-        } else {
-          setSelectedType('')
-          setCustomType('')
-        }
+        applyOwnerFormFromCompany(data)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Une erreur est survenue')
       } finally {
@@ -133,7 +200,7 @@ export default function RegistrySettingsPage() {
     if (mounted && user) {
       fetchCompany()
     }
-  }, [user, companyId, mounted, getAccessToken, router])
+  }, [user, companyId, mounted, getAccessToken, applyOwnerFormFromCompany])
 
   const handleEdit = () => {
     setIsEditing(true)
@@ -166,7 +233,31 @@ export default function RegistrySettingsPage() {
       }
     }
     setIsEditing(false)
+    setHighlightMissing(false)
     setError(null)
+  }
+
+  const handleHighlightRequest = () => {
+    if (!isEditing) {
+      setIsEditing(true)
+    }
+    setHighlightMissing(true)
+    setTimeout(() => {
+      const firstMissingField = document.querySelector(
+        '#registry-form [data-missing="true"]'
+      ) as HTMLElement | null
+      if (firstMissingField) {
+        firstMissingField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        if (
+          firstMissingField instanceof HTMLInputElement ||
+          firstMissingField instanceof HTMLSelectElement ||
+          firstMissingField instanceof HTMLTextAreaElement ||
+          firstMissingField instanceof HTMLButtonElement
+        ) {
+          firstMissingField.focus({ preventScroll: true })
+        }
+      }
+    }, 150)
   }
 
   const handleSave = async () => {
@@ -200,9 +291,11 @@ export default function RegistrySettingsPage() {
       }
 
       const updatedCompany = await response.json()
-      setCompany(updatedCompany)
+      setCompany((prev) => mergeCompanyFromApi(prev, updatedCompany))
       setSaveSuccess(true)
       setIsEditing(false)
+      setHighlightMissing(false)
+      refreshServerData()
 
       // Reset success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000)
@@ -235,8 +328,9 @@ export default function RegistrySettingsPage() {
       }
 
       const updatedCompany = await response.json()
-      setCompany(updatedCompany)
+      setCompany((prev) => mergeCompanyFromApi(prev, updatedCompany))
       setShowCentralizedRegistryModal(false)
+      refreshServerData()
 
       // Display success message with number of updated use cases
       const useCasesUpdated = updatedCompany.useCasesUpdated || 0
@@ -276,8 +370,9 @@ export default function RegistrySettingsPage() {
       }
 
       const updatedCompany = await response.json()
-      setCompany(updatedCompany)
+      setCompany((prev) => mergeCompanyFromApi(prev, updatedCompany))
       setShowEditRegistryModal(false)
+      refreshServerData()
 
       // Display success message with number of updated use cases
       const useCasesUpdated = updatedCompany.useCasesUpdated || 0
@@ -321,7 +416,13 @@ export default function RegistrySettingsPage() {
     }
   }
 
-  if (!mounted || authLoading || loading) {
+  const isRightsPending =
+    company != null && (company.role === undefined || company.role === null)
+
+  const showLoadingState =
+    !mounted || authLoading || loading || isRefreshPending || isRightsPending
+
+  if (showLoadingState) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -336,8 +437,7 @@ export default function RegistrySettingsPage() {
     return null
   }
 
-  // Non-owner: show restricted access message
-  if (company.role !== 'owner') {
+  if (isAccessDeniedForSettings(company)) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -366,8 +466,34 @@ export default function RegistrySettingsPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Paramètres du registre</h1>
+        <div className="mb-8 flex flex-wrap items-center gap-3">
+          {isCompanyCentralized(company) && (
+            <Tooltip
+              title={REGISTRE_MAYDAI_SEAL_ALT}
+              shortContent="Source de vérité légale (Registre MaydAI)"
+              type="answer"
+              position="bottom"
+            >
+              <img
+                src={REGISTRE_MAYDAI_SEAL_SRC}
+                alt={REGISTRE_MAYDAI_SEAL_ALT}
+                width={36}
+                height={36}
+                className="object-contain drop-shadow-sm shrink-0 cursor-default"
+              />
+            </Tooltip>
+          )}
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Paramètres du registre</h1>
+          {isCompanyCentralized(company) && (
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200"
+              role="status"
+              aria-label="Ce registre est défini comme centralisé"
+            >
+              <ShieldCheck aria-hidden="true" size={14} />
+              Centralisé
+            </span>
+          )}
         </div>
 
         {/* Error message */}
@@ -387,33 +513,50 @@ export default function RegistrySettingsPage() {
         <div className="space-y-6">
           {/* General Section */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col gap-6 md:flex-row md:justify-between md:items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900">
                 Informations générales
               </h2>
-              {!isEditing && (
-                <button
-                  onClick={handleEdit}
-                  className="inline-flex items-center px-4 py-2 text-[#0080A3] hover:text-[#006280] hover:bg-[#0080A3]/5 border border-[#0080A3] rounded-lg transition-colors font-medium"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Modifier
-                </button>
-              )}
+              <div className="flex items-center gap-6">
+                {!isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleEdit}
+                    className="inline-flex items-center px-4 py-2 text-[#0080A3] hover:text-[#006280] hover:bg-[#0080A3]/5 border border-[#0080A3] rounded-lg transition-colors font-medium"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Modifier
+                  </button>
+                )}
+                <div className="pl-6 border-l border-gray-200">
+                  <RegistryCompletenessScore
+                    score={company.completeness_score}
+                    isLoading={loading}
+                    onHighlightRequest={handleHighlightRequest}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-6">
+            <form
+              id="registry-form"
+              className="space-y-6"
+              onSubmit={(e) => e.preventDefault()}
+            >
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="registry-name" className="block text-sm font-medium text-gray-700 mb-2">
                   Nom du registre *
                 </label>
                 {isEditing ? (
                   <input
+                    id="registry-name"
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
+                    data-missing={!formData.name.trim()}
+                    aria-invalid={highlightMissing && !formData.name.trim() ? true : undefined}
+                    className={registryFieldClass(highlightMissing, !formData.name.trim())}
                     placeholder="Nom du registre"
                   />
                 ) : (
@@ -423,14 +566,15 @@ export default function RegistrySettingsPage() {
 
               {/* Industry */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Secteur d'activité
-                </label>
+                <span className="block text-sm font-medium text-gray-700 mb-2">
+                  Secteur d&apos;activité
+                </span>
                 {isEditing ? (
                   <CompanySectorSelector
                     value={industrySelection}
                     onChange={setIndustrySelection}
                     required={false}
+                    highlightMissing={highlightMissing}
                   />
                 ) : (
                   <p className="text-gray-900 py-2">
@@ -446,15 +590,18 @@ export default function RegistrySettingsPage() {
 
               {/* City */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="registry-city" className="block text-sm font-medium text-gray-700 mb-2">
                   Ville
                 </label>
                 {isEditing ? (
                   <input
+                    id="registry-city"
                     type="text"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
+                    data-missing={!formData.city.trim()}
+                    aria-invalid={highlightMissing && !formData.city.trim() ? true : undefined}
+                    className={registryFieldClass(highlightMissing, !formData.city.trim())}
                     placeholder="Ville"
                   />
                 ) : (
@@ -464,15 +611,18 @@ export default function RegistrySettingsPage() {
 
               {/* Country */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="registry-country" className="block text-sm font-medium text-gray-700 mb-2">
                   Pays
                 </label>
                 {isEditing ? (
                   <input
+                    id="registry-country"
                     type="text"
                     value={formData.country}
                     onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
+                    data-missing={!formData.country.trim()}
+                    aria-invalid={highlightMissing && !formData.country.trim() ? true : undefined}
+                    className={registryFieldClass(highlightMissing, !formData.country.trim())}
                     placeholder="Pays"
                   />
                 ) : (
@@ -482,12 +632,13 @@ export default function RegistrySettingsPage() {
 
               {/* Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="registry-type" className="block text-sm font-medium text-gray-700 mb-2">
                   Type de registre
                 </label>
                 {isEditing ? (
                   <div className="space-y-3">
                     <select
+                      id="registry-type"
                       value={selectedType}
                       onChange={(e) => {
                         setSelectedType(e.target.value)
@@ -495,7 +646,9 @@ export default function RegistrySettingsPage() {
                           setCustomType('')
                         }
                       }}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent bg-white"
+                      data-missing={!selectedType}
+                      aria-invalid={highlightMissing && !selectedType ? true : undefined}
+                      className={`${registryFieldClass(highlightMissing, !selectedType)} bg-white`}
                     >
                       <option value="">Sélectionner un type</option>
                       {REGISTRY_TYPES.map(type => (
@@ -510,7 +663,16 @@ export default function RegistrySettingsPage() {
                         type="text"
                         value={customType}
                         onChange={(e) => setCustomType(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
+                        data-missing={selectedType === 'autre' && !customType.trim()}
+                        aria-invalid={
+                          highlightMissing && selectedType === 'autre' && !customType.trim()
+                            ? true
+                            : undefined
+                        }
+                        className={registryFieldClass(
+                          highlightMissing,
+                          selectedType === 'autre' && !customType.trim()
+                        )}
                         placeholder="Précisez le type (ex: Direction RH, Département IT...)"
                       />
                     )}
@@ -519,6 +681,24 @@ export default function RegistrySettingsPage() {
                   <p className="text-gray-900 py-2">{getTypeLabel(company.type)}</p>
                 )}
               </div>
+
+              {!(company.has_collaborators ?? false) && (
+                <div
+                  className="mt-6 p-4 rounded-md border border-[#ffab5a] bg-orange-50/50 flex flex-col gap-2"
+                  role="region"
+                  aria-label="Suggestion d'amélioration du score"
+                >
+                  <p className="text-sm text-gray-700">
+                    Invitez un collaborateur pour gagner 10&nbsp;% sur votre score de complétude.
+                  </p>
+                  <Link
+                    href={`/dashboard/${companyId}/collaboration`}
+                    className="text-sm text-[#0080A3] underline hover:text-opacity-80 transition-colors w-fit focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:outline-none rounded px-1 py-0.5"
+                  >
+                    Aller à la section Collaboration
+                  </Link>
+                </div>
+              )}
 
               {/* Action Buttons */}
               {isEditing && (
@@ -557,39 +737,51 @@ export default function RegistrySettingsPage() {
                   Modifications enregistrées avec succès
                 </p>
               )}
-            </div>
+            </form>
           </div>
 
           {/* Centralized Registry Definition */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
               Définition du registre centralisé
             </h2>
-            <p className="text-gray-700 mb-4">
-              Le registre centralisé est un registre qui contient toutes les informations liées à la conformité des cas d'usage IA.
+            <p className="text-sm text-gray-600 mb-4">
+              Agissant comme votre unique source de vérité, ce registre regroupe l&apos;ensemble de vos
+              cas d&apos;usage IA. Ce statut garantit une vue consolidée pour vos audits et valide
+              automatiquement l&apos;exigence de complétude (100&nbsp;%).
             </p>
 
-            {company.maydai_as_registry ? (
-              // Already declared - show success message with edit button
-              <div className="space-y-3">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-green-900">
-                        MaydAI est votre registre centralisé
-                      </p>
-                      <p className="text-sm text-green-700 mt-1">
-                        Toutes vos informations de conformité IA sont centralisées dans cet outil.
-                      </p>
-                    </div>
+            {isCompanyCentralized(company) ? (
+              <div
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-md border border-emerald-200 bg-emerald-50/50"
+                role="status"
+                aria-live="polite"
+              >
+                <div className="flex items-start sm:items-center gap-4">
+                  <div className="shrink-0">
+                    <img
+                      src={REGISTRE_MAYDAI_SEAL_SRC}
+                      alt={REGISTRE_MAYDAI_SEAL_ALT}
+                      width={48}
+                      height={48}
+                      className="object-contain drop-shadow-sm"
+                    />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-emerald-900">
+                      MaydAI est votre registre centralisé
+                    </h4>
+                    <p className="text-xs text-emerald-700 mt-1">
+                      Toutes vos informations de conformité IA sont centralisées dans cet outil.
+                    </p>
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowEditRegistryModal(true)}
-                  className="text-sm text-gray-600 hover:text-gray-900 underline"
+                  className="shrink-0 text-sm font-medium text-emerald-700 hover:text-emerald-800 bg-white border border-emerald-200 hover:bg-emerald-100 px-4 py-2 rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none whitespace-nowrap shadow-sm"
                 >
-                  Modifier
+                  Modifier le statut
                 </button>
               </div>
             ) : (

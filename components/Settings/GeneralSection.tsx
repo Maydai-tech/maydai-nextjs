@@ -1,16 +1,35 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Mail, HardDrive, User, Building2, Phone, FileText, Pencil, X, Check, Loader2, AlertTriangle, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { HardDrive, User, Building2, Phone, FileText, Pencil, X, Check, Loader2, AlertTriangle, Trash2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { validateSIREN, cleanSIREN, formatSIREN } from '@/lib/validation/siren'
 import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
 import { getIndustryDisplayText, getIndustryLabel, getSubCategoryLabel } from '@/lib/constants/industries'
 import DeleteAccountModal from '@/components/Settings/DeleteAccountModal'
+import ProfileCompletenessScore from '@/components/Settings/ProfileCompletenessScore'
+import ReadOnlyEmailBlock from '@/components/Settings/ReadOnlyEmailBlock'
+import {
+  calculateProfileCompletenessScore,
+  toProfileCompletenessInput,
+} from '@/lib/validations/profile-completeness'
+
+const INPUT_BASE_CLASS =
+  'w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors'
+
+const HIGHLIGHT_RING_CLASS =
+  'ring-2 ring-[#ffab5a] border-transparent transition-all duration-300'
+
+function fieldInputClass(highlightMissing: boolean, isEmpty: boolean, extra = ''): string {
+  const highlight = highlightMissing && isEmpty ? HIGHLIGHT_RING_CLASS : ''
+  return `${INPUT_BASE_CLASS} ${highlight} ${extra}`.trim()
+}
 
 interface GeneralSectionProps {
   userEmail: string | undefined
+  isEmailVerified?: boolean
 }
 
 interface ProfileData {
@@ -23,7 +42,7 @@ interface ProfileData {
   siren: string
 }
 
-export default function GeneralSection({ userEmail }: GeneralSectionProps) {
+export default function GeneralSection({ userEmail, isEmailVerified }: GeneralSectionProps) {
   const { getAccessToken } = useAuth()
   const { plan } = useUserPlan()
 
@@ -66,6 +85,17 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
   const [sirenError, setSirenError] = useState('')
   const [industryError, setIndustryError] = useState('')
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false)
+  const [hasCollaborators, setHasCollaborators] = useState(false)
+  const [highlightMissing, setHighlightMissing] = useState(false)
+
+  const scoreSource = isEditing ? editedData : profileData
+  const completenessScore = useMemo(
+    () =>
+      calculateProfileCompletenessScore(
+        toProfileCompletenessInput(scoreSource, hasCollaborators)
+      ),
+    [scoreSource, hasCollaborators, isEditing, editedData, profileData]
+  )
 
   // Fetch profile data
   useEffect(() => {
@@ -104,6 +134,27 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
     }
 
     fetchProfile()
+  }, [getAccessToken])
+
+  useEffect(() => {
+    const fetchCollaborators = async () => {
+      try {
+        const token = getAccessToken()
+        if (!token) return
+
+        const res = await fetch('/api/collaboration/profile', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setHasCollaborators(Array.isArray(data) && data.length > 0)
+        }
+      } catch (error) {
+        console.error('Error fetching collaborators for completeness:', error)
+      }
+    }
+
+    fetchCollaborators()
   }, [getAccessToken])
 
   // Fetch storage usage
@@ -180,9 +231,38 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
       subCategoryId: profileData.subCategoryId
     })
     setIsEditing(false)
+    setHighlightMissing(false)
     setError('')
     setSirenError('')
     setIndustryError('')
+  }
+
+  const handleHighlightRequest = () => {
+    const needsEditOpen = !isEditing
+    if (needsEditOpen) {
+      handleStartEdit()
+    }
+    setHighlightMissing(true)
+    setTimeout(
+      () => {
+        const firstMissingField = document.querySelector(
+          '#profile-form [data-missing="true"]'
+        ) as HTMLElement | null
+        if (firstMissingField) {
+          firstMissingField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          if (
+            firstMissingField instanceof HTMLInputElement ||
+            firstMissingField instanceof HTMLSelectElement ||
+            firstMissingField instanceof HTMLTextAreaElement ||
+            firstMissingField instanceof HTMLButtonElement ||
+            firstMissingField instanceof HTMLAnchorElement
+          ) {
+            firstMissingField.focus({ preventScroll: true })
+          }
+        }
+      },
+      needsEditOpen ? 200 : 100
+    )
   }
 
   const handleSave = async () => {
@@ -245,6 +325,7 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
         subCategoryId: editedData.subCategoryId
       })
       setIsEditing(false)
+      setHighlightMissing(false)
       setSuccess('Profil mis à jour avec succès')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
@@ -255,14 +336,17 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
   }
   return (
     <div className="space-y-8">
-      {/* Header avec avatar */}
-      <div className="flex items-center space-x-6 p-6 bg-blue-50/50 rounded-xl border border-gray-100">
-        <div className="flex-shrink-0">
-        </div>
+      {/* En-tête Informations générales + score de complétude */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-6 bg-slate-50 p-6 rounded-lg border border-gray-100">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-1">Informations générales</h2>
           <p className="text-gray-500">Gérez vos informations personnelles et les paramètres de votre compte</p>
         </div>
+        <ProfileCompletenessScore
+          score={completenessScore}
+          isLoading={loadingProfile}
+          onHighlightRequest={handleHighlightRequest}
+        />
       </div>
 
       {/* Messages de succès/erreur */}
@@ -280,27 +364,11 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
         </div>
       )}
 
-      {/* Carte Email */}
-      <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-            <Mail className="w-5 h-5 text-[#0080A3] mr-2" />
-            Adresse e-mail
-          </h3>
-          <p className="text-gray-500 text-sm">Votre adresse e-mail associée à ce compte (non modifiable)</p>
-        </div>
-
-        <div className="p-4 bg-gray-50/80 border border-gray-100 rounded-lg">
-          <div className="flex items-center space-x-3">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span className="text-gray-900 font-medium">{userEmail}</span>
-          </div>
-        </div>
-      </div>
+      <ReadOnlyEmailBlock userEmail={userEmail} isVerified={isEmailVerified} />
 
       {/* Carte Informations personnelles */}
       <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
               <User className="w-5 h-5 text-[#0080A3] mr-2" />
@@ -310,6 +378,7 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
           </div>
           {!isEditing && !loadingProfile && (
             <button
+              type="button"
               onClick={handleStartEdit}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#0080A3] bg-[#0080A3]/10 rounded-lg hover:bg-[#0080A3]/20 transition-colors"
             >
@@ -325,11 +394,11 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
           </div>
         ) : isEditing ? (
           /* Mode édition */
-          <div className="space-y-4">
+          <form id="profile-form" className="space-y-4" onSubmit={(e) => e.preventDefault()}>
             {/* Prénom & Nom */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="profile-firstName" className="block text-sm font-medium text-gray-700 mb-2">
                   Prénom <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -337,17 +406,20 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
                     <User className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
+                    id="profile-firstName"
                     type="text"
                     value={editedData.firstName}
                     onChange={(e) => handleEditChange('firstName', e.target.value)}
-                    className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+                    data-missing={!editedData.firstName}
+                    aria-invalid={highlightMissing && !editedData.firstName ? true : undefined}
+                    className={fieldInputClass(highlightMissing, !editedData.firstName)}
                     placeholder="Jean"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="profile-lastName" className="block text-sm font-medium text-gray-700 mb-2">
                   Nom <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -355,10 +427,13 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
                     <User className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
+                    id="profile-lastName"
                     type="text"
                     value={editedData.lastName}
                     onChange={(e) => handleEditChange('lastName', e.target.value)}
-                    className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+                    data-missing={!editedData.lastName}
+                    aria-invalid={highlightMissing && !editedData.lastName ? true : undefined}
+                    className={fieldInputClass(highlightMissing, !editedData.lastName)}
                     placeholder="Dupont"
                   />
                 </div>
@@ -367,7 +442,7 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
 
             {/* Entreprise */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="profile-companyName" className="block text-sm font-medium text-gray-700 mb-2">
                 Entreprise <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -375,10 +450,13 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
                   <Building2 className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
+                  id="profile-companyName"
                   type="text"
                   value={editedData.companyName}
                   onChange={(e) => handleEditChange('companyName', e.target.value)}
-                  className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+                  data-missing={!editedData.companyName}
+                  aria-invalid={highlightMissing && !editedData.companyName ? true : undefined}
+                  className={fieldInputClass(highlightMissing, !editedData.companyName)}
                   placeholder="Nom de votre entreprise"
                 />
               </div>
@@ -400,23 +478,27 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
                 }}
                 error={industryError}
                 required
+                highlightMissing={highlightMissing}
               />
             </div>
 
             {/* Téléphone */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Téléphone <span className="text-gray-500 text-xs">(optionnel)</span>
+              <label htmlFor="profile-phone" className="block text-sm font-medium text-gray-700 mb-2">
+                Téléphone <span className="text-gray-500 text-xs">(recommandé pour le score)</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Phone className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
+                  id="profile-phone"
                   type="tel"
                   value={editedData.phone}
                   onChange={(e) => handleEditChange('phone', e.target.value)}
-                  className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+                  data-missing={!editedData.phone}
+                  aria-invalid={highlightMissing && !editedData.phone ? true : undefined}
+                  className={fieldInputClass(highlightMissing, !editedData.phone)}
                   placeholder="06 12 34 56 78"
                 />
               </div>
@@ -424,26 +506,31 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
 
             {/* SIREN */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                SIREN <span className="text-gray-500 text-xs">(optionnel)</span>
+              <label htmlFor="profile-siren" className="block text-sm font-medium text-gray-700 mb-2">
+                SIREN <span className="text-gray-500 text-xs">(recommandé pour le score)</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FileText className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
+                  id="profile-siren"
                   type="text"
                   inputMode="numeric"
                   maxLength={9}
                   value={editedData.siren}
                   onChange={(e) => handleEditChange('siren', cleanSIREN(e.target.value))}
-                  className={`w-full px-4 py-3 pl-10 border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:outline-none transition-colors ${
+                  data-missing={!editedData.siren}
+                  aria-invalid={highlightMissing && !editedData.siren ? true : undefined}
+                  className={fieldInputClass(
+                    highlightMissing,
+                    !editedData.siren,
                     sirenError
-                      ? 'border-red-300 focus:border-red-500'
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                       : editedData.siren && !sirenError && editedData.siren.length === 9
                         ? 'border-green-300 focus:border-green-500'
-                        : 'border-gray-300 focus:border-[#0080A3]'
-                  }`}
+                        : ''
+                  )}
                   placeholder="123456789"
                 />
               </div>
@@ -458,9 +545,31 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
               )}
             </div>
 
+            {!hasCollaborators && (
+              <div
+                className={`p-4 rounded-lg border ${
+                  highlightMissing
+                    ? 'ring-2 ring-[#ffab5a] border-transparent bg-orange-50/40'
+                    : 'border-gray-100 bg-gray-50/80'
+                }`}
+              >
+                <p className="text-sm text-gray-700 mb-2">
+                  Invitez un collaborateur pour gagner 15&nbsp;% sur votre score de complétude.
+                </p>
+                <Link
+                  href="/settings?section=collaboration"
+                  data-missing={!hasCollaborators}
+                  className="text-sm font-medium text-[#0080A3] underline hover:text-opacity-80 focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:outline-none rounded px-1 py-0.5"
+                >
+                  Aller à la section Collaboration
+                </Link>
+              </div>
+            )}
+
             {/* Boutons d'action */}
             <div className="flex items-center gap-3 pt-4">
               <button
+                type="button"
                 onClick={handleSave}
                 disabled={saving || !!sirenError || !!industryError}
                 className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -478,6 +587,7 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
                 )}
               </button>
               <button
+                type="button"
                 onClick={handleCancelEdit}
                 disabled={saving}
                 className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
@@ -486,7 +596,7 @@ export default function GeneralSection({ userEmail }: GeneralSectionProps) {
                 Annuler
               </button>
             </div>
-          </div>
+          </form>
         ) : (
           /* Mode affichage */
           <div className="space-y-4">

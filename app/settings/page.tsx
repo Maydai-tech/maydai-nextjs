@@ -88,6 +88,7 @@ export default function ProfilPage() {
 
     // Refresh the collaborators list
     await fetchCollaborators()
+    router.refresh()
   }
 
   const handleRemoveCollaboratorClick = (collaboratorId: string) => {
@@ -238,7 +239,12 @@ export default function ProfilPage() {
   const renderContent = () => {
     switch (activeSection) {
       case 'general':
-        return <GeneralSection userEmail={user.email} />
+        return (
+          <GeneralSection
+            userEmail={user.email}
+            isEmailVerified={!!user.email_confirmed_at}
+          />
+        )
       case 'collaboration':
         return (
           <CollaborationSection

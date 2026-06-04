@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
+import { calculateProfileCompletenessScore } from '@/lib/validations/profile-completeness'
 
 export async function GET(request: NextRequest) {
   try {
@@ -74,6 +75,25 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    // --- NOUVEAU MOTEUR DE SCORING ---
+    // Vérification des collaborateurs (a invité quelqu'un)
+    const { count: collabCount } = await supabase
+      .from('user_profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('inviter_user_id', user.id)
+
+    const completeness_score = calculateProfileCompletenessScore({
+      first_name: firstName,
+      last_name: lastName,
+      company_name: companyName,
+      industry: mainIndustryId,
+      sub_category_id: subCategoryId,
+      phone: phone,
+      siren: siren,
+      has_collaborators: (collabCount || 0) > 0,
+    })
+    // ---------------------------------
+
     // Update profile
     // Store mainIndustryId in industry field and subCategoryId in sub_category_id field
     const { error: updateError } = await supabase
@@ -86,6 +106,7 @@ export async function PATCH(request: NextRequest) {
         sub_category_id: subCategoryId.trim(),
         phone: phone?.trim() || null,
         siren: siren ? cleanSIREN(siren) : null,
+        completeness_score,
         updated_at: new Date().toISOString()
       })
       .eq('id', user.id)
