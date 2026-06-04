@@ -6,12 +6,13 @@ import { ComplAIModel } from '@/lib/supabase'
 import { getUseCaseStatusInFrench } from '../../utils/questionnaire'
 import { cn } from '@/lib/utils/cn'
 import { useCaseRoutes, withEvaluationEntree } from '../../utils/routes'
-import { useUseCaseNavigation } from '../../utils/navigation'
+import { getBlockingPivotId } from '../../utils/blocking-pivot-focus'
 import { Badge, type BadgeVariant } from '@/components/ui/badge'
 import {
   ArrowLeft,
   CheckCircle,
   Clock,
+  Edit2,
   Edit3,
   RefreshCcw,
   AlertTriangle,
@@ -216,7 +217,6 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   // État pour l'édition de la date de déploiement
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
   const [isSavingDeploymentDate, setIsSavingDeploymentDate] = useState(false)
-  const { goToEvaluation } = useUseCaseNavigation(useCase.id, useCase.company_id)
   const showV3DualPath = showV3DualPathEntrypoints(useCase.questionnaire_version)
   const { riskLevel, classificationStatus, loading: riskLoading, error: riskError } = useUseCaseRisk()
   const headerFunnelKey = useMemo(
@@ -238,6 +238,15 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const { isOwner } = useCompanyInfo(useCase.company_id)
   const router = useRouter()
   const { session } = useAuth()
+
+  const goToEvaluation = () => {
+    let url = `/usecases/${useCase.id}/evaluation`
+    if (classificationStatus === 'impossible') {
+      const focusId = getBlockingPivotId(useCase)
+      if (focusId) url += `?focus=${encodeURIComponent(focusId)}`
+    }
+    router.push(url)
+  }
 
   const showPasserAuParcoursCompletCta =
     showV3DualPath && useCase.path_mode === 'short'
@@ -477,35 +486,43 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
 
             <div className="flex flex-wrap items-center justify-between gap-4 mt-4 mb-6 border-b border-gray-200 pb-4">
               <div className="flex flex-wrap items-center gap-3 min-w-0">
-                {showV3DualPath ? (
-                  showPasserAuParcoursCompletCta ? (
-                    <button
-                      type="button"
-                      onClick={() => void handlePasserAuParcoursComplet()}
-                      disabled={isSwitchingToLongPath || updating}
-                      aria-label="Passer à l'évaluation détaillée du parcours complet"
-                      aria-busy={isSwitchingToLongPath}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#0080A3] text-[#0080A3] bg-white hover:bg-sky-50 transition-colors text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3] disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {isSwitchingToLongPath ? (
-                        <RefreshCcw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                      ) : (
-                        <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
-                      )}
-                      Passer au Parcours Complet
-                    </button>
-                  ) : null
-                ) : (
+                {showPasserAuParcoursCompletCta ? (
                   <button
                     type="button"
-                    onClick={() => goToEvaluation()}
-                    disabled={updating}
-                    className="inline-flex items-center gap-2 bg-[#0080A3] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#006682] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3] disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => void handlePasserAuParcoursComplet()}
+                    disabled={isSwitchingToLongPath || updating}
+                    aria-label="Passer à l'évaluation détaillée du parcours complet"
+                    aria-busy={isSwitchingToLongPath}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#0080A3] text-[#0080A3] bg-white hover:bg-sky-50 transition-colors text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0080A3] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <RefreshCcw className="w-4 h-4 shrink-0" aria-hidden />
-                    Réévaluer le cas d&apos;usage
+                    {isSwitchingToLongPath ? (
+                      <RefreshCcw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                    ) : (
+                      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                    )}
+                    Passer au Parcours Complet
                   </button>
-                )}
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => goToEvaluation()}
+                  disabled={updating}
+                  className={`inline-flex items-center px-4 py-2 border shadow-sm text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    classificationStatus === 'impossible'
+                      ? 'border-purple-300 text-purple-700 bg-white hover:bg-purple-50 focus:ring-purple-500'
+                      : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-indigo-500'
+                  }`}
+                >
+                  <Edit2
+                    className={`h-4 w-4 mr-2 shrink-0 ${
+                      classificationStatus === 'impossible' ? 'text-purple-500' : 'text-gray-500'
+                    }`}
+                    aria-hidden
+                  />
+                  {classificationStatus === 'impossible'
+                    ? 'Réévaluer et corriger'
+                    : "Réévaluer le cas d'usage"}
+                </button>
               </div>
 
               <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4 shrink-0">
@@ -731,6 +748,11 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                   loading={riskLoading}
                   error={riskError}
                   className="w-full"
+                  correctionSource={{
+                    id: useCase.id,
+                    checklist_gov_usecase: useCase.checklist_gov_usecase,
+                    checklist_gov_enterprise: useCase.checklist_gov_enterprise,
+                  }}
                 />
               )}
             </div>

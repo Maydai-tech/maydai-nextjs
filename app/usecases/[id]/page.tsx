@@ -14,7 +14,8 @@ import { useNextSteps } from './hooks/useNextSteps'
 import { useUseCaseScore } from './hooks/useUseCaseScore'
 import { useUseCaseRisk } from './context/UseCaseRiskContext'
 import type { UseCase } from './types/usecase'
-import { RefreshCcw } from 'lucide-react'
+import { Edit2, RefreshCcw } from 'lucide-react'
+import { buildEvaluationFocusHref, getBlockingPivotId } from './utils/blocking-pivot-focus'
 import { getScoreStyle } from '@/lib/score-styles'
 import { RiskLevelBadge } from './components/overview/RiskLevelBadge'
 import { V3_IMPOSSIBLE_MATURITY_SCORES_DISCLAIMER } from '@/lib/classification-risk-display'
@@ -51,6 +52,7 @@ function UseCaseOverviewSections({
   generatingReport,
   handleGenerateReport,
 }: UseCaseOverviewSectionsProps) {
+  const router = useRouter()
   const { riskLevel, classificationStatus, loading: riskLoading, error: riskError } = useUseCaseRisk()
   const classificationForNextSteps = classificationStatus ?? useCase.classification_status ?? null
   const {
@@ -205,6 +207,11 @@ function UseCaseOverviewSections({
                     loading={riskLoading}
                     error={riskError}
                     className="w-full"
+                    correctionSource={{
+                      id: useCase.id,
+                      checklist_gov_usecase: useCase.checklist_gov_usecase,
+                      checklist_gov_enterprise: useCase.checklist_gov_enterprise,
+                    }}
                   />
                 </div>
               </div>
@@ -443,6 +450,19 @@ function UseCaseOverviewSections({
                 ne produit pas de rapport d&apos;analyse réglementaire complet ni d&apos;export PDF. Complétez ou précisez
                 les réponses du questionnaire pour débloquer ces étapes.
               </p>
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const focusId = getBlockingPivotId(useCase)
+                    router.push(buildEvaluationFocusHref(useCase.id, focusId))
+                  }}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-purple-500"
+                >
+                  <Edit2 className="h-4 w-4 mr-2 shrink-0" aria-hidden />
+                  Corriger la réponse bloquante
+                </button>
+              </div>
             </div>
           )}
 

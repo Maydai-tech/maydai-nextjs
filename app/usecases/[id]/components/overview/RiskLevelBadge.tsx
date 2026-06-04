@@ -1,9 +1,23 @@
+'use client'
+
 import React from 'react'
-import { Shield, AlertTriangle, AlertCircle, CheckCircle, HelpCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Shield, AlertTriangle, AlertCircle, CheckCircle, HelpCircle, Edit2 } from 'lucide-react'
+import {
+  buildEvaluationFocusHref,
+  getBlockingPivotId,
+} from '../../utils/blocking-pivot-focus'
 
 type RiskLevel = 'unacceptable' | 'high' | 'limited' | 'minimal'
 
 export type ClassificationStatus = 'qualified' | 'impossible'
+
+/** Données minimales pour le deep-link de correction (pivot JNS). */
+export type RiskLevelBadgeCorrectionSource = {
+  id: string
+  checklist_gov_usecase?: string[] | null
+  checklist_gov_enterprise?: string[] | null
+}
 
 interface RiskLevelBadgeProps {
   riskLevel: RiskLevel | null
@@ -12,6 +26,8 @@ interface RiskLevelBadgeProps {
   loading?: boolean
   error?: string | null
   className?: string
+  /** Cas d’usage : active le CTA « Réévaluer et corriger » si classification impossible. */
+  correctionSource?: RiskLevelBadgeCorrectionSource | null
 }
 
 const getRiskLevelConfig = (level: RiskLevel) => {
@@ -69,7 +85,10 @@ export function RiskLevelBadge({
   loading = false,
   error = null,
   className = '',
+  correctionSource = null,
 }: RiskLevelBadgeProps) {
+  const router = useRouter()
+
   if (loading) {
     return (
       <div className={`inline-flex items-center px-4 py-2 rounded-lg border-2 bg-gray-50 border-gray-200 ${className}`}>
@@ -82,19 +101,38 @@ export function RiskLevelBadge({
   if (classificationStatus === 'impossible') {
     return (
       <div
-        className={`inline-flex items-center px-4 py-2 rounded-lg border-2 transition-all duration-200 bg-violet-50 border-violet-200 shadow-sm ${className}`}
+        className={`flex flex-col w-full px-4 py-2 rounded-lg border-2 transition-all duration-200 bg-violet-50 border-violet-200 shadow-sm ${className}`}
         title="Qualification réglementaire : pivots non tranchés (réponses « Je ne sais pas »)."
       >
-        <HelpCircle className="h-5 w-5 text-violet-600 mr-2.5 flex-shrink-0" />
-        <div className="flex flex-col text-left min-w-0">
-          <span className="text-xs font-medium text-violet-800 opacity-90">Niveau IA Act</span>
-          <span className="text-sm font-bold text-violet-900 leading-tight">
-            Classification impossible
-          </span>
-          <span className="text-xs text-violet-800/80 mt-0.5">
-            Complétez ou précisez les réponses « Je ne sais pas » sur les pivots juridiques.
-          </span>
+        <div className="flex items-start min-w-0">
+          <HelpCircle className="h-5 w-5 text-violet-600 mr-2.5 flex-shrink-0 mt-0.5" />
+          <div className="flex flex-col text-left min-w-0 flex-1">
+            <span className="text-xs font-medium text-violet-800 opacity-90">Niveau IA Act</span>
+            <span className="text-sm font-bold text-violet-900 leading-tight">
+              Classification impossible
+            </span>
+            <span className="text-xs text-violet-800/80 mt-0.5">
+              Complétez ou précisez les réponses « Je ne sais pas » sur les pivots juridiques.
+            </span>
+          </div>
         </div>
+        {correctionSource ? (
+          <div className="mt-3 w-full">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                const focusId = getBlockingPivotId(correctionSource)
+                router.push(buildEvaluationFocusHref(correctionSource.id, focusId))
+              }}
+              className="inline-flex items-center justify-center w-full px-3 py-1.5 border border-purple-300 shadow-sm text-xs font-medium rounded text-purple-700 bg-white hover:bg-purple-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-purple-500 transition-colors"
+            >
+              <Edit2 className="h-3.5 w-3.5 mr-1.5 text-purple-500 shrink-0" aria-hidden />
+              Réévaluer et corriger
+            </button>
+          </div>
+        ) : null}
       </div>
     )
   }

@@ -24,6 +24,7 @@ function EvaluationInner() {
   const params = useParams()
   const searchParams = useSearchParams()
   const evaluationEntrySurface = searchParams.get('entree') ?? undefined
+  const focusId = searchParams.get('focus')
   const [mounted, setMounted] = useState(false)
 
   const useCaseId = params.id as string
@@ -166,6 +167,7 @@ function EvaluationInner() {
           onComplete={handleQuestionnaireComplete}
           questionnairePathMode={questionnairePathMode}
           evaluationRunId={evaluationRunId}
+          initialFocusId={focusId}
         />
       </div>
     </div>

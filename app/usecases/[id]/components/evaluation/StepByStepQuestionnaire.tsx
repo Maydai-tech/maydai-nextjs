@@ -49,6 +49,8 @@ interface StepByStepQuestionnaireProps {
   questionnairePathMode?: QuestionnairePathMode
   /** Run first-party (Supabase) pour clôturer la session analytics (court et long). */
   evaluationRunId?: string | null
+  /** Deep-link `?focus=` : question pivot à ouvrir en priorité. */
+  initialFocusId?: string | null
 }
 
 /**
@@ -63,6 +65,7 @@ export function StepByStepQuestionnaire({
   onComplete,
   questionnairePathMode = 'long',
   evaluationRunId = null,
+  initialFocusId = null,
 }: StepByStepQuestionnaireProps) {
   // Auth et informations de la company pour la collaboration
   const { session } = useAuth()
@@ -133,7 +136,22 @@ export function StepByStepQuestionnaire({
     questionnaireVersion: useCase.questionnaire_version,
     systemType: useCase.system_type,
     questionnairePathMode: questionnairePathMode,
+    initialFocusId,
   })
+
+  useEffect(() => {
+    if (!initialFocusId || isHydratingAnswers || currentQuestion?.id !== initialFocusId) return
+
+    const timer = setTimeout(() => {
+      const el = document.querySelector(`[data-testid="question-${initialFocusId}"]`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.classList.add('ring-2', 'ring-purple-500', 'ring-offset-2', 'rounded-lg', 'transition-all')
+      }
+    }, 100)
+
+    return () => clearTimeout(timer)
+  }, [initialFocusId, currentQuestion?.id, isHydratingAnswers])
 
   const progressPercentage = typeof progress?.percentage === 'number' ? progress.percentage : 0
   /** CTA « Terminer » : dernière question du graphe ou progression déjà à 100 % (fin / raccourci). */
