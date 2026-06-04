@@ -2,7 +2,7 @@ import { supabase as defaultSupabase } from '@/lib/supabase';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type ResourceType = 'profile' | 'company' | 'usecase';
-export type CollaboratorRole = 'owner' | 'user';
+export type CollaboratorRole = 'owner' | 'user' | 'human_oversight';
 
 /**
  * Vérifie si un utilisateur a accès à une ressource en vérifiant la hiérarchie :

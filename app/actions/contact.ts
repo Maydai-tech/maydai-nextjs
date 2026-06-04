@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { sendAdminContactNotification } from '@/lib/email/mailjet'
 import { contactSiteSchema } from '@/lib/validations/contact'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -139,11 +140,22 @@ export async function submitContactForm(prevState: unknown, formData: FormData) 
     }
   }
 
-  await sendContactConfirmationEmail({
-    email: data.email,
-    first_name: data.first_name,
-    subject: data.subject,
-  })
+  // Exécution parallèle des e-mails (Confirmation Utilisateur + Notification Admin)
+  await Promise.allSettled([
+    sendContactConfirmationEmail({
+      email: data.email,
+      first_name: data.first_name,
+      subject: data.subject,
+    }),
+    sendAdminContactNotification({
+      subject: data.subject,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      email: data.email,
+      phone: data.phone ?? null,
+      message: data.message ?? null,
+    }),
+  ])
 
   revalidatePath('/admin/contacts')
 

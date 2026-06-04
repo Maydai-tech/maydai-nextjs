@@ -6,7 +6,8 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import { useApiCall } from '@/lib/api-client-legacy'
-import { ArrowLeft, FileText, Check, Loader2, Info, ChevronDown, X, AlertTriangle, RotateCcw, Pencil, Edit } from 'lucide-react'
+import { ArrowLeft, FileText, Check, Loader2, Info, ChevronDown, X, AlertTriangle, RotateCcw, Pencil, Edit, UserPlus } from 'lucide-react'
+import Toast from '@/components/Toast'
 import ComplianceFileUpload from '@/components/ComplianceFileUpload'
 import UploadedFileDisplay from '@/components/UploadedFileDisplay'
 import ScoreEvolutionPopup from '@/components/ScoreEvolutionPopup'
@@ -112,6 +113,10 @@ export default function DossierDetailPage() {
     pointsGained: number
     reason: string
   } | null>(null)
+  const [isInviting, setIsInviting] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('success')
+  const [showToast, setShowToast] = useState(false)
 
   const [editingDeploymentDate, setEditingDeploymentDate] = useState(false)
   const [deploymentDateDraft, setDeploymentDateDraft] = useState('')
@@ -432,6 +437,131 @@ export default function DossierDetailPage() {
       console.error('Error saving text:', error)
     } finally {
       setSaving({ ...saving, [docType]: false })
+    }
+  }
+
+  const canInviteSupervisor = () =>
+    Boolean(
+      supervisorData.name.trim() &&
+        supervisorData.role.trim() &&
+        supervisorData.email.trim()
+    )
+
+  const handleInviteSupervisor = async () => {
+    if (!user) return
+
+    const nameTrimmed = supervisorData.name.trim()
+    const roleTrimmed = supervisorData.role.trim()
+    const emailTrimmed = supervisorData.email.trim()
+
+    if (!nameTrimmed || !roleTrimmed || !emailTrimmed) {
+      console.error('[handleInviteSupervisor] Champs requis manquants', { supervisorData })
+      setToastMessage('Veuillez renseigner le nom complet, le poste et l\'email.')
+      setToastType('error')
+      setShowToast(true)
+      return
+    }
+
+    setIsInviting(true)
+
+    try {
+      const token = getAccessToken()
+      if (!token) {
+        throw new Error('No access token available')
+      }
+
+      const saveRes = await fetch(`/api/dossiers/${usecaseId}/human_oversight`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formData: {
+            supervisorName: nameTrimmed,
+            supervisorRole: roleTrimmed,
+            supervisorEmail: emailTrimmed,
+          },
+          status: 'complete',
+        }),
+      })
+
+      if (!saveRes.ok) {
+        const saveError = await saveRes.json().catch(() => ({}))
+        throw new Error(
+          (saveError as { error?: string }).error ||
+            'Échec de la sauvegarde du responsable de surveillance.'
+        )
+      }
+
+      const saveResult = await saveRes.json()
+
+      if (saveResult.scoreChange) {
+        setScoreChangePopup({
+          previousScore: saveResult.scoreChange.previousScore,
+          newScore: saveResult.scoreChange.newScore,
+          pointsGained: saveResult.scoreChange.pointsGained,
+          reason: saveResult.scoreChange.reason || 'Document de conformite ajoute',
+        })
+
+        if (useCase && saveResult.scoreChange.newScore !== null) {
+          setUseCase({
+            ...useCase,
+            score_final: saveResult.scoreChange.newScore,
+          })
+        }
+      }
+
+      const getRes = await fetch(`/api/dossiers/${usecaseId}/human_oversight`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (getRes.ok) {
+        const data = await getRes.json()
+        setDocuments((prev) => ({ ...prev, human_oversight: data }))
+        setInitialSupervisorData({
+          name: nameTrimmed,
+          role: roleTrimmed,
+          email: emailTrimmed,
+        })
+      }
+
+      const inviteRes = await fetch(`/api/usecases/${usecaseId}/collaborators`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: supervisorData.email,
+          firstName: supervisorData.name.split(' ')[0] || '',
+          lastName: supervisorData.name.split(' ').slice(1).join(' '),
+          role: 'human_oversight',
+        }),
+      })
+
+      if (!inviteRes.ok) {
+        const inviteError = await inviteRes.json().catch(() => ({}))
+        throw new Error(
+          (inviteError as { error?: string }).error ||
+            'Échec de l\'invitation du collaborateur.'
+        )
+      }
+
+      setToastMessage('Invitation envoyée avec succès.')
+      setToastType('success')
+      setShowToast(true)
+      router.refresh()
+    } catch (error) {
+      console.error('[Invitation Human Oversight UI]', error)
+      setToastMessage(
+        error instanceof Error
+          ? error.message
+          : 'Une erreur est survenue lors de l\'invitation.'
+      )
+      setToastType('error')
+      setShowToast(true)
+    } finally {
+      setIsInviting(false)
     }
   }
 
@@ -1496,10 +1626,10 @@ export default function DossierDetailPage() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0080A3] focus:border-transparent"
                         />
                       </div>
-                      <div className="flex gap-3">
+                      <div className="flex flex-wrap gap-3">
                         <button
                           onClick={() => handleTextSave(docType.key)}
-                          disabled={isSaving || !canSave(docType)}
+                          disabled={isSaving || isInviting || !canSave(docType)}
                           className="inline-flex items-center px-4 py-2 bg-[#0080A3] text-white font-medium rounded-lg hover:bg-[#006280] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {isSaving ? (
@@ -1514,10 +1644,28 @@ export default function DossierDetailPage() {
                             </>
                           )}
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => handleInviteSupervisor()}
+                          disabled={isInviting || isSaving || !canInviteSupervisor()}
+                          className="inline-flex items-center px-4 py-2 bg-white text-[#0080A3] font-medium rounded-lg border border-[#0080A3] hover:bg-[#0080A3]/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {isInviting ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Invitation...
+                            </>
+                          ) : (
+                            <>
+                              <UserPlus className="w-4 h-4 mr-2" />
+                              Inviter le collaborateur
+                            </>
+                          )}
+                        </button>
                         {isDocumentCompleted(docType.key) && (
                           <button
                             onClick={() => handleReset(docType.key)}
-                            disabled={resetting[docType.key] || false}
+                            disabled={resetting[docType.key] || isInviting || false}
                             className="inline-flex items-center px-4 py-2 bg-white text-red-600 font-medium rounded-lg border border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             {resetting[docType.key] ? (
@@ -1680,6 +1828,13 @@ export default function DossierDetailPage() {
           usecaseDossierUrl={`/usecases/${usecaseId}`}
         />
       )}
+
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+      />
     </div>
   )
 }

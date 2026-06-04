@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import { isOwner } from '@/lib/collaborators'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { getUserByEmail, inviteUserByEmail, createProfileForUser } from '@/lib/invite-user'
+import { sendHumanOversightInvite } from '@/lib/email/mailjet'
+import { InviteUsecaseCollaboratorSchema } from '@/lib/validations/usecase-collaborator-invite'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -61,23 +63,22 @@ export async function POST(
     }
 
     // Verify user is owner of the parent company
-    const userIsOwner = await isOwner(user.id, 'company', usecase.company_id)
+    const userIsOwner = await isOwner(user.id, 'company', usecase.company_id, supabase)
     if (!userIsOwner) {
       return NextResponse.json({ error: 'Only company owners can invite collaborators' }, { status: 403 })
     }
 
     const body = await request.json()
-    const { email, firstName, lastName } = body
-
-    if (!email || !firstName || !lastName) {
-      return NextResponse.json({ error: 'Missing required fields: email, firstName, lastName' }, { status: 400 })
+    const parsed = InviteUsecaseCollaboratorSchema.safeParse(body)
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0]
+      return NextResponse.json(
+        { error: firstIssue?.message ?? 'Invalid request body' },
+        { status: 400 }
+      )
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
-    }
+    const { email, firstName, lastName, role } = parsed.data
 
     // Check if user exists in auth.users by email
     let collaboratorProfileId: string | null = null
@@ -151,19 +152,68 @@ export async function POST(
       return NextResponse.json({ error: 'This user is already a collaborator on this use case' }, { status: 400 })
     }
 
-    // Create user_usecases entry with default role 'user'
     const { error: insertError } = await supabase
       .from('user_usecases')
       .insert({
         user_id: collaboratorProfileId,
         usecase_id: usecaseId,
-        role: 'user',
+        role,
         added_by: user.id
       })
 
     if (insertError) {
       logger.error('Failed to create user_usecases entry', insertError, createRequestContext(request))
       return NextResponse.json({ error: 'Failed to add collaborator' }, { status: 500 })
+    }
+
+    // Traçabilité légale (AI Act - Règle 6.3)
+    const { error: historyError } = await supabase
+      .from('usecase_history')
+      .insert({
+        usecase_id: usecaseId,
+        user_id: user.id,
+        event_type: 'collaborator_invited',
+        metadata: {
+          role,
+          email,
+          invited_by: user.id,
+        },
+      })
+
+    if (historyError) {
+      logger.error(
+        'Failed to create usecase_history entry for collaboration',
+        historyError,
+        createRequestContext(request)
+      )
+      // No block : On ne fait pas échouer la requête HTTP si l'historique flanche, mais on loggue strictement pour alerte Vercel.
+    }
+
+    if (role === 'human_oversight') {
+      const companyId = usecase.company_id
+      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://www.maydai.io').replace(/\/+$/, '')
+      const ctaLink = `${appUrl}/dashboard/${companyId}/dossiers/${usecaseId}`
+
+      const { data: inviterProfile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', user.id)
+        .single()
+
+      const inviterFullName =
+        inviterProfile?.first_name && inviterProfile?.last_name
+          ? `${inviterProfile.first_name} ${inviterProfile.last_name}`
+          : 'Équipe MaydAI'
+
+      sendHumanOversightInvite({
+        email,
+        firstName,
+        inviterName: inviterFullName,
+        usecaseName: usecase.name || 'ce cas d\'usage',
+        ctaLink,
+      }).catch((err) => {
+        console.error('Failed to send human oversight invitation email:', err)
+      })
     }
 
     // Get collaborator details
@@ -179,7 +229,8 @@ export async function POST(
         id: collaboratorProfile?.id,
         firstName: collaboratorProfile?.first_name,
         lastName: collaboratorProfile?.last_name,
-        email
+        email,
+        role,
       },
       usecase: {
         id: usecaseId,

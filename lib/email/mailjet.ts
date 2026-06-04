@@ -3,7 +3,8 @@ import Mailjet from 'node-mailjet';
 // Configuration
 const TEMPLATES = {
   COLLABORATION_INVITE: 7438322, // Template pour invitation au niveau registre
-  ACCOUNT_COLLABORATION_INVITE: 7576574 // Template pour invitation au niveau compte
+  ACCOUNT_COLLABORATION_INVITE: 7576574, // Template pour invitation au niveau compte
+  HUMAN_OVERSIGHT_INVITE: 8083771, // Template invitation surveillance humaine (cas d'usage)
 } as const;
 
 /** Template Mailjet — campagne acquisition (lead Google Ads). */
@@ -112,6 +113,58 @@ export async function sendRegistryCollaborationInvite({
       fullError: err.response?.body
     });
     return { success: false, error: err };
+  }
+}
+
+export interface SendHumanOversightInviteParams {
+  email: string
+  firstName: string
+  inviterName: string
+  usecaseName: string
+  ctaLink: string
+}
+
+export async function sendHumanOversightInvite(params: SendHumanOversightInviteParams) {
+  const client = getMailjetClient()
+  if (!client) {
+    throw new Error('MAILJET_API_KEY ou MAILJET_API_SECRET manquant')
+  }
+
+  console.log(
+    `[Mailjet] Envoi invitation Surveillance Humaine à ${params.email} pour le cas d'usage: ${params.usecaseName}`
+  )
+
+  try {
+    const request = await client.post('send', { version: 'v3.1' }).request({
+      Messages: [
+        {
+          From: {
+            Email: FROM_EMAIL,
+            Name: FROM_NAME,
+          },
+          To: [
+            {
+              Email: params.email,
+              Name: params.firstName,
+            },
+          ],
+          TemplateID: TEMPLATES.HUMAN_OVERSIGHT_INVITE,
+          TemplateLanguage: true,
+          Subject: `Invitation : Responsable de la surveillance humaine pour ${params.usecaseName}`,
+          Variables: {
+            firstName: params.firstName,
+            inviterName: params.inviterName,
+            usecaseName: params.usecaseName,
+            ctaLink: params.ctaLink,
+          },
+        },
+      ],
+    })
+
+    return request.body
+  } catch (error) {
+    console.error("[Mailjet] Échec de l'envoi de l'invitation Surveillance Humaine:", error)
+    throw new Error("Erreur lors de l'envoi de l'email d'invitation.")
   }
 }
 
@@ -263,5 +316,68 @@ export async function sendLeadInviteEmail({
       errorMessage: err.response?.body?.ErrorMessage,
     });
     return { success: false, error: err };
+  }
+}
+
+// Type basé sur le payload Zod existant
+export type ContactNotificationPayload = {
+  subject: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string | null;
+  message?: string | null;
+};
+
+export async function sendAdminContactNotification(data: ContactNotificationPayload) {
+  const mailjet = getMailjetClient();
+  if (!mailjet) {
+    return mailjetNotConfiguredError();
+  }
+
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #333;">Vous avez reçu une nouvelle soumission sur le formulaire de contact MaydAI</h2>
+      <p style="color: #666; font-size: 14px;">Détails de la soumission :</p>
+      <hr style="border: 1px solid #eee; margin: 20px 0;" />
+      
+      <p><strong>Objet :</strong><br/>${data.subject}</p>
+      <p><strong>Prénom :</strong><br/>${data.first_name}</p>
+      <p><strong>Nom :</strong><br/>${data.last_name}</p>
+      <p><strong>E-mail :</strong><br/><a href="mailto:${data.email}">${data.email}</a></p>
+      <p><strong>Numéro de téléphone portable :</strong><br/>${data.phone ? data.phone : '<em>Non renseigné</em>'}</p>
+      <p><strong>Questions ou précisions concernant votre demande de contact :</strong><br/>
+      <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; white-space: pre-wrap;">${data.message ? data.message : '<em>Aucun message</em>'}</div></p>
+      
+      <hr style="border: 1px solid #eee; margin: 20px 0;" />
+      <p style="font-size: 12px; color: #999;">Notification automatique générée par le système MaydAI.</p>
+    </div>
+  `;
+
+  try {
+    const request = await mailjet.post('send', { version: 'v3.1' }).request({
+      Messages: [
+        {
+          From: {
+            Email: 'tech@maydai.io',
+            Name: 'MaydAI Bot',
+          },
+          To: [
+            {
+              Email: 'tech@maydai.io',
+              Name: 'MaydAI Tech Team',
+            },
+          ],
+          Subject: `Nouveau Contact Site Web : ${data.subject} - ${data.first_name} ${data.last_name}`,
+          HTMLPart: htmlContent,
+        },
+      ],
+    });
+
+    console.log('[Contact Web] Notification admin envoyée', request.body);
+    return { success: true };
+  } catch (error) {
+    console.error('[Contact Web] Erreur critique envoi notification admin:', error);
+    return { success: false, error };
   }
 }
