@@ -50,10 +50,16 @@ function isCompanyCentralized(company: Company): boolean {
   )
 }
 
+/** Réponse GET/PUT company (+ champs métier optionnels du PUT). */
+type CompanyApiPayload = Partial<Company> & {
+  useCasesUpdated?: number
+  registryScoresRecalculated?: number
+}
+
 /** Le PUT renvoie la ligne companies sans `role` ; on fusionne pour éviter un flash « accès refusé ». */
 function mergeCompanyFromApi(
   previous: Company | null,
-  payload: Record<string, unknown>
+  payload: CompanyApiPayload
 ): Company {
   return {
     ...(previous ?? {}),
