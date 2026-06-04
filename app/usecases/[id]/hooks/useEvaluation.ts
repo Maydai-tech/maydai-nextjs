@@ -119,6 +119,8 @@ interface UseEvaluationProps {
   systemType?: string | null
   /** V3 uniquement : `short` = parcours court (même graphe métier, périmètre actif réduit côté scoring). */
   questionnairePathMode?: QuestionnairePathMode
+  /** Deep-link `?focus=` : prioritaire sur getResumeQuestionId à l’hydratation. */
+  initialFocusId?: string | null
 }
 
 export function useEvaluation({
@@ -128,6 +130,7 @@ export function useEvaluation({
   questionnaireVersion: questionnaireVersionProp,
   systemType: systemTypeProp,
   questionnairePathMode: questionnairePathModeProp = 'long',
+  initialFocusId: initialFocusIdProp = null,
 }: UseEvaluationProps): UseEvaluationReturn {
   const questionnaireVersion: QuestionnaireVersion = useMemo(
     () => normalizeQuestionnaireVersion(questionnaireVersionProp),
@@ -182,13 +185,16 @@ export function useEvaluation({
           }
         : undefined
 
+    const questionsById = loadQuestions()
+    const resolvedInitialFocus =
+      initialFocusIdProp && questionsById[initialFocusIdProp] ? initialFocusIdProp : null
+
     if (savedAnswers && Object.keys(savedAnswers).length > 0) {
-      let currentQuestionId = getResumeQuestionId(
-        savedAnswers,
-        questionnaireVersion,
-        navOpts
-      )
+      let currentQuestionId =
+        resolvedInitialFocus ||
+        getResumeQuestionId(savedAnswers, questionnaireVersion, navOpts)
       if (
+        !resolvedInitialFocus &&
         questionnairePathModeProp === 'short' &&
         questionnaireVersion === QUESTIONNAIRE_VERSION_V3 &&
         currentQuestionId === V3_SHORT_MINIPACK_ID
@@ -212,14 +218,15 @@ export function useEvaluation({
       )
       setQuestionHistory(historyPath.length > 0 ? historyPath : ['E4.N7.Q1'])
     } else {
+      const startId = resolvedInitialFocus || 'E4.N7.Q1'
       setQuestionnaireData((prev) => ({
         ...prev,
-        currentQuestionId: 'E4.N7.Q1',
+        currentQuestionId: startId,
         answers: {},
         checklist_gov_enterprise: govEnt,
         checklist_gov_usecase: govUc,
       }))
-      setQuestionHistory(['E4.N7.Q1'])
+      setQuestionHistory([startId])
     }
 
     setInitialDataLoaded(true)
@@ -230,6 +237,7 @@ export function useEvaluation({
     questionnairePathModeProp,
     session?.access_token,
     usecaseId,
+    initialFocusIdProp,
   ])
 
   // Montage / changement de cas : refetch puis hydratation (montage direct en long inclus).

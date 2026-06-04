@@ -19,7 +19,8 @@ import {
   Search,
   X,
   MoreVertical,
-  Trash2
+  Trash2,
+  Edit2,
 } from 'lucide-react'
 import WorldMap from '@/components/WorldMap'
 import ScoreCircle from '@/components/ScoreCircle'
@@ -41,6 +42,10 @@ import RegistreMaydaiBadge from './components/RegistreMaydaiBadge'
 import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
 import { getDeploymentStatus, getDeploymentStatusColor } from '@/lib/deployment-status'
 import { getJourneyTypeFromPathMode, type PathMode } from '@/lib/journey-path-mode'
+import {
+  buildEvaluationFocusHref,
+  getBlockingPivotId,
+} from '@/app/usecases/[id]/utils/blocking-pivot-focus'
 
 interface Company {
   id: string
@@ -88,6 +93,8 @@ interface UseCase {
   questionnaire_version?: string | number | null
   system_type?: string | null
   path_mode?: PathMode
+  checklist_gov_enterprise?: string[] | null
+  checklist_gov_usecase?: string[] | null
 }
 
 interface DashboardProps {
@@ -1049,27 +1056,51 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                                           useCase.risk_level
                                         )
                                         return (
-                                          <div
-                                            className={`${st.bg} ${st.border} border rounded-lg p-2 flex items-center space-x-2`}
-                                          >
-                                            <svg
-                                              className={`w-4 h-4 flex-shrink-0 ${st.text}`}
-                                              fill="none"
-                                              stroke="currentColor"
-                                              viewBox="0 0 24 24"
+                                          <div className="space-y-2">
+                                            <div
+                                              className={`${st.bg} ${st.border} border rounded-lg p-2 flex items-center space-x-2`}
                                             >
-                                              <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z"
-                                              />
-                                            </svg>
-                                            <div>
-                                              <div className={`text-xs ${st.text} opacity-75`}>Statut</div>
-                                              <div className={`text-sm font-semibold ${st.text}`}>
-                                                Classification impossible
+                                              <svg
+                                                className={`w-4 h-4 flex-shrink-0 ${st.text}`}
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                                aria-hidden
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-1.964-1.333-2.732 0L3.732 16c-.77 1.333.192 3 1.732 3z"
+                                                />
+                                              </svg>
+                                              <div>
+                                                <div className={`text-xs ${st.text} opacity-75`}>Statut</div>
+                                                <div className={`text-sm font-semibold ${st.text}`}>
+                                                  Classification impossible
+                                                </div>
                                               </div>
+                                            </div>
+                                            <p className="text-xs text-violet-800/90 leading-relaxed">
+                                              Complétez ou précisez les réponses « Je ne sais pas » sur les pivots
+                                              juridiques.
+                                            </p>
+                                            <div className="mt-1">
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.preventDefault()
+                                                  e.stopPropagation()
+                                                  const focusId = getBlockingPivotId(useCase)
+                                                  router.push(
+                                                    buildEvaluationFocusHref(useCase.id, focusId)
+                                                  )
+                                                }}
+                                                className="inline-flex items-center justify-center w-full px-4 py-2 border border-purple-300 shadow-sm text-sm font-medium rounded-md text-purple-700 bg-white hover:bg-purple-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-purple-500 transition-colors"
+                                              >
+                                                <Edit2 className="h-4 w-4 mr-2 text-purple-500 shrink-0" aria-hidden />
+                                                Réévaluer le cas d&apos;usage
+                                              </button>
                                             </div>
                                           </div>
                                         )
