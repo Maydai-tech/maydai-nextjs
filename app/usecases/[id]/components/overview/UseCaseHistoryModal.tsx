@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, History, Plus, RefreshCw, FileUp, Edit, ArrowRight, TrendingUp, TrendingDown, Minus, RotateCcw, FilePen } from 'lucide-react'
+import { X, History, Plus, RefreshCw, FileUp, Edit, ArrowRight, TrendingUp, TrendingDown, Minus, RotateCcw, FilePen, UserPlus } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import {
   UseCaseHistoryEntry,
@@ -26,7 +26,8 @@ const EVENT_ICONS: Record<UseCaseHistoryEventType, React.ReactNode> = {
   document_uploaded: <FileUp className="h-4 w-4" />,
   document_modified: <FilePen className="h-4 w-4" />,
   document_reset: <RotateCcw className="h-4 w-4" />,
-  field_updated: <Edit className="h-4 w-4" />
+  field_updated: <Edit className="h-4 w-4" />,
+  collaborator_invited: <UserPlus className="h-4 w-4" />
 }
 
 const EVENT_COLORS: Record<UseCaseHistoryEventType, { bg: string; text: string }> = {
@@ -35,7 +36,8 @@ const EVENT_COLORS: Record<UseCaseHistoryEventType, { bg: string; text: string }
   document_uploaded: { bg: 'bg-purple-100', text: 'text-purple-600' },
   document_modified: { bg: 'bg-amber-100', text: 'text-amber-600' },
   document_reset: { bg: 'bg-red-100', text: 'text-red-600' },
-  field_updated: { bg: 'bg-orange-100', text: 'text-orange-600' }
+  field_updated: { bg: 'bg-orange-100', text: 'text-orange-600' },
+  collaborator_invited: { bg: 'bg-teal-100', text: 'text-teal-600' }
 }
 
 export const UseCaseHistoryModal: React.FC<UseCaseHistoryModalProps> = ({

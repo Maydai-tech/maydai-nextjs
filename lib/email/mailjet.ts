@@ -3,7 +3,8 @@ import Mailjet from 'node-mailjet';
 // Configuration
 const TEMPLATES = {
   COLLABORATION_INVITE: 7438322, // Template pour invitation au niveau registre
-  ACCOUNT_COLLABORATION_INVITE: 7576574 // Template pour invitation au niveau compte
+  ACCOUNT_COLLABORATION_INVITE: 7576574, // Template pour invitation au niveau compte
+  HUMAN_OVERSIGHT_INVITE: 8083771, // Template invitation surveillance humaine (cas d'usage)
 } as const;
 
 /** Template Mailjet — campagne acquisition (lead Google Ads). */
@@ -112,6 +113,58 @@ export async function sendRegistryCollaborationInvite({
       fullError: err.response?.body
     });
     return { success: false, error: err };
+  }
+}
+
+export interface SendHumanOversightInviteParams {
+  email: string
+  firstName: string
+  inviterName: string
+  usecaseName: string
+  ctaLink: string
+}
+
+export async function sendHumanOversightInvite(params: SendHumanOversightInviteParams) {
+  const client = getMailjetClient()
+  if (!client) {
+    throw new Error('MAILJET_API_KEY ou MAILJET_API_SECRET manquant')
+  }
+
+  console.log(
+    `[Mailjet] Envoi invitation Surveillance Humaine à ${params.email} pour le cas d'usage: ${params.usecaseName}`
+  )
+
+  try {
+    const request = await client.post('send', { version: 'v3.1' }).request({
+      Messages: [
+        {
+          From: {
+            Email: FROM_EMAIL,
+            Name: FROM_NAME,
+          },
+          To: [
+            {
+              Email: params.email,
+              Name: params.firstName,
+            },
+          ],
+          TemplateID: TEMPLATES.HUMAN_OVERSIGHT_INVITE,
+          TemplateLanguage: true,
+          Subject: `Invitation : Responsable de la surveillance humaine pour ${params.usecaseName}`,
+          Variables: {
+            firstName: params.firstName,
+            inviterName: params.inviterName,
+            usecaseName: params.usecaseName,
+            ctaLink: params.ctaLink,
+          },
+        },
+      ],
+    })
+
+    return request.body
+  } catch (error) {
+    console.error("[Mailjet] Échec de l'envoi de l'invitation Surveillance Humaine:", error)
+    throw new Error("Erreur lors de l'envoi de l'email d'invitation.")
   }
 }
 

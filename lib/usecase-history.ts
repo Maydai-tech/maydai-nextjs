@@ -7,6 +7,7 @@ export type UseCaseHistoryEventType =
   | 'document_modified'
   | 'document_reset'
   | 'field_updated'
+  | 'collaborator_invited'
 
 export interface UseCaseHistoryEntry {
   id: string
@@ -187,7 +188,8 @@ export const EVENT_TYPE_LABELS: Record<UseCaseHistoryEventType, string> = {
   document_uploaded: 'Document complété',
   document_modified: 'Document modifié',
   document_reset: 'Document réinitialisé',
-  field_updated: 'Information modifiée'
+  field_updated: 'Information modifiée',
+  collaborator_invited: 'Collaborateur invité'
 }
 
 /**
