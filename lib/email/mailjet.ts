@@ -318,3 +318,66 @@ export async function sendLeadInviteEmail({
     return { success: false, error: err };
   }
 }
+
+// Type basé sur le payload Zod existant
+export type ContactNotificationPayload = {
+  subject: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string | null;
+  message?: string | null;
+};
+
+export async function sendAdminContactNotification(data: ContactNotificationPayload) {
+  const mailjet = getMailjetClient();
+  if (!mailjet) {
+    return mailjetNotConfiguredError();
+  }
+
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #333;">Vous avez reçu une nouvelle soumission sur le formulaire de contact MaydAI</h2>
+      <p style="color: #666; font-size: 14px;">Détails de la soumission :</p>
+      <hr style="border: 1px solid #eee; margin: 20px 0;" />
+      
+      <p><strong>Objet :</strong><br/>${data.subject}</p>
+      <p><strong>Prénom :</strong><br/>${data.first_name}</p>
+      <p><strong>Nom :</strong><br/>${data.last_name}</p>
+      <p><strong>E-mail :</strong><br/><a href="mailto:${data.email}">${data.email}</a></p>
+      <p><strong>Numéro de téléphone portable :</strong><br/>${data.phone ? data.phone : '<em>Non renseigné</em>'}</p>
+      <p><strong>Questions ou précisions concernant votre demande de contact :</strong><br/>
+      <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; white-space: pre-wrap;">${data.message ? data.message : '<em>Aucun message</em>'}</div></p>
+      
+      <hr style="border: 1px solid #eee; margin: 20px 0;" />
+      <p style="font-size: 12px; color: #999;">Notification automatique générée par le système MaydAI.</p>
+    </div>
+  `;
+
+  try {
+    const request = await mailjet.post('send', { version: 'v3.1' }).request({
+      Messages: [
+        {
+          From: {
+            Email: 'tech@maydai.io',
+            Name: 'MaydAI Bot',
+          },
+          To: [
+            {
+              Email: 'tech@maydai.io',
+              Name: 'MaydAI Tech Team',
+            },
+          ],
+          Subject: `Nouveau Contact Site Web : ${data.subject} - ${data.first_name} ${data.last_name}`,
+          HTMLPart: htmlContent,
+        },
+      ],
+    });
+
+    console.log('[Contact Web] Notification admin envoyée', request.body);
+    return { success: true };
+  } catch (error) {
+    console.error('[Contact Web] Erreur critique envoi notification admin:', error);
+    return { success: false, error };
+  }
+}
