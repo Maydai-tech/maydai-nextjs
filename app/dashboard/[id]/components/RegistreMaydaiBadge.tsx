@@ -1,6 +1,9 @@
 'use client'
 
-const REGISTRE_LOGO_SRC = '/logos/logo-maydai/registre_maydai.svg'
+export const REGISTRE_MAYDAI_SEAL_SRC = '/logos/logo-maydai/registre_maydai.svg'
+export const REGISTRE_MAYDAI_SEAL_ALT = 'Sceau officiel Registre MaydAI'
+
+const REGISTRE_LOGO_SRC = REGISTRE_MAYDAI_SEAL_SRC
 
 interface RegistreMaydaiBadgeProps {
   /** Version compacte pour todo/dossier */

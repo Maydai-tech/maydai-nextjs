@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Users, UserPlus, Info, Building2, Globe } from 'lucide-react';
 import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaboratorModal';
 import RegistryCollaboratorList from '@/components/Collaboration/RegistryCollaboratorList';
@@ -29,6 +29,7 @@ interface Collaborator {
 export default function CollaborationPage() {
   const { user, getAccessToken } = useAuth();
   const params = useParams();
+  const router = useRouter();
   const companyId = params.id as string;
   const { plan } = useUserPlan();
 
@@ -187,6 +188,7 @@ export default function CollaborationPage() {
     await fetchCollaborators();
     await fetchTotalCollaborators();
     setShowInviteModal(false);
+    router.refresh();
   };
 
   const handleRemoveCollaboratorClick = (collaboratorId: string) => {
@@ -220,6 +222,7 @@ export default function CollaborationPage() {
     await fetchTotalCollaborators();
     setShowRemoveModal(false);
     setSelectedCollaborator(null);
+    router.refresh();
   };
 
   if (loadingCompany) {

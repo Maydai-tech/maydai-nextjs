@@ -6,6 +6,7 @@ import { deleteCompanyCascade } from '@/lib/account-deletion'
 import { updateUseCaseRegistryResponses } from '@/lib/registry-sync'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { RegistrySchema } from '@/lib/validations/registry'
+import { calculateRegistryCompletenessScore } from '@/lib/validations/registry-completeness'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -86,10 +87,12 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied to this company' }, { status: 403 })
     }
 
-    // Fetch the specific company
+    // Fetch the specific company (completeness_score requis pour l'UI registre)
     const { data: companyData, error: companyError } = await supabase
       .from('companies')
-      .select('*')
+      .select(
+        'id, name, industry, sub_category_id, city, country, type, maydai_as_registry, is_centralized_registry, completeness_score, created_at, updated_at'
+      )
       .eq('id', id)
       .single()
 
@@ -100,11 +103,17 @@ export async function GET(
       return NextResponse.json({ error: 'Error fetching company' }, { status: 500 })
     }
 
+    const { count: memberCount } = await supabase
+      .from('user_companies')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', id)
+
     // Include user's role in the response
     // Priority: direct role from user_companies, then profile-level role
     return NextResponse.json({
       ...companyData,
-      role: userCompany?.role || profileRole || null
+      role: userCompany?.role || profileRole || null,
+      has_collaborators: (memberCount ?? 0) > 1,
     })
 
   } catch (error) {
@@ -185,7 +194,7 @@ export async function PUT(
     }
 
     // Build update object with only provided fields
-    const updateData: Record<string, string | boolean | null> = {}
+    const updateData: Record<string, string | boolean | number | null> = {}
     if (name !== undefined) updateData.name = name
     if (city !== undefined) updateData.city = city
     if (country !== undefined) updateData.country = country
@@ -232,6 +241,55 @@ export async function PUT(
         updateData.sub_category_id = sub
       }
     }
+
+    // --- NOUVEAU MOTEUR DE SCORING ---
+    // 1. Récupération de l'état actuel pour fusion (mise à jour partielle)
+    const { data: currentCompany } = await supabase
+      .from('companies')
+      .select('name, city, country, type, industry, sub_category_id, is_centralized_registry, maydai_as_registry')
+      .eq('id', companyId)
+      .single()
+
+    // 2. Récupération du SIREN profil
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('siren')
+      .eq('id', user.id)
+      .single()
+
+    // 3. Vérification de la collaboration (Si > 1, cela veut dire qu'il y a le propriétaire + au moins 1 invité)
+    const { count: userCount } = await supabase
+      .from('user_companies')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+
+    // Fusion des données existantes avec les nouvelles valeurs entrantes
+    const mergedData = {
+      ...currentCompany,
+      ...updateData,
+    }
+
+    // Synchronisation des flags de registre centralisé
+    const isCentralized =
+      mergedData.is_centralized_registry === true || mergedData.maydai_as_registry === true
+
+    updateData.completeness_score = calculateRegistryCompletenessScore({
+      name: mergedData.name,
+      industry: mergedData.industry,
+      sub_category_id: mergedData.sub_category_id,
+      city: mergedData.city,
+      country: mergedData.country,
+      type: mergedData.type,
+      siren: currentProfile?.siren,
+      has_collaborators: (userCount || 0) > 1,
+      is_centralized_registry: isCentralized,
+    })
+
+    // Si le flag legacy a été mis à jour, on synchronise le nouveau flag propre
+    if (updateData.maydai_as_registry !== undefined) {
+      updateData.is_centralized_registry = isCentralized
+    }
+    // ---------------------------------
 
     // Update the company
     const { data: updatedCompany, error: updateError } = await supabase
@@ -297,8 +355,15 @@ export async function PUT(
       }
     }
 
+    const { count: memberCountAfterUpdate } = await supabase
+      .from('user_companies')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+
     return NextResponse.json({
       ...updatedCompany,
+      role: 'owner',
+      has_collaborators: (memberCountAfterUpdate ?? 0) > 1,
       useCasesUpdated,
       registryScoresRecalculated,
     })
