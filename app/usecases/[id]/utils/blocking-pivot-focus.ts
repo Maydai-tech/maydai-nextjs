@@ -1,5 +1,3 @@
-import type { UseCase } from '../types/usecase'
-
 /** Codes réponse V3 « Je ne sais pas » déclenchant classification_status = impossible. */
 export const V3_BLOCKING_PIVOT_ANSWER_CODES = [
   'E4.N7.Q4.C',
@@ -7,10 +5,14 @@ export const V3_BLOCKING_PIVOT_ANSWER_CODES = [
   'E4.N8.Q11.T1E.C',
 ] as const
 
-type PivotSource = Pick<UseCase, 'checklist_gov_usecase' | 'checklist_gov_enterprise'> | null | undefined
+/** Source minimale pour détecter un pivot JNS (dashboard, synthèse, header). */
+export type BlockingPivotSource = {
+  checklist_gov_usecase?: string[] | null
+  checklist_gov_enterprise?: string[] | null
+}
 
 /** Ex. `E4.N7.Q5.C` → `E4.N7.Q5` pour deep-link `?focus=`. */
-export function getBlockingPivotId(useCase: PivotSource): string | null {
+export function getBlockingPivotId(useCase: BlockingPivotSource | null | undefined): string | null {
   if (!useCase) return null
 
   const lists = [useCase.checklist_gov_usecase, useCase.checklist_gov_enterprise]
