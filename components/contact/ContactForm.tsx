@@ -3,14 +3,14 @@
 import { useActionState, useEffect } from 'react'
 import { submitContactForm } from '@/app/actions/contact'
 import { sendContactFormSuccess } from '@/lib/gtm'
+import { CONTACT_SUBJECT_OPTIONS, type ContactSource } from '@/lib/validations/contact'
 
-const SUBJECT_OPTIONS = [
-  'Support & Démo',
-  'Presse & Média',
-  'Partenariats & Fournisseurs',
-  'Carrières',
-  'Audit personnalisé',
-] as const
+type ContactFormProps = {
+  source?: ContactSource
+  userId?: string
+  companyId?: string
+  usecaseId?: string
+}
 
 type ContactFormState = {
   success?: boolean
@@ -32,7 +32,12 @@ function FieldError({ messages }: { messages?: string[] }) {
   )
 }
 
-export default function ContactForm() {
+export default function ContactForm({
+  source = 'contact_page',
+  userId,
+  companyId,
+  usecaseId,
+}: ContactFormProps) {
   const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
 
   useEffect(() => {
@@ -60,6 +65,11 @@ export default function ContactForm() {
 
   return (
     <form action={formAction} className="space-y-5" noValidate>
+      <input type="hidden" name="source" value={source} />
+      {userId ? <input type="hidden" name="user_id" value={userId} /> : null}
+      {companyId ? <input type="hidden" name="company_id" value={companyId} /> : null}
+      {usecaseId ? <input type="hidden" name="usecase_id" value={usecaseId} /> : null}
+
       {state?.error && (
         <div
           className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
@@ -125,7 +135,7 @@ export default function ContactForm() {
           <option value="" disabled>
             Sélectionnez un motif
           </option>
-          {SUBJECT_OPTIONS.map((option) => (
+          {CONTACT_SUBJECT_OPTIONS.map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
