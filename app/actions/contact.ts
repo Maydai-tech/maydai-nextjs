@@ -16,6 +16,12 @@ function readOptionalString(value: FormDataEntryValue | null): string | undefine
   return trimmed.length > 0 ? trimmed : undefined
 }
 
+function readOptionalUuid(value: FormDataEntryValue | null): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
 function parseMarketingConsent(value: FormDataEntryValue | null): boolean {
   if (value === null) return false
   if (typeof value === 'string') {
@@ -33,6 +39,10 @@ function formDataToContactPayload(formData: FormData) {
     phone: readOptionalString(formData.get('phone')),
     message: readOptionalString(formData.get('message')),
     marketing_consent: parseMarketingConsent(formData.get('marketing_consent')),
+    source: readOptionalString(formData.get('source')),
+    user_id: readOptionalUuid(formData.get('user_id')),
+    company_id: readOptionalUuid(formData.get('company_id')),
+    usecase_id: readOptionalUuid(formData.get('usecase_id')),
   }
 }
 
@@ -46,7 +56,7 @@ async function sendContactConfirmationEmail(data: {
 
   if (!apiKey || !apiSecret) {
     console.error(
-      '[API_CONTACT_SUBMIT] Erreur Mailjet:',
+      '[Action: Contact] Mailjet Notification Error:',
       'MAILJET_API_KEY ou MAILJET_API_SECRET manquant',
     )
     return
@@ -54,46 +64,71 @@ async function sendContactConfirmationEmail(data: {
 
   const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
 
-  try {
-    const response = await fetch(MAILJET_SEND_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${auth}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        Messages: [
-          {
-            From: {
-              Email: MAILJET_FROM_EMAIL,
-              Name: MAILJET_FROM_NAME,
-            },
-            To: [
-              {
-                Email: data.email,
-                Name: data.first_name,
-              },
-            ],
-            TemplateID: CONTACT_MAILJET_TEMPLATE_ID,
-            TemplateLanguage: true,
-            Variables: {
-              first_name: data.first_name,
-              subject: data.subject,
-            },
+  const response = await fetch(MAILJET_SEND_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      Messages: [
+        {
+          From: {
+            Email: MAILJET_FROM_EMAIL,
+            Name: MAILJET_FROM_NAME,
           },
-        ],
-      }),
+          To: [
+            {
+              Email: data.email,
+              Name: data.first_name,
+            },
+          ],
+          TemplateID: CONTACT_MAILJET_TEMPLATE_ID,
+          TemplateLanguage: true,
+          Variables: {
+            first_name: data.first_name,
+            subject: data.subject,
+          },
+        },
+      ],
+    }),
+  })
+
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(`Mailjet confirmation failed (${response.status}): ${body}`)
+  }
+}
+
+async function sendContactEmailsSafely(data: {
+  email: string
+  first_name: string
+  last_name: string
+  subject: string
+  phone?: string
+  message?: string
+}): Promise<void> {
+  try {
+    await sendContactConfirmationEmail({
+      email: data.email,
+      first_name: data.first_name,
+      subject: data.subject,
     })
 
-    if (!response.ok) {
-      const body = await response.text()
-      console.error('[API_CONTACT_SUBMIT] Erreur Mailjet:', {
-        status: response.status,
-        body,
-      })
+    const adminResult = await sendAdminContactNotification({
+      subject: data.subject,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      email: data.email,
+      phone: data.phone ?? null,
+      message: data.message ?? null,
+    })
+
+    if (!adminResult.success) {
+      console.error('[Action: Contact] Mailjet Notification Error:', adminResult.error)
     }
   } catch (error) {
-    console.error('[API_CONTACT_SUBMIT] Erreur Mailjet:', error)
+    console.error('[Action: Contact] Mailjet Notification Error:', error)
   }
 }
 
@@ -107,13 +142,42 @@ export async function submitContactForm(prevState: unknown, formData: FormData) 
     }
   }
 
-  const data = validation.data
+  const validatedData = validation.data
+
+  const {
+    subject,
+    first_name,
+    last_name,
+    email,
+    phone,
+    message,
+    marketing_consent,
+    status,
+    source,
+    user_id,
+    company_id,
+    usecase_id,
+  } = validatedData
 
   let supabase
   try {
     supabase = await createSupabaseServerClient()
   } catch (error) {
-    console.error('[API_CONTACT_SUBMIT] Erreur Supabase:', error)
+    console.error('[Action: Contact] Erreur Supabase:', error)
+    return {
+      success: false as const,
+      error:
+        'Une erreur est survenue lors de l\'envoi du formulaire. Veuillez réessayer plus tard.',
+    }
+  }
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (user_id && (!user || user.id !== user_id)) {
+    console.error('[Action: Contact] Erreur auth:', authError)
     return {
       success: false as const,
       error:
@@ -122,17 +186,22 @@ export async function submitContactForm(prevState: unknown, formData: FormData) 
   }
 
   const { error } = await supabase.from('contact_site').insert({
-    subject: data.subject,
-    first_name: data.first_name,
-    last_name: data.last_name,
-    email: data.email,
-    phone: data.phone ?? null,
-    message: data.message ?? null,
-    marketing_consent: data.marketing_consent,
+    subject,
+    first_name,
+    last_name,
+    email,
+    phone: phone ?? null,
+    message: message ?? null,
+    marketing_consent,
+    status,
+    source,
+    user_id: user?.id ?? user_id ?? null,
+    company_id: company_id ?? null,
+    usecase_id: usecase_id ?? null,
   })
 
   if (error) {
-    console.error('[API_CONTACT_SUBMIT] Erreur Supabase:', error)
+    console.error('[Action: Contact] Erreur Supabase:', error)
     return {
       success: false as const,
       error:
@@ -140,22 +209,14 @@ export async function submitContactForm(prevState: unknown, formData: FormData) 
     }
   }
 
-  // Exécution parallèle des e-mails (Confirmation Utilisateur + Notification Admin)
-  await Promise.allSettled([
-    sendContactConfirmationEmail({
-      email: data.email,
-      first_name: data.first_name,
-      subject: data.subject,
-    }),
-    sendAdminContactNotification({
-      subject: data.subject,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      email: data.email,
-      phone: data.phone ?? null,
-      message: data.message ?? null,
-    }),
-  ])
+  await sendContactEmailsSafely({
+    email,
+    first_name,
+    last_name,
+    subject,
+    phone,
+    message,
+  })
 
   revalidatePath('/admin/contacts')
 
