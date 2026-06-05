@@ -1,5 +1,23 @@
 import { z } from 'zod'
 
+export const COMMERCIAL_SUBJECTS = [
+  'Support & Démo',
+  'Presse & Média',
+  'Partenariats & Fournisseurs',
+  'Carrières',
+  'Audit personnalisé',
+] as const
+
+export const SUPPORT_SUBJECTS = [
+  'Compte — changement d\'email',
+  'Plateforme — utilisation',
+  'IA Act — réglementation',
+  'Formation & conformité',
+  'Facturation & abonnement',
+  'Audit personnalisé',
+  'Autre demande',
+] as const
+
 export const CONTACT_SUBJECT_OPTIONS = [
   'Support & Démo',
   'Presse & Média',

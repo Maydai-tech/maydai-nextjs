@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 import ContactForm from '@/components/contact/ContactForm'
+import SupportFAQ from '@/components/support/SupportFAQ'
+import SupportResources from '@/components/support/SupportResources'
+import UrgentContact from '@/components/support/UrgentContact'
 
 export const metadata: Metadata = {
   title: 'Support MaydAI | Aide plateforme & conformité IA Act',
@@ -22,8 +25,17 @@ export default function SupportPage() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-xl lg:p-10">
-            <ContactForm source="support_page" />
+          <div className="space-y-12">
+            <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-xl lg:p-10">
+              <ContactForm source="support_page" />
+            </div>
+
+            <section aria-labelledby="public-faq-heading" className="mb-12 w-full">
+              <SupportFAQ role="public" />
+            </section>
+
+            <SupportResources />
+            <UrgentContact />
           </div>
 
           <p className="mt-4 text-center text-xs text-gray-500">

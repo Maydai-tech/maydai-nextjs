@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, User, Menu, X, Users, FileText, CheckSquare, Settings, House, BarChart } from 'lucide-react';
+import { Home, User, Menu, X, Users, FileText, CheckSquare, Settings, House, BarChart, CircleHelp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useApiCall } from '@/lib/api-client-legacy';
@@ -191,6 +191,24 @@ export default function Sidebar() {
     return '/dashboard/registries';
   };
 
+  // Determine support URL based on current context
+  const getSupportUrl = () => {
+    if (useCaseRegistryId) {
+      return `/dashboard/${useCaseRegistryId}/support`;
+    }
+
+    const dashboardMatch = pathname.match(/^\/dashboard\/([^\/]+)/);
+    if (dashboardMatch && dashboardMatch[1] !== 'companies' && dashboardMatch[1] !== 'registries') {
+      return `/dashboard/${dashboardMatch[1]}/support`;
+    }
+
+    if (companyId) {
+      return `/dashboard/${companyId}/support`;
+    }
+
+    return '/dashboard/registries';
+  };
+
   // Determine Bench LLM URL (fixed route, not dependent on context)
   const getBenchLLMUrl = () => {
     return '/bench-llm';
@@ -240,6 +258,11 @@ export default function Sidebar() {
       name: 'Paramètres',
       href: getSettingsUrl(),
       icon: Settings
+    },
+    {
+      name: 'Support',
+      href: getSupportUrl(),
+      icon: CircleHelp
     }
   ];
 
@@ -308,7 +331,9 @@ export default function Sidebar() {
                     ? pathname.includes('/collaboration') && pathname.startsWith('/dashboard/')
                     : item.name === 'Paramètres'
                       ? pathname.includes('/settings') && pathname.startsWith('/dashboard/')
-                      : item.name === 'Bench LLM'
+                      : item.name === 'Support'
+                        ? pathname.includes('/support') && pathname.startsWith('/dashboard/')
+                        : item.name === 'Bench LLM'
                         ? pathname === '/bench-llm'
                         : pathname === item.href;
 
@@ -335,6 +360,7 @@ export default function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
+                aria-current={isActive ? 'page' : undefined}
                 className={`
                   flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 group
                   ${isActive
@@ -344,7 +370,7 @@ export default function Sidebar() {
                 `}
                 onClick={() => setIsOpen(false)}
               >
-                <Icon className={`w-5 h-5 ${isActive ? 'text-[#0080A3]' : 'text-white/90 group-hover:text-white'}`} />
+                <Icon className={`w-5 h-5 ${isActive ? 'text-[#0080A3]' : 'text-white/90 group-hover:text-white'}`} aria-hidden="true" />
                 <span className="font-medium">{item.name}</span>
               </Link>
             );

@@ -1,15 +1,22 @@
 'use client'
 
-import { useActionState, useEffect } from 'react'
+import { useActionState, useEffect, useState } from 'react'
+import { Lock } from 'lucide-react'
 import { submitContactForm } from '@/app/actions/contact'
 import { sendContactFormSuccess } from '@/lib/gtm'
-import { CONTACT_SUBJECT_OPTIONS, type ContactSource } from '@/lib/validations/contact'
+import EmailChangeNotice from '@/components/support/EmailChangeNotice'
+import { COMMERCIAL_SUBJECTS, SUPPORT_SUBJECTS, type ContactSource } from '@/lib/validations/contact'
+
+const EMAIL_CHANGE_SUBJECT = 'Compte — changement d\'email'
 
 type ContactFormProps = {
   source?: ContactSource
   userId?: string
   companyId?: string
   usecaseId?: string
+  defaultEmail?: string
+  defaultFirstName?: string
+  defaultLastName?: string
 }
 
 type ContactFormState = {
@@ -21,12 +28,19 @@ type ContactFormState = {
 const initialState: ContactFormState = {}
 
 const inputClassName =
-  'w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500'
+  'w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:border-[#0080A3] focus-visible:outline-none transition-colors disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500'
 
-function FieldError({ messages }: { messages?: string[] }) {
+const lockedInputClassName =
+  'bg-slate-50 text-slate-500 cursor-not-allowed focus-visible:ring-0 focus-visible:border-gray-300'
+
+function isPrefilledValue(value?: string): boolean {
+  return Boolean(value?.trim())
+}
+
+function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   if (!messages?.length) return null
   return (
-    <p className="mt-1 text-sm text-red-600" role="alert">
+    <p id={id} className="mt-1 text-sm text-red-600" role="alert">
       {messages.join(', ')}
     </p>
   )
@@ -37,8 +51,18 @@ export default function ContactForm({
   userId,
   companyId,
   usecaseId,
+  defaultEmail,
+  defaultFirstName,
+  defaultLastName,
 }: ContactFormProps) {
   const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
+  const [subject, setSubject] = useState('')
+
+  const isAuthenticatedContext = source === 'dashboard_support'
+  const isFirstNameLocked = isAuthenticatedContext && isPrefilledValue(defaultFirstName)
+  const isLastNameLocked = isAuthenticatedContext && isPrefilledValue(defaultLastName)
+  const isEmailLocked = isAuthenticatedContext && isPrefilledValue(defaultEmail)
+  const showEmailSecurityHelp = isEmailLocked
 
   useEffect(() => {
     if (state?.success) {
@@ -62,6 +86,17 @@ export default function ContactForm({
   }
 
   const fieldErrors = state?.errors ?? {}
+  const emailHasError = Boolean(fieldErrors.email)
+  const emailDescribedBy = showEmailSecurityHelp
+    ? emailHasError
+      ? 'email-error email-security-help'
+      : 'email-security-help'
+    : emailHasError
+      ? 'email-error'
+      : undefined
+
+  // Détermination de la liste des motifs selon le contexte de la page
+  const subjectsToDisplay = source === 'contact_page' ? COMMERCIAL_SUBJECTS : SUPPORT_SUBJECTS
 
   return (
     <form action={formAction} className="space-y-5" noValidate>
@@ -79,7 +114,37 @@ export default function ContactForm({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+      <div>
+        <label htmlFor="subject" className="mb-2 block text-sm font-medium text-gray-700">
+          Motif de la demande <span className="text-red-500">*</span>
+        </label>
+        <select
+          id="subject"
+          name="subject"
+          required
+          aria-required="true"
+          defaultValue=""
+          disabled={isPending}
+          className={inputClassName}
+          aria-invalid={Boolean(fieldErrors.subject)}
+          aria-describedby={fieldErrors.subject ? 'subject-error' : undefined}
+          onChange={(event) => setSubject(event.target.value)}
+        >
+          <option value="" disabled>
+            Sélectionnez un motif
+          </option>
+          {subjectsToDisplay.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+        <FieldError id="subject-error" messages={fieldErrors.subject} />
+      </div>
+
+      {subject !== '' ? (
+        <div className="animate-in fade-in slide-in-from-top-4 mt-5 space-y-5 border-t border-slate-100 pt-5 duration-500 ease-out">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
           <label htmlFor="first_name" className="mb-2 block text-sm font-medium text-gray-700">
             Prénom <span className="text-red-500">*</span>
@@ -89,14 +154,18 @@ export default function ContactForm({
             name="first_name"
             type="text"
             required
+            aria-required="true"
             minLength={2}
             autoComplete="given-name"
             disabled={isPending}
-            className={inputClassName}
+            readOnly={isFirstNameLocked}
+            className={`${inputClassName} ${isFirstNameLocked ? lockedInputClassName : ''}`}
             placeholder="Jean"
+            defaultValue={defaultFirstName}
             aria-invalid={Boolean(fieldErrors.first_name)}
+            aria-describedby={fieldErrors.first_name ? 'first_name-error' : undefined}
           />
-          <FieldError messages={fieldErrors.first_name} />
+          <FieldError id="first_name-error" messages={fieldErrors.first_name} />
         </div>
 
         <div>
@@ -108,40 +177,19 @@ export default function ContactForm({
             name="last_name"
             type="text"
             required
+            aria-required="true"
             minLength={2}
             autoComplete="family-name"
             disabled={isPending}
-            className={inputClassName}
+            readOnly={isLastNameLocked}
+            className={`${inputClassName} ${isLastNameLocked ? lockedInputClassName : ''}`}
             placeholder="Dupont"
+            defaultValue={defaultLastName}
             aria-invalid={Boolean(fieldErrors.last_name)}
+            aria-describedby={fieldErrors.last_name ? 'last_name-error' : undefined}
           />
-          <FieldError messages={fieldErrors.last_name} />
+          <FieldError id="last_name-error" messages={fieldErrors.last_name} />
         </div>
-      </div>
-
-      <div>
-        <label htmlFor="subject" className="mb-2 block text-sm font-medium text-gray-700">
-          Objet de la demande <span className="text-red-500">*</span>
-        </label>
-        <select
-          id="subject"
-          name="subject"
-          required
-          defaultValue=""
-          disabled={isPending}
-          className={inputClassName}
-          aria-invalid={Boolean(fieldErrors.subject)}
-        >
-          <option value="" disabled>
-            Sélectionnez un motif
-          </option>
-          {CONTACT_SUBJECT_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-        <FieldError messages={fieldErrors.subject} />
       </div>
 
       <div>
@@ -153,18 +201,36 @@ export default function ContactForm({
           name="email"
           type="email"
           required
+          aria-required="true"
           autoComplete="email"
           disabled={isPending}
-          className={inputClassName}
+          readOnly={isEmailLocked}
+          className={`${inputClassName} ${isEmailLocked ? lockedInputClassName : ''}`}
           placeholder="vous@entreprise.com"
-          aria-invalid={Boolean(fieldErrors.email)}
+          defaultValue={defaultEmail}
+          aria-invalid={emailHasError}
+          aria-describedby={emailDescribedBy}
         />
-        <FieldError messages={fieldErrors.email} />
+        {showEmailSecurityHelp ? (
+          <p
+            id="email-security-help"
+            className="mt-2 flex items-start gap-1.5 font-sans text-sm text-slate-500 sm:items-center"
+          >
+            <Lock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+            Adresse sécurisée liée à votre session. Utilisez le menu déroulant ci-dessus pour
+            demander une modification.
+          </p>
+        ) : null}
+        <FieldError id="email-error" messages={fieldErrors.email} />
       </div>
+
+      {subject === EMAIL_CHANGE_SUBJECT ? (
+        <EmailChangeNotice />
+      ) : null}
 
       <div>
         <label htmlFor="phone" className="mb-2 block text-sm font-medium text-gray-700">
-          Téléphone <span className="text-gray-400 font-normal">(optionnel)</span>
+          Téléphone
         </label>
         <input
           id="phone"
@@ -175,13 +241,14 @@ export default function ContactForm({
           className={inputClassName}
           placeholder="+33 6 12 34 56 78"
           aria-invalid={Boolean(fieldErrors.phone)}
+          aria-describedby={fieldErrors.phone ? 'phone-error' : undefined}
         />
-        <FieldError messages={fieldErrors.phone} />
+        <FieldError id="phone-error" messages={fieldErrors.phone} />
       </div>
 
       <div>
         <label htmlFor="message" className="mb-2 block text-sm font-medium text-gray-700">
-          Message <span className="text-gray-400 font-normal">(optionnel)</span>
+          Message
         </label>
         <textarea
           id="message"
@@ -191,8 +258,9 @@ export default function ContactForm({
           className={`${inputClassName} resize-none`}
           placeholder="Décrivez votre demande..."
           aria-invalid={Boolean(fieldErrors.message)}
+          aria-describedby={fieldErrors.message ? 'message-error' : undefined}
         />
-        <FieldError messages={fieldErrors.message} />
+        <FieldError id="message-error" messages={fieldErrors.message} />
       </div>
 
       <div className="flex items-start gap-3">
@@ -202,22 +270,26 @@ export default function ContactForm({
           type="checkbox"
           value="on"
           disabled={isPending}
-          className="mt-1 h-4 w-4 rounded border-gray-300 text-[#0080A3] focus:ring-[#0080A3]"
+          className="mt-1 h-4 w-4 rounded border-gray-300 text-[#0080A3] focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:outline-none"
           aria-invalid={Boolean(fieldErrors.marketing_consent)}
+          aria-describedby={fieldErrors.marketing_consent ? 'marketing_consent-error' : undefined}
         />
         <label htmlFor="marketing_consent" className="text-sm text-gray-600 leading-relaxed">
           J&apos;accepte de recevoir des communications marketing de MaydAI.
         </label>
       </div>
-      <FieldError messages={fieldErrors.marketing_consent} />
+      <FieldError id="marketing_consent-error" messages={fieldErrors.marketing_consent} />
 
       <button
         type="submit"
         disabled={isPending}
-        className="w-full rounded-lg bg-[#0080A3] px-6 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-[#006280] focus:outline-none focus:ring-2 focus:ring-[#0080A3] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+        aria-busy={isPending}
+        className="w-full rounded-lg bg-[#0080A3] px-6 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-[#006280] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isPending ? 'Envoi en cours…' : 'Envoyer le message'}
       </button>
+        </div>
+      ) : null}
     </form>
   )
 }
