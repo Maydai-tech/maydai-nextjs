@@ -6,9 +6,7 @@ import { contactSiteSchema } from '@/lib/validations/contact'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 const MAILJET_SEND_URL = 'https://api.mailjet.com/v3.1/send'
-const CONTACT_MAILJET_TEMPLATE_ID = 8074397
-const MAILJET_FROM_EMAIL = 'tech@maydai.io'
-const MAILJET_FROM_NAME = 'MaydAI'
+const MAILJET_FROM_EMAIL = 'contact@maydai.io'
 
 function readOptionalString(value: FormDataEntryValue | null): string | undefined {
   if (typeof value !== 'string') return undefined
@@ -50,6 +48,7 @@ async function sendContactConfirmationEmail(data: {
   email: string
   first_name: string
   subject: string
+  source: string
 }): Promise<void> {
   const apiKey = process.env.MAILJET_API_KEY
   const apiSecret = process.env.MAILJET_API_SECRET
@@ -61,6 +60,9 @@ async function sendContactConfirmationEmail(data: {
     )
     return
   }
+
+  const templateId = data.source === 'contact_page' ? 8074397 : 8087654
+  const fromName = data.source === 'contact_page' ? 'MaydAI' : 'Support MaydAI'
 
   const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')
 
@@ -75,7 +77,7 @@ async function sendContactConfirmationEmail(data: {
         {
           From: {
             Email: MAILJET_FROM_EMAIL,
-            Name: MAILJET_FROM_NAME,
+            Name: fromName,
           },
           To: [
             {
@@ -83,7 +85,7 @@ async function sendContactConfirmationEmail(data: {
               Name: data.first_name,
             },
           ],
-          TemplateID: CONTACT_MAILJET_TEMPLATE_ID,
+          TemplateID: templateId,
           TemplateLanguage: true,
           Variables: {
             first_name: data.first_name,
@@ -105,6 +107,7 @@ async function sendContactEmailsSafely(data: {
   first_name: string
   last_name: string
   subject: string
+  source: string
   phone?: string
   message?: string
 }): Promise<void> {
@@ -113,6 +116,7 @@ async function sendContactEmailsSafely(data: {
       email: data.email,
       first_name: data.first_name,
       subject: data.subject,
+      source: data.source,
     })
 
     const adminResult = await sendAdminContactNotification({
@@ -122,6 +126,7 @@ async function sendContactEmailsSafely(data: {
       email: data.email,
       phone: data.phone ?? null,
       message: data.message ?? null,
+      source: data.source,
     })
 
     if (!adminResult.success) {
@@ -214,6 +219,7 @@ export async function submitContactForm(prevState: unknown, formData: FormData) 
     first_name,
     last_name,
     subject,
+    source,
     phone,
     message,
   })
