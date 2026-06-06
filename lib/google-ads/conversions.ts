@@ -5,8 +5,30 @@ import { GoogleAdsApi, type Customer } from 'google-ads-api'
 const LOG_PREFIX = '[google-ads-api]'
 
 function hashEmailForGoogleAdsClickConversion(email: string): string | null {
-  const normalized = email.trim().toLowerCase()
-  if (!normalized) return null
+  const trimmed = email.trim().toLowerCase()
+  if (!trimmed) return null
+
+  const parts = trimmed.split('@')
+  let normalized = trimmed
+
+  if (parts.length === 2) {
+    let localPart = parts[0]
+    const domainPart = parts[1]
+
+    // 1. Suppression de la partie alias (tout ce qui suit le "+")
+    const plusIndex = localPart.indexOf('+')
+    if (plusIndex !== -1) {
+      localPart = localPart.substring(0, plusIndex)
+    }
+
+    // 2. Suppression des points (.) exclusivement pour Gmail
+    if (domainPart === 'gmail.com' || domainPart === 'googlemail.com') {
+      localPart = localPart.replace(/\./g, '')
+    }
+
+    normalized = `${localPart}@${domainPart}`
+  }
+
   return createHash('sha256').update(normalized, 'utf8').digest('hex')
 }
 
@@ -154,6 +176,8 @@ export type SendGoogleAdsConversionInput = {
    * Optionnel : les appels existants (Stripe, leads) restent inchangés si omis.
    */
   email?: string
+  /** Dry run Google Ads : valide le payload sans enregistrer la conversion. */
+  validateOnly?: boolean
 }
 
 /**
@@ -169,6 +193,7 @@ export async function sendGoogleAdsConversion({
   currencyCode = 'EUR',
   orderId,
   email,
+  validateOnly = false,
 }: SendGoogleAdsConversionInput): Promise<boolean> {
   try {
     const env = readGoogleAdsEnv()
@@ -229,7 +254,7 @@ export async function sendGoogleAdsConversion({
       {
         customer_id: env.customerId,
         partial_failure: true,
-        validate_only: false,
+        validate_only: validateOnly,
         conversions: [clickPayload],
       } as never
     )
