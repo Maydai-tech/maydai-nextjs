@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
       await sendGoogleAdsOfflineSignupConversion({
         clickId: String(leadAfter.click_id),
         conversionValue: 0,
+        email: leadEmail,
       });
     }
 

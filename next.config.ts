@@ -98,10 +98,10 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               
               // Scripts - Autoriser GTM, Google Ads, CookieYes, Stripe et les scripts nécessaires à Next.js
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://js.stripe.com",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://js.stripe.com https://bat.bing.com https://bat.bing.net",
               
               // Script elements - Même liste que script-src pour les navigateurs supportant script-src-elem
-              "script-src-elem 'self' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://js.stripe.com",
+              "script-src-elem 'self' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://js.stripe.com https://bat.bing.com https://bat.bing.net",
               
               // Styles - Autoriser les styles inline (nécessaire pour Next.js et les bandeaux)
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn-cookieyes.com https://app.cookieyes.com https://www.googletagmanager.com https://tagmanager.google.com",
@@ -113,7 +113,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: https: https://www.google.com https://www.google-analytics.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://*.doubleclick.net https://*.google.com https://*.google.fr https://www.google.fr https://*.googlesyndication.com https://pagead2.googlesyndication.com https://google.com/pagead/ https://cdn-cookieyes.com https://app.cookieyes.com",
               
               // Connexions - Autoriser les appels API nécessaires (Supabase + GA4 + GTM + Google Ads + CookieYes + Stripe)
-              "connect-src 'self' https://*.supabase.co https://api.maydai.io https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://region1.google-analytics.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://*.doubleclick.net https://*.google.com https://*.google.fr https://www.google.fr https://*.googlesyndication.com https://pagead2.googlesyndication.com https://google.com/pagead/ https://www.googletagmanager.com https://cookieyes.com https://cdn-cookieyes.com https://app.cookieyes.com https://log.cookieyes.com https://api.cookieyes.com https://widget.cookieyes.com https://api.stripe.com",
+              "connect-src 'self' https://*.supabase.co https://api.maydai.io https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://region1.google-analytics.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://*.doubleclick.net https://*.google.com https://*.google.fr https://www.google.fr https://*.googlesyndication.com https://pagead2.googlesyndication.com https://google.com/pagead/ https://www.googletagmanager.com https://cookieyes.com https://cdn-cookieyes.com https://app.cookieyes.com https://log.cookieyes.com https://api.cookieyes.com https://widget.cookieyes.com https://api.stripe.com https://bat.bing.com https://bat.bing.net",
               
               // Polices - Autoriser les polices personnalisées et Google Fonts
               "font-src 'self' data: https://fonts.gstatic.com https://cdn-cookieyes.com https://app.cookieyes.com",
