@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import ContactForm from '@/components/contact/ContactForm'
 import SupportFAQ from '@/components/support/SupportFAQ'
+import SupportFAQStructuredData from '@/components/support/SupportFAQStructuredData'
 import SupportResources from '@/components/support/SupportResources'
 import UrgentContact from '@/components/support/UrgentContact'
 
@@ -8,11 +9,40 @@ export const metadata: Metadata = {
   title: 'Support MaydAI | Aide plateforme & conformité IA Act',
   description:
     'Contactez le support MaydAI pour toute question sur la plateforme, la réglementation IA Act, la formation ou votre abonnement.',
+  alternates: {
+    canonical: 'https://www.maydai.io/support',
+  },
+  openGraph: {
+    title: 'Support MaydAI | Aide plateforme & conformité IA Act',
+    description:
+      'Contactez le support MaydAI pour toute question sur la plateforme, la réglementation IA Act, la formation ou votre abonnement.',
+    url: 'https://www.maydai.io/support',
+    type: 'website',
+    locale: 'fr_FR',
+    siteName: 'MaydAI',
+    images: [
+      {
+        url: '/content/open_graph_maydai.png',
+        width: 1200,
+        height: 630,
+        alt: 'MaydAI - Support et aide plateforme IA Act',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Support MaydAI | Aide plateforme & conformité IA Act',
+    description:
+      'Contactez le support MaydAI pour toute question sur la plateforme, la réglementation IA Act, la formation ou votre abonnement.',
+    images: ['/content/open_graph_maydai.png'],
+  },
 }
 
 export default function SupportPage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
+    <>
+      <SupportFAQStructuredData role="public" />
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
       <section className="px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl">
           <div className="mb-10 text-center">
@@ -48,5 +78,6 @@ export default function SupportPage() {
         </div>
       </section>
     </main>
+    </>
   )
 }
