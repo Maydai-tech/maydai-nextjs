@@ -4,6 +4,7 @@ import { isOwner } from '@/lib/collaborators'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { deleteCompanyCascade } from '@/lib/account-deletion'
 import { updateUseCaseRegistryResponses } from '@/lib/registry-sync'
+import { cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { RegistrySchema } from '@/lib/validations/registry'
 import { calculateRegistryCompletenessScore } from '@/lib/validations/registry-completeness'
@@ -91,7 +92,7 @@ export async function GET(
     const { data: companyData, error: companyError } = await supabase
       .from('companies')
       .select(
-        'id, name, industry, sub_category_id, city, country, type, maydai_as_registry, is_centralized_registry, completeness_score, created_at, updated_at'
+        'id, name, industry, sub_category_id, city, country, type, siren, maydai_as_registry, is_centralized_registry, completeness_score, created_at, updated_at'
       )
       .eq('id', id)
       .single()
@@ -108,10 +109,65 @@ export async function GET(
       .select('*', { count: 'exact', head: true })
       .eq('company_id', id)
 
+    const { data: ownerRecord } = await supabase
+      .from('user_companies')
+      .select('user_id')
+      .eq('company_id', id)
+      .eq('role', 'owner')
+      .maybeSingle()
+
+    let ownerProfileSiren = ''
+    if (ownerRecord?.user_id) {
+      const { data: ownerProfile } = await supabase
+        .from('profiles')
+        .select('siren')
+        .eq('id', ownerRecord.user_id)
+        .maybeSingle()
+      ownerProfileSiren = ownerProfile?.siren?.trim() ?? ''
+    }
+
+    const isCentralized =
+      companyData.is_centralized_registry === true ||
+      companyData.maydai_as_registry === true
+
+    const calculatedScore = calculateRegistryCompletenessScore({
+      name: companyData.name,
+      industry: companyData.industry,
+      sub_category_id: companyData.sub_category_id,
+      city: companyData.city,
+      country: companyData.country,
+      type: companyData.type,
+      siren: companyData.siren,
+      profileSirenFallback: ownerProfileSiren,
+      has_collaborators: (memberCount ?? 0) > 1,
+      is_centralized_registry: isCentralized,
+    })
+
+    let completenessScore = companyData.completeness_score ?? 0
+
+    if (calculatedScore !== completenessScore) {
+      const { error: healError } = await supabase
+        .from('companies')
+        .update({ completeness_score: calculatedScore })
+        .eq('id', id)
+
+      if (healError) {
+        console.error('[Registry Auto-Heal] Échec correction completeness_score', {
+          companyId: id,
+          calculatedScore,
+          storedScore: completenessScore,
+          error: healError,
+        })
+      } else {
+        completenessScore = calculatedScore
+      }
+    }
+
     // Include user's role in the response
     // Priority: direct role from user_companies, then profile-level role
     return NextResponse.json({
       ...companyData,
+      completeness_score: completenessScore,
       role: userCompany?.role || profileRole || null,
       has_collaborators: (memberCount ?? 0) > 1,
     })
@@ -179,17 +235,34 @@ export async function PUT(
     } else if (body.subCategoryId !== undefined) {
       registryUpdatePayload.sub_category_id = body.subCategoryId
     }
+    if (body.siren !== undefined) {
+      if (body.siren === null || body.siren === '') {
+        registryUpdatePayload.siren = null
+      } else if (typeof body.siren === 'string') {
+        registryUpdatePayload.siren = cleanSIREN(body.siren)
+      } else {
+        registryUpdatePayload.siren = body.siren
+      }
+    }
 
     const validation = RegistrySchema.partial().safeParse(registryUpdatePayload)
     if (!validation.success) {
       return NextResponse.json(validation.error.flatten().fieldErrors, { status: 400 })
     }
 
-    const { name, city, country, type, maydai_as_registry, mainIndustryId, subCategoryId } = body
+    const { name, city, country, type, maydai_as_registry, mainIndustryId, subCategoryId, siren } = body
 
     // Validate at least one field is provided
     const hasIndustryUpdate = mainIndustryId !== undefined || subCategoryId !== undefined
-    if (!name && !city && !country && !type && maydai_as_registry === undefined && !hasIndustryUpdate) {
+    if (
+      !name &&
+      !city &&
+      !country &&
+      !type &&
+      maydai_as_registry === undefined &&
+      !hasIndustryUpdate &&
+      siren === undefined
+    ) {
       return NextResponse.json({ error: 'At least one field must be provided' }, { status: 400 })
     }
 
@@ -200,6 +273,12 @@ export async function PUT(
     if (country !== undefined) updateData.country = country
     if (type !== undefined) updateData.type = type
     if (maydai_as_registry !== undefined) updateData.maydai_as_registry = maydai_as_registry
+    if (validation.data.siren !== undefined) {
+      updateData.siren =
+        validation.data.siren === null || validation.data.siren === ''
+          ? null
+          : validation.data.siren
+    }
 
     // Map new business fields:
     // - mainIndustryId -> companies.industry
@@ -246,7 +325,7 @@ export async function PUT(
     // 1. Récupération de l'état actuel pour fusion (mise à jour partielle)
     const { data: currentCompany } = await supabase
       .from('companies')
-      .select('name, city, country, type, industry, sub_category_id, is_centralized_registry, maydai_as_registry')
+      .select('name, city, country, type, industry, sub_category_id, is_centralized_registry, maydai_as_registry, siren')
       .eq('id', companyId)
       .single()
 
@@ -280,7 +359,8 @@ export async function PUT(
       city: mergedData.city,
       country: mergedData.country,
       type: mergedData.type,
-      siren: currentProfile?.siren,
+      siren: mergedData.siren,
+      profileSirenFallback: currentProfile?.siren,
       has_collaborators: (userCount || 0) > 1,
       is_centralized_registry: isCentralized,
     })

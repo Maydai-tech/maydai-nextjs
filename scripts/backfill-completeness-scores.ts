@@ -40,6 +40,7 @@ type CompanyRow = {
   city: string | null
   country: string | null
   type: string | null
+  siren: string | null
   is_centralized_registry: boolean | null
   maydai_as_registry: boolean | null
   completeness_score: number | null
@@ -186,7 +187,7 @@ async function backfillCompanies(supabase: SupabaseClient): Promise<{
   const { data: companies, error } = await supabase
     .from('companies')
     .select(
-      'id, name, industry, sub_category_id, city, country, type, is_centralized_registry, maydai_as_registry, completeness_score'
+      'id, name, industry, sub_category_id, city, country, type, siren, is_centralized_registry, maydai_as_registry, completeness_score'
     )
 
   if (error) {
@@ -217,7 +218,8 @@ async function backfillCompanies(supabase: SupabaseClient): Promise<{
         city: company.city ?? '',
         country: company.country ?? '',
         type: company.type ?? '',
-        siren: ownerSiren,
+        siren: company.siren ?? '',
+        profileSirenFallback: ownerSiren,
         has_collaborators: memberCount > 1,
         is_centralized_registry: isCentralized,
       })

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { strictStringField, strictBooleanField } from '@/lib/validations/strict-fields'
 
-// Schéma d'entrée dérivé (Siren injecté depuis le profil, has_collaborators résolu via jointure)
+// Schéma d'entrée dérivé (siren = companies.siren ; profileSirenFallback = rétrocompat)
 export const RegistryCompletenessInputSchema = z.object({
   name: strictStringField.default(''),
   industry: strictStringField.default(''),
@@ -10,6 +10,7 @@ export const RegistryCompletenessInputSchema = z.object({
   country: strictStringField.default(''),
   type: strictStringField.default(''),
   siren: strictStringField.default(''),
+  profileSirenFallback: strictStringField.default(''),
   has_collaborators: strictBooleanField.default(false),
   is_centralized_registry: strictBooleanField.default(false),
 })
@@ -34,7 +35,9 @@ export function calculateRegistryCompletenessScore(data: unknown): number {
   if (p.city) score += 10
   if (p.country) score += 10
   if (p.type) score += 10
-  if (p.siren) score += 15
+  // Source primaire : companies.siren — fallback temporaire profiles.siren (rétrocompat)
+  const sirenScore = p.siren || p.profileSirenFallback ? 15 : 0
+  score += sirenScore
   if (p.has_collaborators) score += 10
   if (p.is_centralized_registry) score += 10
 

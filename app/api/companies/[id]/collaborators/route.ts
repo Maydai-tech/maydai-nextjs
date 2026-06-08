@@ -190,7 +190,7 @@ export async function POST(
     const { data: companyForScore } = await supabase
       .from('companies')
       .select(
-        'name, city, country, type, industry, sub_category_id, is_centralized_registry, maydai_as_registry'
+        'name, city, country, type, industry, sub_category_id, is_centralized_registry, maydai_as_registry, siren'
       )
       .eq('id', companyId)
       .single()
@@ -228,7 +228,8 @@ export async function POST(
       city: companyForScore?.city,
       country: companyForScore?.country,
       type: companyForScore?.type,
-      siren: ownerSiren,
+      siren: companyForScore?.siren,
+      profileSirenFallback: ownerSiren,
       has_collaborators: (memberCount ?? 0) > 1,
       is_centralized_registry: isCentralized,
     })
