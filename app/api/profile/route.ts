@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getPlansFetchUrl } from '@/lib/api/plans'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
@@ -46,6 +47,16 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json()
     const { firstName, lastName, companyName, mainIndustryId, subCategoryId, phone, siren } = body
+
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('siren')
+      .eq('id', user.id)
+      .single()
+
+    const previousSiren = existingProfile?.siren?.trim() || null
+    const nextSiren = siren ? cleanSIREN(siren) : null
+    const sirenChanged = 'siren' in body && nextSiren !== previousSiren
 
     // Validate required fields
     if (!firstName || !lastName || !companyName || !mainIndustryId || !subCategoryId) {
@@ -117,6 +128,17 @@ export async function PATCH(request: NextRequest) {
         { error: 'Erreur lors de la mise à jour du profil' },
         { status: 500 }
       )
+    }
+
+    if (sirenChanged) {
+      fetch(getPlansFetchUrl('/api/webhooks/sync-siren'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-api-key': process.env.INTERNAL_API_KEY || '',
+        },
+        body: JSON.stringify({ userId: user.id, siren: nextSiren ?? '' }),
+      }).catch((e) => console.error('[Sync Siren Error]', e))
     }
 
     return NextResponse.json({ success: true })
