@@ -4,21 +4,100 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect, useRef, MouseEvent } from 'react';
 import { useAuth } from '@/lib/auth';
-import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs';
+import {
+  MARKETING_HEADER_NAVIGATION,
+  MARKETING_HEADER_CTAS,
+  isMarketingNavDropdown,
+  type MarketingHeaderCta,
+  type MarketingNavLink,
+} from '@/config/marketing-navigation';
+
+const CHEVRON_ICON = (
+  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+  </svg>
+);
+
+function NavDropdownChildLink({
+  child,
+  className,
+  onNavigate,
+}: {
+  child: MarketingNavLink;
+  className: string;
+  onNavigate: () => void;
+}) {
+  return (
+    <Link href={child.href} className={className} onClick={onNavigate}>
+      {child.icon && (
+        <Image
+          src={child.icon.src}
+          alt={child.icon.alt}
+          width={16}
+          height={16}
+          className="w-4 h-4"
+        />
+      )}
+      {child.label}
+    </Link>
+  );
+}
+
+function HeaderCtaLink({
+  cta,
+  layout,
+  onNavigate,
+  onButtonHover,
+}: {
+  cta: MarketingHeaderCta;
+  layout: 'desktop' | 'mobile';
+  onNavigate?: () => void;
+  onButtonHover: (e: MouseEvent<HTMLAnchorElement>, color: string) => void;
+}) {
+  if (cta.variant === 'primary') {
+    const baseClass =
+      layout === 'desktop'
+        ? 'px-5 py-2 rounded-lg font-semibold shadow transition text-white'
+        : 'block w-full px-5 py-3 rounded-lg font-semibold shadow transition text-center text-white';
+
+    return (
+      <Link
+        href={cta.href}
+        className={baseClass}
+        style={{ backgroundColor: '#ffab5a' }}
+        onMouseEnter={(e) => onButtonHover(e, '#e6995a')}
+        onMouseLeave={(e) => onButtonHover(e, '#ffab5a')}
+        onClick={onNavigate}
+      >
+        {cta.label}
+      </Link>
+    );
+  }
+
+  const baseClass =
+    layout === 'desktop'
+      ? 'px-5 py-2 rounded-lg font-normal text-sm transition text-primary'
+      : 'block w-full px-5 py-3 rounded-lg font-normal text-center text-primary mb-2';
+
+  return (
+    <Link href={cta.href} className={baseClass} onClick={onNavigate}>
+      {cta.label}
+    </Link>
+  );
+}
 
 export default function Header() {
   const { user, loading } = useAuth();
-  const [isIaActMenuOpen, setIsIaActMenuOpen] = useState(false);
+  const [openDropdownLabel, setOpenDropdownLabel] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLLIElement>(null);
+  const desktopNavRef = useRef<HTMLUListElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: globalThis.MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsIaActMenuOpen(false);
+      if (desktopNavRef.current && !desktopNavRef.current.contains(event.target as Node)) {
+        setOpenDropdownLabel(null);
       }
-      // Verifier que le clic n'est pas sur le bouton burger lui-meme
       const burgerButton = (event.target as HTMLElement).closest('[data-mobile-menu-button]');
       if (!burgerButton && mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
         setIsMobileMenuOpen(false);
@@ -35,6 +114,14 @@ export default function Header() {
     (e.target as HTMLAnchorElement).style.backgroundColor = color;
   };
 
+  const closeDropdown = () => setOpenDropdownLabel(null);
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  const headerCtas =
+    !loading && user
+      ? MARKETING_HEADER_CTAS.authenticated
+      : MARKETING_HEADER_CTAS.unauthenticated;
+
   return (
     <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-30">
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3 md:py-4">
@@ -48,81 +135,63 @@ export default function Header() {
             priority
           />
         </Link>
-        <ul className="hidden md:flex gap-8 items-center text-gray-700 font-medium">
-          <li className="relative" ref={menuRef}>
-            <button
-              onClick={() => setIsIaActMenuOpen(!isIaActMenuOpen)}
-              className="flex items-center hover:text-primary transition"
-            >
-              IA Act
-              <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {isIaActMenuOpen && (
-              <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <Link
-                  href="/ia-act-ue"
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition"
-                  onClick={() => setIsIaActMenuOpen(false)}
-                >
-                  <Image src="/icons/eye.png" alt="Oeil" width={16} height={16} className="w-4 h-4" />
-                  Vue d&apos;ensemble
+        <ul
+          ref={desktopNavRef}
+          className="hidden md:flex gap-8 items-center text-gray-700 font-medium"
+        >
+          {MARKETING_HEADER_NAVIGATION.map((item) => {
+            if (isMarketingNavDropdown(item)) {
+              const isOpen = openDropdownLabel === item.label;
+
+              return (
+                <li key={item.label} className="relative">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenDropdownLabel(isOpen ? null : item.label)
+                    }
+                    className="flex items-center hover:text-primary transition"
+                  >
+                    {item.label}
+                    {CHEVRON_ICON}
+                  </button>
+                  {isOpen && (
+                    <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                      {item.children.map((child) => (
+                        <NavDropdownChildLink
+                          key={child.href}
+                          child={child}
+                          className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition"
+                          onNavigate={closeDropdown}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </li>
+              );
+            }
+
+            return (
+              <li key={item.label}>
+                <Link href={item.href} className="hover:text-primary transition">
+                  {item.label}
                 </Link>
-                <Link
-                  href="/ia-act-ue/calendrier"
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition"
-                  onClick={() => setIsIaActMenuOpen(false)}
-                >
-                  <Image src="/icons/calendar.png" alt="Calendrier" width={16} height={16} className="w-4 h-4" />
-                  Calendrier IA Act
-                </Link>
-                <Link
-                  href="/ia-act-ue/risques"
-                  className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition"
-                  onClick={() => setIsIaActMenuOpen(false)}
-                >
-                  <Image src="/icons/caution-1.png" alt="Attention" width={16} height={16} className="w-4 h-4" />
-                  Pyramide risques IA
-                </Link>
-              </div>
-            )}
-          </li>
-          <li><Link href="/fonctionnalites" className="hover:text-primary transition">Fonctionnalites</Link></li>
-          <li><Link href="/securite" className="hover:text-primary transition">Sécurité</Link></li>
-          <li><Link href="/tarifs" className="hover:text-primary transition">Tarifs</Link></li>
-          <li><Link href="/a-propos" className="hover:text-primary transition">A propos</Link></li>
-          <li><Link href="/contact" className="hover:text-primary transition">Contact</Link></li>
+              </li>
+            );
+          })}
         </ul>
 
         <div className="hidden md:flex gap-2 items-center">
-          {!loading && user ? (
-            <Link
-              href="/dashboard/registries"
-              className="px-5 py-2 rounded-lg font-semibold shadow transition text-white"
-              style={{ backgroundColor: '#ffab5a' }}
-              onMouseEnter={(e) => handleButtonHover(e, '#e6995a')}
-              onMouseLeave={(e) => handleButtonHover(e, '#ffab5a')}
-            >
-              Dashboard
-            </Link>
-          ) : (
-            <>
-              <Link href="/login" className="px-5 py-2 rounded-lg font-normal text-sm transition text-primary">Connexion</Link>
-              <Link
-                href={SIGNUP_HREF.navbar_header}
-                className="px-5 py-2 rounded-lg font-semibold shadow transition text-white"
-                style={{ backgroundColor: '#ffab5a' }}
-                onMouseEnter={(e) => handleButtonHover(e, '#e6995a')}
-                onMouseLeave={(e) => handleButtonHover(e, '#ffab5a')}
-              >
-                Commencer
-              </Link>
-            </>
-          )}
+          {headerCtas.map((cta) => (
+            <HeaderCtaLink
+              key={cta.label}
+              cta={cta}
+              layout="desktop"
+              onButtonHover={handleButtonHover}
+            />
+          ))}
         </div>
 
-        {/* Mobile menu button */}
         <button
           className="md:hidden flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 transition"
           onClick={(e) => {
@@ -142,119 +211,53 @@ export default function Header() {
         </button>
       </nav>
 
-      {/* Mobile menu */}
       {isMobileMenuOpen && (
         <div
           ref={mobileMenuRef}
           className="md:hidden bg-white border-t border-gray-100 shadow-lg"
         >
           <div className="px-4 py-4 space-y-4">
-            {/* IA Act submenu for mobile */}
-            <div className="space-y-2">
-              <div className="font-medium text-gray-900 px-2 py-1">IA Act</div>
-              <Link
-                href="/ia-act-ue"
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition rounded-lg"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <Image src="/icons/eye.png" alt="Oeil" width={16} height={16} className="w-4 h-4" />
-                Vue d&apos;ensemble
-              </Link>
-              <Link
-                href="/ia-act-ue/calendrier"
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition rounded-lg"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <Image src="/icons/calendar.png" alt="Calendrier" width={16} height={16} className="w-4 h-4" />
-                Calendrier IA Act
-              </Link>
-              <Link
-                href="/ia-act-ue/risques"
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition rounded-lg"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <Image src="/icons/caution-1.png" alt="Attention" width={16} height={16} className="w-4 h-4" />
-                Pyramide risques IA
-              </Link>
-            </div>
+            {MARKETING_HEADER_NAVIGATION.map((item) => {
+              if (isMarketingNavDropdown(item)) {
+                return (
+                  <div key={item.label} className="space-y-2">
+                    <div className="font-medium text-gray-900 px-2 py-1">{item.label}</div>
+                    {item.children.map((child) => (
+                      <NavDropdownChildLink
+                        key={child.href}
+                        child={child}
+                        className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-primary transition rounded-lg"
+                        onNavigate={closeMobileMenu}
+                      />
+                    ))}
+                  </div>
+                );
+              }
 
-            <hr className="border-gray-200" />
-
-            {/* Other menu items */}
-            <div className="space-y-2">
-              <Link
-                href="/fonctionnalites"
-                className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Fonctionnalites
-              </Link>
-              <Link
-                href="/securite"
-                className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Sécurité
-              </Link>
-              <Link
-                href="/tarifs"
-                className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Tarifs
-              </Link>
-              <Link
-                href="/a-propos"
-                className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                A propos
-              </Link>
-              <Link
-                href="/contact"
-                className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Contact
-              </Link>
-            </div>
-
-            <hr className="border-gray-200" />
-
-            {/* CTA button for mobile */}
-            <div className="pt-2">
-              {!loading && user ? (
+              return (
                 <Link
-                  href="/dashboard/registries"
-                  className="block w-full px-5 py-3 rounded-lg font-semibold shadow transition text-center text-white"
-                  style={{ backgroundColor: '#ffab5a' }}
-                  onMouseEnter={(e) => handleButtonHover(e, '#e6995a')}
-                  onMouseLeave={(e) => handleButtonHover(e, '#ffab5a')}
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  key={item.label}
+                  href={item.href}
+                  className="block px-2 py-2 text-gray-700 hover:text-primary transition rounded-lg hover:bg-gray-50"
+                  onClick={closeMobileMenu}
                 >
-                  Dashboard
+                  {item.label}
                 </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className="block w-full px-5 py-3 rounded-lg font-normal text-center text-primary mb-2"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Connexion
-                  </Link>
-                  <Link
-                    href={SIGNUP_HREF.navbar_header}
-                    className="block w-full px-5 py-3 rounded-lg font-semibold shadow transition text-center text-white"
-                    style={{ backgroundColor: '#ffab5a' }}
-                    onMouseEnter={(e) => handleButtonHover(e, '#e6995a')}
-                    onMouseLeave={(e) => handleButtonHover(e, '#ffab5a')}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Commencer
-                  </Link>
-                </>
-              )}
+              );
+            })}
+
+            <hr className="border-gray-200" />
+
+            <div className="pt-2">
+              {headerCtas.map((cta) => (
+                <HeaderCtaLink
+                  key={cta.label}
+                  cta={cta}
+                  layout="mobile"
+                  onNavigate={closeMobileMenu}
+                  onButtonHover={handleButtonHover}
+                />
+              ))}
             </div>
           </div>
         </div>

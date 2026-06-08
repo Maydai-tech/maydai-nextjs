@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { MARKETING_FOOTER_NAVIGATION } from '@/config/marketing-navigation';
 
 export default function Footer() {
   return (
@@ -14,13 +15,11 @@ export default function Footer() {
           />
         </div>
         <nav className="flex flex-wrap justify-center gap-4 md:gap-6 text-gray-500 text-sm">
-          <a href="/securite" className="hover:text-primary">Sécurité</a>
-          <a href="/fonctionnalites" className="hover:text-primary">Fonctionnalités</a>
-          <a href="/tarifs" className="hover:text-primary">Tarifs</a>
-          <a href="/a-propos" className="hover:text-primary">À propos</a>
-          <a href="/contact" className="hover:text-primary">Contact</a>
-          <a href="/politique-confidentialite" className="hover:text-primary">Confidentialité</a>
-          <a href="/conditions-generales" className="hover:text-primary">CGU</a>
+          {MARKETING_FOOTER_NAVIGATION.map((item) => (
+            <a key={item.label} href={item.href} className="hover:text-primary">
+              {item.label}
+            </a>
+          ))}
         </nav>
         <div className="flex flex-col items-center md:items-end gap-2">
           <div className="flex items-center gap-2 text-gray-500 text-xs bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
