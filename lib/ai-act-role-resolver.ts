@@ -5,7 +5,7 @@
  * Question pivot : E4.N7.Q1 — « Quel est le rôle de votre organisation ? »
  */
 
-import { extractEffectiveSingleValue } from '@/lib/todo-action-sync'
+import { extractEffectiveSingleValue, type DbResponseRow } from '@/lib/todo-action-sync'
 
 export type AiActRole = 'fournisseur' | 'deployeur' | 'integrateur'
 
@@ -15,13 +15,6 @@ const ROLE_BY_ANSWER_CODE: Record<string, AiActRole> = {
   'E4.N7.Q1.A': 'fournisseur',
   'E4.N7.Q1.B': 'deployeur',
   'E4.N7.Q1.C': 'integrateur',
-}
-
-type ResponseRow = {
-  question_code?: string
-  single_value?: string | null
-  conditional_main?: string | null
-  multiple_codes?: string[] | null
 }
 
 /**
@@ -36,17 +29,19 @@ export function getAiActRoleFromResponses(responses: unknown[]): AiActRole {
   }
 
   const row = responses.find(
-    (r): r is ResponseRow =>
+    (r) =>
       typeof r === 'object' &&
       r !== null &&
-      (r as ResponseRow).question_code === E4_N7_Q1
+      (r as { question_code?: string }).question_code === E4_N7_Q1
   )
 
-  if (!row) {
+  // Type guard de sécurité stricte
+  if (!row || !(row as { question_code?: string }).question_code) {
     return 'deployeur'
   }
 
-  const answerCode = extractEffectiveSingleValue(row)
+  // Cast sécurisé vers DbResponseRow puisque nous avons vérifié la présence du question_code
+  const answerCode = extractEffectiveSingleValue(row as DbResponseRow)
   if (!answerCode) {
     return 'deployeur'
   }

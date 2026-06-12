@@ -46,7 +46,7 @@ function replaceMappingOptionInChecklists(
   return { checklist_gov_enterprise: ent, checklist_gov_usecase: uc }
 }
 
-type DbResponseRow = {
+export type DbResponseRow = {
   question_code: string
   single_value?: string | null
   multiple_codes?: string[] | null
