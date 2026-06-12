@@ -216,8 +216,7 @@ export function mergePdfDocumentsToStatusMap(
 
 /**
  * Règle 6.7 — Synchronisation des points (BPGV / ORS / OCRU).
- * Le libellé « Acquis » n’est appliqué que si le document correspondant est présent
- * dans `documents` avec un statut positif.
+ * Trois états : à récupérer, gagnés via preuve, ou preuve documentée sans gain réel.
  */
 export function buildRule67PointsLine(
   item: ReportCanonicalItem,
@@ -231,8 +230,13 @@ export function buildRule67PointsLine(
     return `${DECLARATION_PROOF_FLOW_COPY.reportPdfPointsToRecoverPrefix} : +${points} pt`
   }
 
-  if (isPdfDocumentCompletedInPayload(docType, documents)) {
-    return `${DECLARATION_PROOF_FLOW_COPY.reportPdfPointsAcquiredPrefix} (+${points} pt)`
+  const isCompleted = isPdfDocumentCompletedInPayload(docType, documents)
+
+  if (isCompleted) {
+    if (item.cta.isActuallyGained) {
+      return `+${points} ${DECLARATION_PROOF_FLOW_COPY.reportPdfPointsGainedSuffix}`
+    }
+    return DECLARATION_PROOF_FLOW_COPY.reportPdfPointsAlreadyCreditedLine
   }
 
   return `${DECLARATION_PROOF_FLOW_COPY.reportPdfPointsToRecoverPrefix} : +${points} pt`

@@ -12,7 +12,8 @@ import {
 
 function makeCanonicalItem(
   docType: string,
-  points: number | undefined
+  points: number | undefined,
+  isActuallyGained = false
 ): ReportCanonicalItem {
   return {
     identity: {
@@ -37,6 +38,7 @@ function makeCanonicalItem(
       dossierUrl: '/dashboard/c1/dossiers/u1/system_prompt',
       label: 'Compléter le prompt',
       points,
+      isActuallyGained,
     },
   }
 }
@@ -97,18 +99,18 @@ describe('pdf-payload-service', () => {
   })
 
   describe('règle 6.7 — synchronisation des points', () => {
-    test('ne présume pas Acquis sans document positif dans le tableau', () => {
+    test('document incomplet — affiche les points à récupérer', () => {
       const item = makeCanonicalItem('system_prompt', 5)
       expect(
         buildRule67PointsLine(item, [{ doc_type: 'human_oversight', status: 'complete' }])
       ).toBe(`${DECLARATION_PROOF_FLOW_COPY.reportPdfPointsToRecoverPrefix} : +5 pt`)
     })
 
-    test('remplace par Acquis quand le doc_type correspond avec statut positif', () => {
-      const item = makeCanonicalItem('system_prompt', 5)
+    test('document complété et points réellement gagnés', () => {
+      const item = makeCanonicalItem('system_prompt', 5, true)
       expect(
         buildRule67PointsLine(item, [{ doc_type: 'system_prompt', status: 'complete' }])
-      ).toBe(`${DECLARATION_PROOF_FLOW_COPY.reportPdfPointsAcquiredPrefix} (+5 pt)`)
+      ).toBe(`+5 ${DECLARATION_PROOF_FLOW_COPY.reportPdfPointsGainedSuffix}`)
       expect(
         isPdfDocumentCompletedInPayload('system_prompt', [
           { doc_type: 'system_prompt', status: 'validated' },
@@ -116,13 +118,20 @@ describe('pdf-payload-service', () => {
       ).toBe(true)
     })
 
+    test('document complété mais score déjà crédité au questionnaire', () => {
+      const item = makeCanonicalItem('system_prompt', 5, false)
+      expect(
+        buildRule67PointsLine(item, [{ doc_type: 'system_prompt', status: 'complete' }])
+      ).toBe(DECLARATION_PROOF_FLOW_COPY.reportPdfPointsAlreadyCreditedLine)
+    })
+
     test('applyRule67PointsSync injecte pointsLine sur chaque item', () => {
       const items = applyRule67PointsSync(
-        [makeCanonicalItem('system_prompt', 3)],
+        [makeCanonicalItem('system_prompt', 3, true)],
         [{ doc_type: 'system_prompt', status: 'complete' }]
       )
       expect(items[0]?.cta.pointsLine).toBe(
-        `${DECLARATION_PROOF_FLOW_COPY.reportPdfPointsAcquiredPrefix} (+3 pt)`
+        `+3 ${DECLARATION_PROOF_FLOW_COPY.reportPdfPointsGainedSuffix}`
       )
     })
   })

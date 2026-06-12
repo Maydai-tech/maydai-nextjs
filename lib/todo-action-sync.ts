@@ -46,7 +46,7 @@ function replaceMappingOptionInChecklists(
   return { checklist_gov_enterprise: ent, checklist_gov_usecase: uc }
 }
 
-type DbResponseRow = {
+export type DbResponseRow = {
   question_code: string
   single_value?: string | null
   multiple_codes?: string[] | null
@@ -54,6 +54,48 @@ type DbResponseRow = {
   conditional_main?: string | null
   conditional_keys?: string[] | null
   conditional_values?: string[] | null
+  metadata?: Record<string, unknown> | null
+}
+
+function extractOriginalValueFromMetadata(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== 'object') return null
+  const value = (metadata as Record<string, unknown>).original_value
+  return typeof value === 'string' && value.length > 0 ? value : null
+}
+
+async function loadResponseOriginalValueByCode(
+  supabase: SupabaseClient,
+  usecaseId: string,
+  questionCodes: string[]
+): Promise<Map<string, string | null>> {
+  const map = new Map<string, string | null>()
+  if (questionCodes.length === 0) return map
+
+  const { data } = await supabase
+    .from('usecase_responses')
+    .select('question_code, metadata')
+    .eq('usecase_id', usecaseId)
+    .in('question_code', questionCodes)
+
+  for (const row of data ?? []) {
+    map.set(row.question_code, extractOriginalValueFromMetadata(row.metadata))
+  }
+  return map
+}
+
+function buildSyncMetadataPayload(
+  existingMetadata: unknown,
+  previousValue: string | null,
+  negativeAnswerCode: string | null
+): { original_value: string | null } {
+  const existingOriginal = extractOriginalValueFromMetadata(existingMetadata)
+  if (existingOriginal) {
+    return { original_value: existingOriginal }
+  }
+  if (previousValue) {
+    return { original_value: previousValue }
+  }
+  return { original_value: negativeAnswerCode }
 }
 
 export function extractEffectiveSingleValue(row: DbResponseRow): string | null {
@@ -311,6 +353,19 @@ async function syncOneTodoMappingToResponse(
     await persistChecklistsIfChanged(supabase, usecaseId, ent, uc, next.checklist_gov_enterprise, next.checklist_gov_usecase)
   }
 
+  const { data: existingRow } = await supabase
+    .from('usecase_responses')
+    .select('metadata')
+    .eq('usecase_id', usecaseId)
+    .eq('question_code', mapping.questionCode)
+    .maybeSingle()
+
+  const metadata = buildSyncMetadataPayload(
+    existingRow?.metadata,
+    previousValue,
+    mapping.negativeAnswerCode
+  )
+
   const { error } = await supabase.from('usecase_responses').upsert(
     {
       usecase_id: usecaseId,
@@ -323,6 +378,7 @@ async function syncOneTodoMappingToResponse(
       conditional_main: null,
       conditional_keys: null,
       conditional_values: null,
+      metadata,
     },
     { onConflict: 'usecase_id,question_code' }
   )
@@ -453,8 +509,18 @@ async function reverseOneTodoMappingResponse(
 
   const wasPositiveAnswer = previousValue === mapping.positiveAnswerCode
 
+  const { data: metadataRow } = await supabase
+    .from('usecase_responses')
+    .select('metadata')
+    .eq('usecase_id', usecaseId)
+    .eq('question_code', mapping.questionCode)
+    .maybeSingle()
+
+  const originalValue = extractOriginalValueFromMetadata(metadataRow?.metadata)
+  const restoreValue = originalValue || mapping.negativeAnswerCode
+
   console.log(
-    `[TODO-REVERSE] Updating ${mapping.questionCode} from ${previousValue} to ${mapping.negativeAnswerCode}`
+    `[TODO-REVERSE] Updating ${mapping.questionCode} from ${previousValue} to ${restoreValue}`
   )
   console.log(
     `[TODO-REVERSE] Was positive answer: ${wasPositiveAnswer}, Expected points lost: ${wasPositiveAnswer ? mapping.expectedPointsGained : 0}`
@@ -468,7 +534,7 @@ async function reverseOneTodoMappingResponse(
       .single()
     const ent = normalizeStringArray(ucRow?.checklist_gov_enterprise)
     const uc = normalizeStringArray(ucRow?.checklist_gov_usecase)
-    const next = replaceMappingOptionInChecklists(ent, uc, mapping, mapping.negativeAnswerCode)
+    const next = replaceMappingOptionInChecklists(ent, uc, mapping, restoreValue)
     await persistChecklistsIfChanged(supabase, usecaseId, ent, uc, next.checklist_gov_enterprise, next.checklist_gov_usecase)
   }
 
@@ -476,7 +542,7 @@ async function reverseOneTodoMappingResponse(
     {
       usecase_id: usecaseId,
       question_code: mapping.questionCode,
-      single_value: mapping.negativeAnswerCode,
+      single_value: restoreValue,
       answered_by: userEmail,
       answered_at: new Date().toISOString(),
       multiple_codes: null,
@@ -484,6 +550,7 @@ async function reverseOneTodoMappingResponse(
       conditional_main: null,
       conditional_keys: null,
       conditional_values: null,
+      metadata: {},
     },
     { onConflict: 'usecase_id,question_code' }
   )
@@ -547,20 +614,20 @@ export async function reverseTodoActionResponse(
   console.log(`[TODO-REVERSE] Found ${reversible.length} reversible mapping(s) for ${todoAction}:`, reversible)
 
   const codes = reversible.map((m) => m.questionCode)
-  const { previousByCode, checklistEnt, checklistUc } = await loadMergedPreviousByCode(
-    supabase,
-    usecaseId,
-    codes
-  )
+  const [{ previousByCode, checklistEnt, checklistUc }, originalByCode] = await Promise.all([
+    loadMergedPreviousByCode(supabase, usecaseId, codes),
+    loadResponseOriginalValueByCode(supabase, usecaseId, codes),
+  ])
 
   let nextEnt = [...checklistEnt]
   let nextUc = [...checklistUc]
   for (const m of reversible) {
     if (!m.negativeAnswerCode) continue
     const prev = previousByCode.get(m.questionCode) ?? null
-    if (prev === m.negativeAnswerCode) continue
+    const restoreCode = originalByCode.get(m.questionCode) ?? m.negativeAnswerCode
+    if (prev === restoreCode) continue
     if (!isE4E5E6QuestionCode(m.questionCode)) continue
-    const next = replaceMappingOptionInChecklists(nextEnt, nextUc, m, m.negativeAnswerCode)
+    const next = replaceMappingOptionInChecklists(nextEnt, nextUc, m, restoreCode)
     nextEnt = next.checklist_gov_enterprise
     nextUc = next.checklist_gov_usecase
   }

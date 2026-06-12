@@ -121,6 +121,10 @@ export const DECLARATION_PROOF_FLOW_COPY = {
   reportPdfPointsToRecoverPrefix: 'Points à récupérer',
   /** PDF — règle 6.7 : document complété dans le dossier, points synchronisés */
   reportPdfPointsAcquiredPrefix: 'Acquis',
+  /** PDF — règle 6.7 : preuve complétée et malus questionnaire réellement récupéré */
+  reportPdfPointsGainedSuffix: 'pt gagnés grâce à cette preuve',
+  /** PDF — règle 6.7 : preuve complétée mais score déjà crédité au questionnaire */
+  reportPdfPointsAlreadyCreditedLine: 'Preuve documentée · score déjà crédité',
   /** PDF — action documentée sans créneau de récupération de score côté questionnaire */
   reportPdfValidatedNoPointsLine:
     'Validé : preuve documentée ; aucun point à récupérer sur cette action selon le questionnaire.',
