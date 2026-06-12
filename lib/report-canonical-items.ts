@@ -4,6 +4,8 @@
  * est piloté par le catalogue et les statuts déterministes, pas par la seule présence de texte LLM.
  */
 
+import { AI_ACT_NARRATIVE_DICT, type AiActNarrativeDocType } from '@/lib/ai-act-narrative-dictionary'
+import { getAiActRoleFromResponses } from '@/lib/ai-act-role-resolver'
 import {
   REPORT_STANDARD_SLOT_KEYS_ORDERED,
   buildDashboardDossierDeepLink,
@@ -21,17 +23,29 @@ import { DECLARATION_PROOF_FLOW_COPY } from '@/lib/declaration-proof-flow-copy'
 /** Réexport — ordre des 9 slots = `REPORT_STANDARD_SLOT_KEYS_ORDERED` (catalogue). */
 export const STANDARD_PLAN_SLOT_KEYS_ORDERED: readonly string[] = [...REPORT_STANDARD_SLOT_KEYS_ORDERED]
 
+export interface PointMetrics {
+  /** Valeur absolue (potentiel ou acquis selon l’état dossier). */
+  value: number
+  /** Vrai si la complétion dossier a réellement récupéré un malus questionnaire. */
+  isActuallyGained: boolean
+}
+
 function reportCtaPointsFromQuestionnaire(params: {
   docType: string
   questionnaireResponses: unknown[]
   docCompleted: boolean
   path_mode?: string | null
-}): number {
+}): PointMetrics {
   const rows = params.questionnaireResponses as any[]
   if (params.docCompleted) {
-    return getEarnedPoints(params.docType, rows, true, params.path_mode)
+    const earned = getEarnedPoints(params.docType, rows, true, params.path_mode)
+    const potential = getPotentialPoints(params.docType, rows, params.path_mode)
+    return { value: earned, isActuallyGained: potential > 0 }
   }
-  return getPotentialPoints(params.docType, rows, params.path_mode)
+  return {
+    value: getPotentialPoints(params.docType, rows, params.path_mode),
+    isActuallyGained: false,
+  }
 }
 
 function isDocumentActionCompleted(
@@ -190,6 +204,8 @@ export interface ReportItemCta {
   label: string
   /** Points malus / récupération (questionnaire) ; `undefined` = masquer la pastille (ex. déclaration OUI, preuve encore à compléter). */
   points: number | undefined
+  /** Vrai si la preuve dossier a réellement récupéré des points (malus questionnaire). */
+  isActuallyGained?: boolean
   /** Ligne pré-calculée pour le PDF (règle 6.7 — synchronisation des points). */
   pointsLine?: string | null
 }
@@ -362,16 +378,30 @@ export function buildReportCanonicalItemForSlot(params: {
   const title = action.todo_action_label
   const llmText = slotNarrativeFromNextSteps(nextSteps, reportSlotKey)
   const declaration_status = slotStatuses?.[reportSlotKey as keyof SlotStatusMap] ?? null
-  const narrative_text = getReportPlanNarrativeLine(llmText, declaration_status, action)
 
   const legal_status = getLegalTaxonomyForAction(action.canonical_action_code, riskLevel)
   const legal_basis =
     LEGAL_BASIS_PRIMARY[action.canonical_action_code] ??
     `Cadre AI Act — exigences applicables selon la qualification du risque pour : ${action.label}.`
-  const business_rationale = action.todo_explanation
 
   const docCompleted = isDocumentActionCompleted(docType, documentStatuses, maydaiAsRegistry)
-  const calculatedPoints = reportCtaPointsFromQuestionnaire({
+
+  const aiActRole = getAiActRoleFromResponses(questionnaireResponses)
+  const deterministicNarrative =
+    AI_ACT_NARRATIVE_DICT[docType as AiActNarrativeDocType]?.[aiActRole]?.[
+      docCompleted ? 'true' : 'false'
+    ]
+
+  let narrative_text: string
+  let business_rationale: string
+  if (deterministicNarrative) {
+    narrative_text = deterministicNarrative.constat
+    business_rationale = deterministicNarrative.action_recommandee
+  } else {
+    narrative_text = getReportPlanNarrativeLine(llmText, declaration_status, action)
+    business_rationale = action.todo_explanation
+  }
+  const pointsMetrics = reportCtaPointsFromQuestionnaire({
     docType,
     questionnaireResponses,
     docCompleted,
@@ -393,7 +423,7 @@ export function buildReportCanonicalItemForSlot(params: {
   // pour éviter une incohérence avec « À documenter ».
   const suppressCtaQuestionnairePoints =
     !docCompleted && declaration_status === 'OUI'
-  const ctaPoints = suppressCtaQuestionnairePoints ? undefined : calculatedPoints
+  const finalPointsMetrics = suppressCtaQuestionnairePoints ? undefined : pointsMetrics
 
   return {
     identity: {
@@ -418,7 +448,8 @@ export function buildReportCanonicalItemForSlot(params: {
       dossierUrl,
       todoUrl,
       label: title,
-      points: ctaPoints,
+      points: finalPointsMetrics?.value,
+      isActuallyGained: finalPointsMetrics?.isActuallyGained,
     },
   }
 }

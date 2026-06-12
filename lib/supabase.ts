@@ -168,6 +168,7 @@ export interface UseCaseResponse {
   answered_at: string
   created_at: string
   updated_at: string
+  metadata?: Record<string, any> | null
 }
 
 export interface QuestionnaireResponseInput {
