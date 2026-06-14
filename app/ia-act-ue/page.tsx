@@ -1,17 +1,20 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import Link from 'next/link';
 import Header from '@/components/site-vitrine/Header';
 import Footer from '@/components/site-vitrine/Footer';
 
 export const metadata: Metadata = {
-  title: "Qu'est-ce que l'IA Act UE ? Guide Complet de la Réglementation Européenne | MaydAI.io",
-  description: "Découvrez l'IA Act UE, la première réglementation mondiale sur l'intelligence artificielle. Comprenez sa classification des risques, ses principes clés et son impact sur le développement de l'IA.",
+  title: 'IA Act (AI Act) : Guide Complet & Résumé du Règlement Européen | MaydAI',
+  description:
+    "Découvrez le guide complet et le résumé de l'IA Act (AI Act) européen. Comprenez la réglementation, la classification des risques et vos obligations de conformité.",
   alternates: {
     canonical: 'https://www.maydai.io/ia-act-ue',
   },
   openGraph: {
-    title: "Qu'est-ce que l'IA Act UE ? Guide Complet de la Réglementation Européenne | MaydAI.io",
-    description: "Découvrez l'IA Act UE, la première réglementation mondiale sur l'intelligence artificielle. Comprenez sa classification des risques, ses principes clés et son impact sur le développement de l'IA.",
+    title: 'IA Act (AI Act) : Guide Complet & Résumé du Règlement Européen | MaydAI',
+    description:
+      "Découvrez le guide complet et le résumé de l'IA Act (AI Act) européen. Comprenez la réglementation, la classification des risques et vos obligations de conformité.",
     url: 'https://www.maydai.io/ia-act-ue',
     images: [
       {
@@ -26,8 +29,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Qu'est-ce que l'IA Act UE ? Guide Complet de la Réglementation Européenne | MaydAI.io",
-    description: "Découvrez l'IA Act UE, la première réglementation mondiale sur l'intelligence artificielle. Comprenez sa classification des risques, ses principes clés et son impact sur le développement de l'IA.",
+    title: 'IA Act (AI Act) : Guide Complet & Résumé du Règlement Européen | MaydAI',
+    description:
+      "Découvrez le guide complet et le résumé de l'IA Act (AI Act) européen. Comprenez la réglementation, la classification des risques et vos obligations de conformité.",
     images: ['/eu-parlement-ai-act.jpg'],
   },
 };
@@ -36,9 +40,16 @@ export default function IAActUEPage() {
   const articleJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'TechArticle',
-    headline: "Qu'est-ce que l'IA Act UE ? Le guide complet du règlement européen",
+    headline: "IA Act (AI Act) : Guide complet et résumé du règlement européen sur l'IA",
     description:
       "Comprendre le règlement européen sur l'intelligence artificielle (IA Act UE). Analyse des niveaux de risques, obligations de conformité, modèles GPAI et sanctions financières.",
+    author: {
+      '@type': 'Organization',
+      name: 'MaydAI',
+      url: 'https://www.maydai.io',
+    },
+    datePublished: '2024-03-13T08:00:00+01:00',
+    dateModified: '2026-06-14T10:00:00+01:00',
     url: 'https://www.maydai.io/ia-act-ue',
     inLanguage: 'fr-FR',
     mainEntityOfPage: 'https://www.maydai.io/ia-act-ue',
@@ -112,13 +123,13 @@ export default function IAActUEPage() {
                   {/* En-tête */}
                   <div className="text-center mb-12">
                     <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                      Qu&apos;est-ce que l&apos;IA Act UE ?
+                      IA Act (AI Act) : Guide complet et résumé du règlement européen sur l&apos;IA
                     </h1>
                   </div>
 
                   {/* Section Introduction */}
                   <section id="introduction" className="mb-12">
-                    <h2 className="text-3xl font-bold text-[#0080a3] mb-6">L&apos;AI Act : Le Gardien des principes éthiques, le cadre réglementaire du marché européen</h2>
+                    <h2 className="text-3xl font-bold text-[#0080a3] mb-6">Résumé de l&apos;IA Act : Le nouveau cadre réglementaire européen</h2>
                     <p className="text-lg leading-relaxed mb-6">
                       L&apos;<strong>IA Act UE</strong> (ou règlement européen sur l&apos;intelligence artificielle) est le premier cadre juridique complet au monde visant à encadrer le développement et le déploiement des systèmes d&apos;IA. Adopté par l&apos;Union européenne, ce texte classe les technologies selon quatre niveaux de risque et impose des obligations de transparence strictes pour garantir une IA éthique et sécurisée, sous peine de sanctions financières lourdes.
                     </p>
@@ -128,7 +139,7 @@ export default function IAActUEPage() {
                   <section id="coeur-reacteur" className="mb-12">
                     <div className="flex items-center gap-4 mb-6">
                       <Image src="/icons/risk.png" alt="Risque" width={36} height={36} className="w-9 h-9" />
-                      <h2 className="font-bold text-[17px] text-[#0080a3] mb-0">La Classification par Risques : Une approche proportionnée</h2>
+                      <h2 className="font-bold text-[17px] text-[#0080a3] mb-0">La classification des risques de l&apos;IA Act</h2>
                     </div>
                     <p>
                       L&apos;IA Act s&apos;appuie sur une classification stricte en quatre niveaux de risque. Cette approche proportionnée permet d&apos;adapter les exigences de conformité à la criticité réelle des cas d&apos;usage et à leur impact potentiel sur les droits fondamentaux.
@@ -140,12 +151,12 @@ export default function IAActUEPage() {
                       <li><strong>Risque Minimal :</strong> Aucune obligation spécifique</li>
                     </ul>
                     <div className="mt-6 text-center">
-                      <a 
-                        href="/ia-act-ue/risques" 
+                      <Link
+                        href="/ia-act-ue/risques"
                         className="inline-flex items-center justify-center bg-[#0080a3] hover:bg-[#006080] text-white font-bold px-6 py-3 rounded-lg transition-colors"
                       >
                         Pyramide Risques IA
-                      </a>
+                      </Link>
                     </div>
                   </section>
 
@@ -242,12 +253,12 @@ export default function IAActUEPage() {
                       Le barème des sanctions en cas d&apos;infraction est hautement dissuasif : les violations des pratiques interdites peuvent entraîner des amendes administratives allant jusqu&apos;à 35 millions d&apos;euros ou 7% du chiffre d&apos;affaires mondial annuel global de l&apos;entreprise.
                     </p>
                     <div className="mt-6 text-center">
-                      <a 
-                        href="/ia-act-ue/calendrier" 
+                      <Link
+                        href="/ia-act-ue/calendrier"
                         className="inline-flex items-center justify-center bg-[#0080a3] hover:bg-[#006080] text-white font-bold px-6 py-3 rounded-lg transition-colors"
                       >
                         Calendrier IA Act
-                      </a>
+                      </Link>
                     </div>
                   </section>
 
@@ -281,19 +292,25 @@ export default function IAActUEPage() {
                     <p className="text-gray-600 mb-6">
                       Découvrez nos outils pour vous accompagner dans votre démarche de conformité
                     </p>
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                      <a 
-                        href="/ia-act-ue/risques" 
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                      <Link
+                        href="/signup?utm_source=maydai_website&utm_medium=cta_button&utm_campaign=guide_ia_act_page"
+                        className="inline-flex items-center justify-center bg-[#ffab5a] text-white font-bold px-8 py-3 rounded-xl transition-all"
+                      >
+                        Créer mon registre IA gratuitement
+                      </Link>
+                      <Link
+                        href="/ia-act-ue/risques"
                         className="inline-flex items-center justify-center bg-[#0080a3] hover:bg-[#006080] text-white font-bold px-8 py-3 rounded-lg transition-colors"
                       >
                         Voir la pyramide des risques
-                      </a>
-                      <a 
-                        href="/ia-act-ue/calendrier" 
+                      </Link>
+                      <Link
+                        href="/ia-act-ue/calendrier"
                         className="inline-flex items-center justify-center border border-[#0080a3] text-[#0080a3] hover:bg-[#0080a3] hover:text-white font-bold px-8 py-3 rounded-lg transition-colors"
                       >
-                        Consulter le calendrier
-                      </a>
+                        Consulter le calendrier de l&apos;IA Act
+                      </Link>
                     </div>
                   </div>
                 </div>
