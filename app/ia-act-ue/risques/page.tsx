@@ -1,14 +1,42 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
+import Link from 'next/link';
 import Header from '@/components/site-vitrine/Header';
 import Footer from '@/components/site-vitrine/Footer';
 
 export const metadata: Metadata = {
-  title: "Risques IA Act : La Pyramide de Classification des IA",
-  description: "Découvrez la classification des risques de l'IA Act à travers sa pyramide. De 'inacceptable' à 'minimal', comprenez chaque niveau de risque et préparez-vous aux obligations.",
+  title: 'Pyramide des Risques IA Act : Classification & Analyse | MaydAI',
+  description:
+    "Découvrez la pyramide de classification des risques de l'AI Act européen. De inacceptable à minimal, analysez le niveau de risque de vos systèmes d'IA.",
+  alternates: {
+    canonical: 'https://www.maydai.io/ia-act-ue/risques',
+  },
+  openGraph: {
+    title: 'Pyramide des Risques IA Act : Classification & Analyse | MaydAI',
+    description:
+      "Découvrez la pyramide de classification des risques de l'AI Act européen. De inacceptable à minimal, analysez le niveau de risque de vos systèmes d'IA.",
+    url: 'https://www.maydai.io/ia-act-ue/risques',
+    type: 'website',
+  },
 };
 
 export default function RisquesIaActPage() {
+  const articleJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: "Pyramide de classification des risques de l'AI Act européen",
+    description:
+      "L'AI Act européen classe les systèmes d'IA en quatre niveaux de risque : inacceptable (interdit), élevé (fortement réglementé), limité (obligation de transparence) et minimal (libre utilisation).",
+    url: 'https://www.maydai.io/ia-act-ue/risques',
+    inLanguage: 'fr-FR',
+    mainEntityOfPage: 'https://www.maydai.io/ia-act-ue/risques',
+    publisher: {
+      '@type': 'Organization',
+      name: 'MaydAI',
+      url: 'https://www.maydai.io',
+    },
+  };
+
   return (
     <>
       <Header />
@@ -18,7 +46,7 @@ export default function RisquesIaActPage() {
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
               <h1 className="text-4xl md:text-6xl font-bold text-[#0080a3] mb-8 leading-tight">
-                Les Risques de l&apos;IA Act : Une Approche Graduée par la Classification
+                Pyramide de classification des risques de l&apos;AI Act européen
               </h1>
               
               <div className="max-w-4xl mx-auto space-y-6 text-lg text-gray-700 leading-relaxed">
@@ -72,8 +100,7 @@ export default function RisquesIaActPage() {
         <section className="py-4 px-4 sm:px-6 lg:px-8 bg-gray-50">
           <div className="max-w-7xl mx-auto">
             <h2 className="text-4xl md:text-5xl font-bold text-center text-[#0080a3] mb-4">
-              La Pyramide des Risques :<br />
-              Quatre Niveaux pour Classer les IA
+              Les 4 niveaux de la pyramide des risques IA Act
             </h2>
             
             <div className="flex justify-center">
@@ -268,7 +295,7 @@ export default function RisquesIaActPage() {
         <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-100">
           <div className="max-w-7xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-center text-[#0080a3] mb-8">
-              L&apos;Heure des Comptes : Le Tic-tac de l&apos;Horloge et le Poids du Portefeuille
+              Analyse des risques et sanctions financières de l&apos;AI Act
             </h2>
             
             <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
@@ -332,6 +359,12 @@ export default function RisquesIaActPage() {
                 <p className="leading-relaxed">
                   Notre première mission : vous aider à identifier précisément où se situent vos systèmes d&apos;IA dans cette pyramide des risques. Parce qu&apos;on ne peut pas se conformer à quelque chose qu&apos;on ne comprend pas.
                 </p>
+                <Link
+                  href="/signup?utm_source=maydai_website&utm_medium=cta_button&utm_campaign=risques_page"
+                  className="text-[#0080a3] underline mt-4 inline-block"
+                >
+                  Créer un registre d&apos;IA gratuitement
+                </Link>
               </div>
               
               <div className="bg-white/10 backdrop-blur rounded-2xl p-8 text-white">
@@ -339,11 +372,18 @@ export default function RisquesIaActPage() {
                 <p className="leading-relaxed">
                   Notre seconde mission : analyser vos pratiques actuelles et vous proposer un plan d&apos;action concret pour atteindre la conformité, sans vous noyer dans la complexité réglementaire.
                 </p>
+                <p className="leading-relaxed mt-4">
+                  Découvrez comment nos{' '}
+                  <Link href="/fonctionnalites" className="underline font-medium hover:text-white/90">
+                    fonctionnalités d&apos;audit IA Act
+                  </Link>{' '}
+                  simplifient cette analyse réglementaire.
+                </p>
               </div>
             </div>
             
             <div className="flex justify-center">
-              <a 
+              <Link
                 href="/contact"
                 className="inline-flex items-center bg-white text-[#0080a3] hover:bg-gray-50 font-bold px-12 py-4 rounded-2xl text-xl transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105"
               >
@@ -351,10 +391,14 @@ export default function RisquesIaActPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 Évaluez votre risque dès maintenant
-              </a>
+              </Link>
             </div>
           </div>
         </section>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+        />
       </main>
       <Footer />
     </>
