@@ -1,15 +1,27 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
+import Link from 'next/link';
 import Header from '@/components/site-vitrine/Header';
 import Footer from '@/components/site-vitrine/Footer';
 
+const CALENDRIER_SIGNUP_HREF =
+  '/signup?utm_source=maydai_website&utm_medium=cta_button&utm_campaign=calendrier_page';
+
+const INLINE_LINK_CLASS =
+  'font-medium text-[#0080A3] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-1 rounded';
+
 export const metadata: Metadata = {
-  title: "Agenda IA Act : Le Calendrier Complet des Échéances 2025-2030 | MaydAI",
-  description: "Calendrier complet de l'AI Act européen : dates clés, échéances réglementaires 2025-2030, conformité IA, obligations entreprises. Guide expert pour naviguer dans la réglementation européenne de l'intelligence artificielle.",
+  title: "Calendrier IA Act & Dates Clés : L'Agenda des Échéances 2024-2030 | MaydAI",
+  description:
+    "Découvrez le calendrier officiel de l'AI Act européen. Quelles sont les dates clés et échéances (2024 à 2030) pour la mise en conformité de votre entreprise ?",
+  alternates: {
+    canonical: 'https://www.maydai.io/ia-act-ue/calendrier',
+  },
   keywords: "AI Act, calendrier, échéances, conformité IA, réglementation européenne, intelligence artificielle, 2025, 2026, 2030, obligations, entreprise, GPAI, systèmes à haut risque",
   openGraph: {
-    title: "Agenda IA Act : Le Calendrier Complet des Échéances 2025-2030",
-    description: "Découvrez toutes les dates clés de l'AI Act européen et préparez votre entreprise à la conformité réglementaire.",
+    title: "Calendrier IA Act & Dates Clés : L'Agenda des Échéances 2024-2030 | MaydAI",
+    description:
+      "Découvrez le calendrier officiel de l'AI Act européen. Quelles sont les dates clés et échéances (2024 à 2030) pour la mise en conformité de votre entreprise ?",
     type: "website"
   }
 };
@@ -18,47 +30,78 @@ export default function IaActAgendaPage() {
   const timelineData = [
     {
       date: "1er août 2024",
-      title: "Acte I, Scène 1 : Le Lever de Rideau",
+      title: "Août 2024 - Date d'entrée en vigueur de l'AI Act",
       description: "Ce jour-là, le rideau s'est levé sur une pièce un peu folle : l'AI Act. L'Europe, en bonne mère de famille soucieuse, a officiellement donné le coup d'envoi à son épopée administrative. C'est ici que le calendrier de la mise au pas de nos créatures de silicium a été figé, que la promesse de leur apprendre les bonnes manières a été gravée dans le marbre du Journal Officiel.",
       details: "Publication officielle au Journal Officiel de l'Union Européenne. Entrée en vigueur du règlement (UE) 2024/1689. Début de la période de transition de 24 mois pour les entreprises. Première étape vers l'harmonisation réglementaire de l'IA en Europe.",
       impact: "Les entreprises ont désormais un cadre légal clair pour développer leurs stratégies de conformité. Les investissements en R&D IA doivent intégrer les exigences réglementaires dès la conception."
     },
     {
       date: "2 février 2025",
-      title: "Fin des usages inacceptables",
+      title: "Février 2025 - Date limite pour les IA inacceptables",
       description: "L'Europe siffle la fin de la partie pour les manipulations subliminales, l'exploitation des faibles et la notation sociale par les États. Un grand ménage de printemps réglementaire.",
       details: "Interdiction définitive des systèmes d'IA considérés comme inacceptables : manipulation subliminale, exploitation des vulnérabilités, notation sociale par les États, reconnaissance biométrique en temps réel dans l'espace public (sauf exceptions strictes).",
       impact: "Les entreprises doivent immédiatement cesser tout usage de ces systèmes. Sanctions pouvant aller jusqu'à 35 millions d'euros ou 7% du chiffre d'affaires annuel mondial."
     },
     {
       date: "10 juillet 2025",
-      title: "Arrivée des codes de bonne pratique",
+      title: "Juillet 2025 - Publication des codes de bonne pratique GPAI",
       description: "Les fameux « codes de bonne pratique » arrivent, agissant comme un guide de savoir-vivre pour les cerveaux numériques les plus puissants, afin d'encadrer leur développement.",
       details: "Publication des codes de conduite volontaires pour les modèles d'IA générative (GPAI). Guidelines pour la transparence, la sécurité et l'éthique. Collaboration entre la Commission européenne et les acteurs de l'industrie.",
       impact: "Les développeurs de GPAI peuvent s'appuyer sur ces codes pour anticiper les exigences réglementaires. Meilleure préparation à la conformité obligatoire d'août 2025."
     },
     {
       date: "2 août 2025",
-      title: "Le Grand Rendez-vous : Gouvernance et Transparence",
+      title: "Août 2025 - Échéance gouvernance et transparence des modèles GPAI",
       description: "Les États membres doivent mettre en place leurs autorités de surveillance. Les fournisseurs de modèles d'IA à usage général (GPAI) doivent fournir une documentation technique, respecter les droits d'auteur et publier un résumé de leurs données d'entraînement.",
       details: "Mise en place des autorités nationales de surveillance dans chaque État membre. Obligations de transparence pour les GPAI : documentation technique, résumé des données d'entraînement, respect des droits d'auteur, évaluation des risques systémiques.",
       impact: "Les entreprises utilisant des GPAI doivent s'assurer que leurs fournisseurs respectent ces obligations. Nouveaux processus de due diligence à mettre en place."
     },
     {
       date: "2 août 2026",
-      title: "Le Grand Jour de la Responsabilité pour toutes les Entreprises",
+      title: "Août 2026 - Date limite de conformité pour les IA à haut risque",
       description: "La majorité des dispositions de l'AI Act deviennent la norme. Les systèmes d'IA « à haut risque » doivent se conformer à des exigences strictes et les « bacs à sable réglementaires » doivent être opérationnels.",
       details: "Application pleine et entière de l'AI Act. Conformité obligatoire pour tous les systèmes à haut risque : évaluation de conformité, gestion des risques, traçabilité, transparence, surveillance humaine. Mise en place des bacs à sable réglementaires pour tester l'IA dans un environnement contrôlé.",
       impact: "Toutes les entreprises développant ou utilisant des systèmes d'IA à haut risque doivent être conformes. Processus d'audit et de certification obligatoires. Nouveaux coûts de conformité à intégrer."
     },
     {
       date: "2027 & 2030",
-      title: "Le Temps des Règlements de Comptes et des Ajustements",
+      title: "2027-2030 - Échéances finales pour les systèmes legacy et le secteur public",
       description: "Dernières échéances pour le grand rattrapage. Les systèmes à haut risque déjà sur le marché et les grands systèmes informatiques publics devront, eux aussi, se plier à la règle commune.",
       details: "2027 : Conformité obligatoire pour les systèmes à haut risque déjà commercialisés avant août 2026. 2030 : Conformité pour les grands systèmes informatiques publics (systèmes de gestion des dossiers, systèmes de gestion des ressources humaines, systèmes de gestion des finances publiques).",
       impact: "Les systèmes legacy doivent être mis à niveau ou remplacés. Investissements importants en modernisation des infrastructures publiques et privées. Dernière chance pour les entreprises de se conformer sans sanctions."
     }
   ];
+
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: '🤔 Mon entreprise utilise ChatGPT et autres IA génératives. Quelles sont mes obligations ?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: "Dès août 2025 : Vérifiez que vos fournisseurs (OpenAI, Google, etc.) respectent les obligations de transparence (documentation technique, résumé des données d'entraînement). Dès août 2026 : Si vous utilisez ces IA pour des décisions automatisées affectant les personnes, vous devez vous conformer aux exigences des systèmes à haut risque. Cela inclut la traçabilité, la surveillance humaine et l'évaluation des risques.",
+        },
+      },
+      {
+        '@type': 'Question',
+        name: "⏰ J'ai raté l'échéance du 2 février 2025. Que faire ?",
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: "Action immédiate requise : Cessez immédiatement tout usage de systèmes d'IA inacceptables (manipulation subliminale, notation sociale, etc.). Contactez un expert en conformité AI Act pour un audit d'urgence. Les sanctions peuvent être appliquées dès le 2 février 2025. Plus vous agissez rapidement, plus vous réduisez les risques de sanctions et les coûts de mise en conformité.",
+        },
+      },
+      {
+        '@type': 'Question',
+        name: "💰 Combien coûte la conformité à l'AI Act pour une PME ?",
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: "Coûts variables selon la complexité : Pour une PME utilisant des IA standard (ChatGPT, outils de recrutement), comptez 15 000 à 50 000€ pour l'audit et la mise en conformité. Pour des systèmes d'IA développés en interne, les coûts peuvent atteindre 100 000 à 500 000€. ROI positif : La conformité précoce évite les sanctions (jusqu'à 7,5M€) et améliore la confiance clients. MaydAI propose des solutions automatisées réduisant ces coûts de 60-70%.",
+        },
+      },
+    ],
+  };
 
   return (
     <>
@@ -78,7 +121,7 @@ export default function IaActAgendaPage() {
             Calendrier IA Act
           </div>
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
-            L&apos;Agenda de l&apos;AI Act
+            Calendrier et agenda de l&apos;AI Act : toutes les dates clés et échéances
           </h1>
           <div className="text-xl text-gray-600 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed mb-8 space-y-4">
             <p>
@@ -293,9 +336,22 @@ export default function IaActAgendaPage() {
                   💰 Combien coûte la conformité à l&apos;AI Act pour une PME ?
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                  <strong>Coûts variables selon la complexité :</strong> Pour une PME utilisant des IA standard (ChatGPT, outils de recrutement), comptez 15 000 à 50 000€ pour l&apos;audit et la mise en conformité. Pour des systèmes d&apos;IA développés en interne, les coûts peuvent atteindre 100 000 à 500 000€. <strong>ROI positif :</strong> La conformité précoce évite les sanctions (jusqu&apos;à 7,5M€) et améliore la confiance clients. MaydAI propose des solutions automatisées réduisant ces coûts de 60-70%.
+                  <strong>Coûts variables selon la complexité :</strong> Pour une PME utilisant des IA standard (ChatGPT, outils de recrutement), comptez 15 000 à 50 000€ pour l&apos;audit et la mise en conformité. Pour des systèmes d&apos;IA développés en interne, les coûts peuvent atteindre 100 000 à 500 000€.{' '}
+                  <strong>ROI positif :</strong> La conformité précoce évite les sanctions (jusqu&apos;à 7,5M€) et améliore la confiance clients. MaydAI propose des{' '}
+                  <Link href="/fonctionnalites" className={INLINE_LINK_CLASS}>
+                    solutions automatisées de conformité IA Act
+                  </Link>{' '}
+                  réduisant ces coûts de 60-70% —{' '}
+                  <Link href="/tarifs" className={INLINE_LINK_CLASS}>
+                    consultez nos tarifs
+                  </Link>
+                  .
                 </p>
               </div>
+              <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+              />
             </div>
           </div>
         </section>
@@ -318,25 +374,34 @@ export default function IaActAgendaPage() {
               <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
                 Ne laissez pas ces échéances vous surprendre. L&apos;AI Act approche à grands pas et la conformité n&apos;est plus une option. Anticipez dès maintenant avec MaydAI et transformez cette contrainte en avantage concurrentiel.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <a 
-                  href="/contact" 
+              <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center">
+                <Link
+                  href={CALENDRIER_SIGNUP_HREF}
+                  className="inline-flex items-center justify-center bg-[#ffab5a] hover:bg-[#e6995a] text-white font-bold px-8 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Créer mon premier registre IA gratuitement
+                </Link>
+                <Link
+                  href="/contact"
                   className="inline-flex items-center justify-center bg-[#0080a3] hover:bg-[#006080] text-white font-bold px-8 py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl"
                 >
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Commencer mon audit
-                </a>
-                <a 
-                  href="/ia-act-ue" 
+                </Link>
+                <Link
+                  href="/ia-act-ue"
                   className="inline-flex items-center justify-center bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-semibold px-8 py-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 shadow-lg hover:shadow-2xl"
                 >
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   En savoir plus sur l&apos;AI Act
-                </a>
+                </Link>
               </div>
             </div>
           </div>

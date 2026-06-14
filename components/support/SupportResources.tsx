@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BookOpen, FileText, Scale } from 'lucide-react'
+import { BookOpen, Calendar, FileText, Landmark, Scale, TriangleAlert } from 'lucide-react'
 
 const RESOURCES = [
   {
@@ -13,6 +13,24 @@ const RESOURCES = [
     label: 'Comprendre l\'IA Act',
     description: 'Les enjeux réglementaires et les étapes clés de la mise en conformité.',
     icon: Scale,
+  },
+  {
+    href: '/ia-act-ue',
+    label: 'Vue d\'ensemble IA Act UE',
+    description: 'Guide complet du règlement européen : classification des risques et obligations.',
+    icon: Landmark,
+  },
+  {
+    href: '/ia-act-ue/calendrier',
+    label: 'Calendrier IA Act',
+    description: 'Échéances d\'application du règlement de 2025 à 2030.',
+    icon: Calendar,
+  },
+  {
+    href: '/ia-act-ue/risques',
+    label: 'Pyramide risques IA',
+    description: 'Les quatre niveaux de risque et leurs implications pour votre conformité.',
+    icon: TriangleAlert,
   },
   {
     href: '/conditions-generales',
