@@ -1,3 +1,5 @@
+import Link from 'next/link'
+import type { ReactNode } from 'react'
 import {
   ChevronDown,
   CreditCard,
@@ -12,9 +14,13 @@ import {
 } from 'lucide-react'
 import {
   getSupportFaqSections,
+  type SupportFAQItem,
   type SupportFAQRole,
   type SupportFAQSection,
 } from '@/components/support/support-faq-data'
+
+const FAQ_LINK_CLASS =
+  'font-medium text-[#0080A3] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-1 rounded'
 
 const SUPPORT_FAQ_SECTION_ICONS: Record<string, LucideIcon> = {
   "Cas d'usage et évaluation": Lightbulb,
@@ -41,6 +47,42 @@ function withSectionIcons(sections: SupportFAQSection[]): FAQSectionWithIcon[] {
 
 type SupportFAQProps = {
   role: SupportFAQRole
+}
+
+function renderFaqAnswer(item: SupportFAQItem, role: SupportFAQRole): ReactNode {
+  if (role !== 'public') {
+    return item.a
+  }
+
+  switch (item.q) {
+    case 'Comment créer un compte ?':
+      return (
+        <>
+          Cliquez sur « S&apos;inscrire » depuis la{' '}
+          <Link href="/" className={FAQ_LINK_CLASS}>
+            page d&apos;accueil
+          </Link>{' '}
+          ou les{' '}
+          <Link href="/tarifs" className={FAQ_LINK_CLASS}>
+            tarifs
+          </Link>
+          . Une fois connecté, vous pourrez créer votre registre depuis le tableau de bord.
+        </>
+      )
+    case 'J\'ai une question commerciale (démo, presse, partenariat)':
+      return (
+        <>
+          Utilisez la{' '}
+          <Link href="/contact" className={FAQ_LINK_CLASS}>
+            page Contact
+          </Link>{' '}
+          pour les demandes commerciales. Ce centre d&apos;aide traite l&apos;utilisation de la
+          plateforme et le support produit.
+        </>
+      )
+    default:
+      return item.a
+  }
 }
 
 export default function SupportFAQ({ role }: SupportFAQProps) {
@@ -90,7 +132,9 @@ export default function SupportFAQ({ role }: SupportFAQProps) {
                   />
                 </summary>
                 <div className="px-4 pb-4 pt-1 sm:px-5 sm:pb-5">
-                  <p className="text-sm leading-relaxed text-slate-600">{item.a}</p>
+                  <p className="text-sm leading-relaxed text-slate-600">
+                    {renderFaqAnswer(item, role)}
+                  </p>
                 </div>
               </details>
             ))}
