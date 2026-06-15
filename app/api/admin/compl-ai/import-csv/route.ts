@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifyAdminAuth } from '@/lib/admin-auth'
+import { recalculateUseCaseScoresForModel } from '@/lib/usecase-score-service'
+
+// Un import peut toucher plusieurs modèles et déclencher le recalcul de nombreux
+// use cases : on autorise une exécution plus longue (recalcul synchrone).
+export const maxDuration = 300
 
 interface CSVRow {
   model_name: string
@@ -101,6 +106,10 @@ export async function POST(request: NextRequest) {
       errors: [],
       warnings: []
     }
+
+    // Modèles dont au moins une évaluation a réellement changé (création/màj) :
+    // ils déclencheront un recalcul automatique des scores après l'import.
+    const touchedModelIds = new Set<string>()
 
     // Récupérer tous les principes et benchmarks pour validation
     const { data: principlesData } = await supabase
@@ -265,6 +274,7 @@ export async function POST(request: NextRequest) {
               }
 
               stats.evaluationsUpdated++
+              touchedModelIds.add(modelId)
             } else {
               stats.warnings.push(`Ligne ${rowNumber}: Évaluation existante ignorée (mode: ${updateMode})`)
             }
@@ -280,6 +290,7 @@ export async function POST(request: NextRequest) {
             }
 
             stats.evaluationsCreated++
+            touchedModelIds.add(modelId)
           }
         }
 
@@ -288,10 +299,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Recalcul automatique des scores des use cases impactés par les modèles modifiés.
+    // Une erreur de recalcul ne fait pas échouer l'import (les scores modèle sont déjà persistés).
+    let usecasesRecalculated = 0
+    for (const modelId of touchedModelIds) {
+      try {
+        const summary = await recalculateUseCaseScoresForModel(modelId)
+        usecasesRecalculated += summary.success_count
+      } catch (recalcError) {
+        const msg = recalcError instanceof Error ? recalcError.message : 'Erreur inconnue'
+        stats.warnings.push(`Recalcul automatique des scores échoué pour le modèle ${modelId}: ${msg}`)
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Import CSV terminé',
-      stats
+      stats,
+      models_recalculated: touchedModelIds.size,
+      usecases_recalculated: usecasesRecalculated
     })
 
   } catch (error) {
