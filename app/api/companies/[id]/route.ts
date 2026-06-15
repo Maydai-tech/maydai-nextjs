@@ -514,8 +514,17 @@ export async function DELETE(
 
     // Cascade: usecase_responses → usecases → NULL profiles → user_companies → company
     // (logique partagée avec la suppression de compte, cf. lib/account-deletion.ts)
+    // Requiert un client service-role : la cascade vide des tables enfant sans
+    // policy DELETE (RLS) — un client utilisateur déclencherait une violation FK 23503.
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseServiceRoleKey) {
+      logger.error('SUPABASE_SERVICE_ROLE_KEY is not defined', undefined, context)
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+    const supabaseAdmin = createClient(supabaseUrl!, supabaseServiceRoleKey)
+
     try {
-      await deleteCompanyCascade(supabase, companyId)
+      await deleteCompanyCascade(supabaseAdmin, companyId)
     } catch (cascadeError) {
       logger.error('Failed to delete company and associated data', cascadeError, {
         ...context,
