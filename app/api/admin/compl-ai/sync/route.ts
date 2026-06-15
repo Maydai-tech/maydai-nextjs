@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
+import { recalculateUseCaseScoresForModel } from '@/lib/usecase-score-service'
 import fs from 'fs'
 import path from 'path'
+
+// Le sync (lecture JSON + upsert) suivi du recalcul en cascade des use cases
+// peut prendre du temps : on autorise une exécution plus longue.
+export const maxDuration = 300
 
 interface ComplAiResult {
   config: {
@@ -202,6 +207,10 @@ export async function POST(request: NextRequest) {
       evaluationsUpdated: 0,
       errors: [] as string[]
     }
+
+    // Modèles dont au moins une évaluation a réellement changé pendant ce sync :
+    // ils déclencheront le recalcul automatique (maydai_score + score_final des use cases).
+    const touchedModelIds = new Set<string>()
 
     // Lire les fichiers JSON du dossier data/compl-ai/results
     const resultsDir = path.join(process.cwd(), 'data', 'compl-ai', 'results')
@@ -416,6 +425,7 @@ export async function POST(request: NextRequest) {
               stats.errors.push(`Erreur mise à jour évaluation ${modelInfo.name}/${benchmarkCode}: ${updateError.message}`)
             } else {
               stats.evaluationsUpdated++
+              touchedModelIds.add(modelId)
             }
           } else {
             // Créer une nouvelle évaluation
@@ -427,6 +437,7 @@ export async function POST(request: NextRequest) {
               stats.errors.push(`Erreur création évaluation ${modelInfo.name}/${benchmarkCode}: ${insertError.message}`)
             } else {
               stats.evaluationsCreated++
+              touchedModelIds.add(modelId)
             }
           }
         }
@@ -436,19 +447,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Recalculer tous les scores MaydAI après synchronisation
-    console.log('Recalcul des scores MaydAI avec logique TypeScript...')
-    try {
-      const { recalculateAllMaydaiScores } = await import('@/lib/maydai-calculator')
-      const recalcResults = await recalculateAllMaydaiScores()
-      
-      const totalEvaluationsUpdated = recalcResults.reduce((sum, r) => sum + r.evaluations_updated, 0)
-      console.log(`Scores MaydAI recalculés pour ${recalcResults.length} modèles, ${totalEvaluationsUpdated} évaluations mises à jour`)
-      
-    } catch (error) {
-      console.error('Erreur lors du recalcul des scores MaydAI:', error)
-      stats.errors.push(`Erreur recalcul scores MaydAI: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
+    // Recalcul automatique en cascade pour chaque modèle dont les scores ont changé :
+    // recalculateUseCaseScoresForModel rafraîchit le maydai_score du modèle PUIS recalcule
+    // le score_final des use cases liés. Remplace l'ancien recalcul maydai global (évite le
+    // double calcul) et garantit la fraîcheur des scores use case après un sync.
+    console.log(`Recalcul automatique des scores pour ${touchedModelIds.size} modèle(s) modifié(s)...`)
+    let usecasesRecalculated = 0
+    for (const modelId of touchedModelIds) {
+      try {
+        const summary = await recalculateUseCaseScoresForModel(modelId)
+        usecasesRecalculated += summary.success_count
+      } catch (error) {
+        console.error(`Erreur recalcul automatique pour le modèle ${modelId}:`, error)
+        stats.errors.push(`Recalcul auto échoué pour le modèle ${modelId}: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
+      }
     }
+    console.log(`Recalcul terminé : ${touchedModelIds.size} modèle(s), ${usecasesRecalculated} use case(s) recalculé(s)`)
 
     const executionTime = Date.now() - startTime
 
@@ -464,8 +478,8 @@ export async function POST(request: NextRequest) {
 
     const result: SyncResult = {
       success: stats.errors.length === 0,
-      message: stats.errors.length === 0 
-        ? `Synchronisation réussie en ${executionTime}ms. ${stats.modelsCreated + stats.modelsUpdated} modèles, ${stats.benchmarksCreated} benchmarks créés, ${stats.evaluationsCreated + stats.evaluationsUpdated} évaluations.`
+      message: stats.errors.length === 0
+        ? `Synchronisation réussie en ${executionTime}ms. ${stats.modelsCreated + stats.modelsUpdated} modèles, ${stats.benchmarksCreated} benchmarks créés, ${stats.evaluationsCreated + stats.evaluationsUpdated} évaluations. ${touchedModelIds.size} modèle(s) et ${usecasesRecalculated} use case(s) recalculé(s).`
         : `Synchronisation terminée avec ${stats.errors.length} erreurs`,
       stats
     }
