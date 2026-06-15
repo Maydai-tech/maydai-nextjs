@@ -10,6 +10,7 @@ import {
 } from '@/lib/journey-path-mode'
 import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 import { UpdateUsecaseSchema } from '@/lib/validations/usecase'
+import { removeDossierStorageFiles } from '@/lib/account-deletion'
 import { z } from 'zod'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -701,6 +702,18 @@ export async function DELETE(
 
     const dossierIds = (dossierRows ?? []).map((row) => row.id as string).filter(Boolean)
     if (dossierIds.length > 0) {
+      // Supprimer les fichiers physiques du Storage (RGPD) avant de purger les
+      // lignes dossier_documents — best-effort, ne bloque pas la suppression.
+      try {
+        await removeDossierStorageFiles(supabaseAdmin, dossierIds)
+      } catch (storageCleanupError) {
+        logger.warn('Storage cleanup failed during use case deletion, continuing', {
+          ...context,
+          useCaseId,
+          error: storageCleanupError instanceof Error ? storageCleanupError.message : String(storageCleanupError),
+        })
+      }
+
       const { error: deleteDossierDocumentsError } = await supabaseAdmin
         .from('dossier_documents')
         .delete()
