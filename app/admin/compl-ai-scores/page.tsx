@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { BarChart3, TrendingUp, Database, RefreshCw, Trash2, Plus, Save, X, Check, Edit, Calculator, Download, Upload, FileText, ChevronDown, ChevronUp, ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
+import { BarChart3, TrendingUp, Database, RefreshCw, Trash2, Plus, Save, X, Check, Edit, Calculator, Download, Upload, FileText, ChevronDown, ChevronUp, ArrowDown, ArrowUp, ArrowUpDown, Search } from 'lucide-react'
 import ModelTooltip from '@/components/ModelTooltip'
 
 
@@ -98,6 +98,31 @@ interface ScoreDeleteData {
   benchmarkCode: string
 }
 
+/** Taille de page pour la pagination des requêtes Supabase (limite serveur par défaut). */
+const SUPABASE_PAGE_SIZE = 1000
+
+/**
+ * Récupère toutes les lignes d'une requête Supabase en paginant via `.range()`,
+ * pour contourner le plafond implicite de 1000 lignes et scaler quel que soit le volume.
+ *
+ * @param buildPage - fabrique une requête Supabase avec `.range(from, to)` appliqué.
+ */
+async function fetchAllRows<T = any>(
+  buildPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>
+): Promise<T[]> {
+  const all: T[] = []
+  let from = 0
+  for (;;) {
+    const { data, error } = await buildPage(from, from + SUPABASE_PAGE_SIZE - 1)
+    if (error) throw error
+    const rows = data ?? []
+    all.push(...rows)
+    if (rows.length < SUPABASE_PAGE_SIZE) break
+    from += SUPABASE_PAGE_SIZE
+  }
+  return all
+}
+
 
 export default function ComplAIScoresPage() {
   const [modelPrincipleMatrix, setModelPrincipleMatrix] = useState<ModelPrincipleMatrix[]>([])
@@ -135,6 +160,7 @@ export default function ComplAIScoresPage() {
 
   const [expandedPrinciples, setExpandedPrinciples] = useState<Set<string>>(new Set())
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null)
+  const [modelSearchTerm, setModelSearchTerm] = useState('')
 
   const togglePrinciple = (principleId: string) => {
     setExpandedPrinciples((prev) => {
@@ -166,8 +192,18 @@ export default function ComplAIScoresPage() {
   // 3. Reconstruire le tableau avec Human Agency STRICTEMENT à la fin
   const sortedPrinciples = agencyPrinciple ? [...otherPrinciples, agencyPrinciple] : principles
 
+  // Filtre de recherche par nom (model_name + noms d'affichage)
+  const normalizedModelSearch = modelSearchTerm.trim().toLowerCase()
+  const filteredModels = normalizedModelSearch
+    ? modelPrincipleMatrix.filter((model) =>
+        [model.model_name, model.short_name, model.long_name].some((value) =>
+          (value || '').toLowerCase().includes(normalizedModelSearch)
+        )
+      )
+    : modelPrincipleMatrix
+
   const sortedModels = (() => {
-    if (!sortConfig) return modelPrincipleMatrix
+    if (!sortConfig) return filteredModels
 
     const getSortableValue = (model: ModelPrincipleMatrix) => {
       if (sortConfig.key === 'avg_score') {
@@ -181,7 +217,7 @@ export default function ComplAIScoresPage() {
 
     const directionFactor = sortConfig.direction === 'asc' ? 1 : -1
 
-    return [...modelPrincipleMatrix].sort((a, b) => {
+    return [...filteredModels].sort((a, b) => {
       const aVal = getSortableValue(a)
       const bVal = getSortableValue(b)
 
@@ -736,13 +772,17 @@ export default function ComplAIScoresPage() {
 
   const fetchScores = async () => {
     try {
-      // Récupérer tous les modèles
-      const { data: allModels, error: modelsError} = await supabase
-        .from('compl_ai_models')
-        .select('id, model_name, model_provider, model_type, version, short_name, long_name, launch_date, notes_short, notes_long, variants')
-        .order('model_name')
-
-      if (modelsError) throw modelsError
+      // Récupérer tous les modèles (paginé pour scaler au-delà de 1000)
+      const allModels: any[] = await fetchAllRows((from, to) =>
+        supabase
+          .from('compl_ai_models')
+          .select('id, model_name, model_provider, model_type, version, short_name, long_name, launch_date, notes_short, notes_long, variants')
+          .order('model_name')
+          // Tiebreaker unique : sans clé unique secondaire, `.range()` paginé peut
+          // dupliquer/omettre des lignes au passage de page (ordre non déterministe sur égalité).
+          .order('id')
+          .range(from, to)
+      )
 
       console.log('Debug: Modèles récupérés:', {
         count: allModels?.length || 0,
@@ -756,40 +796,46 @@ export default function ComplAIScoresPage() {
       // Récupérer les scores moyens MaydAI par principe depuis la vue compl_ai_maydai_scores
       console.log('Debug: Récupération des scores moyens MaydAI depuis la vue...')
 
-      // Récupérer toutes les évaluations avec benchmarks et principes
-      const { data: evaluations, error } = await supabase
-        .from('compl_ai_evaluations')
-        .select(`
-          id,
-          score,
-          score_text,
-          evaluation_date,
-          raw_data,
-          maydai_score,
-          rang_compar_ia,
-          compl_ai_models!inner (
-            id,
-            model_name,
-            model_provider,
-            model_type,
-            version,
-            short_name,
-            long_name,
-            launch_date
-          ),
-          compl_ai_principles!inner (
-            name,
-            code,
-            category
-          ),
-          compl_ai_benchmarks (
-            code,
-            name
-          )
-        `)
-        .order('evaluation_date', { ascending: false })
-
-      if (error) throw error
+      // Récupérer TOUTES les évaluations (paginées) avec benchmarks et principes.
+      // La pagination évite le plafond implicite de 1000 lignes de Supabase qui
+      // tronquait les évaluations (>1000 en base) et affichait des scores vides.
+      const evaluations: any[] = await fetchAllRows((from, to) =>
+        supabase
+          .from('compl_ai_evaluations')
+          .select(`
+              id,
+              score,
+              score_text,
+              evaluation_date,
+              raw_data,
+              maydai_score,
+              rang_compar_ia,
+              compl_ai_models!inner (
+                id,
+                model_name,
+                model_provider,
+                model_type,
+                version,
+                short_name,
+                long_name,
+                launch_date
+              ),
+              compl_ai_principles!inner (
+                name,
+                code,
+                category
+              ),
+              compl_ai_benchmarks (
+                code,
+                name
+              )
+            `)
+            .order('evaluation_date', { ascending: false })
+            // Tiebreaker unique : `evaluation_date` n'est pas unique ; sans clé secondaire,
+            // la pagination `.range()` pourrait dupliquer/omettre des évaluations entre deux pages.
+            .order('id')
+            .range(from, to)
+      )
 
       // Debug: Vérifier les scores MaydAI
       console.log('Debug evaluations - premier échantillon:', evaluations?.slice(0, 3)?.map(e => ({
@@ -984,21 +1030,39 @@ export default function ComplAIScoresPage() {
             rang_compar_ia: evaluation.rang_compar_ia
           }
 
-          modelData.all_scores.push(evaluation.score)
+          // N'agréger que les scores réellement renseignés : les benchmarks N/A
+          // (ex. num_gpus, time_to_train…) ne doivent pas être comptés comme 0.
+          if (evaluation.score !== null && evaluation.score !== undefined) {
+            modelData.all_scores.push(evaluation.score)
+          }
           modelData.all_dates.push(evaluation.evaluation_date)
         })
       }
 
-      // Récupérer les scores moyens MaydAI par principe depuis la vue
-      const { data: maydaiScoresData, error: maydaiError } = await supabase
-        .from('compl_ai_maydai_scores')
-        .select(`
-          model_name,
-          model_provider,
-          principle_code,
-          average_maydai_score
-        `)
-        .order('model_name')
+      // Récupérer les scores moyens MaydAI par principe depuis la vue (paginé : la vue
+      // croît avec le nombre de modèles × principes et dépasserait le plafond de 1000).
+      let maydaiScoresData: any[] | null = null
+      let maydaiError: unknown = null
+      try {
+        maydaiScoresData = await fetchAllRows((from, to) =>
+          supabase
+            .from('compl_ai_maydai_scores')
+            .select(`
+              model_name,
+              model_provider,
+              principle_code,
+              average_maydai_score
+            `)
+            .order('model_name')
+            // Tiebreakers uniques : la vue n'a pas d'id ; (model_name, model_provider,
+            // principle_code) identifie chaque ligne et rend la pagination `.range()` déterministe.
+            .order('model_provider')
+            .order('principle_code')
+            .range(from, to)
+        )
+      } catch (e) {
+        maydaiError = e
+      }
 
       if (maydaiError) {
         console.error('Erreur lors de la récupération des scores MaydAI:', maydaiError)
@@ -1024,7 +1088,11 @@ export default function ComplAIScoresPage() {
         // Calculer la moyenne par principe
         Object.keys(group.principle_scores).forEach(principleCode => {
           const principleData = group.principle_scores[principleCode]
-          const scores = Object.values(principleData.benchmark_scores).map(b => b.score)
+          // Exclure les benchmarks N/A (score null) du calcul de la moyenne du principe :
+          // sinon ils sont coercés en 0 et tirent la moyenne vers le bas (ex. 2.0/6 au lieu de 2.0/3).
+          const scores = Object.values(principleData.benchmark_scores)
+            .map(b => b.score)
+            .filter((s): s is number => s !== null && s !== undefined)
           if (scores.length > 0) {
             principleData.avg_score = scores.reduce((sum, score) => sum + score, 0) / scores.length
             principleData.benchmark_count = scores.length
@@ -1599,6 +1667,34 @@ export default function ComplAIScoresPage() {
             </div>
           </div>
         </div>
+        {/* Recherche par nom de modèle */}
+        <div className="px-6 py-3 border-b border-gray-200">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={modelSearchTerm}
+              onChange={(e) => setModelSearchTerm(e.target.value)}
+              placeholder="Rechercher un modèle par nom..."
+              className="w-full pl-9 pr-9 py-2 border border-gray-300 rounded-lg bg-white text-sm text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
+            />
+            {modelSearchTerm && (
+              <button
+                type="button"
+                onClick={() => setModelSearchTerm('')}
+                aria-label="Effacer la recherche"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {normalizedModelSearch && (
+            <p className="mt-2 text-xs text-gray-500">
+              {sortedModels.length} modèle{sortedModels.length > 1 ? 's' : ''} trouvé{sortedModels.length > 1 ? 's' : ''} sur {modelPrincipleMatrix.length}
+            </p>
+          )}
+        </div>
         <div className="overflow-x-auto max-h-screen">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-white sticky top-0 z-20">
@@ -1759,6 +1855,21 @@ export default function ComplAIScoresPage() {
                         
                         {/* Scores moyens MaydAI et Rang Compar:IA du principe */}
                         <div className="flex flex-col items-center gap-1.5 mt-1">
+                          {/* Score COMPL-AI original moyen du principe — cliquer pour déplier et éditer les benchmarks */}
+                          {model.principle_scores[principle.code] && model.principle_scores[principle.code].benchmark_count > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => togglePrinciple(principle.code)}
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200 transition-colors cursor-pointer"
+                              title={expandedPrinciples.has(principle.code) ? 'Scores par benchmark affichés ci-dessous (cliquer pour modifier)' : 'Cliquer pour déplier et éditer les scores COMPL-AI par benchmark'}
+                            >
+                              Score:{' '}
+                              <span className="font-mono ml-1">
+                                {model.principle_scores[principle.code].avg_score.toFixed(3)}
+                              </span>
+                            </button>
+                          )}
+
                           {/* Édition du score Rang Compar:IA */}
                           {model.principle_scores[principle.code] && (
                             editingRangComparIa?.modelId === model.model_id && editingRangComparIa?.principleCode === principle.code ? (
@@ -2011,6 +2122,11 @@ export default function ComplAIScoresPage() {
         {modelPrincipleMatrix.length === 0 && (
           <div className="px-6 py-12 text-center">
             <p className="text-gray-500">Aucune donnée disponible</p>
+          </div>
+        )}
+        {modelPrincipleMatrix.length > 0 && sortedModels.length === 0 && (
+          <div className="px-6 py-12 text-center">
+            <p className="text-gray-500">Aucun modèle ne correspond à « {modelSearchTerm} »</p>
           </div>
         )}
       </div>
