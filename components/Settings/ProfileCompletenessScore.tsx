@@ -5,7 +5,9 @@ import { CheckCircle2 } from 'lucide-react'
 interface ProfileCompletenessScoreProps {
   score: number
   isLoading?: boolean
-  onHighlightRequest: () => void
+  onHighlightRequest?: () => void
+  /** Masque le titre et le CTA internes (donut seul, ex. scorecard dashboard). */
+  compact?: boolean
 }
 
 const SIZE = 80
@@ -18,11 +20,61 @@ export default function ProfileCompletenessScore({
   score,
   isLoading = false,
   onHighlightRequest,
+  compact = false,
 }: ProfileCompletenessScoreProps) {
   const clampedScore = Math.min(100, Math.max(0, Math.round(score)))
   const strokeDashoffset = CIRCUMFERENCE - (clampedScore / 100) * CIRCUMFERENCE
 
+  const donut = (
+    <div className="relative w-20 h-20">
+      <svg
+        width={SIZE}
+        height={SIZE}
+        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        className="-rotate-90"
+        role="progressbar"
+        aria-valuenow={clampedScore}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Complétude du profil : ${clampedScore} pour cent`}
+      >
+        <circle
+          cx={CENTER}
+          cy={CENTER}
+          r={RADIUS}
+          fill="none"
+          className="stroke-[#F5E6C2]"
+          strokeWidth={STROKE_WIDTH}
+        />
+        <circle
+          cx={CENTER}
+          cy={CENTER}
+          r={RADIUS}
+          fill="none"
+          className="stroke-[#0080A3] transition-all duration-500 ease-out"
+          strokeWidth={STROKE_WIDTH}
+          strokeLinecap="round"
+          strokeDasharray={CIRCUMFERENCE}
+          strokeDashoffset={strokeDashoffset}
+        />
+      </svg>
+      <span className="font-mono text-lg font-semibold text-gray-900 absolute inset-0 flex items-center justify-center pointer-events-none">
+        {clampedScore}%
+      </span>
+    </div>
+  )
+
   if (isLoading) {
+    if (compact) {
+      return (
+        <div
+          className="w-20 h-20 rounded-full bg-gray-200 animate-pulse"
+          aria-busy="true"
+          aria-label="Chargement du score de complétude du profil"
+        />
+      )
+    }
+
     return (
       <aside
         className="flex flex-col items-center font-sans w-full sm:w-auto sm:min-w-[140px]"
@@ -40,6 +92,10 @@ export default function ProfileCompletenessScore({
     )
   }
 
+  if (compact) {
+    return donut
+  }
+
   return (
     <aside className="font-sans w-full sm:w-auto sm:min-w-[140px]">
       <div
@@ -50,42 +106,7 @@ export default function ProfileCompletenessScore({
           Complétude du profil
         </h3>
 
-        <div className="relative w-20 h-20">
-          <svg
-            width={SIZE}
-            height={SIZE}
-            viewBox={`0 0 ${SIZE} ${SIZE}`}
-            className="-rotate-90"
-            role="progressbar"
-            aria-valuenow={clampedScore}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={`Complétude du profil : ${clampedScore} pour cent`}
-          >
-            <circle
-              cx={CENTER}
-              cy={CENTER}
-              r={RADIUS}
-              fill="none"
-              className="stroke-[#F5E6C2]"
-              strokeWidth={STROKE_WIDTH}
-            />
-            <circle
-              cx={CENTER}
-              cy={CENTER}
-              r={RADIUS}
-              fill="none"
-              className="stroke-[#0080A3] transition-all duration-500 ease-out"
-              strokeWidth={STROKE_WIDTH}
-              strokeLinecap="round"
-              strokeDasharray={CIRCUMFERENCE}
-              strokeDashoffset={strokeDashoffset}
-            />
-          </svg>
-          <span className="font-mono text-lg font-semibold text-gray-900 absolute inset-0 flex items-center justify-center pointer-events-none">
-            {clampedScore}%
-          </span>
-        </div>
+        {donut}
 
         {clampedScore === 100 ? (
           <div className="mt-4 flex items-center justify-center gap-1.5 text-emerald-600 animate-in fade-in zoom-in duration-500">

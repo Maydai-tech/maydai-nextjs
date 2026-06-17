@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { HardDrive, User, Building2, Phone, FileText, Pencil, X, Check, Loader2, AlertTriangle, Trash2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
@@ -30,6 +30,8 @@ function fieldInputClass(highlightMissing: boolean, isEmpty: boolean, extra = ''
 interface GeneralSectionProps {
   userEmail: string | undefined
   isEmailVerified?: boolean
+  /** Ouvre l’édition et surligne les champs manquants (ex. lien depuis le dashboard). */
+  highlightProfileOnMount?: boolean
 }
 
 interface ProfileData {
@@ -42,7 +44,11 @@ interface ProfileData {
   siren: string
 }
 
-export default function GeneralSection({ userEmail, isEmailVerified }: GeneralSectionProps) {
+export default function GeneralSection({
+  userEmail,
+  isEmailVerified,
+  highlightProfileOnMount = false,
+}: GeneralSectionProps) {
   const { getAccessToken } = useAuth()
   const { plan } = useUserPlan()
 
@@ -264,6 +270,13 @@ export default function GeneralSection({ userEmail, isEmailVerified }: GeneralSe
       needsEditOpen ? 200 : 100
     )
   }
+
+  const highlightOnMountDone = useRef(false)
+  useEffect(() => {
+    if (!highlightProfileOnMount || loadingProfile || highlightOnMountDone.current) return
+    highlightOnMountDone.current = true
+    handleHighlightRequest()
+  }, [highlightProfileOnMount, loadingProfile])
 
   const handleSave = async () => {
     setError('')
