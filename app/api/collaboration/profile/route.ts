@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { getUserByEmail, inviteUserByEmail, createProfileForUser } from '@/lib/invite-user'
 import { sendAccountCollaborationInvite } from '@/lib/email/mailjet'
+import { calculateAndSaveProfileCompleteness } from '@/lib/services/profileScoreService'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -131,6 +132,17 @@ export async function POST(request: NextRequest) {
     if (insertError) {
       logger.error('Failed to create user_profiles entry', insertError, createRequestContext(request))
       return NextResponse.json({ error: 'Failed to add collaborator' }, { status: 500 })
+    }
+
+    try {
+      await calculateAndSaveProfileCompleteness(user.id, supabase)
+    } catch (scoreError) {
+      logger.error(
+        'Failed to recalculate profile completeness after collaborator invite',
+        scoreError,
+        createRequestContext(request)
+      )
+      return NextResponse.json({ error: 'Failed to update profile completeness score' }, { status: 500 })
     }
 
     // Get collaborator details

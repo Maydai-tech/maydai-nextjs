@@ -133,6 +133,8 @@ export default function ProfilPage() {
     if (!mounted) return
 
     const section = searchParams.get('section')
+    const highlightProfile = searchParams.get('highlight') === 'profile'
+
     if (section) {
       const validSections: MenuSection[] = ['general', 'collaboration', 'subscription']
       if (validSections.includes(section as MenuSection)) {
@@ -143,6 +145,8 @@ export default function ProfilPage() {
           fetchCollaborators()
         }
       }
+    } else if (highlightProfile) {
+      setActiveSection('general')
     }
   }, [mounted, searchParams, user, loading])
 
@@ -243,6 +247,7 @@ export default function ProfilPage() {
           <GeneralSection
             userEmail={user.email}
             isEmailVerified={!!user.email_confirmed_at}
+            highlightProfileOnMount={searchParams.get('highlight') === 'profile'}
           />
         )
       case 'collaboration':
