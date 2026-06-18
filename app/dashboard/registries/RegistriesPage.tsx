@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/lib/auth'
+import { supabase } from '@/lib/supabase'
 import { useApiCall } from '@/lib/api-client-legacy'
 import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
 import {
@@ -95,7 +96,7 @@ export default function RegistriesPage({
   const [companies, setCompanies] = useState<Company[]>(() =>
     normalizeCompanies(initialCompanies)
   )
-  const [dashboardMetrics] = useState(initialMetrics)
+  const [dashboardMetrics, setDashboardMetrics] = useState(initialMetrics)
   const [isRefetching, setIsRefetching] = useState(false)
   const [showLimitModal, setShowLimitModal] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -160,6 +161,33 @@ export default function RegistriesPage({
       router.push('/login')
     }
   }, [user, loading, router, mounted])
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const refetchProfileCompleteness = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('completeness_score')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (error) {
+        console.error('[Dashboard] Échec relecture completeness_score:', error)
+        return
+      }
+
+      if (data?.completeness_score == null) return
+
+      setDashboardMetrics((prev) =>
+        prev.profileCompleteness === data.completeness_score
+          ? prev
+          : { ...prev, profileCompleteness: data.completeness_score }
+      )
+    }
+
+    void refetchProfileCompleteness()
+  }, [user?.id])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

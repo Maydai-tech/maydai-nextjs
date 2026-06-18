@@ -71,6 +71,26 @@ async function persistProfileCompletenessScore(
 }
 
 /**
+ * Lit completeness_score en base via service-role (fiable côté SSR dashboard).
+ * À appeler uniquement après vérification auth (userId issu de getUser()).
+ */
+export async function getProfileCompletenessScoreFromDb(userId: string): Promise<number> {
+  const supabaseAdmin = getServiceRoleClient()
+
+  const { data, error } = await supabaseAdmin
+    .from('profiles')
+    .select('completeness_score')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Échec lecture completeness_score: ${error.message}`)
+  }
+
+  return data?.completeness_score ?? 0
+}
+
+/**
  * Recalcule et persiste profiles.completeness_score pour un utilisateur.
  * Même logique que scripts/backfill-completeness-scores.ts et PATCH /api/profile.
  */
