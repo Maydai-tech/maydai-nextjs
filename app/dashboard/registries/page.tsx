@@ -1,11 +1,14 @@
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getUserAccessibleCompanies } from '@/lib/services/companyAccessService'
+import { getProfileCompletenessScoreFromDb } from '@/lib/services/profileScoreService'
 import {
   DashboardMetricsSchema,
   type DashboardMetrics,
 } from '@/lib/validations/dashboard-metrics'
 import RegistriesPage, { type Company } from './RegistriesPage'
+
+export const dynamic = 'force-dynamic'
 
 const DEFAULT_METRICS: DashboardMetrics = {
   profileCompleteness: 0,
@@ -22,8 +25,11 @@ async function loadDashboardData(
   let initialCompanies: Company[] = []
 
   try {
-    const [profileResult, accessResult, collaboratorsResult] = await Promise.all([
-      supabase.from('profiles').select('completeness_score').eq('id', userId).maybeSingle(),
+    const [profileCompletenessResult, accessResult, collaboratorsResult] = await Promise.all([
+      getProfileCompletenessScoreFromDb(userId).catch((error) => {
+        console.error('[Dashboard SSR] completeness_score (service-role):', error)
+        return 0
+      }),
       getUserAccessibleCompanies(userId, supabase).catch((error) => {
         console.error('[Dashboard SSR]', error)
         return { companyIdsArray: [] as string[], roleMap: new Map<string, string>() }
@@ -34,17 +40,11 @@ async function loadDashboardData(
         .eq('inviter_user_id', userId),
     ])
 
-    if (profileResult.error) {
-      console.error('[Dashboard SSR]', profileResult.error)
-    }
-
     if (collaboratorsResult.error) {
       console.error('[Dashboard SSR]', collaboratorsResult.error)
     }
 
-    const profileCompleteness = profileResult.error
-      ? 0
-      : profileResult.data?.completeness_score ?? 0
+    const profileCompleteness = profileCompletenessResult
 
     const { companyIdsArray, roleMap } = accessResult
     const activeRegistries = companyIdsArray.length

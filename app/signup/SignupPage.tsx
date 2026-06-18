@@ -376,6 +376,7 @@ export default function SignupPage() {
         console.error('[gtm] Signup event tracking failed:', gtmErr)
       }
 
+      router.refresh()
       router.push('/dashboard/registries')
     } catch (err) {
       console.error('Complete signup error:', err)

@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { sendGoogleAdsOfflineSignupConversion } from '@/lib/google-ads/offline-signup-conversion'
@@ -184,6 +185,7 @@ export async function POST(request: NextRequest) {
     }
 
     await calculateAndSaveProfileCompleteness(user.id, supabase)
+    revalidatePath('/dashboard/registries')
 
     // Intention de forfait (URL ?plan=) — re-valider, ignorer si invalide (ne bloque pas l’inscription)
     if (rawPlanIntent !== undefined && rawPlanIntent !== null && rawPlanIntent !== '') {
