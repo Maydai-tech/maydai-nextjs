@@ -8,4 +8,4 @@ Disallow:
 Disallow: /_next/
 
 # Point to the sitemap (use the full URL)
-Sitemap: https://maydai.io/sitemap.xml
+Sitemap: https://www.maydai.io/sitemap.xml

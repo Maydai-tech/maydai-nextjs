@@ -205,6 +205,7 @@ export const MARKETING_HEADER_CTAS: MarketingHeaderCtas = {
 export const MARKETING_FOOTER_NAVIGATION: readonly MarketingFooterLink[] = [
   { label: 'Sécurité', href: '/securite' },
   { label: 'Fonctionnalités', href: '/fonctionnalites' },
+  { label: 'Impact Environnemental', href: '/impact-environnemental' },
   { label: 'Tarifs', href: '/tarifs' },
   { label: 'À propos', href: '/a-propos' },
   { label: 'Contact', href: '/contact' },

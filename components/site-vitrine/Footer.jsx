@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { MARKETING_FOOTER_NAVIGATION } from '@/config/marketing-navigation';
 
 export default function Footer() {
@@ -16,9 +17,9 @@ export default function Footer() {
         </div>
         <nav className="flex flex-wrap justify-center gap-4 md:gap-6 text-gray-500 text-sm">
           {MARKETING_FOOTER_NAVIGATION.map((item) => (
-            <a key={item.label} href={item.href} className="hover:text-primary">
+            <Link key={item.label} href={item.href} className="hover:text-primary">
               {item.label}
-            </a>
+            </Link>
           ))}
         </nav>
         <div className="flex flex-col items-center md:items-end gap-2">
