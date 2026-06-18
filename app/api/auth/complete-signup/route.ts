@@ -5,7 +5,7 @@ import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { planIdSchema } from '@/lib/validations/pricing'
 import { CompleteSignupSchema } from '@/lib/validations/signup'
-import { calculateAndSaveProfileCompleteness } from '@/lib/services/profileScoreService'
+import { calculateAndSaveProfileCompleteness, computeProfileCompletenessScoreFromRow } from '@/lib/services/profileScoreService'
 
 const ACQUISITION_FIELD_MAX_LEN = 512
 
@@ -152,6 +152,18 @@ export async function POST(request: NextRequest) {
       utm_source,
       utm_medium,
       utm_campaign,
+      completeness_score: computeProfileCompletenessScoreFromRow(
+        {
+          first_name: firstName?.trim() ?? null,
+          last_name: lastName?.trim() ?? null,
+          company_name: companyName?.trim() ?? null,
+          industry: mainIndustryId?.trim() ?? null,
+          sub_category_id: subCategoryId?.trim() ?? null,
+          phone: cleanedPhone,
+          siren: cleanedSiren,
+        },
+        false
+      ),
       updated_at: new Date().toISOString(),
     }
 
