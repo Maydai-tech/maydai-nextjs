@@ -34,6 +34,20 @@ describe('Scoring de Complétude - Moteur Isolé', () => {
       })
       expect(score).toBe(100)
     })
+
+    it('devrait retourner 60 pour un profil inscription sans phone ni siren (null Supabase)', () => {
+      const score = calculateProfileCompletenessScore({
+        first_name: 'Tomi',
+        last_name: 'Test',
+        company_name: 'MaydA',
+        industry: 'health',
+        sub_category_id: 'pharma',
+        phone: null,
+        siren: null,
+        has_collaborators: false,
+      })
+      expect(score).toBe(60)
+    })
   })
 
   describe('Registry Completeness', () => {
