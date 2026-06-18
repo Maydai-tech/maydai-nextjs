@@ -5,6 +5,7 @@ import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { planIdSchema } from '@/lib/validations/pricing'
 import { CompleteSignupSchema } from '@/lib/validations/signup'
+import { calculateAndSaveProfileCompleteness } from '@/lib/services/profileScoreService'
 
 const ACQUISITION_FIELD_MAX_LEN = 512
 
@@ -169,6 +170,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    await calculateAndSaveProfileCompleteness(user.id, supabase)
 
     // Intention de forfait (URL ?plan=) — re-valider, ignorer si invalide (ne bloque pas l’inscription)
     if (rawPlanIntent !== undefined && rawPlanIntent !== null && rawPlanIntent !== '') {
