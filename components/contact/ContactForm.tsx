@@ -17,6 +17,7 @@ type ContactFormProps = {
   defaultEmail?: string
   defaultFirstName?: string
   defaultLastName?: string
+  alwaysExpanded?: boolean
 }
 
 type ContactFormState = {
@@ -54,6 +55,7 @@ export default function ContactForm({
   defaultEmail,
   defaultFirstName,
   defaultLastName,
+  alwaysExpanded,
 }: ContactFormProps) {
   const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
   const [subject, setSubject] = useState('')
@@ -142,7 +144,7 @@ export default function ContactForm({
         <FieldError id="subject-error" messages={fieldErrors.subject} />
       </div>
 
-      {subject !== '' ? (
+      {subject !== '' || alwaysExpanded ? (
         <div className="animate-in fade-in slide-in-from-top-4 mt-5 space-y-5 border-t border-slate-100 pt-5 duration-500 ease-out">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>

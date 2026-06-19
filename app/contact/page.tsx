@@ -60,7 +60,7 @@ export default function ContactPage() {
 
                 <div className="flex flex-col justify-center p-8 lg:p-10">
                   <div className="w-full">
-                    <ContactForm />
+                    <ContactForm alwaysExpanded />
                   </div>
 
                   <p className="mt-4 text-center text-xs text-gray-500">
