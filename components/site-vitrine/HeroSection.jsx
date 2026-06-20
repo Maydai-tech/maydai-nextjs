@@ -16,14 +16,13 @@ export default function HeroSection() {
           Démarrer l&apos;Audit AI Act
         </Link>
       </div>
-      {/* Logo conformité IA - Optimisé pour LCP */}
+      {/* Logo conformité IA - décoratif */}
       <Image 
         src="/content/compliance-ai-eu.webp" 
         alt="Logo conformité IA" 
         width={256}
         height={256}
         className="absolute right-8 bottom-0 w-40 md:w-64 h-auto opacity-30 pointer-events-none select-none"
-        priority
         sizes="(max-width: 768px) 160px, 256px"
       />
     </section>

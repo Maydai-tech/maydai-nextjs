@@ -4,6 +4,26 @@
   --color-primary: #0080A3;
   --color-primary-light: #00A3CC;
   --color-primary-dark: #006280;
+  --animate-fade-in-up: fade-in-up 700ms ease-out both;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(2rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 :root {

@@ -103,15 +103,15 @@ export default function Hero() {
 
           <div className="mt-12">
             {/* Desktop screenshot */}
-            <div className="hidden sm:block mx-auto max-w-5xl relative">
+            <div className="hidden sm:block mx-auto max-w-5xl w-full">
               <Image
-                src="/screenshots/dashboard-conformite-ai-act-maydai.webp"
-                alt="Dashboard plateforme MaydAI - Évaluation des risques AI Act"
-                width={1200}
-                height={675}
+                src="/screenshots/dashboard-ai-act.webp"
+                alt="Tableau de bord MaydAI - Vue détaillée de l'évaluation des risques et des scores de conformité AI Act"
+                width={2021}
+                height={2324}
+                sizes="(max-width: 1024px) 100vw, 1024px"
                 priority={true}
-                style={{ width: '100%', height: 'auto' }}
-                className="rounded-xl shadow-2xl border border-gray-100 object-cover"
+                className="w-full h-auto rounded-2xl overflow-hidden border border-slate-200/60 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.02)]"
               />
             </div>
 
