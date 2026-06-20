@@ -48,13 +48,12 @@ export default function ContactPage() {
               <div className="grid min-h-[600px] grid-cols-1 lg:grid-cols-2">
                 <div className="hidden items-center justify-center bg-gray-100 p-4 lg:flex">
                   <Image
-                    src="/screenshots/dashboard-conformite-ai-act-maydai.webp"
-                    alt="Dashboard plateforme MaydAI - Évaluation des risques AI Act"
-                    width={1200}
-                    height={675}
-                    priority
-                    className="h-auto w-full rounded-xl border border-gray-100 object-cover shadow-2xl"
-                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    src="/screenshots/dashboard-ai-act.webp"
+                    alt="Tableau de bord MaydAI - Vue détaillée de l'évaluation des risques et des scores de conformité AI Act"
+                    width={2021}
+                    height={2324}
+                    sizes="(max-width: 1024px) 100vw, 1024px"
+                    className="w-full h-auto rounded-2xl overflow-hidden border border-slate-200/60 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.02)]"
                   />
                 </div>
 
