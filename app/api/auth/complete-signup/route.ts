@@ -210,20 +210,18 @@ export async function POST(request: NextRequest) {
         (user.email?.trim().toLowerCase() ||
           (typeof body.email === 'string' ? body.email.trim().toLowerCase() : '')) ||
         ''
-      void (async () => {
-        try {
-          await sendGoogleAdsOfflineSignupConversion({
-            clickId: gclid,
-            conversionValue: 0,
-            ...(emailForConversion ? { email: emailForConversion } : {}),
-          })
-        } catch (err) {
-          console.error(
-            '[complete-signup] Google Ads offline conversion (non bloquant):',
-            err
-          )
-        }
-      })()
+      try {
+        await sendGoogleAdsOfflineSignupConversion({
+          clickId: gclid,
+          conversionValue: 0,
+          ...(emailForConversion ? { email: emailForConversion } : {}),
+        })
+      } catch (err) {
+        console.error(
+          '[complete-signup] Google Ads offline conversion (non bloquant):',
+          err
+        )
+      }
     }
 
     return NextResponse.json({ profile }, { status: 200 })

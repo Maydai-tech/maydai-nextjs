@@ -88,11 +88,15 @@ export async function POST(request: NextRequest) {
         click_id: leadAfter.click_id,
       })
     ) {
-      await sendGoogleAdsOfflineSignupConversion({
-        clickId: String(leadAfter.click_id),
-        conversionValue: 0,
-        email: leadEmail,
-      });
+      try {
+        await sendGoogleAdsOfflineSignupConversion({
+          clickId: String(leadAfter.click_id),
+          conversionValue: 0,
+          email: leadEmail,
+        })
+      } catch (err) {
+        console.error('[link-to-user] Google Ads offline conversion (non bloquant):', err)
+      }
     }
 
     return NextResponse.json({ success: true }, { status: 200 });
