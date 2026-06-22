@@ -236,8 +236,16 @@ export async function sendGoogleAdsConversion({
     const hashedEmail =
       typeof email === 'string' ? hashEmailForGoogleAdsClickConversion(email) : null
 
+    const clickIdLower = gclid.toLowerCase()
+    const clickIdentifierPayload: Record<string, string> =
+      clickIdLower.startsWith('wbraid')
+        ? { wbraid: gclid }
+        : clickIdLower.startsWith('gbraid')
+          ? { gbraid: gclid }
+          : { gclid }
+
     const clickPayload: Record<string, unknown> = {
-      gclid,
+      ...clickIdentifierPayload,
       conversion_action: conversionAction,
       conversion_date_time: formatConversionDateTime(new Date()),
       conversion_value: conversionValue,

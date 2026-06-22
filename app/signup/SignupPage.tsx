@@ -376,6 +376,9 @@ export default function SignupPage() {
         console.error('[gtm] Signup event tracking failed:', gtmErr)
       }
 
+      // Temporisation réseau stricte (500ms) pour garantir l'envoi du payload GTM avant la destruction du contexte par le routeur Next.js
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
       router.refresh()
       router.push('/dashboard/registries')
     } catch (err) {

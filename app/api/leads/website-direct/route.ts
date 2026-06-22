@@ -117,10 +117,14 @@ export async function POST(request: NextRequest) {
         click_id: row.click_id,
       })
     ) {
-      await sendGoogleAdsOfflineSignupConversion({
-        clickId: row.click_id as string,
-        conversionValue: 0,
-      })
+      try {
+        await sendGoogleAdsOfflineSignupConversion({
+          clickId: row.click_id as string,
+          conversionValue: 0,
+        })
+      } catch (err) {
+        console.error('[website-direct] Google Ads offline conversion (non bloquant):', err)
+      }
     }
 
     return NextResponse.json(
