@@ -2,6 +2,11 @@ import { createHash } from 'node:crypto'
 
 import { GoogleAdsApi, type Customer } from 'google-ads-api'
 
+import {
+  uploadClickConversionsViaRest,
+  type RestClickConversion,
+} from '@/lib/google-ads/oauth-client'
+
 const LOG_PREFIX = '[google-ads-api]'
 
 function hashEmailForGoogleAdsClickConversion(email: string): string | null {
@@ -244,32 +249,29 @@ export async function sendGoogleAdsConversion({
           ? { gbraid: gclid }
           : { gclid }
 
-    const clickPayload: Record<string, unknown> = {
+    const restConversion: RestClickConversion = {
       ...clickIdentifierPayload,
-      conversion_action: conversionAction,
-      conversion_date_time: formatConversionDateTime(new Date()),
-      conversion_value: conversionValue,
-      currency_code: currencyCode,
+      conversionAction,
+      conversionDateTime: formatConversionDateTime(new Date()),
+      conversionValue,
+      currencyCode,
     }
     if (order_id) {
-      clickPayload.order_id = order_id
+      restConversion.orderId = order_id
     }
     if (hashedEmail) {
-      clickPayload.user_identifiers = [{ hashed_email: hashedEmail }]
+      restConversion.userIdentifiers = [{ hashedEmail: hashedEmail }]
     }
 
-    const response = await customer.conversionUploads.uploadClickConversions(
-      {
-        customer_id: env.customerId,
-        partial_failure: true,
-        validate_only: validateOnly,
-        conversions: [clickPayload],
-      } as never
-    )
+    // REST + OAuth2 explicite : le chemin gRPC de google-ads-api déclenche
+    // google-gax → GoogleAuth.getClient() → sonde metadata (169.254.169.254).
+    const response = await uploadClickConversionsViaRest(env, {
+      partialFailure: true,
+      validateOnly,
+      conversions: [restConversion],
+    })
 
-    const partial =
-      (response as { partial_failure_error?: unknown }).partial_failure_error ??
-      (response as { partialFailureError?: unknown }).partialFailureError
+    const partial = response.partialFailureError
 
     if (partial) {
       console.error(`${LOG_PREFIX} partial_failure`, partial)
