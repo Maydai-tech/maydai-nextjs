@@ -1,6 +1,9 @@
 import 'dotenv/config'
 import { sendGoogleAdsConversion } from '../lib/google-ads/conversions'
-import { GOOGLE_ADS_OFFLINE_SIGNUP_CONVERSION_NAME } from '../lib/google-ads/offline-signup-conversion'
+import {
+  GOOGLE_ADS_OFFLINE_SIGNUP_CONVERSION_NAME,
+  GOOGLE_ADS_OFFLINE_SIGNUP_CONVERSION_VALUE,
+} from '../lib/google-ads/offline-signup-conversion'
 
 /**
  * Script de test isolé (Dry Run) pour l'API Google Ads OCI.
@@ -22,7 +25,7 @@ async function main() {
     const success = await sendGoogleAdsConversion({
       clickId: realGclidFromDb,
       conversionName: conversionName,
-      conversionValue: 0,
+      conversionValue: GOOGLE_ADS_OFFLINE_SIGNUP_CONVERSION_VALUE,
       currencyCode: 'EUR',
       email: testEmail,
       validateOnly: true, // Empêche l'enregistrement réel de la conversion

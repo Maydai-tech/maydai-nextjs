@@ -15,6 +15,9 @@ const DEDUP_TABLE = 'google_ads_offline_import_dedup'
 export const GOOGLE_ADS_OFFLINE_SIGNUP_CONVERSION_NAME =
   'hors connexion (importation)' as const
 
+/** Valeur VBB envoyée à Google Ads pour l’inscription (OCI). */
+export const GOOGLE_ADS_OFFLINE_SIGNUP_CONVERSION_VALUE = 30 as const
+
 export type OfflineSignupConversionResult =
   | 'sent'
   | 'skipped_duplicate'
@@ -72,9 +75,10 @@ async function releaseOfflineSignupClickId(
 
 export type SendGoogleAdsOfflineSignupConversionInput = Omit<
   SendGoogleAdsConversionInput,
-  'conversionName' | 'clickId'
+  'conversionName' | 'clickId' | 'conversionValue'
 > & {
   clickId: string
+  conversionValue?: number
 }
 
 /**
@@ -108,7 +112,8 @@ export async function sendGoogleAdsOfflineSignupConversion(
   const sent = await sendGoogleAdsConversion({
     clickId,
     conversionName: GOOGLE_ADS_OFFLINE_SIGNUP_CONVERSION_NAME,
-    conversionValue: input.conversionValue,
+    conversionValue:
+      input.conversionValue ?? GOOGLE_ADS_OFFLINE_SIGNUP_CONVERSION_VALUE,
     currencyCode: input.currencyCode,
     orderId: input.orderId,
     email: input.email,
