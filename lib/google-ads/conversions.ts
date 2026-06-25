@@ -265,6 +265,9 @@ export async function sendGoogleAdsConversion({
 
     // REST + OAuth2 explicite : le chemin gRPC de google-ads-api déclenche
     // google-gax → GoogleAuth.getClient() → sonde metadata (169.254.169.254).
+    console.log(
+      `${LOG_PREFIX} uploadClickConversions — action="${conversionName}" conversionValue=${conversionValue} ${currencyCode}`
+    )
     const response = await uploadClickConversionsViaRest(env, {
       partialFailure: true,
       validateOnly,

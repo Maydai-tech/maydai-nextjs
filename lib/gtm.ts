@@ -65,6 +65,11 @@ interface ContactFormSuccessEvent {
   event: 'contact_form_success'
 }
 
+interface DownloadPdfEvent {
+  event: 'download_pdf'
+  usecase_id: string
+}
+
 /** CTA landing conformité IA (header / hero / footer). */
 export type LandingCtaIntent = 'essai_gratuit' | 'demande_demo'
 export type LandingCtaLocation = 'header' | 'hero' | 'footer'
@@ -102,6 +107,7 @@ export type GTMEvent =
   | LimitReachedEvent
   | StorageAlertEvent
   | ContactFormSuccessEvent
+  | DownloadPdfEvent
   | ClickButtonLandingEvent
   | GoogleAdsEnhancedConversionDataLayerEvent
   | CustomEvent
@@ -248,6 +254,17 @@ export function trackUseCaseCreation(registryId: string, aiCategory: string): Pr
     event: 'usecase_creation',
     registry_id: registryId,
     ai_category: aiCategory,
+  })
+}
+
+export function sendDownloadPdfEvent(usecaseId: string): Promise<void> {
+  const trimmed = usecaseId.trim()
+  if (!trimmed) {
+    return Promise.resolve()
+  }
+  return sendGTMEventAfterConsentDelay({
+    event: 'download_pdf',
+    usecase_id: trimmed,
   })
 }
 

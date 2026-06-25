@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useAuth } from '@/lib/auth'
+import { sendDownloadPdfEvent } from '@/lib/gtm'
 
 interface UsePDFExportReturn {
   isGenerating: boolean
@@ -96,6 +97,12 @@ export function usePDFExport(useCaseId: string): UsePDFExportReturn {
       document.body.removeChild(link)
 
       window.URL.revokeObjectURL(url)
+
+      try {
+        await sendDownloadPdfEvent(useCaseId)
+      } catch (gtmErr) {
+        console.error('[gtm] download_pdf event tracking failed:', gtmErr)
+      }
 
       setSuccessMessage('Téléchargement du PDF lancé. Vérifiez votre dossier de téléchargements.')
       successTimerRef.current = setTimeout(() => {

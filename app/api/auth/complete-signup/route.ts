@@ -213,7 +213,6 @@ export async function POST(request: NextRequest) {
       try {
         await sendGoogleAdsOfflineSignupConversion({
           clickId: gclid,
-          conversionValue: 0,
           ...(emailForConversion ? { email: emailForConversion } : {}),
         })
       } catch (err) {
