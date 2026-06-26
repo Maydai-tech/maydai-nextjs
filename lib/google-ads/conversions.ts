@@ -135,6 +135,20 @@ export function leadQualifiesForGoogleAdsClickConversion(row: {
   return source === 'google_ads_form' || source === 'website_direct'
 }
 
+/**
+ * Éligibilité OCI inscription « hors connexion (importation) » :
+ * uniquement leads issus du Lead Form Asset Google Ads (webhook).
+ */
+export function leadQualifiesForGoogleAdsOfflineSignupConversion(row: {
+  source?: string | null
+  click_id?: string | null
+}): boolean {
+  const source = (row.source ?? '').trim()
+  const clickId = (row.click_id ?? '').trim()
+  if (!clickId) return false
+  return source === 'google_ads_form'
+}
+
 async function resolveConversionActionResourceName(
   customer: Customer,
   conversionName: string
