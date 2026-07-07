@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import {
   isChecklistGovEnterpriseQuestionCode,
   isChecklistGovUsecaseQuestionCode,
-} from '@/app/usecases/[id]/utils/bpgv-transparency-checklist-save'
+} from '@/app/(saas)/usecases/[id]/utils/bpgv-transparency-checklist-save'
 import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
 import { recordUseCaseHistory } from '@/lib/usecase-history'
 

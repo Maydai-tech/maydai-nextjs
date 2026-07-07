@@ -5,7 +5,7 @@
 import {
   collectV3ActiveQuestionCodes,
   computeV3UsecaseQuestionnaireFields,
-} from '@/app/usecases/[id]/utils/questionnaire-v3-graph'
+} from '@/app/(saas)/usecases/[id]/utils/questionnaire-v3-graph'
 import { calculateMaxCategoryScoresForActiveQuestionCodes } from '@/lib/score-category-max'
 import { QUESTIONNAIRE_VERSION_V3, normalizeQuestionnaireVersion } from '@/lib/questionnaire-version'
 import { dbResponsesToQuestionnaireAnswers } from '@/lib/scoring-v2-server'

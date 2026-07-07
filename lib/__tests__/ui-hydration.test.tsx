@@ -3,10 +3,10 @@
  */
 import React, { useEffect, useState } from 'react'
 import { render, screen, waitFor, act } from '@testing-library/react'
-import { QuestionRenderer } from '@/app/usecases/[id]/components/evaluation/QuestionRenderer'
-import { useEvaluation } from '@/app/usecases/[id]/hooks/useEvaluation'
-import { loadQuestions } from '@/app/usecases/[id]/utils/questions-loader'
-import type { QuestionnairePathMode } from '@/app/usecases/[id]/utils/questionnaire'
+import { QuestionRenderer } from '@/app/(saas)/usecases/[id]/components/evaluation/QuestionRenderer'
+import { useEvaluation } from '@/app/(saas)/usecases/[id]/hooks/useEvaluation'
+import { loadQuestions } from '@/app/(saas)/usecases/[id]/utils/questions-loader'
+import type { QuestionnairePathMode } from '@/app/(saas)/usecases/[id]/utils/questionnaire'
 import {
   simulateGetResponsesAfterMerge,
   simulateShortPathSavePipeline,

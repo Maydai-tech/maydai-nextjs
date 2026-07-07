@@ -8,7 +8,7 @@ import {
   type UseCaseHistoryEventType,
 } from '@/lib/usecase-history'
 import type { ReportCanonicalItem } from '@/lib/report-canonical-items'
-import type { PDFReportData, UseCaseNextSteps } from '@/app/usecases/[id]/components/pdf/types'
+import type { PDFReportData, UseCaseNextSteps } from '@/app/(saas)/usecases/[id]/components/pdf/types'
 import type {
   ActivityHistoryItem,
   PdfDocumentItem,

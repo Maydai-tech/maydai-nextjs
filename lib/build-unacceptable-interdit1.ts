@@ -1,4 +1,4 @@
-import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
+import questionsData from '@/app/(saas)/usecases/[id]/data/questions-with-scores.json'
 import {
   UNACCEPTABLE_INTERDIT1_FALLBACK,
   UNACCEPTABLE_INTERDIT1_INTRO,

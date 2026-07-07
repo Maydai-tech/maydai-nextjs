@@ -13,7 +13,7 @@ import {
   getCanonicalActionByReportSlot,
   resolveCanonicalDocType,
 } from '@/lib/canonical-actions'
-import { getEarnedPoints, getPotentialPoints } from '@/app/dashboard/[id]/todo-list/utils/todo-helpers'
+import { getEarnedPoints, getPotentialPoints } from '@/app/(saas)/dashboard/[id]/todo-list/utils/todo-helpers'
 import { getReportPlanNarrativeLine } from '@/lib/report-plan-ui'
 import type { RiskLevelCode } from '@/lib/risk-level'
 import type { SlotStatus, SlotStatusMap } from '@/lib/slot-statuses'

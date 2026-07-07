@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { renderToBuffer, Document } from '@react-pdf/renderer'
 import React from 'react'
-import { PDFDocument } from '@/app/usecases/[id]/components/pdf/PDFDocument'
-import { PDFReportData } from '@/app/usecases/[id]/components/pdf/types'
-import { resolveAuthoritativeRiskCodeForPdf } from '@/app/usecases/[id]/components/pdf/pdf-risk-logic'
+import { PDFDocument } from '@/app/(saas)/usecases/[id]/components/pdf/PDFDocument'
+import { PDFReportData } from '@/app/(saas)/usecases/[id]/components/pdf/types'
+import { resolveAuthoritativeRiskCodeForPdf } from '@/app/(saas)/usecases/[id]/components/pdf/pdf-risk-logic'
 import { REPORT_STANDARD_SLOT_KEYS_ORDERED } from '@/lib/canonical-actions'
 import { buildAllStandardPlanCanonicalItems } from '@/lib/report-canonical-items'
 import { logger, createRequestContext } from '@/lib/secure-logger'
@@ -214,7 +214,7 @@ export async function GET(
     // Calculer le score complet pour obtenir les category_scores avec gestion d'erreur
     let fullScoreData
     try {
-      const { calculateScore } = await import('@/app/usecases/[id]/utils/score-calculator')
+      const { calculateScore } = await import('@/app/(saas)/usecases/[id]/utils/score-calculator')
       const dbPdfPath = (useCase as { path_mode?: string | null }).path_mode
       const v3PathModeForPdf =
         pdfQuestionnaireVersion === QUESTIONNAIRE_VERSION_V3

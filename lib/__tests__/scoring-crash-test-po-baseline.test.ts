@@ -22,7 +22,7 @@ jest.mock('@/lib/supabase', () => ({
   createSupabaseClient: jest.fn(),
 }))
 
-import { calculateScore } from '@/app/usecases/[id]/utils/score-calculator'
+import { calculateScore } from '@/app/(saas)/usecases/[id]/utils/score-calculator'
 import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
 import { buildV3ScoringContextFromDbResponses } from '@/lib/scoring-v3-server'
 import { calculateBaseScore, type BaseScoreResult, type UserResponse } from '@/lib/score-calculator-simple'
@@ -33,20 +33,20 @@ import {
   V3_SHORT_SOCIAL_ENV_ID,
   V3_SHORT_TRANSPARENCE_ID,
   V3_SHORT_USAGE_ID,
-} from '@/app/usecases/[id]/utils/questionnaire-v3-graph'
+} from '@/app/(saas)/usecases/[id]/utils/questionnaire-v3-graph'
 import {
   collectE5DeclaredOptionCodes,
   collectE6DeclaredOptionCodes,
   E6_TRANSPARENCY_PACK_CONTENT_CODE,
   E6_TRANSPARENCY_PACK_INTERACTION_CODE,
-} from '@/app/usecases/[id]/utils/bpgv-transparency-checklist-save'
+} from '@/app/(saas)/usecases/[id]/utils/bpgv-transparency-checklist-save'
 import {
   declarativeAnswersAfterEnterpriseStage,
   declarativeAnswersAfterSocialEnvStage,
   declarativeAnswersAfterTransparenceStage,
   declarativeAnswersAfterUsageStage,
   normalizeShortPathStageSelection,
-} from '@/app/usecases/[id]/utils/v3-short-path-stages'
+} from '@/app/(saas)/usecases/[id]/utils/v3-short-path-stages'
 
 const USECASE_ID = 'crash-test-po-baseline'
 
