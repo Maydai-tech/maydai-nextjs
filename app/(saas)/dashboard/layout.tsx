@@ -1,4 +1,10 @@
 import type { Metadata } from 'next'
+import { Geist_Mono } from 'next/font/google'
+
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
+})
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -9,5 +15,5 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  return children
+  return <div className={geistMono.variable}>{children}</div>
 }

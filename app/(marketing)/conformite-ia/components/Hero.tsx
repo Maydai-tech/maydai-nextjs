@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, AppWindow } from 'lucide-react'
 import TrustBadges from '@/components/ui/TrustBadges'
-import { useAIActCountdown } from '@/app/conformite-ia/hooks/useAIActCountdown'
+import { useAIActCountdown } from '@/app/(marketing)/conformite-ia/hooks/useAIActCountdown'
 import { sendLandingCtaClick } from '@/lib/gtm'
 import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
 

@@ -16,7 +16,7 @@ import OTPVerification from '@/components/auth/OTPVerification'
 import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
 import SecurityLogosGrid from '@/components/ui/SecurityLogosGrid'
 import { User, Building2, ArrowRight, Mail, Info, Lock, ShieldCheck } from 'lucide-react'
-import { useAIActCountdown } from '@/app/conformite-ia/hooks/useAIActCountdown'
+import { useAIActCountdown } from '@/app/(marketing)/conformite-ia/hooks/useAIActCountdown'
 import {
   readStoredAttribution,
   hasMeaningfulAttribution,

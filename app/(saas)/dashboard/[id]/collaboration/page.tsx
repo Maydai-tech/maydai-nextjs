@@ -8,7 +8,7 @@ import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaborat
 import RegistryCollaboratorList from '@/components/Collaboration/RegistryCollaboratorList';
 import ConfirmRemoveCollaboratorModal from '@/components/Collaboration/ConfirmRemoveCollaboratorModal';
 import PlanLimitModal from '@/components/Shared/PlanLimitModal';
-import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan';
+import { useUserPlan } from '@/app/(saas)/abonnement/hooks/useUserPlan';
 import { trackLimitReached } from '@/lib/gtm';
 
 interface Company {

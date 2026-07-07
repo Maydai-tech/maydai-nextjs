@@ -1,11 +1,9 @@
-import Header from '@/components/site-vitrine/Header'
-import Footer from '@/components/site-vitrine/Footer'
-import MarketingProviders from '@/components/MarketingProviders'
+import RootProviders from '@/components/RootProviders'
 import GTMConsentHeadScripts from '@/components/GTMConsentHeadScripts'
 import { getNonce } from '@/lib/csp-nonce'
 import { shouldLoadOfficialGTM } from '@/lib/should-load-official-gtm'
 
-export default async function MarketingLayout({
+export default async function SaasLayout({
   children,
 }: {
   children: React.ReactNode
@@ -19,11 +17,9 @@ export default async function MarketingLayout({
     <>
       {nonce && <meta name="csp-nonce" content={nonce} />}
       <GTMConsentHeadScripts loadOfficialGTM={loadOfficialGTM} nonce={nonce} />
-      <MarketingProviders loadOfficialGTM={loadOfficialGTM} nonce={nonce}>
-      <Header />
-      {children}
-      <Footer />
-    </MarketingProviders>
+      <RootProviders loadOfficialGTM={loadOfficialGTM} nonce={nonce}>
+        {children}
+      </RootProviders>
     </>
   )
 }

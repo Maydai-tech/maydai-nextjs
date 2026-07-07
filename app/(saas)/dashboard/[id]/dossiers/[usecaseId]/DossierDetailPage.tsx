@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
-import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
+import { useUserPlan } from '@/app/(saas)/abonnement/hooks/useUserPlan'
 import { useApiCall } from '@/lib/api-client-legacy'
 import { ArrowLeft, FileText, Check, Loader2, Info, ChevronDown, X, AlertTriangle, RotateCcw, Pencil, Edit, UserPlus } from 'lucide-react'
 import Toast from '@/components/Toast'
@@ -14,7 +14,7 @@ import ScoreEvolutionPopup from '@/components/ScoreEvolutionPopup'
 import DateEditStep from '@/components/UnacceptableCase/DateEditStep'
 import ContactHelpCard from '@/components/UnacceptableCase/ContactHelpCard'
 import MarkdownText from '@/components/Shared/MarkdownText'
-import RegistreMaydaiBadge from '@/app/dashboard/[id]/components/RegistreMaydaiBadge'
+import RegistreMaydaiBadge from '@/app/(saas)/dashboard/[id]/components/RegistreMaydaiBadge'
 import { formatDate, formatDateForInput } from '@/lib/utils/dateFormatters'
 import {
   getDeploymentUrgency,
@@ -31,14 +31,14 @@ import {
 import {
   getUnacceptableActionDocTypesOrdered,
   getUnacceptablePrimaryDocumentType
-} from '@/app/dashboard/[id]/todo-list/utils/todo-helpers'
+} from '@/app/(saas)/dashboard/[id]/todo-list/utils/todo-helpers'
 import {
   getClassificationRiskDisplayLabel,
   getClassificationRiskPillClasses,
 } from '@/lib/classification-risk-display'
-import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/app/(saas)/usecases/[id]/utils/declaration-proof-flow-copy'
 import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
-import { withEvaluationEntree } from '@/app/usecases/[id]/utils/routes'
+import { withEvaluationEntree } from '@/app/(saas)/usecases/[id]/utils/routes'
 
 /** Sections dossier flux standard — ordre, libellés, modes preuve et formats = `getStandardDossierSectionsOrdered()` (catalogue). */
 const STANDARD_DOSSIER_SECTIONS: DossierSectionUiDefinition[] = getStandardDossierSectionsOrdered()

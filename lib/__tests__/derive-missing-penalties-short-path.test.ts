@@ -1,11 +1,11 @@
 import { deriveMissingPenaltiesForShortPath } from '@/lib/derive-missing-penalties-short-path'
-import { E6_TRANSPARENCY_PACK_INTERACTION_CODE } from '@/app/usecases/[id]/utils/bpgv-transparency-checklist-save'
+import { E6_TRANSPARENCY_PACK_INTERACTION_CODE } from '@/app/(saas)/usecases/[id]/utils/bpgv-transparency-checklist-save'
 import {
   V3_SHORT_ENTREPRISE_ID,
   V3_SHORT_SOCIAL_ENV_ID,
   V3_SHORT_TRANSPARENCE_ID,
   V3_SHORT_USAGE_ID,
-} from '@/app/usecases/[id]/utils/questionnaire-v3-graph'
+} from '@/app/(saas)/usecases/[id]/utils/questionnaire-v3-graph'
 
 describe('deriveMissingPenaltiesForShortPath', () => {
   describe('V3_SHORT_ENTREPRISE', () => {

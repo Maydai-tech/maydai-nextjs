@@ -7,7 +7,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
-import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
+import questionsData from '@/app/(saas)/usecases/[id]/data/questions-with-scores.json'
 import { resolveCanonicalDocType } from '@/lib/canonical-actions'
 import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'
 

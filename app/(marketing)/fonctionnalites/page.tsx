@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import Header from '@/components/site-vitrine/Header';
-import Footer from '@/components/site-vitrine/Footer';
 
 export const metadata: Metadata = {
   title: "Fonctionnalités MaydAI | Plateforme IA Act - Audit & Conformité IA",
@@ -27,7 +25,6 @@ export const metadata: Metadata = {
 export default function FonctionnalitesPage() {
   return (
     <div className="bg-white">
-      <Header />
       <main>
         <div className="container mx-auto px-4 py-8 sm:py-16">
           <div className="max-w-7xl mx-auto">
@@ -302,7 +299,6 @@ export default function FonctionnalitesPage() {
           </div>
         </div>
       </main>
-      <Footer />
       
       {/* Données structurées JSON-LD pour le SEO */}
       <script

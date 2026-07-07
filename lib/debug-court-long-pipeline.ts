@@ -8,11 +8,11 @@ import {
   V3_SHORT_SOCIAL_ENV_ID,
   V3_SHORT_TRANSPARENCE_ID,
   V3_SHORT_USAGE_ID,
-} from '@/app/usecases/[id]/utils/questionnaire-v3-graph'
+} from '@/app/(saas)/usecases/[id]/utils/questionnaire-v3-graph'
 import {
   buildShortPathLongAnswerPatches,
   normalizeShortPathStageSelection,
-} from '@/app/usecases/[id]/utils/v3-short-path-stages'
+} from '@/app/(saas)/usecases/[id]/utils/v3-short-path-stages'
 import { buildConsolidatedChecklistsFromAnswers } from '@/lib/consolidated-checklists-from-answers'
 import { deriveMissingPenaltiesForShortPath } from '@/lib/derive-missing-penalties-short-path'
 import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-user-responses'

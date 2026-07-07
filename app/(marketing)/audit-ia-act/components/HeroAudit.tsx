@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { ArrowRight, AppWindow } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import TrustBadges from '@/components/ui/TrustBadges'
-import { useAIActCountdown } from '@/app/conformite-ia/hooks/useAIActCountdown'
+import { useAIActCountdown } from '@/app/(marketing)/conformite-ia/hooks/useAIActCountdown'
 import { SIGNUP_AUDIT_HREF } from '../signup-audit-href'
 
 export default function HeroAudit() {

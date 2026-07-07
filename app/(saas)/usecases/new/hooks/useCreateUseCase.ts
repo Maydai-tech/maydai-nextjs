@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApiCall } from '@/lib/api-client-legacy'
-import { useCaseRoutes } from '@/app/usecases/[id]/utils/routes'
+import { useCaseRoutes } from '@/app/(saas)/usecases/[id]/utils/routes'
 import type { CreateUseCasePayload } from '../types'
 
 export interface UseCreateUseCaseOptions {

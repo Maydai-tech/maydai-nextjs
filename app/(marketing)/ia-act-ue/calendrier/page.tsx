@@ -1,8 +1,6 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import Header from '@/components/site-vitrine/Header';
-import Footer from '@/components/site-vitrine/Footer';
 
 const CALENDRIER_SIGNUP_HREF =
   '/signup?utm_source=maydai_website&utm_medium=cta_button&utm_campaign=calendrier_page';
@@ -105,7 +103,6 @@ export default function IaActAgendaPage() {
 
   return (
     <>
-      <Header />
       <main className="min-h-screen bg-slate-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         {/* En-tête de la page */}
@@ -450,7 +447,6 @@ export default function IaActAgendaPage() {
         </section>
       </div>
     </main>
-    <Footer />
     </>
   );
 } 

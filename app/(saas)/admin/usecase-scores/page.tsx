@@ -15,7 +15,7 @@ import {
   RefreshCw,
   Download
 } from 'lucide-react'
-import type { UseCaseScore } from '@/app/usecases/[id]/types/usecase'
+import type { UseCaseScore } from '@/app/(saas)/usecases/[id]/types/usecase'
 import {
   getClassificationRiskDisplayLabel,
   getListRiskBadgeStyle,

@@ -22,7 +22,7 @@ import {
   type DocumentType
 } from './utils/todo-helpers'
 import { getRegistryTodoTitleForCase, resolveCanonicalDocType } from '@/lib/canonical-actions'
-import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/app/(saas)/usecases/[id]/utils/declaration-proof-flow-copy'
 import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 
 interface UseCase {

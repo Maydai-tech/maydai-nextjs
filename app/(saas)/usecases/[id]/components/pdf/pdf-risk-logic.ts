@@ -1,5 +1,5 @@
 import { isRiskLevelCode, normalizeToRiskLevelCode, type RiskLevelCode } from '@/lib/risk-level'
-import { getRiskLevelJustification } from '@/app/usecases/[id]/utils/company-status'
+import { getRiskLevelJustification } from '@/app/(saas)/usecases/[id]/utils/company-status'
 
 export const PDF_RISK_JUSTIFICATION_UNAVAILABLE =
   "Le niveau de risque au sens de l'AI Act n'est pas établi de manière fiable dans ce rapport PDF (donnée absente ou non normalisable). Aucun palier « minimal », « limité », « élevé » ou « interdit » ne doit être déduit du seul score de conformité ou du présent document : vérifiez le cas d'usage dans MaydAI après recalcul du score si nécessaire."

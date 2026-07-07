@@ -32,14 +32,12 @@
   --primary: #0080A3;
   --primary-light: #00A3CC;
   --primary-dark: #006280;
-  --font-geist-sans: "Geist", system-ui, sans-serif;
-  --font-geist-mono: "Geist Mono", "Courier New", monospace;
 }
 
 body {
   background: #ffffff;
   color: #171717;
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   min-height: 100vh;
 }
 

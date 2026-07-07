@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 import { sendLandingCtaClick } from '@/lib/gtm'
 import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
@@ -56,51 +55,6 @@ export default function LandingFooter() {
         </div>
       </section>
 
-      {/* Minimal legal footer */}
-      <div className="border-t border-gray-100 py-6 px-5 sm:px-6">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Link href="/" className="hover:opacity-80 transition-opacity">
-            <div className="relative w-[100px] h-6">
-              <Image
-                src="/logos/logo-maydai/logo-maydai-complet.png"
-                alt="MaydAI"
-                fill
-                sizes="100px"
-                className="object-contain object-left"
-              />
-            </div>
-          </Link>
-          <nav className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
-            <Link
-              href="/politique-confidentialite"
-              className="hover:text-[#0080a3] transition-colors"
-            >
-              Confidentialité
-            </Link>
-            <Link
-              href="/conditions-generales"
-              className="hover:text-[#0080a3] transition-colors"
-            >
-              CGU
-            </Link>
-            <Link
-              href="/securite"
-              className="hover:text-[#0080a3] transition-colors"
-            >
-              Sécurité
-            </Link>
-            <Link
-              href="/contact"
-              className="hover:text-[#0080a3] transition-colors"
-            >
-              Contact
-            </Link>
-          </nav>
-          <p className="text-xs text-gray-400">
-            &copy; {new Date().getFullYear()} MaydAI
-          </p>
-        </div>
-      </div>
     </footer>
   )
 }

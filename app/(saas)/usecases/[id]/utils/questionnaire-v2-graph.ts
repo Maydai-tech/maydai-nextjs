@@ -7,7 +7,7 @@ import {
   ORS_EXIT_N8_COMPLETED,
   ORS_EXIT_UNACCEPTABLE
 } from '@/lib/questionnaire-version'
-import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
+import questionsData from '@/app/(saas)/usecases/[id]/data/questions-with-scores.json'
 
 type RawQuestion = {
   type?: string

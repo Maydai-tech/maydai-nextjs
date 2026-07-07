@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { User as UserIcon, Settings, LogOut } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
-import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
+import { useUserPlan } from '@/app/(saas)/abonnement/hooks/useUserPlan'
 
 export default function ProfileDropdown() {
   const [isOpen, setIsOpen] = useState(false)

@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { useApiCall } from '@/lib/api-client-legacy'
-import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
+import { useUserPlan } from '@/app/(saas)/abonnement/hooks/useUserPlan'
 import {
   Building2,
   Plus,
@@ -29,7 +29,7 @@ import Footer from '@/components/site-vitrine/Footer'
 import NavBar from '@/components/NavBar/NavBar'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import { trackLimitReached } from '@/lib/gtm'
-import DeleteRegistryModal from '@/app/dashboard/[id]/components/DeleteRegistryModal'
+import DeleteRegistryModal from '@/app/(saas)/dashboard/[id]/components/DeleteRegistryModal'
 import SecurityLogosGrid from '@/components/ui/SecurityLogosGrid'
 import type { DashboardMetrics } from '@/lib/validations/dashboard-metrics'
 

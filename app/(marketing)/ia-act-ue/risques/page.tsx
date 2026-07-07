@@ -1,8 +1,6 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import Header from '@/components/site-vitrine/Header';
-import Footer from '@/components/site-vitrine/Footer';
 
 export const metadata: Metadata = {
   title: 'Pyramide des Risques IA Act : Classification & Analyse | MaydAI',
@@ -39,7 +37,6 @@ export default function RisquesIaActPage() {
 
   return (
     <>
-      <Header />
       <main className="min-h-screen bg-white">
         {/* Section 1: Introduction */}
         <section className="bg-gradient-to-b from-slate-50 to-white py-16 px-4 sm:px-6 lg:px-8">
@@ -400,7 +397,6 @@ export default function RisquesIaActPage() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
         />
       </main>
-      <Footer />
     </>
   );
 } 

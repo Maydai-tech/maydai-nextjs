@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useApiCall } from '@/lib/api-client-legacy'
-import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
+import { useUserPlan } from '@/app/(saas)/abonnement/hooks/useUserPlan'
 import { Building2, ArrowLeft } from "lucide-react"
 import { REGISTRY_TYPES } from '@/lib/registry-types'
 import { trackRegistryCreation, type PlanName } from '@/lib/gtm'

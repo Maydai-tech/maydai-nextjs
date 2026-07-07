@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { UseCaseScore } from '../types/usecase'
-import { useAuth } from '../../../../lib/auth'
+import { useAuth } from '@/lib/auth'
 
 export const useUseCaseScore = (usecaseId: string, autoFetch: boolean = true) => {
   const [score, setScore] = useState<UseCaseScore | null>(null)

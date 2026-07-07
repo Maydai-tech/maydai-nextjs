@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import Header from '@/components/site-vitrine/Header';
-import Footer from '@/components/site-vitrine/Footer';
 import SecurityLogosGrid from '@/components/ui/SecurityLogosGrid';
 import { Server, Lock, Shield, ChevronDown } from 'lucide-react';
 import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs';
@@ -64,7 +62,6 @@ export default function SecuritePage() {
 
   return (
     <div className="bg-white text-gray-800">
-      <Header />
       <main>
         {/* Hero Section */}
         <section className="relative py-16 md:py-24 px-4 overflow-hidden">
@@ -227,7 +224,6 @@ export default function SecuritePage() {
           </div>
         </section>
       </main>
-      <Footer />
     </div>
   );
 }

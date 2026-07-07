@@ -1,6 +1,4 @@
 import Image from 'next/image';
-import Header from '@/components/site-vitrine/Header';
-import Footer from '@/components/site-vitrine/Footer';
 
 // Données des membres de l'équipe
 const teamMembers = [
@@ -110,7 +108,6 @@ export default function AProposPage() {
         }}
       />
       
-      <Header />
       <main className="min-h-screen bg-white">
         {/* Section principale */}
         <section className="py-16 px-4 sm:px-6 lg:px-8">
@@ -239,7 +236,6 @@ export default function AProposPage() {
           </div>
         </section>
       </main>
-      <Footer />
     </>
   );
 } 

@@ -3,7 +3,7 @@
 import React from 'react'
 import Image from 'next/image'
 import { useRegistryCategoryScores } from '../hooks/useRegistryCategoryScores'
-import { RISK_CATEGORIES } from '@/app/usecases/[id]/utils/risk-categories'
+import { RISK_CATEGORIES } from '@/app/(saas)/usecases/[id]/utils/risk-categories'
 import { AlertCircle, Info } from 'lucide-react'
 import { getScoreStyle } from '@/lib/score-styles'
 

@@ -8,7 +8,7 @@ import {
   getEarnedPoints,
   type DocumentType,
 } from '../utils/todo-helpers'
-import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/app/(saas)/usecases/[id]/utils/declaration-proof-flow-copy'
 
 interface TodoItem {
   id: string

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CategoryScore } from '@/app/usecases/[id]/types/usecase'
+import { CategoryScore } from '@/app/(saas)/usecases/[id]/types/usecase'
 import { useAuth } from '@/lib/auth'
 
 interface RegistryCategoryScoresResponse {

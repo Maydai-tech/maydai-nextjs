@@ -10,8 +10,8 @@ import {
   getRiskLevelDisplayConfig,
   getUnacceptableActionDocTypesOrdered,
   isUnacceptableCase
-} from '@/app/dashboard/[id]/todo-list/utils/todo-helpers'
-import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
+} from '@/app/(saas)/dashboard/[id]/todo-list/utils/todo-helpers'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/app/(saas)/usecases/[id]/utils/declaration-proof-flow-copy'
 
 interface UseCase {
   id: string

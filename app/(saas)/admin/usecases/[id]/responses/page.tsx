@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { supabase, UseCase, UseCaseResponse } from '@/lib/supabase'
 import { getClassificationRiskDisplayLabel } from '@/lib/classification-risk-display'
 import { ArrowLeft, Calendar, User, FileText, Eye, AlertTriangle, Shield } from 'lucide-react'
-import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
+import questionsData from '@/app/(saas)/usecases/[id]/data/questions-with-scores.json'
 
 interface ResponseWithQuestion extends UseCaseResponse {
   question_text?: string

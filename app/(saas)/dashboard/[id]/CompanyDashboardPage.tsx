@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
-import { useRegistryOwnerPlan } from '@/app/abonnement/hooks/useRegistryOwnerPlan'
+import { useRegistryOwnerPlan } from '@/app/(saas)/abonnement/hooks/useRegistryOwnerPlan'
 import { getProviderIcon } from '@/lib/provider-icons'
 import {
   ArrowLeft,
@@ -25,7 +25,7 @@ import {
 import WorldMap from '@/components/WorldMap'
 import ScoreCircle from '@/components/ScoreCircle'
 import RiskPyramid from '@/components/RiskPyramid'
-import DeleteConfirmationModal from '@/app/usecases/[id]/components/DeleteConfirmationModal'
+import DeleteConfirmationModal from '@/app/(saas)/usecases/[id]/components/DeleteConfirmationModal'
 import Toast from '@/components/Toast'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import { trackLimitReached } from '@/lib/gtm'
@@ -39,13 +39,13 @@ import {
 } from '@/lib/classification-risk-display'
 import { CategoryScoresRegistry } from './components/CategoryScoresRegistry'
 import RegistreMaydaiBadge from './components/RegistreMaydaiBadge'
-import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/app/(saas)/usecases/[id]/utils/declaration-proof-flow-copy'
 import { getDeploymentStatus, getDeploymentStatusColor } from '@/lib/deployment-status'
 import { getJourneyTypeFromPathMode, type PathMode } from '@/lib/journey-path-mode'
 import {
   buildEvaluationFocusHref,
   getBlockingPivotId,
-} from '@/app/usecases/[id]/utils/blocking-pivot-focus'
+} from '@/app/(saas)/usecases/[id]/utils/blocking-pivot-focus'
 
 interface Company {
   id: string

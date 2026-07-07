@@ -16,7 +16,7 @@ import {
 } from '@/lib/questionnaire-version'
 import { deriveRiskLevelFromResponses, type RiskLevelResponseInput } from '@/lib/risk-level'
 import { isOrsUnacceptableAtQ31 } from './questionnaire-v2-graph'
-import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
+import questionsData from '@/app/(saas)/usecases/[id]/data/questions-with-scores.json'
 import { V3_PRODUCT_SYSTEM_TYPE } from '@/lib/qualification-v3-decision'
 
 /** Étapes synthétiques parcours court V3 (séquentielles : entreprise, usage, transparence, bien-être social & env.). Littératie IA : question autonome `E4.N8.Q12` (long) ou dérivée côté court. */

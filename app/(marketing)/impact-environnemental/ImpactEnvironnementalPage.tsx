@@ -3,8 +3,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ExternalLink, ArrowRight } from 'lucide-react'
 import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
-import Header from '@/components/site-vitrine/Header'
-import Footer from '@/components/site-vitrine/Footer'
 import HeroEco from './components/HeroEco'
 import AverageKpiBanner from './components/AverageKpiBanner'
 import UseCasePillSelector from './components/UseCasePillSelector'
@@ -117,8 +115,6 @@ export default function ImpactEnvironnementalPage({
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-      <Header />
-
       <HeroEco />
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 pb-8 sm:pb-12 pt-8 sm:pt-10">
@@ -279,8 +275,6 @@ export default function ImpactEnvironnementalPage({
       </main>
 
       <FaqEnvironnement />
-
-      <Footer />
     </div>
   )
 }

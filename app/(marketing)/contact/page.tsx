@@ -1,7 +1,5 @@
 import { FiPhone, FiMail, FiMapPin, FiChevronDown } from 'react-icons/fi'
 import Image from 'next/image'
-import Header from '@/components/site-vitrine/Header'
-import Footer from '@/components/site-vitrine/Footer'
 import ContactForm from '@/components/contact/ContactForm'
 
 const faqData = [
@@ -25,8 +23,6 @@ const faqData = [
 export default function ContactPage() {
   return (
     <>
-      <Header />
-
       <main className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
         <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-5xl">
@@ -52,6 +48,7 @@ export default function ContactPage() {
                     alt="Tableau de bord MaydAI - Vue détaillée de l'évaluation des risques et des scores de conformité AI Act"
                     width={2021}
                     height={2324}
+                    priority
                     sizes="(max-width: 1024px) 100vw, 1024px"
                     className="w-full h-auto rounded-2xl overflow-hidden border border-slate-200/60 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.02)]"
                   />
@@ -174,7 +171,6 @@ export default function ContactPage() {
           </div>
         </section>
       </main>
-      <Footer />
     </>
   )
 }

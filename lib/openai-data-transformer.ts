@@ -14,12 +14,12 @@ import {
   V3_SHORT_MINIPACK_ID,
   V3_SHORT_USAGE_ID,
   isV3ShortSyntheticQuestionId,
-} from '@/app/usecases/[id]/utils/questionnaire-v3-graph'
+} from '@/app/(saas)/usecases/[id]/utils/questionnaire-v3-graph'
 import {
   isEarlyE4PivotQuestionId,
   normalizeShortPathStageSelection,
   unfoldShortPathPackToLongAnswers,
-} from '@/app/usecases/[id]/utils/v3-short-path-stages'
+} from '@/app/(saas)/usecases/[id]/utils/v3-short-path-stages'
 
 function normalizeChecklistStrings(v: unknown): string[] {
   if (!Array.isArray(v)) return []

@@ -3,7 +3,7 @@
  * Les libellés CTA alignés sur la to-do utilisent `todo_action_label` du catalogue.
  */
 
-import { getPotentialPoints } from '@/app/dashboard/[id]/todo-list/utils/todo-helpers'
+import { getPotentialPoints } from '@/app/(saas)/dashboard/[id]/todo-list/utils/todo-helpers'
 import {
   getCanonicalActionByReportSlot,
   REPORT_STANDARD_SLOT_KEYS_ORDERED,

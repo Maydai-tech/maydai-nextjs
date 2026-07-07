@@ -1,6 +1,6 @@
 import { UseCase } from '@/lib/supabase'
 import type { ReportCanonicalItem } from '@/lib/report-canonical-items'
-import type { CategoryScore } from '@/app/usecases/[id]/types/usecase'
+import type { CategoryScore } from '@/app/(saas)/usecases/[id]/types/usecase'
 import type { ActivityHistoryItem, PdfDocumentItem, PdfUseCase } from '@/lib/validations/pdf.schema'
 
 // Interface pour les prochaines étapes

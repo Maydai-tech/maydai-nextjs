@@ -15,10 +15,10 @@ import {
   Check
 } from 'lucide-react'
 import RegistryProofUpload from '@/components/RegistryProofUpload'
-import RegistreMaydaiBadge from '@/app/dashboard/[id]/components/RegistreMaydaiBadge'
+import RegistreMaydaiBadge from '@/app/(saas)/dashboard/[id]/components/RegistreMaydaiBadge'
 import { getRegistryTodoHelpExplanation } from '@/lib/canonical-actions'
 import { getPotentialPoints, getEarnedPoints } from '../utils/todo-helpers'
-import { DECLARATION_PROOF_FLOW_COPY } from '@/app/usecases/[id]/utils/declaration-proof-flow-copy'
+import { DECLARATION_PROOF_FLOW_COPY } from '@/app/(saas)/usecases/[id]/utils/declaration-proof-flow-copy'
 
 interface TodoItem {
   id: string

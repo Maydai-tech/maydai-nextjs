@@ -1,5 +1,3 @@
-import Header from '@/components/site-vitrine/Header';
-import Footer from '@/components/site-vitrine/Footer';
 
 export default function PolitiqueConfidentialitePage() {
   // Date actuelle pour la mise à jour
@@ -7,7 +5,6 @@ export default function PolitiqueConfidentialitePage() {
 
   return (
     <>
-      <Header />
       <main className="min-h-screen bg-white">
         <div className="max-w-4xl mx-auto p-8 py-16">
           {/* Titre principal */}
@@ -248,7 +245,6 @@ export default function PolitiqueConfidentialitePage() {
           </article>
         </div>
       </main>
-      <Footer />
     </>
   );
 } 

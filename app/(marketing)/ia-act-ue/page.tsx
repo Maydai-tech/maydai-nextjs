@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import Header from '@/components/site-vitrine/Header';
-import Footer from '@/components/site-vitrine/Footer';
 
 export const metadata: Metadata = {
   title: 'IA Act (AI Act) : Guide Complet & Résumé du Règlement Européen | MaydAI',
@@ -62,7 +60,6 @@ export default function IAActUEPage() {
 
   return (
     <div className="bg-white">
-      <Header />
       <main>
         <script
           type="application/ld+json"
@@ -319,7 +316,6 @@ export default function IAActUEPage() {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 } 

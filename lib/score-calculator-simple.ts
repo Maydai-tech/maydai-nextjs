@@ -15,7 +15,7 @@
  * - Modèle COMPL-AI : 50 points max (1/3) - 5 principes × 10 points
  */
 
-import { loadQuestions } from '@/app/usecases/[id]/utils/questions-loader';
+import { loadQuestions } from '@/app/(saas)/usecases/[id]/utils/questions-loader';
 import type { QuestionOption, UseCaseChecklistResponseFields } from '@/types/questions';
 import { mergeChecklistIntoUserResponses } from '@/lib/merge-checklist-into-user-responses';
 

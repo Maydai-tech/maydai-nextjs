@@ -6,7 +6,7 @@ import { Home, User, Menu, X, Users, FileText, CheckSquare, Settings, House, Bar
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useApiCall } from '@/lib/api-client-legacy';
-import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan';
+import { useUserPlan } from '@/app/(saas)/abonnement/hooks/useUserPlan';
 import packageJson from '../package.json';
 
 export default function Sidebar() {
