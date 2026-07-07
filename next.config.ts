@@ -68,6 +68,15 @@ const nextConfig: NextConfig = {
     // En production, utilisez les en-têtes de sécurité stricts avec support CookieYes
     return [
       {
+        source: '/_next/static/(.*)',
+        headers: [
+          {
+            key: 'X-Robots-Tag',
+            value: 'noindex, nofollow',
+          },
+        ],
+      },
+      {
         source: '/(.*)',
         headers: [
           // Empêche les navigateurs de deviner le type MIME

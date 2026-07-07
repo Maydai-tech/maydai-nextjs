@@ -1,46 +1,13 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = 'https://www.maydai.io'
-  
   return {
-    rules: [
-      {
-        userAgent: '*',
-        allow: [
-          '/',
-          '/a-propos',
-          '/conditions-generales',
-          '/contact',
-          '/fonctionnalites',
-          '/ia-act-ue',
-          '/ia-act-ue/calendrier',
-          '/ia-act-ue/risques',
-          '/politique-confidentialite',
-          '/tarifs',
-        ],
-        disallow: [
-          '/admin/',
-          '/api/',
-          '/dashboard/',
-          '/login/',
-          '/signup/',
-          '/settings/',
-          '/usecases/',
-          '/companies/',
-          '/_next/',
-          '/private/',
-        ],
-      },
-      {
-        userAgent: 'GPTBot',
-        disallow: '/',
-      },
-      {
-        userAgent: 'Google-Extended',
-        disallow: '/',
-      },
-    ],
-    sitemap: `${baseUrl}/sitemap.xml`,
+    rules: {
+      userAgent: '*',
+      allow: '/',
+      // On retire /_next/ et les pages privées pour que Google puisse voir nos consignes "noindex"
+      disallow: ['/api/'],
+    },
+    sitemap: 'https://www.maydai.io/sitemap.xml',
   }
-} 
+}
