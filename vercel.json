@@ -6,10 +6,22 @@
     "NODE_ENV": "production"
   },
   "functions": {
+    "app/api/cron/sync-llm-stats/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/admin/llm-stats-sync-runs/route.ts": {
+      "maxDuration": 60
+    },
     "app/api/**/*.js": {
       "maxDuration": 30
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/sync-llm-stats",
+      "schedule": "0 3 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
