@@ -110,6 +110,8 @@ export default function IAActUEPage() {
                   <Image 
                     src="/content/eu-parlement-ai-act.jpg"
                     fill
+                    priority
+                    sizes="100vw"
                     style={{ objectFit: 'cover' }}
                     alt="Drapeaux de l'Union Européenne devant le bâtiment de la Commission Européenne" 
                   />

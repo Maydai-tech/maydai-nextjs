@@ -1,4 +1,5 @@
 import Mailjet from 'node-mailjet';
+import type { LlmStatsSyncResult } from '@/lib/bench-llm/llm-stats-sync';
 
 // Configuration
 const TEMPLATES = {
@@ -13,6 +14,10 @@ const MAILJET_LEAD_INVITE_TEMPLATE_ID = '7948763';
 const FROM_EMAIL = 'tech@maydai.io';
 const FROM_NAME = 'MaydAI';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.maydai.io';
+const LLM_STATS_SYNC_RECIPIENTS = [
+  { Email: 'tech@maydai.io', Name: 'MaydAI Tech' },
+  { Email: 'hugo.faye@gmail.com', Name: 'Hugo Faye' },
+] as const;
 
 type MailjetClient = ReturnType<typeof Mailjet.apiConnect>;
 
@@ -42,6 +47,133 @@ function mailjetNotConfiguredError(): { success: false; error: Error } {
     success: false,
     error: new Error('MAILJET_API_KEY ou MAILJET_API_SECRET manquant'),
   };
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function renderModelChanges(
+  title: string,
+  models: LlmStatsSyncResult['createdModels'],
+): string {
+  if (models.length === 0) {
+    return `<h3>${escapeHtml(title)} (0)</h3><p>Aucun modèle.</p>`
+  }
+
+  const rows = models
+    .map((model) => {
+      const changedFields = model.changedFields?.length
+        ? `<br/><small>Champs: ${escapeHtml(model.changedFields.join(', '))}</small>`
+        : ''
+      return `<li><strong>${escapeHtml(model.model_provider)}</strong> - ${escapeHtml(model.model_name)}${changedFields}</li>`
+    })
+    .join('')
+
+  return `<h3>${escapeHtml(title)} (${models.length})</h3><ul>${rows}</ul>`
+}
+
+export async function sendLlmStatsSyncReportEmail(result: LlmStatsSyncResult) {
+  const mailjet = getMailjetClient();
+  if (!mailjet) {
+    return mailjetNotConfiguredError();
+  }
+
+  const statusLabel = result.success ? 'réussie' : 'partielle';
+  const htmlContent = `
+    <h2>Synchronisation LLM Stats ${escapeHtml(statusLabel)}</h2>
+    <p><strong>Début :</strong> ${escapeHtml(result.startedAt)}</p>
+    <p><strong>Fin :</strong> ${escapeHtml(result.finishedAt)}</p>
+    <p><strong>Durée :</strong> ${escapeHtml(result.durationMs)} ms</p>
+    <ul>
+      <li><strong>Modèles récupérés :</strong> ${escapeHtml(result.modelsFetched)}</li>
+      <li><strong>Créés :</strong> ${escapeHtml(result.modelsCreated)}</li>
+      <li><strong>Mis à jour :</strong> ${escapeHtml(result.modelsUpdated)}</li>
+      <li><strong>Inchangés :</strong> ${escapeHtml(result.modelsUnchanged)}</li>
+    </ul>
+    ${renderModelChanges('Modèles créés', result.createdModels)}
+    ${renderModelChanges('Modèles mis à jour', result.updatedModels)}
+    ${
+      result.errors.length > 0
+        ? `<h3>Erreurs (${result.errors.length})</h3><ul>${result.errors
+            .map((error) => `<li>${escapeHtml(error)}</li>`)
+            .join('')}</ul>`
+        : '<p>Aucune erreur.</p>'
+    }
+  `;
+
+  try {
+    const request = await mailjet.post('send', { version: 'v3.1' }).request({
+      Messages: [
+        {
+          From: {
+            Email: FROM_EMAIL,
+            Name: FROM_NAME,
+          },
+          To: [...LLM_STATS_SYNC_RECIPIENTS],
+          Subject: `[MaydAI] Sync LLM Stats ${statusLabel} - ${result.modelsCreated} créés, ${result.modelsUpdated} mis à jour`,
+          HTMLPart: htmlContent,
+        },
+      ],
+    });
+
+    console.log('[LLM Stats Sync] Email de rapport envoyé', request.body);
+    return { success: true, data: request.body };
+  } catch (error) {
+    console.error('[LLM Stats Sync] Erreur envoi email de rapport:', error);
+    return { success: false, error };
+  }
+}
+
+export async function sendLlmStatsSyncFailureEmail(error: unknown, context?: Record<string, unknown>) {
+  const mailjet = getMailjetClient();
+  if (!mailjet) {
+    return mailjetNotConfiguredError();
+  }
+
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  const errorStack = error instanceof Error ? error.stack : null
+  const htmlContent = `
+    <h2>Synchronisation LLM Stats échouée</h2>
+    <p><strong>Erreur :</strong> ${escapeHtml(errorMessage)}</p>
+    ${
+      errorStack
+        ? `<h3>Stack</h3><pre>${escapeHtml(errorStack)}</pre>`
+        : ''
+    }
+    ${
+      context
+        ? `<h3>Contexte</h3><pre>${escapeHtml(JSON.stringify(context, null, 2))}</pre>`
+        : ''
+    }
+  `;
+
+  try {
+    const request = await mailjet.post('send', { version: 'v3.1' }).request({
+      Messages: [
+        {
+          From: {
+            Email: FROM_EMAIL,
+            Name: FROM_NAME,
+          },
+          To: [...LLM_STATS_SYNC_RECIPIENTS],
+          Subject: `[MaydAI] Sync LLM Stats échouée - ${errorMessage.slice(0, 120)}`,
+          HTMLPart: htmlContent,
+        },
+      ],
+    });
+
+    console.log("[LLM Stats Sync] Email d'échec envoyé", request.body);
+    return { success: true, data: request.body };
+  } catch (sendError) {
+    console.error("[LLM Stats Sync] Erreur envoi email d'échec:", sendError);
+    return { success: false, error: sendError };
+  }
 }
 
 // Fonction d'envoi pour invitation au niveau registre (registry-level)

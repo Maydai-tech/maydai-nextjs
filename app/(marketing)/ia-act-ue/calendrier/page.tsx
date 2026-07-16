@@ -139,6 +139,8 @@ export default function IaActAgendaPage() {
               alt="Calendrier et agenda complet de l'AI Act avec les dates clés et échéances"
               width={500}
               height={350}
+              priority
+              sizes="(max-width: 768px) 100vw, 500px"
               className="rounded-xl shadow-lg max-w-full h-auto"
             />
           </div>

@@ -17,7 +17,7 @@ const TarifsPage: NextPage = () => {
           <section className="py-20 px-4 text-center">
             <div className="container mx-auto">
               <div className="flex flex-col items-center mb-6">
-                <Image src="/icons/tag.png" alt="Étiquette de prix" width={64} height={64} className="w-16 h-16 mb-4" priority fetchPriority="high" />
+                <Image src="/icons/tag.png" alt="Étiquette de prix" width={64} height={64} className="w-16 h-16 mb-4" priority fetchPriority="high" sizes="64px" />
                 <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight" style={{ color: '#0080a3' }}>
                   Des plans adaptés à chaque étape de votre conformité AI Act
                 </h1>
