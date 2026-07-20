@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Inclut les instructions système versionnées dans les bundles des routes serveur.
+  outputFileTracingIncludes: {
+    '/*': ['./docs/openai-assistant-system-instructions.md'],
+  },
   eslint: {
     // Désactive ESLint pendant le build de production
     ignoreDuringBuilds: true,

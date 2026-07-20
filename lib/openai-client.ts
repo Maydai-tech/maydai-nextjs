@@ -1,4 +1,6 @@
 import OpenAI from 'openai'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { buildStandardizedPrompt } from './formatting-template'
 import type { RiskLevelCode } from '@/lib/risk-level'
 import type { SlotStatusMap } from '@/lib/slot-statuses'
@@ -89,31 +91,43 @@ interface OpenAIAnalysisInputComplete {
   report_grounding_block?: string
 }
 
-/**
- * Configuration des timeouts et tentatives pour l'API OpenAI
- * Ces valeurs sont utilisées pour éviter les blocages et optimiser les performances
- */
-const OPENAI_CONFIG = {
-  // Nombre maximum de tentatives pour attendre la completion (2 minutes total)
-  MAX_POLLING_ATTEMPTS: 120,
-  
-  // Délai entre chaque vérification du statut en millisecondes
-  POLLING_INTERVAL_MS: 1000,
-  
-  // Fréquence d'affichage des logs de progression (toutes les 10 secondes)
-  PROGRESS_LOG_FREQUENCY: 10,
-  
-  // Nombre minimum de tentatives avant d'abandonner en cas d'erreur de récupération
-  MIN_RETRY_ATTEMPTS: 10
-} as const
+const SYSTEM_INSTRUCTIONS_PATH = join(
+  process.cwd(),
+  'docs',
+  'openai-assistant-system-instructions.md'
+)
+const OPENAI_MODEL = 'gpt-4o-mini'
+const OPENAI_VECTOR_STORE_ID = 'vs_68b1b8fb9b608191982f946b23282bb3'
+
+function loadReportSystemInstructions(): string {
+  const document = readFileSync(SYSTEM_INSTRUCTIONS_PATH, 'utf8')
+  const separator = '\n---\n'
+  const separatorIndex = document.indexOf(separator)
+
+  if (separatorIndex === -1) {
+    throw new Error(
+      `Séparateur des instructions OpenAI introuvable dans ${SYSTEM_INSTRUCTIONS_PATH}`
+    )
+  }
+
+  const instructions = document.slice(separatorIndex + separator.length).trim()
+
+  if (!instructions) {
+    throw new Error('Les instructions système OpenAI sont vides')
+  }
+
+  return instructions
+}
 
 /**
- * Client pour interagir avec l'API OpenAI Assistant
+ * Client pour interagir avec l'API OpenAI Responses
  * Gère la génération d'analyses de conformité IA Act
  */
 export class OpenAIClient {
   private client: OpenAI
-  private assistantId: string
+  private model: string
+  private vectorStoreId: string
+  private systemInstructions: string
 
   /**
    * Initialise le client OpenAI avec les clés d'API nécessaires
@@ -125,7 +139,9 @@ export class OpenAIClient {
     this.client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY!
     })
-    this.assistantId = process.env.OPENAI_ASSISTANT_ID!
+    this.model = OPENAI_MODEL
+    this.vectorStoreId = OPENAI_VECTOR_STORE_ID
+    this.systemInstructions = loadReportSystemInstructions()
   }
 
   /**
@@ -136,249 +152,61 @@ export class OpenAIClient {
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('Clé API OpenAI manquante. Vérifiez OPENAI_API_KEY dans votre fichier .env')
     }
-    if (!process.env.OPENAI_ASSISTANT_ID) {
-      throw new Error('ID Assistant OpenAI manquant. Vérifiez OPENAI_ASSISTANT_ID dans votre fichier .env')
-    }
   }
 
   /**
    * Point d'entrée principal pour générer une analyse de conformité (ancien format)
    * @param data - Données du cas d'usage et réponses au questionnaire
-   * @returns Promise<string> - Rapport d'analyse généré par l'Assistant OpenAI
+   * @returns Promise<string> - Rapport d'analyse généré via Responses API
    */
   async generateComplianceAnalysis(data: OpenAIAnalysisInput): Promise<string> {
-    console.log('🚀 Génération d\'analyse de conformité avec Assistant OpenAI pour:', data.usecase_name)
-    return await this.executeAssistantWorkflow(data)
+    console.log('🚀 Génération d\'analyse de conformité avec Responses API pour:', data.usecase_name)
+    return await this.executeResponsesWorkflow(this.buildAnalysisPrompt(data))
   }
 
   /**
    * Point d'entrée principal pour générer une analyse de conformité (nouveau format complet)
    * @param data - Données complètes du cas d'usage et réponses au questionnaire
-   * @returns Promise<string> - Rapport d'analyse généré par l'Assistant OpenAI
+   * @returns Promise<string> - Rapport d'analyse généré via Responses API
    */
   async generateComplianceAnalysisComplete(data: OpenAIAnalysisInputComplete): Promise<string> {
-    console.log('🚀 Génération d\'analyse de conformité complète avec Assistant OpenAI pour:', data.usecase_context_fields.cas_usage.name)
-    return await this.executeAssistantWorkflowComplete(data)
+    console.log('🚀 Génération d\'analyse de conformité complète avec Responses API pour:', data.usecase_context_fields.cas_usage.name)
+    return await this.executeResponsesWorkflow(this.buildCompleteAnalysisPrompt(data))
   }
 
   /**
-   * Exécute le workflow complet avec l'Assistant OpenAI (ancien format)
-   * Étapes : 1) Création du thread et run, 2) Polling du statut, 3) Récupération du résultat
-   * @param data - Données d'entrée pour l'analyse
+   * Génère un rapport sans conversation persistante via Responses API.
+   * File Search conserve l'accès aux mêmes sources que l'ancien Assistant.
+   * @param prompt - Prompt métier complet à envoyer au modèle
    * @returns Promise<string> - Résultat de l'analyse
    */
-  private async executeAssistantWorkflow(data: OpenAIAnalysisInput): Promise<string> {
+  private async executeResponsesWorkflow(prompt: string): Promise<string> {
     try {
-      // Étape 1: Préparer le prompt d'analyse
-      const analysisPrompt = this.buildAnalysisPrompt(data)
-      
-      // Étape 2: Créer et lancer l'Assistant OpenAI
-      const assistantRun = await this.createAndRunAssistant(analysisPrompt)
-      
-      // Étape 3: Attendre la completion du traitement
-      const completedRun = await this.waitForRunCompletion(assistantRun)
-      
-      // Étape 4: Récupérer et nettoyer le résultat
-      const analysisResult = await this.retrieveAssistantResponse(completedRun.thread_id)
-      
-      // Étape 5: Nettoyer les ressources (thread)
-      await this.cleanupThread(completedRun.thread_id)
-      
-      return analysisResult
-      
-    } catch (error) {
-      console.error('❌ Erreur dans le workflow Assistant OpenAI:', error)
-      throw new Error(`Erreur avec l'Assistant OpenAI: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
-    }
-  }
-
-  /**
-   * Exécute le workflow complet avec l'Assistant OpenAI (nouveau format complet)
-   * Étapes : 1) Création du thread et run, 2) Polling du statut, 3) Récupération du résultat
-   * @param data - Données complètes d'entrée pour l'analyse
-   * @returns Promise<string> - Résultat de l'analyse
-   */
-  private async executeAssistantWorkflowComplete(data: OpenAIAnalysisInputComplete): Promise<string> {
-    try {
-      // Étape 1: Préparer le prompt d'analyse complet
-      const analysisPrompt = this.buildCompleteAnalysisPrompt(data)
-      
-      // Étape 2: Créer et lancer l'Assistant OpenAI
-      const assistantRun = await this.createAndRunAssistant(analysisPrompt)
-      
-      // Étape 3: Attendre la completion du traitement
-      const completedRun = await this.waitForRunCompletion(assistantRun)
-      
-      // Étape 4: Récupérer et nettoyer le résultat
-      const analysisResult = await this.retrieveAssistantResponse(completedRun.thread_id)
-      
-      // Étape 5: Nettoyer les ressources (thread)
-      await this.cleanupThread(completedRun.thread_id)
-      
-      return analysisResult
-      
-    } catch (error) {
-      console.error('❌ Erreur dans le workflow Assistant OpenAI complet:', error)
-      throw new Error(`Erreur avec l'Assistant OpenAI: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
-    }
-  }
-
-  /**
-   * Crée un thread et lance l'exécution avec l'Assistant OpenAI
-   * @param prompt - Prompt d'analyse à envoyer à l'assistant
-   * @returns Promise<Run> - L'objet Run créé
-   */
-  private async createAndRunAssistant(prompt: string) {
-    console.log('🚀 Création du thread et run avec l\'Assistant OpenAI')
-    
-    const run = await this.client.beta.threads.createAndRun({
-      assistant_id: this.assistantId,
-      thread: {
-        messages: [{
-          role: 'user',
-          content: prompt
+      const response = await this.client.responses.create({
+        model: this.model,
+        instructions: this.systemInstructions,
+        input: prompt,
+        store: false,
+        tools: [{
+          type: 'file_search',
+          vector_store_ids: [this.vectorStoreId]
         }]
-      }
-    })
-    
-    console.log('✅ Thread et Run créés - Thread ID:', run.thread_id, 'Run ID:', run.id)
-    return run
-  }
-
-  /**
-   * Attend que le run soit terminé en utilisant un système de polling
-   * Vérifie régulièrement le statut jusqu'à completion ou timeout
-   * @param initialRun - Le run initial créé
-   * @returns Promise<Run> - Le run une fois terminé
-   */
-  private async waitForRunCompletion(initialRun: any) {
-    console.log('⏳ Attente de la completion...')
-    
-    let currentRun = initialRun
-    let pollingAttempts = 0
-    
-    // Boucle de polling : continue tant que le run n'est pas terminé
-    while (this.isRunInProgress(currentRun.status) && pollingAttempts < OPENAI_CONFIG.MAX_POLLING_ATTEMPTS) {
-      // Attendre avant la prochaine vérification
-      await this.waitBeforeNextCheck()
-      pollingAttempts++
-      
-      // Récupérer le statut actuel du run
-      currentRun = await this.checkRunStatus(initialRun, pollingAttempts)
-      
-      // Vérifier si le run a échoué
-      if (this.isRunFailed(currentRun.status)) {
-        console.error('❌ Run terminé avec erreur:', currentRun.status, currentRun.last_error)
-        throw new Error(`Le run a échoué avec le statut: ${currentRun.status}`)
-      }
-    }
-    
-    // Vérifier si on a atteint le timeout
-    if (pollingAttempts >= OPENAI_CONFIG.MAX_POLLING_ATTEMPTS) {
-      throw new Error(`Timeout: Le run n'a pas terminé après ${OPENAI_CONFIG.MAX_POLLING_ATTEMPTS} secondes (statut: ${currentRun.status})`)
-    }
-    
-    if (currentRun.status !== 'completed') {
-      throw new Error(`Le run a terminé avec un statut inattendu: ${currentRun.status}`)
-    }
-    
-    console.log('✅ Run terminé avec succès')
-    return currentRun
-  }
-
-  /**
-   * Vérifie si le run est encore en cours de traitement
-   * @param status - Statut actuel du run
-   * @returns boolean - True si le run est en cours
-   */
-  private isRunInProgress(status: string): boolean {
-    return status === 'queued' || status === 'in_progress'
-  }
-
-  /**
-   * Vérifie si le run a échoué
-   * @param status - Statut actuel du run
-   * @returns boolean - True si le run a échoué
-   */
-  private isRunFailed(status: string): boolean {
-    return status === 'failed' || status === 'cancelled' || status === 'expired'
-  }
-
-  /**
-   * Attend un délai fixe avant la prochaine vérification
-   */
-  private async waitBeforeNextCheck(): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, OPENAI_CONFIG.POLLING_INTERVAL_MS))
-  }
-
-  /**
-   * Vérifie le statut actuel du run avec gestion d'erreur
-   * @param run - Le run à vérifier
-   * @param attempts - Nombre de tentatives effectuées
-   * @returns Promise<Run> - Le run mis à jour
-   */
-  private async checkRunStatus(run: any, attempts: number) {
-    try {
-      const updatedRun = await this.client.beta.threads.runs.retrieve(run.id, {
-        thread_id: run.thread_id
       })
-      
-      // Afficher le progrès périodiquement
-      if (attempts % OPENAI_CONFIG.PROGRESS_LOG_FREQUENCY === 0) {
-        console.log(`⏱️  Statut du run (${attempts}s): ${updatedRun.status}`)
+
+      if (!response.output_text.trim()) {
+        throw new Error('Aucune réponse textuelle trouvée dans la réponse OpenAI')
       }
-      
-      return updatedRun
-      
+
+      console.log('✅ Réponse OpenAI reçue via Responses API')
+      return response.output_text
     } catch (error) {
-      console.error('Erreur lors de la récupération du statut du run:', error)
-      // Ne pas échouer immédiatement, donner quelques chances
-      if (attempts >= OPENAI_CONFIG.MIN_RETRY_ATTEMPTS) {
-        throw error
-      }
-      return run // Retourner le run précédent en cas d'erreur temporaire
+      console.error('❌ Erreur dans le workflow Responses API:', error)
+      throw new Error(`Erreur avec Responses API: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
     }
   }
 
   /**
-   * Récupère la réponse finale de l'Assistant depuis le thread
-   * @param threadId - ID du thread contenant les messages
-   * @returns Promise<string> - Contenu de la réponse de l'assistant
-   */
-  private async retrieveAssistantResponse(threadId: string): Promise<string> {
-    // Récupérer tous les messages du thread
-    const messages = await this.client.beta.threads.messages.list(threadId)
-    
-    // Filtrer et trier pour obtenir la dernière réponse de l'assistant
-    const assistantMessage = messages.data
-      .filter(message => message.role === 'assistant')
-      .sort((a, b) => b.created_at - a.created_at)[0]
-    
-    // Vérifier que nous avons bien une réponse textuelle
-    if (assistantMessage && assistantMessage.content[0] && assistantMessage.content[0].type === 'text') {
-      console.log('✅ Réponse Assistant OpenAI reçue')
-      return assistantMessage.content[0].text.value
-    } else {
-      throw new Error('Aucune réponse textuelle trouvée dans la réponse de l\'assistant')
-    }
-  }
-
-  /**
-   * Nettoie le thread après utilisation pour économiser les ressources
-   * @param threadId - ID du thread à supprimer
-   */
-  private async cleanupThread(threadId: string): Promise<void> {
-    try {
-      await this.client.beta.threads.delete(threadId)
-      console.log('🧹 Thread nettoyé après succès')
-    } catch (cleanupError) {
-      // Ne pas faire échouer tout le processus si le nettoyage échoue
-      console.warn('⚠️  Impossible de nettoyer le thread:', cleanupError)
-    }
-  }
-
-  /**
-   * Construit le prompt d'analyse pour l'Assistant OpenAI
+   * Construit le prompt d'analyse pour Responses API
    * Utilise la structure de formatage standardisée
    * @param data - Données du cas d'usage et réponses au questionnaire
    * @returns string - Prompt formaté prêt à être envoyé à l'assistant

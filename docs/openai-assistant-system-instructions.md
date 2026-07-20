@@ -1,6 +1,6 @@
 # Instructions système — assistant OpenAI « Rapport MaydAI »
 
-**Source canonique (repo)** : le bloc sous le séparateur `---` est le texte à copier **intégralement** dans le champ **Instructions** de l’assistant OpenAI associé à `OPENAI_ASSISTANT_ID`. Ne pas inclure les lignes au-dessus du `---` dans le collage.
+**Source canonique (repo)** : le bloc sous le séparateur `---` est chargé côté serveur et transmis au champ `instructions` de la Responses API. Ne pas inclure les lignes au-dessus du `---` dans les instructions envoyées à OpenAI.
 
 ---
 
