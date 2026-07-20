@@ -1,4 +1,6 @@
-# 📘 Guide : Forcer le Format Markdown dans l'Assistant OpenAI
+# 📘 Guide historique : configuration de l'Assistant OpenAI
+
+> Ce document décrit l'ancien workflow Assistants API et est conservé pour historique. L'application utilise désormais Responses API. Seule la clé secrète `OPENAI_API_KEY` est configurée dans l'environnement ; le modèle, le vector store et les instructions système sont versionnés dans le repo.
 
 ## 🎯 Objectif
 
@@ -182,4 +184,3 @@ Après configuration, les nouveaux rapports générés doivent :
   - `## Conclusion`
 
 Le parser pourra alors extraire correctement toutes les données.
-
