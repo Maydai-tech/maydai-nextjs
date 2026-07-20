@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       console.error('[Admin LLM Stats Sync Runs] Email de rapport non envoyé:', emailResult.error)
     }
 
-    await recordLlmStatsSyncRun(
+    const historyRecorded = await recordLlmStatsSyncRun(
       supabase,
       buildLlmStatsSyncRunFromResult(result, emailResult.success),
     )
@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
       {
         ...result,
         emailSent: emailResult.success,
+        historyRecorded,
         triggeredBy: authResult.user?.email || authResult.user?.id || 'admin',
       },
       { status: result.success ? 200 : 207 },

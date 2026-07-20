@@ -69,21 +69,33 @@ export function buildLlmStatsSyncRunFromFailure(params: {
 export async function recordLlmStatsSyncRun(
   supabase: SupabaseClient,
   row: LlmStatsSyncRunInsert,
-): Promise<void> {
+): Promise<boolean> {
   try {
     const query = supabase.from('llm_stats_sync_runs') as unknown as {
-      insert?: (value: LlmStatsSyncRunInsert) => Promise<{ error?: unknown }>
+      insert?: (value: LlmStatsSyncRunInsert) => Promise<{
+        error?: unknown
+        status?: number
+        statusText?: string
+      }>
     }
     if (typeof query.insert !== 'function') {
       console.error('[LLM Stats Sync] Historique cron non enregistré: insert indisponible')
-      return
+      return false
     }
 
-    const { error } = await query.insert(row)
-    if (error) {
-      console.error('[LLM Stats Sync] Historique cron non enregistré:', error)
+    const result = await query.insert(row)
+    if (result.error) {
+      console.error('[LLM Stats Sync] Historique cron non enregistré:', {
+        error: result.error,
+        status: result.status,
+        statusText: result.statusText,
+      })
+      return false
     }
+
+    return true
   } catch (error) {
     console.error('[LLM Stats Sync] Historique cron non enregistré:', error)
+    return false
   }
 }

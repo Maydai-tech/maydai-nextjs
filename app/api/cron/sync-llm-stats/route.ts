@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       console.error('[LLM Stats Sync] Email de rapport non envoyé:', emailResult.error)
     }
 
-    await recordLlmStatsSyncRun(
+    const historyRecorded = await recordLlmStatsSyncRun(
       supabase,
       buildLlmStatsSyncRunFromResult(result, emailResult.success),
     )
@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ...result,
       emailSent: emailResult.success,
+      historyRecorded,
     }, { status: result.success ? 200 : 207 })
   } catch (error) {
     console.error('[LLM Stats Sync] Cron échoué:', error)
