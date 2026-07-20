@@ -105,6 +105,7 @@ describe('POST /api/admin/llm-stats-sync-runs', () => {
     expect(await response.json()).toMatchObject({
       success: true,
       emailSent: true,
+      historyRecorded: true,
       triggeredBy: 'admin@example.com',
     })
   })

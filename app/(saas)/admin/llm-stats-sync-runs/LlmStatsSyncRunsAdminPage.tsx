@@ -53,6 +53,7 @@ type RunNowResponse = {
   modelsUnchanged?: number
   emailSent?: boolean
   failureEmailSent?: boolean
+  historyRecorded?: boolean
 }
 
 function formatDateTime(value: string): string {
@@ -204,6 +205,7 @@ export default function LlmStatsSyncRunsAdminPage() {
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [runMessage, setRunMessage] = useState<string | null>(null)
+  const [runWarning, setRunWarning] = useState(false)
   const [runError, setRunError] = useState<string | null>(null)
 
   const latestRun = useMemo(() => runs[0] || null, [runs])
@@ -250,6 +252,7 @@ export default function LlmStatsSyncRunsAdminPage() {
 
     setRunning(true)
     setRunMessage(null)
+    setRunWarning(false)
     setRunError(null)
 
     try {
@@ -264,11 +267,15 @@ export default function LlmStatsSyncRunsAdminPage() {
         throw new Error(payload.error || "Impossible d'exécuter le cron LLM Stats.")
       }
 
+      const summary = `Exécution terminée : ${payload.modelsFetched ?? 0} modèles récupérés, ${
+        payload.modelsCreated ?? 0
+      } créés, ${payload.modelsUpdated ?? 0} mis à jour.`
       setRunMessage(
-        `Exécution terminée : ${payload.modelsFetched ?? 0} modèles récupérés, ${
-          payload.modelsCreated ?? 0
-        } créés, ${payload.modelsUpdated ?? 0} mis à jour.`,
+        payload.historyRecorded === false
+          ? `${summary} Historique non enregistré : vérifie les droits INSERT service_role sur llm_stats_sync_runs.`
+          : summary,
       )
+      setRunWarning(payload.historyRecorded === false)
       await fetchRuns()
     } catch (syncError) {
       setRunError(syncError instanceof Error ? syncError.message : 'Erreur inconnue')
@@ -332,7 +339,13 @@ export default function LlmStatsSyncRunsAdminPage() {
       </div>
 
       {runMessage ? (
-        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <div
+          className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+            runWarning
+              ? 'border-amber-200 bg-amber-50 text-amber-800'
+              : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+          }`}
+        >
           {runMessage}
         </div>
       ) : null}
