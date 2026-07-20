@@ -208,6 +208,7 @@ export interface ComplAIPrinciple {
 
 export interface ComplAIModel {
   id: string
+  llm_stats_id?: string | null
   model_name: string
   model_provider?: string
   model_type?: string

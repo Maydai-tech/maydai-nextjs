@@ -72,6 +72,11 @@ interface LlmStatsScoresResponse {
   total: number
 }
 
+interface SupabaseQueryError {
+  code?: string
+  message: string
+}
+
 interface ModelProviderRow {
   id: number
   name: string
@@ -79,6 +84,7 @@ interface ModelProviderRow {
 
 interface ExistingModelRow {
   id: string
+  llm_stats_id: string | null
   model_name: string
   model_provider_id: number | null
   model_provider: string | null
@@ -96,6 +102,7 @@ interface ExistingModelRow {
 }
 
 export interface LlmStatsModelRecord {
+  llm_stats_id: string
   model_name: string
   model_provider: string
   model_provider_id: number
@@ -252,6 +259,52 @@ export function buildFallbackGeneralRankMap(
   return new Map(sortable.map((entry, index) => [entry.id, index + 1]))
 }
 
+function modelDisplayKey(model: LlmStatsModelSummary): string {
+  return `${model.organization.name}:${model.name}`.toLowerCase()
+}
+
+function dateValue(date?: string | null): number {
+  if (!date) return Number.NEGATIVE_INFINITY
+  const time = Date.parse(date)
+  return Number.isFinite(time) ? time : Number.NEGATIVE_INFINITY
+}
+
+function compareCanonicalModels(
+  candidate: LlmStatsModelSummary,
+  current: LlmStatsModelSummary,
+): number {
+  const dateDiff = dateValue(candidate.release_date) - dateValue(current.release_date)
+  if (dateDiff !== 0) return dateDiff
+
+  const candidateScore = candidate.top_scores?.general
+  const currentScore = current.top_scores?.general
+  const candidateHasScore = typeof candidateScore === 'number' && Number.isFinite(candidateScore)
+  const currentHasScore = typeof currentScore === 'number' && Number.isFinite(currentScore)
+  if (candidateHasScore || currentHasScore) {
+    if (!candidateHasScore) return -1
+    if (!currentHasScore) return 1
+    if (candidateScore !== currentScore) return candidateScore! - currentScore!
+  }
+
+  return candidate.id.localeCompare(current.id)
+}
+
+export function selectCanonicalLlmStatsModels(
+  models: LlmStatsModelSummary[],
+): LlmStatsModelSummary[] {
+  const byDisplayKey = new Map<string, LlmStatsModelSummary>()
+
+  for (const model of models) {
+    const key = modelDisplayKey(model)
+    const current = byDisplayKey.get(key)
+    if (!current || compareCanonicalModels(model, current) > 0) {
+      byDisplayKey.set(key, model)
+    }
+  }
+
+  return [...byDisplayKey.values()]
+}
+
 export function mapLlmStatsModelToRecord(params: {
   model: LlmStatsModelSummary
   providerId: number
@@ -263,6 +316,7 @@ export function mapLlmStatsModelToRecord(params: {
   const providers = params.model.providers || []
 
   return {
+    llm_stats_id: params.model.id,
     model_name: params.model.name,
     model_provider: params.model.organization.name,
     model_provider_id: params.providerId,
@@ -315,6 +369,19 @@ function changedFieldsForRecord(
   ] as const
 
   return fields.filter((field) => !valuesEqual(existing[field], record[field]))
+}
+
+function isMissingLlmStatsIdColumn(error: SupabaseQueryError): boolean {
+  return error.message.includes('llm_stats_id') || error.code === 'PGRST204'
+}
+
+function databaseRecordFor(
+  record: LlmStatsModelRecord,
+  includeLlmStatsId: boolean,
+): LlmStatsModelRecord | Omit<LlmStatsModelRecord, 'llm_stats_id'> {
+  if (includeLlmStatsId) return record
+  const { llm_stats_id: _llmStatsId, ...databaseRecord } = record
+  return databaseRecord
 }
 
 async function fetchAllModels(): Promise<LlmStatsModelSummary[]> {
@@ -419,37 +486,73 @@ async function ensureProvider(
 
 async function loadExistingModels(
   supabase: SupabaseClient,
-): Promise<Map<string, ExistingModelRow>> {
-  const { data, error } = await supabase
+): Promise<{
+  byLlmStatsId: Map<string, ExistingModelRow>
+  byProviderAndName: Map<string, ExistingModelRow>
+  supportsLlmStatsId: boolean
+}> {
+  const selectFields = `
+    model_name,
+    model_provider_id,
+    model_provider,
+    model_type,
+    license,
+    context_length,
+    release_date,
+    knowledge_cutoff,
+    input_cost_per_million,
+    output_cost_per_million,
+    model_size,
+    gpqa_score,
+    aime_2025_score,
+    llm_leader_rank
+  `
+  let supportsLlmStatsId = true
+  let { data, error } = await supabase
     .from('compl_ai_models')
     .select(`
       id,
-      model_name,
-      model_provider_id,
-      model_provider,
-      model_type,
-      license,
-      context_length,
-      release_date,
-      knowledge_cutoff,
-      input_cost_per_million,
-      output_cost_per_million,
-      model_size,
-      gpqa_score,
-      aime_2025_score,
-      llm_leader_rank
+      llm_stats_id,
+      ${selectFields}
     `)
+
+  if (error && isMissingLlmStatsIdColumn(error as SupabaseQueryError)) {
+    supportsLlmStatsId = false
+    const fallback = await supabase
+      .from('compl_ai_models')
+      .select(`
+        id,
+        ${selectFields}
+      `)
+    data = fallback.data
+    error = fallback.error
+  }
 
   if (error) {
     throw new Error(`Erreur récupération compl_ai_models: ${error.message}`)
   }
 
-  const map = new Map<string, ExistingModelRow>()
-  for (const model of (data || []) as ExistingModelRow[]) {
+  const byLlmStatsId = new Map<string, ExistingModelRow>()
+  const byProviderAndName = new Map<string, ExistingModelRow>()
+  const rows = ((data || []) as Array<Omit<ExistingModelRow, 'llm_stats_id'> & {
+    llm_stats_id?: string | null
+  }>).map((model) => ({
+    ...model,
+    llm_stats_id: model.llm_stats_id ?? null,
+  }))
+
+  for (const model of rows) {
+    if (model.llm_stats_id) {
+      byLlmStatsId.set(model.llm_stats_id, model)
+    }
     if (model.model_provider_id === null) continue
-    map.set(existingModelKey(model.model_provider_id, model.model_name), model)
+    const key = existingModelKey(model.model_provider_id, model.model_name)
+    if (!byProviderAndName.has(key)) {
+      byProviderAndName.set(key, model)
+    }
   }
-  return map
+
+  return { byLlmStatsId, byProviderAndName, supportsLlmStatsId }
 }
 
 export async function syncLlmStatsModels(
@@ -474,11 +577,12 @@ export async function syncLlmStatsModels(
     loadExistingModels(supabase),
   ])
 
+  const canonicalModels = selectCanonicalLlmStatsModels(models)
   const gpqaScoreMap = buildBestScoreMap(gpqaScores)
   const aimeScoreMap = buildBestScoreMap(aimeScores)
   const now = new Date().toISOString()
 
-  for (const model of models) {
+  for (const model of canonicalModels) {
     try {
       const provider = await ensureProvider(supabase, providerMap, model.organization.name)
       const record = mapLlmStatsModelToRecord({
@@ -491,12 +595,13 @@ export async function syncLlmStatsModels(
       })
 
       const key = existingModelKey(provider.id, model.name)
-      const existing = existingModels.get(key)
+      const existing =
+        existingModels.byLlmStatsId.get(model.id) || existingModels.byProviderAndName.get(key)
 
       if (!existing) {
         const { data, error } = await supabase
           .from('compl_ai_models')
-          .insert(record)
+          .insert(databaseRecordFor(record, existingModels.supportsLlmStatsId))
           .select('id')
           .single()
 
@@ -511,19 +616,29 @@ export async function syncLlmStatsModels(
           model_provider: model.organization.name,
         }
         createdModels.push(created)
-        existingModels.set(key, { ...record, id: created.id || '', model_provider_id: provider.id })
+        const createdRow = {
+          ...record,
+          id: created.id || '',
+          model_provider_id: provider.id,
+        }
+        existingModels.byLlmStatsId.set(record.llm_stats_id, createdRow)
+        existingModels.byProviderAndName.set(key, createdRow)
         continue
       }
 
       const changedFields = changedFieldsForRecord(existing, record)
-      if (changedFields.length === 0) {
+      const shouldUpdateInternalId =
+        existingModels.supportsLlmStatsId &&
+        !valuesEqual(existing.llm_stats_id, record.llm_stats_id)
+
+      if (changedFields.length === 0 && !shouldUpdateInternalId) {
         modelsUnchanged++
         continue
       }
 
       const { error } = await supabase
         .from('compl_ai_models')
-        .update(record)
+        .update(databaseRecordFor(record, existingModels.supportsLlmStatsId))
         .eq('id', existing.id)
 
       if (error) {
@@ -531,12 +646,23 @@ export async function syncLlmStatsModels(
         continue
       }
 
-      updatedModels.push({
-        id: existing.id,
-        model_name: model.name,
-        model_provider: model.organization.name,
-        changedFields,
-      })
+      if (changedFields.length > 0) {
+        updatedModels.push({
+          id: existing.id,
+          model_name: model.name,
+          model_provider: model.organization.name,
+          changedFields,
+        })
+      } else {
+        modelsUnchanged++
+      }
+
+      const updatedRow = { ...existing, ...record }
+      if (existing.llm_stats_id && existing.llm_stats_id !== record.llm_stats_id) {
+        existingModels.byLlmStatsId.delete(existing.llm_stats_id)
+      }
+      existingModels.byLlmStatsId.set(record.llm_stats_id, updatedRow)
+      existingModels.byProviderAndName.set(key, updatedRow)
     } catch (error) {
       errors.push(
         `${model.organization.name}/${model.name}: ${
@@ -553,7 +679,7 @@ export async function syncLlmStatsModels(
     startedAt,
     finishedAt,
     durationMs: Date.now() - startTime,
-    modelsFetched: models.length,
+    modelsFetched: canonicalModels.length,
     modelsCreated: createdModels.length,
     modelsUpdated: updatedModels.length,
     modelsUnchanged,
