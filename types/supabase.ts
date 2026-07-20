@@ -16,6 +16,7 @@ export type Database = {
       compl_ai_models: {
         Row: {
           id: string
+          llm_stats_id: string | null
           model_name: string
           model_provider: string | null
           model_type: string | null
@@ -50,6 +51,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          llm_stats_id?: string | null
           model_name: string
           model_provider?: string | null
           model_type?: string | null
@@ -84,6 +86,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          llm_stats_id?: string | null
           model_name?: string
           model_provider?: string | null
           model_type?: string | null
@@ -614,4 +617,3 @@ export type Database = {
     CompositeTypes: Record<string, never>
   }
 }
-

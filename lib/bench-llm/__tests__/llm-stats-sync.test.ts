@@ -2,6 +2,7 @@ import {
   buildBestScoreMap,
   deriveModelSizeFromParamCount,
   mapLlmStatsModelToRecord,
+  selectCanonicalLlmStatsModels,
 } from '../llm-stats-sync'
 
 describe('LLM Stats sync mapping', () => {
@@ -87,6 +88,7 @@ describe('LLM Stats sync mapping', () => {
 
     expect(record).toMatchObject({
       model_name: 'Claude Mythos Preview',
+      llm_stats_id: 'claude-mythos-preview',
       model_provider: 'Anthropic',
       model_provider_id: 42,
       model_type: 'chat',
@@ -124,5 +126,41 @@ describe('LLM Stats sync mapping', () => {
     expect(record.output_cost_per_million).toBeNull()
     expect(record.gpqa_score).toBeNull()
     expect(record.aime_2025_score).toBeNull()
+  })
+
+  test('keeps one canonical LLM Stats model per provider and display name', () => {
+    const canonicalModels = selectCanonicalLlmStatsModels([
+      {
+        id: 'gpt-4o-2024-05-13',
+        name: 'GPT-4o',
+        organization: { id: 'openai', name: 'OpenAI' },
+        open_weight: false,
+        model_type: 'chat',
+        release_date: '2024-05-13',
+        top_scores: { general: 0.9 },
+      },
+      {
+        id: 'gpt-4o-2024-08-06',
+        name: 'GPT-4o',
+        organization: { id: 'openai', name: 'OpenAI' },
+        open_weight: false,
+        model_type: 'chat',
+        release_date: '2024-08-06',
+        top_scores: { general: 0.8 },
+      },
+      {
+        id: 'gpt-4o-mini-2024-07-18',
+        name: 'GPT-4o mini',
+        organization: { id: 'openai', name: 'OpenAI' },
+        open_weight: false,
+        model_type: 'chat',
+        release_date: '2024-07-18',
+      },
+    ])
+
+    expect(canonicalModels.map((model) => model.id)).toEqual([
+      'gpt-4o-2024-08-06',
+      'gpt-4o-mini-2024-07-18',
+    ])
   })
 })

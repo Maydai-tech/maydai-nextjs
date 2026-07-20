@@ -25,6 +25,7 @@ CREATE INDEX IF NOT EXISTS llm_stats_sync_runs_status_idx
 ALTER TABLE public.llm_stats_sync_runs ENABLE ROW LEVEL SECURITY;
 GRANT SELECT ON TABLE public.llm_stats_sync_runs TO authenticated;
 GRANT SELECT, INSERT ON TABLE public.llm_stats_sync_runs TO service_role;
+NOTIFY pgrst, 'reload schema';
 
 CREATE OR REPLACE FUNCTION public.is_admin_or_super_admin(user_id uuid)
 RETURNS boolean
