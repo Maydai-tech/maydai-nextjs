@@ -335,8 +335,37 @@ export function mapLlmStatsModelToRecord(params: {
   }
 }
 
+export function normalizeLlmStatsMatchValue(value: string): string {
+  const normalized = value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+
+  const aliases: Record<string, string> = {
+    claude37sonnet: 'claudesonnet37',
+    claude3opus: 'claudeopus3',
+  }
+
+  return aliases[normalized] || normalized
+}
+
+const PROVIDER_ALIASES = new Map<string, string>([
+  [normalizeLlmStatsMatchValue('Alibaba Cloud / Qwen Team'), 'Qwen'],
+  [normalizeLlmStatsMatchValue('Alibaba (Qwen)'), 'Qwen'],
+  [normalizeLlmStatsMatchValue('Mistral AI'), 'Mistral'],
+])
+
+export function canonicalLlmStatsProviderName(providerName: string): string {
+  return PROVIDER_ALIASES.get(normalizeLlmStatsMatchValue(providerName)) || providerName.trim()
+}
+
+function providerMatchKey(providerName: string): string {
+  return normalizeLlmStatsMatchValue(canonicalLlmStatsProviderName(providerName))
+}
+
 function existingModelKey(providerId: number, modelName: string): string {
-  return `${providerId}:${modelName}`
+  return `${providerId}:${normalizeLlmStatsMatchValue(modelName)}`
 }
 
 function valuesEqual(a: unknown, b: unknown): boolean {
@@ -446,7 +475,9 @@ async function loadProviderMap(
     throw new Error(`Erreur récupération model_providers: ${error.message}`)
   }
 
-  return new Map(((data || []) as ModelProviderRow[]).map((provider) => [provider.name, provider]))
+  return new Map(
+    ((data || []) as ModelProviderRow[]).map((provider) => [providerMatchKey(provider.name), provider]),
+  )
 }
 
 async function ensureProvider(
@@ -454,12 +485,14 @@ async function ensureProvider(
   providers: Map<string, ModelProviderRow>,
   name: string,
 ): Promise<ModelProviderRow> {
-  const existing = providers.get(name)
+  const canonicalName = canonicalLlmStatsProviderName(name)
+  const matchKey = providerMatchKey(canonicalName)
+  const existing = providers.get(matchKey)
   if (existing) return existing
 
   const { data, error } = await supabase
     .from('model_providers')
-    .insert({ name })
+    .insert({ name: canonicalName })
     .select('id, name')
     .single()
 
@@ -467,20 +500,22 @@ async function ensureProvider(
     const retry = await supabase
       .from('model_providers')
       .select('id, name')
-      .eq('name', name)
+      .eq('name', canonicalName)
       .single()
 
     if (retry.error || !retry.data) {
-      throw new Error(`Erreur création provider ${name}: ${error?.message || retry.error?.message}`)
+      throw new Error(
+        `Erreur création provider ${canonicalName}: ${error?.message || retry.error?.message}`,
+      )
     }
 
     const provider = retry.data as ModelProviderRow
-    providers.set(name, provider)
+    providers.set(matchKey, provider)
     return provider
   }
 
   const provider = data as ModelProviderRow
-  providers.set(name, provider)
+  providers.set(matchKey, provider)
   return provider
 }
 
@@ -593,6 +628,7 @@ export async function syncLlmStatsModels(
         aime2025Score: aimeScoreMap.get(model.id) ?? null,
         now,
       })
+      record.model_provider = provider.name
 
       const key = existingModelKey(provider.id, model.name)
       const existing =
