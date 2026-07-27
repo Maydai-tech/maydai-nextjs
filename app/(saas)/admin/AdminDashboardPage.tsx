@@ -12,7 +12,6 @@ import {
   Activity,
   LineChart,
   ShieldCheck,
-  History,
 } from 'lucide-react'
 
 interface AdminStats {
@@ -218,13 +217,13 @@ export default function AdminDashboardPage() {
             </Link>
 
             <Link
-              href="/admin/llm-stats-sync-runs"
-              className="block rounded-lg border border-sky-200 bg-sky-50/50 p-4 transition-colors hover:border-[#0080A3] hover:shadow-md"
+              href="/admin/bench-llms"
+              className="block rounded-lg border border-sky-200 bg-gradient-to-br from-sky-50/70 to-emerald-50/50 p-4 transition-colors hover:border-[#0080A3] hover:shadow-md"
             >
-              <History className="mb-2 h-6 w-6 text-sky-800" />
-              <h3 className="font-medium text-gray-900">Cron LLM Stats</h3>
+              <BarChart3 className="mb-2 h-6 w-6 text-[#0080A3]" />
+              <h3 className="font-medium text-gray-900">Bench LLMs</h3>
               <p className="mt-1 text-sm text-gray-500">
-                Historique des synchronisations quotidiennes, emails et erreurs
+                Modèles et données MaydAI, COMPL-AI, Compar:IA, LLM Stats et EcoLogits
               </p>
             </Link>
 
@@ -236,17 +235,6 @@ export default function AdminDashboardPage() {
               <h3 className="font-medium text-gray-900">Scores des Usecases</h3>
               <p className="mt-1 text-sm text-gray-500">
                 Vue d'ensemble des scores de conformité IA Act pour tous les cas d'usage
-              </p>
-            </a>
-
-            <a
-              href="/admin/compl-ai-scores"
-              className="block rounded-lg border border-gray-200 p-4 transition-colors hover:border-orange-500 hover:shadow-md"
-            >
-              <TrendingUp className="mb-2 h-6 w-6 text-orange-600" />
-              <h3 className="font-medium text-gray-900">Scores COMPL-AI</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Consulter les scores de conformité des modèles IA
               </p>
             </a>
 
