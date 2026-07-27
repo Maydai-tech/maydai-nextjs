@@ -47,16 +47,18 @@ interface CompariaRankingRow {
   updated_at: string
 }
 
-function parseNumber(value: string | undefined, fallback = 0): number {
-  if (value == null || String(value).trim() === '') return fallback
-  const n = Number(String(value).replace(',', '.').trim())
-  return Number.isFinite(n) ? n : fallback
+/** Convertit une cellule CSV en float, ou null si vide / invalide (évite 22P02). */
+function safeFloat(val: unknown): number | null {
+  if (val === null || val === undefined || val === '' || val === 'NaN') return null
+  const parsed = parseFloat(String(val).replace(',', '.'))
+  return Number.isNaN(parsed) ? null : parsed
 }
 
-function parseNumberOrNull(value: string | undefined): number | null {
-  if (value == null || String(value).trim() === '') return null
-  const n = Number(String(value).replace(',', '.').trim())
-  return Number.isFinite(n) ? n : null
+/** Convertit une cellule CSV en entier, avec fallback si vide / invalide. */
+function safeInt(val: unknown, fallback = 0): number {
+  if (val === null || val === undefined || val === '' || val === 'NaN') return fallback
+  const parsed = parseInt(String(val), 10)
+  return Number.isNaN(parsed) ? fallback : parsed
 }
 
 function mapCsvRowToRanking(row: CompariaCsvRow, updatedAt: string): CompariaRankingRow | null {
@@ -65,16 +67,16 @@ function mapCsvRowToRanking(row: CompariaCsvRow, updatedAt: string): CompariaRan
 
   return {
     id,
-    rank: parseNumber(row.Rank),
-    bradley_terry_score: parseNumber(row['Bradley-Terry Score']),
-    total_votes: parseNumber(row['Total votes']),
-    consumption_mwh: parseNumberOrNull(row['Consumption mWh (1000 tokens)']),
-    size: (row.Size ?? '').trim(),
-    parameters_b: parseNumberOrNull(row['Parameters (B)']),
-    architecture: (row.Architecture ?? '').trim(),
-    release: (row.Release ?? '').trim(),
-    organisation: (row.Organisation ?? '').trim(),
-    license: (row.License ?? '').trim(),
+    rank: safeInt(row.Rank, 0),
+    bradley_terry_score: safeFloat(row['Bradley-Terry Score']) ?? 0,
+    total_votes: safeInt(row['Total votes'], 0),
+    consumption_mwh: safeFloat(row['Consumption mWh (1000 tokens)']),
+    size: String(row.Size || ''),
+    parameters_b: safeFloat(row['Parameters (B)']),
+    architecture: String(row.Architecture || ''),
+    release: String(row.Release || ''),
+    organisation: String(row.Organisation || ''),
+    license: String(row.License || ''),
     updated_at: updatedAt,
   }
 }
@@ -249,11 +251,13 @@ export async function POST(request: NextRequest) {
       .upsert(rows, { onConflict: 'id' })
 
     if (upsertError) {
-      console.error('[Webhook KB Update] Erreur upsert Supabase:', upsertError)
+      console.error('[Webhook KB Update] Erreur Upsert Supabase:', upsertError)
       return NextResponse.json(
         {
           error: 'Échec de l’upsert Supabase',
           details: upsertError.message,
+          code: upsertError.code,
+          hint: upsertError.hint,
         },
         { status: 500 }
       )
