@@ -49,14 +49,18 @@ interface CompariaRankingRow {
 
 /** Convertit une cellule CSV en float, ou null si vide / invalide (évite 22P02). */
 function safeFloat(val: unknown): number | null {
-  if (val === null || val === undefined || val === '' || val === 'NaN') return null
+  if (val === null || val === undefined || val === 'NaN') return null
+  if (typeof val === 'string' && val.trim() === '') return null
+  if (val === '') return null
   const parsed = parseFloat(String(val).replace(',', '.'))
   return Number.isNaN(parsed) ? null : parsed
 }
 
 /** Convertit une cellule CSV en entier, avec fallback si vide / invalide. */
 function safeInt(val: unknown, fallback = 0): number {
-  if (val === null || val === undefined || val === '' || val === 'NaN') return fallback
+  if (val === null || val === undefined || val === 'NaN') return fallback
+  if (typeof val === 'string' && val.trim() === '') return fallback
+  if (val === '') return fallback
   const parsed = parseInt(String(val), 10)
   return Number.isNaN(parsed) ? fallback : parsed
 }
@@ -255,9 +259,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Échec de l’upsert Supabase',
-          details: upsertError.message,
-          code: upsertError.code,
+          // Champs PostgREST complets (ne pas écraser `details` avec `message`)
+          message: upsertError.message,
+          details: upsertError.details,
           hint: upsertError.hint,
+          code: upsertError.code,
         },
         { status: 500 }
       )
