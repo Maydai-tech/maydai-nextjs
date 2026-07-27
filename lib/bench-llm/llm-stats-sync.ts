@@ -101,6 +101,10 @@ interface ExistingModelRow {
   llm_leader_rank: number | null
 }
 
+type ExistingModelDatabaseRow = Omit<ExistingModelRow, 'llm_stats_id'> & {
+  llm_stats_id?: string | null
+}
+
 export interface LlmStatsModelRecord {
   llm_stats_id: string
   model_name: string
@@ -543,13 +547,15 @@ async function loadExistingModels(
     llm_leader_rank
   `
   let supportsLlmStatsId = true
-  let { data, error } = await supabase
+  const initialQuery = await supabase
     .from('compl_ai_models')
     .select(`
       id,
       llm_stats_id,
       ${selectFields}
     `)
+  let data = initialQuery.data as ExistingModelDatabaseRow[] | null
+  let error = initialQuery.error
 
   if (error && isMissingLlmStatsIdColumn(error as SupabaseQueryError)) {
     supportsLlmStatsId = false
@@ -559,7 +565,7 @@ async function loadExistingModels(
         id,
         ${selectFields}
       `)
-    data = fallback.data
+    data = fallback.data as ExistingModelDatabaseRow[] | null
     error = fallback.error
   }
 
@@ -569,9 +575,7 @@ async function loadExistingModels(
 
   const byLlmStatsId = new Map<string, ExistingModelRow>()
   const byProviderAndName = new Map<string, ExistingModelRow>()
-  const rows = ((data || []) as Array<Omit<ExistingModelRow, 'llm_stats_id'> & {
-    llm_stats_id?: string | null
-  }>).map((model) => ({
+  const rows: ExistingModelRow[] = (data || []).map((model) => ({
     ...model,
     llm_stats_id: model.llm_stats_id ?? null,
   }))
