@@ -91,17 +91,22 @@ function getServiceSupabase() {
 }
 
 function getDriveClient() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n')
+  // Noms Vercel / MaydAI, avec fallback sur les anciens noms
+  const clientEmail =
+    process.env.GOOGLE_DRIVE_CLIENT_EMAIL ||
+    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
+  const rawPrivateKey =
+    process.env.GOOGLE_DRIVE_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY
+  const privateKey = rawPrivateKey?.replace(/\\n/g, '\n')
 
-  if (!email || !privateKey) {
+  if (!clientEmail || !privateKey) {
     throw new Error(
-      'GOOGLE_SERVICE_ACCOUNT_EMAIL ou GOOGLE_PRIVATE_KEY manquant(e)'
+      'GOOGLE_DRIVE_CLIENT_EMAIL ou GOOGLE_DRIVE_PRIVATE_KEY manquant(e)'
     )
   }
 
   const auth = new google.auth.JWT({
-    email,
+    email: clientEmail,
     key: privateKey,
     scopes: ['https://www.googleapis.com/auth/drive.readonly'],
   })
@@ -117,16 +122,43 @@ function escapeDriveName(name: string): string {
 async function downloadCsvFromDrive(fileName: string): Promise<string> {
   const drive = getDriveClient()
   const escapedName = escapeDriveName(fileName)
+  const kbFolderId = process.env.GOOGLE_DRIVE_KB_FOLDER_ID?.trim()
+  const baseQuery = `name='${escapedName}' and trashed=false`
 
-  const listRes = await drive.files.list({
-    q: `name='${escapedName}' and trashed=false`,
-    fields: 'files(id, name)',
-    pageSize: 10,
-    supportsAllDrives: true,
-    includeItemsFromAllDrives: true,
-  })
+  // 1) Shared Drive MaydAI (GOOGLE_DRIVE_KB_FOLDER_ID type 0A…)
+  let listRes = kbFolderId
+    ? await drive.files.list({
+        q: baseQuery,
+        fields: 'files(id, name)',
+        pageSize: 10,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+        corpora: 'drive',
+        driveId: kbFolderId,
+      })
+    : await drive.files.list({
+        q: baseQuery,
+        fields: 'files(id, name)',
+        pageSize: 10,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+      })
 
-  const files = listRes.data.files ?? []
+  let files = listRes.data.files ?? []
+
+  // 2) Fallback si l’ID est un dossier (pas un Shared Drive root)
+  if (files.length === 0 && kbFolderId) {
+    listRes = await drive.files.list({
+      q: `${baseQuery} and '${kbFolderId}' in parents`,
+      fields: 'files(id, name)',
+      pageSize: 10,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      corpora: 'allDrives',
+    })
+    files = listRes.data.files ?? []
+  }
+
   if (files.length === 0 || !files[0]?.id) {
     throw new Error(`Fichier Google Drive introuvable: ${fileName}`)
   }
