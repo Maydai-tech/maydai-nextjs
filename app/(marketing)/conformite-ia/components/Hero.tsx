@@ -9,7 +9,7 @@ import { sendLandingCtaClick } from '@/lib/gtm'
 import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
 
 export default function Hero() {
-  const daysLeft = useAIActCountdown()
+  const { days, label, isPassed, isMounted } = useAIActCountdown()
 
   const handleHeroFreeTrialClick = () => {
     sendLandingCtaClick({
@@ -36,17 +36,37 @@ export default function Hero() {
             qui vous accompagne dans vos Audits IA
           </h1>
 
-          <p className="text-lg md:text-xl font-medium text-white/95">
-            Plus que{' '}
-            <strong className="text-3xl md:text-4xl lg:text-5xl font-extrabold">
-              {daysLeft} jours
-            </strong>{' '}
-            avant le plein déploiement du règlement européen. MaydAI automatise
-            votre démarche de <strong>conformité IA Act</strong> (ou{' '}
-            <strong>Conformité AI Act</strong>) en rendant simples et
-            collaboratives les exigences de transparence et de sécurité pour vos
-            systèmes d&apos;intelligence artificielle.
-          </p>
+          {/* Fallback SSR anti-hydratation error */}
+          {!isMounted ? (
+            <span className="opacity-0" aria-hidden="true">
+              Chargement du compteur...
+            </span>
+          ) : isPassed ? (
+            <p className="text-lg md:text-xl font-medium text-white/95">
+              Depuis{' '}
+              <strong className="text-3xl md:text-4xl lg:text-5xl font-extrabold">
+                {days}
+              </strong>{' '}
+              {label}, l&apos;IA Act est officiellement en vigueur pour toutes
+              les entreprises. MaydAI automatise votre démarche de{' '}
+              <strong>conformité IA Act</strong> (ou{' '}
+              <strong>Conformité AI Act</strong>) en rendant simples et
+              collaboratives les exigences de transparence et de sécurité pour
+              vos systèmes d&apos;intelligence artificielle.
+            </p>
+          ) : (
+            <p className="text-lg md:text-xl font-medium text-white/95">
+              Plus que{' '}
+              <strong className="text-3xl md:text-4xl lg:text-5xl font-extrabold">
+                {days}
+              </strong>{' '}
+              {label} avant le plein déploiement du règlement européen. MaydAI
+              automatise votre démarche de <strong>conformité IA Act</strong>{' '}
+              (ou <strong>Conformité AI Act</strong>) en rendant simples et
+              collaboratives les exigences de transparence et de sécurité pour
+              vos systèmes d&apos;intelligence artificielle.
+            </p>
+          )}
         </div>
 
         <Image
