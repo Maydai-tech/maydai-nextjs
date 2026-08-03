@@ -98,7 +98,7 @@ export default function SignupPage() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [acceptTerms, setAcceptTerms] = useState(false)
 
-  const daysLeft = useAIActCountdown()
+  const { days, label, isPassed, isMounted } = useAIActCountdown()
 
   const inputFocusClass =
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:border-transparent'
@@ -440,17 +440,35 @@ export default function SignupPage() {
               <p className="text-base font-bold text-slate-900">
                 Évaluation rapide, intuitive et strictement confidentielle.
               </p>
-              <p
-                className="text-base font-bold text-slate-900"
-                role="timer"
-                aria-live="polite"
-              >
-                Plus que{' '}
-                <span className={signupHeadingAccentClass}>
-                  {daysLeft} jours
-                </span>{' '}
-                avant le plein déploiement de l&apos;AI Act
-              </p>
+              {!isMounted ? (
+                <div className="invisible" aria-hidden="true">
+                  Chargement du compteur...
+                </div>
+              ) : isPassed ? (
+                <p
+                  className="text-base font-bold text-slate-900"
+                  role="timer"
+                  aria-live="polite"
+                >
+                  Depuis{' '}
+                  <span className={signupHeadingAccentClass}>
+                    {days} {label}
+                  </span>
+                  , l&apos;IA Act est en vigueur
+                </p>
+              ) : (
+                <p
+                  className="text-base font-bold text-slate-900"
+                  role="timer"
+                  aria-live="polite"
+                >
+                  Plus que{' '}
+                  <span className={signupHeadingAccentClass}>
+                    {days} {label}
+                  </span>{' '}
+                  avant le plein déploiement de l&apos;AI Act
+                </p>
+              )}
             </>
           )}
         </div>

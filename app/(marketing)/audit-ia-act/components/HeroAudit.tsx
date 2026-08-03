@@ -3,18 +3,12 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, AppWindow } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import TrustBadges from '@/components/ui/TrustBadges'
 import { useAIActCountdown } from '@/app/(marketing)/conformite-ia/hooks/useAIActCountdown'
 import { SIGNUP_AUDIT_HREF } from '../signup-audit-href'
 
 export default function HeroAudit() {
-  const [mounted, setMounted] = useState(false)
-  const daysLeft = useAIActCountdown()
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const { days, label, isPassed, isMounted } = useAIActCountdown()
 
   return (
     <>
@@ -28,21 +22,28 @@ export default function HeroAudit() {
             <span className="text-[#ffab5a]">Audit IA Act</span>
           </h1>
 
-          <p className="text-lg md:text-xl font-medium text-white/95">
-            {mounted ? (
-              <>
-                Plus que{' '}
-                <strong className="text-3xl md:text-4xl lg:text-5xl font-extrabold">
-                  {daysLeft} jours
-                </strong>{' '}
-                avant le plein déploiement de l&apos;IA Act.
-              </>
-            ) : (
-              <span className="inline-block min-h-[1.75rem]" aria-hidden>
-                Calcul du décompte…
-              </span>
-            )}
-          </p>
+          {!isMounted ? (
+            <span className="opacity-0" aria-hidden="true">
+              Chargement...
+            </span>
+          ) : isPassed ? (
+            <p className="text-lg md:text-xl font-medium text-white/95">
+              Depuis{' '}
+              <strong className="text-3xl md:text-4xl lg:text-5xl font-extrabold">
+                {days}
+              </strong>{' '}
+              {label}, l&apos;IA Act est officiellement en vigueur pour toutes
+              les entreprises.
+            </p>
+          ) : (
+            <p className="text-lg md:text-xl font-medium text-white/95">
+              Plus que{' '}
+              <strong className="text-3xl md:text-4xl lg:text-5xl font-extrabold">
+                {days}
+              </strong>{' '}
+              {label} avant le plein déploiement de l&apos;IA Act.
+            </p>
+          )}
         </div>
 
         <Image
