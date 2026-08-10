@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { google } from 'googleapis'
 import Papa from 'papaparse'
+import { findFileIdByName, getFileFromDrive } from '@/lib/google-drive'
 
 /** Durée max Vercel : téléchargement Drive + upsert massif */
 export const maxDuration = 60
@@ -15,11 +15,16 @@ interface KbUpdatePayload {
   file_name: string
 }
 
-/** Ligne CSV brute (en-têtes anglais Compar:IA) */
+/** Ligne CSV brute (en-têtes anglais Compar:IA — 16 colonnes) */
 interface CompariaCsvRow {
   id?: string
   Rank?: string
   'Bradley-Terry Score'?: string
+  'BT p2.5'?: string
+  'BT p97.5'?: string
+  'Confidence interval'?: string
+  'Rank p2.5'?: string
+  'Rank p97.5'?: string
   'Total votes'?: string
   'Consumption mWh (1000 tokens)'?: string
   Size?: string
@@ -36,6 +41,11 @@ interface CompariaRankingRow {
   id: string
   rank: number
   bradley_terry_score: number
+  bt_p2_5: number | null
+  bt_p97_5: number | null
+  confidence_interval: string
+  rank_p2_5: number | null
+  rank_p97_5: number | null
   total_votes: number
   consumption_mwh: number | null
   size: string
@@ -45,6 +55,44 @@ interface CompariaRankingRow {
   organisation: string
   license: string
   updated_at: string
+}
+
+/**
+ * Allowlist strict des colonnes upsertées dans `comparia_rankings`.
+ * Toute clé hors liste (colonne CSV surprise, champ futur non migré) est ignorée.
+ */
+const COMPARIA_RANKINGS_UPSERT_KEYS = [
+  'id',
+  'rank',
+  'bradley_terry_score',
+  'bt_p2_5',
+  'bt_p97_5',
+  'confidence_interval',
+  'rank_p2_5',
+  'rank_p97_5',
+  'total_votes',
+  'consumption_mwh',
+  'size',
+  'parameters_b',
+  'architecture',
+  'release',
+  'organisation',
+  'license',
+  'updated_at',
+] as const satisfies readonly (keyof CompariaRankingRow)[]
+
+type CompariaUpsertRow = Pick<
+  CompariaRankingRow,
+  (typeof COMPARIA_RANKINGS_UPSERT_KEYS)[number]
+>
+
+/** Ne conserve que les clés du schéma attendu avant l’upsert Supabase. */
+function toCompariaUpsertRow(row: CompariaRankingRow): CompariaUpsertRow {
+  const cleaned = {} as CompariaUpsertRow
+  for (const key of COMPARIA_RANKINGS_UPSERT_KEYS) {
+    cleaned[key] = row[key] as never
+  }
+  return cleaned
 }
 
 /** Convertit une cellule CSV en float, ou null si vide / invalide (évite 22P02). */
@@ -69,10 +117,16 @@ function mapCsvRowToRanking(row: CompariaCsvRow, updatedAt: string): CompariaRan
   const id = row.id?.trim()
   if (!id) return null
 
+  // Mapping explicite : les en-têtes CSV hors liste ne sont jamais propagés.
   return {
     id,
     rank: safeInt(row.Rank, 0),
     bradley_terry_score: safeFloat(row['Bradley-Terry Score']) ?? 0,
+    bt_p2_5: safeFloat(row['BT p2.5']),
+    bt_p97_5: safeFloat(row['BT p97.5']),
+    confidence_interval: String(row['Confidence interval'] || ''),
+    rank_p2_5: safeFloat(row['Rank p2.5']),
+    rank_p97_5: safeFloat(row['Rank p97.5']),
     total_votes: safeInt(row['Total votes'], 0),
     consumption_mwh: safeFloat(row['Consumption mWh (1000 tokens)']),
     size: String(row.Size || ''),
@@ -93,94 +147,59 @@ function getServiceSupabase() {
       'NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY manquant(e)'
     )
   }
-  return createClient(url, key)
+  // Service role obligatoire : contourne RLS pour l'upsert backend
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
 }
 
-function getDriveClient() {
-  // Noms Vercel / MaydAI, avec fallback sur les anciens noms
-  const clientEmail =
-    process.env.GOOGLE_DRIVE_CLIENT_EMAIL ||
-    process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
-  const rawPrivateKey =
-    process.env.GOOGLE_DRIVE_PRIVATE_KEY || process.env.GOOGLE_PRIVATE_KEY
-  const privateKey = rawPrivateKey?.replace(/\\n/g, '\n')
+/**
+ * PostgrestError hérite de Error : `message` est non-énumérable.
+ * `JSON.stringify(error)` / NextResponse.json(error) → `{}` vide.
+ * On extrait donc explicitement les champs utiles + un dump brut.
+ */
+function serializePostgrestError(error: unknown): {
+  message: string | null
+  details: string | null
+  hint: string | null
+  code: string | null
+  name: string | null
+  raw: string
+} {
+  const e = error as {
+    message?: string
+    details?: string
+    hint?: string
+    code?: string
+    name?: string
+  } | null
 
-  if (!clientEmail || !privateKey) {
-    throw new Error(
-      'GOOGLE_DRIVE_CLIENT_EMAIL ou GOOGLE_DRIVE_PRIVATE_KEY manquant(e)'
+  let raw = ''
+  try {
+    raw = JSON.stringify(
+      error,
+      error instanceof Error
+        ? Object.getOwnPropertyNames(error)
+        : undefined,
+      2
     )
+  } catch {
+    raw = String(error)
   }
 
-  const auth = new google.auth.JWT({
-    email: clientEmail,
-    key: privateKey,
-    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
-  })
-
-  return google.drive({ version: 'v3', auth })
-}
-
-/** Échappe les apostrophes pour la requête Drive `q` */
-function escapeDriveName(name: string): string {
-  return name.replace(/'/g, "\\'")
+  return {
+    message: e?.message ?? (error instanceof Error ? error.message : null),
+    details: e?.details ?? null,
+    hint: e?.hint ?? null,
+    code: e?.code ?? null,
+    name: e?.name ?? (error instanceof Error ? error.name : null),
+    raw,
+  }
 }
 
 async function downloadCsvFromDrive(fileName: string): Promise<string> {
-  const drive = getDriveClient()
-  const escapedName = escapeDriveName(fileName)
-  const kbFolderId = process.env.GOOGLE_DRIVE_KB_FOLDER_ID?.trim()
-  const baseQuery = `name='${escapedName}' and trashed=false`
-
-  // 1) Shared Drive MaydAI (GOOGLE_DRIVE_KB_FOLDER_ID type 0A…)
-  let listRes = kbFolderId
-    ? await drive.files.list({
-        q: baseQuery,
-        fields: 'files(id, name)',
-        pageSize: 10,
-        supportsAllDrives: true,
-        includeItemsFromAllDrives: true,
-        corpora: 'drive',
-        driveId: kbFolderId,
-      })
-    : await drive.files.list({
-        q: baseQuery,
-        fields: 'files(id, name)',
-        pageSize: 10,
-        supportsAllDrives: true,
-        includeItemsFromAllDrives: true,
-      })
-
-  let files = listRes.data.files ?? []
-
-  // 2) Fallback si l’ID est un dossier (pas un Shared Drive root)
-  if (files.length === 0 && kbFolderId) {
-    listRes = await drive.files.list({
-      q: `${baseQuery} and '${kbFolderId}' in parents`,
-      fields: 'files(id, name)',
-      pageSize: 10,
-      supportsAllDrives: true,
-      includeItemsFromAllDrives: true,
-      corpora: 'allDrives',
-    })
-    files = listRes.data.files ?? []
-  }
-
-  if (files.length === 0 || !files[0]?.id) {
-    throw new Error(`Fichier Google Drive introuvable: ${fileName}`)
-  }
-
-  const fileId = files[0].id
-  const fileRes = await drive.files.get(
-    { fileId, alt: 'media', supportsAllDrives: true },
-    { responseType: 'text' }
-  )
-
-  const content = fileRes.data
-  if (typeof content !== 'string') {
-    throw new Error(`Contenu CSV invalide pour le fichier: ${fileName}`)
-  }
-
-  return content
+  const fileId = await findFileIdByName(fileName)
+  return getFileFromDrive(fileId)
 }
 
 export async function POST(request: NextRequest) {
@@ -240,6 +259,7 @@ export async function POST(request: NextRequest) {
     const rows = parsed.data
       .map((row) => mapCsvRowToRanking(row, updatedAt))
       .filter((row): row is CompariaRankingRow => row !== null)
+      .map(toCompariaUpsertRow)
 
     if (rows.length === 0) {
       return NextResponse.json(
@@ -249,21 +269,27 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Upsert massif dans Supabase (service role, contourne RLS)
+    // Payload filtré : uniquement COMPARIA_RANKINGS_UPSERT_KEYS
     const supabase = getServiceSupabase()
     const { error: upsertError } = await supabase
       .from('comparia_rankings')
       .upsert(rows, { onConflict: 'id' })
 
     if (upsertError) {
-      console.error('[Webhook KB Update] Erreur Upsert Supabase:', upsertError)
+      const serialized = serializePostgrestError(upsertError)
+      // Observabilité temporaire : dump brut + champs extraits
+      console.error('[Webhook KB Update] Erreur Upsert Supabase (raw):', upsertError)
+      console.error('[Webhook KB Update] Erreur Upsert Supabase (serialized):', serialized)
+
       return NextResponse.json(
         {
           error: 'Échec de l’upsert Supabase',
-          // Champs PostgREST complets (ne pas écraser `details` avec `message`)
-          message: upsertError.message,
-          details: upsertError.details,
-          hint: upsertError.hint,
-          code: upsertError.code,
+          message: serialized.message,
+          details: serialized.details,
+          hint: serialized.hint,
+          code: serialized.code,
+          name: serialized.name,
+          raw: serialized.raw,
         },
         { status: 500 }
       )
