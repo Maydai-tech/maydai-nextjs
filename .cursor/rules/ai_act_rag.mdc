@@ -1,0 +1,32 @@
+---
+description: Règles d'architecture et d'ingestion pour le RAG "AI Act" via Supabase pgvector
+globs: ["app/api/webhooks/kb-update/route.ts", "lib/rag-ingestion.ts", "lib/ai-act-mistral.ts", "supabase/migrations/*.sql"]
+alwaysApply: false
+---
+
+# RAG "AI Act" - Supabase First-Party
+
+Cette règle définit l'architecture du RAG juridique pour l'agent conversationnel Mistral, basé sur le dossier Drive `05_AI_Act_Docs`.
+
+## 1. Séparation des préoccupations (Strict)
+- **Ce RAG N'EST PAS** le système OpenAI File Search utilisé pour la génération de rapports de fin de parcours.
+- **Ce RAG NE MODIFIE PAS** le moteur de qualification des risques (arbre de décision JSON, `lib/qualification-v3-decision`). Le droit pour la qualification reste codé en dur.
+- Ce RAG est une brique documentaire alimentée par Supabase `pgvector` et exploitée par l'API Mistral pour du chat exploratoire.
+
+## 2. Webhook et Ingestion Drive
+- La route `POST /api/webhooks/kb-update` doit parser le payload. Si `folder_name === '05_AI_Act_Docs'`, déclencher le service d'ingestion RAG au lieu de chercher un CSV Compar:IA.
+- Le service d'ingestion doit lire `AI_Act_Index.json` sur le Drive.
+- Schéma strict de chaque entrée de l'index : `canonical_id`, `drive_file_id`, `file_name`, `source_url`, `version_date` (YYYY-MM-DD), `document_type`, `hash` (SHA-256), `status` (`active` | `archived`).
+- Seules les entrées `status = active` sont ingérées. Le matching N → N-1 se fait sur `canonical_id`.
+
+## 3. Schéma de Base de Données (Supabase)
+- Les migrations doivent définir deux tables : `ai_act_documents` et `ai_act_chunks`.
+- `ai_act_documents` doit inclure : `canonical_id`, `drive_file_id`, `file_name`, `source_url`, `version_date`, `document_type`, `hash`, `is_active`, `supersedes_id` (UUID vers N-1).
+- Un seul document `is_active = true` par `canonical_id` (index unique partiel). `hash` est unique (anti double ingestion).
+- `ai_act_chunks` stocke le texte et l'embedding `vector(1024)` (`mistral-embed`).
+- RPC namespacée : `match_ai_act_chunks` (jamais `match_documents`). Jointure obligatoire : ne retourner que les chunks dont le parent a `is_active = true`.
+
+## 4. Gestion du Versionning (N et N-1)
+- Si un `canonical_id` a déjà un document `is_active = true` : le passer à `is_active = false`, insérer le nouveau avec `is_active = true` et `supersedes_id` = id de l'ancien.
+- Les chunks de N-1 restent en base mais ne sont plus retournés par `match_ai_act_chunks`.
+- Les requêtes sémantiques Mistral ne s'effectuent que sur les chunks dont `document.is_active = true`.

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Papa from 'papaparse'
 import { findFileIdByName, getFileFromDrive } from '@/lib/google-drive'
+import { ingestAiActKnowledgeBase, isAiActDocsFolder } from '@/lib/rag-ingestion'
 
-/** Durée max Vercel : téléchargement Drive + upsert massif */
-export const maxDuration = 60
+/** Durée max Vercel : Compar:IA CSV ou ingestion RAG AI Act (OCR + embeddings) */
+export const maxDuration = 300
 
 /** Payload attendu depuis Hermes */
 interface KbUpdatePayload {
@@ -233,6 +234,27 @@ export async function POST(request: NextRequest) {
 
     const payload = body as Partial<KbUpdatePayload>
     const fileName = typeof payload.file_name === 'string' ? payload.file_name.trim() : ''
+    const folderName =
+      typeof payload.folder_name === 'string' ? payload.folder_name.trim() : ''
+
+    if (isAiActDocsFolder(folderName)) {
+      // Désactivation temporaire de l'ingestion Mistral / pgvector.
+      return NextResponse.json(
+        { message: 'RAG Ingestion temporarily disabled' },
+        { status: 200 }
+      )
+
+      const ingestion = await ingestAiActKnowledgeBase()
+      const hasErrors = ingestion.errors.length > 0
+      return NextResponse.json(
+        {
+          success: !hasErrors || ingestion.documents_ingested > 0,
+          source: 'ai_act_rag',
+          ...ingestion,
+        },
+        { status: hasErrors && ingestion.documents_ingested === 0 ? 500 : 200 }
+      )
+    }
 
     if (!fileName) {
       return NextResponse.json(

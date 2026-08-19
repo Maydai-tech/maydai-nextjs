@@ -55,6 +55,30 @@ export async function getFileFromDrive(fileId: string): Promise<string> {
 }
 
 /**
+ * Télécharge un fichier Drive en binaire (PDF, etc.).
+ * Toujours avec supportsAllDrives: true (Shared Drives).
+ */
+export async function getBinaryFileFromDrive(fileId: string): Promise<Buffer> {
+  const drive = getDriveClient()
+  const fileRes = await drive.files.get(
+    { fileId, alt: 'media', supportsAllDrives: true },
+    { responseType: 'arraybuffer' }
+  )
+
+  const data = fileRes.data
+  if (Buffer.isBuffer(data)) {
+    return data
+  }
+  if (data instanceof ArrayBuffer) {
+    return Buffer.from(data)
+  }
+  if (ArrayBuffer.isView(data)) {
+    return Buffer.from(data.buffer, data.byteOffset, data.byteLength)
+  }
+  throw new Error(`Contenu binaire invalide pour le fichier Drive: ${fileId}`)
+}
+
+/**
  * Liste les fichiers (non corbeille) directement contenus dans un dossier.
  * Compatible Shared Drives.
  */
