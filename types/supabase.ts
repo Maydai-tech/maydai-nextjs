@@ -597,9 +597,99 @@ export type Database = {
           updated_at?: string
         }
       }
+      ai_act_documents: {
+        Row: {
+          id: string
+          canonical_id: string
+          drive_file_id: string
+          file_name: string
+          source_url: string
+          version_date: string
+          document_type: string
+          hash: string
+          is_active: boolean
+          supersedes_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          canonical_id: string
+          drive_file_id: string
+          file_name: string
+          source_url: string
+          version_date: string
+          document_type: string
+          hash: string
+          is_active?: boolean
+          supersedes_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          canonical_id?: string
+          drive_file_id?: string
+          file_name?: string
+          source_url?: string
+          version_date?: string
+          document_type?: string
+          hash?: string
+          is_active?: boolean
+          supersedes_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      ai_act_chunks: {
+        Row: {
+          id: string
+          document_id: string
+          chunk_index: number
+          content: string
+          embedding: number[]
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          document_id: string
+          chunk_index: number
+          content: string
+          embedding: number[]
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          document_id?: string
+          chunk_index?: number
+          content?: string
+          embedding?: number[]
+          created_at?: string
+        }
+      }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      match_ai_act_chunks: {
+        Args: {
+          query_embedding: number[]
+          match_count?: number
+          match_threshold?: number
+        }
+        Returns: {
+          id: string
+          document_id: string
+          content: string
+          chunk_index: number
+          similarity: number
+          canonical_id: string
+          source_url: string
+          version_date: string
+          document_type: string
+          file_name: string
+        }[]
+      }
+    }
     Enums: {
       doc_status: 'incomplete' | 'complete' | 'validated'
       doc_type:
