@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, User, Menu, X, Users, FileText, CheckSquare, Settings, House, BarChart, CircleHelp } from 'lucide-react';
+import { Home, User, Menu, X, Users, FileText, CheckSquare, Settings, House, BarChart, CircleHelp, MessageSquare } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useApiCall } from '@/lib/api-client-legacy';
@@ -214,6 +214,16 @@ export default function Sidebar() {
     return '/bench-llm';
   };
 
+  const getChatIaUrl = () => {
+    return '/chat';
+  };
+
+  const isChatIaRoute =
+    pathname === '/chat' ||
+    pathname.startsWith('/chat/') ||
+    pathname.startsWith('/usecases/new/setup-chat') ||
+    /\/usecases\/[^/]+\/chat-evaluation(\/|$)/.test(pathname);
+
   // Determine the current registry ID to check the user's role
   const getCurrentRegistryId = (): string | null => {
     if (useCaseRegistryId) return useCaseRegistryId;
@@ -233,6 +243,11 @@ export default function Sidebar() {
       name: 'Dashboard',
       href: getDashboardUrl(),
       icon: Home
+    },
+    {
+      name: 'Chat IA',
+      href: getChatIaUrl(),
+      icon: MessageSquare
     },
     {
       name: 'Bench LLM',
@@ -321,9 +336,12 @@ export default function Sidebar() {
             // Collaboration should be highlighted when on company collaboration pages only
             // Paramètres should be highlighted when on settings pages
             // Bench LLM should be highlighted when on /bench-llm
+            // Chat IA should be highlighted on /chat and the conversational flow
             const isActive = item.name === 'Dashboard'
-              ? (pathname === item.href || pathname.startsWith('/usecases/'))
-              : item.name === 'Dossiers'
+              ? !isChatIaRoute && (pathname === item.href || pathname.startsWith('/usecases/'))
+              : item.name === 'Chat IA'
+                ? isChatIaRoute
+                : item.name === 'Dossiers'
                 ? pathname.includes('/dossiers')
                 : item.name === 'To-do List'
                   ? pathname.includes('/todo-list')
