@@ -121,7 +121,7 @@ function isQ5DomainMismatch(
 }
 
 function answersAfterAnnexMismatch(answers: GraphAnswers): GraphAnswers {
-  const next = { ...answers, 'E4.N7.Q2': ['E4.N7.Q2.G'] }
+  const next: GraphAnswers = { ...answers, 'E4.N7.Q2': ['E4.N7.Q2.G'] }
   delete next['E4.N7.Q5']
   return next
 }

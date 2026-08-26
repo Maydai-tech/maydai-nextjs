@@ -109,7 +109,11 @@ export async function generateChatReport(options: {
       recordHistory: true,
     })
 
-    if (score.classification_status === 'impossible' || !isRiskLevelCode(score.risk_level)) {
+    if (
+      score.classification_status === 'impossible' ||
+      !score.risk_level ||
+      !isRiskLevelCode(score.risk_level)
+    ) {
       return {
         ok: false,
         status: 409,

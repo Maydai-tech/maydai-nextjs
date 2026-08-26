@@ -16,7 +16,11 @@ import {
   ASSISTANT_ENTRY_SURFACE,
   ASSISTANT_PATH_RUN_MODE,
 } from '@/lib/evaluation-path-run-mode'
-import { QUESTIONNAIRE_VERSION_V3, normalizeQuestionnaireVersion } from '@/lib/questionnaire-version'
+import {
+  QUESTIONNAIRE_VERSION_V3,
+  normalizeQuestionnaireVersion,
+  type QuestionnaireVersion,
+} from '@/lib/questionnaire-version'
 
 export default function ChatEvaluationPage() {
   return (
@@ -39,7 +43,8 @@ export function ChatEvaluationPageContent() {
   const [showProcessingAnimation, setShowProcessingAnimation] = useState(false)
   const [reportError, setReportError] = useState('')
   const [hasExistingReport, setHasExistingReport] = useState(false)
-  const [questionnaireVersion, setQuestionnaireVersion] = useState(QUESTIONNAIRE_VERSION_V3)
+  const [questionnaireVersion, setQuestionnaireVersion] =
+    useState<QuestionnaireVersion>(QUESTIONNAIRE_VERSION_V3)
   const [evaluationRunId, setEvaluationRunId] = useState<string | null>(null)
   const generatingReport = useRef(false)
   const pathRunCompletedSent = useRef(false)

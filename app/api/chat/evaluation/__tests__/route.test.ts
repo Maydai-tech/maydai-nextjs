@@ -35,6 +35,7 @@ import { DEFAULT_EVALUATION_AGENT_ID } from '@/lib/mistral/agents'
 import {
   SAVE_EVALUATION_NODES_TOOL_NAME,
   SAVE_SINGLE_ANSWER_TOOL_NAME,
+  type EvaluationNodes,
 } from '@/lib/mistral/evaluation-tool'
 import { mapEvaluationNodesToAnswers } from '@/lib/mistral/map-evaluation-nodes'
 import {
@@ -59,7 +60,7 @@ const projectContext = {
   industryLabel: 'Tech, Data & Télécoms',
 }
 
-const validNodes = {
+const validNodes: EvaluationNodes = {
   role_deduit: 'deployeur',
   is_art5_interdit: false,
   domaine_annexe3: 'Emploi',
