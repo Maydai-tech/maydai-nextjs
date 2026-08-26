@@ -96,7 +96,10 @@ export function withAnnexIiiAccessControlGuard(
   const onlyEmployment =
     Array.isArray(q2) && q2.length === 1 && q2[0] === 'E4.N7.Q2.A'
   if (!onlyEmployment) return answers
-  const next = { ...answers, 'E4.N7.Q2': [ANNEX_NONE_OPTION_CODE] }
+  const next: Record<string, string | string[]> = {
+    ...answers,
+    'E4.N7.Q2': [ANNEX_NONE_OPTION_CODE],
+  }
   delete next['E4.N7.Q5']
   return next
 }

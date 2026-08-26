@@ -95,7 +95,7 @@ function createSupabaseMock(initialDocuments: Array<Record<string, unknown>> = [
     throw new Error(`Table inattendue: ${table}`)
   })
 
-  return { client: { from } as AiActIngestionDeps['supabase'], documents, chunks, from }
+  return { client: { from } as unknown as AiActIngestionDeps['supabase'], documents, chunks, from }
 }
 
 describe('RAG AI Act — parsing et versioning', () => {
