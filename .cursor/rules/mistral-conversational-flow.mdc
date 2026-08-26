@@ -1,0 +1,25 @@
+---
+description: Architecture stricte du parcours hybride Mistral (Accueil, Chat Guidé, Évaluateur avec Persona dynamique).
+globs: ["app/api/chat/**/*.ts", "components/chat/**/*.tsx", "lib/mistral/**/*.ts", "app/(saas)/usecases/**/chat*/**/*.tsx"]
+---
+# ARCHITECTURE DU PARCOURS HYBRIDE (3 ÉTAPES)
+Le parcours de création de cas d'usage IA est un flux hybride mêlant IA conversationnelle et formulaires déterministes. NE JAMAIS casser cet enchaînement.
+
+## Étape 1 : Accueil & Profil (Mistral)
+- **Objectif** : Verrouiller l'identité juridique (Nom, Secteur, Pays) dans la table `companies`.
+- **UI** : Chat Mistral avec `Quick Replies` (boutons) pour les données manquantes.
+- **Backend** : `POST /api/chat/setup` utilise le tool `confirm_company_profile` pour faire un UPDATE sur `companies`.
+- **Transition** : Au succès du tool, on masque Mistral et on passe à l'état `guided_draft` SANS rechargement de page.
+
+## Étape 2 : Chat Guidé / Brouillon (Déterministe)
+- **Objectif** : Saisie stricte des 9 champs obligatoires. Mistral N'INTERVIENT PAS ici.
+- **Persistance** : Le `deployment_date` et le `primary_model_id` (via un matching ILIKE sur `compl_ai_models.model_name`) DOIVENT être enregistrés dans la table `usecases`. Aucun forçage à `null`.
+- **Redirection** : Fin du brouillon -> redirect vers `/usecases/[id]/chat-evaluation`.
+
+## Étape 3 : Évaluateur & Persona Dynamique (Mistral + Moteur V3)
+- **Règle d'or** : Le moteur V3 (`getNextQuestionV3`) dicte les questions, Mistral les pose.
+- **Le Skill Persona (Q1.2)** : 
+  1. Le moteur V3 ne doit JAMAIS forcer la réponse `E4.N7.Q1.2.A`.
+  2. Le frontend intercepte le nœud `E4.N7.Q1.2` et l'affiche sous forme de BOUTONS (pas de texte libre).
+  3. Le backend (`lib/mistral/load-evaluation-context.ts`) lit la réponse et injecte dynamiquement une consigne de TON dans le System Prompt de Mistral (Jargon juridique pour Avocat/DPO, Vulgarisation extrême pour Profil métier/Dirigeant).
+- **Fin** : `PATH_COMPLETE` fige le `score_base` et génère le rapport en `Structured Output`.

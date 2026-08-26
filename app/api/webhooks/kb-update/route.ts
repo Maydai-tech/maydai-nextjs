@@ -238,12 +238,6 @@ export async function POST(request: NextRequest) {
       typeof payload.folder_name === 'string' ? payload.folder_name.trim() : ''
 
     if (isAiActDocsFolder(folderName)) {
-      // Désactivation temporaire de l'ingestion Mistral / pgvector.
-      return NextResponse.json(
-        { message: 'RAG Ingestion temporarily disabled' },
-        { status: 200 }
-      )
-
       const ingestion = await ingestAiActKnowledgeBase()
       const hasErrors = ingestion.errors.length > 0
       return NextResponse.json(

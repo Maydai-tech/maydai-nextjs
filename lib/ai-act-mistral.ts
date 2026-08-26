@@ -1,60 +1,12 @@
+import { getMistralClient } from '@/lib/mistral/client'
 import { logger } from '@/lib/secure-logger'
 
-const MISTRAL_API_URL = 'https://api.mistral.ai/v1'
 export const MISTRAL_EMBED_MODEL = 'mistral-embed'
 export const MISTRAL_EMBED_DIMENSIONS = 1024
 export const MISTRAL_OCR_MODEL = 'mistral-ocr-latest'
 
-const EMBED_BATCH_SIZE = 16
-
-function getMistralApiKey(): string {
-  const apiKey = process.env.MISTRAL_API_KEY?.trim()
-  if (!apiKey) {
-    throw new Error('Clé API Mistral manquante. Vérifiez MISTRAL_API_KEY')
-  }
-  return apiKey
-}
-
-interface MistralEmbeddingItem {
-  embedding?: number[]
-  index?: number
-}
-
-interface MistralEmbeddingsResponse {
-  data?: MistralEmbeddingItem[]
-}
-
-interface MistralOcrPage {
-  markdown?: string
-  text?: string
-}
-
-interface MistralOcrResponse {
-  pages?: MistralOcrPage[]
-}
-
-async function mistralFetch(path: string, body: unknown): Promise<Response> {
-  const response = await fetch(`${MISTRAL_API_URL}${path}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${getMistralApiKey()}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    logger.error('Erreur API Mistral (RAG AI Act)', undefined, {
-      path,
-      status: response.status,
-      details: errorText.slice(0, 500),
-    })
-    throw new Error(`Erreur API Mistral ${path}: ${response.status}`)
-  }
-
-  return response
-}
+/** Lots d’embeddings : 8 × ~1000 tokens reste sous la limite ~16k tokens de l’API. */
+export const MISTRAL_EMBED_BATCH_SIZE = 8
 
 export function assertEmbeddingDimension(embedding: number[]): number[] {
   if (embedding.length !== MISTRAL_EMBED_DIMENSIONS) {
@@ -66,35 +18,46 @@ export function assertEmbeddingDimension(embedding: number[]): number[] {
 }
 
 /**
- * Embeddings `mistral-embed` (1024) — même famille que le LLM conversationnel.
+ * Embeddings `mistral-embed` (1024) via le SDK officiel — même famille que le LLM conversationnel.
  */
 export async function embedAiActTexts(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return []
 
+  const client = getMistralClient()
   const embeddings: number[][] = []
 
-  for (let i = 0; i < texts.length; i += EMBED_BATCH_SIZE) {
-    const batch = texts.slice(i, i + EMBED_BATCH_SIZE)
-    const response = await mistralFetch('/embeddings', {
-      model: MISTRAL_EMBED_MODEL,
-      input: batch,
-    })
-    const payload = (await response.json()) as MistralEmbeddingsResponse
-    const items = [...(payload.data ?? [])].sort(
-      (a, b) => (a.index ?? 0) - (b.index ?? 0)
-    )
-
-    if (items.length !== batch.length) {
-      throw new Error(
-        `Réponse embeddings incomplète: ${items.length}/${batch.length}`
+  for (let i = 0; i < texts.length; i += MISTRAL_EMBED_BATCH_SIZE) {
+    const batch = texts.slice(i, i + MISTRAL_EMBED_BATCH_SIZE)
+    try {
+      const response = await client.embeddings.create({
+        model: MISTRAL_EMBED_MODEL,
+        inputs: batch,
+        outputDimension: MISTRAL_EMBED_DIMENSIONS,
+      })
+      const items = [...(response.data ?? [])].sort(
+        (a, b) => (a.index ?? 0) - (b.index ?? 0)
       )
-    }
 
-    for (const item of items) {
-      if (!Array.isArray(item.embedding)) {
-        throw new Error('Embedding Mistral manquant ou invalide')
+      if (items.length !== batch.length) {
+        throw new Error(
+          `Réponse embeddings incomplète: ${items.length}/${batch.length}`
+        )
       }
-      embeddings.push(assertEmbeddingDimension(item.embedding))
+
+      for (const item of items) {
+        if (!Array.isArray(item.embedding)) {
+          throw new Error('Embedding Mistral manquant ou invalide')
+        }
+        embeddings.push(assertEmbeddingDimension(item.embedding))
+      }
+    } catch (error) {
+      logger.error('Erreur API Mistral embeddings (RAG AI Act)', undefined, {
+        batch_size: batch.length,
+        details: error instanceof Error ? error.message : String(error),
+      })
+      throw error instanceof Error
+        ? error
+        : new Error('Erreur API Mistral embeddings')
     }
   }
 
@@ -102,33 +65,41 @@ export async function embedAiActTexts(texts: string[]): Promise<number[][]> {
 }
 
 /**
- * Extraction de texte PDF via Mistral OCR (pas de dépendance pdf-parse / next.config).
+ * Extraction de texte PDF via Mistral OCR (SDK officiel).
  */
 export async function extractPdfTextWithMistralOcr(pdfBuffer: Buffer): Promise<string> {
   if (pdfBuffer.length === 0) {
     throw new Error('PDF vide, extraction impossible')
   }
 
-  const dataUrl = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`
-  const response = await mistralFetch('/ocr', {
-    model: MISTRAL_OCR_MODEL,
-    document: {
-      type: 'document_url',
-      document_url: dataUrl,
-    },
-  })
+  const documentUrl = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`
+  const client = getMistralClient()
 
-  const payload = (await response.json()) as MistralOcrResponse
-  const text = (payload.pages ?? [])
-    .map((page) => page.markdown || page.text || '')
-    .join('\n\n')
-    .trim()
+  try {
+    const payload = await client.ocr.process({
+      model: MISTRAL_OCR_MODEL,
+      document: {
+        type: 'document_url',
+        documentUrl,
+      },
+    })
 
-  if (!text) {
-    throw new Error('OCR Mistral: aucun texte extrait du PDF')
+    const text = (payload.pages ?? [])
+      .map((page) => page.markdown || '')
+      .join('\n\n')
+      .trim()
+
+    if (!text) {
+      throw new Error('OCR Mistral: aucun texte extrait du PDF')
+    }
+
+    return text
+  } catch (error) {
+    logger.error('Erreur API Mistral OCR (RAG AI Act)', undefined, {
+      details: error instanceof Error ? error.message : String(error),
+    })
+    throw error instanceof Error ? error : new Error('Erreur API Mistral OCR')
   }
-
-  return text
 }
 
 export async function extractAiActFileText(

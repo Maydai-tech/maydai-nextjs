@@ -39,7 +39,15 @@ describe('POST /api/webhooks/kb-update', () => {
     expect(ingestAiActKnowledgeBase).not.toHaveBeenCalled()
   })
 
-  test('retourne 200 sans ingérer si folder_name = 05_AI_Act_Docs (RAG temporairement désactivé)', async () => {
+  test('déclenche l\'ingestion RAG si folder_name = 05_AI_Act_Docs', async () => {
+    ingestAiActKnowledgeBase.mockResolvedValue({
+      documents_processed: 1,
+      documents_ingested: 1,
+      documents_skipped: 0,
+      chunks_created: 4,
+      errors: [],
+    })
+
     const response = await POST(
       makeRequest({
         event: 'file_updated',
@@ -52,8 +60,33 @@ describe('POST /api/webhooks/kb-update', () => {
     const payload = await response.json()
 
     expect(response.status).toBe(200)
-    expect(payload.message).toBe('RAG Ingestion temporarily disabled')
-    expect(ingestAiActKnowledgeBase).not.toHaveBeenCalled()
+    expect(ingestAiActKnowledgeBase).toHaveBeenCalledTimes(1)
+    expect(payload.source).toBe('ai_act_rag')
+    expect(payload.success).toBe(true)
+    expect(payload.documents_ingested).toBe(1)
+    expect(payload.chunks_created).toBe(4)
+  })
+
+  test('retourne 500 si l\'ingestion RAG échoue sans aucun document', async () => {
+    ingestAiActKnowledgeBase.mockResolvedValue({
+      documents_processed: 1,
+      documents_ingested: 0,
+      documents_skipped: 0,
+      chunks_created: 0,
+      errors: ['Hash SHA-256 divergent'],
+    })
+
+    const response = await POST(
+      makeRequest({
+        folder_name: '05_AI_Act_Docs',
+        file_name: 'AI_Act_Index.json',
+      })
+    )
+    const payload = await response.json()
+
+    expect(response.status).toBe(500)
+    expect(payload.success).toBe(false)
+    expect(payload.errors).toEqual(['Hash SHA-256 divergent'])
   })
 
   test('exige file_name hors du dossier AI Act', async () => {

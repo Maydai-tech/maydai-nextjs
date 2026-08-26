@@ -15,8 +15,12 @@ import { logger } from '@/lib/secure-logger'
 export const AI_ACT_DOCS_FOLDER = '05_AI_Act_Docs'
 export const AI_ACT_INDEX_FILE_NAME = 'AI_Act_Index.json'
 
-const MAX_CHUNK_CHARS = 1600
-const CHUNK_OVERLAP_CHARS = 200
+/** ~1000 tokens / chunk, overlap ~200 — heuristique 4 caractères ≈ 1 token (textes juridiques FR). */
+export const AI_ACT_CHUNK_TARGET_TOKENS = 1000
+export const AI_ACT_CHUNK_OVERLAP_TOKENS = 200
+const CHARS_PER_TOKEN = 4
+const TARGET_CHUNK_CHARS = AI_ACT_CHUNK_TARGET_TOKENS * CHARS_PER_TOKEN
+const OVERLAP_CHUNK_CHARS = AI_ACT_CHUNK_OVERLAP_TOKENS * CHARS_PER_TOKEN
 
 const aiActIndexEntrySchema = z.object({
   canonical_id: z.string().trim().min(1),
@@ -91,40 +95,93 @@ export function parseAiActIndex(raw: string): AiActIndexEntry[] {
   }))
 }
 
+export function estimateTokenCount(text: string): number {
+  if (!text) return 0
+  return Math.ceil(text.length / CHARS_PER_TOKEN)
+}
+
+function splitOversizedUnit(text: string): string[] {
+  const step = Math.max(TARGET_CHUNK_CHARS - OVERLAP_CHUNK_CHARS, 1)
+  const parts: string[] = []
+  for (let i = 0; i < text.length; i += step) {
+    const slice = text.slice(i, i + TARGET_CHUNK_CHARS).trim()
+    if (slice) parts.push(slice)
+    if (i + TARGET_CHUNK_CHARS >= text.length) break
+  }
+  return parts
+}
+
+/** Unités sémantiques : paragraphes, puis alinéas (sauts de ligne), puis coupe dure. */
+function splitIntoSemanticUnits(text: string): string[] {
+  const paragraphs = text
+    .replace(/\r\n/g, '\n')
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  const units: string[] = []
+  for (const paragraph of paragraphs) {
+    if (estimateTokenCount(paragraph) <= AI_ACT_CHUNK_TARGET_TOKENS) {
+      units.push(paragraph)
+      continue
+    }
+
+    const lines = paragraph.split('\n').map((line) => line.trim()).filter(Boolean)
+    for (const line of lines) {
+      if (estimateTokenCount(line) <= AI_ACT_CHUNK_TARGET_TOKENS) {
+        units.push(line)
+      } else {
+        units.push(...splitOversizedUnit(line))
+      }
+    }
+  }
+  return units
+}
+
+function overlapPrefix(previous: string): string {
+  return previous.slice(-OVERLAP_CHUNK_CHARS).trim()
+}
+
+/**
+ * Chunking sémantique pour textes de lois : coupe aux paragraphes / alinéas,
+ * cible ~1000 tokens, recouvrement ~200 tokens.
+ */
 export function chunkAiActText(text: string): string[] {
   const normalized = text.replace(/\r\n/g, '\n').trim()
   if (!normalized) return []
 
-  const paragraphs = normalized.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean)
+  const units = splitIntoSemanticUnits(normalized)
+  if (units.length === 0) return []
+
   const chunks: string[] = []
   let current = ''
 
-  const pushCurrent = () => {
-    if (current.trim()) {
-      chunks.push(current.trim())
-    }
+  const flush = () => {
+    const trimmed = current.trim()
+    if (trimmed) chunks.push(trimmed)
     current = ''
   }
 
-  for (const paragraph of paragraphs) {
-    if (paragraph.length > MAX_CHUNK_CHARS) {
-      pushCurrent()
-      for (let i = 0; i < paragraph.length; i += MAX_CHUNK_CHARS - CHUNK_OVERLAP_CHARS) {
-        chunks.push(paragraph.slice(i, i + MAX_CHUNK_CHARS).trim())
-      }
+  for (const unit of units) {
+    const candidate = current ? `${current}\n\n${unit}` : unit
+    if (estimateTokenCount(candidate) <= AI_ACT_CHUNK_TARGET_TOKENS) {
+      current = candidate
       continue
     }
 
-    const candidate = current ? `${current}\n\n${paragraph}` : paragraph
-    if (candidate.length > MAX_CHUNK_CHARS) {
-      pushCurrent()
-      current = paragraph
+    flush()
+    const prefix = chunks.length > 0 ? overlapPrefix(chunks[chunks.length - 1]) : ''
+    const withOverlap = prefix ? `${prefix}\n\n${unit}` : unit
+    if (estimateTokenCount(withOverlap) <= AI_ACT_CHUNK_TARGET_TOKENS) {
+      current = withOverlap
+    } else if (estimateTokenCount(unit) <= AI_ACT_CHUNK_TARGET_TOKENS) {
+      current = unit
     } else {
-      current = candidate
+      chunks.push(...splitOversizedUnit(unit))
     }
   }
 
-  pushCurrent()
+  flush()
   return chunks.filter(Boolean)
 }
 
