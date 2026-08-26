@@ -12,6 +12,7 @@ describe('evaluation-path-runs-admin-csv', () => {
       },
       short: { starts: 1, completions: 0, completion_rate: 0, mean_completion_seconds: null, median_completion_seconds: null },
       long: { starts: 2, completions: 1, completion_rate: 0.5, mean_completion_seconds: 10, median_completion_seconds: 10 },
+      assistant: { starts: 3, completions: 2, completion_rate: 2 / 3, mean_completion_seconds: 90, median_completion_seconds: 80 },
       short_to_long: {
         summary: {
           cohort_short_completed_count: 1,
@@ -60,5 +61,7 @@ describe('evaluation-path-runs-admin-csv', () => {
     expect(csv).toContain('evaluation_path_runs')
     expect(csv).toContain('Acme')
     expect(csv).toContain('uuid-co')
+    expect(csv).toContain('assistant')
+    expect(csv).toContain('metric,short,long,assistant')
   })
 })

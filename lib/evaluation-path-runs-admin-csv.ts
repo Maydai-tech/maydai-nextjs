@@ -53,6 +53,7 @@ export type EvaluationPathRunsAdminCsvInput = {
   }
   short: Record<string, number | null>
   long: Record<string, number | null>
+  assistant: Record<string, number | null>
   short_to_long: {
     summary: Record<string, number | null>
     summary_windows: Record<string, number | null>
@@ -63,7 +64,12 @@ export type EvaluationPathRunsAdminCsvInput = {
     by_questionnaire_version: SegmentTable
     by_company_id: SegmentTable
   }
-  by_entry_surface: { entry_surface: string; short_starts: number; long_starts: number }[]
+  by_entry_surface: {
+    entry_surface: string
+    short_starts: number
+    long_starts: number
+    assistant_starts: number
+  }[]
   by_outcome: { classification_status: string; risk_level: string; count: number }[]
 }
 
@@ -85,11 +91,36 @@ export function evaluationPathRunsAdminToCsv(data: EvaluationPathRunsAdminCsvInp
   )
   lines.push('')
 
-  lines.push('# Parcours court / long (volumes période)')
-  lines.push(line(['metric', 'short', 'long']))
-  lines.push(line(['starts', data.short.starts, data.long.starts]))
-  lines.push(line(['completions', data.short.completions, data.long.completions]))
-  lines.push(line(['completion_rate', data.short.completion_rate ?? '', data.long.completion_rate ?? '']))
+  lines.push('# Parcours court / long / assistant (volumes période)')
+  lines.push(line(['metric', 'short', 'long', 'assistant']))
+  lines.push(line(['starts', data.short.starts, data.long.starts, data.assistant.starts]))
+  lines.push(
+    line(['completions', data.short.completions, data.long.completions, data.assistant.completions])
+  )
+  lines.push(
+    line([
+      'completion_rate',
+      data.short.completion_rate ?? '',
+      data.long.completion_rate ?? '',
+      data.assistant.completion_rate ?? '',
+    ])
+  )
+  lines.push(
+    line([
+      'mean_completion_seconds',
+      data.short.mean_completion_seconds ?? '',
+      data.long.mean_completion_seconds ?? '',
+      data.assistant.mean_completion_seconds ?? '',
+    ])
+  )
+  lines.push(
+    line([
+      'median_completion_seconds',
+      data.short.median_completion_seconds ?? '',
+      data.long.median_completion_seconds ?? '',
+      data.assistant.median_completion_seconds ?? '',
+    ])
+  )
   lines.push('')
 
   lines.push('# Conversion court → long — résumé')
@@ -138,10 +169,10 @@ export function evaluationPathRunsAdminToCsv(data: EvaluationPathRunsAdminCsvInp
   )
   lines.push(...tableSection('Conversion par entreprise', segCols, data.short_to_long.by_company_id))
 
-  lines.push('# Démarrages par surface (court / long)')
-  lines.push(line(['entry_surface', 'short_starts', 'long_starts']))
+  lines.push('# Démarrages par surface (court / long / assistant)')
+  lines.push(line(['entry_surface', 'short_starts', 'long_starts', 'assistant_starts']))
   for (const r of data.by_entry_surface) {
-    lines.push(line([r.entry_surface, r.short_starts, r.long_starts]))
+    lines.push(line([r.entry_surface, r.short_starts, r.long_starts, r.assistant_starts]))
   }
   lines.push('')
 

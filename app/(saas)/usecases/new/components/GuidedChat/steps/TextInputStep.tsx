@@ -47,8 +47,10 @@ export default function TextInputStep({
           autoFocus
         />
         <button
+          type="button"
           onClick={onSubmit}
           disabled={!value.trim()}
+          aria-label="Envoyer"
           className="flex-shrink-0 p-1.5 rounded-lg bg-[#0080A3] text-white hover:bg-[#006280] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <Send className="h-4 w-4" />

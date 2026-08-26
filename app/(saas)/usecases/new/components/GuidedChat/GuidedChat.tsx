@@ -357,15 +357,6 @@ export default function GuidedChat({ companyId, company }: GuidedChatProps) {
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="space-y-4 mb-6">
-        {state.messages.map(msg => (
-          <ChatMessage key={msg.id} message={msg} />
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Current step input or Review */}
       {isReview ? (
         <ReviewSummary
           draft={state.draft}
@@ -375,40 +366,48 @@ export default function GuidedChat({ companyId, company }: GuidedChatProps) {
           error={submitError || stepError}
         />
       ) : (
-        <div className="space-y-3">
-          <ChatStepRenderer
-            stepId={state.currentStepId}
-            draft={state.draft}
-            error={stepError}
-            partners={modelProviders.partners}
-            loadingPartners={modelProviders.loadingPartners}
-            availableModels={modelProviders.availableModels}
-            loadingModels={modelProviders.loadingModels}
-            isCustomPartner={isCustom}
-            isGeneratingDescription={state.isGeneratingDescription}
-            responsibleServiceOptions={responsibleServiceOptions}
-            aiCategoryOptions={aiCategoryOptions}
-            systemTypeOptions={systemTypeOptions}
-            onFieldChange={actions.setFieldValue}
-            onSubmitStep={handleSubmitStep}
-            onSkipStep={state.currentStepId === 'deployment_date' ? handleSkipStep : undefined}
-            onSelectAndAdvance={handleSelectAndAdvance}
-            onPartnerSelect={handlePartnerSelect}
-            onModelSelect={handleModelSelect}
-            onCountriesChange={handleCountriesChange}
-            onGenerateDescription={handleGenerateDescription}
-          />
+        <div className="flex min-h-[28rem] flex-col sm:min-h-[32rem]">
+          <div className="mb-4 flex-1 space-y-4 overflow-y-auto">
+            {state.messages.map((msg) => (
+              <ChatMessage key={msg.id} message={msg} />
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
 
-          {/* Back button */}
-          {currentStepIndex > 0 && !state.editingFromReview && (
-            <button
-              onClick={() => { setStepError(''); actions.goToPreviousStep() }}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#0080A3] transition-colors"
-            >
-              <ChevronLeft className="h-3 w-3" />
-              Précédent
-            </button>
-          )}
+          <div className="sticky bottom-0 space-y-3 bg-gray-50 pb-2 pt-1">
+            <ChatStepRenderer
+              stepId={state.currentStepId}
+              draft={state.draft}
+              error={stepError}
+              partners={modelProviders.partners}
+              loadingPartners={modelProviders.loadingPartners}
+              availableModels={modelProviders.availableModels}
+              loadingModels={modelProviders.loadingModels}
+              isCustomPartner={isCustom}
+              isGeneratingDescription={state.isGeneratingDescription}
+              responsibleServiceOptions={responsibleServiceOptions}
+              aiCategoryOptions={aiCategoryOptions}
+              systemTypeOptions={systemTypeOptions}
+              onFieldChange={actions.setFieldValue}
+              onSubmitStep={handleSubmitStep}
+              onSkipStep={state.currentStepId === 'deployment_date' ? handleSkipStep : undefined}
+              onSelectAndAdvance={handleSelectAndAdvance}
+              onPartnerSelect={handlePartnerSelect}
+              onModelSelect={handleModelSelect}
+              onCountriesChange={handleCountriesChange}
+              onGenerateDescription={handleGenerateDescription}
+            />
+
+            {currentStepIndex > 0 && !state.editingFromReview && (
+              <button
+                onClick={() => { setStepError(''); actions.goToPreviousStep() }}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#0080A3] transition-colors"
+              >
+                <ChevronLeft className="h-3 w-3" />
+                Précédent
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

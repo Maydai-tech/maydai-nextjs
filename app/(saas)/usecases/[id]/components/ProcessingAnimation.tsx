@@ -73,7 +73,7 @@ const PROCESSING_STEPS: ProcessingStep[] = [
   }
 ]
 
-export function ProcessingAnimation({ isVisible, onComplete }: ProcessingAnimationProps) {
+export function ProcessingAnimation({ isVisible }: ProcessingAnimationProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0)
   const [progress, setProgress] = useState(0)
   const [isCompleted, setIsCompleted] = useState(false)
@@ -86,41 +86,33 @@ export function ProcessingAnimation({ isVisible, onComplete }: ProcessingAnimati
       return
     }
 
+    let stepIndex = 0
     let stepStartTime = Date.now()
-    const totalDuration = PROCESSING_STEPS.reduce((acc, step) => acc + step.duration, 0)
-    const currentStepDuration = 0
+    const lastIndex = PROCESSING_STEPS.length - 1
 
-    const updateProgress = () => {
-      const now = Date.now()
-      const elapsed = now - stepStartTime
-      
-      // Calculer le progrès de l'étape actuelle
-      const stepProgress = Math.min(elapsed / PROCESSING_STEPS[currentStepIndex].duration, 1)
-      
-      // Calculer le progrès total
-      const completedStepsProgress = currentStepIndex / PROCESSING_STEPS.length
-      const currentStepProgress = stepProgress / PROCESSING_STEPS.length
-      const totalProgress = (completedStepsProgress + currentStepProgress) * 100
-      
-      setProgress(Math.min(totalProgress, 100))
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - stepStartTime
+      const duration = PROCESSING_STEPS[stepIndex].duration
+      const stepProgress = Math.min(elapsed / duration, 1)
+      const totalProgress = ((stepIndex + stepProgress) / PROCESSING_STEPS.length) * 100
 
-      // Passer à l'étape suivante si l'étape actuelle est terminée
-      if (stepProgress >= 1 && currentStepIndex < PROCESSING_STEPS.length - 1) {
-        setCurrentStepIndex(prev => prev + 1)
-        stepStartTime = now
-      } else if (stepProgress >= 1 && currentStepIndex === PROCESSING_STEPS.length - 1) {
-        // Toutes les étapes sont terminées
-        setIsCompleted(true)
-        setTimeout(() => {
-          onComplete?.()
-        }, 1000)
+      // Dernière étape : on attend la fin réelle de l’API (le parent masque l’overlay).
+      if (stepIndex === lastIndex) {
+        setCurrentStepIndex(lastIndex)
+        setProgress(Math.min(totalProgress, 92))
+        return
       }
-    }
 
-    const interval = setInterval(updateProgress, 50) // Mise à jour toutes les 50ms pour une animation fluide
+      setProgress(totalProgress)
+      if (stepProgress >= 1) {
+        stepIndex += 1
+        stepStartTime = Date.now()
+        setCurrentStepIndex(stepIndex)
+      }
+    }, 50)
 
     return () => clearInterval(interval)
-  }, [isVisible, currentStepIndex, onComplete])
+  }, [isVisible])
 
   if (!isVisible) return null
 
@@ -138,7 +130,8 @@ export function ProcessingAnimation({ isVisible, onComplete }: ProcessingAnimati
             Analyse en cours...
           </h2>
           <p className="text-gray-600">
-            Votre cas d'usage est en cours d'analyse pour une première évaluation
+            Votre cas d'usage est en cours d'analyse pour une première évaluation.
+            La génération du rapport peut prendre jusqu’à deux minutes.
           </p>
         </div>
 

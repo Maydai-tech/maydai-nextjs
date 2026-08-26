@@ -210,7 +210,7 @@ export default function AdminDashboardPage() {
               className="block rounded-lg border border-cyan-200 bg-cyan-50/50 p-4 transition-colors hover:border-[#0080A3] hover:shadow-md"
             >
               <Activity className="mb-2 h-6 w-6 text-cyan-800" />
-              <h3 className="font-medium text-gray-900">Parcours court / long (Supabase)</h3>
+              <h3 className="font-medium text-gray-900">Parcours court / long / assistant</h3>
               <p className="mt-1 text-sm text-gray-500">
                 Démarrages, complétions, durées et résultats — mesure métier first-party
               </p>
