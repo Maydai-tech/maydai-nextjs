@@ -2,12 +2,14 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
-import ModeSelector from './components/ModeSelector'
+import { useCaseRoutes } from '@/app/(saas)/usecases/[id]/utils/routes'
+import CreateUseCaseHub, {
+  type CreationInteractionPath,
+} from './components/CreateUseCaseHub'
 import CreateUseCasePage from './CreateUseCasePage'
-import GuidedChat from './components/GuidedChat/GuidedChat'
-import type { CreationMode } from './types'
 
 interface Company {
   id: string
@@ -24,7 +26,7 @@ function CreateUseCaseOrchestratorContent() {
   const api = useApiCall()
   const [mounted, setMounted] = useState(false)
   const [company, setCompany] = useState<Company | null>(null)
-  const [mode, setMode] = useState<CreationMode>('form')
+  const [path, setPath] = useState<CreationInteractionPath | null>(null)
 
   const companyId = searchParams.get('company')
 
@@ -85,22 +87,48 @@ function CreateUseCaseOrchestratorContent() {
     )
   }
 
+  if (!path) {
+    return (
+      <CreateUseCaseHub
+        companyName={company.name}
+        dashboardHref={`/dashboard/${companyId}`}
+        onSelect={(selected) => {
+          if (selected === 'chat' && companyId) {
+            router.push(useCaseRoutes.setupChat(companyId))
+            return
+          }
+          setPath(selected)
+        }}
+      />
+    )
+  }
+
   return (
-    <>
-      <div className="bg-gray-50 pt-6 pb-2">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <ModeSelector mode={mode} onChange={setMode} />
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="mx-auto max-w-2xl px-4 pt-6 sm:px-6 lg:px-8">
+        <button
+          type="button"
+          onClick={() => setPath(null)}
+          className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-600 transition hover:text-[#0080A3]"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          Choisir un autre type d&apos;interaction
+        </button>
       </div>
 
-      {mode === 'form' ? (
+      <Suspense
+        fallback={
+          <div className="flex min-h-[40vh] items-center justify-center">
+            <div className="text-center">
+              <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-[#0080A3]" />
+              <p className="text-gray-600">Chargement du formulaire…</p>
+            </div>
+          </div>
+        }
+      >
         <CreateUseCasePage />
-      ) : (
-        <div className="min-h-screen bg-gray-50 pt-4">
-          <GuidedChat companyId={companyId!} company={company} />
-        </div>
-      )}
-    </>
+      </Suspense>
+    </div>
   )
 }
 

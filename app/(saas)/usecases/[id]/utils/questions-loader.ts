@@ -33,6 +33,7 @@ export function loadQuestions(): Record<string, Question> {
       })),
       required: data.required,
       tooltip: data.tooltip || undefined,
+      description: data.description || undefined,
       impact_mode: data.impact_mode || undefined
     }
   }

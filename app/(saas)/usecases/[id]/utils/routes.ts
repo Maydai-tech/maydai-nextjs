@@ -9,6 +9,8 @@ export const useCaseRoutes = {
   /** Après création : choix parcours court / long avant l’évaluation. */
   selectPath: (id: string) => `/usecases/${id}/select-path`,
   evaluation: (id: string) => `/usecases/${id}/evaluation`,
+  /** Évaluation conversationnelle (agent Mistral) après le cadrage chat. */
+  chatEvaluation: (id: string) => `/usecases/${id}/chat-evaluation`,
   /** V3 — coque parcours court (sans E5 ; Q12 + E6 si applicable) ; même graphe, saut de navigation côté UI. */
   evaluationShort: (id: string) => `/usecases/${id}/evaluation?parcours=court`,
   rapport: (id: string) => `/usecases/${id}/rapport`,
@@ -16,7 +18,12 @@ export const useCaseRoutes = {
   annexes: (id: string) => `/usecases/${id}/annexes`,
   collaboration: (id: string) => `/usecases/${id}/collaboration`,
   dashboard: (companyId: string) => `/dashboard/${companyId}`,
-  companies: () => '/dashboard/registries'
+  companies: () => '/dashboard/registries',
+  /** Hub de choix d’interaction (Chat IA vs questionnaires). */
+  create: (companyId: string) => `/usecases/new?company=${encodeURIComponent(companyId)}`,
+  /** Étape 1–2 du parcours Chat IA. */
+  setupChat: (companyId: string) =>
+    `/usecases/new/setup-chat?company=${encodeURIComponent(companyId)}`,
 }
 
 export const useCaseNavigation = [

@@ -31,6 +31,13 @@ function formatRate(r: number | null | undefined): string {
   return `${Math.round(r * 1000) / 10} %`
 }
 
+function pathModeLabel(mode: string): string {
+  if (mode === 'short') return 'Court'
+  if (mode === 'assistant') return 'Assistant'
+  if (mode === 'long') return 'Long'
+  return mode
+}
+
 type PathSummary = {
   starts: number
   completions: number
@@ -86,6 +93,7 @@ type ApiResponse = {
   }
   short: PathSummary
   long: PathSummary
+  assistant: PathSummary
   short_to_long?: {
     summary: ShortToLongSummary
     summary_windows?: ConversionWindowsSummary
@@ -100,6 +108,7 @@ type ApiResponse = {
     entry_surface: string
     short_starts: number
     long_starts: number
+    assistant_starts: number
   }[]
   by_outcome: {
     classification_status: string
@@ -331,7 +340,7 @@ export default function EvaluationPathRunsAdminPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Route className="h-8 w-8 text-[#0080A3]" />
-            Parcours court / long
+            Parcours court / long / assistant
           </h1>
           <p className="mt-1 text-sm text-gray-600">
             Mesure first-party (Supabase) : démarrages, complétions et durées — source principale
@@ -453,9 +462,10 @@ export default function EvaluationPathRunsAdminPage() {
             </details>
           )}
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <PathCards title="Parcours court (V3)" s={data.short} />
             <PathCards title="Parcours long" s={data.long} />
+            <PathCards title="Parcours assistant" s={data.assistant} />
           </div>
 
           {data.short_to_long && (
@@ -649,12 +659,13 @@ export default function EvaluationPathRunsAdminPage() {
                     <th className="px-4 py-2 font-medium">Surface</th>
                     <th className="px-4 py-2 font-medium text-right">Court</th>
                     <th className="px-4 py-2 font-medium text-right">Long</th>
+                    <th className="px-4 py-2 font-medium text-right">Assistant</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.by_entry_surface.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="px-4 py-6 text-center text-gray-500">
+                      <td colSpan={4} className="px-4 py-6 text-center text-gray-500">
                         Aucun démarrage sur la période.
                       </td>
                     </tr>
@@ -664,6 +675,7 @@ export default function EvaluationPathRunsAdminPage() {
                         <td className="px-4 py-2 text-gray-900">{row.entry_surface}</td>
                         <td className="px-4 py-2 text-right tabular-nums">{row.short_starts}</td>
                         <td className="px-4 py-2 text-right tabular-nums">{row.long_starts}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">{row.assistant_starts}</td>
                       </tr>
                     ))
                   )}
@@ -739,7 +751,7 @@ export default function EvaluationPathRunsAdminPage() {
                             ? new Date(r.completed_at).toLocaleString('fr-FR')
                             : '—'}
                         </td>
-                        <td className="px-4 py-2">{r.path_mode === 'short' ? 'Court' : 'Long'}</td>
+                        <td className="px-4 py-2">{pathModeLabel(r.path_mode)}</td>
                         <td
                           className="px-4 py-2 text-gray-800 max-w-[12rem] truncate"
                           title={r.company_name ?? r.company_id}

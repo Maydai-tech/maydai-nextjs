@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { verifyAdminAuth } from '@/lib/admin-auth'
 import { parisDateRangeToUtcBounds } from '@/lib/admin-analytics-buckets'
-import { meanSeconds, medianSeconds } from '@/lib/evaluation-path-runs-stats'
+import { summarizeEvaluationPathRuns } from '@/lib/evaluation-path-runs-stats'
 import {
   evaluationPathRunsAdminToCsv,
   type EvaluationPathRunsAdminCsvInput,
@@ -23,13 +23,14 @@ import {
   type ShortCohortRun,
 } from '@/lib/evaluation-path-short-to-long'
 import { isQuestionnaireVersion } from '@/lib/questionnaire-version'
+import type { EvaluationPathRunMode } from '@/lib/evaluation-path-run-mode'
 
 function parseYmd(s: string | null): string | null {
   if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null
   return s
 }
 
-type PathMode = 'short' | 'long'
+type PathMode = EvaluationPathRunMode
 
 type RunRow = {
   id: string
@@ -44,32 +45,6 @@ type RunRow = {
   completion_seconds: number | null
   classification_status: string | null
   risk_level: string | null
-}
-
-function summarizePath(
-  started: RunRow[],
-  completed: RunRow[],
-  mode: PathMode
-): {
-  starts: number
-  completions: number
-  completion_rate: number | null
-  mean_completion_seconds: number | null
-  median_completion_seconds: number | null
-} {
-  const s = started.filter((r) => r.path_mode === mode).length
-  const done = completed.filter((r) => r.path_mode === mode)
-  const c = done.length
-  const secs = done
-    .map((r) => r.completion_seconds)
-    .filter((n): n is number => typeof n === 'number' && Number.isFinite(n))
-  return {
-    starts: s,
-    completions: c,
-    completion_rate: s > 0 ? c / s : null,
-    mean_completion_seconds: meanSeconds(secs),
-    median_completion_seconds: medianSeconds(secs),
-  }
 }
 
 function entrySurfaceKey(v: string | null | undefined): string {
@@ -210,8 +185,9 @@ export async function GET(request: NextRequest) {
   const started = (startedRows || []) as RunRow[]
   const completed = (completedRows || []) as RunRow[]
 
-  const short = summarizePath(started, completed, 'short')
-  const long = summarizePath(started, completed, 'long')
+  const short = summarizeEvaluationPathRuns(started, completed, 'short')
+  const long = summarizeEvaluationPathRuns(started, completed, 'long')
+  const assistant = summarizeEvaluationPathRuns(started, completed, 'assistant')
 
   const shortCohort: ShortCohortRun[] = (shortCohortRows || [])
     .filter((r) => r.completed_at)
@@ -266,7 +242,12 @@ export async function GET(request: NextRequest) {
 
   const surfaceMap = new Map<
     string,
-    { entry_surface: string; short_starts: number; long_starts: number }
+    {
+      entry_surface: string
+      short_starts: number
+      long_starts: number
+      assistant_starts: number
+    }
   >()
   for (const r of started) {
     const k = entrySurfaceKey(r.entry_surface)
@@ -274,13 +255,17 @@ export async function GET(request: NextRequest) {
       entry_surface: k,
       short_starts: 0,
       long_starts: 0,
+      assistant_starts: 0,
     }
     if (r.path_mode === 'short') cur.short_starts += 1
-    else cur.long_starts += 1
+    else if (r.path_mode === 'long') cur.long_starts += 1
+    else if (r.path_mode === 'assistant') cur.assistant_starts += 1
     surfaceMap.set(k, cur)
   }
   const by_entry_surface = [...surfaceMap.values()].sort(
-    (a, b) => b.short_starts + b.long_starts - (a.short_starts + a.long_starts)
+    (a, b) =>
+      b.short_starts + b.long_starts + b.assistant_starts -
+      (a.short_starts + a.long_starts + a.assistant_starts)
   )
 
   const outcomeMap = new Map<string, number>()
@@ -331,10 +316,11 @@ export async function GET(request: NextRequest) {
     methodology: {
       short_to_long: SHORT_TO_LONG_METHODOLOGY_FR,
       period_note:
-        'Les cartes « Court / Long » (démarrages & complétions) utilisent la période sur started_at ou completed_at comme avant. La cohorte conversion court → long utilise uniquement les courts dont la fin (completed_at) tombe dans la période ; les runs long liés peuvent commencer ou finir en dehors de cette période.',
+        'Les cartes « Court / Long / Assistant » (démarrages & complétions) utilisent la période sur started_at ou completed_at comme avant. La cohorte conversion court → long utilise uniquement les courts dont la fin (completed_at) tombe dans la période ; les runs long liés peuvent commencer ou finir en dehors de cette période. Le parcours assistant (Chat IA) est distinct du questionnaire long.',
     },
     short,
     long,
+    assistant,
     short_to_long: {
       summary: short_to_long_summary,
       summary_windows: short_to_long_summary_windows,
@@ -355,6 +341,7 @@ export async function GET(request: NextRequest) {
       meta: payload.meta,
       short: payload.short,
       long: payload.long,
+      assistant: payload.assistant,
       short_to_long: payload.short_to_long,
       by_entry_surface: payload.by_entry_surface,
       by_outcome: payload.by_outcome,

@@ -24,6 +24,7 @@ const customJestConfig = {
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^@mistralai/mistralai$': '<rootDir>/lib/mistral/__mocks__/mistralai.ts',
   },
 }
 

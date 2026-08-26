@@ -8,10 +8,12 @@ import { createHash } from 'node:crypto'
 import {
   chunkAiActText,
   computeSha256,
+  estimateTokenCount,
   ingestAiActKnowledgeBase,
   isAiActDocsFolder,
   parseAiActIndex,
   planSupersession,
+  AI_ACT_CHUNK_TARGET_TOKENS,
   type AiActIngestionDeps,
   type AiActIndexEntry,
 } from '@/lib/rag-ingestion'
@@ -132,12 +134,22 @@ describe('RAG AI Act — parsing et versioning', () => {
     })
   })
 
-  test('chunkAiActText découpe les longs textes sans perdre le contenu', () => {
-    const text = `${'Article 1.\n\n'}${'x'.repeat(2000)}\n\nArticle 2. court`
+  test('chunkAiActText découpe les longs textes aux paragraphes sans perdre le contenu', () => {
+    const text = `Article 1.\n\n${'x'.repeat(5000)}\n\nArticle 2. court`
     const chunks = chunkAiActText(text)
     expect(chunks.length).toBeGreaterThan(1)
-    expect(chunks.join('')).toContain('Article 2. court')
-    expect(chunks.every((chunk) => chunk.length <= 1600)).toBe(true)
+    expect(chunks.join(' ')).toContain('Article 2. court')
+    expect(
+      chunks.every((chunk) => estimateTokenCount(chunk) <= AI_ACT_CHUNK_TARGET_TOKENS + 50)
+    ).toBe(true)
+  })
+
+  test('chunkAiActText recouvre d\'environ 200 tokens entre deux morceaux d\'un alinéa trop long', () => {
+    const body = 'abcdefghi '.repeat(500)
+    const chunks = chunkAiActText(body)
+    expect(chunks.length).toBeGreaterThan(1)
+    const overlapWindow = chunks[0].slice(-800)
+    expect(chunks[1].includes(overlapWindow.slice(0, 200))).toBe(true)
   })
 })
 

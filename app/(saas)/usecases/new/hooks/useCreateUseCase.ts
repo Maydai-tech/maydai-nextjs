@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApiCall } from '@/lib/api-client-legacy'
 import { useCaseRoutes } from '@/app/(saas)/usecases/[id]/utils/routes'
@@ -8,6 +8,8 @@ import type { CreateUseCasePayload } from '../types'
 
 export interface UseCreateUseCaseOptions {
   onSuccess?: (usecaseId: string) => void | Promise<void>
+  /** Destination après création. Par défaut : chat d’évaluation V3. */
+  afterCreate?: (usecaseId: string) => string
 }
 
 export interface UseCreateUseCaseReturn {
@@ -22,6 +24,8 @@ export function useCreateUseCase(options?: UseCreateUseCaseOptions): UseCreateUs
   const [error, setError] = useState('')
   const router = useRouter()
   const api = useApiCall()
+  const optionsRef = useRef(options)
+  optionsRef.current = options
 
   const submit = useCallback(async (payload: CreateUseCasePayload) => {
     setSubmitting(true)
@@ -52,11 +56,14 @@ export function useCreateUseCase(options?: UseCreateUseCaseOptions): UseCreateUs
 
       if (response.data?.id) {
         try {
-          await Promise.resolve(options?.onSuccess?.(response.data.id))
+          await Promise.resolve(optionsRef.current?.onSuccess?.(response.data.id))
         } catch (callbackErr) {
           console.error('[gtm] Use case creation success callback failed:', callbackErr)
         }
-        router.push(useCaseRoutes.selectPath(response.data.id))
+        const nextPath =
+          optionsRef.current?.afterCreate?.(response.data.id) ??
+          useCaseRoutes.chatEvaluation(response.data.id)
+        router.push(nextPath)
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erreur lors de la création du cas d\'usage'

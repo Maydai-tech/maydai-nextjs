@@ -1,0 +1,20 @@
+---
+description: Règle d'intégration pour l'ingestion des documents AI Act via Mistral et Supabase PgVector.
+globs: ["app/api/webhooks/kb-update/**/*.ts", "lib/mistral/**/*.ts", "lib/supabase/**/*.ts"]
+---
+# Contexte
+Nous activons le RAG pour le nouvel assistant conversationnel. Le webhook d'ingestion reçoit des PDF depuis le Drive (via l'agent Hermes). Le parsing PDF est déjà validé. Il faut maintenant vectoriser avec Mistral.
+
+# Instructions pour Cursor
+1. **Nettoyage du Webhook** : Dans `app/api/webhooks/kb-update/route.ts`, retire le `early return` (coupe-circuit) qui bloquait l'exécution du RAG.
+2. **Client Mistral** : Utilise le SDK officiel `@mistralai/mistralai`. Instancie-le dans un fichier dédié (ex: `lib/mistral/client.ts`) avec `process.env.MISTRAL_API_KEY`.
+3. **Stratégie de Chunking** : Après l'extraction du texte du PDF, implémente un chunking sémantique (taille cible : ~1000 tokens, overlap : ~200 tokens) adapté aux textes de lois (privilégier la coupe aux sauts de ligne/paragraphes).
+4. **Génération des Embeddings** : 
+   - Modèle à utiliser : `mistral-embed`.
+   - Dimension attendue par la base de données : `1024` dimensions.
+   - Gère le batching si le document comporte beaucoup de chunks (les limites de l'API Mistral).
+5. **Insertion Supabase** : 
+   - Insère les métadonnées dans `ai_act_documents`.
+   - Insère les vecteurs dans `ai_act_chunks` (avec `embedding`, `content`, `document_id`).
+   - Assure-toi que l'opération est transactionnelle ou proprement gérée en cas d'erreur d'API.
+6. **Sécurité** : Maintiens la vérification de l'API Key sur la route POST.
