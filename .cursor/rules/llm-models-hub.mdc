@@ -1,0 +1,41 @@
+---
+description: Hub canonique LLM — compl_ai_models, slug, pivot llm_model_source_ids. Interdit les colonnes dénormalisées.
+alwaysApply: true
+---
+
+# Hub canonique des modèles LLM
+
+`compl_ai_models` ne contient **que** des données canoniques : `id`, `slug`, nom, provider canonique (et métadonnées de fiche). Pas d’identifiants de sources externes.
+
+## Clé universelle
+
+- Le **`slug`** (kebab-case, unique) est la clé d’identification universelle.
+- Matching inter-sources : `source_id` → `slug` → nom, jamais l’inverse comme clé primaire.
+
+## Interdiction stricte
+
+Ne **jamais** ajouter de colonnes dénormalisées dans `compl_ai_models` pour une source externe :
+
+```sql
+-- ❌ INTERDIT
+alter table public.compl_ai_models add column llm_stats_id text;
+alter table public.compl_ai_models add column eco_provider text;
+alter table public.compl_ai_models add column eco_model text;
+```
+
+## Mapping des sources
+
+Toute source s’intègre **uniquement** via la table pivot `llm_model_source_ids` :
+
+```sql
+-- ✅ AUTORISÉ
+insert into public.llm_model_source_ids (model_id, source, source_id, match_method)
+values ('…', 'comparia', 'gpt-4o', 'exact');
+-- source ∈ llm_stats | ecologits | comparia
+```
+
+## Conséquences code
+
+- Sync LLM Stats / EcoLogits / Compar:IA : écrire le pivot, pas `compl_ai_models.llm_stats_id`.
+- Dashboard admin : badges et overlay via `llm_model_source_ids`, une ligne par fiche canonique.
+- Une source orpheline n’est pas une raison de dénormaliser le hub.

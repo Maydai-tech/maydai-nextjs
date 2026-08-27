@@ -5,7 +5,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ||
 process.env.LLM_STATS_API_KEY = process.env.LLM_STATS_API_KEY || 'llm-stats-key'
 process.env.CRON_SECRET = process.env.CRON_SECRET || 'cron-secret'
 
-const mockCreateClient = jest.fn(() => ({ from: jest.fn() }))
+const mockCreateClient = jest.fn((..._args: unknown[]) => ({ from: jest.fn() }))
 const mockSyncLlmStatsModels = jest.fn()
 const mockSendLlmStatsSyncReportEmail = jest.fn()
 const mockSendLlmStatsSyncFailureEmail = jest.fn()

@@ -208,7 +208,6 @@ export interface ComplAIPrinciple {
 
 export interface ComplAIModel {
   id: string
-  llm_stats_id?: string | null
   model_name: string
   model_provider?: string
   model_type?: string
@@ -217,10 +216,6 @@ export interface ComplAIModel {
   long_name?: string
   launch_date?: string
   model_provider_id?: number
-  eco_provider?: string | null
-  eco_model?: string | null
-  eco_status?: string | null
-  eco_resolved_at?: string | null
   notes_short?: string
   notes_long?: string
   variants?: string[]
@@ -237,6 +232,7 @@ export interface ComplAIModel {
   consumption_wh_per_1k_tokens?: number | null
   release_date?: string | null
   knowledge_cutoff?: string | null
+  slug?: string | null
   country?: string | null
   created_at: string
   updated_at: string

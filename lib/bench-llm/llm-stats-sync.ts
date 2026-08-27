@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { normalizeLlmModelSlug } from '@/lib/bench-llm/model-slug'
+
 const DEFAULT_LLM_STATS_BASE_URL = 'https://api.llm-stats.com/stats'
 const MODELS_PAGE_LIMIT = 200
 const SCORES_PAGE_LIMIT = 500
@@ -72,11 +74,6 @@ interface LlmStatsScoresResponse {
   total: number
 }
 
-interface SupabaseQueryError {
-  code?: string
-  message: string
-}
-
 interface ModelProviderRow {
   id: number
   name: string
@@ -84,6 +81,7 @@ interface ModelProviderRow {
 
 interface ExistingModelRow {
   id: string
+  slug: string | null
   llm_stats_id: string | null
   model_name: string
   model_provider_id: number | null
@@ -101,8 +99,10 @@ interface ExistingModelRow {
   llm_leader_rank: number | null
 }
 
-type ExistingModelDatabaseRow = Omit<ExistingModelRow, 'llm_stats_id'> & {
-  llm_stats_id?: string | null
+type ExistingModelsIndex = {
+  byLlmStatsId: Map<string, ExistingModelRow>
+  bySlug: Map<string, ExistingModelRow>
+  byProviderAndName: Map<string, ExistingModelRow>
 }
 
 export interface LlmStatsModelRecord {
@@ -372,6 +372,13 @@ function existingModelKey(providerId: number, modelName: string): string {
   return `${providerId}:${normalizeLlmStatsMatchValue(modelName)}`
 }
 
+function databaseRecordFor(
+  record: LlmStatsModelRecord,
+): Omit<LlmStatsModelRecord, 'llm_stats_id'> {
+  const { llm_stats_id: _llmStatsId, ...databaseRecord } = record
+  return databaseRecord
+}
+
 function valuesEqual(a: unknown, b: unknown): boolean {
   if (typeof a === 'number' || typeof b === 'number') {
     if (a === null && b === null) return true
@@ -402,19 +409,6 @@ function changedFieldsForRecord(
   ] as const
 
   return fields.filter((field) => !valuesEqual(existing[field], record[field]))
-}
-
-function isMissingLlmStatsIdColumn(error: SupabaseQueryError): boolean {
-  return error.message.includes('llm_stats_id') || error.code === 'PGRST204'
-}
-
-function databaseRecordFor(
-  record: LlmStatsModelRecord,
-  includeLlmStatsId: boolean,
-): LlmStatsModelRecord | Omit<LlmStatsModelRecord, 'llm_stats_id'> {
-  if (includeLlmStatsId) return record
-  const { llm_stats_id: _llmStatsId, ...databaseRecord } = record
-  return databaseRecord
 }
 
 async function fetchAllModels(): Promise<LlmStatsModelSummary[]> {
@@ -525,64 +519,59 @@ async function ensureProvider(
 
 async function loadExistingModels(
   supabase: SupabaseClient,
-): Promise<{
-  byLlmStatsId: Map<string, ExistingModelRow>
-  byProviderAndName: Map<string, ExistingModelRow>
-  supportsLlmStatsId: boolean
-}> {
-  const selectFields = `
-    model_name,
-    model_provider_id,
-    model_provider,
-    model_type,
-    license,
-    context_length,
-    release_date,
-    knowledge_cutoff,
-    input_cost_per_million,
-    output_cost_per_million,
-    model_size,
-    gpqa_score,
-    aime_2025_score,
-    llm_leader_rank
-  `
-  let supportsLlmStatsId = true
-  const initialQuery = await supabase
-    .from('compl_ai_models')
-    .select(`
+): Promise<ExistingModelsIndex> {
+  const [{ data, error }, { data: sourceIds, error: sourceError }] = await Promise.all([
+    supabase.from('compl_ai_models').select(`
       id,
-      llm_stats_id,
-      ${selectFields}
-    `)
-  let data = initialQuery.data as ExistingModelDatabaseRow[] | null
-  let error = initialQuery.error
-
-  if (error && isMissingLlmStatsIdColumn(error as SupabaseQueryError)) {
-    supportsLlmStatsId = false
-    const fallback = await supabase
-      .from('compl_ai_models')
-      .select(`
-        id,
-        ${selectFields}
-      `)
-    data = fallback.data as ExistingModelDatabaseRow[] | null
-    error = fallback.error
-  }
+      slug,
+      model_name,
+      model_provider_id,
+      model_provider,
+      model_type,
+      license,
+      context_length,
+      release_date,
+      knowledge_cutoff,
+      input_cost_per_million,
+      output_cost_per_million,
+      model_size,
+      gpqa_score,
+      aime_2025_score,
+      llm_leader_rank
+    `),
+    supabase
+      .from('llm_model_source_ids')
+      .select('model_id, source_id')
+      .eq('source', 'llm_stats'),
+  ])
 
   if (error) {
     throw new Error(`Erreur récupération compl_ai_models: ${error.message}`)
   }
+  if (sourceError) {
+    throw new Error(`Erreur récupération llm_model_source_ids: ${sourceError.message}`)
+  }
+
+  const modelsById = new Map(
+    ((data || []) as Omit<ExistingModelRow, 'llm_stats_id'>[]).map((model) => [
+      model.id,
+      { ...model, llm_stats_id: null as string | null },
+    ]),
+  )
 
   const byLlmStatsId = new Map<string, ExistingModelRow>()
-  const byProviderAndName = new Map<string, ExistingModelRow>()
-  const rows: ExistingModelRow[] = (data || []).map((model) => ({
-    ...model,
-    llm_stats_id: model.llm_stats_id ?? null,
-  }))
+  for (const link of sourceIds || []) {
+    const model = modelsById.get(link.model_id)
+    if (!model) continue
+    if (!model.llm_stats_id) model.llm_stats_id = link.source_id
+    byLlmStatsId.set(link.source_id, model)
+  }
 
-  for (const model of rows) {
-    if (model.llm_stats_id) {
-      byLlmStatsId.set(model.llm_stats_id, model)
+  const bySlug = new Map<string, ExistingModelRow>()
+  const byProviderAndName = new Map<string, ExistingModelRow>()
+  for (const model of modelsById.values()) {
+    if (model.slug && !bySlug.has(model.slug)) {
+      bySlug.set(model.slug, model)
     }
     if (model.model_provider_id === null) continue
     const key = existingModelKey(model.model_provider_id, model.model_name)
@@ -591,7 +580,92 @@ async function loadExistingModels(
     }
   }
 
-  return { byLlmStatsId, byProviderAndName, supportsLlmStatsId }
+  return { byLlmStatsId, bySlug, byProviderAndName }
+}
+
+function findExistingLlmStatsModel(
+  existingModels: ExistingModelsIndex,
+  model: LlmStatsModelSummary,
+  providerId: number,
+): { row: ExistingModelRow; matchMethod: 'exact' | 'slug' } | null {
+  const bySourceId = existingModels.byLlmStatsId.get(model.id)
+  if (bySourceId) return { row: bySourceId, matchMethod: 'exact' }
+
+  const nameSlug = normalizeLlmModelSlug(model.name)
+  if (nameSlug) {
+    const byNameSlug = existingModels.bySlug.get(nameSlug)
+    if (byNameSlug) return { row: byNameSlug, matchMethod: 'slug' }
+  }
+
+  const idSlug = normalizeLlmModelSlug(model.id)
+  if (idSlug && idSlug !== nameSlug) {
+    const byIdSlug = existingModels.bySlug.get(idSlug)
+    if (byIdSlug) return { row: byIdSlug, matchMethod: 'slug' }
+  }
+
+  const byName = existingModels.byProviderAndName.get(existingModelKey(providerId, model.name))
+  if (byName) return { row: byName, matchMethod: 'exact' }
+
+  return null
+}
+
+function rememberExistingModel(
+  existingModels: ExistingModelsIndex,
+  row: ExistingModelRow,
+  providerId: number,
+) {
+  if (row.llm_stats_id) existingModels.byLlmStatsId.set(row.llm_stats_id, row)
+  if (row.slug) existingModels.bySlug.set(row.slug, row)
+  existingModels.byProviderAndName.set(existingModelKey(providerId, row.model_name), row)
+}
+
+async function upsertLlmStatsSourceLink(
+  supabase: SupabaseClient,
+  existingModels: ExistingModelsIndex,
+  params: {
+    modelId: string
+    sourceId: string
+    matchMethod: 'exact' | 'slug'
+    previousSourceId: string | null
+  },
+): Promise<void> {
+  const owner = existingModels.byLlmStatsId.get(params.sourceId)
+  if (owner && owner.id !== params.modelId) {
+    throw new Error(
+      `Identifiant LLM Stats « ${params.sourceId} » déjà lié à un autre modèle`,
+    )
+  }
+
+  if (!owner) {
+    const { error } = await supabase.from('llm_model_source_ids').insert({
+      model_id: params.modelId,
+      source: 'llm_stats',
+      source_id: params.sourceId,
+      match_method: params.matchMethod,
+    })
+    if (error) throw error
+  } else if (owner.id === params.modelId) {
+    const { error } = await supabase
+      .from('llm_model_source_ids')
+      .update({
+        match_method: params.matchMethod,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('source', 'llm_stats')
+      .eq('source_id', params.sourceId)
+    if (error) throw error
+  }
+
+  if (params.previousSourceId && params.previousSourceId !== params.sourceId) {
+    const { error } = await supabase
+      .from('llm_model_source_ids')
+      .delete()
+      .eq('source', 'llm_stats')
+      .eq('source_id', params.previousSourceId)
+      .eq('model_id', params.modelId)
+    if (error) throw error
+    existingModels.byLlmStatsId.delete(params.previousSourceId)
+  }
 }
 
 export async function syncLlmStatsModels(
@@ -634,15 +708,14 @@ export async function syncLlmStatsModels(
       })
       record.model_provider = provider.name
 
-      const key = existingModelKey(provider.id, model.name)
-      const existing =
-        existingModels.byLlmStatsId.get(model.id) || existingModels.byProviderAndName.get(key)
+      const matched = findExistingLlmStatsModel(existingModels, model, provider.id)
+      const existing = matched?.row ?? null
 
       if (!existing) {
         const { data, error } = await supabase
           .from('compl_ai_models')
-          .insert(databaseRecordFor(record, existingModels.supportsLlmStatsId))
-          .select('id')
+          .insert(databaseRecordFor(record))
+          .select('id, slug')
           .single()
 
         if (error) {
@@ -650,59 +723,84 @@ export async function syncLlmStatsModels(
           continue
         }
 
-        const created = {
-          id: (data as { id?: string } | null)?.id,
+        const createdId = (data as { id?: string } | null)?.id
+        const createdSlug =
+          (data as { slug?: string } | null)?.slug ?? normalizeLlmModelSlug(model.name)
+        if (!createdId) {
+          errors.push(`Création ${model.organization.name}/${model.name}: id manquant`)
+          continue
+        }
+
+        await upsertLlmStatsSourceLink(supabase, existingModels, {
+          modelId: createdId,
+          sourceId: record.llm_stats_id,
+          matchMethod: 'exact',
+          previousSourceId: null,
+        })
+
+        createdModels.push({
+          id: createdId,
           model_name: model.name,
           model_provider: model.organization.name,
-        }
-        createdModels.push(created)
-        const createdRow = {
-          ...record,
-          id: created.id || '',
-          model_provider_id: provider.id,
-        }
-        existingModels.byLlmStatsId.set(record.llm_stats_id, createdRow)
-        existingModels.byProviderAndName.set(key, createdRow)
+        })
+        rememberExistingModel(
+          existingModels,
+          {
+            ...record,
+            id: createdId,
+            slug: createdSlug,
+            model_provider_id: provider.id,
+          },
+          provider.id,
+        )
         continue
       }
 
       const changedFields = changedFieldsForRecord(existing, record)
-      const shouldUpdateInternalId =
-        existingModels.supportsLlmStatsId &&
-        !valuesEqual(existing.llm_stats_id, record.llm_stats_id)
+      const needsSourceLink = existing.llm_stats_id !== record.llm_stats_id
+      if (needsSourceLink) changedFields.push('source_id')
 
-      if (changedFields.length === 0 && !shouldUpdateInternalId) {
+      if (changedFields.length === 0) {
         modelsUnchanged++
         continue
       }
 
-      const { error } = await supabase
-        .from('compl_ai_models')
-        .update(databaseRecordFor(record, existingModels.supportsLlmStatsId))
-        .eq('id', existing.id)
+      const modelFieldChanges = changedFields.filter((field) => field !== 'source_id')
+      if (modelFieldChanges.length > 0) {
+        const { error } = await supabase
+          .from('compl_ai_models')
+          .update(databaseRecordFor(record))
+          .eq('id', existing.id)
 
-      if (error) {
-        errors.push(`Mise à jour ${model.organization.name}/${model.name}: ${error.message}`)
-        continue
+        if (error) {
+          errors.push(`Mise à jour ${model.organization.name}/${model.name}: ${error.message}`)
+          continue
+        }
       }
 
-      if (changedFields.length > 0) {
-        updatedModels.push({
-          id: existing.id,
-          model_name: model.name,
-          model_provider: model.organization.name,
-          changedFields,
+      if (needsSourceLink) {
+        await upsertLlmStatsSourceLink(supabase, existingModels, {
+          modelId: existing.id,
+          sourceId: record.llm_stats_id,
+          matchMethod: matched?.matchMethod ?? 'exact',
+          previousSourceId: existing.llm_stats_id,
         })
-      } else {
-        modelsUnchanged++
       }
 
-      const updatedRow = { ...existing, ...record }
-      if (existing.llm_stats_id && existing.llm_stats_id !== record.llm_stats_id) {
-        existingModels.byLlmStatsId.delete(existing.llm_stats_id)
+      updatedModels.push({
+        id: existing.id,
+        model_name: model.name,
+        model_provider: model.organization.name,
+        changedFields,
+      })
+
+      const updatedRow: ExistingModelRow = {
+        ...existing,
+        ...record,
+        id: existing.id,
+        slug: existing.slug ?? normalizeLlmModelSlug(record.model_name),
       }
-      existingModels.byLlmStatsId.set(record.llm_stats_id, updatedRow)
-      existingModels.byProviderAndName.set(key, updatedRow)
+      rememberExistingModel(existingModels, updatedRow, provider.id)
     } catch (error) {
       errors.push(
         `${model.organization.name}/${model.name}: ${

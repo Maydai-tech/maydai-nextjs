@@ -77,4 +77,29 @@ describe('Bench LLMs admin unified registry', () => {
     expect(parseBenchEntityId('ecologits_def')).toEqual({ kind: 'ecologits', id: 'def' })
     expect(parseBenchEntityId('invalid')).toBeNull()
   })
+
+  test('reads source badges from llm_model_source_ids instead of denormalized columns', () => {
+    const rows = buildUnifiedBenchModels(
+      [
+        {
+          id: 'model-3',
+          model_name: 'GPT 5.2',
+          model_provider: 'OpenAI',
+          source_ids: [
+            { source: 'llm_stats', source_id: 'gpt-5.2' },
+            { source: 'comparia', source_id: 'gpt-5.2' },
+          ],
+        },
+      ],
+      [],
+      [],
+    )
+    expect(rows[0]?.sources).toEqual({
+      maydai: false,
+      compl_ai: false,
+      comparia: true,
+      llm_stats: true,
+      ecologits: false,
+    })
+  })
 })

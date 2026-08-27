@@ -14,6 +14,7 @@ import { use, useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { useAuth } from '@/lib/auth'
+import { parseApiJson } from '@/lib/utils'
 
 type TabKey = 'maydai' | 'compl-ai' | 'comparia' | 'llm-stats' | 'ecologits'
 type Benchmark = { id: string; code: string; name: string; principle_id: string }
@@ -166,10 +167,10 @@ export function BenchLlmDetailContent({
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch(`/api/admin/bench-llms/${id}`, {
+      const response = await fetch(`/api/admin/bench-llms/models/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      const payload = (await response.json()) as DetailResponse
+      const payload = await parseApiJson<DetailResponse>(response)
       if (!response.ok) throw new Error(payload.error || 'Détail impossible')
       setData(payload)
       if (payload.model) {
@@ -208,7 +209,7 @@ export function BenchLlmDetailContent({
           ...(options.headers ?? {}),
         },
       })
-      const payload = await response.json()
+      const payload = await parseApiJson<{ error?: string }>(response)
       if (!response.ok) throw new Error(payload.error || `${name} impossible`)
       setMessage(`${name} enregistré.`)
       await fetchDetail()

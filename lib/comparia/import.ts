@@ -1,5 +1,6 @@
 import { parse } from 'csv-parse/sync'
 
+import { normalizeLlmModelSlug } from '@/lib/bench-llm/model-slug'
 import { exactEcoLogitsMatchKey } from '@/lib/ecologits/normalization'
 
 const REQUIRED_HEADERS = [
@@ -47,7 +48,14 @@ export type CompariaCanonicalModel = {
   id: string
   model_name: string
   model_provider: string | null
+  slug?: string | null
   llm_stats_id?: string | null
+  llm_stats_ids?: string[]
+}
+
+export type CompariaHubLink = {
+  modelId: string
+  matchMethod: 'exact' | 'slug'
 }
 
 function nullableText(value: string): string | null {
@@ -129,31 +137,89 @@ export function parseCompariaCsv(csv: string): ParsedCompariaModel[] {
   })
 }
 
+type CandidateHit = { id: string; method: 'exact' | 'slug' }
+
+function addCandidate(
+  candidates: Map<string, CandidateHit[]>,
+  key: string | null | undefined,
+  modelId: string,
+  method: 'exact' | 'slug',
+) {
+  if (!key) return
+  const hits = candidates.get(key) ?? []
+  if (!hits.some((hit) => hit.id === modelId)) hits.push({ id: modelId, method })
+  candidates.set(key, hits)
+}
+
+function llmStatsIdsFor(model: CompariaCanonicalModel): string[] {
+  const ids = [
+    ...(model.llm_stats_ids ?? []),
+    ...(model.llm_stats_id ? [model.llm_stats_id] : []),
+  ]
+  return [...new Set(ids.map((id) => id.trim().toLowerCase()).filter(Boolean))]
+}
+
+/**
+ * Associe une ligne Compar:IA au hub `compl_ai_models` via identifiant LLM Stats,
+ * nom, clé EcoLogits, ou slug. Un match n'est retenu que s'il est unique.
+ */
+export function findCompariaHubLinks(
+  rows: ParsedCompariaModel[],
+  canonicalModels: CompariaCanonicalModel[],
+): Map<string, CompariaHubLink> {
+  const candidates = new Map<string, CandidateHit[]>()
+  for (const model of canonicalModels) {
+    for (const sourceId of llmStatsIdsFor(model)) {
+      addCandidate(candidates, sourceId, model.id, 'exact')
+    }
+    addCandidate(
+      candidates,
+      exactEcoLogitsMatchKey(model.model_provider ?? '', model.model_name),
+      model.id,
+      'exact',
+    )
+    addCandidate(candidates, model.model_name.trim().toLowerCase(), model.id, 'exact')
+    addCandidate(
+      candidates,
+      model.slug ?? normalizeLlmModelSlug(model.model_name),
+      model.id,
+      'slug',
+    )
+  }
+
+  const links = new Map<string, CompariaHubLink>()
+  for (const row of rows) {
+    const lookups: Array<{ key: string | null; method: 'exact' | 'slug' }> = [
+      { key: row.source_id.toLowerCase(), method: 'exact' },
+      { key: exactEcoLogitsMatchKey(row.organisation, row.source_id), method: 'exact' },
+      { key: normalizeLlmModelSlug(row.source_id), method: 'slug' },
+    ]
+    const hits = lookups.flatMap((lookup) => {
+      if (!lookup.key) return []
+      return (candidates.get(lookup.key) ?? []).map((hit) => ({
+        id: hit.id,
+        method: hit.method === 'exact' && lookup.method === 'exact' ? 'exact' as const : 'slug' as const,
+      }))
+    })
+    const uniqueIds = [...new Set(hits.map((hit) => hit.id))]
+    if (uniqueIds.length !== 1) continue
+    const modelId = uniqueIds[0]!
+    const matchMethod = hits.some((hit) => hit.id === modelId && hit.method === 'exact')
+      ? 'exact'
+      : 'slug'
+    links.set(row.source_id, { modelId, matchMethod })
+  }
+  return links
+}
+
 export function findExactCompariaLinks(
   rows: ParsedCompariaModel[],
   canonicalModels: CompariaCanonicalModel[],
 ): Map<string, string> {
-  const candidates = new Map<string, Set<string>>()
-  for (const model of canonicalModels) {
-    const keys = [
-      model.llm_stats_id?.trim().toLowerCase(),
-      exactEcoLogitsMatchKey(model.model_provider ?? '', model.model_name),
-    ].filter((key): key is string => Boolean(key))
-    for (const key of keys) {
-      const ids = candidates.get(key) ?? new Set<string>()
-      ids.add(model.id)
-      candidates.set(key, ids)
-    }
-  }
-
-  const links = new Map<string, string>()
-  for (const row of rows) {
-    const keys = [
-      row.source_id.toLowerCase(),
-      exactEcoLogitsMatchKey(row.organisation, row.source_id),
-    ]
-    const ids = new Set(keys.flatMap((key) => [...(candidates.get(key) ?? [])]))
-    if (ids.size === 1) links.set(row.source_id, [...ids][0]!)
-  }
-  return links
+  return new Map(
+    [...findCompariaHubLinks(rows, canonicalModels)].map(([sourceId, link]) => [
+      sourceId,
+      link.modelId,
+    ]),
+  )
 }

@@ -20,6 +20,7 @@ import { useCallback, useDeferredValue, useEffect, useRef, useState } from 'reac
 
 import { useAuth } from '@/lib/auth'
 import type { BenchSourceKey, UnifiedBenchModel } from '@/lib/bench-llm/admin-unified'
+import { parseApiJson, toTitleCase } from '@/lib/utils'
 
 const BenchLlmDetailContent = dynamic(
   () => import('./[id]/BenchLlmDetailPage').then((module) => module.BenchLlmDetailContent),
@@ -57,7 +58,15 @@ type HistoryRow = {
   started_at?: string
   created_at?: string
   models_fetched?: number
+  rows_imported?: number
+  models_synced?: number
+  rows_received?: number
   errors?: unknown
+}
+
+function historyModelsCount(row: HistoryRow): number | null {
+  const value = row.models_fetched ?? row.rows_imported ?? row.models_synced ?? row.rows_received
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
 function Presence({ available }: { available: boolean }) {
@@ -151,7 +160,6 @@ function FullScreenModelModal({
 export default function BenchLlmsAdminPage() {
   const { getAccessToken } = useAuth()
   const importInput = useRef<HTMLInputElement>(null)
-  const compariaImportInput = useRef<HTMLInputElement>(null)
   const [models, setModels] = useState<UnifiedBenchModel[]>([])
   const [providers, setProviders] = useState<string[]>([])
   const [total, setTotal] = useState(0)
@@ -191,7 +199,7 @@ export default function BenchLlmsAdminPage() {
       const response = await fetch(`/api/admin/bench-llms?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      const payload = (await response.json()) as ApiResponse
+      const payload = await parseApiJson<ApiResponse>(response)
       if (!response.ok) throw new Error(payload.error || 'Chargement impossible')
       setModels(payload.models)
       setProviders(payload.providers)
@@ -222,7 +230,7 @@ export default function BenchLlmsAdminPage() {
           ...(options?.headers ?? {}),
         },
       })
-      const payload = await response.json()
+      const payload = await parseApiJson<{ error?: string; message?: string }>(response)
       if (!response.ok && response.status !== 207) throw new Error(payload.error || payload.message || `${name} impossible`)
       setMessage(`${name} terminé avec succès.`)
       await fetchModels()
@@ -248,35 +256,6 @@ export default function BenchLlmsAdminPage() {
       body: JSON.stringify({ csvData, updateMode: importMode === 'update' }),
     })
   }, [callAction, importMode])
-
-  const importCompariaCsv = useCallback(async (file: File) => {
-    const token = getAccessToken()
-    if (!token) return
-    setAction('Import Compar:IA')
-    setError(null)
-    setMessage(null)
-    try {
-      const formData = new FormData()
-      formData.set('file', file)
-      const response = await fetch('/api/admin/comparia/import', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      })
-      const payload = await response.json()
-      if (!response.ok) throw new Error(payload.error || 'Import Compar:IA impossible')
-      setMessage(
-        `Compar:IA : ${payload.rowsImported} modèle(s) importé(s), ` +
-        `${payload.exactLinksCreated} nouvelle(s) liaison(s) exacte(s), ` +
-        `${payload.modelsDeactivated} modèle(s) désactivé(s).`,
-      )
-      await fetchModels()
-    } catch (importError) {
-      setError(importError instanceof Error ? importError.message : 'Erreur inconnue')
-    } finally {
-      setAction(null)
-    }
-  }, [fetchModels, getAccessToken])
 
   const exportCsv = useCallback(async () => {
     const token = getAccessToken()
@@ -340,8 +319,7 @@ export default function BenchLlmsAdminPage() {
           <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium"><Plus className="h-4 w-4" /> Modèle</button>
           <button onClick={() => callAction('Synchronisation LLM Stats', '/api/admin/llm-stats-sync-runs')} disabled={action != null} className="rounded-md bg-sky-700 px-3 py-2 text-sm font-medium text-white">Sync LLM Stats</button>
           <button onClick={() => callAction('Synchronisation EcoLogits', '/api/admin/ecologits/sync')} disabled={action != null} className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white"><Leaf className="h-4 w-4" /> Sync EcoLogits</button>
-          <button onClick={() => compariaImportInput.current?.click()} disabled={action != null} className="rounded-md bg-violet-700 px-3 py-2 text-sm font-medium text-white">Import Compar:IA</button>
-          <input ref={compariaImportInput} type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importCompariaCsv(file); event.target.value = '' }} />
+          <button onClick={() => callAction('Synchronisation Compar:IA', '/api/admin/comparia/sync')} disabled={action != null} className="rounded-md bg-violet-700 px-3 py-2 text-sm font-medium text-white">Sync Compar:IA</button>
           <button onClick={() => callAction('Synchronisation COMPL-AI', '/api/admin/compl-ai/sync')} disabled={action != null} className="rounded-md bg-indigo-700 px-3 py-2 text-sm font-medium text-white">Sync COMPL-AI</button>
           <button onClick={() => callAction('Recalcul MaydAI', '/api/admin/compl-ai/recalculate-maydai-scores')} disabled={action != null} className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium">Recalcul MaydAI</button>
           <button onClick={exportCsv} disabled={action != null} className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium"><Download className="h-4 w-4" /> CSV</button>
@@ -366,7 +344,7 @@ export default function BenchLlmsAdminPage() {
             const latest = (rows as HistoryRow[])[0]
             return <div key={String(label)} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
               <div className="font-medium text-gray-900">{String(label)}</div>
-              {latest ? <div className="mt-2 text-sm text-gray-600"><div>Statut : {latest.status ?? 'terminé'}</div><div>{latest.models_fetched ?? '—'} modèle(s)</div><div className="mt-1 text-xs text-gray-500">{formatHistoryDate(latest)}</div></div> : <div className="mt-2 text-sm text-gray-500">Aucun historique.</div>}
+              {latest ? <div className="mt-2 text-sm text-gray-600"><div>Statut : {latest.status ?? 'terminé'}</div><div>{historyModelsCount(latest) ?? '—'} modèle(s)</div><div className="mt-1 text-xs text-gray-500">{formatHistoryDate(latest)}</div></div> : <div className="mt-2 text-sm text-gray-500">Aucun historique.</div>}
             </div>
           })}
         </div>
@@ -378,7 +356,7 @@ export default function BenchLlmsAdminPage() {
 
       <div className="mb-4 grid gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-5">
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Rechercher…" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
-        <select value={provider} onChange={(event) => setProvider(event.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm"><option value="">Tous les fournisseurs</option>{providers.map((item) => <option key={item}>{item}</option>)}</select>
+        <select value={provider} onChange={(event) => setProvider(event.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm"><option value="">Tous les fournisseurs</option>{providers.map((item) => <option key={item} value={item}>{toTitleCase(item)}</option>)}</select>
         <select value={active} onChange={(event) => setActive(event.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm"><option value="all">Tous les statuts</option><option value="active">Actifs</option><option value="inactive">Inactifs</option></select>
         <select value={source} onChange={(event) => setSource(event.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm"><option value="">Toutes les sources</option>{SOURCES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
         <select value={availability} onChange={(event) => setAvailability(event.target.value)} disabled={!source} className="rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"><option value="all">Disponible ou non</option><option value="present">Données présentes</option><option value="missing">Données absentes</option></select>
@@ -405,7 +383,7 @@ export default function BenchLlmsAdminPage() {
                   }}
                   className="cursor-pointer hover:bg-sky-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#0080A3]"
                 >
-                  <td className="px-4 py-3"><div className="font-medium text-gray-900">{model.name}</div><div className="text-xs text-gray-500">{model.provider}{model.active ? '' : ' · inactif'}</div></td>
+                  <td className="px-4 py-3"><div className="font-medium text-gray-900">{model.slug}</div><div className="text-xs text-gray-500">{toTitleCase(model.provider)}{model.active ? '' : ' · inactif'}</div></td>
                   {SOURCES.map((item) => <td key={item.key} className="px-4 py-3 text-center"><Presence available={model.sources[item.key]} /></td>)}
                 </tr>
               ))}
