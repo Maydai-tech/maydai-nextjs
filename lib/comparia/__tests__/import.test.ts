@@ -55,4 +55,19 @@ describe('Compar:IA CSV import', () => {
 
     expect(links.has('gpt-5.3')).toBe(false)
   })
+
+  test('links via slug when llm_stats_id is absent', () => {
+    const rows = parseCompariaCsv(`${HEADER}
+1,gpt-5.3,1144,1126,1165,+0/-5,1,6,1454,N/A,L,N/A,maybe-moe,03/2026,OpenAI,api-only`)
+    const links = findExactCompariaLinks(rows, [
+      {
+        id: 'maydai-gpt',
+        model_name: 'GPT 5.3',
+        model_provider: 'OpenAI',
+        slug: 'gpt-5-3',
+      },
+    ])
+
+    expect(links.get('gpt-5.3')).toBe('maydai-gpt')
+  })
 })

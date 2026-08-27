@@ -16,7 +16,6 @@ export type Database = {
       compl_ai_models: {
         Row: {
           id: string
-          llm_stats_id: string | null
           model_name: string
           model_provider: string | null
           model_type: string | null
@@ -42,16 +41,12 @@ export type Database = {
           release_date: string | null
           knowledge_cutoff: string | null
           country: string | null
-          eco_provider: string | null
-          eco_model: string | null
-          eco_status: string | null
-          eco_resolved_at: string | null
+          slug: string
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          llm_stats_id?: string | null
           model_name: string
           model_provider?: string | null
           model_type?: string | null
@@ -77,16 +72,12 @@ export type Database = {
           release_date?: string | null
           knowledge_cutoff?: string | null
           country?: string | null
-          eco_provider?: string | null
-          eco_model?: string | null
-          eco_status?: string | null
-          eco_resolved_at?: string | null
+          slug?: string
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          llm_stats_id?: string | null
           model_name?: string
           model_provider?: string | null
           model_type?: string | null
@@ -112,10 +103,37 @@ export type Database = {
           release_date?: string | null
           knowledge_cutoff?: string | null
           country?: string | null
-          eco_provider?: string | null
-          eco_model?: string | null
-          eco_status?: string | null
-          eco_resolved_at?: string | null
+          slug?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+
+      llm_model_source_ids: {
+        Row: {
+          id: string
+          model_id: string
+          source: 'llm_stats' | 'ecologits' | 'comparia'
+          source_id: string
+          match_method: 'exact' | 'slug' | 'manual'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          model_id: string
+          source: 'llm_stats' | 'ecologits' | 'comparia'
+          source_id: string
+          match_method: 'exact' | 'slug' | 'manual'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          model_id?: string
+          source?: 'llm_stats' | 'ecologits' | 'comparia'
+          source_id?: string
+          match_method?: 'exact' | 'slug' | 'manual'
           created_at?: string
           updated_at?: string
         }

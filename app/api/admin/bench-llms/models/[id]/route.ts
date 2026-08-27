@@ -10,13 +10,13 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await verifyAdminAuth(request)
-  if (auth.error) return auth.error
-  const { id: entityId } = await context.params
-  const parsed = parseBenchEntityId(entityId)
-  if (!parsed) return NextResponse.json({ error: 'Identifiant modèle invalide' }, { status: 400 })
-
   try {
+    const auth = await verifyAdminAuth(request)
+    if (auth.error) return auth.error
+    const { id: entityId } = await context.params
+    const parsed = parseBenchEntityId(entityId)
+    if (!parsed) return NextResponse.json({ error: 'Identifiant modèle invalide' }, { status: 400 })
+
     const supabase = createEcoLogitsServiceClient()
     let canonicalModelId: string | null = parsed.kind === 'maydai' ? parsed.id : null
     let ecoModelId: string | null = parsed.kind === 'ecologits' ? parsed.id : null
@@ -70,7 +70,7 @@ export async function GET(
       compariaModelId = compariaLink?.id ?? null
     }
 
-    const [modelResult, evaluationsResult, ecoResult, compariaResult, principlesResult, maydaiModelsResult, llmRunsResult] =
+    const [modelResult, evaluationsResult, ecoResult, compariaResult, principlesResult, maydaiModelsResult, llmRunsResult, sourceIdsResult] =
       await Promise.all([
         canonicalModelId
           ? supabase.from('compl_ai_models').select('*').eq('id', canonicalModelId).maybeSingle()
@@ -98,14 +98,27 @@ export async function GET(
           .order('code'),
         supabase.from('compl_ai_models').select('id, model_name, model_provider').order('model_name'),
         supabase.from('llm_stats_sync_runs').select('*').order('started_at', { ascending: false }).limit(10),
+        canonicalModelId
+          ? supabase
+              .from('llm_model_source_ids')
+              .select('source, source_id, match_method')
+              .eq('model_id', canonicalModelId)
+          : Promise.resolve({ data: [], error: null }),
       ])
 
-    for (const result of [modelResult, evaluationsResult, ecoResult, compariaResult, principlesResult]) {
+    for (const result of [modelResult, evaluationsResult, ecoResult, compariaResult, principlesResult, sourceIdsResult]) {
       if (result.error) throw result.error
     }
     if (!modelResult.data && !ecoResult.data && !compariaResult.data) {
       return NextResponse.json({ error: 'Modèle introuvable' }, { status: 404 })
     }
+
+    const sourceIds = sourceIdsResult.data ?? []
+    const llmStatsId =
+      sourceIds.find((link) => link.source === 'llm_stats')?.source_id ?? null
+    const model = modelResult.data
+      ? { ...modelResult.data, llm_stats_id: llmStatsId }
+      : null
 
     return NextResponse.json({
       entityId: canonicalModelId
@@ -113,10 +126,11 @@ export async function GET(
         : ecoModelId
           ? `ecologits_${ecoModelId}`
           : `comparia_${compariaModelId}`,
-      model: modelResult.data,
+      model,
       evaluations: evaluationsResult.data ?? [],
       ecologits: ecoResult.data,
       comparia: compariaResult.data,
+      sourceIds,
       principles: principlesResult.data ?? [],
       maydaiModels: maydaiModelsResult.data ?? [],
       llmStatsRuns: llmRunsResult.data ?? [],

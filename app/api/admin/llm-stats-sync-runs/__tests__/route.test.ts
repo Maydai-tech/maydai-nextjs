@@ -7,7 +7,7 @@ const mockLimit = jest.fn()
 const mockOrder = jest.fn(() => ({ limit: mockLimit }))
 const mockSelect = jest.fn(() => ({ order: mockOrder }))
 const mockFrom = jest.fn(() => ({ select: mockSelect }))
-const mockCreateClient = jest.fn(() => ({ from: mockFrom }))
+const mockCreateClient = jest.fn((..._args: unknown[]) => ({ from: mockFrom }))
 const mockVerifyAdminAuth = jest.fn()
 
 jest.mock('@supabase/supabase-js', () => ({

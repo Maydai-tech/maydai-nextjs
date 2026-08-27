@@ -6,7 +6,7 @@ process.env.LLM_STATS_API_KEY = process.env.LLM_STATS_API_KEY || 'llm-stats-key'
 
 const mockInsert = jest.fn(async () => ({ error: null }))
 const mockFrom = jest.fn(() => ({ insert: mockInsert }))
-const mockCreateClient = jest.fn(() => ({ from: mockFrom }))
+const mockCreateClient = jest.fn((..._args: unknown[]) => ({ from: mockFrom }))
 const mockVerifyAdminAuth = jest.fn()
 const mockSyncLlmStatsModels = jest.fn()
 const mockSendLlmStatsSyncReportEmail = jest.fn()

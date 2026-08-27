@@ -1,6 +1,7 @@
 /** @jest-environment node */
 
 const ingestAiActKnowledgeBase = jest.fn()
+const persistCompariaCatalog = jest.fn()
 
 jest.mock('@/lib/rag-ingestion', () => ({
   ingestAiActKnowledgeBase: (...args: unknown[]) => ingestAiActKnowledgeBase(...args),
@@ -13,7 +14,16 @@ jest.mock('@/lib/google-drive', () => ({
   getFileFromDrive: jest.fn(),
 }))
 
+jest.mock('@/lib/comparia/catalog-sync', () => ({
+  persistCompariaCatalog: (...args: unknown[]) => persistCompariaCatalog(...args),
+}))
+
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: () => ({ from: jest.fn() }),
+}))
+
 import { NextRequest } from 'next/server'
+import { findFileIdByName, getFileFromDrive } from '@/lib/google-drive'
 import { POST } from '../route'
 
 function makeRequest(body: unknown, apiKey = 'internal-key') {
@@ -98,5 +108,42 @@ describe('POST /api/webhooks/kb-update', () => {
     )
     expect(response.status).toBe(400)
     expect(ingestAiActKnowledgeBase).not.toHaveBeenCalled()
+  })
+
+  test('écrit le CSV Compar:IA dans comparia_models via le catalogue, pas comparia_rankings', async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost'
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role'
+    const csv = `Rank,id,Bradley-Terry Score,BT p2.5,BT p97.5,Confidence interval,Rank p2.5,Rank p97.5,Total votes,Consumption mWh (1000 tokens),Size,Parameters (B),Architecture,Release,Organisation,License
+1,gpt-5.3,1144,1126,1165,+0/-5,1,6,1454,N/A,L,N/A,maybe-moe,03/2026,OpenAI,api-only`
+    jest.mocked(findFileIdByName).mockResolvedValue('file-id')
+    jest.mocked(getFileFromDrive).mockResolvedValue(csv)
+    persistCompariaCatalog.mockResolvedValue({
+      rowsImported: 1,
+      exactLinksCreated: 1,
+      modelsDeactivated: 0,
+    })
+
+    const response = await POST(
+      makeRequest({
+        folder_name: '04_ComparIA',
+        file_name: 'leaderboard.csv',
+      }),
+    )
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(persistCompariaCatalog).toHaveBeenCalledTimes(1)
+    expect(persistCompariaCatalog.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        fileName: 'leaderboard.csv',
+        rows: [expect.objectContaining({ source_id: 'gpt-5.3', rank: 1 })],
+      }),
+    )
+    expect(payload).toEqual({
+      success: true,
+      models_updated: 1,
+      exact_links_created: 1,
+      models_deactivated: 0,
+    })
   })
 })
