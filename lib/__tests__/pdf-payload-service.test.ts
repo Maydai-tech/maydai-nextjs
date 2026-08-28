@@ -48,7 +48,7 @@ describe('pdf-payload-service', () => {
     test('remplace une URL dashboard MaydAI par un libellé propre', () => {
       const input =
         'Voir https://www.maydai.io/dashboard/abc/dossiers/xyz/system_prompt pour la preuve.'
-      expect(cleanPdfUrls(input)).toBe('Voir [Lien vers le dossier] pour la preuve.')
+      expect(cleanPdfUrls(input)).toBe('Voir [Dossier du cas (preuves)] pour la preuve.')
     })
 
     test('remplace une URL todo par le libellé todo', () => {

@@ -1,6 +1,18 @@
 import { render, screen } from '@testing-library/react'
 import { RiskLevelBadge } from '../RiskLevelBadge'
 
+// Mock du Next.js App Router pour le composant
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+    back: jest.fn(),
+  }),
+  usePathname: () => '',
+  useSearchParams: () => new URLSearchParams(),
+}))
+
 describe('RiskLevelBadge', () => {
   test('impossible : affiche Classification impossible sans niveau classique', () => {
     render(

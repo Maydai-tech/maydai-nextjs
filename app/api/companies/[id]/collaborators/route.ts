@@ -76,26 +76,15 @@ export async function POST(
 
     if (existingAuthUser) {
       // User already exists in auth
-      // Check if user is trying to invite themselves
       if (existingAuthUser.id === user.id) {
         return NextResponse.json({ error: 'Cannot invite yourself' }, { status: 400 })
       }
 
       collaboratorProfileId = existingAuthUser.id
+      // VULNERABILITE CORRIGEE (Zero Overwrite) : On supprime createProfileForUser ici.
 
-      // Create or update profile for existing auth user with provided firstName/lastName
-      const { error: createProfileError } = await createProfileForUser(
-        existingAuthUser.id,
-        firstName,
-        lastName
-      )
-
-      if (createProfileError) {
-        logger.error('Failed to create/update profile for existing user', createProfileError, createRequestContext(request))
-        return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
-      }
     } else {
-      // User doesn't exist, create them (email will be sent via Mailjet)
+      // User doesn't exist, create them
       const { data: inviteData, error: inviteError } = await inviteUserByEmail(email, {
         firstName,
         lastName
@@ -108,7 +97,7 @@ export async function POST(
 
       collaboratorProfileId = inviteData.user.id
 
-      // Create profile for the invited user
+      // Create profile ONLY for the newly invited user
       const { error: createProfileError } = await createProfileForUser(
         inviteData.user.id,
         firstName,
