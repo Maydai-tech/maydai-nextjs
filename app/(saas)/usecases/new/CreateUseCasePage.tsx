@@ -572,6 +572,7 @@ function CreateUseCasePageContent() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
         },
         body: JSON.stringify({ formData: dataToSend })
       })

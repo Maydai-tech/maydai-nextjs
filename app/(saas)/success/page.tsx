@@ -21,7 +21,7 @@ interface PaymentDetails {
 }
 
 export default function SuccessPage() {
-  const { user, loading } = useAuth()
+  const { user, loading, session } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
@@ -71,12 +71,16 @@ export default function SuccessPage() {
 
   // Récupérer les détails du paiement
   useEffect(() => {
-    if (!sessionId || !mounted) return
+    if (!sessionId || !mounted || !session?.access_token) return
 
     const fetchPaymentDetails = async () => {
       try {
         setLoadingPayment(true)
-        const response = await fetch(`/api/stripe/retrieve-session?session_id=${sessionId}`)
+        const response = await fetch(`/api/stripe/retrieve-session?session_id=${sessionId}`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        })
         
         if (!response.ok) {
           throw new Error('Erreur lors de la récupération des détails du paiement')
@@ -93,7 +97,7 @@ export default function SuccessPage() {
     }
 
     fetchPaymentDetails()
-  }, [sessionId, mounted])
+  }, [sessionId, mounted, session?.access_token])
 
   // Show loading state during SSR and initial client load
   if (!mounted || loading) {

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { ArrowLeft, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useAuth } from '@/lib/auth'
 import { useGuidedChatState } from '../../hooks/useGuidedChatState'
 import { useModelProviders } from '../../hooks/useModelProviders'
 import { useCreateUseCase } from '../../hooks/useCreateUseCase'
@@ -32,6 +33,7 @@ interface GuidedChatProps {
 }
 
 export default function GuidedChat({ companyId, company }: GuidedChatProps) {
+  const { session } = useAuth()
   const { state, actions } = useGuidedChatState()
   const modelProviders = useModelProviders()
   const { submit, submitting, error: submitError, clearError } = useCreateUseCase({
@@ -234,7 +236,10 @@ export default function GuidedChat({ companyId, company }: GuidedChatProps) {
       }
       const response = await fetch('/api/mistral/generate-description', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
         body: JSON.stringify({ formData: dataToSend }),
       })
       if (!response.ok) {
@@ -262,7 +267,7 @@ export default function GuidedChat({ companyId, company }: GuidedChatProps) {
     } finally {
       actions.setGeneratingDescription(false)
     }
-  }, [actions, state.draft, company])
+  }, [actions, state.draft, company, session])
 
   // Edit a field from the review screen
   const handleEditFromReview = useCallback((stepId: ChatStepId) => {
