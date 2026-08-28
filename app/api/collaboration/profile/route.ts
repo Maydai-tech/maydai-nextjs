@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { email, firstName, lastName, role = 'user' } = body
+    // VULNERABILITE CORRIGEE : On extrait les données, mais on ignore 'role' du payload client
+    const { email, firstName, lastName } = body
 
     if (!email || !firstName || !lastName) {
       return NextResponse.json({ error: 'Missing required fields: email, firstName, lastName' }, { status: 400 })
@@ -50,36 +51,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
     }
 
-    // Validate role
-    const validRoles = ['owner', 'user']
-    if (!validRoles.includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
-    }
-
     // Check if user exists in auth.users by email
     let collaboratorProfileId: string | null = null
     const { user: existingAuthUser } = await getUserByEmail(email)
 
     if (existingAuthUser) {
       // User already exists in auth
-      // Check if user is trying to invite themselves
       if (existingAuthUser.id === user.id) {
         return NextResponse.json({ error: 'Cannot invite yourself' }, { status: 400 })
       }
 
       collaboratorProfileId = existingAuthUser.id
+      // VULNERABILITE CORRIGEE (Zero Overwrite) : Aucun appel à createProfileForUser ici.
+      // On respecte l'identité existante de l'utilisateur.
 
-      // Create or update profile for existing auth user with provided firstName/lastName
-      const { error: createProfileError } = await createProfileForUser(
-        existingAuthUser.id,
-        firstName,
-        lastName
-      )
-
-      if (createProfileError) {
-        logger.error('Failed to create/update profile for existing user', createProfileError, createRequestContext(request))
-        return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
-      }
     } else {
       // User doesn't exist, create them (email will be sent via Mailjet)
       const { data: inviteData, error: inviteError } = await inviteUserByEmail(email, {
@@ -94,7 +79,7 @@ export async function POST(request: NextRequest) {
 
       collaboratorProfileId = inviteData.user.id
 
-      // Create profile for the invited user
+      // Create profile for the newly invited user ONLY
       const { error: createProfileError } = await createProfileForUser(
         inviteData.user.id,
         firstName,
@@ -125,7 +110,7 @@ export async function POST(request: NextRequest) {
       .insert({
         inviter_user_id: user.id,
         invited_user_id: collaboratorProfileId,
-        role: role,
+        role: 'user', // VULNERABILITE CORRIGEE : Figeage autoritaire du rôle à 'user'
         added_by: user.id
       })
 
@@ -159,32 +144,18 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    console.log('📧 [Profile Route] Inviter profile query:', {
-      userId: user.id,
-      inviterProfile,
-      inviterProfileError
-    })
-
     const inviterFullName = inviterProfile?.first_name && inviterProfile?.last_name
       ? `${inviterProfile.first_name} ${inviterProfile.last_name}`
       : 'Équipe MaydAI'
 
-    console.log('📧 [Profile Route] Email params:', {
-      collaboratorEmail: email,
-      collaboratorFirstName: firstName,
-      inviterName: inviterFullName,
-      orgName: inviterProfile?.company_name || 'votre organisation'
-    })
-
     // Envoi email via Mailjet (non-bloquant, ne fait pas échouer la création)
     sendAccountCollaborationInvite({
       collaboratorEmail: email,
-      collaboratorFirstName: firstName,
+      collaboratorFirstName: collaboratorProfile?.first_name || firstName, // Utilise le vrai nom si existant
       inviterName: inviterFullName,
       orgName: inviterProfile?.company_name || 'votre organisation'
     }).catch(err => {
       console.error('Failed to send account invitation email:', err)
-      // Continue silently, email failure doesn't block user creation
     })
 
     return NextResponse.json({
@@ -194,7 +165,7 @@ export async function POST(request: NextRequest) {
         firstName: collaboratorProfile?.first_name,
         lastName: collaboratorProfile?.last_name,
         email,
-        role
+        role: 'user' // Reflète le rôle figé
       }
     })
 
@@ -293,7 +264,7 @@ export async function GET(request: NextRequest) {
         lastName: (pc.profiles as any)?.last_name,
         role: pc.role,
         scope: 'account' as const,
-        companiesCount: ownedCompanyIds.length, // Account-level = all companies
+        companiesCount: ownedCompanyIds.length,
         addedAt: pc.created_at
       })
     })

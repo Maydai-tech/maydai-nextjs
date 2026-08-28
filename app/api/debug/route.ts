@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { verifyAdminAuth } from '@/lib/admin-auth'
 
 const DEFAULT_ECOLOGITS_BASE = 'https://api.ecologits.ai'
 const HTTP_TIMEOUT_MS = 30_000
@@ -8,27 +9,6 @@ const TEST_CASES = [
   { provider: 'openai', model_name: 'gpt-3.5-turbo' },
   { provider: 'mistralai', model_name: 'Mistral-7B-v0.1' }
 ] as const
-
-function describeSecret(value: string | undefined) {
-  if (!value) return { present: false as const }
-  const trimmed = value.trim()
-  return {
-    present: true as const,
-    length: trimmed.length,
-    suffix: trimmed.length > 4 ? `…${trimmed.slice(-4)}` : '(trop court pour masquer)'
-  }
-}
-
-function describeOptionalUrl(value: string | undefined) {
-  if (!value) return { present: false as const }
-  let host: string | undefined
-  try {
-    host = new URL(value).host
-  } catch {
-    host = undefined
-  }
-  return { present: true as const, length: value.length, host }
-}
 
 function decodeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -84,11 +64,11 @@ function computeRequestLatencySeconds(outputTokens: number, deployment: { tps: n
   return deployment.ttft + outputTokens / deployment.tps
 }
 
-export async function GET() {
-  const env = {
-    ECOLOGITS_API_KEY: describeSecret(process.env.ECOLOGITS_API_KEY),
-    ECOLOGITS_BASE_URL: describeOptionalUrl(process.env.ECOLOGITS_BASE_URL),
-    ECOLOGITS_URL: describeOptionalUrl(process.env.ECOLOGITS_URL)
+export async function GET(request: NextRequest) {
+  // 1. Protection Zero Trust
+  const { error: authError } = await verifyAdminAuth(request, 'super_admin')
+  if (authError) {
+    return authError
   }
 
   const baseUrl = resolvedEcologitsBaseUrl()
@@ -157,7 +137,6 @@ export async function GET() {
       } catch (err) {
         return NextResponse.json({
           ok: false,
-          env,
           ecologits: {
             resolvedBaseUrl: baseUrl,
             test: { provider, model_name, country: TEST_COUNTRY, request_latency: requestLatency },
@@ -171,7 +150,6 @@ export async function GET() {
 
       return NextResponse.json({
         ok: estRes.ok,
-        env,
         ecologits: {
           resolvedBaseUrl: baseUrl,
           test: { provider, model_name, country: TEST_COUNTRY, request_latency: requestLatency },
@@ -183,7 +161,6 @@ export async function GET() {
 
     return NextResponse.json({
       ok: false,
-      env,
       ecologits: {
         resolvedBaseUrl: baseUrl,
         message: 'Aucun des modèles de test na pu être estimé (catalogue ou modèle manquant).',
@@ -194,7 +171,6 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
-        env,
         ecologits: {
           resolvedBaseUrl: baseUrl,
           error: decodeError(error)

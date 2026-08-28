@@ -28,9 +28,6 @@ export function getReportPlanNarrativeLine(
 ): string {
   const trimmed = (llmText ?? '').trim()
   if (trimmed.length > 0) {
-    if (hasKnownStatusPrefix(trimmed)) {
-      return trimmed
-    }
     if (isKnownSlotStatus(slotStatus)) {
       return enforceStatusPrefix(trimmed, slotStatus)
     }
