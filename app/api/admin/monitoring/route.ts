@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorMonitor } from '@/lib/error-monitor'
+import { verifyAdminAuth } from '@/lib/admin-auth'
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 
@@ -359,6 +360,9 @@ async function getDockerPurgesResult(): Promise<DockerPurgesResult> {
 // GET: Obtenir les statistiques de monitoring
 export async function GET(req: NextRequest) {
   try {
+    const authResult = await verifyAdminAuth(req)
+    if (authResult.error) return authResult.error
+
     const { searchParams } = new URL(req.url)
     const action = searchParams.get('action') || 'stats'
     const limit = parseInt(searchParams.get('limit') || '50')
@@ -445,6 +449,9 @@ export async function GET(req: NextRequest) {
 // POST: Actions de monitoring
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await verifyAdminAuth(req)
+    if (authResult.error) return authResult.error
+
     const { action, ...params } = await req.json()
 
     switch (action) {
