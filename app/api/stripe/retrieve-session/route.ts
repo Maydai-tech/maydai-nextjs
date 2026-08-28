@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { getStripeClient } from '@/lib/stripe/config/client'
 import { validateSessionId } from '@/lib/stripe/utils/validation'
 import { handleStripeError, handleValidationError } from '@/lib/stripe/utils/error-handling'
@@ -6,6 +7,18 @@ import type { RetrieveSessionResponse } from '@/lib/stripe/types'
 
 export async function GET(request: NextRequest) {
   try {
+    let user
+    try {
+      const auth = await getAuthenticatedSupabaseClient(request)
+      user = auth.user
+    } catch {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
+    }
+
     // Récupérer et valider le sessionId
     const { searchParams } = new URL(request.url)
     const sessionId = searchParams.get('session_id')
@@ -23,6 +36,13 @@ export async function GET(request: NextRequest) {
     const session = await stripe.checkout.sessions.retrieve(sessionId!, {
       expand: ['subscription']
     })
+
+    if (user.id !== session.client_reference_id && user.id !== session.metadata?.user_id) {
+      return NextResponse.json(
+        { error: 'Accès refusé à cette session' },
+        { status: 403 }
+      )
+    }
 
     // Formater les données pour le frontend
     const paymentDetails: RetrieveSessionResponse = {
