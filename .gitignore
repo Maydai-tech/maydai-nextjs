@@ -57,3 +57,17 @@ next-env.d.ts
 
 # Claude config
 /.claude
+
+# --- Ajouts Sécurité & Cache ---
+# pnpm cache
+.pnpm-store/
+
+# next.js build cache
+.swc/
+
+# extra local env files
+.env.eco-test
+.env.supabase.example1
+
+# editors
+.vscode/
