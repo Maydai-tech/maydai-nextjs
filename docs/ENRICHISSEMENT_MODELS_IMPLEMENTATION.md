@@ -1,5 +1,7 @@
 # Implémentation de l'Enrichissement des Modèles LLM
 
+> **Historique.** Ne plus ajouter d’identifiants de source sur `compl_ai_models`. Voir [llm-models-hub.md](./llm-models-hub.md). L’admin unifié est `app/(saas)/admin/bench-llms/`, plus `app/admin/compl-ai-scores/page.tsx`.
+
 ## Résumé
 Ce document décrit l'implémentation complète de l'ajout des champs **notes** (courtes et longues) et **variantes** aux modèles LLM, avec affichage d'infobulles et liste de variantes dans l'interface admin.
 

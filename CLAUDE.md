@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MaydAI is a Next.js 15 application for AI Act (EU) compliance management. It helps organizations assess and manage AI use cases, conduct risk evaluations, and generate compliance reports.
 
-**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), OpenAI API, Stripe
+**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), Mistral Agents (chat + RAG), OpenAI (rapports File Search), Stripe
+
+**Docs techniques :** [docs/README.md](docs/README.md) — Chat IA, hub LLM, auth API, RAG AI Act.
 
 ## Development Commands
 
@@ -55,11 +57,16 @@ bash scripts/clean-cache.sh            # Clean build cache
 ```
 app/                          # Next.js 15 App Router
 ├── api/                      # API routes (protected with auth)
-│   ├── usecases/            # UseCase endpoints
+│   ├── chat/                # Setup welcome, évaluation conversationnelle, rapport
+│   ├── usecases/            # UseCase endpoints + evaluation-runs
 │   ├── companies/           # Company management
 │   ├── collaboration/       # Team collaboration
-│   ├── questionnaire/       # Questionnaire responses
+│   ├── admin/               # Admin (verifyAdminAuth) + crons Compar:IA
+│   ├── cron/                # LLM Stats / EcoLogits (CRON_SECRET)
+│   ├── webhooks/            # KB Drive (INTERNAL_API_KEY), Stripe, SIREN
 │   └── stripe/              # Subscription & billing
+├── (saas)/chat/             # Landing Chat IA
+├── (saas)/usecases/         # Hub création, setup-chat, chat-evaluation
 ├── dashboard/[id]/          # Company dashboards
 ├── usecases/[id]/           # UseCase pages (overview, evaluation, rapport)
 ├── admin/                   # Admin panel (role-protected)
@@ -67,10 +74,13 @@ app/                          # Next.js 15 App Router
 
 lib/                         # Shared utilities & services
 ├── auth.tsx                 # Client-side auth hook (useAuth)
-├── api-auth.ts              # Server-side auth (getAuthenticatedSupabaseClient)
-├── supabase.ts              # Supabase client setup
-├── questionnaire-api.ts     # Questionnaire data layer
-├── openai-client.ts         # OpenAI integration
+├── api-auth.ts              # Bearer user (getAuthenticatedSupabaseClient)
+├── admin-auth.ts            # verifyAdminAuth (admin / super_admin)
+├── mistral/                 # Agents chat, graphe V3, rapport
+├── bench-llm/               # Hub canonique + sync LLM Stats
+├── comparia/                # Import Drive + pivot
+├── rag-ingestion.ts         # RAG AI Act (pgvector)
+├── openai-client.ts         # Rapports File Search (hors chat)
 └── stripe/                  # Stripe subscription logic
 
 components/                  # Reusable UI components
@@ -198,14 +208,22 @@ export async function GET(request: NextRequest) {
 **Files:**
 - Client auth: [lib/auth.tsx](lib/auth.tsx)
 - API auth: [lib/api-auth.ts](lib/api-auth.ts)
+- Admin / cron / webhook: [docs/api-auth-security.md](docs/api-auth-security.md)
 - Protected route component: [components/ProtectedRoute.tsx](components/ProtectedRoute.tsx)
 
 ### UseCase System
 
-**3-Page Structure:**
+**3-Page Structure (questionnaire):**
 - `/usecases/[id]` - Overview (main view)
 - `/usecases/[id]/evaluation` - Questionnaire (drafts only)
 - `/usecases/[id]/rapport` - Compliance report (completed only)
+
+**Chat IA (3 étapes, distinct du questionnaire) :**
+- Hub `/chat` ou `/usecases/new?company=` → `/usecases/new/setup-chat`
+- Accueil Mistral (`phase=welcome`) puis brouillon `GuidedChat`
+- `/usecases/[id]/chat-evaluation` puis `POST /api/chat/generate-report`
+- Tracking first-party : `evaluation_path_runs.path_mode = assistant`
+- Détail : [docs/chat-assistant-parcours.md](docs/chat-assistant-parcours.md)
 
 **Smart Navigation:**
 - Draft usecases auto-redirect to `/evaluation`
@@ -382,23 +400,21 @@ npm run dev
 ## Configuration Files
 
 ### Environment Variables
-Required variables in `.env.local`:
+Référence complète : [`.env.example`](.env.example). Minimum local :
+
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_COOKIEYES_ID=
 OPENAI_API_KEY=
-OPENAI_ASSISTANT_ID=
+MISTRAL_API_KEY=
 MAILJET_API_KEY=
 MAILJET_API_SECRET=
 ```
 
-Optional:
-```bash
-AIRTABLE_API_KEY=
-AIRTABLE_BASE_ID=
-```
+Jobs / webhooks (prod) : `CRON_SECRET`, `INTERNAL_API_KEY`, `LLM_STATS_API_KEY`, `GOOGLE_DRIVE_*`.  
+Hub LLM : [docs/llm-models-hub.md](docs/llm-models-hub.md). RAG : [docs/ai-act-rag.md](docs/ai-act-rag.md).
 
 ### TypeScript
 - Path alias: `@/*` maps to project root

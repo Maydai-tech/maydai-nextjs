@@ -1,5 +1,7 @@
 # Implémentation des Modèles Perplexity et Scores Rang Compar:IA
 
+> **Historique.** Le hub canonique et le pivot `llm_model_source_ids` sont décrits dans [llm-models-hub.md](./llm-models-hub.md). Les chemins `app/api/admin/compl-ai/*` ci-dessous existent encore ; l’UI Bench unifiée passe par `/api/admin/bench-llms`.
+
 ## Résumé
 Ce document décrit l'implémentation complète de l'ajout des 4 modèles Perplexity avec leurs métadonnées et le nouveau système de scoring "Rang Compar:IA".
 

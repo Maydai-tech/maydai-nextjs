@@ -13,8 +13,10 @@ Le parcours de création de cas d'usage IA est un flux hybride mêlant IA conver
 
 ## Étape 2 : Chat Guidé / Brouillon (Déterministe)
 - **Objectif** : Saisie stricte des 9 champs obligatoires. Mistral N'INTERVIENT PAS ici.
+- **UI branchée** : `SetupChatPage` monte `GuidedChat` puis `POST /api/usecases` (`useCreateUseCase`). `SetupChatInterviewer` + tool `save_usecase_setup` existent en code mais ne sont pas le chemin `/setup-chat`.
 - **Persistance** : Le `deployment_date` et le `primary_model_id` (via un matching ILIKE sur `compl_ai_models.model_name`) DOIVENT être enregistrés dans la table `usecases`. Aucun forçage à `null`.
 - **Redirection** : Fin du brouillon -> redirect vers `/usecases/[id]/chat-evaluation`.
+- Runbook : `docs/chat-assistant-parcours.md`.
 
 ## Étape 3 : Évaluateur & Persona Dynamique (Mistral + Moteur V3)
 - **Règle d'or** : Le moteur V3 (`getNextQuestionV3`) dicte les questions, Mistral les pose.
