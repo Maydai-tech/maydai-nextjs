@@ -2,6 +2,7 @@
 
 const ingestAiActKnowledgeBase = jest.fn()
 const persistCompariaCatalog = jest.fn()
+const createClient = jest.fn()
 
 jest.mock('@/lib/rag-ingestion', () => ({
   ingestAiActKnowledgeBase: (...args: unknown[]) => ingestAiActKnowledgeBase(...args),
@@ -19,12 +20,24 @@ jest.mock('@/lib/comparia/catalog-sync', () => ({
 }))
 
 jest.mock('@supabase/supabase-js', () => ({
-  createClient: () => ({ from: jest.fn() }),
+  createClient: (...args: unknown[]) => createClient(...args),
 }))
 
+import { createHash } from 'node:crypto'
 import { NextRequest } from 'next/server'
 import { findFileIdByName, getFileFromDrive } from '@/lib/google-drive'
 import { POST } from '../route'
+
+const EMBEDDING = Array.from({ length: 1024 }, (_, index) => index * 0.0001)
+
+const VEILLE_DOCUMENT = {
+  canonical_id: 'art-6-annexe-iii',
+  file_name: 'article-6.md',
+  source_url: 'https://eur-lex.europa.eu/eli/reg/2024/1689',
+  version_date: '2024-08-01',
+  document_type: 'regulation',
+  content: 'Résumé de veille sur l’annexe III.',
+}
 
 function makeRequest(body: unknown, apiKey = 'internal-key') {
   return new NextRequest('http://localhost/api/webhooks/kb-update', {
@@ -37,10 +50,117 @@ function makeRequest(body: unknown, apiKey = 'internal-key') {
   })
 }
 
+function makeSupabaseMock(options?: {
+  existingHashId?: string | null
+  existingActiveId?: string | null
+  insertDocumentId?: string
+  insertDocumentError?: string
+  insertChunkError?: string
+}) {
+  const insertDocument = jest.fn()
+  const insertChunk = jest.fn()
+  const updateDocuments = jest.fn()
+  const deleteDocuments = jest.fn()
+
+  createClient.mockReturnValue({
+    from: (table: string) => {
+      if (table === 'ai_act_documents') {
+        return {
+          select: () => ({
+            eq: (column: string) => {
+              if (column === 'hash') {
+                return {
+                  maybeSingle: async () => ({
+                    data: options?.existingHashId
+                      ? { id: options.existingHashId }
+                      : null,
+                    error: null,
+                  }),
+                }
+              }
+              return {
+                eq: () => ({
+                  maybeSingle: async () => ({
+                    data: options?.existingActiveId
+                      ? { id: options.existingActiveId }
+                      : null,
+                    error: null,
+                  }),
+                }),
+              }
+            },
+          }),
+          insert: (row: unknown) => {
+            insertDocument(row)
+            return {
+              select: () => ({
+                single: async () => {
+                  if (options?.insertDocumentError) {
+                    return {
+                      data: null,
+                      error: { message: options.insertDocumentError },
+                    }
+                  }
+                  return {
+                    data: { id: options?.insertDocumentId ?? 'doc-uuid' },
+                    error: null,
+                  }
+                },
+              }),
+            }
+          },
+          update: (row: unknown) => {
+            updateDocuments(row)
+            return {
+              eq: async () => ({ error: null }),
+            }
+          },
+          delete: () => {
+            deleteDocuments()
+            return {
+              eq: async () => ({ error: null }),
+            }
+          },
+        }
+      }
+
+      if (table === 'ai_act_chunks') {
+        return {
+          insert: async (row: unknown) => {
+            insertChunk(row)
+            if (options?.insertChunkError) {
+              return { error: { message: options.insertChunkError } }
+            }
+            return { error: null }
+          },
+        }
+      }
+
+      throw new Error(`Table inattendue: ${table}`)
+    },
+  })
+
+  return { insertDocument, insertChunk, updateDocuments, deleteDocuments }
+}
+
 describe('POST /api/webhooks/kb-update', () => {
+  const originalFetch = global.fetch
+
   beforeEach(() => {
     jest.clearAllMocks()
     process.env.INTERNAL_API_KEY = 'internal-key'
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost'
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role'
+    process.env.MISTRAL_API_KEY = 'mistral-key'
+    createClient.mockReturnValue({ from: jest.fn() })
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: [{ embedding: EMBEDDING, index: 0 }] }),
+    }) as typeof fetch
+  })
+
+  afterEach(() => {
+    global.fetch = originalFetch
   })
 
   test('refuse une clé API invalide', async () => {
@@ -50,13 +170,11 @@ describe('POST /api/webhooks/kb-update', () => {
   })
 
   test('déclenche l\'ingestion RAG si folder_name = 05_AI_Act_Docs', async () => {
-    ingestAiActKnowledgeBase.mockResolvedValue({
-      documents_processed: 1,
-      documents_ingested: 1,
-      documents_skipped: 0,
-      chunks_created: 4,
-      errors: [],
-    })
+    const { insertDocument, insertChunk } = makeSupabaseMock()
+    jest.mocked(findFileIdByName).mockResolvedValue('index-file-id')
+    jest.mocked(getFileFromDrive).mockResolvedValue(
+      JSON.stringify({ documents: [VEILLE_DOCUMENT] })
+    )
 
     const response = await POST(
       makeRequest({
@@ -70,21 +188,50 @@ describe('POST /api/webhooks/kb-update', () => {
     const payload = await response.json()
 
     expect(response.status).toBe(200)
-    expect(ingestAiActKnowledgeBase).toHaveBeenCalledTimes(1)
+    expect(findFileIdByName).toHaveBeenCalledWith('AI_Act_Index.json')
+    expect(insertDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        canonical_id: VEILLE_DOCUMENT.canonical_id,
+        drive_file_id: 'veille-json-source',
+        file_name: VEILLE_DOCUMENT.file_name,
+        source_url: VEILLE_DOCUMENT.source_url,
+        version_date: VEILLE_DOCUMENT.version_date,
+        document_type: VEILLE_DOCUMENT.document_type,
+        hash: createHash('sha256').update(VEILLE_DOCUMENT.content, 'utf8').digest('hex'),
+        is_active: true,
+      })
+    )
+    expect(insertChunk).toHaveBeenCalledWith(
+      expect.objectContaining({
+        document_id: 'doc-uuid',
+        chunk_index: 0,
+        content: VEILLE_DOCUMENT.content,
+        embedding: EMBEDDING,
+      })
+    )
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.mistral.ai/v1/embeddings',
+      expect.objectContaining({
+        method: 'POST',
+      })
+    )
     expect(payload.source).toBe('ai_act_rag')
     expect(payload.success).toBe(true)
-    expect(payload.documents_ingested).toBe(1)
-    expect(payload.chunks_created).toBe(4)
+    expect(payload.documents_inserted).toBe(1)
+    expect(payload.chunks_created).toBe(1)
   })
 
   test('retourne 500 si l\'ingestion RAG échoue sans aucun document', async () => {
-    ingestAiActKnowledgeBase.mockResolvedValue({
-      documents_processed: 1,
-      documents_ingested: 0,
-      documents_skipped: 0,
-      chunks_created: 0,
-      errors: ['Hash SHA-256 divergent'],
-    })
+    makeSupabaseMock()
+    jest.mocked(findFileIdByName).mockResolvedValue('index-file-id')
+    jest.mocked(getFileFromDrive).mockResolvedValue(
+      JSON.stringify({ documents: [VEILLE_DOCUMENT] })
+    )
+    jest.mocked(global.fetch).mockResolvedValue({
+      ok: false,
+      status: 401,
+      text: async () => 'invalid api key',
+    } as Response)
 
     const response = await POST(
       makeRequest({
@@ -96,7 +243,8 @@ describe('POST /api/webhooks/kb-update', () => {
 
     expect(response.status).toBe(500)
     expect(payload.success).toBe(false)
-    expect(payload.errors).toEqual(['Hash SHA-256 divergent'])
+    expect(payload.documents_inserted).toBe(0)
+    expect(payload.errors[0]).toMatch(/art-6-annexe-iii/)
   })
 
   test('exige file_name hors du dossier AI Act', async () => {
@@ -145,5 +293,29 @@ describe('POST /api/webhooks/kb-update', () => {
       exact_links_created: 1,
       models_deactivated: 0,
     })
+  })
+
+  test('ignore un document de veille déjà présent (hash identique)', async () => {
+    const { insertDocument, insertChunk } = makeSupabaseMock({
+      existingHashId: 'already-there',
+    })
+    jest.mocked(findFileIdByName).mockResolvedValue('index-file-id')
+    jest.mocked(getFileFromDrive).mockResolvedValue(
+      JSON.stringify({ documents: [VEILLE_DOCUMENT] })
+    )
+
+    const response = await POST(
+      makeRequest({
+        folder_name: '05_AI_Act_Docs',
+        file_name: 'AI_Act_Index.json',
+      })
+    )
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(insertDocument).not.toHaveBeenCalled()
+    expect(insertChunk).not.toHaveBeenCalled()
+    expect(payload.documents_skipped).toBe(1)
+    expect(payload.documents_inserted).toBe(0)
   })
 })

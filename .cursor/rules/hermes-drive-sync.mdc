@@ -1,0 +1,26 @@
+---
+description: Encadre les flux de données asynchrones provenant de Google Drive (fichiers générés par les agents Hermes) et leur intégration dans MaydAI.
+globs: "app/api/webhooks/**/*.ts", "app/api/cron/**/*.ts", "lib/google-drive.ts", "lib/comparia/**/*.ts", "lib/rag-ingestion.ts"
+alwaysApply: false
+---
+# Architecture Google Drive & Hermes Sync
+
+## 1. Sécurité et Authentification (Critique)
+- **Aucun fichier JSON de credentials** (`service_account.json`) ne doit être ajouté au projet. L'authentification au service account Google s'effectue EXCLUSIVEMENT via les variables d'environnement Vercel.
+- **Parsing PEM** : Le format multiligne de la clé privée doit être reconstruit au runtime via `process.env.GOOGLE_DRIVE_PRIVATE_KEY?.replace(/\\n/g, '\n')` tel qu'implémenté dans `lib/google-drive.ts`.
+- **Protection des Endpoints** : Les routes de synchronisation doivent bloquer l'accès public.
+  - Webhooks (Hermes) : Validation du header `x-api-key` contre `process.env.INTERNAL_API_KEY`.
+  - Crons (Vercel) : Validation du Bearer token contre `process.env.CRON_SECRET`.
+
+## 2. Frontière Client / Serveur
+- **Interdiction formelle** de requêter l'API Google Drive depuis le frontend (composants `"use client"` ou Server Components dédiés à l'UI).
+- Le flux de données unidirectionnel imposé est : 
+  Google Drive (via `lib/google-drive.ts`) -> Webhook/Cron Route -> Insertion dans Supabase via le Service Role (bypass RLS) -> Le Frontend lit uniquement Supabase.
+
+## 3. Traitement des Formats Spécifiques
+- **ComparIA (Données Tabulaires)** : Utiliser `csv-parse` pour lire et normaliser le classement issu de Drive.
+- **Veille AI Act (GRC)** : Cibler exclusivement le fichier `AI_Act_Index.json`. Utiliser `JSON.parse` combiné à une validation stricte via Zod avant l'insertion en base pour le pipeline RAG.
+
+## 4. Cache & Exécution
+- Les Route Handlers chargés de la synchronisation (ex: `app/api/webhooks/kb-update/route.ts`) doivent utiliser `export const dynamic = 'force-dynamic'` pour garantir que la requête vers Drive contourne le cache Next.js et récupère toujours le fichier le plus récent.
+- Autoriser l'augmentation du timeout (`export const maxDuration = 300`) sur ces routes spécifiques si le parsing des gros fichiers (RAG) l'exige.
