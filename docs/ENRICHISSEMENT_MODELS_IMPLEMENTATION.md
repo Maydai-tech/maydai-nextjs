@@ -1,5 +1,7 @@
 # Implémentation de l'Enrichissement des Modèles LLM
 
+> **Note historique.** Ce document décrit un ancien chemin admin. Ne plus ajouter de colonnes dénormalisées sur `compl_ai_models` pour une source externe : mapping via `llm_model_source_ids` uniquement (`.cursor/rules/llm-models-hub.mdc`).
+
 ## Résumé
 Ce document décrit l'implémentation complète de l'ajout des champs **notes** (courtes et longues) et **variantes** aux modèles LLM, avec affichage d'infobulles et liste de variantes dans l'interface admin.
 

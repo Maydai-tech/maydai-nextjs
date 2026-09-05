@@ -19,7 +19,7 @@ alwaysApply: false
 
 ## 3. Traitement des Formats Spécifiques
 - **ComparIA (Données Tabulaires)** : Utiliser `csv-parse` pour lire et normaliser le classement issu de Drive.
-- **Veille AI Act (GRC)** : Cibler exclusivement le fichier `AI_Act_Index.json`. Utiliser `JSON.parse` combiné à une validation stricte via Zod avant l'insertion en base pour le pipeline RAG.
+- **Veille AI Act (GRC)** : Cibler exclusivement le fichier `AI_Act_Index.json` (déclenché si `folder_name === '05_AI_Act_Docs'` ou `file_name === 'AI_Act_Index.json'`). Valider `{ documents: [...] }` via Zod dans `route.ts` (`content` déjà dans le JSON). Ne pas rappeler `ingestAiActKnowledgeBase`. Runbook : `docs/ai-act-rag.md`.
 
 ## 4. Cache & Exécution
 - Les Route Handlers chargés de la synchronisation (ex: `app/api/webhooks/kb-update/route.ts`) doivent utiliser `export const dynamic = 'force-dynamic'` pour garantir que la requête vers Drive contourne le cache Next.js et récupère toujours le fichier le plus récent.

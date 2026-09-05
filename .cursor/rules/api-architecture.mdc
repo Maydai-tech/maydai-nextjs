@@ -48,6 +48,9 @@ export async function GET(request: NextRequest) {
 - Handle authentication errors gracefully with automatic logout
 - Implement proper CORS and security headers
 - Log authentication failures for security monitoring
+- Webhooks Hermes (`/api/webhooks/kb-update`, `/api/webhooks/sync-siren`) : header `x-api-key` === `INTERNAL_API_KEY` (pas un Bearer utilisateur)
+- Crons Vercel : Bearer === `CRON_SECRET`
+- Admin : `verifyAdminAuth` — ne pas se contenter d'un check client
 
 ## File Structure
 
