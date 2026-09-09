@@ -143,7 +143,7 @@ export async function GET(
     if (useCase.primary_model_id) {
       const { data: model } = await supabase
         .from('compl_ai_models')
-        .select('id, model_name, model_provider, model_type, version')
+        .select('id, model_name, model_provider, model_type, version, slug')
         .eq('id', useCase.primary_model_id)
         .single()
 
@@ -325,7 +325,7 @@ export async function PUT(
     if (updatedUseCase.primary_model_id) {
       const { data: model } = await supabase
         .from('compl_ai_models')
-        .select('id, model_name, model_provider, model_type, version')
+        .select('id, model_name, model_provider, model_type, version, slug')
         .eq('id', updatedUseCase.primary_model_id)
         .single()
 
@@ -494,7 +494,7 @@ export async function PUT(
         if (useCaseWithNewScore.primary_model_id) {
           const { data: model } = await supabase
             .from('compl_ai_models')
-            .select('id, model_name, model_provider, model_type, version')
+            .select('id, model_name, model_provider, model_type, version, slug')
             .eq('id', useCaseWithNewScore.primary_model_id)
             .single()
 

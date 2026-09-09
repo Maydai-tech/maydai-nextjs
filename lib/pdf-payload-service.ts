@@ -8,11 +8,15 @@ import {
   type UseCaseHistoryEventType,
 } from '@/lib/usecase-history'
 import type { ReportCanonicalItem } from '@/lib/report-canonical-items'
-import type { PDFReportData, UseCaseNextSteps } from '@/app/(saas)/usecases/[id]/components/pdf/types'
+import type { PDFReportData, PdfCanonicalItem, PdfSystemCardSection, UseCaseNextSteps } from '@/app/(saas)/usecases/[id]/components/pdf/types'
 import type {
   ActivityHistoryItem,
   PdfDocumentItem,
 } from '@/lib/validations/pdf.schema'
+import {
+  PILLAR_CODE_TO_DOC_TYPE,
+  type SystemCardPillar,
+} from '@/lib/validations/system-card'
 
 /** Sélection Supabase pour la génération PDF (cas + historique + dossier). */
 export const USECASE_PDF_SELECT = `
@@ -30,7 +34,8 @@ export const USECASE_PDF_SELECT = `
     model_name,
     model_provider,
     model_type,
-    version
+    version,
+    slug
   ),
   usecase_history(
     id,
@@ -45,7 +50,10 @@ export const USECASE_PDF_SELECT = `
     id,
     dossier_documents(
       doc_type,
-      status
+      status,
+      form_data,
+      maydai_prefill_applied,
+      user_completion_applied
     )
   )
 `
@@ -160,31 +168,110 @@ export function mapUseCaseHistoryToPdfItems(
     }))
 }
 
+type PdfDossierDocumentRow = {
+  doc_type: string
+  status: string | null
+  form_data?: Record<string, unknown> | null
+  maydai_prefill_applied?: boolean | null
+  user_completion_applied?: boolean | null
+}
+
 type UseCasePdfQueryRow = {
   dossiers?:
     | {
         id: string
-        dossier_documents?: { doc_type: string; status: string | null }[] | null
+        dossier_documents?: PdfDossierDocumentRow[] | null
       }
     | {
         id: string
-        dossier_documents?: { doc_type: string; status: string | null }[] | null
+        dossier_documents?: PdfDossierDocumentRow[] | null
       }[]
     | null
   usecase_history?: UseCaseHistoryEntry[] | null
 }
 
+function firstDossier(useCaseRow: UseCasePdfQueryRow) {
+  const dossiers = useCaseRow.dossiers
+  return Array.isArray(dossiers) ? dossiers[0] : dossiers
+}
+
 export function extractPdfDocumentsFromUseCaseRow(
   useCaseRow: UseCasePdfQueryRow
 ): PdfDocumentItem[] {
-  const dossiers = useCaseRow.dossiers
-  const dossier = Array.isArray(dossiers) ? dossiers[0] : dossiers
-  const rows = dossier?.dossier_documents ?? []
+  const rows = firstDossier(useCaseRow)?.dossier_documents ?? []
 
   return rows.map((row) => ({
     doc_type: resolveCanonicalDocType(row.doc_type),
     status: row.status || 'incomplete',
+    maydai_prefill_applied: Boolean(row.maydai_prefill_applied),
+    user_completion_applied: Boolean(row.user_completion_applied),
   }))
+}
+
+export function extractPdfSystemCardNotesByDocType(
+  useCaseRow: UseCasePdfQueryRow
+): Record<string, string> {
+  const rows = firstDossier(useCaseRow)?.dossier_documents ?? []
+  const notes: Record<string, string> = {}
+
+  for (const row of rows) {
+    const formData = row.form_data
+    const rawNotes = formData && typeof formData === 'object' ? formData.system_card_notes : null
+    if (typeof rawNotes !== 'string' || !rawNotes.trim()) continue
+    notes[resolveCanonicalDocType(row.doc_type)] = rawNotes.trim()
+  }
+
+  return notes
+}
+
+export function buildPdfSystemCardSections(
+  pillars: SystemCardPillar[],
+  notesByDocType: Record<string, string>
+): PdfSystemCardSection[] {
+  return pillars.map((pillar) => {
+    const docType = PILLAR_CODE_TO_DOC_TYPE[pillar.pillar_code]
+    const userNotes = notesByDocType[docType]
+    return userNotes ? { pillar, userNotes } : { pillar }
+  })
+}
+
+/**
+ * Colle la fiche System Card sous une action PDF uniquement si
+ * `maydai_prefill_applied` est vrai pour le document correspondant.
+ */
+export function attachSystemCardSectionsToCanonicalItems(params: {
+  items: PdfCanonicalItem[]
+  documents: PdfDocumentItem[]
+  pillars: SystemCardPillar[]
+  notesByDocType: Record<string, string>
+}): PdfCanonicalItem[] {
+  const { items, documents, pillars, notesByDocType } = params
+
+  return items.map((item) => {
+    const docType = item.identity.doc_type_canonique
+    const dbDoc = documents.find((doc) => doc.doc_type === docType)
+
+    if (!dbDoc?.maydai_prefill_applied) {
+      return item
+    }
+
+    const matchingPillar = pillars.find(
+      (pillar) => PILLAR_CODE_TO_DOC_TYPE[pillar.pillar_code] === docType
+    )
+    if (!matchingPillar) {
+      return item
+    }
+
+    const userNotes = notesByDocType[docType]
+    return {
+      ...item,
+      maydai_prefill_applied: dbDoc.maydai_prefill_applied,
+      user_completion_applied: dbDoc.user_completion_applied,
+      systemCardSection: userNotes
+        ? { pillar: matchingPillar, userNotes }
+        : { pillar: matchingPillar },
+    }
+  })
 }
 
 export function extractPdfHistoryFromUseCaseRow(
@@ -268,7 +355,7 @@ function sanitizeNextSteps(nextSteps: UseCaseNextSteps | null): UseCaseNextSteps
   return sanitized
 }
 
-function sanitizeCanonicalPlanItems(items: ReportCanonicalItem[] | undefined): ReportCanonicalItem[] {
+function sanitizeCanonicalPlanItems(items: PdfCanonicalItem[] | undefined): PdfCanonicalItem[] {
   return (items ?? []).map((item) => ({
     ...item,
     legal: {
@@ -288,6 +375,14 @@ function sanitizeCanonicalPlanItems(items: ReportCanonicalItem[] | undefined): R
       label: cleanPdfUrls(item.cta.label),
       pointsLine: item.cta.pointsLine ? cleanPdfUrls(item.cta.pointsLine) : item.cta.pointsLine,
     },
+    systemCardSection: item.systemCardSection
+      ? {
+          ...item.systemCardSection,
+          userNotes: item.systemCardSection.userNotes
+            ? cleanPdfUrls(item.systemCardSection.userNotes)
+            : item.systemCardSection.userNotes,
+        }
+      : item.systemCardSection,
   }))
 }
 
@@ -297,6 +392,10 @@ export function sanitizePdfReportData(data: PDFReportData): PDFReportData {
     ...data,
     nextSteps: sanitizeNextSteps(data.nextSteps),
     canonicalPlanItems: sanitizeCanonicalPlanItems(data.canonicalPlanItems),
+    systemCardSections: (data.systemCardSections ?? []).map((section) => ({
+      ...section,
+      userNotes: section.userNotes ? cleanPdfUrls(section.userNotes) : section.userNotes,
+    })),
     useCase: {
       ...data.useCase,
       description:

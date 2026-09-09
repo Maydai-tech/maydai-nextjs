@@ -20,6 +20,7 @@ import {
   getDeploymentUrgency,
   getUnacceptablePriorityHint
 } from '@/lib/unacceptable-case-copy'
+import { getTodoActionMappings } from '@/lib/todo-action-sync'
 import {
   resolveDossierSectionIdFromUrlParam,
   normalizeHumanOversightFormData,
@@ -39,6 +40,12 @@ import {
 import { DECLARATION_PROOF_FLOW_COPY } from '@/app/(saas)/usecases/[id]/utils/declaration-proof-flow-copy'
 import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 import { withEvaluationEntree } from '@/app/(saas)/usecases/[id]/utils/routes'
+import SystemCardPillarTab from './components/SystemCardPillarTab'
+import {
+  resolvePillarCodeFromDocType,
+  type SystemCardPillar,
+  type SystemCardPillarCode,
+} from '@/lib/validations/system-card'
 
 /** Sections dossier flux standard — ordre, libellés, modes preuve et formats = `getStandardDossierSectionsOrdered()` (catalogue). */
 const STANDARD_DOSSIER_SECTIONS: DossierSectionUiDefinition[] = getStandardDossierSectionsOrdered()
@@ -48,6 +55,9 @@ interface DocumentData {
   fileUrl: string | null
   status: 'incomplete' | 'complete' | 'validated'
   updatedAt: string | null
+  dossierId?: string | null
+  maydaiPrefillApplied?: boolean
+  userCompletionApplied?: boolean
 }
 
 interface UseCase {
@@ -59,6 +69,8 @@ interface UseCase {
   deployment_date?: string | null
   questionnaire_version?: string | number | null
   status?: string | null
+  llm_model_version?: string | null
+  compl_ai_models?: { slug?: string | null; model_name?: string | null } | null
 }
 
 interface UseCaseNextStepsPayload {
@@ -123,6 +135,10 @@ export default function DossierDetailPage() {
   const [savingDeploymentDate, setSavingDeploymentDate] = useState(false)
   const [nextSteps, setNextSteps] = useState<UseCaseNextStepsPayload | null>(null)
   const [loadingNextSteps, setLoadingNextSteps] = useState(false)
+  const [dossierId, setDossierId] = useState<string | null>(null)
+  const [systemCardPillars, setSystemCardPillars] = useState<
+    Partial<Record<SystemCardPillarCode, SystemCardPillar | null>>
+  >({})
 
   const isUnacceptableCase = useCase?.risk_level?.toLowerCase() === 'unacceptable'
 
@@ -273,6 +289,9 @@ export default function DossierDetailPage() {
               const data = await res.json()
               console.log('[FETCH] Document loaded:', docType.key, data)
               docsData[docType.key] = data
+              if (data.dossierId) {
+                setDossierId(data.dossierId)
+              }
 
               // Extract text content from formData
               if (data.formData) {
@@ -306,6 +325,30 @@ export default function DossierDetailPage() {
         setDocuments(docsData)
         setTextContents(textData)
         setInitialTextContents(textData)
+
+        const modelIdentifier =
+          usecaseData?.compl_ai_models?.slug || usecaseData?.llm_model_version || ''
+        if (modelIdentifier) {
+          const pillarCodes: SystemCardPillarCode[] = [
+            'doc_technique',
+            'data_governance',
+            'prompts_guardrails',
+            'risk_management',
+            'surveillance_plan',
+          ]
+          const entries = await Promise.all(
+            pillarCodes.map(async (code) => {
+              const pillarRes = await fetch(
+                `/api/system-cards/${encodeURIComponent(modelIdentifier)}/pillars/${code}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              )
+              if (!pillarRes.ok) return [code, null] as const
+              const pillarJson = await pillarRes.json()
+              return [code, pillarJson.pillar ?? null] as const
+            })
+          )
+          setSystemCardPillars(Object.fromEntries(entries))
+        }
       } catch (error) {
         console.error('Error fetching dossier data:', error)
       } finally {
@@ -343,6 +386,18 @@ export default function DossierDetailPage() {
 
   const onUploadSuccess = () => {
     router.push(`/dashboard/${companyId}/dossiers`)
+  }
+
+  const refreshDossierDocument = async (docType: string) => {
+    const token = getAccessToken()
+    if (!token) return
+    const res = await fetch(`/api/dossiers/${usecaseId}/${docType}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return
+    const data = await res.json()
+    setDocuments((prev) => ({ ...prev, [docType]: data }))
+    if (data.dossierId) setDossierId(data.dossierId)
   }
 
   const handleTextSave = async (docType: string) => {
@@ -809,18 +864,108 @@ export default function DossierDetailPage() {
     }
   }
 
-  const getStatusIcon = (status: string) => {
-    if (status === 'complete' || status === 'validated') {
+  const isSectionComplete = (doc: DocumentData) =>
+    doc.status === 'complete' || doc.status === 'validated'
+
+  const isSectionInProgress = (doc: DocumentData) =>
+    !isSectionComplete(doc) &&
+    (Boolean(doc.maydaiPrefillApplied) || Boolean(doc.userCompletionApplied))
+
+  const getStatusIcon = (doc: DocumentData) => {
+    if (isSectionComplete(doc)) {
       return <Check className="w-5 h-5 text-green-600" />
+    }
+    if (isSectionInProgress(doc)) {
+      return <AlertTriangle className="w-5 h-5 text-amber-600" />
     }
     return <X className="w-5 h-5 text-red-500" />
   }
 
-  const getStatusColor = (status: string) => {
-    if (status === 'complete' || status === 'validated') {
+  const getStatusColor = (doc: DocumentData) => {
+    if (isSectionComplete(doc)) {
       return 'bg-green-50 border-green-300'
     }
+    if (isSectionInProgress(doc)) {
+      return 'bg-amber-50 border-amber-300'
+    }
     return 'bg-red-50 border-red-200'
+  }
+
+  const renderSectionStatusBadge = (doc: DocumentData) => {
+    if (isSectionComplete(doc)) {
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap bg-green-100 text-green-800 border border-green-300">
+          {doc.status === 'validated' ? '✓ Validé' : '✓ Complété'}
+        </span>
+      )
+    }
+    if (isSectionInProgress(doc)) {
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap bg-amber-100 text-amber-800 border border-amber-300">
+          En cours
+        </span>
+      )
+    }
+    return (
+      <span className="px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap bg-red-100 text-red-800 border border-red-300">
+        ✗ Incomplet
+      </span>
+    )
+  }
+
+  const hasSystemCardForDocType = (docTypeKey: string) => {
+    const pillarCode = resolvePillarCodeFromDocType(docTypeKey)
+    return Boolean(pillarCode && systemCardPillars[pillarCode])
+  }
+
+  const renderSystemCardPillarTab = (docType: DossierSectionUiDefinition, doc: DocumentData) => {
+    const pillarCode = resolvePillarCodeFromDocType(docType.key)
+    if (!pillarCode || !expandedSections[docType.key]) return null
+    const pillar = systemCardPillars[pillarCode] ?? null
+    if (!pillar) return null
+
+    const notes =
+      typeof doc.formData?.system_card_notes === 'string' ? doc.formData.system_card_notes : ''
+
+    const mappings = getTodoActionMappings(docType.key)
+    const maxPoints = mappings.reduce((sum, m) => sum + (m.expectedPointsGained || 0), 0)
+    const halfPoints = maxPoints / 2
+
+    return (
+      <div className="px-4 sm:px-6 pb-6">
+        <SystemCardPillarTab
+          usecaseId={usecaseId}
+          dossierId={dossierId ?? doc.dossierId ?? null}
+          pillar={pillar}
+          maydaiApplied={Boolean(doc.maydaiPrefillApplied)}
+          userApplied={Boolean(doc.userCompletionApplied)}
+          halfPoints={halfPoints}
+          initialUserNotes={notes}
+          fileUrl={doc.fileUrl}
+          isUploading={uploading[docType.key]}
+          isDeleting={deleting[docType.key]}
+          acceptedFormats={docType.acceptedFormats || '.pdf,.docx,.md'}
+          onFileSelected={(file) => handleFileUpload(docType.key, file)}
+          onFileDelete={() => handleFileDelete(docType.key)}
+          onUpdateSuccess={(payload) => {
+            void refreshDossierDocument(docType.key)
+            const scoreChange = payload?.scoreChange
+            if (scoreChange?.newScore != null) {
+              setUseCase((prev) =>
+                prev ? { ...prev, score_final: scoreChange.newScore } : prev
+              )
+              setScoreChangePopup({
+                previousScore: scoreChange.previousScore,
+                newScore: scoreChange.newScore,
+                pointsGained: scoreChange.pointsGained,
+                reason: scoreChange.reason || 'Analyse System Card validee',
+              })
+            }
+            router.refresh()
+          }}
+        />
+      </div>
+    )
   }
 
   const canSave = (docType: DossierSectionUiDefinition) => {
@@ -910,9 +1055,10 @@ export default function DossierDetailPage() {
     const docMeta = (key: string) =>
       key === 'stopping_proof' ? getStoppingProofDossierSectionUi() : getSystemPromptDossierSectionUiUnacceptable()
 
-    const statusLabel = (status: string) => {
-      if (status === 'complete') return 'Déposé (complété)'
-      if (status === 'validated') return 'Validé'
+    const statusLabel = (doc: DocumentData) => {
+      if (doc.status === 'complete') return 'Déposé (complété)'
+      if (doc.status === 'validated') return 'Validé'
+      if (isSectionInProgress(doc)) return 'En cours'
       return 'Manquant ou à compléter'
     }
 
@@ -1058,6 +1204,7 @@ export default function DossierDetailPage() {
               const isPrimary = hasDatePriority && index === 0
               const isSaving = saving[docType.key]
               const isUploading = uploading[docType.key]
+              const hasSystemCard = hasSystemCardForDocType(docType.key)
 
               return (
                 <div
@@ -1067,14 +1214,14 @@ export default function DossierDetailPage() {
                     isPrimary
                       ? 'ring-2 ring-orange-300 border-orange-200'
                       : 'border-gray-200'
-                  } ${getStatusColor(doc.status)}`}
+                  } ${getStatusColor(doc)}`}
                 >
                   <div
                     className="flex items-start justify-between p-6 cursor-pointer"
                     onClick={() => toggleSection(docType.key)}
                   >
                     <div className="flex items-start gap-3 flex-1 min-w-0">
-                      {getStatusIcon(doc.status)}
+                      {getStatusIcon(doc)}
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="text-lg font-semibold text-gray-900">{docType.label}</h3>
@@ -1111,7 +1258,7 @@ export default function DossierDetailPage() {
                           </div>
                         </div>
                         <p className="text-sm text-gray-600 mt-1">{docType.description}</p>
-                        <p className="text-xs text-gray-500 mt-2">{statusLabel(doc.status)}</p>
+                        <p className="text-xs text-gray-500 mt-2">{statusLabel(doc)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
@@ -1120,23 +1267,11 @@ export default function DossierDetailPage() {
                           expandedSections[docType.key] ? 'rotate-180' : ''
                         }`}
                       />
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                          doc.status === 'complete' || doc.status === 'validated'
-                            ? 'bg-green-100 text-green-800 border border-green-300'
-                            : 'bg-red-100 text-red-800 border border-red-300'
-                        }`}
-                      >
-                        {doc.status === 'complete'
-                          ? '✓ Complété'
-                          : doc.status === 'validated'
-                            ? '✓ Validé'
-                            : '✗ Incomplet'}
-                      </span>
+                      {renderSectionStatusBadge(doc)}
                     </div>
                   </div>
 
-                  {docType.type === 'textarea' && (
+                  {docType.type === 'textarea' && !hasSystemCard && (
                     <div
                       className="overflow-hidden transition-all duration-300 ease-in-out"
                       style={{
@@ -1196,35 +1331,37 @@ export default function DossierDetailPage() {
                           )}
                         </div>
 
-                        <div className="mt-6 pt-6 border-t border-gray-200">
-                          {doc.fileUrl ? (
-                            <UploadedFileDisplay
-                              fileUrl={doc.fileUrl}
-                              onDelete={() => handleFileDelete(docType.key)}
-                              isDeleting={deleting[docType.key] || false}
-                            />
-                          ) : (
-                            <>
-                              <ComplianceFileUpload
-                                label="Ou importer un fichier"
-                                helpText={`Formats acceptés: ${docType.acceptedFormats}`}
-                                acceptedFormats={docType.acceptedFormats}
-                                onFileSelected={file => handleFileUpload(docType.key, file)}
+                        {!hasSystemCard && (
+                          <div className="mt-6 pt-6 border-t border-gray-200">
+                            {doc.fileUrl ? (
+                              <UploadedFileDisplay
+                                fileUrl={doc.fileUrl}
+                                onDelete={() => handleFileDelete(docType.key)}
+                                isDeleting={deleting[docType.key] || false}
                               />
-                              {isUploading && (
-                                <div className="mt-3 flex items-center text-sm text-gray-600">
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Upload en cours...
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
+                            ) : (
+                              <>
+                                <ComplianceFileUpload
+                                  label="Ou importer un fichier"
+                                  helpText={`Formats acceptés: ${docType.acceptedFormats}`}
+                                  acceptedFormats={docType.acceptedFormats}
+                                  onFileSelected={file => handleFileUpload(docType.key, file)}
+                                />
+                                {isUploading && (
+                                  <div className="mt-3 flex items-center text-sm text-gray-600">
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Upload en cours...
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {docType.type === 'file' && (
+                  {docType.type === 'file' && !hasSystemCard && (
                     <div
                       className="overflow-hidden transition-all duration-300 ease-in-out"
                       style={{
@@ -1258,6 +1395,8 @@ export default function DossierDetailPage() {
                       </div>
                     </div>
                   )}
+
+                  {renderSystemCardPillarTab(docType, doc)}
                 </div>
               )
             })}
@@ -1367,6 +1506,7 @@ export default function DossierDetailPage() {
             const doc = documents[docType.key] || { status: 'incomplete', formData: null, fileUrl: null, updatedAt: null }
             const isSaving = saving[docType.key]
             const isUploading = uploading[docType.key]
+            const hasSystemCard = hasSystemCardForDocType(docType.key)
 
             // Special handling for registry_proof when MaydAI is declared as registry
             if (docType.key === 'registry_proof' && company?.maydai_as_registry === true) {
@@ -1445,14 +1585,14 @@ export default function DossierDetailPage() {
               <div
                 key={docType.key}
                 id={`section-${docType.key}`}
-                className={`bg-white rounded-xl shadow-sm border ${getStatusColor(doc.status)}`}
+                className={`bg-white rounded-xl shadow-sm border ${getStatusColor(doc)}`}
               >
                 <div 
                   className="flex items-start justify-between p-6 cursor-pointer"
                   onClick={() => toggleSection(docType.key)}
                 >
                   <div className="flex items-start gap-3 flex-1">
-                    {getStatusIcon(doc.status)}
+                    {getStatusIcon(doc)}
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg font-semibold text-gray-900">{docType.label}</h3>
@@ -1481,18 +1621,12 @@ export default function DossierDetailPage() {
                         expandedSections[docType.key] ? 'rotate-180' : ''
                       }`}
                     />
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
-                      doc.status === 'complete' || doc.status === 'validated'
-                        ? 'bg-green-100 text-green-800 border border-green-300'
-                        : 'bg-red-100 text-red-800 border border-red-300'
-                    }`}>
-                      {doc.status === 'complete' ? '✓ Complété' : doc.status === 'validated' ? '✓ Validé' : '✗ Incomplet'}
-                    </span>
+                    {renderSectionStatusBadge(doc)}
                   </div>
                 </div>
 
                 {/* Section for Prompt System (textarea) */}
-                {docType.type === 'textarea' && (
+                {docType.type === 'textarea' && !hasSystemCard && (
                   <div 
                     className="overflow-hidden transition-all duration-300 ease-in-out"
                     style={{ 
@@ -1550,7 +1684,7 @@ export default function DossierDetailPage() {
                         )}
                       </div>
 
-                      {docType.acceptedFormats && (
+                      {docType.acceptedFormats && !hasSystemCard && (
                         <div className="mt-6 pt-6 border-t border-gray-200">
                           {doc.fileUrl ? (
                             <UploadedFileDisplay
@@ -1747,36 +1881,38 @@ export default function DossierDetailPage() {
                         )}
                       </div>
 
-                      <div className="pt-4 border-t border-gray-200">
-                        {doc.fileUrl ? (
-                          <UploadedFileDisplay
-                            fileUrl={doc.fileUrl}
-                            onDelete={() => handleFileDelete(docType.key)}
-                            isDeleting={deleting[docType.key] || false}
-                          />
-                        ) : (
-                          <>
-                            <ComplianceFileUpload
-                              label={docType.fileLabel || 'Fichier (optionnel)'}
-                              helpText={`${docType.fileHelpText || 'Document associé'}. Formats acceptés: ${docType.acceptedFormats}`}
-                              acceptedFormats={docType.acceptedFormats}
-                              onFileSelected={(file) => handleFileUpload(docType.key, file)}
+                      {!hasSystemCard && (
+                        <div className="pt-4 border-t border-gray-200">
+                          {doc.fileUrl ? (
+                            <UploadedFileDisplay
+                              fileUrl={doc.fileUrl}
+                              onDelete={() => handleFileDelete(docType.key)}
+                              isDeleting={deleting[docType.key] || false}
                             />
-                            {isUploading && (
-                              <div className="mt-3 flex items-center text-sm text-gray-600">
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Upload en cours...
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
+                          ) : (
+                            <>
+                              <ComplianceFileUpload
+                                label={docType.fileLabel || 'Fichier (optionnel)'}
+                                helpText={`${docType.fileHelpText || 'Document associé'}. Formats acceptés: ${docType.acceptedFormats}`}
+                                acceptedFormats={docType.acceptedFormats}
+                                onFileSelected={(file) => handleFileUpload(docType.key, file)}
+                              />
+                              {isUploading && (
+                                <div className="mt-3 flex items-center text-sm text-gray-600">
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Upload en cours...
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Section for File Upload Only */}
-                {docType.type === 'file' && (
+                {/* Section for File Upload Only — fallback si aucune System Card n'est associée au modèle */}
+                {docType.type === 'file' && !hasSystemCard && (
                   <div 
                     className="overflow-hidden transition-all duration-300 ease-in-out"
                     style={{ 
@@ -1810,6 +1946,8 @@ export default function DossierDetailPage() {
                     </div>
                   </div>
                 )}
+
+                {renderSystemCardPillarTab(docType, doc)}
               </div>
             )
           })}

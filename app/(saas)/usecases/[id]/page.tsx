@@ -17,6 +17,7 @@ import type { UseCase } from './types/usecase'
 import { Edit2, RefreshCcw } from 'lucide-react'
 import { buildEvaluationFocusHref, getBlockingPivotId } from './utils/blocking-pivot-focus'
 import { getScoreStyle } from '@/lib/score-styles'
+import { formatScore } from '@/lib/utils'
 import { RiskLevelBadge } from './components/overview/RiskLevelBadge'
 import { V3_IMPOSSIBLE_MATURITY_SCORES_DISCLAIMER } from '@/lib/classification-risk-display'
 import { getCompanyStatusLabel, getCompanyStatusDefinition } from './utils/company-status'
@@ -261,7 +262,7 @@ function UseCaseOverviewSections({
                           className={`text-3xl font-bold ${getScoreStyle(score.score).text} mb-2`}
                           data-testid="final-score-value"
                         >
-                          {Math.round(score.score)}
+                          {formatScore(score.score)}
                         </div>
                       </div>
                     </div>

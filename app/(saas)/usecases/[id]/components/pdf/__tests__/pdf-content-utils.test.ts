@@ -1,4 +1,4 @@
-import { getPdfCanonicalDescription, getPdfReportDateIso } from '../pdf-content-utils'
+import { formatComplianceStatusForPdf, getPdfCanonicalDescription, getPdfReportDateIso } from '../pdf-content-utils'
 
 function makePdfData(partialUseCase: any) {
   return {
@@ -40,6 +40,14 @@ describe('pdf-content-utils', () => {
 
       const data2 = makePdfData({})
       expect(getPdfReportDateIso(data2)).toBe('2026-01-01T00:00:00.000Z')
+    })
+  })
+
+  describe('formatComplianceStatusForPdf', () => {
+    test('traduit les statuts AI Act', () => {
+      expect(formatComplianceStatusForPdf('COMPLIANT')).toBe('Conforme')
+      expect(formatComplianceStatusForPdf('PARTIAL')).toBe('Partiel')
+      expect(formatComplianceStatusForPdf('NON_COMPLIANT')).toBe('Non conforme')
     })
   })
 })

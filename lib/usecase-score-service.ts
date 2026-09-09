@@ -35,6 +35,11 @@ import {
 import { buildV3ScoringContextFromDbResponses } from '@/lib/scoring-v3-server'
 import { resolveQualificationOutcomeV3 } from '@/lib/qualification-v3-decision'
 import { getServiceRoleClient, recalculateModelMaydaiScores } from '@/lib/maydai-calculator'
+import {
+  computeSystemCardPrefillBonus,
+  applySystemCardBonusToScores,
+  SYSTEM_CARD_SCORE_BASE_CAP,
+} from '@/lib/system-card-score-bonus'
 
 /**
  * Erreur métier du calcul de score, porteuse d'un code HTTP pour le route.
@@ -75,6 +80,7 @@ export interface CalculateAndPersistResult {
   company_status_definition: string
   classification_status: string | null
   risk_level: string | null
+  previousScore: number | null
 }
 
 /**
@@ -193,6 +199,30 @@ export async function calculateAndPersistUseCaseScore(
         })
       : calculateBaseScore(userResponses)
 
+  // ===== Bonus partiel System Card (50/50) — sans UPDATE direct de score_final =====
+  let systemCardBonus = 0
+  if (!baseScoreResult.is_eliminated) {
+    try {
+      const { data: dossier } = await supabase
+        .from('dossiers')
+        .select('id')
+        .eq('usecase_id', usecaseId)
+        .maybeSingle()
+
+      const dossierId = dossier?.id as string | undefined
+      if (dossierId) {
+        const { data: dossierDocs } = await supabase
+          .from('dossier_documents')
+          .select('doc_type, status, maydai_prefill_applied, user_completion_applied')
+          .eq('dossier_id', dossierId)
+
+        systemCardBonus = computeSystemCardPrefillBonus(dossierDocs ?? [], mergedResponses)
+      }
+    } catch (error) {
+      console.warn('⚠️ Erreur lors du calcul du bonus System Card:', error)
+    }
+  }
+
   // ===== Statut d'entreprise =====
   const companyStatus = determineCompanyStatus(userResponses)
 
@@ -235,12 +265,51 @@ export async function calculateAndPersistUseCaseScore(
   }
 
   // ===== Score final =====
-  const finalResult = calculateFinalScore(baseScoreResult, modelScore, usecaseId, {
+  const finalScoreOptions = {
     activeQuestionCodes:
       v3ScoringCtx?.scoringActiveQuestionCodes ?? v2ScoringCtx?.scoringActiveQuestionCodes,
     questionnairePathMode:
       questionnaireVersion === QUESTIONNAIRE_VERSION_V3 ? v3QuestionnairePathMode : undefined,
+  }
+
+  const theoreticalMaxFinal = calculateFinalScore(
+    {
+      score_base: SYSTEM_CARD_SCORE_BASE_CAP,
+      is_eliminated: false,
+      elimination_reason: '',
+      calculation_details: {
+        base_score: SYSTEM_CARD_SCORE_BASE_CAP,
+        total_impact: 0,
+        final_base_score: SYSTEM_CARD_SCORE_BASE_CAP,
+      },
+    },
+    modelScore,
+    usecaseId,
+    finalScoreOptions
+  ).scores.score_final
+
+  const computedFinal = calculateFinalScore(
+    baseScoreResult,
+    modelScore,
+    usecaseId,
+    finalScoreOptions
+  )
+
+  // Prime absolue sur score_final (échelle 100), hors pondération score_base / modèle.
+  const boostedScores = applySystemCardBonusToScores({
+    scoreBase: computedFinal.scores.score_base,
+    scoreFinal: computedFinal.scores.score_final,
+    bonus: systemCardBonus,
+    theoreticalMaxFinal,
   })
+
+  const finalResult = {
+    ...computedFinal,
+    scores: {
+      ...computedFinal.scores,
+      score_final: boostedScores.scoreFinal,
+    },
+  }
 
   // ===== Niveau de risque / classification =====
   let riskLevel: string | null
@@ -265,8 +334,8 @@ export async function calculateAndPersistUseCaseScore(
 
   // ===== Persistance =====
   const nowIso = new Date().toISOString()
-  const roundedScoreBase = Math.round(Number(finalResult.scores.score_base))
-  const roundedScoreFinal = Math.round(Number(finalResult.scores.score_final))
+  const roundedScoreBase = Math.round(Number(finalResult.scores.score_base) * 10) / 10
+  const roundedScoreFinal = Math.round(Number(finalResult.scores.score_final) * 10) / 10
   const persistedScoreModel =
     finalResult.scores.score_model == null
       ? null
@@ -356,6 +425,7 @@ export async function calculateAndPersistUseCaseScore(
     company_status_definition: getCompanyStatusDefinition(companyStatus),
     classification_status: classificationStatusForDb,
     risk_level: riskLevel,
+    previousScore,
   }
 }
 

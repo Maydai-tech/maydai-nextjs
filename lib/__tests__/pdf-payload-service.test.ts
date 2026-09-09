@@ -2,10 +2,13 @@ import { DECLARATION_PROOF_FLOW_COPY } from '@/lib/declaration-proof-flow-copy'
 import type { ReportCanonicalItem } from '@/lib/report-canonical-items'
 import {
   applyRule67PointsSync,
+  attachSystemCardSectionsToCanonicalItems,
+  buildPdfSystemCardSections,
   buildRule67PointsLine,
   cleanPdfUrls,
   extractPdfDocumentsFromUseCaseRow,
   extractPdfHistoryFromUseCaseRow,
+  extractPdfSystemCardNotesByDocType,
   isPdfDocumentCompletedInPayload,
   mapUseCaseHistoryToPdfItems,
 } from '@/lib/pdf-payload-service'
@@ -70,8 +73,43 @@ describe('pdf-payload-service', () => {
       })
 
       expect(docs).toEqual([
-        { doc_type: 'system_prompt', status: 'complete' },
-        { doc_type: 'human_oversight', status: 'incomplete' },
+        {
+          doc_type: 'system_prompt',
+          status: 'complete',
+          maydai_prefill_applied: false,
+          user_completion_applied: false,
+        },
+        {
+          doc_type: 'human_oversight',
+          status: 'incomplete',
+          maydai_prefill_applied: false,
+          user_completion_applied: false,
+        },
+      ])
+    })
+
+    test('propage les flags 50/50 System Card quand ils sont présents', () => {
+      const docs = extractPdfDocumentsFromUseCaseRow({
+        dossiers: {
+          id: 'd1',
+          dossier_documents: [
+            {
+              doc_type: 'technical_documentation',
+              status: 'incomplete',
+              maydai_prefill_applied: true,
+              user_completion_applied: false,
+            },
+          ],
+        },
+      })
+
+      expect(docs).toEqual([
+        {
+          doc_type: 'technical_documentation',
+          status: 'incomplete',
+          maydai_prefill_applied: true,
+          user_completion_applied: false,
+        },
       ])
     })
   })
@@ -158,6 +196,72 @@ describe('pdf-payload-service', () => {
       expect(history).toHaveLength(1)
       expect(history[0]?.metadata.label).toBe('Évaluation complétée')
       expect(history[0]?.metadata.score_impact).toBe(4)
+    })
+  })
+
+  describe('System Cards PDF', () => {
+    const pillar = {
+      id: '11111111-1111-4111-8111-111111111111',
+      system_card_id: '22222222-2222-4222-8222-222222222222',
+      pillar_code: 'doc_technique' as const,
+      pillar_title: 'Documentation',
+      sections_covered: 'Abstract',
+      summary: 'Résumé',
+      key_points: ['A'],
+      ai_act_compliance: [],
+      recommendations: {},
+    }
+
+    test('extrait les notes system_card depuis form_data', () => {
+      const notes = extractPdfSystemCardNotesByDocType({
+        dossiers: {
+          id: 'd1',
+          dossier_documents: [
+            {
+              doc_type: 'technical_documentation',
+              status: 'incomplete',
+              form_data: { system_card_notes: '  Garde-fou interne  ' },
+            },
+          ],
+        },
+      })
+      expect(notes.technical_documentation).toBe('Garde-fou interne')
+    })
+
+    test('associe les notes au pilier correspondant', () => {
+      const sections = buildPdfSystemCardSections([pillar], {
+        technical_documentation: 'Note entreprise',
+      })
+      expect(sections).toEqual([{ pillar, userNotes: 'Note entreprise' }])
+    })
+
+    test('colle la fiche sous l’action seulement si maydai_prefill_applied', () => {
+      const item = makeCanonicalItem('technical_documentation', 3)
+      const attached = attachSystemCardSectionsToCanonicalItems({
+        items: [item, makeCanonicalItem('system_prompt', 2)],
+        documents: [
+          {
+            doc_type: 'technical_documentation',
+            status: 'incomplete',
+            maydai_prefill_applied: true,
+            user_completion_applied: false,
+          },
+          {
+            doc_type: 'system_prompt',
+            status: 'incomplete',
+            maydai_prefill_applied: false,
+            user_completion_applied: false,
+          },
+        ],
+        pillars: [pillar],
+        notesByDocType: { technical_documentation: 'Note entreprise' },
+      })
+
+      expect(attached[0]?.systemCardSection).toEqual({
+        pillar,
+        userNotes: 'Note entreprise',
+      })
+      expect(attached[1]?.systemCardSection).toBeUndefined()
     })
   })
 })
