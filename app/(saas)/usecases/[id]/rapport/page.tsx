@@ -13,6 +13,7 @@ import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { useNextSteps } from '../hooks/useNextSteps'
 import { usePDFExport } from '../hooks/usePDFExport'
 import { getScoreStyle } from '@/lib/score-styles'
+import { formatScore } from '@/lib/utils'
 import { AlertTriangle, RefreshCcw, Download, HelpCircle } from 'lucide-react'
 import { getCompanyStatusLabel, getCompanyStatusDefinition, getRiskLevelJustification } from '../utils/company-status'
 import UnacceptableInterditsPanel from '@/components/UnacceptableCase/UnacceptableInterditsPanel'
@@ -460,7 +461,7 @@ function UseCaseRapportMainContent({
                           className={`text-3xl font-bold ${getScoreStyle(score.score).text} mb-2`}
                           data-testid="final-score-value"
                         >
-                          {Math.round(score.score)}
+                          {formatScore(score.score)}
                         </div>
                         
                         {score.is_eliminated && (

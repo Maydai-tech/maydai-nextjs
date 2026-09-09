@@ -34,6 +34,7 @@ import { useAuth } from '@/lib/auth'
 import WorldMap from '@/components/WorldMap'
 import { getProviderIcon } from '@/lib/provider-icons'
 import { getScoreStyle } from '@/lib/score-styles'
+import { formatScore } from '@/lib/utils'
 import { usePDFExport } from '../../hooks/usePDFExport'
 import { V3_IMPOSSIBLE_MATURITY_SCORES_DISCLAIMER } from '@/lib/classification-risk-display'
 import { resolveV3ShortPathFunnelOutcomeKey } from '../../utils/v3-short-path-funnel-context'
@@ -132,10 +133,10 @@ function HeaderScore({ useCaseId }: { useCaseId: string }) {
   }
 
   // Le score est déjà en pourcentage (0-100) depuis la base de données
-  const displayScore = Math.round(score.score)
+  const displayScore = formatScore(score.score)
 
   // Utilise les styles unifiés de l'application
-  const scoreStyle = getScoreStyle(displayScore)
+  const scoreStyle = getScoreStyle(Number(score.score))
 
   return (
     <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200">

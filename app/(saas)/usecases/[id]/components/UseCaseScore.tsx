@@ -8,6 +8,7 @@ import { RISK_CATEGORIES } from '../utils/risk-categories'
 import { getDisplayMaxScore } from '../utils/score-conversion'
 import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, Info } from 'lucide-react'
 import ComplAiScoreDisplay from './ComplAiScoreDisplay'
+import { formatScore } from '@/lib/utils'
 
 interface UseCaseScoreProps {
   usecaseId: string
@@ -74,7 +75,7 @@ export const UseCaseScore = React.memo(function UseCaseScore({ usecaseId }: UseC
             <span className="text-2xl">{category.icon}</span>
             <div>
               <div className="text-2xl font-bold" data-testid="final-score-value">
-                {Math.round(score.score)}/{getDisplayMaxScore()}
+                {formatScore(score.score)}/{getDisplayMaxScore()}
               </div>
               <div className="text-sm font-medium">{category.category}</div>
             </div>

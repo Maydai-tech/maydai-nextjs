@@ -2,6 +2,7 @@
 
 import { useUseCaseScore } from '../hooks/useUseCaseScore'
 import { getScoreCategory } from '@/lib/score-styles'
+import { formatScore } from '@/lib/utils'
 import { AlertCircle, CheckCircle, Info } from 'lucide-react'
 
 interface CompactScoreProps {
@@ -49,7 +50,7 @@ export function CompactScore({ usecaseId }: CompactScoreProps) {
         <span className="text-lg">{category.icon}</span>
       </div>
       <div className="text-2xl font-bold text-gray-900 mb-1">
-        {Math.round(score.score)}%
+        {formatScore(score.score)}%
       </div>
       <div className="text-xs text-gray-600">
         {category.category}

@@ -12,7 +12,7 @@ interface PDFCoverPageProps {
 }
 
 // Table des matières statique selon le modèle fourni
-const tableOfContents: TableOfContentsItem[] = [
+const BASE_TABLE_OF_CONTENTS: TableOfContentsItem[] = [
   {
     title: 'Synthèse',
     subsections: [
@@ -45,6 +45,7 @@ const tableOfContents: TableOfContentsItem[] = [
 ]
 
 export const PDFCoverPage: React.FC<PDFCoverPageProps> = ({ data }) => {
+  const tableOfContents: TableOfContentsItem[] = BASE_TABLE_OF_CONTENTS
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), 'dd MMMM yyyy', { locale: fr })

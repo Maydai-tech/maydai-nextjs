@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { formatScore } from '@/lib/utils'
 
 interface ScoreCircleProps {
   averageScore: number | null
@@ -152,7 +153,7 @@ export default function ScoreCircle({
           {/* Contenu au centre */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className={`flex items-baseline ${circleData.colorClass} font-bold`}>
-              <span className="text-4xl">{Math.round(score)}</span>
+              <span className="text-4xl">{formatScore(score)}</span>
               <span className="text-lg ml-1">%</span>
             </div>
           </div>

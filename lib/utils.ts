@@ -18,6 +18,13 @@ export function toTitleCase(value: string): string {
     .join('')
 }
 
+export function formatScore(score: number | string | null | undefined): string {
+  if (score === null || score === undefined) return '0'
+  const num = Number(score)
+  if (Number.isNaN(num)) return '0'
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(num)
+}
+
 export async function parseApiJson<T>(response: Response): Promise<T> {
   const text = await response.text()
   const trimmed = text.trim()

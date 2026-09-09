@@ -28,7 +28,7 @@
   "crons": [
     {
       "path": "/api/cron/sync-llm-stats",
-      "schedule": "30 2 * * *"
+      "schedule": "0 4 * * 3"
     },
     {
       "path": "/api/cron/sync-ecologits",
