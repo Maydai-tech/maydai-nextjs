@@ -99,8 +99,10 @@ export function buildControlTowerCsv(rows: ControlTowerModelRow[]): string {
   return `${lines.join('\n')}\n`
 }
 
+type PageResult<T> = { data: T[] | null; error: { message: string } | null }
+
 async function fetchAllPages<T>(
-  loadPage: (from: number, to: number) => Promise<{ data: T[] | null; error: { message: string } | null }>,
+  loadPage: (from: number, to: number) => PromiseLike<PageResult<T>>,
   errorPrefix: string,
 ): Promise<T[]> {
   const rows: T[] = []
@@ -130,11 +132,13 @@ async function fetchSystemCardIdentifiers(
 ): Promise<Set<string>> {
   const rows = await fetchAllPages<{ model_identifier: string }>(
     (from, to) =>
-      supabase
-        .from('llm_system_cards')
-        .select('model_identifier')
-        .order('model_identifier', { ascending: true })
-        .range(from, to),
+      Promise.resolve(
+        supabase
+          .from('llm_system_cards')
+          .select('model_identifier')
+          .order('model_identifier', { ascending: true })
+          .range(from, to),
+      ),
     'Lecture llm_system_cards',
   )
 
@@ -147,11 +151,13 @@ async function fetchControlTowerRows(
   const systemCardIds = await fetchSystemCardIdentifiers(supabase)
   const models = await fetchAllPages<ComplAiModelPageRow>(
     (from, to) =>
-      supabase
-        .from('compl_ai_models')
-        .select('id, slug, model_provider, model_name, updated_at')
-        .order('slug', { ascending: true })
-        .range(from, to),
+      Promise.resolve(
+        supabase
+          .from('compl_ai_models')
+          .select('id, slug, model_provider, model_name, updated_at')
+          .order('slug', { ascending: true })
+          .range(from, to),
+      ),
     'Lecture compl_ai_models',
   )
 
