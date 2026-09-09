@@ -1,13 +1,13 @@
+import { Readable } from 'node:stream'
+
 import { google, type drive_v3 } from 'googleapis'
 
 export type DriveFile = drive_v3.Schema$File
 
-/**
- * Client Google Drive (Service Account), toujours compatible Shared Drives.
- * Variables : GOOGLE_DRIVE_CLIENT_EMAIL + GOOGLE_DRIVE_PRIVATE_KEY
- * (fallback : GOOGLE_SERVICE_ACCOUNT_EMAIL / GOOGLE_PRIVATE_KEY)
- */
-export function getDriveClient() {
+export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive'
+export const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets'
+
+function getServiceAccountJwt(scopes: string[]) {
   const clientEmail =
     process.env.GOOGLE_DRIVE_CLIENT_EMAIL ||
     process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL
@@ -21,13 +21,29 @@ export function getDriveClient() {
     )
   }
 
-  const auth = new google.auth.JWT({
+  return new google.auth.JWT({
     email: clientEmail,
     key: privateKey,
-    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+    scopes,
   })
+}
 
-  return google.drive({ version: 'v3', auth })
+/**
+ * Client Google Drive (Service Account), toujours compatible Shared Drives.
+ * Scope `drive` (lecture + écriture) pour l’upsert de fichiers.
+ * Variables : GOOGLE_DRIVE_CLIENT_EMAIL + GOOGLE_DRIVE_PRIVATE_KEY
+ * (fallback : GOOGLE_SERVICE_ACCOUNT_EMAIL / GOOGLE_PRIVATE_KEY)
+ */
+export function getDriveClient() {
+  return google.drive({ version: 'v3', auth: getServiceAccountJwt([DRIVE_SCOPE]) })
+}
+
+/**
+ * Client Google Sheets (Service Account).
+ * Scope `spreadsheets` — le scope Drive ne suffit pas pour values.batchUpdate.
+ */
+export function getSheetsClient() {
+  return google.sheets({ version: 'v4', auth: getServiceAccountJwt([SHEETS_SCOPE]) })
 }
 
 /** Échappe les apostrophes pour la requête Drive `q` */
@@ -35,15 +51,45 @@ export function escapeDriveName(name: string): string {
   return name.replace(/'/g, "\\'")
 }
 
+export type DriveTextFile = {
+  content: string
+  name: string | null
+}
+
 /**
- * Télécharge le contenu texte d’un fichier Drive par ID.
+ * Télécharge le contenu texte d’un fichier Drive par ID, avec son nom.
  * Toujours avec supportsAllDrives: true (Shared Drives).
  */
-export async function getFileFromDrive(fileId: string): Promise<string> {
+export async function getDriveFileText(fileId: string): Promise<DriveTextFile> {
   const drive = getDriveClient()
+  const metaRes = await drive.files.get({
+    fileId,
+    fields: 'id,name,mimeType',
+    supportsAllDrives: true,
+  })
+  const mimeType = metaRes.data.mimeType ?? ''
+  const name = metaRes.data.name ?? null
+  console.log('[Google Drive] mimeType', {
+    fileId,
+    name,
+    mimeType,
+  })
+
+  if (mimeType.startsWith('application/vnd.google-apps.')) {
+    const exported = await drive.files.export(
+      { fileId, mimeType: 'text/plain' },
+      { responseType: 'text' },
+    )
+    const content = exported.data
+    if (typeof content !== 'string') {
+      throw new Error(`Contenu invalide pour le fichier Drive: ${fileId}`)
+    }
+    return { content, name }
+  }
+
   const fileRes = await drive.files.get(
     { fileId, alt: 'media', supportsAllDrives: true },
-    { responseType: 'text' }
+    { responseType: 'text' },
   )
 
   const content = fileRes.data
@@ -51,7 +97,16 @@ export async function getFileFromDrive(fileId: string): Promise<string> {
     throw new Error(`Contenu invalide pour le fichier Drive: ${fileId}`)
   }
 
-  return content
+  return { content, name }
+}
+
+/**
+ * Télécharge le contenu texte d’un fichier Drive par ID.
+ * Toujours avec supportsAllDrives: true (Shared Drives).
+ */
+export async function getFileFromDrive(fileId: string): Promise<string> {
+  const file = await getDriveFileText(fileId)
+  return file.content
 }
 
 /**
@@ -150,4 +205,70 @@ export async function findFileIdByName(fileName: string): Promise<string> {
   }
 
   return fileId
+}
+
+/**
+ * Résout un fichier par nom dans un dossier Drive (Shared Drives).
+ */
+export async function findFileIdInFolder(
+  folderId: string,
+  fileName: string,
+): Promise<string | null> {
+  const drive = getDriveClient()
+  const listRes = await drive.files.list({
+    q: `name='${escapeDriveName(fileName)}' and '${folderId}' in parents and trashed=false`,
+    fields: 'files(id, name)',
+    pageSize: 1,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+    corpora: 'allDrives',
+  })
+
+  return listRes.data.files?.[0]?.id ?? null
+}
+
+/**
+ * Crée un fichier texte dans un dossier, ou écrase le contenu s’il existe déjà
+ * (même nom, même parent) pour éviter les doublons.
+ */
+export async function upsertTextFileInFolder(params: {
+  folderId: string
+  fileName: string
+  content: string
+  mimeType?: string
+}): Promise<{ id: string; updated: boolean }> {
+  const mimeType = params.mimeType || 'text/csv'
+  const drive = getDriveClient()
+  const existingId = await findFileIdInFolder(params.folderId, params.fileName)
+  const body = Readable.from([params.content])
+
+  if (existingId) {
+    const updated = await drive.files.update({
+      fileId: existingId,
+      media: { mimeType, body },
+      supportsAllDrives: true,
+      fields: 'id',
+    })
+    const id = updated.data.id
+    if (!id) {
+      throw new Error(`Mise à jour Drive sans id: ${params.fileName}`)
+    }
+    return { id, updated: true }
+  }
+
+  const created = await drive.files.create({
+    requestBody: {
+      name: params.fileName,
+      parents: [params.folderId],
+      mimeType,
+    },
+    media: { mimeType, body },
+    supportsAllDrives: true,
+    fields: 'id',
+  })
+  const id = created.data.id
+  if (!id) {
+    throw new Error(`Création Drive sans id: ${params.fileName}`)
+  }
+  return { id, updated: false }
 }
