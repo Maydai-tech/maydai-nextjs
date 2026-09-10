@@ -524,8 +524,9 @@ function computeAction1(
     transparencyKeys,
     responsesMap.get('E5.N9.Q1')
   )
-  if (isOui('E5.N9.Q1', main)) return 'NON'
-  if (isNon('E5.N9.Q1', main)) return 'OUI'
+  // Polarité questionnaire : Oui = mesure en place → slot OUI (idem quick_win / priorite).
+  if (isOui('E5.N9.Q1', main)) return 'OUI'
+  if (isNon('E5.N9.Q1', main)) return 'NON'
   return 'Information insuffisante'
 }
 
@@ -540,8 +541,8 @@ function computeAction2(
     transparencyKeys,
     responsesMap.get('E5.N9.Q9')
   )
-  if (isOui('E5.N9.Q9', main)) return 'NON'
-  if (isNon('E5.N9.Q9', main)) return 'OUI'
+  if (isOui('E5.N9.Q9', main)) return 'OUI'
+  if (isNon('E5.N9.Q9', main)) return 'NON'
   return 'Information insuffisante'
 }
 
@@ -551,8 +552,8 @@ function computeAction3(
   _transparencyKeys: string[]
 ): SlotStatus {
   const main = getMainAnswer(responsesMap.get('E4.N8.Q12'))
-  if (isOui('E4.N8.Q12', main)) return 'NON'
-  if (isNon('E4.N8.Q12', main)) return 'OUI'
+  if (isOui('E4.N8.Q12', main)) return 'OUI'
+  if (isNon('E4.N8.Q12', main)) return 'NON'
   return 'Information insuffisante'
 }
 
