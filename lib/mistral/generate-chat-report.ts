@@ -100,8 +100,6 @@ export async function generateChatReport(options: {
   const { supabase, user, usecaseId } = options
 
   try {
-    await markUsecaseCompleted(supabase, usecaseId)
-
     const score = await calculateAndPersistUseCaseScore({
       client: supabase,
       usecaseId,
@@ -138,6 +136,8 @@ export async function generateChatReport(options: {
       authoritativeRiskCode: prepared.authoritativeRiskCode,
       processingTimeMs,
     })
+
+    await markUsecaseCompleted(supabase, usecaseId)
 
     await completeOpenEvaluationPathRun(supabase, {
       usecaseId,

@@ -1,6 +1,10 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { getQuestionById } from '@/app/(saas)/usecases/[id]/utils/questions-loader'
+import { ANNEX_NONE_OPTION_CODE } from '@/lib/mistral/map-evaluation-nodes'
 import { logger } from '@/lib/secure-logger'
+
+/** Art. 6.3 — n’a de sens que si Annexe III est un domaine sensible, pas « Aucun ». */
+export const ANNEX_III_FOLLOW_UP_QUESTION_CODE = 'E4.N7.Q5'
 
 export type GraphAnswers = Record<string, string | string[]>
 
@@ -87,6 +91,51 @@ export async function loadUsecaseGraphAnswers(
   return responsesToGraphAnswers(data ?? [])
 }
 
+function annexIiiCodes(value: string | string[] | undefined): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((code): code is string => typeof code === 'string' && code.trim().length > 0)
+  }
+  if (typeof value === 'string' && value.trim()) return [value.trim()]
+  return []
+}
+
+/**
+ * Q5 (art. 6.3) ne s’applique que si Q2 est un domaine Annexe III sensible.
+ * Quand un patch pose Q2 = « Aucun » (G), la réponse Q5 restante en base
+ * fausse la qualification (ex. Q5.C → classification_status = impossible).
+ */
+export function followUpQuestionCodesToClear(answers: GraphAnswers): string[] {
+  if (!Object.prototype.hasOwnProperty.call(answers, 'E4.N7.Q2')) return []
+  const codes = annexIiiCodes(answers['E4.N7.Q2'])
+  if (codes.length === 1 && codes[0] === ANNEX_NONE_OPTION_CODE) {
+    return [ANNEX_III_FOLLOW_UP_QUESTION_CODE]
+  }
+  return []
+}
+
+export async function deleteUsecaseGraphAnswers(
+  supabase: SupabaseClient,
+  usecaseId: string,
+  questionCodes: string[]
+): Promise<void> {
+  const codes = [...new Set(questionCodes.filter((code) => typeof code === 'string' && code.trim()))]
+  if (codes.length === 0) return
+
+  const { error } = await supabase
+    .from('usecase_responses')
+    .delete()
+    .eq('usecase_id', usecaseId)
+    .in('question_code', codes)
+
+  if (error) {
+    logger.error('deleteUsecaseGraphAnswers', undefined, {
+      details: error.message,
+      questionCodes: codes,
+    })
+    throw new Error('Impossible d’enregistrer les réponses')
+  }
+}
+
 export async function upsertUsecaseGraphAnswers(
   supabase: SupabaseClient,
   user: User,
@@ -152,4 +201,6 @@ export async function upsertUsecaseGraphAnswers(
       }
     }
   }
+
+  await deleteUsecaseGraphAnswers(supabase, usecaseId, followUpQuestionCodesToClear(answers))
 }
