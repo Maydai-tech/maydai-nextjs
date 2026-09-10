@@ -35,7 +35,9 @@ jest.mock('@/lib/google-drive', () => ({
 
 import { CONTROL_TOWER_FOLDER_ID } from '../control-tower-csv'
 import {
+  approxSameMonthOverwriteWarning,
   columnIndexToA1,
+  decideCardVersionOverwrite,
   downloadControlTowerCsvFromDrive,
   downloadMarkdownFromDrive,
   extractCardDateFromMarkdown,
@@ -45,13 +47,20 @@ import {
   isReadyForImport,
   missingDriveFileMessage,
   olderVersionIgnoredMessage,
+  parseCardVersionDateFromFileName,
   parseControlTowerCsv,
   resolveDriveMarkdownRef,
   importSystemCardsFromControlTower,
   writeControlTowerStatusesToSheet,
 } from '../system-cards-import'
 
-function cardsTable(upsert: jest.Mock, existing: { card_version_date: string | null } | null = null) {
+function cardsTable(
+  upsert: jest.Mock,
+  existing: {
+    card_version_date: string | null
+    card_version_date_is_approx?: boolean
+  } | null = null,
+) {
   return {
     select: () => ({
       eq: () => ({
@@ -126,6 +135,94 @@ describe('system cards import helpers', () => {
     expect(extractCardDateFromMarkdown('* **Date de la fiche :** Février 2026')).toEqual({
       card_date_label: 'Février 2026',
       card_month: '2026-02-01',
+    })
+  })
+
+  test('accepts unknown days in Drive file names as the first of the month', () => {
+    expect(
+      extractCardVersionDateFromFileName('Claude_Haiku_4.5_2025-10-XX_03_Audit_FR_V2.md'),
+    ).toBe('2025-10-01')
+    expect(extractCardVersionDateFromFileName('Claude_Haiku_4.5_2025_10_xx_Audit.md')).toBe(
+      '2025-10-01',
+    )
+    expect(extractCardVersionDateFromFileName('Claude_Haiku_4.5_2025-10-??_Audit.md')).toBe(
+      '2025-10-01',
+    )
+    expect(
+      parseCardVersionDateFromFileName('Claude_Haiku_4.5_2025-10-XX_03_Audit_FR_V2.md'),
+    ).toEqual({
+      card_version_date: '2025-10-01',
+      card_version_date_is_approx: true,
+    })
+    expect(
+      parseCardVersionDateFromFileName('Claude_Sonnet_3.5_2024-06-20_03_Audit_FR_V2.md'),
+    ).toEqual({
+      card_version_date: '2024-06-20',
+      card_version_date_is_approx: false,
+    })
+    expect(extractCardVersionDateFromFileName('Claude_Haiku_4.5_2025-XX-10.md')).toBeNull()
+    expect(parseCardVersionDateFromFileName('Claude_Haiku_4.5_XXXX-10-20.md')).toEqual({
+      card_version_date: null,
+      card_version_date_is_approx: false,
+    })
+    expect(parseCardVersionDateFromFileName('sans-date.md')).toEqual({
+      card_version_date: null,
+      card_version_date_is_approx: false,
+    })
+  })
+
+  test('keeps a raw Date de la fiche label when the day is unknown', () => {
+    expect(extractCardDateFromMarkdown('Date de la fiche : XX Février 2026')).toEqual({
+      card_date_label: 'XX Février 2026',
+      card_month: '2026-02-01',
+    })
+    expect(extractCardDateFromMarkdown('Date de la fiche : ?? Octobre 2025')).toEqual({
+      card_date_label: '?? Octobre 2025',
+      card_month: '2025-10-01',
+    })
+    expect(extractCardDateFromMarkdown('Date de la fiche : 2025-10-XX')).toEqual({
+      card_date_label: '2025-10-XX',
+      card_month: '2025-10-01',
+    })
+    expect(extractCardDateFromMarkdown('Date de la fiche : 2025-XX-10')).toEqual({
+      card_date_label: '2025-XX-10',
+      card_month: null,
+    })
+  })
+
+  test('allows overwrite when both version dates are approximate in the same month', () => {
+    expect(
+      decideCardVersionOverwrite({
+        existingDate: '2025-10-15',
+        incomingDate: '2025-10-01',
+        existingApprox: true,
+        incomingApprox: true,
+      }),
+    ).toEqual({
+      action: 'upsert',
+      warning: approxSameMonthOverwriteWarning('2025-10-15', '2025-10-01'),
+    })
+    expect(
+      decideCardVersionOverwrite({
+        existingDate: '2025-11-01',
+        incomingDate: '2025-10-01',
+        existingApprox: true,
+        incomingApprox: true,
+      }),
+    ).toEqual({
+      action: 'skip',
+      message: olderVersionIgnoredMessage('2025-11-01', '2025-10-01'),
+    })
+    expect(
+      decideCardVersionOverwrite({
+        existingDate: '2025-10-15',
+        incomingDate: '2025-10-01',
+        existingApprox: false,
+        incomingApprox: true,
+      }),
+    ).toEqual({
+      action: 'skip',
+      message: olderVersionIgnoredMessage('2025-10-15', '2025-10-01'),
     })
   })
 
@@ -426,6 +523,118 @@ describe('importSystemCardsFromControlTower', () => {
         errorMessage: message,
       }),
     ])
+  })
+
+  test('upserts an approximate card_version_date from an XX day in the file name', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined)
+    mockGetDriveFileText.mockResolvedValue({
+      content: '# Fiche Haiku\nDate de la fiche : XX Octobre 2025\n',
+      name: 'Claude_Haiku_4.5_2025-10-XX_03_Audit_FR_V2.md',
+    })
+    const upsert = jest.fn(async () => ({ error: null }))
+    const maybeSingle = jest.fn(async () => ({
+      data: {
+        slug: 'claude-haiku-4-5',
+        model_name: 'Claude Haiku 4.5',
+        model_provider: 'Anthropic',
+      },
+      error: null,
+    }))
+
+    const result = await importSystemCardsFromControlTower({
+      supabase: {
+        from: jest.fn((table: string) => {
+          if (table === 'compl_ai_models') {
+            return { select: () => ({ eq: () => ({ maybeSingle }) }) }
+          }
+          return cardsTable(upsert)
+        }),
+      } as never,
+      downloadControlTowerCsv: async () =>
+        [
+          'ID Supabase,Nom du LLM (Standard Supabase),Lien du fichier Markdown généré,Prêt pour import',
+          'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa,Claude Haiku 4.5,https://drive.google.com/file/d/1_c_nWKfM6Yfj9cf4Mb_f6Sv79mHIyVM_/view,Oui',
+        ].join('\n'),
+      downloadMarkdown: async () => '# unused',
+    })
+
+    expect(result).toMatchObject({ success: true, processed: 1, inserted: 1, skipped: [] })
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source_file_name: 'Claude_Haiku_4.5_2025-10-XX_03_Audit_FR_V2.md',
+        card_version_date: '2025-10-01',
+        card_version_date_is_approx: true,
+        card_date_label: 'XX Octobre 2025',
+        card_month: '2025-10-01',
+      }),
+      { onConflict: 'model_identifier' },
+    )
+    expect(logSpy).toHaveBeenCalledWith(
+      '[LLM System Cards Import] Métadonnées fiche',
+      expect.objectContaining({
+        card_version_date: expect.objectContaining({
+          value: '2025-10-01',
+          precision: 'approximative',
+        }),
+        card_version_date_is_approx: true,
+        card_date_label: expect.objectContaining({
+          value: 'XX Octobre 2025',
+        }),
+      }),
+    )
+    warnSpy.mockRestore()
+    logSpy.mockRestore()
+  })
+
+  test('overwrites when both stored and incoming dates are approximate in the same month', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined)
+    mockGetDriveFileText.mockResolvedValue({
+      content: '# Fiche Haiku\nDate de la fiche : XX Octobre 2025\n',
+      name: 'Claude_Haiku_4.5_2025-10-XX_03_Audit_FR_V2.md',
+    })
+    const upsert = jest.fn(async () => ({ error: null }))
+    const maybeSingle = jest.fn(async () => ({
+      data: {
+        slug: 'claude-haiku-4-5',
+        model_name: 'Claude Haiku 4.5',
+        model_provider: 'Anthropic',
+      },
+      error: null,
+    }))
+
+    const result = await importSystemCardsFromControlTower({
+      supabase: {
+        from: jest.fn((table: string) => {
+          if (table === 'compl_ai_models') {
+            return { select: () => ({ eq: () => ({ maybeSingle }) }) }
+          }
+          return cardsTable(upsert, {
+            card_version_date: '2025-10-15',
+            card_version_date_is_approx: true,
+          })
+        }),
+      } as never,
+      downloadControlTowerCsv: async () =>
+        [
+          'ID Supabase,Nom du LLM (Standard Supabase),Lien du fichier Markdown généré,Prêt pour import',
+          'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa,Claude Haiku 4.5,https://drive.google.com/file/d/1_c_nWKfM6Yfj9cf4Mb_f6Sv79mHIyVM_/view,Oui',
+        ].join('\n'),
+      downloadMarkdown: async () => '# unused',
+    })
+
+    expect(upsert).toHaveBeenCalled()
+    expect(result.inserted).toBe(1)
+    expect(result.skipped).toEqual([])
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[LLM System Cards Import] Garde-fou version approximatif',
+      expect.objectContaining({
+        base: '2025-10-15',
+        fichier: '2025-10-01',
+        avertissement: approxSameMonthOverwriteWarning('2025-10-15', '2025-10-01'),
+      }),
+    )
+    warnSpy.mockRestore()
   })
 })
 
