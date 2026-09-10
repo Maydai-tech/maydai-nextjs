@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase, UseCaseResponse } from '@/lib/supabase'
+import questionsData from '@/app/(saas)/usecases/[id]/data/questions-with-scores.json'
 import { Search, Filter, Eye, Calendar } from 'lucide-react'
 
 interface ResponseWithDetails extends UseCaseResponse {
@@ -35,22 +36,14 @@ export default function ResponsesPage() {
 
       if (error) throw error
 
-      // Récupérer les textes des questions
-      const enrichedResponses = await Promise.all(
-        (data || []).map(async (response) => {
-          const { data: questionData } = await supabase
-            .from('questionnaire_questions')
-            .select('question_text')
-            .eq('code', response.question_code)
-            .single()
-
-          return {
-            ...response,
-            usecase_name: response.usecases?.name || 'Cas d\'usage supprimé',
-            question_text: questionData?.question_text || response.question_code
-          }
-        })
-      )
+      const enrichedResponses = (data || []).map((response) => {
+        const question = questionsData[response.question_code as keyof typeof questionsData]
+        return {
+          ...response,
+          usecase_name: response.usecases?.name || 'Cas d\'usage supprimé',
+          question_text: question?.question || response.question_code,
+        }
+      })
 
       setResponses(enrichedResponses)
     } catch (error) {

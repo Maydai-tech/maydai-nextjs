@@ -70,37 +70,6 @@ export const supabase = createSupabaseClient()
 export { createClient } from '@supabase/supabase-js'
 
 // Types pour la base de données
-export interface QuestionnaireSection {
-  id: string
-  code: string
-  name: string
-  description?: string
-  display_order: number
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface QuestionnaireQuestion {
-  id: string
-  section_id?: string
-  code: string
-  question_text: string
-  question_type: 'text' | 'textarea' | 'select' | 'multiselect' | 'boolean' | 'number' | 'date'
-  options?: Array<string | { 
-    value: string
-    label: string
-    next_question_id?: string 
-  }>
-  next_question_id?: string
-  is_required: boolean
-  display_order: number
-  help_text?: string
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
 export interface UseCase {
   id: string
   name: string

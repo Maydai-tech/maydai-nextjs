@@ -167,7 +167,8 @@ export function resolveDriveMarkdownRef(raw: string): DriveMarkdownRef {
   return { fileName: value }
 }
 
-const FILE_NAME_DATE_RE = /(\d{4})[-_](\d{2})[-_](\d{2})/
+const FILE_NAME_DATE_RE = /(\d{4})[-_](\d{2})[-_](\d{2}|XX|xx|\?\?)/
+const UNKNOWN_DAY_RE = /^(?:XX|xx|\?\?)$/i
 const FR_MONTHS: Array<[string, string]> = [
   ['janvier', '01'],
   ['fevrier', '02'],
@@ -183,33 +184,103 @@ const FR_MONTHS: Array<[string, string]> = [
   ['decembre', '12'],
 ]
 
+export type CardVersionDateParse = {
+  card_version_date: string | null
+  card_version_date_is_approx: boolean
+}
+
+function emptyCardVersionDateParse(): CardVersionDateParse {
+  return { card_version_date: null, card_version_date_is_approx: false }
+}
+
+function isUnknownDayToken(value: string): boolean {
+  return UNKNOWN_DAY_RE.test(value)
+}
+
+export function parseCardVersionDateFromFileName(
+  fileName: string | null | undefined,
+): CardVersionDateParse {
+  const match = (fileName ?? '').match(FILE_NAME_DATE_RE)
+  if (!match) return emptyCardVersionDateParse()
+  const year = match[1]
+  const month = match[2]
+  const dayToken = match[3]
+  if (!year || !month || !dayToken) return emptyCardVersionDateParse()
+  const monthNum = Number(month)
+  if (monthNum < 1 || monthNum > 12) return emptyCardVersionDateParse()
+  if (isUnknownDayToken(dayToken)) {
+    return {
+      card_version_date: `${year}-${month}-01`,
+      card_version_date_is_approx: true,
+    }
+  }
+  const dayNum = Number(dayToken)
+  if (dayNum < 1 || dayNum > 31) return emptyCardVersionDateParse()
+  return {
+    card_version_date: `${year}-${month}-${dayToken}`,
+    card_version_date_is_approx: false,
+  }
+}
+
 export function extractCardVersionDateFromFileName(
   fileName: string | null | undefined,
 ): string | null {
-  const match = (fileName ?? '').match(FILE_NAME_DATE_RE)
-  if (!match) return null
-  const year = match[1]
-  const month = match[2]
-  const day = match[3]
-  if (!year || !month || !day) return null
-  const monthNum = Number(month)
-  const dayNum = Number(day)
-  if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31) return null
-  return `${year}-${month}-${day}`
+  return parseCardVersionDateFromFileName(fileName).card_version_date
+}
+
+export function cardVersionDatePrecision(
+  date: string | null,
+  isApprox: boolean,
+): 'exacte' | 'approximative' | null {
+  if (!date) return null
+  return isApprox ? 'approximative' : 'exacte'
+}
+
+export function isSameYearMonth(a: string, b: string): boolean {
+  return a.slice(0, 7) === b.slice(0, 7)
+}
+
+export function approxSameMonthOverwriteWarning(baseDate: string, fileDate: string): string {
+  return `dates approximatives sur le même mois : la comparaison n'est pas fiable au jour près (base: ${baseDate}, fichier: ${fileDate})`
+}
+
+export function decideCardVersionOverwrite(params: {
+  existingDate: string | null
+  incomingDate: string | null
+  existingApprox?: boolean
+  incomingApprox?: boolean
+}): { action: 'upsert' | 'skip'; warning?: string; message?: string } {
+  const { existingDate, incomingDate, existingApprox, incomingApprox } = params
+  const bothApproxSameMonth = Boolean(
+    existingDate &&
+      incomingDate &&
+      existingApprox &&
+      incomingApprox &&
+      isSameYearMonth(existingDate, incomingDate),
+  )
+  const warning = bothApproxSameMonth
+    ? approxSameMonthOverwriteWarning(existingDate as string, incomingDate as string)
+    : undefined
+
+  if (existingDate && incomingDate && existingDate > incomingDate && !bothApproxSameMonth) {
+    return { action: 'skip', message: olderVersionIgnoredMessage(existingDate, incomingDate) }
+  }
+
+  return warning ? { action: 'upsert', warning } : { action: 'upsert' }
 }
 
 export function normalizeCardMonth(label: string | null | undefined): string | null {
   const value = (label ?? '').trim()
   if (!value) return null
 
-  const iso = value.match(/(\d{4})[-_/](\d{1,2})/)
-  if (iso?.[1] && iso[2]) {
+  const iso = value.match(/(\d{4})[-_/](\d{1,2}|XX|xx|\?\?)(?:[-_/](\d{2}|XX|xx|\?\?))?/i)
+  if (iso?.[1] && iso[2] && /^\d{1,2}$/.test(iso[2])) {
     const month = iso[2].padStart(2, '0')
     const monthNum = Number(month)
     if (monthNum >= 1 && monthNum <= 12) return `${iso[1]}-${month}-01`
   }
 
-  const folded = foldHeader(value)
+  const folded = foldHeader(value).replace(/^(?:xx|\?\?|\d{1,2})\s+/, '')
   const year = folded.match(/(\d{4})/)?.[1]
   if (!year) return null
   const month = FR_MONTHS.find(([name]) => folded.includes(name))?.[1]
@@ -592,8 +663,14 @@ export async function importSystemCardsFromControlTower(
         throw new Error('Fichier Markdown vide')
       }
 
-      const card_version_date = extractCardVersionDateFromFileName(sourceFileName)
+      const parsedVersion = parseCardVersionDateFromFileName(sourceFileName)
+      const card_version_date = parsedVersion.card_version_date
+      const card_version_date_is_approx = parsedVersion.card_version_date_is_approx
       const { card_date_label, card_month } = extractCardDateFromMarkdown(markdown)
+      const versionPrecision = cardVersionDatePrecision(
+        card_version_date,
+        card_version_date_is_approx,
+      )
       console.log('[LLM System Cards Import] Métadonnées fiche', {
         modele: label,
         source_file_name: {
@@ -603,7 +680,9 @@ export async function importSystemCardsFromControlTower(
         card_version_date: {
           value: card_version_date,
           source: card_version_date ? 'nom Drive' : null,
+          precision: versionPrecision,
         },
+        card_version_date_is_approx,
         card_date_label: {
           value: card_date_label,
           source: card_date_label ? 'Date de la fiche' : null,
@@ -617,7 +696,7 @@ export async function importSystemCardsFromControlTower(
       const model = await resolveModelIdentifier(deps.supabase, row)
       const { data: existingCard, error: existingError } = await deps.supabase
         .from('llm_system_cards')
-        .select('card_version_date')
+        .select('card_version_date, card_version_date_is_approx')
         .eq('model_identifier', model.slug)
         .maybeSingle()
 
@@ -627,13 +706,36 @@ export async function importSystemCardsFromControlTower(
 
       const existingDate = toDateOnly(existingCard?.card_version_date)
       const incomingDate = toDateOnly(card_version_date)
-      if (existingDate && incomingDate && existingDate > incomingDate) {
-        const message = olderVersionIgnoredMessage(existingDate, incomingDate)
+      const existingApprox = Boolean(existingCard?.card_version_date_is_approx)
+      const overwrite = decideCardVersionOverwrite({
+        existingDate,
+        incomingDate,
+        existingApprox,
+        incomingApprox: card_version_date_is_approx,
+      })
+      if (overwrite.warning) {
+        console.warn('[LLM System Cards Import] Garde-fou version approximatif', {
+          modele: label,
+          slug: model.slug,
+          base: existingDate,
+          fichier: incomingDate,
+          base_precision: cardVersionDatePrecision(existingDate, existingApprox),
+          fichier_precision: versionPrecision,
+          avertissement: overwrite.warning,
+        })
+      }
+      if (overwrite.action === 'skip') {
+        const message = overwrite.message ?? olderVersionIgnoredMessage(
+          existingDate ?? '',
+          incomingDate ?? '',
+        )
         console.log('[LLM System Cards Import] Garde-fou version', {
           modele: label,
           slug: model.slug,
           base: existingDate,
           fichier: incomingDate,
+          base_precision: cardVersionDatePrecision(existingDate, existingApprox),
+          fichier_precision: versionPrecision,
         })
         skipped.push(message)
         statusUpdates.push({
@@ -660,6 +762,7 @@ export async function importSystemCardsFromControlTower(
           source_markdown: markdown,
           source_file_name: sourceFileName,
           card_version_date,
+          card_version_date_is_approx,
           card_date_label,
           card_month,
           updated_at: now,

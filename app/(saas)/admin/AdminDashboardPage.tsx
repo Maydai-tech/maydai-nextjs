@@ -5,8 +5,6 @@ import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import {
   Users,
-  FileText,
-  Settings,
   BarChart3,
   TrendingUp,
   Activity,
@@ -15,16 +13,12 @@ import {
 } from 'lucide-react'
 
 interface AdminStats {
-  sectionsCount: number
-  questionsCount: number
   usecasesCount: number
   responsesCount: number
 }
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<AdminStats>({
-    sectionsCount: 0,
-    questionsCount: 0,
     usecasesCount: 0,
     responsesCount: 0,
   })
@@ -33,18 +27,21 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const [sections, questions, usecases, responses] = await Promise.all([
-          supabase.from('questionnaire_sections').select('id', { count: 'exact' }),
-          supabase.from('questionnaire_questions').select('id', { count: 'exact' }),
+        const [usecases, responses] = await Promise.all([
           supabase.from('usecases').select('id', { count: 'exact' }),
-          supabase.from('usecase_questionnaire_responses').select('id', { count: 'exact' }),
+          supabase.from('usecase_responses').select('id', { count: 'exact' }),
         ])
 
+        if (usecases.error) {
+          console.error('Erreur lors du chargement des cas d\'usage:', usecases.error)
+        }
+        if (responses.error) {
+          console.error('Erreur lors du chargement des réponses:', responses.error)
+        }
+
         setStats({
-          sectionsCount: sections.count || 0,
-          questionsCount: questions.count || 0,
-          usecasesCount: usecases.count || 0,
-          responsesCount: responses.count || 0,
+          usecasesCount: usecases.error ? 0 : (usecases.count ?? 0),
+          responsesCount: responses.error ? 0 : (responses.count ?? 0),
         })
       } catch (error) {
         console.error('Erreur lors du chargement des statistiques:', error)
@@ -73,31 +70,7 @@ export default function AdminDashboardPage() {
         </p>
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg bg-white p-6 shadow">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Settings className="h-8 w-8 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Sections</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.sectionsCount}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-lg bg-white p-6 shadow">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <FileText className="h-8 w-8 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Questions</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.questionsCount}</p>
-            </div>
-          </div>
-        </div>
-
+      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="rounded-lg bg-white p-6 shadow">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -128,27 +101,7 @@ export default function AdminDashboardPage() {
           <h2 className="text-lg font-medium text-gray-900">Actions rapides</h2>
         </div>
         <div className="p-6">
-          <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <a
-              href="/admin/sections"
-              className="block rounded-lg border border-gray-200 p-4 transition-colors hover:border-blue-500 hover:shadow-md"
-            >
-              <Settings className="mb-2 h-6 w-6 text-blue-600" />
-              <h3 className="font-medium text-gray-900">Gérer les sections</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Organiser les sections du questionnaire
-              </p>
-            </a>
-
-            <a
-              href="/admin/questions"
-              className="block rounded-lg border border-gray-200 p-4 transition-colors hover:border-green-500 hover:shadow-md"
-            >
-              <FileText className="mb-2 h-6 w-6 text-green-600" />
-              <h3 className="font-medium text-gray-900">Créer des questions</h3>
-              <p className="mt-1 text-sm text-gray-500">Ajouter et modifier les questions</p>
-            </a>
-
+          <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <a
               href="/admin/usecases"
               className="block rounded-lg border border-gray-200 p-4 transition-colors hover:border-purple-500 hover:shadow-md"
