@@ -148,6 +148,35 @@ describe('generateChatReport', () => {
     expect(persistChatReport).not.toHaveBeenCalled()
   })
 
+  test('ne clôture pas le cas d’usage si la classification est impossible', async () => {
+    calculateAndPersistUseCaseScore.mockResolvedValue({
+      classification_status: 'impossible',
+      risk_level: null,
+    })
+    const supabase = mockSupabase()
+    await generateChatReport({
+      supabase: supabase as never,
+      user,
+      usecaseId: USECASE_ID,
+    })
+
+    expect(supabase.update).not.toHaveBeenCalled()
+  })
+
+  test('ne clôture pas le cas d’usage si la génération du rapport échoue', async () => {
+    completeReportAgent.mockRejectedValue(new Error('agent down'))
+    const supabase = mockSupabase()
+    const result = await generateChatReport({
+      supabase: supabase as never,
+      user,
+      usecaseId: USECASE_ID,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(persistChatReport).not.toHaveBeenCalled()
+    expect(supabase.update).not.toHaveBeenCalled()
+  })
+
   test('coupe un agent Mistral bloqué sans dépasser le budget serveur', async () => {
     jest.useFakeTimers()
     completeReportAgent.mockReturnValue(new Promise(() => {}))

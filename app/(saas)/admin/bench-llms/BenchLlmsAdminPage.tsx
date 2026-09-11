@@ -18,6 +18,7 @@ import {
 import dynamic from 'next/dynamic'
 import { useCallback, useDeferredValue, useEffect, useRef, useState } from 'react'
 
+import Toast from '@/components/Toast'
 import { useAuth } from '@/lib/auth'
 import type { BenchSourceKey, UnifiedBenchModel } from '@/lib/bench-llm/admin-unified'
 import { parseApiJson, toTitleCase } from '@/lib/utils'
@@ -175,6 +176,7 @@ export default function BenchLlmsAdminPage() {
   const [action, setAction] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
   const [importMode, setImportMode] = useState<'create' | 'update'>('update')
@@ -221,6 +223,7 @@ export default function BenchLlmsAdminPage() {
     setAction(name)
     setError(null)
     setMessage(null)
+    setToast(null)
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -232,10 +235,14 @@ export default function BenchLlmsAdminPage() {
       })
       const payload = await parseApiJson<{ error?: string; message?: string }>(response)
       if (!response.ok && response.status !== 207) throw new Error(payload.error || payload.message || `${name} impossible`)
-      setMessage(`${name} terminé avec succès.`)
+      const successText = payload.message || `${name} terminé avec succès.`
+      setMessage(successText)
+      setToast({ message: successText, type: 'success' })
       await fetchModels()
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Erreur inconnue')
+      const errorText = actionError instanceof Error ? actionError.message : 'Erreur inconnue'
+      setError(errorText)
+      setToast({ message: errorText, type: 'error' })
     } finally {
       setAction(null)
     }
@@ -318,6 +325,8 @@ export default function BenchLlmsAdminPage() {
         <div className="flex flex-wrap gap-2">
           <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium"><Plus className="h-4 w-4" /> Modèle</button>
           <button onClick={() => callAction('Synchronisation LLM Stats', '/api/admin/llm-stats-sync-runs')} disabled={action != null} className="rounded-md bg-sky-700 px-3 py-2 text-sm font-medium text-white">Sync LLM Stats</button>
+          <button onClick={() => callAction('Synchronisation LLM Control', '/api/admin/llm-control-tower-sync')} disabled={action != null} className="rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white">Sync LLM Control</button>
+          <button onClick={() => callAction('Import System Cards', '/api/admin/llm-system-cards-import')} disabled={action != null} className="rounded-md bg-amber-700 px-3 py-2 text-sm font-medium text-white">Import System Cards</button>
           <button onClick={() => callAction('Synchronisation EcoLogits', '/api/admin/ecologits/sync')} disabled={action != null} className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white"><Leaf className="h-4 w-4" /> Sync EcoLogits</button>
           <button onClick={() => callAction('Synchronisation Compar:IA', '/api/admin/comparia/sync')} disabled={action != null} className="rounded-md bg-violet-700 px-3 py-2 text-sm font-medium text-white">Sync Compar:IA</button>
           <button onClick={() => callAction('Synchronisation COMPL-AI', '/api/admin/compl-ai/sync')} disabled={action != null} className="rounded-md bg-indigo-700 px-3 py-2 text-sm font-medium text-white">Sync COMPL-AI</button>
@@ -419,6 +428,13 @@ export default function BenchLlmsAdminPage() {
           onDeleted={() => void fetchModels()}
         />
       ) : null}
+
+      <Toast
+        message={toast?.message ?? ''}
+        type={toast?.type}
+        isVisible={toast != null}
+        onClose={() => setToast(null)}
+      />
     </div>
   )
 }

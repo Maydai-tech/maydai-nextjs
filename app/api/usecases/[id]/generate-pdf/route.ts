@@ -19,11 +19,15 @@ import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-use
 import {
   USECASE_PDF_SELECT,
   applyRule67PointsSync,
+  attachSystemCardSectionsToCanonicalItems,
+  buildPdfSystemCardSections,
   extractPdfDocumentsFromUseCaseRow,
   extractPdfHistoryFromUseCaseRow,
+  extractPdfSystemCardNotesByDocType,
   mergePdfDocumentsToStatusMap,
   sanitizePdfReportData,
 } from '@/lib/pdf-payload-service'
+import { getSystemCardPillarsByModel } from '@/lib/services/system-card-service'
 
 function stringSetsEqual(a: Set<string>, b: Set<string>): boolean {
   if (a.size !== b.size) return false
@@ -392,6 +396,24 @@ export async function GET(
       documents: pdfDocuments,
     }
 
+    const modelIdentifier =
+      (typeof modelData?.slug === 'string' ? modelData.slug.trim() : '') ||
+      (typeof useCase.llm_model_version === 'string' ? useCase.llm_model_version.trim() : '')
+    const systemCardPillars = modelIdentifier
+      ? await getSystemCardPillarsByModel(modelIdentifier)
+      : []
+    const notesByDocType = extractPdfSystemCardNotesByDocType(useCase)
+    canonicalPlanItems = attachSystemCardSectionsToCanonicalItems({
+      items: canonicalPlanItems,
+      documents: pdfDocuments,
+      pillars: systemCardPillars,
+      notesByDocType,
+    })
+    const systemCardSections = buildPdfSystemCardSections(
+      systemCardPillars,
+      notesByDocType
+    )
+
     // Prepare PDF data
     const pdfData: PDFReportData = sanitizePdfReportData({
       pdfCtaBaseUrl: pdfCtaBaseUrl || undefined,
@@ -413,6 +435,7 @@ export async function GET(
         last_name: profileData.last_name,
       },
       generatedDate: new Date().toISOString(),
+      systemCardSections,
     })
 
     // Generate PDF

@@ -2,6 +2,21 @@ import { UseCase } from '@/lib/supabase'
 import type { ReportCanonicalItem } from '@/lib/report-canonical-items'
 import type { CategoryScore } from '@/app/(saas)/usecases/[id]/types/usecase'
 import type { ActivityHistoryItem, PdfDocumentItem, PdfUseCase } from '@/lib/validations/pdf.schema'
+import type { SystemCardPillar } from '@/lib/validations/system-card'
+
+export interface PdfSystemCardSection {
+  pillar: SystemCardPillar
+  userNotes?: string
+  maydai_prefill_applied?: boolean
+  user_completion_applied?: boolean
+}
+
+/** Item du plan d’action PDF, avec fiche System Card optionnelle collée sous l’action. */
+export type PdfCanonicalItem = ReportCanonicalItem & {
+  systemCardSection?: PdfSystemCardSection
+  maydai_prefill_applied?: boolean
+  user_completion_applied?: boolean
+}
 
 // Interface pour les prochaines étapes
 export interface UseCaseNextSteps {
@@ -53,7 +68,9 @@ export interface PDFReportData {
   /** Préfixe optionnel pour absolufiger les liens todo conformité / dossier du cas (ex. https://app.example.com). */
   pdfCtaBaseUrl?: string
   /** Plan d’action standard (9 items) — même logique que le rapport web (phase 5). Vide si cas inacceptable. */
-  canonicalPlanItems?: ReportCanonicalItem[]
+  canonicalPlanItems?: PdfCanonicalItem[]
+  /** Fiches System Card du modèle, pour les pages PDF d’audit GPAI. */
+  systemCardSections?: PdfSystemCardSection[]
   useCase: UseCase & Pick<PdfUseCase, 'score_final' | 'score_model'> & {
     companies?: {
       id: string

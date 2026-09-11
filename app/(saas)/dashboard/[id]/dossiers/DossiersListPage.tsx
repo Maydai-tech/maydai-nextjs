@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth'
 import { useApiCall } from '@/lib/api-client-legacy'
 import { FileText, ChevronRight, Check, AlertTriangle } from 'lucide-react'
 import { getCompactScoreStyle } from '@/lib/score-styles'
+import { formatScore } from '@/lib/utils'
 import {
   getRiskLevelDisplayConfig,
   getUnacceptableActionDocTypesOrdered,
@@ -260,7 +261,7 @@ export default function DossiersComplianceView() {
                                     <span
                                       className={`text-xs font-semibold ${getCompactScoreStyle(useCase.score_final).accent}`}
                                     >
-                                      {Math.round(useCase.score_final)}
+                                      {formatScore(useCase.score_final)}
                                     </span>
                                   </div>
                                 </div>

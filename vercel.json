@@ -12,6 +12,12 @@
     "app/api/admin/llm-stats-sync-runs/route.ts": {
       "maxDuration": 60
     },
+    "app/api/admin/llm-control-tower-sync/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/admin/llm-system-cards-import/route.ts": {
+      "maxDuration": 300
+    },
     "app/api/cron/sync-ecologits/route.ts": {
       "maxDuration": 300
     },
@@ -28,7 +34,7 @@
   "crons": [
     {
       "path": "/api/cron/sync-llm-stats",
-      "schedule": "30 2 * * *"
+      "schedule": "0 4 * * 3"
     },
     {
       "path": "/api/cron/sync-ecologits",

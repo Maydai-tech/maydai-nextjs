@@ -6,18 +6,21 @@ alwaysApply: false
 
 # RAG "AI Act" - Supabase First-Party
 
-Cette règle définit l'architecture du RAG juridique pour l'agent conversationnel Mistral, basé sur le dossier Drive `05_AI_Act_Docs`.
+Cette règle définit l'architecture du RAG juridique pour un futur chat exploratoire Mistral, basé sur le dossier Drive `05_AI_Act_Docs`.
 
 ## 1. Séparation des préoccupations (Strict)
 - **Ce RAG N'EST PAS** le système OpenAI File Search utilisé pour la génération de rapports de fin de parcours.
 - **Ce RAG NE MODIFIE PAS** le moteur de qualification des risques (arbre de décision JSON, `lib/qualification-v3-decision`). Le droit pour la qualification reste codé en dur.
-- Ce RAG est une brique documentaire alimentée par Supabase `pgvector` et exploitée par l'API Mistral pour du chat exploratoire.
+- Ce RAG est une brique documentaire alimentée par Supabase `pgvector`. Aucune route chat n'appelle encore `match_ai_act_chunks`.
 
-## 2. Webhook et Ingestion Drive
-- La route `POST /api/webhooks/kb-update` doit parser le payload. Si `folder_name === '05_AI_Act_Docs'`, déclencher le service d'ingestion RAG au lieu de chercher un CSV Compar:IA.
-- Le service d'ingestion doit lire `AI_Act_Index.json` sur le Drive.
-- Schéma strict de chaque entrée de l'index : `canonical_id`, `drive_file_id`, `file_name`, `source_url`, `version_date` (YYYY-MM-DD), `document_type`, `hash` (SHA-256), `status` (`active` | `archived`).
-- Seules les entrées `status = active` sont ingérées. Le matching N → N-1 se fait sur `canonical_id`.
+## 2. Webhook live (chemin à maintenir)
+- `POST /api/webhooks/kb-update` : si `folder_name === '05_AI_Act_Docs'` **ou** `file_name === 'AI_Act_Index.json'`, ingérer la veille JSON. Sinon, CSV Compar:IA.
+- Lire `AI_Act_Index.json` via `findFileIdByName` + `getFileFromDrive`. Le `file_name` du payload ne sert qu'au routage.
+- Schéma live (Zod dans `route.ts`) : objet `{ documents: [...] }` avec `canonical_id`, `file_name`, `source_url`, `version_date` (YYYY-MM-DD), `document_type`, `content`.
+- Tous les documents du tableau sont traités. `hash` = SHA-256 UTF-8 de `content`. `drive_file_id` stocké = `'veille-json-source'` (marqueur, pas un id Drive).
+- Un chunk par document (`chunk_index = 0`), embedding `mistral-embed` (1024) via `https://api.mistral.ai/v1/embeddings`.
+- **Ne pas** rappeler `ingestAiActKnowledgeBase` depuis le webhook : cette lib attend un autre schéma d'index (fichiers Drive + `status`/`hash`).
+- Auth : header `x-api-key` = `INTERNAL_API_KEY`. `dynamic = 'force-dynamic'`, `maxDuration = 300`.
 
 ## 3. Schéma de Base de Données (Supabase)
 - Les migrations doivent définir deux tables : `ai_act_documents` et `ai_act_chunks`.
@@ -28,6 +31,8 @@ Cette règle définit l'architecture du RAG juridique pour l'agent conversationn
 
 ## 4. Gestion du Versionning (N et N-1)
 - Si un `canonical_id` a déjà un document `is_active = true` : le passer à `is_active = false`, insérer le nouveau avec `is_active = true` et `supersedes_id` = id de l'ancien.
+- Échec embed / insert chunk : supprimer le nouveau document et réactiver le N-1.
 - Les chunks de N-1 restent en base mais ne sont plus retournés par `match_ai_act_chunks`.
 - Les requêtes sémantiques Mistral ne s'effectuent que sur les chunks dont `document.is_active = true`.
 - Runbook ops : `docs/ai-act-rag.md`. Aucune route chat n'appelle encore `match_ai_act_chunks`.
+- Runbook ops : `docs/ai-act-rag.md`.

@@ -3,6 +3,7 @@
 import { TrendingUp, X, ArrowLeft, FileText } from 'lucide-react'
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { formatScore } from '@/lib/utils'
 
 interface ScoreEvolutionPopupProps {
   previousScore: number | null
@@ -67,7 +68,7 @@ export default function ScoreEvolutionPopup({
             <div className="text-center">
               <div className="text-sm text-gray-500 mb-1">Avant</div>
               <div className="text-2xl font-bold text-gray-400">
-                {previousScore !== null ? Math.round(previousScore) : '-'}
+                {previousScore !== null ? formatScore(previousScore) : '-'}
               </div>
             </div>
 
@@ -80,7 +81,7 @@ export default function ScoreEvolutionPopup({
             <div className="text-center">
               <div className="text-sm text-gray-500 mb-1">Maintenant</div>
               <div className={`text-3xl font-bold ${isPositive ? 'text-green-600' : 'text-blue-600'}`}>
-                {newScore !== null ? Math.round(newScore) : '-'}
+                {newScore !== null ? formatScore(newScore) : '-'}
               </div>
             </div>
           </div>
@@ -88,7 +89,7 @@ export default function ScoreEvolutionPopup({
           {/* Points gained badge */}
           <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${isPositive ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'} font-semibold mb-4`}>
             <TrendingUp className="w-4 h-4" />
-            {isPositive ? '+' : ''}{Math.round(pointsGained)} points
+            {isPositive ? '+' : ''}{formatScore(pointsGained)} points
           </div>
 
           {/* Reason */}

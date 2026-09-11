@@ -9,6 +9,9 @@ MaydAI is a Next.js 15 application for AI Act (EU) compliance management. It hel
 **Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), Mistral Agents (chat + RAG), OpenAI (rapports File Search), Stripe
 
 **Docs techniques :** [docs/README.md](docs/README.md) — Chat IA, hub LLM, auth API, RAG AI Act.
+**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), OpenAI API, Mistral API, Stripe
+
+Runbooks : [docs/README.md](docs/README.md). RAG veille AI Act : [docs/ai-act-rag.md](docs/ai-act-rag.md).
 
 ## Development Commands
 
@@ -67,6 +70,10 @@ app/                          # Next.js 15 App Router
 │   └── stripe/              # Subscription & billing
 ├── (saas)/chat/             # Landing Chat IA
 ├── (saas)/usecases/         # Hub création, setup-chat, chat-evaluation
+│   ├── questionnaire/       # Questionnaire responses
+│   ├── stripe/              # Subscription & billing
+│   ├── chat/                # Agents Mistral (setup, evaluation, rapport)
+│   └── webhooks/            # Hermes Drive (Compar:IA CSV + RAG AI_Act_Index.json)
 ├── dashboard/[id]/          # Company dashboards
 ├── usecases/[id]/           # UseCase pages (overview, evaluation, rapport)
 ├── admin/                   # Admin panel (role-protected)
@@ -409,6 +416,9 @@ SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_COOKIEYES_ID=
 OPENAI_API_KEY=
 MISTRAL_API_KEY=
+OPENAI_ASSISTANT_ID=
+MISTRAL_API_KEY=
+INTERNAL_API_KEY=
 MAILJET_API_KEY=
 MAILJET_API_SECRET=
 ```
