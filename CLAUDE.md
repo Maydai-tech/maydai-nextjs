@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MaydAI is a Next.js 15 application for AI Act (EU) compliance management. It helps organizations assess and manage AI use cases, conduct risk evaluations, and generate compliance reports.
 
-**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), OpenAI API, Stripe
+**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), OpenAI API, Mistral API, Stripe
+
+Runbooks : [docs/README.md](docs/README.md). RAG veille AI Act : [docs/ai-act-rag.md](docs/ai-act-rag.md).
 
 ## Development Commands
 
@@ -59,7 +61,9 @@ app/                          # Next.js 15 App Router
 │   ├── companies/           # Company management
 │   ├── collaboration/       # Team collaboration
 │   ├── questionnaire/       # Questionnaire responses
-│   └── stripe/              # Subscription & billing
+│   ├── stripe/              # Subscription & billing
+│   ├── chat/                # Agents Mistral (setup, evaluation, rapport)
+│   └── webhooks/            # Hermes Drive (Compar:IA CSV + RAG AI_Act_Index.json)
 ├── dashboard/[id]/          # Company dashboards
 ├── usecases/[id]/           # UseCase pages (overview, evaluation, rapport)
 ├── admin/                   # Admin panel (role-protected)
@@ -390,6 +394,8 @@ SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_COOKIEYES_ID=
 OPENAI_API_KEY=
 OPENAI_ASSISTANT_ID=
+MISTRAL_API_KEY=
+INTERNAL_API_KEY=
 MAILJET_API_KEY=
 MAILJET_API_SECRET=
 ```

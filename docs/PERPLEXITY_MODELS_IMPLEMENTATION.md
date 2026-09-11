@@ -1,5 +1,7 @@
 # Implémentation des Modèles Perplexity et Scores Rang Compar:IA
 
+> **Note historique.** Ce document décrit un ancien chemin admin. Ne plus ajouter de colonnes dénormalisées sur `compl_ai_models` pour une source externe : mapping via `llm_model_source_ids` uniquement (`.cursor/rules/llm-models-hub.mdc`).
+
 ## Résumé
 Ce document décrit l'implémentation complète de l'ajout des 4 modèles Perplexity avec leurs métadonnées et le nouveau système de scoring "Rang Compar:IA".
 

@@ -1,20 +1,25 @@
 ---
-description: Règle d'intégration pour l'ingestion des documents AI Act via Mistral et Supabase PgVector.
-globs: ["app/api/webhooks/kb-update/**/*.ts", "lib/mistral/**/*.ts", "lib/supabase/**/*.ts"]
+description: État actuel de l'ingestion RAG AI Act (veille JSON Hermes → pgvector). Ne pas réintroduire le pipeline PDF/chunking dans le webhook.
+globs: ["app/api/webhooks/kb-update/**/*.ts", "lib/rag-ingestion.ts", "lib/ai-act-mistral.ts"]
 ---
-# Contexte
-Nous activons le RAG pour le nouvel assistant conversationnel. Le webhook d'ingestion reçoit des PDF depuis le Drive (via l'agent Hermes). Le parsing PDF est déjà validé. Il faut maintenant vectoriser avec Mistral.
+# RAG AI Act — ingestion live
 
-# Instructions pour Cursor
-1. **Nettoyage du Webhook** : Dans `app/api/webhooks/kb-update/route.ts`, retire le `early return` (coupe-circuit) qui bloquait l'exécution du RAG.
-2. **Client Mistral** : Utilise le SDK officiel `@mistralai/mistralai`. Instancie-le dans un fichier dédié (ex: `lib/mistral/client.ts`) avec `process.env.MISTRAL_API_KEY`.
-3. **Stratégie de Chunking** : Après l'extraction du texte du PDF, implémente un chunking sémantique (taille cible : ~1000 tokens, overlap : ~200 tokens) adapté aux textes de lois (privilégier la coupe aux sauts de ligne/paragraphes).
-4. **Génération des Embeddings** : 
-   - Modèle à utiliser : `mistral-embed`.
-   - Dimension attendue par la base de données : `1024` dimensions.
-   - Gère le batching si le document comporte beaucoup de chunks (les limites de l'API Mistral).
-5. **Insertion Supabase** : 
-   - Insère les métadonnées dans `ai_act_documents`.
-   - Insère les vecteurs dans `ai_act_chunks` (avec `embedding`, `content`, `document_id`).
-   - Assure-toi que l'opération est transactionnelle ou proprement gérée en cas d'erreur d'API.
-6. **Sécurité** : Maintiens la vérification de l'API Key sur la route POST.
+Le webhook `POST /api/webhooks/kb-update` ingère **un JSON de veille**, pas des PDF.
+
+## Chemin à maintenir (`route.ts`)
+
+1. Auth : header `x-api-key` === `INTERNAL_API_KEY` (absent → 500, invalide → 401).
+2. Routage RAG : `folder_name === '05_AI_Act_Docs'` **ou** `file_name === 'AI_Act_Index.json'`.
+3. Télécharger `AI_Act_Index.json` (`findFileIdByName` + `getFileFromDrive`).
+4. Valider `{ documents: [{ canonical_id, file_name, source_url, version_date, document_type, content }] }` avec Zod.
+5. Pour chaque document : hash SHA-256 de `content` ; skip si hash déjà en base ; sinon rotation N/N-1, insert `ai_act_documents` (`drive_file_id = 'veille-json-source'`), embed `mistral-embed` (1024) via `fetch` vers `https://api.mistral.ai/v1/embeddings`, un seul chunk (`chunk_index = 0`).
+6. Rollback si embed/chunk échoue : delete du nouveau document + réactivation N-1.
+
+## Interdits
+
+- Ne pas rebrancher `ingestAiActKnowledgeBase` / `lib/ai-act-mistral.ts` sur ce webhook sans changer l'index Drive (autre schéma : fichiers + `status`/`hash`).
+- Ne pas utiliser le SDK `@mistralai/mistralai` pour ce chemin : le code live fait un `fetch` HTTP.
+- Ne pas chunker le `content` de veille (un document = un chunk).
+- Ne pas appeler une RPC générique : consommation future = `match_ai_act_chunks` uniquement.
+
+Runbook : `docs/ai-act-rag.md`.

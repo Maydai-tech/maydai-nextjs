@@ -23,3 +23,5 @@ Le parcours de création de cas d'usage IA est un flux hybride mêlant IA conver
   2. Le frontend intercepte le nœud `E4.N7.Q1.2` et l'affiche sous forme de BOUTONS (pas de texte libre).
   3. Le backend (`lib/mistral/load-evaluation-context.ts`) lit la réponse et injecte dynamiquement une consigne de TON dans le System Prompt de Mistral (Jargon juridique pour Avocat/DPO, Vulgarisation extrême pour Profil métier/Dirigeant).
 - **Fin** : `PATH_COMPLETE` fige le `score_base` et génère le rapport en `Structured Output`.
+- **UI réelle** : `/usecases/new/setup-chat` rend `GuidedChat`. `SetupChatInterviewer` + tool `save_usecase_setup` existent mais ne sont pas branchés sur cette page.
+- **RAG** : le corpus `ai_act_chunks` n'est pas consommé par ces APIs. Ne pas inventer un appel à `match_ai_act_chunks` ici. Runbook : `docs/ai-act-rag.md`.
