@@ -1,5 +1,6 @@
 # Implémentation de l'Enrichissement des Modèles LLM
 
+> **Historique.** Ne plus ajouter d’identifiants de source sur `compl_ai_models`. Voir [llm-models-hub.md](./llm-models-hub.md). L’admin unifié est `app/(saas)/admin/bench-llms/`, plus `app/admin/compl-ai-scores/page.tsx`.
 > **Note historique.** Ce document décrit un ancien chemin admin. Ne plus ajouter de colonnes dénormalisées sur `compl_ai_models` pour une source externe : mapping via `llm_model_source_ids` uniquement (`.cursor/rules/llm-models-hub.mdc`).
 
 ## Résumé

@@ -33,4 +33,6 @@ Cette règle définit l'architecture du RAG juridique pour un futur chat explora
 - Si un `canonical_id` a déjà un document `is_active = true` : le passer à `is_active = false`, insérer le nouveau avec `is_active = true` et `supersedes_id` = id de l'ancien.
 - Échec embed / insert chunk : supprimer le nouveau document et réactiver le N-1.
 - Les chunks de N-1 restent en base mais ne sont plus retournés par `match_ai_act_chunks`.
+- Les requêtes sémantiques Mistral ne s'effectuent que sur les chunks dont `document.is_active = true`.
+- Runbook ops : `docs/ai-act-rag.md`. Aucune route chat n'appelle encore `match_ai_act_chunks`.
 - Runbook ops : `docs/ai-act-rag.md`.

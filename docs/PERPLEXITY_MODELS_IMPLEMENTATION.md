@@ -1,5 +1,6 @@
 # Implémentation des Modèles Perplexity et Scores Rang Compar:IA
 
+> **Historique.** Le hub canonique et le pivot `llm_model_source_ids` sont décrits dans [llm-models-hub.md](./llm-models-hub.md). Les chemins `app/api/admin/compl-ai/*` ci-dessous existent encore ; l’UI Bench unifiée passe par `/api/admin/bench-llms`.
 > **Note historique.** Ce document décrit un ancien chemin admin. Ne plus ajouter de colonnes dénormalisées sur `compl_ai_models` pour une source externe : mapping via `llm_model_source_ids` uniquement (`.cursor/rules/llm-models-hub.mdc`).
 
 ## Résumé

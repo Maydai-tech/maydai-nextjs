@@ -14,10 +14,13 @@ Use [lib/auth.tsx](mdc:lib/auth.tsx) for all client-side authentication:
 - Manages session refresh and error handling
 
 ### Server-Side Authentication
-Use [lib/api-auth.ts](mdc:lib/api-auth.ts) for API route protection:
-- `getAuthenticatedSupabaseClient()` verifies Bearer tokens
+Use [lib/api-auth.ts](mdc:lib/api-auth.ts) for user API route protection:
+- `getAuthenticatedSupabaseClient()` verifies Bearer tokens (RLS)
 - `useApiCall()` hook handles automatic token refresh and logout
-- All API routes must validate authentication before processing
+- Admin routes: `verifyAdminAuth` in [lib/admin-auth.ts](mdc:lib/admin-auth.ts) (`admin` or `super_admin`)
+- Crons: `Authorization: Bearer $CRON_SECRET` (Compar:IA accepte aussi `x-cron-secret`)
+- Webhooks Drive / SIREN: header `x-api-key: $INTERNAL_API_KEY`
+- Runbook: [docs/api-auth-security.md](mdc:docs/api-auth-security.md)
 
 ## API Route Structure
 
