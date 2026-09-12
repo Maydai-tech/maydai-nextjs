@@ -1,6 +1,6 @@
 ---
 description: Encadre les flux de données asynchrones provenant de Google Drive (fichiers générés par les agents Hermes) et leur intégration dans MaydAI.
-globs: "app/api/webhooks/**/*.ts", "app/api/cron/**/*.ts", "lib/google-drive.ts", "lib/comparia/**/*.ts", "lib/rag-ingestion.ts"
+globs: "app/api/webhooks/**/*.ts", "app/api/cron/**/*.ts", "app/api/admin/llm-control-tower-sync/**/*.ts", "app/api/admin/llm-system-cards-import/**/*.ts", "lib/google-drive.ts", "lib/comparia/**/*.ts", "lib/rag-ingestion.ts", "lib/bench-llm/control-tower-csv.ts", "lib/bench-llm/system-cards-import.ts"
 alwaysApply: false
 ---
 # Architecture Google Drive & Hermes Sync
@@ -20,6 +20,7 @@ alwaysApply: false
 ## 3. Traitement des Formats Spécifiques
 - **ComparIA (Données Tabulaires)** : Utiliser `csv-parse` pour lire et normaliser le classement issu de Drive.
 - **Veille AI Act (GRC)** : Cibler exclusivement le fichier `AI_Act_Index.json` (déclenché si `folder_name === '05_AI_Act_Docs'` ou `file_name === 'AI_Act_Index.json'`). Valider `{ documents: [...] }` via Zod dans `route.ts` (`content` déjà dans le JSON). Ne pas rappeler `ingestAiActKnowledgeBase`. Runbook : `docs/ai-act-rag.md`.
+- **Tour de contrôle / System Cards** : l’export CSV (`POST /api/admin/llm-control-tower-sync`) et l’import Sheet (`POST /api/admin/llm-system-cards-import`) sont des artefacts Drive **distincts**. L’import upsert `llm_system_cards` (Markdown) et **n’écrit pas** les piliers. Runbook : `docs/llm-system-cards.md`. Ne pas dénormaliser sur `compl_ai_models`.
 
 ## 4. Cache & Exécution
 - Les Route Handlers chargés de la synchronisation (ex: `app/api/webhooks/kb-update/route.ts`) doivent utiliser `export const dynamic = 'force-dynamic'` pour garantir que la requête vers Drive contourne le cache Next.js et récupère toujours le fichier le plus récent.
