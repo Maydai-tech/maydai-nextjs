@@ -13,27 +13,21 @@ Index pour scanner les runbooks et références. Les règles Cursor (`.cursor/ru
 
 Chat IA (3 étapes, `/api/chat/*`) : règle `.cursor/rules/mistral-conversational-flow.mdc`. L’UI réelle de `/usecases/new/setup-chat` est `GuidedChat`, pas `SetupChatInterviewer`.
 
-## Hub LLM, RAG, webhooks
+## Hub LLM, System Cards, RAG
 
 | Document | Sujet |
 |----------|--------|
 | [llm-models-hub.md](./llm-models-hub.md) | `compl_ai_models` + pivot `llm_model_source_ids`, crons, Compar:IA |
-| [ai-act-rag.md](./ai-act-rag.md) | Ingestion Drive `05_AI_Act_Docs` → pgvector (pas encore consommé par le chat) |
+| [llm-system-cards.md](./llm-system-cards.md) | Fiches GPAI, Tour de contrôle Drive, bonus score, PDF |
 | [ai-act-rag.md](./ai-act-rag.md) | Ingestion veille `AI_Act_Index.json` → pgvector (pas encore consommé par le chat) |
 
-Hub canonique LLM (`compl_ai_models` + pivot `llm_model_source_ids`) : `.cursor/rules/llm-models-hub.mdc`. Sync Drive Hermes : `.cursor/rules/hermes-drive-sync.mdc`.
+Hub canonique LLM : `.cursor/rules/llm-models-hub.mdc`. Sync Drive Hermes : `.cursor/rules/hermes-drive-sync.mdc`.
 
 ## Auth, ops, setup
 
 | Document | Sujet |
 |----------|--------|
 | [api-auth-security.md](./api-auth-security.md) | Bearer, `verifyAdminAuth`, crons, webhooks, invitations |
-| [guide-installation-mcp-supabase.md](./guide-installation-mcp-supabase.md) | MCP Supabase OVH |
-| [supabase-ovh-cli.md](./supabase-ovh-cli.md) | CLI Supabase self-hosted |
-
-## Notes historiques (ne plus suivre pour de nouvelles colonnes)
-
-Les implémentations Perplexity / notes-variantes décrivent d’anciens chemins admin. Le hub canonique est [llm-models-hub.md](./llm-models-hub.md).
 | [guide-installation-mcp-supabase.md](./guide-installation-mcp-supabase.md) | MCP Supabase OVH |
 | [supabase-ovh-cli.md](./supabase-ovh-cli.md) | CLI Supabase self-hosted |
 

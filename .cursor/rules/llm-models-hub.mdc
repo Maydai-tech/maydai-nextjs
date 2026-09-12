@@ -39,3 +39,4 @@ values ('…', 'comparia', 'gpt-4o', 'exact');
 - Sync LLM Stats / EcoLogits / Compar:IA : écrire le pivot, pas `compl_ai_models.llm_stats_id`.
 - Dashboard admin : badges et overlay via `llm_model_source_ids`, une ligne par fiche canonique.
 - Une source orpheline n’est pas une raison de dénormaliser le hub.
+- System Cards : table `llm_system_cards` (`model_identifier` = slug). Pas une colonne sur `compl_ai_models`, pas une `source` du pivot. Runbook : `docs/llm-system-cards.md`.
