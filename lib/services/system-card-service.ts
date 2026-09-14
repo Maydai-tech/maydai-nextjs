@@ -1,5 +1,8 @@
 import { getServiceRoleClient } from '@/lib/maydai-calculator'
-import { syncTodoActionToResponse } from '@/lib/todo-action-sync'
+import {
+  reverseTodoActionResponse,
+  syncTodoActionToResponse,
+} from '@/lib/todo-action-sync'
 import { calculateAndPersistUseCaseScore } from '@/lib/usecase-score-service'
 import type { DocStatus } from '@/lib/validations/dossier-doc-type'
 import {
@@ -162,6 +165,10 @@ export async function updateDossierPillarCompletion(params: {
 
     const isPrefillDone = applyMaydaiPrefill ?? existingDoc?.maydai_prefill_applied ?? false
     const isUserDone = applyUserCompletion ?? existingDoc?.user_completion_applied ?? false
+    const previousStatus = resolveDossierStatusFromPillarFlags(
+      Boolean(existingDoc?.maydai_prefill_applied),
+      Boolean(existingDoc?.user_completion_applied)
+    )
     const status = resolveDossierStatusFromPillarFlags(Boolean(isPrefillDone), Boolean(isUserDone))
 
     const payload = {
@@ -187,6 +194,15 @@ export async function updateDossierPillarCompletion(params: {
         await syncTodoActionToResponse(supabase, usecaseId, docType, 'system-card')
       } catch (syncError) {
         console.error('[SystemCardService] syncTodoActionToResponse failed:', syncError)
+      }
+    } else if (previousStatus === 'complete') {
+      // Même contrat que POST /api/dossiers/[usecaseId]/[docType] : retirer
+      // un pilier 100 % doit restaurer la question déclarative (sinon le
+      // score reste gonflé alors que l’UI affiche « incomplet »).
+      try {
+        await reverseTodoActionResponse(supabase, usecaseId, docType, 'system-card')
+      } catch (reverseError) {
+        console.error('[SystemCardService] reverseTodoActionResponse failed:', reverseError)
       }
     }
 
