@@ -58,7 +58,7 @@ test.describe.skip('Moteur de calcul - Élimination AI Act', () => {
 
       const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
         email: testData.email,
-        password: 'TestPassword123!',
+        password: testData.password,
       })
 
       expect(authError).toBeNull()

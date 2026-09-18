@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from '../auth-helper'
+import { authenticateUser, generateSecureTestPassword } from '../auth-helper'
 import { cleanupTestData } from '../_helpers/db-cleanup'
 
 /**
@@ -10,8 +10,6 @@ import { cleanupTestData } from '../_helpers/db-cleanup'
  * - Type de registre : select sans `required` (recommandé de le renseigner pour un cas d’usage réaliste).
  * - CompanySectorSelector : `required={false}` sur la page registre ; on remplit tout de même secteur + sous-catégorie pour fiabiliser l’appel POST /api/companies (industry résolue ou payload explicite).
  */
-
-const TEST_PASSWORD = 'TestPassword123!'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -23,6 +21,7 @@ test.describe.skip('Création de registre', () => {
   let testUserId: string | null = null
   let initialCompanyId: string | null = null
   let createdRegistryCompanyId: string | null = null
+  const testUserPassword = generateSecureTestPassword()
 
   function getAdminClient() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -39,7 +38,7 @@ test.describe.skip('Création de registre', () => {
     const supabase = getAdminClient()
     const { data, error } = await supabase.auth.admin.createUser({
       email: testUserEmail,
-      password: TEST_PASSWORD,
+      password: testUserPassword,
       email_confirm: true,
     })
     if (error || !data.user) {
@@ -82,7 +81,7 @@ test.describe.skip('Création de registre', () => {
   })
 
   test.beforeEach(async ({ page }) => {
-    await authenticateUser(page, testUserEmail)
+    await authenticateUser(page, testUserEmail, testUserPassword)
   })
 
   // TODO: Investigate 2.0m timeout on registry creation before unskipping.

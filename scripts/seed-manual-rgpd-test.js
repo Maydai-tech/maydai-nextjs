@@ -2,7 +2,7 @@
  * Seed manuel pour tester la suppression RGPD en cascade (storage cleanup).
  *
  * Crée, sur la base Supabase configurée dans .env.local :
- *   - un utilisateur auth (email e2e-*@maydai-test.com, mdp TestPassword123!)
+ *   - un utilisateur auth (email e2e-*@maydai-test.com, mot de passe généré dynamiquement)
  *   - une company + une "registry" company (préfixées E2E), liens owner
  *   - un profil
  *   - un use case draft rattaché à la registry company
@@ -23,8 +23,12 @@
 const path = require('path')
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env.local') })
 const { createClient } = require('@supabase/supabase-js')
+const crypto = require('crypto')
 
-const PASSWORD = 'TestPassword123!'
+function generateSecureTestPassword() {
+  return crypto.randomBytes(12).toString('hex') + 'A1!'
+}
+
 const DOC_TYPE = 'technical_documentation'
 
 function admin() {
@@ -92,11 +96,12 @@ async function cleanup(supabase, userId) {
 async function seed(supabase, emailOverride) {
   const ts = Date.now()
   const email = emailOverride || `e2e-rgpd-manual-${ts}@maydai-test.com`
+  const password = generateSecureTestPassword()
 
   // 1. Utilisateur auth
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email,
-    password: PASSWORD,
+    password,
     email_confirm: true,
   })
   if (authError) throw new Error(`createUser: ${authError.message}`)
@@ -174,7 +179,7 @@ async function seed(supabase, emailOverride) {
     .select('id').single()
   if (docErr) throw new Error(`dossier_documents: ${docErr.message}`)
 
-  return { email, userId, companyId, registryId, usecaseId, usecaseName, dossierId, docId: doc.id, storagePath, fileUrl }
+  return { email, password, userId, companyId, registryId, usecaseId, usecaseName, dossierId, docId: doc.id, storagePath, fileUrl }
 }
 
 async function main() {
@@ -207,7 +212,7 @@ async function main() {
   console.log('  Email :', r.email)
   console.log('  Code  :', otp, '(valable ~1h)')
   console.log('  Lien  :', actionLink)
-  console.log('  (mot de passe de secours :', PASSWORD + ')')
+  console.log('  (mot de passe de secours :', r.password + ')')
   console.log('\n── Entités ───────────────────────────────')
   console.log('  user_id      :', r.userId)
   console.log('  company_id   :', r.companyId, '(registre unique)')
