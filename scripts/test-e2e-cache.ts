@@ -14,12 +14,12 @@ import { createServerClient } from '@supabase/ssr'
 import * as dotenv from 'dotenv'
 import * as path from 'path'
 import { computeProfileCompletenessScoreFromRow } from '../lib/services/profileScoreService'
+import { generateSecureTestPassword } from '../e2e/auth-helper'
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
 
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
 const TEST_EMAIL = (process.argv[2] ?? 't.chippeaux+139@gmail.com').trim()
-const TEST_PASSWORD = 'TestPassword123!'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -141,9 +141,11 @@ async function main() {
     console.log('✓ Aucun compte préexistant')
   }
 
+  const password = generateSecureTestPassword()
+
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email: TEST_EMAIL,
-    password: TEST_PASSWORD,
+    password,
     email_confirm: true,
   })
   if (createError || !created.user) {
@@ -154,7 +156,7 @@ async function main() {
 
   const { data: signIn, error: signInError } = await admin.auth.signInWithPassword({
     email: TEST_EMAIL,
-    password: TEST_PASSWORD,
+    password,
   })
   if (signInError || !signIn.session) {
     throw new Error(`signIn: ${signInError?.message ?? 'no session'}`)

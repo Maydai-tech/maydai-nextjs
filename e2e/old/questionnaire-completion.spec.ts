@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { authenticateUser } from '../auth-helper'
+import { authenticateUser, generateSecureTestPassword } from '../auth-helper'
 
 /**
  * E2E Test: Questionnaire Completion and Score Calculation
@@ -21,6 +21,7 @@ interface TestData {
   registryId: string
   usecaseId: string
   email: string
+  password: string
 }
 
 // Question answers for happy path (low risk, maximum score)
@@ -68,11 +69,12 @@ function getAdminClient(): SupabaseClient {
 async function createTestData(testId: string): Promise<TestData> {
   const supabase = getAdminClient()
   const email = `e2e-quest-${testId}-${Date.now()}@maydai-test.com`
+  const password = generateSecureTestPassword()
 
   // Create auth user
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email,
-    password: 'TestPassword123!',
+    password,
     email_confirm: true,
   })
 
@@ -176,7 +178,7 @@ async function createTestData(testId: string): Promise<TestData> {
 
   console.log(`✅ Test data created: ${email} (usecase: ${usecaseId})`)
 
-  return { userId, companyId, registryId, usecaseId, email }
+  return { userId, companyId, registryId, usecaseId, email, password }
 }
 
 /**
@@ -427,7 +429,7 @@ async function completeQuestionnaire(page: Page) {
  * Authenticate and navigate to evaluation page
  */
 async function authenticateAndNavigate(page: Page, testData: TestData): Promise<void> {
-  await authenticateUser(page, testData.email)
+  await authenticateUser(page, testData.email, testData.password)
 
   // Navigate to evaluation page with retry
   let navigationSuccess = false

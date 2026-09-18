@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { assertE2eKillSwitchNotProductionSupabase } from './_helpers/kill-switch-6-6'
 import { getAdminClient } from './_helpers/supabase-admin'
-import { authenticateUser } from './auth-helper'
+import { authenticateUser, generateSecureTestPassword } from './auth-helper'
 import {
   assertEventBeforeSpaNavigation,
   assertOfficialGtmEnabledOnHome,
@@ -12,10 +12,10 @@ import {
   waitForDataLayerEvent,
 } from './_helpers/tracking-instrumentation'
 
-const TEST_PASSWORD = 'TestPassword123!'
 const LOGIN_TEST_EMAIL = `e2e-tracking-login-${Date.now()}@maydai-test.com`
 const REGISTRY_TEST_EMAIL = `e2e-tracking-registry-${Date.now()}@maydai-test.com`
 const MOCK_REGISTRY_ID = 'e2e-tracking-registry-id'
+const registryTestPassword = generateSecureTestPassword()
 
 test.describe.configure({ mode: 'serial' })
 
@@ -54,7 +54,7 @@ test.describe('GTM tracking — Phases 1 & 2 (règle 6.6)', { tag: ['@tracking',
       const admin = getAdminClient()
       const { error } = await admin.auth.admin.createUser({
         email: REGISTRY_TEST_EMAIL,
-        password: TEST_PASSWORD,
+        password: registryTestPassword,
         email_confirm: true,
       })
       if (error) {
@@ -144,7 +144,7 @@ test.describe('GTM tracking — Phases 1 & 2 (règle 6.6)', { tag: ['@tracking',
     }) => {
       test.setTimeout(90_000)
       await installDataLayerTrace(page)
-      await authenticateUser(page, REGISTRY_TEST_EMAIL)
+      await authenticateUser(page, REGISTRY_TEST_EMAIL, registryTestPassword)
 
       await page.route('**/api/companies', async (route) => {
         if (route.request().method() !== 'POST') {

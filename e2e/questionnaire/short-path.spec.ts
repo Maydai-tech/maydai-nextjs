@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from '../auth-helper'
+import { authenticateUser, generateSecureTestPassword } from '../auth-helper'
 import { cleanupTestData } from '../_helpers/db-cleanup'
 import { seedV2Usecase } from '../_helpers/seed-usecase'
 import { CompleteSignupSchema } from '@/lib/validations/signup'
@@ -11,8 +11,6 @@ import { ChecklistArraySchema } from '@/lib/validations/usecases'
  * Une réponse `usecase_responses` minimale est insérée en setup : l’API `calculate-score`
  * exige au moins une entrée (réponses et/ou checklists) sans quoi elle répond 404.
  */
-
-const TEST_PASSWORD = 'TestPassword123!'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -39,13 +37,14 @@ test.describe.skip('Questionnaire V3 — parcours court (scoring)', () => {
   let testUserId: string | null = null
   let testCompanyId: string | null = null
   let testUsecaseId: string | null = null
+  const testUserPassword = generateSecureTestPassword()
 
   test.beforeAll(async () => {
     const admin = getAdminClient()
 
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
       email: testUserEmail,
-      password: TEST_PASSWORD,
+      password: testUserPassword,
       email_confirm: true,
     })
     if (authError || !authData.user) {
@@ -137,7 +136,7 @@ test.describe.skip('Questionnaire V3 — parcours court (scoring)', () => {
   })
 
   test.beforeEach(async ({ page }) => {
-    await authenticateUser(page, testUserEmail)
+    await authenticateUser(page, testUserEmail, testUserPassword)
   })
 
   // TODO: Update assertions to match the new AI Act scoring math (0.614 scaling factor) before unskipping.

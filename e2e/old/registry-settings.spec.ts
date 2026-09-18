@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from '../auth-helper'
+import { authenticateUser, generateSecureTestPassword } from '../auth-helper'
 
 /**
  * E2E Test: Registry Settings (Modification & Deletion)
@@ -12,7 +12,7 @@ import { authenticateUser } from '../auth-helper'
 // Test user data
 const TEST_USER = {
   email: `e2e-settings-${Date.now()}@maydai-test.com`,
-  password: 'TestPassword123!',
+  password: generateSecureTestPassword(),
   firstName: 'E2E',
   lastName: 'SettingsTest',
   companyName: 'E2E Settings Test Company',
@@ -195,7 +195,7 @@ test.describe('Registry Settings', () => {
   test('should modify registry information', async ({ page }) => {
     const supabase = getAdminClient()
 
-    await authenticateUser(page, TEST_USER.email)
+    await authenticateUser(page, TEST_USER.email, TEST_USER.password)
 
     // Navigate to registry settings page
     await page.goto(`/dashboard/${testRegistryId}/settings`)
@@ -253,7 +253,7 @@ test.describe('Registry Settings', () => {
   })
 
   test('should delete registry', async ({ page }) => {
-    await authenticateUser(page, TEST_USER.email)
+    await authenticateUser(page, TEST_USER.email, TEST_USER.password)
 
     // Navigate to registry settings page
     await page.goto(`/dashboard/${testRegistryId}/settings`)

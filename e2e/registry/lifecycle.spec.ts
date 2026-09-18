@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { RegistrySchema } from '@/lib/validations/registry'
 import { getAdminClient } from '../_helpers/supabase-admin'
-
-const TEST_PASSWORD = 'TestPassword123!'
+import { generateSecureTestPassword } from '../auth-helper'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -47,10 +46,11 @@ test.describe.skip('Registre — cycle de vie API', () => {
 
   test.beforeAll(async () => {
     const adminClient = getAdminClient()
+    const password = generateSecureTestPassword()
 
     const { data: createUserData, error: createUserError } = await adminClient.auth.admin.createUser({
       email: testUserEmail,
-      password: TEST_PASSWORD,
+      password,
       email_confirm: true,
     })
 
@@ -60,7 +60,7 @@ test.describe.skip('Registre — cycle de vie API', () => {
 
     const { data: signInData, error: signInError } = await adminClient.auth.signInWithPassword({
       email: testUserEmail,
-      password: TEST_PASSWORD,
+      password,
     })
 
     if (signInError || !signInData.session?.access_token || !signInData.user) {
