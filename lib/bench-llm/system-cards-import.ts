@@ -269,15 +269,31 @@ export function decideCardVersionOverwrite(params: {
   return warning ? { action: 'upsert', warning } : { action: 'upsert' }
 }
 
+function monthFirstOf(year: string, monthToken: string): string | null {
+  const month = monthToken.padStart(2, '0')
+  const monthNum = Number(month)
+  if (monthNum < 1 || monthNum > 12) return null
+  return `${year}-${month}-01`
+}
+
 export function normalizeCardMonth(label: string | null | undefined): string | null {
   const value = (label ?? '').trim()
   if (!value) return null
 
   const iso = value.match(/(\d{4})[-_/](\d{1,2}|XX|xx|\?\?)(?:[-_/](\d{2}|XX|xx|\?\?))?/i)
   if (iso?.[1] && iso[2] && /^\d{1,2}$/.test(iso[2])) {
-    const month = iso[2].padStart(2, '0')
-    const monthNum = Number(month)
-    if (monthNum >= 1 && monthNum <= 12) return `${iso[1]}-${month}-01`
+    const fromIso = monthFirstOf(iso[1], iso[2])
+    if (fromIso) return fromIso
+  }
+
+  const dmy = value.match(/(\d{1,2}|XX|xx|\?\?)[-_/](\d{1,2})[-_/](\d{4})/i)
+  if (dmy?.[1] && dmy[2] && dmy[3]) {
+    const dayNum = Number(dmy[1])
+    const dayOk = isUnknownDayToken(dmy[1]) || (dayNum >= 1 && dayNum <= 31)
+    if (dayOk) {
+      const fromDmy = monthFirstOf(dmy[3], dmy[2])
+      if (fromDmy) return fromDmy
+    }
   }
 
   const folded = foldHeader(value).replace(/^(?:xx|\?\?|\d{1,2})\s+/, '')
@@ -291,7 +307,10 @@ function sanitizeCardDateLabel(value: string): string {
   return value.replace(/^[*_\s\u00a0]+|[*_\s\u00a0]+$/g, '')
 }
 
-export function extractCardDateFromMarkdown(markdown: string): {
+export function extractCardDateFromMarkdown(
+  markdown: string,
+  cardVersionDate?: string | null,
+): {
   card_date_label: string | null
   card_month: string | null
 } {
@@ -299,13 +318,28 @@ export function extractCardDateFromMarkdown(markdown: string): {
   const card_date_label = sanitizeCardDateLabel(lineMatch?.[1] ?? '') || null
   return {
     card_date_label,
-    card_month: normalizeCardMonth(card_date_label),
+    card_month: resolveCardMonth(card_date_label, cardVersionDate),
   }
 }
 
 export function toDateOnly(value: string | null | undefined): string | null {
   const match = String(value ?? '').match(/^(\d{4}-\d{2}-\d{2})/)
   return match?.[1] ?? null
+}
+
+export function cardMonthFromVersionDate(
+  versionDate: string | null | undefined,
+): string | null {
+  const date = toDateOnly(versionDate)
+  if (!date) return null
+  return monthFirstOf(date.slice(0, 4), date.slice(5, 7))
+}
+
+export function resolveCardMonth(
+  cardDateLabel: string | null | undefined,
+  cardVersionDate?: string | null,
+): string | null {
+  return normalizeCardMonth(cardDateLabel) ?? cardMonthFromVersionDate(cardVersionDate)
 }
 
 export function olderVersionIgnoredMessage(baseDate: string, fileDate: string): string {
@@ -666,7 +700,11 @@ export async function importSystemCardsFromControlTower(
       const parsedVersion = parseCardVersionDateFromFileName(sourceFileName)
       const card_version_date = parsedVersion.card_version_date
       const card_version_date_is_approx = parsedVersion.card_version_date_is_approx
-      const { card_date_label, card_month } = extractCardDateFromMarkdown(markdown)
+      const { card_date_label, card_month } = extractCardDateFromMarkdown(
+        markdown,
+        card_version_date,
+      )
+      const monthFromLabel = normalizeCardMonth(card_date_label)
       const versionPrecision = cardVersionDatePrecision(
         card_version_date,
         card_version_date_is_approx,
@@ -689,7 +727,11 @@ export async function importSystemCardsFromControlTower(
         },
         card_month: {
           value: card_month,
-          source: card_month ? 'Date de la fiche' : null,
+          source: monthFromLabel
+            ? 'Date de la fiche'
+            : card_month
+              ? 'nom Drive'
+              : null,
         },
       })
 
