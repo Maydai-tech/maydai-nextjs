@@ -245,28 +245,6 @@ jobs:
             test-results.json
           retention-days: 7
 
-      - name: Deploy report to OVH server
-        if: always() && steps.e2e.outcome != 'skipped'
-        env:
-          OVH_SSH_KEY: ${{ secrets.OVH_SSH_KEY }}
-        run: |
-          if [ -z "$OVH_SSH_KEY" ]; then
-            echo "OVH_SSH_KEY is not configured; skipping report deployment."
-            exit 0
-          fi
-
-          if [ ! -d playwright-report ]; then
-            echo "playwright-report directory not found; skipping report deployment."
-            exit 0
-          fi
-
-          mkdir -p ~/.ssh
-          echo "$OVH_SSH_KEY" | base64 -d > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H 57.130.47.254 >> ~/.ssh/known_hosts
-          ssh -i ~/.ssh/id_ed25519 ubuntu@57.130.47.254 "mkdir -p /var/www/e2e-reports/${{ github.run_id }}"
-          rsync -avz -e "ssh -i ~/.ssh/id_ed25519" --delete ./playwright-report/ ubuntu@57.130.47.254:/var/www/e2e-reports/${{ github.run_id }}/
-
       - name: Build Slack success payload
         if: always() && steps.e2e.outcome == 'success'
         env:
@@ -282,7 +260,6 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          REPORT_URL: http://57.130.47.254:8080/${{ github.run_id }}/
         run: |
           PR_LINE="—"
           if [ -n "$PR_NUMBER" ]; then PR_LINE="#${PR_NUMBER} ${PR_TITLE}"; fi
@@ -298,7 +275,6 @@ jobs:
             --arg skipped "$SKIPPED" \
             --arg test_list "$TEST_LIST" \
             --arg run_url "$RUN_URL" \
-            --arg report_url "$REPORT_URL" \
             '{
               "blocks": [
                 {"type": "header", "text": {"type": "plain_text", "text": ("✅ E2E [" + $regime + "] Passed"), "emoji": true}},
@@ -317,8 +293,7 @@ jobs:
                 {"type": "section", "text": {"type": "mrkdwn", "text": ("*Résultats:* ✅ " + $passed + " passed | ⚠️ " + $flaky + " flaky | ⏭️ " + $skipped + " skipped")}},
                 {"type": "section", "text": {"type": "mrkdwn", "text": ("*Tests:*\n```" + $test_list + "```")}},
                 {"type": "actions", "elements": [
-                  {"type": "button", "text": {"type": "plain_text", "text": "View Run"}, "url": $run_url},
-                  {"type": "button", "text": {"type": "plain_text", "text": "View Report"}, "url": $report_url}
+                  {"type": "button", "text": {"type": "plain_text", "text": "View Run"}, "url": $run_url}
                 ]}
               ]
             }' > slack-success-payload.json
@@ -349,7 +324,6 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          REPORT_URL: http://57.130.47.254:8080/${{ github.run_id }}/
         run: |
           PR_LINE="—"
           if [ -n "$PR_NUMBER" ]; then PR_LINE="#${PR_NUMBER} ${PR_TITLE}"; fi
@@ -370,7 +344,6 @@ jobs:
             --arg error_details "$CLEAN_ERRORS" \
             --arg local_cmd "$LOCAL_CMD" \
             --arg run_url "$RUN_URL" \
-            --arg report_url "$REPORT_URL" \
             '{
               "blocks": [
                 {"type": "section", "text": {"type": "mrkdwn", "text": "<!here>"}},
@@ -394,8 +367,7 @@ jobs:
                 {"type": "divider"},
                 {"type": "section", "text": {"type": "mrkdwn", "text": ("🔍 *Erreurs:*\n```" + $error_details + "```")}},
                 {"type": "actions", "elements": [
-                  {"type": "button", "text": {"type": "plain_text", "text": "GitHub Actions"}, "url": $run_url},
-                  {"type": "button", "text": {"type": "plain_text", "text": "Rapport HTML"}, "style": "danger", "url": $report_url}
+                  {"type": "button", "text": {"type": "plain_text", "text": "GitHub Actions"}, "url": $run_url}
                 ]}
               ]
             }' > slack-payload.json

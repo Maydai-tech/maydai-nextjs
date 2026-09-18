@@ -46,9 +46,11 @@ import {
   formatStatutSupabaseValue,
   isReadyForImport,
   missingDriveFileMessage,
+  normalizeCardMonth,
   olderVersionIgnoredMessage,
   parseCardVersionDateFromFileName,
   parseControlTowerCsv,
+  resolveCardMonth,
   resolveDriveMarkdownRef,
   importSystemCardsFromControlTower,
   writeControlTowerStatusesToSheet,
@@ -186,6 +188,39 @@ describe('system cards import helpers', () => {
     })
     expect(extractCardDateFromMarkdown('Date de la fiche : 2025-XX-10')).toEqual({
       card_date_label: '2025-XX-10',
+      card_month: null,
+    })
+  })
+
+  test('normalizes JJ/MM/AAAA labels to the first of that month', () => {
+    expect(normalizeCardMonth('19/08/2026')).toBe('2026-08-01')
+    expect(normalizeCardMonth('1/8/2026')).toBe('2026-08-01')
+    expect(normalizeCardMonth('19-08-2026')).toBe('2026-08-01')
+    expect(normalizeCardMonth('XX/10/2025')).toBe('2025-10-01')
+    expect(normalizeCardMonth('32/08/2026')).toBeNull()
+    expect(normalizeCardMonth('19/13/2026')).toBeNull()
+    expect(extractCardDateFromMarkdown('**Date de la fiche :** 19/08/2026')).toEqual({
+      card_date_label: '19/08/2026',
+      card_month: '2026-08-01',
+    })
+  })
+
+  test('falls back card_month to the first of card_version_date month', () => {
+    expect(resolveCardMonth(null, '2024-06-20')).toBe('2024-06-01')
+    expect(resolveCardMonth('illisible', '2025-10-01')).toBe('2025-10-01')
+    expect(resolveCardMonth('illisible', null)).toBeNull()
+    expect(resolveCardMonth('2025-XX-10', '2025-10-01')).toBe('2025-10-01')
+    expect(resolveCardMonth('19/08/2026', '2024-06-20')).toBe('2026-08-01')
+    expect(extractCardDateFromMarkdown('# Sans date', '2024-06-20')).toEqual({
+      card_date_label: null,
+      card_month: '2024-06-01',
+    })
+    expect(extractCardDateFromMarkdown('Date de la fiche : 2025-XX-10', '2024-06-20')).toEqual({
+      card_date_label: '2025-XX-10',
+      card_month: '2024-06-01',
+    })
+    expect(extractCardDateFromMarkdown('# Sans date', null)).toEqual({
+      card_date_label: null,
       card_month: null,
     })
   })
@@ -356,6 +391,48 @@ describe('importSystemCardsFromControlTower', () => {
     )
   })
 
+  test('prefers JJ/MM/AAAA card_date_label over the file-name month', async () => {
+    mockGetDriveFileText.mockResolvedValue({
+      content: '# Fiche\n**Date de la fiche :** 19/08/2026\n',
+      name: 'Claude_3.7_2024-06-20.md',
+    })
+    const upsert = jest.fn(async () => ({ error: null }))
+    const maybeSingle = jest.fn(async () => ({
+      data: {
+        slug: 'claude-3-7-sonnet',
+        model_name: 'Claude 3.7 Sonnet',
+        model_provider: 'Anthropic',
+      },
+      error: null,
+    }))
+
+    await importSystemCardsFromControlTower({
+      supabase: {
+        from: jest.fn((table: string) => {
+          if (table === 'compl_ai_models') {
+            return { select: () => ({ eq: () => ({ maybeSingle }) }) }
+          }
+          return cardsTable(upsert)
+        }),
+      } as never,
+      downloadControlTowerCsv: async () =>
+        [
+          'ID Supabase,Nom du LLM (Standard Supabase),Lien du fichier Markdown généré,Prêt pour import',
+          'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa,Claude 3.7 Sonnet,https://drive.google.com/file/d/1_c_nWKfM6Yfj9cf4Mb_f6Sv79mHIyVM_/view,Oui',
+        ].join('\n'),
+      downloadMarkdown: async () => '# unused',
+    })
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        card_date_label: '19/08/2026',
+        card_version_date: '2024-06-20',
+        card_month: '2026-08-01',
+      }),
+      { onConflict: 'model_identifier' },
+    )
+  })
+
   test('upserts llm_system_cards for ready rows and collects per-row errors', async () => {
     const upsert = jest.fn(async () => ({ error: null }))
     const maybeSingle = jest.fn(async () => ({
@@ -401,6 +478,7 @@ describe('importSystemCardsFromControlTower', () => {
         source_markdown: '# Fiche Claude',
         source_file_name: MARKDOWN_FILE_NAME,
         card_version_date: '2024-06-20',
+        card_month: '2024-06-01',
       }),
       { onConflict: 'model_identifier' },
     )
