@@ -3,6 +3,7 @@
 const mockCalculateAndPersist = jest.fn()
 const mockGetServiceRoleClient = jest.fn()
 const mockSyncTodoActionToResponse = jest.fn()
+const mockReverseTodoActionResponse = jest.fn()
 
 jest.mock('@/lib/maydai-calculator', () => ({
   getServiceRoleClient: () => mockGetServiceRoleClient(),
@@ -14,6 +15,7 @@ jest.mock('@/lib/usecase-score-service', () => ({
 
 jest.mock('@/lib/todo-action-sync', () => ({
   syncTodoActionToResponse: (...args: unknown[]) => mockSyncTodoActionToResponse(...args),
+  reverseTodoActionResponse: (...args: unknown[]) => mockReverseTodoActionResponse(...args),
 }))
 
 import {
@@ -158,6 +160,13 @@ describe('updateDossierPillarCompletion', () => {
       previousValue: 'E5.N9.Q4.B',
       expectedPointsGained: 5,
     })
+    mockReverseTodoActionResponse.mockResolvedValue({
+      changed: true,
+      shouldRecalculate: true,
+      previousValue: 'E5.N9.Q4.A',
+      expectedPointsLost: 5,
+      reason: 'Documentation technique reintialisee',
+    })
   })
 
   test('upsert sur le doc_type canonique et statut complete à 100 %', async () => {
@@ -271,6 +280,64 @@ describe('updateDossierPillarCompletion', () => {
     })
 
     expect(mockSyncTodoActionToResponse).not.toHaveBeenCalled()
+    expect(mockReverseTodoActionResponse).not.toHaveBeenCalled()
     expect(mockCalculateAndPersist).toHaveBeenCalled()
+  })
+
+  test('restaure la question déclarative au rollback d’un pilier 100 %', async () => {
+    const docs = createDocumentsQuery({
+      existing: {
+        system_card_pillar_id: PILLAR_ID,
+        maydai_prefill_applied: true,
+        user_completion_applied: true,
+      },
+    })
+    mockGetServiceRoleClient.mockReturnValue({ from: jest.fn(() => docs) })
+
+    const result = await updateDossierPillarCompletion({
+      usecaseId: USECASE_ID,
+      dossierId: DOSSIER_ID,
+      pillarCode: 'doc_technique',
+      applyMaydaiPrefill: false,
+    })
+
+    expect(result.newStatus).toBe('incomplete')
+    expect(docs.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maydai_prefill_applied: false,
+        user_completion_applied: true,
+        status: 'incomplete',
+      }),
+      expect.anything()
+    )
+    expect(mockSyncTodoActionToResponse).not.toHaveBeenCalled()
+    expect(mockReverseTodoActionResponse).toHaveBeenCalledWith(
+      expect.anything(),
+      USECASE_ID,
+      'technical_documentation',
+      'system-card'
+    )
+    expect(mockCalculateAndPersist).toHaveBeenCalled()
+  })
+
+  test('ne restaure pas la question si le pilier n’était pas à 100 %', async () => {
+    const docs = createDocumentsQuery({
+      existing: {
+        system_card_pillar_id: PILLAR_ID,
+        maydai_prefill_applied: true,
+        user_completion_applied: false,
+      },
+    })
+    mockGetServiceRoleClient.mockReturnValue({ from: jest.fn(() => docs) })
+
+    await updateDossierPillarCompletion({
+      usecaseId: USECASE_ID,
+      dossierId: DOSSIER_ID,
+      pillarCode: 'doc_technique',
+      applyMaydaiPrefill: false,
+    })
+
+    expect(mockReverseTodoActionResponse).not.toHaveBeenCalled()
+    expect(mockSyncTodoActionToResponse).not.toHaveBeenCalled()
   })
 })
