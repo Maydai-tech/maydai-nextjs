@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { AlertTriangle, Bell, HardDrive, RefreshCw, ShieldCheck } from 'lucide-react'
+import { useAuth } from '@/lib/auth'
 import { formatGo, nextPurgeFr, parseUsePercent, usageBarClass } from './utils/format'
 
 interface DiskUsage {
@@ -35,6 +36,7 @@ interface DockerPurge {
 }
 
 export default function AdminMonitoringPage() {
+  const { session, loading: authLoading } = useAuth()
   const [diskUsage, setDiskUsage] = useState<DiskUsage | null>(null)
   const [diskError, setDiskError] = useState<string | null>(null)
   const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null)
@@ -46,11 +48,31 @@ export default function AdminMonitoringPage() {
     let cancelled = false
 
     async function loadDiskUsage() {
+      if (authLoading) return
+      const token = session?.access_token
+      if (!token) {
+        if (!cancelled) {
+          setDiskError('Authentification admin requise.')
+          setLoadingDiskUsage(false)
+        }
+        return
+      }
+
       try {
         const response = await fetch('/api/admin/monitoring?action=disk', {
           cache: 'no-store',
+          headers: { Authorization: `Bearer ${token}` },
         })
         const data = await response.json()
+        if (!response.ok) {
+          if (!cancelled) {
+            setDiskError(
+              typeof data?.error === 'string' ? data.error : 'Impossible de joindre l’API de monitoring.'
+            )
+            setLoadingDiskUsage(false)
+          }
+          return
+        }
         if (!cancelled) {
           setDiskError(typeof data?.diskError === 'string' ? data.diskError : null)
         }
@@ -82,7 +104,7 @@ export default function AdminMonitoringPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [authLoading, session?.access_token])
 
   const checks = [
     {
@@ -170,7 +192,7 @@ export default function AdminMonitoringPage() {
 
       <section className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
         <div className="flex items-start justify-between gap-4">
-          <h2 className="text-lg font-semibold text-gray-900">Occupation disque serveur prod (57.130.47.254)</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Occupation disque serveur de production</h2>
           {!loadingDiskUsage && diskUsage?.updatedAt && (
             <p className="text-xs text-gray-400 whitespace-nowrap">
               Dernière mise à jour : {formatUpdatedAtFr(diskUsage.updatedAt)}

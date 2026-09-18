@@ -4,7 +4,7 @@
 
 **Goal:** Ajouter une section "Historique des purges Docker" sur `/admin/monitoring` et refondre le bloc d'occupation disque en stacked bar horizontale unique.
 
-**Architecture:** Côté serveur prod (57.130.47.254), un wrapper bash en cron root parse l'output de `docker system prune` + `docker builder prune`, écrit un array JSON dans `/var/www/monitoring/docker-purges.json`. Côté Next.js, `app/api/admin/monitoring/route.ts` ajoute `purges`/`purgesError` au payload de `?action=disk`. Le composant `AdminMonitoringPage.tsx` utilise des helpers extraits dans `app/admin/monitoring/utils/format.ts` (testés Jest TDD) pour formater Go, calculer la couleur de la barre selon le seuil, et calculer la prochaine purge en heure de Paris.
+**Architecture:** Côté serveur prod ($SUPABASE_OVH_SSH_HOST), un wrapper bash en cron root parse l'output de `docker system prune` + `docker builder prune`, écrit un array JSON dans `/var/www/monitoring/docker-purges.json`. Côté Next.js, `app/api/admin/monitoring/route.ts` ajoute `purges`/`purgesError` au payload de `?action=disk`. Le composant `AdminMonitoringPage.tsx` utilise des helpers extraits dans `app/admin/monitoring/utils/format.ts` (testés Jest TDD) pour formater Go, calculer la couleur de la barre selon le seuil, et calculer la prochaine purge en heure de Paris.
 
 **Tech Stack:** Next.js 15 App Router, React 19, Tailwind CSS, Jest (next/jest), Bash 5 + GNU coreutils sur Ubuntu 24.04, nginx-host (déjà en place), Docker.
 
@@ -270,7 +270,7 @@ git commit -m "feat: add formatting helpers for monitoring page (Go/usage bar/ne
 Dans `app/api/admin/monitoring/route.ts`, après la ligne 11 (`const MONITORING_FETCH_TIMEOUT_MS = 15_000`), ajouter :
 
 ```ts
-const DEFAULT_PROD_DOCKER_PURGES_JSON_URL = 'http://57.130.47.254/monitoring/docker-purges.json'
+const DEFAULT_PROD_DOCKER_PURGES_JSON_URL = 'http://127.0.0.1:8080/monitoring/docker-purges.json'
 ```
 
 Après la fonction `getProdEmailStatusJsonUrl` (lignes 20-25), ajouter :
@@ -822,7 +822,7 @@ Créer `scripts/deploy/docker-cleanup.sh` :
 
 ```bash
 #!/usr/bin/env bash
-# Wrapper de purge Docker hebdomadaire pour MaydAI prod (57.130.47.254).
+# Wrapper de purge Docker hebdomadaire pour MaydAI prod ($SUPABASE_OVH_SSH_HOST).
 # Lance docker system prune + docker builder prune, parse l'espace récupéré,
 # et append une entrée dans /var/www/monitoring/docker-purges.json (max 30 entrées).
 #
@@ -994,14 +994,14 @@ git commit -m "feat: add docker-cleanup.sh wrapper for weekly purge with JSON hi
 
 ## Task 6 : Déployer le wrapper sur le serveur prod (SSH + cron + premier run)
 
-**Files:** aucun fichier du repo modifié dans cette task. Toutes les actions sont en SSH sur `ubuntu@57.130.47.254`.
+**Files:** aucun fichier du repo modifié dans cette task. Toutes les actions sont en SSH sur `$SUPABASE_OVH_SSH_HOST`.
 
 > ⚠️ Cette task modifie l'infra prod (cron root + premier `docker prune` réel). Hugo doit donner le go avant l'exécution.
 
 - [ ] **Step 6.1 — Vérifier que `jq` est installé sur le serveur**
 
 ```bash
-ssh ubuntu@57.130.47.254 'jq --version'
+ssh "$SUPABASE_OVH_SSH_HOST" 'jq --version'
 ```
 
 Expected: une version (ex. `jq-1.7.1`). Si `command not found`, lancer `sudo apt-get install -y jq` avant de continuer.
@@ -1009,8 +1009,8 @@ Expected: une version (ex. `jq-1.7.1`). Si `command not found`, lancer `sudo apt
 - [ ] **Step 6.2 — Copier le script sur le serveur**
 
 ```bash
-scp scripts/deploy/docker-cleanup.sh ubuntu@57.130.47.254:/tmp/docker-cleanup.sh
-ssh ubuntu@57.130.47.254 'sudo install -m 755 -o root -g root /tmp/docker-cleanup.sh /usr/local/bin/docker-cleanup.sh && rm /tmp/docker-cleanup.sh && ls -la /usr/local/bin/docker-cleanup.sh'
+scp scripts/deploy/docker-cleanup.sh "$SUPABASE_OVH_SSH_HOST":/tmp/docker-cleanup.sh
+ssh "$SUPABASE_OVH_SSH_HOST" 'sudo install -m 755 -o root -g root /tmp/docker-cleanup.sh /usr/local/bin/docker-cleanup.sh && rm /tmp/docker-cleanup.sh && ls -la /usr/local/bin/docker-cleanup.sh'
 ```
 
 Expected: `-rwxr-xr-x 1 root root … /usr/local/bin/docker-cleanup.sh`
@@ -1018,7 +1018,7 @@ Expected: `-rwxr-xr-x 1 root root … /usr/local/bin/docker-cleanup.sh`
 - [ ] **Step 6.3 — Migrer le cron de ubuntu vers root**
 
 ```bash
-ssh ubuntu@57.130.47.254 '
+ssh "$SUPABASE_OVH_SSH_HOST" '
   # Backup ubuntu crontab
   crontab -l > /home/ubuntu/crontab.bak.$(date -u +%Y%m%d-%H%M%S)
   # Retirer la ligne docker prune existante (avec son commentaire de la ligne au-dessus)
@@ -1031,7 +1031,7 @@ ssh ubuntu@57.130.47.254 '
 Puis ajouter au crontab root :
 
 ```bash
-ssh ubuntu@57.130.47.254 '
+ssh "$SUPABASE_OVH_SSH_HOST" '
   sudo bash -c "(crontab -l 2>/dev/null; echo \"0 3 * * 0 /usr/local/bin/docker-cleanup.sh\") | sort -u | crontab -"
   echo "=== root crontab ==="
   sudo crontab -l
@@ -1045,7 +1045,7 @@ Expected dans le output : `0 3 * * 0 /usr/local/bin/docker-cleanup.sh` présent 
 > ⚠️ Cette commande lance une vraie purge Docker. Durée estimée : 30 s à 2 min selon ce qu'il y a à virer. Sur ce VPS qui n'a jamais été purgé via ce wrapper, l'output peut être >1GB de récupéré.
 
 ```bash
-ssh ubuntu@57.130.47.254 'sudo /usr/local/bin/docker-cleanup.sh; echo "exit=$?"'
+ssh "$SUPABASE_OVH_SSH_HOST" 'sudo /usr/local/bin/docker-cleanup.sh; echo "exit=$?"'
 ```
 
 Expected: `exit=0`. Pas d'erreur dans l'output. Pas de sortie autre (le script log via `logger`, pas en stdout).
@@ -1053,7 +1053,7 @@ Expected: `exit=0`. Pas d'erreur dans l'output. Pas de sortie autre (le script l
 - [ ] **Step 6.5 — Vérifier le fichier produit**
 
 ```bash
-ssh ubuntu@57.130.47.254 'sudo cat /var/www/monitoring/docker-purges.json | jq .'
+ssh "$SUPABASE_OVH_SSH_HOST" 'sudo cat /var/www/monitoring/docker-purges.json | jq .'
 ```
 
 Expected: un array JSON avec 1 entrée valide :
@@ -1076,7 +1076,7 @@ Expected: un array JSON avec 1 entrée valide :
 - [ ] **Step 6.6 — Tester l'endpoint public**
 
 ```bash
-curl -i --max-time 10 http://57.130.47.254/monitoring/docker-purges.json
+curl -i --max-time 10 http://127.0.0.1:8080/monitoring/docker-purges.json
 ```
 
 Expected: `HTTP/1.1 200 OK`, `Content-Type: application/json`, body identique au fichier serveur.
