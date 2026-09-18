@@ -8,10 +8,9 @@ MaydAI is a Next.js 15 application for AI Act (EU) compliance management. It hel
 
 **Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), Mistral Agents (chat + RAG), OpenAI (rapports File Search), Stripe
 
-**Docs techniques :** [docs/README.md](docs/README.md) — Chat IA, hub LLM, auth API, RAG AI Act.
-**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), OpenAI API, Mistral API, Stripe
+**Docs techniques :** [docs/README.md](docs/README.md) — Chat IA, hub LLM, System Cards, auth API, RAG AI Act.
 
-Runbooks : [docs/README.md](docs/README.md). RAG veille AI Act : [docs/ai-act-rag.md](docs/ai-act-rag.md).
+Runbooks : [docs/README.md](docs/README.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). RAG veille AI Act : [docs/ai-act-rag.md](docs/ai-act-rag.md).
 
 ## Development Commands
 
@@ -84,7 +83,7 @@ lib/                         # Shared utilities & services
 ├── api-auth.ts              # Bearer user (getAuthenticatedSupabaseClient)
 ├── admin-auth.ts            # verifyAdminAuth (admin / super_admin)
 ├── mistral/                 # Agents chat, graphe V3, rapport
-├── bench-llm/               # Hub canonique + sync LLM Stats
+├── bench-llm/               # Hub canonique + sync LLM Stats / Control Tower / System Cards
 ├── comparia/                # Import Drive + pivot
 ├── rag-ingestion.ts         # RAG AI Act (pgvector)
 ├── openai-client.ts         # Rapports File Search (hors chat)
@@ -424,7 +423,7 @@ MAILJET_API_SECRET=
 ```
 
 Jobs / webhooks (prod) : `CRON_SECRET`, `INTERNAL_API_KEY`, `LLM_STATS_API_KEY`, `GOOGLE_DRIVE_*`.  
-Hub LLM : [docs/llm-models-hub.md](docs/llm-models-hub.md). RAG : [docs/ai-act-rag.md](docs/ai-act-rag.md).
+Hub LLM : [docs/llm-models-hub.md](docs/llm-models-hub.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). RAG : [docs/ai-act-rag.md](docs/ai-act-rag.md).
 
 ### TypeScript
 - Path alias: `@/*` maps to project root

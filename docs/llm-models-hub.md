@@ -40,14 +40,16 @@ Déclarées dans `vercel.json` :
 
 | Job | Chemin | Horloge (UTC) | Auth |
 |-----|--------|---------------|------|
-| LLM Stats | `GET /api/cron/sync-llm-stats` | `30 2 * * *` | `Authorization: Bearer $CRON_SECRET` |
+| LLM Stats | `GET /api/cron/sync-llm-stats` | `0 4 * * 3` (mercredi) | `Authorization: Bearer $CRON_SECRET` |
 | EcoLogits | `GET /api/cron/sync-ecologits` | `0 3 * * *` | idem |
 | Compar:IA Drive | `GET /api/admin/comparia/sync` | `0 2 * * 0` (dimanche) | cron **ou** admin |
+
+System Cards / Tour de contrôle : **pas** de cron — boutons admin uniquement. Runbook : [llm-system-cards.md](./llm-system-cards.md).
 
 Compar:IA accepte aussi `x-cron-secret: $CRON_SECRET` (comparaison `timingSafeEqual`).  
 `GET` = cron only. `POST` = cron **ou** `verifyAdminAuth` (admin). Body optionnel `{ "file_name": "…" }`.
 
-Durées Vercel : LLM Stats 60 s ; EcoLogits / Compar:IA 300 s.
+Durées Vercel : LLM Stats / Control Tower 60 s ; EcoLogits / Compar:IA / import System Cards 300 s.
 
 ### Webhook Drive (Hermes)
 
@@ -70,6 +72,8 @@ CSV Compar:IA attendu : `leaderboard.csv` par défaut (`COMPARIA_DRIVE_FILE_NAME
 
 Admin Bench : `lib/bench-llm/admin-unified.ts` — une ligne par fiche, badges via le pivot (pas de colonnes `llm_stats_id` / `eco_*` sur le hub).
 
+System Cards : table séparée `llm_system_cards.model_identifier` = slug. Pas une source du pivot, pas une colonne sur `compl_ai_models`. Voir [llm-system-cards.md](./llm-system-cards.md).
+
 ## 4. Variables
 
 | Variable | Usage |
@@ -80,6 +84,8 @@ Admin Bench : `lib/bench-llm/admin-unified.ts` — une ligne par fiche, badges v
 | `ECOLOGITS_BASE_URL` / `ECOLOGITS_API_KEY` | Catalogue + estimations |
 | `COMPARIA_DRIVE_FILE_NAME` | Défaut `leaderboard.csv` |
 | `GOOGLE_DRIVE_*` | Service Account Shared Drive |
+| `GOOGLE_SHEETS_CONTROL_TOWER_ID` | Sheet Tour de contrôle (import System Cards) |
+| `GOOGLE_DRIVE_FOLDER_CONTROL_TOWER` | Dossier CSV snapshot (export Control Tower) |
 | `INTERNAL_API_KEY` | Webhook KB + sync SIREN |
 
 ## 5. Relier un modèle à la main

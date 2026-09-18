@@ -36,6 +36,10 @@ if (auth.error) return auth.error
 | `POST /api/admin/comparia/sync` | cron **ou** admin | si `x-cron-secret` est envoyé et faux → 401 même pour un admin |
 | `POST /api/webhooks/kb-update` | `INTERNAL_API_KEY` | `x-api-key` |
 | `POST /api/webhooks/sync-siren` | `INTERNAL_API_KEY` | même schéma |
+| `POST /api/admin/llm-control-tower-sync` | admin | `verifyAdminAuth` (pas de cron) |
+| `POST /api/admin/llm-system-cards-import` | admin | idem |
+
+Routes user System Cards (`GET /api/system-cards/…`, `POST /api/dossiers/pillar-completion`) : Bearer via `getAuthenticatedSupabaseClient`. Le POST vérifie `user_companies` sur le `company_id` du cas d’usage. Détail : [llm-system-cards.md](./llm-system-cards.md).
 
 Sans `CRON_SECRET` / `INTERNAL_API_KEY`, les routes concernées répondent 401 ou 500 (config incomplète). Vercel Cron envoie `Authorization: Bearer $CRON_SECRET`.
 
