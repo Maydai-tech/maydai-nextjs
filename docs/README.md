@@ -27,11 +27,13 @@ Hub canonique LLM : `.cursor/rules/llm-models-hub.mdc`. Sync Drive Hermes : `.cu
 
 | Document | Sujet |
 |----------|--------|
-| [api-auth-security.md](./api-auth-security.md) | Bearer, `verifyAdminAuth`, crons, webhooks, invitations |
+| [api-auth-security.md](./api-auth-security.md) | Bearer, `verifyAdminAuth`, crons, webhooks, invitations, rôles `profiles` |
+| [admin-monitoring.md](./admin-monitoring.md) | `/admin/monitoring`, allowlist JSON hôte, Caddy / nginx |
+| [e2e-playwright.md](./e2e-playwright.md) | Playwright local + CI, mots de passe uniques, plus de rapport OVH |
 | [guide-installation-mcp-supabase.md](./guide-installation-mcp-supabase.md) | MCP Supabase OVH |
 | [supabase-ovh-cli.md](./supabase-ovh-cli.md) | CLI Supabase self-hosted |
 
-Auth API : `.cursor/rules/api-architecture.mdc`, `.cursor/rules/authentication-patterns.mdc`. Webhooks Hermes : header `x-api-key` = `INTERNAL_API_KEY`. Crons Vercel : Bearer `CRON_SECRET`.
+Auth API : `.cursor/rules/api-architecture.mdc`, `.cursor/rules/authentication-patterns.mdc`. Webhooks Hermes : header `x-api-key` = `INTERNAL_API_KEY`. Crons Vercel : Bearer `CRON_SECRET`. Monitoring hôte : jamais d’HTTP public.
 
 ## Notes historiques (ne plus suivre pour de nouvelles colonnes)
 

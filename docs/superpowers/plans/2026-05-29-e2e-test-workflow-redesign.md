@@ -1,5 +1,7 @@
 # Refonte du workflow d'exécution des tests E2E — Plan d'implémentation
 
+> **Obsolète pour l’exploitation.** Runbook à jour : [e2e-playwright.md](../../e2e-playwright.md). Le step « Deploy report to OVH » a été retiré (septembre 2026) : artifacts GitHub uniquement.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Remplacer l'unique workflow E2E par 3 régimes — push preprod (non-bloquant), PR preprod→main (bloquant), nightly prod — partageant un workflow réutilisable, avec exclusion des tests à API payante hors nightly.

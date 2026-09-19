@@ -73,7 +73,7 @@ Colonnes : ID Supabase, provider, nom, nom Hermes (`slug` avec `_`), statuts, li
 2. Garde uniquement `Prêt pour import` égal à `oui` (insensible à la casse, après trim).
 3. Résout le Markdown : URL / id Drive (`files.get`) **ou** nom de fichier dans le dossier **hardcodé** `CONTROL_TOWER_FOLDER_ID` (l’env d’export n’est **pas** utilisé ici).
 4. Date de version : motif `YYYY-MM-DD` dans le **nom Drive**. Jour `XX` / `xx` / `??` → jour `01` + `card_version_date_is_approx = true`.
-5. Label `Date de la fiche : …` lu dans le Markdown (`card_date_label` / `card_month`) — **ne pilote pas** le skip de version.
+5. Label `Date de la fiche : …` lu dans le Markdown → `card_date_label`. `card_month` = 1er du mois (`normalizeCardMonth` / `resolveCardMonth`). **Ne pilote pas** le skip de version.
 6. Slug : `compl_ai_models.id` si UUID, sinon nom Hermes, sinon nom modèle (`normalizeLlmModelSlug`).
 7. Skip si une fiche existe déjà avec `card_version_date` **strictement plus récente**, sauf deux dates approximatives du **même mois** (upsert + warning).
 8. Upsert **uniquement** `llm_system_cards`. **Aucun** insert dans `llm_system_card_pillars`.
@@ -82,6 +82,17 @@ Colonnes : ID Supabase, provider, nom, nom Hermes (`slug` avec `_`), statuts, li
 HTTP import : `200` si `errors` vide ; `207` si insert + erreurs ; `500` si erreurs et `inserted === 0`. Le write-back Sheet en échec est logué, pas fatal.
 
 Deux artefacts Drive distincts : le **CSV snapshot** (export) et le **Sheet** (import + statuts). Ne pas les confondre.
+
+### Dates de fiche (`card_month`)
+
+`card_month` est toujours le **1er du mois** (YYYY-MM-01), jamais le jour exact.
+
+| Source | Parseur | Exemples → `card_month` |
+|--------|---------|-------------------------|
+| Label Markdown | `normalizeCardMonth` | `19/08/2026`, `1/8/2026`, `19-08-2026` → `2026-08-01` ; `Juin 2024` / `Février 2026` → 1er du mois ; `XX/10/2025`, `2025-10-XX` → `2025-10-01` |
+| Nom Drive | `cardMonthFromVersionDate` | fallback si le label est absent ou illisible (`2025-XX-10`, mois 13, jour 32) |
+
+Le label **prime** sur le nom de fichier (`19/08/2026` + fichier `2024-06-20` → `2026-08-01`). Le skip de version reste calé sur `card_version_date` du **nom Drive**, pas sur `card_month`.
 
 ## 4. Produit (dossiers, score, PDF)
 
@@ -94,13 +105,18 @@ POST /api/dossiers/pillar-completion                            Bearer + user_co
 
 `GET` : 401 sans Bearer ; 400 si code inconnu ; `{ pillar: null }` si pas de ligne.
 
-`POST` body (Zod) : `usecaseId`, `pillarCode`, au moins un des flags `applyMaydaiPrefill` / `applyUserCompletion` ; `dossierId` optionnel (créé si absent) ; `userNotes` (max 20 000) persisté dans `form_data.system_card_notes` seulement si `applyUserCompletion`.
+`POST` body (Zod) : `usecaseId`, `pillarCode`, au moins un des flags `applyMaydaiPrefill` / `applyUserCompletion` (**`true` ou `false`**) ; `dossierId` optionnel (créé si absent) ; `userNotes` (max 20 000) persisté dans `form_data.system_card_notes` seulement si `applyUserCompletion` est truthy.
 
-`updateDossierPillarCompletion` :
+`updateDossierPillarCompletion` (`lib/services/system-card-service.ts`) :
 
 - upsert `dossier_documents` sur `(dossier_id, doc_type)` ;
-- si `complete` → `syncTodoActionToResponse(…, 'system-card')` (échec sync logué, pas bloquant) ;
+- flag omis → conserve la valeur déjà en base ;
+- `complete` (les deux flags) → `syncTodoActionToResponse(…, 'system-card')` (échec sync logué, pas bloquant) ;
+- rollback `complete` → `incomplete` (un flag repasse à `false`) → `reverseTodoActionResponse(…, 'system-card')`, **même contrat** que `POST /api/dossiers/[usecaseId]/[docType]` (échec reverse logué, pas bloquant) ;
+- 50 % seul (un flag) : ni sync ni reverse ;
 - recalcule le score (`calculateAndPersistUseCaseScore`).
+
+Sans le reverse, l’UI affiche « incomplet » mais la question déclarative resterait au code positif et le score resterait gonflé.
 
 UI : `SystemCardPillarTab` sur `/dashboard/[id]/dossiers/[usecaseId]`. Sans pilier en base, l’onglet System Card n’a rien à afficher (import Markdown seul ≠ piliers).
 
@@ -138,4 +154,6 @@ Pas de cron secret : ces deux routes sont admin-only.
 - **Lookup Markdown par nom** ignore `GOOGLE_DRIVE_FOLDER_CONTROL_TOWER` (constante uniquement).
 - **`Prêt pour import`** = exactement `oui` après normalisation. `Déjà importé` / `Non` sont ignorés.
 - **Garde-fou version** : date plus ancienne ignorée ; deux `XX` du même mois → overwrite + warning (comparaison jour non fiable).
+- **`card_month` JJ/MM/AAAA** : format Hermes courant ; jour `32` ou mois `13` → `null` puis fallback nom Drive.
+- **Rollback 100 %** : passer un flag à `false` doit appeler `reverseTodoActionResponse`. Ne pas upsert les flags seuls.
 - **CMS questionnaire admin** (`/admin/questions`, `/admin/sections`) retiré en septembre 2026 — ne pas le recréer.
