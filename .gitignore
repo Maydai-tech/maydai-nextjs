@@ -69,5 +69,8 @@ next-env.d.ts
 .env.eco-test
 .env.supabase.example1
 
+# Compte de service Google (export Sheets) — ne jamais committer
+config/google_credentials.json
+
 # editors
 .vscode/
