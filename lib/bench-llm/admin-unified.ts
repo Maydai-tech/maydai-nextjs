@@ -1,6 +1,22 @@
 import { toTitleCase } from '@/lib/utils'
+import {
+  applyLifecycleStatusOverride,
+  resolveProviderLifecycle,
+  type ProviderLifecycle,
+  type ProviderLifecycleStatus,
+} from '@/lib/bench-llm/provider-lifecycle'
 
 export type BenchSourceKey = 'maydai' | 'compl_ai' | 'comparia' | 'llm_stats' | 'ecologits'
+
+export const BENCH_SOURCE_KEYS: BenchSourceKey[] = [
+  'maydai',
+  'compl_ai',
+  'comparia',
+  'llm_stats',
+  'ecologits',
+]
+
+export const DEFAULT_COMPL_AI_BENCHMARK_TOTAL = 31
 
 export type BenchSourceAvailability = Record<BenchSourceKey, boolean>
 
@@ -14,11 +30,14 @@ export type CanonicalBenchModel = {
   slug?: string | null
   model_name: string
   model_provider: string | null
+  model_provider_id?: number | null
   model_type?: string | null
   source_ids?: BenchSourceLink[]
   llm_stats_id?: string | null
+  llm_leader_rank?: number | null
   comparia_rank?: number | null
   updated_at?: string | null
+  lifecycle_status?: ProviderLifecycleStatus | null
 }
 
 export type BenchEvaluationPresence = {
@@ -48,6 +67,18 @@ export type CompariaCatalogPresence = {
   maydai_model_id?: string | null
 }
 
+export type BenchModelMetrics = {
+  sourcesFilled: number
+  sourcesTotal: 5
+  maydaiScore: number | null
+  complAiFilled: number
+  complAiTotal: number
+  compariaRank: number | null
+  llmStatsRank: number | null
+  hasEcologits: boolean
+  hasSystemCard: boolean
+}
+
 export type UnifiedBenchModel = {
   entityId: string
   canonicalModelId: string | null
@@ -59,12 +90,89 @@ export type UnifiedBenchModel = {
   provider: string
   active: boolean
   updatedAt: string | null
+  inQuestionnaire: boolean
   sources: BenchSourceAvailability
+  metrics: BenchModelMetrics
+  lifecycle: ProviderLifecycle | null
+}
+
+export type BenchProviderGroup = {
+  provider: string
+  models: UnifiedBenchModel[]
+  scoredCount: number
+  inQuestionnaire: boolean
 }
 
 export type BuildUnifiedBenchModelsOptions = {
   /** Conservé à true pour les tests ; le dashboard n’affiche que les fiches canoniques. */
   includeUnmatchedCatalogs?: boolean
+  complAiBenchmarkTotal?: number
+  systemCardSlugs?: Iterable<string>
+  /** IDs `model_providers` proposés à la création d’un cas d’usage (tooltip renseigné). */
+  questionnaireProviderIds?: Iterable<number>
+}
+
+export function countFilledBenchSources(sources: BenchSourceAvailability): number {
+  return BENCH_SOURCE_KEYS.reduce((count, key) => count + (sources[key] ? 1 : 0), 0)
+}
+
+export function maydaiScoreFromEvaluations(evaluations: BenchEvaluationPresence[]): number | null {
+  const scores = evaluations
+    .map((row) => row.score)
+    .filter((score): score is number => typeof score === 'number' && Number.isFinite(score))
+  if (scores.length === 0) return null
+  return Math.round((scores.reduce((sum, score) => sum + score, 0) / scores.length) * 100)
+}
+
+export function buildBenchModelMetrics(params: {
+  sources: BenchSourceAvailability
+  evaluations?: BenchEvaluationPresence[]
+  compariaRank?: number | null
+  llmStatsRank?: number | null
+  hasSystemCard?: boolean
+  complAiTotal?: number
+}): BenchModelMetrics {
+  const evaluations = params.evaluations ?? []
+  const filled = evaluations.filter((row) => row.score != null).length
+  return {
+    sourcesFilled: countFilledBenchSources(params.sources),
+    sourcesTotal: 5,
+    maydaiScore: maydaiScoreFromEvaluations(evaluations),
+    complAiFilled: filled,
+    complAiTotal: params.complAiTotal ?? DEFAULT_COMPL_AI_BENCHMARK_TOTAL,
+    compariaRank: params.compariaRank ?? null,
+    llmStatsRank: params.llmStatsRank ?? null,
+    hasEcologits: params.sources.ecologits,
+    hasSystemCard: Boolean(params.hasSystemCard),
+  }
+}
+
+export function groupUnifiedBenchModelsByProvider(models: UnifiedBenchModel[]): BenchProviderGroup[] {
+  const groups = new Map<string, UnifiedBenchModel[]>()
+  for (const model of models) {
+    const rows = groups.get(model.provider) ?? []
+    rows.push(model)
+    groups.set(model.provider, rows)
+  }
+
+  return [...groups.entries()]
+    .sort(([left], [right]) => left.localeCompare(right, 'fr'))
+    .map(([provider, providerModels]) => ({
+      provider,
+      models: providerModels,
+      scoredCount: providerModels.filter((model) => model.sources.compl_ai).length,
+      inQuestionnaire: providerModels.some((model) => model.inQuestionnaire),
+    }))
+}
+
+export function splitBenchProviderGroupsByQuestionnaire(groups: BenchProviderGroup[]): {
+  inQuestionnaire: BenchProviderGroup[]
+  catalogOnly: BenchProviderGroup[]
+} {
+  return {
+    inQuestionnaire: groups.filter((group) => group.inQuestionnaire),
+    catalogOnly: groups.filter((group) => !group.inQuestionnaire),
+  }
 }
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
@@ -194,11 +302,16 @@ export function buildUnifiedBenchModels(
   }
 
   const ecoByMaydai = new Map<string, EcoCatalogPresence>()
+  const ecoNamesByMaydai = new Map<string, string[]>()
   const unmatchedEco: EcoCatalogPresence[] = []
   for (const eco of ecoModels) {
     const link = firstRelation(eco.link)
-    if (link?.maydai_model_id) ecoByMaydai.set(link.maydai_model_id, eco)
-    else unmatchedEco.push(eco)
+    if (link?.maydai_model_id) {
+      ecoByMaydai.set(link.maydai_model_id, eco)
+      const names = ecoNamesByMaydai.get(link.maydai_model_id) ?? []
+      names.push(eco.name)
+      ecoNamesByMaydai.set(link.maydai_model_id, names)
+    } else unmatchedEco.push(eco)
   }
 
   const compariaByMaydai = new Map<string, CompariaCatalogPresence>()
@@ -209,12 +322,35 @@ export function buildUnifiedBenchModels(
   }
 
   const includeUnmatchedCatalogs = options?.includeUnmatchedCatalogs ?? true
+  const complAiTotal = options?.complAiBenchmarkTotal ?? DEFAULT_COMPL_AI_BENCHMARK_TOTAL
+  const systemCardSlugs = new Set(
+    [...(options?.systemCardSlugs ?? [])].map((slug) => slug.trim()).filter(Boolean),
+  )
+  const questionnaireProviderIds = new Set(
+    [...(options?.questionnaireProviderIds ?? [])].filter((id) => Number.isInteger(id)),
+  )
 
   const canonicalRows = uniqueById(canonicalModels).map((model): UnifiedBenchModel => {
     const modelEvaluations = evaluationsByModel.get(model.id) ?? []
     const eco = ecoByMaydai.get(model.id) ?? null
     const comparia = compariaByMaydai.get(model.id) ?? null
     const slug = model.slug?.trim() || model.model_name
+    const sources: BenchSourceAvailability = {
+      maydai: maydaiScoreFromEvaluations(modelEvaluations) != null,
+      compl_ai: modelEvaluations.some((row) => row.score != null),
+      comparia:
+        Boolean(comparia) ||
+        hasSourceLink(model, 'comparia') ||
+        model.comparia_rank != null ||
+        modelEvaluations.some((row) => row.rang_compar_ia != null),
+      llm_stats: hasSourceLink(model, 'llm_stats') || Boolean(model.llm_stats_id),
+      ecologits: Boolean(eco) || hasSourceLink(model, 'ecologits'),
+    }
+    const compariaRank =
+      comparia?.rank ??
+      model.comparia_rank ??
+      modelEvaluations.find((row) => row.rang_compar_ia != null)?.rang_compar_ia ??
+      null
     return {
       entityId: `maydai_${model.id}`,
       canonicalModelId: model.id,
@@ -226,22 +362,39 @@ export function buildUnifiedBenchModels(
       provider: toTitleCase(model.model_provider ?? '') || '—',
       active: eco?.is_active ?? true,
       updatedAt: eco?.last_seen_at ?? model.updated_at ?? null,
-      sources: {
-        maydai: modelEvaluations.some((row) => row.maydai_score != null),
-        compl_ai: modelEvaluations.some((row) => row.score != null),
-        comparia:
-          Boolean(comparia) ||
-          hasSourceLink(model, 'comparia') ||
-          model.comparia_rank != null ||
-          modelEvaluations.some((row) => row.rang_compar_ia != null),
-        llm_stats: hasSourceLink(model, 'llm_stats') || Boolean(model.llm_stats_id),
-        ecologits: Boolean(eco) || hasSourceLink(model, 'ecologits'),
-      },
+      inQuestionnaire:
+        model.model_provider_id != null && questionnaireProviderIds.has(model.model_provider_id),
+      lifecycle: applyLifecycleStatusOverride(
+        resolveProviderLifecycle([
+          slug,
+          model.model_name,
+          ...(ecoNamesByMaydai.get(model.id) ?? []),
+          eco?.name,
+          ...(model.source_ids?.map((link) => link.source_id) ?? []),
+        ]),
+        model.lifecycle_status,
+      ),
+      sources,
+      metrics: buildBenchModelMetrics({
+        sources,
+        evaluations: modelEvaluations,
+        compariaRank,
+        llmStatsRank: model.llm_leader_rank ?? null,
+        hasSystemCard: systemCardSlugs.has(slug),
+        complAiTotal,
+      }),
     }
   })
 
-  const ecoRows = unmatchedEco.map(
-    (eco): UnifiedBenchModel => ({
+  const ecoRows = unmatchedEco.map((eco): UnifiedBenchModel => {
+    const sources: BenchSourceAvailability = {
+      maydai: false,
+      compl_ai: false,
+      comparia: false,
+      llm_stats: false,
+      ecologits: true,
+    }
+    return {
       entityId: `ecologits_${eco.id}`,
       canonicalModelId: null,
       ecoModelId: eco.id,
@@ -252,18 +405,26 @@ export function buildUnifiedBenchModels(
       provider: toTitleCase(eco.provider) || eco.provider,
       active: eco.is_active,
       updatedAt: eco.last_seen_at,
-      sources: {
-        maydai: false,
-        compl_ai: false,
-        comparia: false,
-        llm_stats: false,
-        ecologits: true,
-      },
-    }),
-  )
+      inQuestionnaire: false,
+      lifecycle: resolveProviderLifecycle([eco.name]),
+      sources,
+      metrics: buildBenchModelMetrics({
+        sources,
+        hasSystemCard: systemCardSlugs.has(eco.name),
+        complAiTotal,
+      }),
+    }
+  })
 
-  const compariaRows = unmatchedComparia.map(
-    (comparia): UnifiedBenchModel => ({
+  const compariaRows = unmatchedComparia.map((comparia): UnifiedBenchModel => {
+    const sources: BenchSourceAvailability = {
+      maydai: false,
+      compl_ai: false,
+      comparia: true,
+      llm_stats: false,
+      ecologits: false,
+    }
+    return {
       entityId: `comparia_${comparia.id}`,
       canonicalModelId: null,
       ecoModelId: null,
@@ -274,15 +435,17 @@ export function buildUnifiedBenchModels(
       provider: toTitleCase(comparia.organisation) || comparia.organisation,
       active: comparia.is_active,
       updatedAt: comparia.last_imported_at,
-      sources: {
-        maydai: false,
-        compl_ai: false,
-        comparia: true,
-        llm_stats: false,
-        ecologits: false,
-      },
-    }),
-  )
+      inQuestionnaire: false,
+      lifecycle: resolveProviderLifecycle([comparia.source_id]),
+      sources,
+      metrics: buildBenchModelMetrics({
+        sources,
+        compariaRank: comparia.rank,
+        hasSystemCard: systemCardSlugs.has(comparia.source_id),
+        complAiTotal,
+      }),
+    }
+  })
 
   const rows = includeUnmatchedCatalogs
     ? [...canonicalRows, ...ecoRows, ...compariaRows]

@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifyAdminAuth } from '@/lib/admin-auth'
+import {
+  isUuid,
+  normalizeComplAiCsvRow,
+  summarizeComplAiCsvImport,
+} from '@/lib/bench-llm/compl-ai-csv'
 import { recalculateUseCaseScoresForModel } from '@/lib/usecase-score-service'
 
 // Un import peut toucher plusieurs modèles et déclencher le recalcul de nombreux
 // use cases : on autorise une exécution plus longue (recalcul synchrone).
 export const maxDuration = 300
-
-interface CSVRow {
-  model_name: string
-  model_provider: string
-  model_type: string
-  version: string
-  principle_code: string
-  benchmark_code: string
-  score: number | null
-  score_text: string
-  evaluation_date: string
-}
 
 interface ImportStats {
   totalRows: number
@@ -137,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     // Traiter chaque ligne du CSV
     for (let i = 0; i < csvData.length; i++) {
-      const row = csvData[i]
+      const row = normalizeComplAiCsvRow(csvData[i])
       const rowNumber = i + 2 // +2 car on compte l'en-tête
 
       try {
@@ -169,26 +162,43 @@ export async function POST(request: NextRequest) {
         }
         const score: number | null = scoreResult.score
 
-        // Gestion du modèle (upsert)
+        // Gestion du modèle (upsert) : UUID d'export d'abord, sinon nom exact
         let modelId: string
-        
-        // Chercher le modèle existant
-        const { data: existingModel } = await supabase
-          .from('compl_ai_models')
-          .select('id')
-          .eq('model_name', row.model_name)
-          .single()
+        let existingModel: { id: string } | null = null
+
+        if (row.model_id) {
+          const { data } = await supabase
+            .from('compl_ai_models')
+            .select('id')
+            .eq('id', row.model_id)
+            .maybeSingle()
+          existingModel = data
+        }
+
+        if (!existingModel) {
+          const { data } = await supabase
+            .from('compl_ai_models')
+            .select('id')
+            .eq('model_name', row.model_name)
+            .maybeSingle()
+          existingModel = data
+        }
 
         if (existingModel) {
-          // Mettre à jour le modèle existant
+          const modelUpdates: Record<string, unknown> = {
+            updated_at: new Date().toISOString(),
+          }
+          if (row.model_name && !isUuid(row.model_name)) {
+            modelUpdates.model_name = row.model_name
+          }
+          if (row.model_provider) modelUpdates.model_provider = row.model_provider
+          if (row.model_type) modelUpdates.model_type = row.model_type
+          if (row.version) modelUpdates.version = row.version
+          if (row.lifecycle_status) modelUpdates.lifecycle_status = row.lifecycle_status
+
           const { error: updateError } = await supabase
             .from('compl_ai_models')
-            .update({
-              model_provider: row.model_provider || null,
-              model_type: row.model_type || null,
-              version: row.version || null,
-              updated_at: new Date().toISOString()
-            })
+            .update(modelUpdates)
             .eq('id', existingModel.id)
 
           if (updateError) {
@@ -199,15 +209,18 @@ export async function POST(request: NextRequest) {
           modelId = existingModel.id
           stats.modelsUpdated++
         } else {
-          // Créer un nouveau modèle
+          const insertPayload: Record<string, unknown> = {
+            model_name: row.model_name,
+            model_provider: row.model_provider || null,
+            model_type: row.model_type || null,
+            version: row.version || null,
+            lifecycle_status: row.lifecycle_status,
+          }
+          if (row.model_id) insertPayload.id = row.model_id
+
           const { data: newModel, error: insertError } = await supabase
             .from('compl_ai_models')
-            .insert({
-              model_name: row.model_name,
-              model_provider: row.model_provider || null,
-              model_type: row.model_type || null,
-              version: row.version || null
-            })
+            .insert(insertPayload)
             .select()
             .single()
 
@@ -312,13 +325,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const summary = summarizeComplAiCsvImport(stats)
     return NextResponse.json({
-      success: true,
-      message: 'Import CSV terminé',
+      success: summary.success,
+      message: summary.message,
+      error: summary.success ? undefined : summary.message,
       stats,
       models_recalculated: touchedModelIds.size,
       usecases_recalculated: usecasesRecalculated
-    })
+    }, { status: summary.httpStatus })
 
   } catch (error) {
     console.error('Erreur import CSV COMPL-AI:', error)
@@ -362,6 +377,7 @@ export async function GET(request: NextRequest) {
       'model_provider', 
       'model_type',
       'version',
+      'statut',
       'principle_code',
       'benchmark_code',
       'score',
@@ -379,6 +395,7 @@ export async function GET(request: NextRequest) {
           'OpenAI',
           'large-language-model',
           '4.0',
+          'actif',
           principle.code,
           benchmark.code,
           '0.85',

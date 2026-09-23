@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
+import { formatComplAiLifecycleStatus } from '@/lib/bench-llm/compl-ai-csv'
+import { resolveProviderLifecycle } from '@/lib/bench-llm/provider-lifecycle'
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
     // Récupérer tous les modèles
     const { data: allModels, error: modelsError } = await supabase
       .from('compl_ai_models')
-      .select('id, model_name, model_provider, model_type, version')
+      .select('id, slug, model_name, model_provider, model_type, version, lifecycle_status')
       .order('model_name')
 
     if (modelsError) throw modelsError
@@ -162,6 +164,7 @@ export async function GET(request: NextRequest) {
       'Fournisseur',
       'Type',
       'Version',
+      'Statut',
       'Principe Code',
       'Principe Nom',
       'Catégorie Principe',
@@ -170,7 +173,7 @@ export async function GET(request: NextRequest) {
       'Score Original',
       'Score Text',
       'Date d\'Évaluation',
-      'Statut'
+      'Statut évaluation'
     ]
     csvRows.push(headers.join(','))
 
@@ -182,12 +185,18 @@ export async function GET(request: NextRequest) {
           const evaluationKey = `${model.id}-${benchmark.id}`
           const evaluation = evaluationMap.get(evaluationKey)
           
+          const lifecycleStatus =
+            model.lifecycle_status ??
+            resolveProviderLifecycle([model.slug, model.model_name])?.status ??
+            null
+
           const row = [
             model.id,
             `"${model.model_name || 'N/A'}"`,
             `"${model.model_provider || 'N/A'}"`,
             `"${model.model_type || 'N/A'}"`,
             `"${model.version || 'N/A'}"`,
+            `"${formatComplAiLifecycleStatus(lifecycleStatus) || 'N/A'}"`,
             `"${principle.code}"`,
             `"${principle.name}"`,
             `"${principle.category || 'N/A'}"`,
