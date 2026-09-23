@@ -55,12 +55,6 @@ export async function PUT(
       )
       .select('ecologits_model_id, maydai_model_id, match_method')
       .single()
-    if (error?.code === '23505') {
-      return NextResponse.json(
-        { error: 'Ce modèle MaydAI est déjà lié à un autre modèle EcoLogits.' },
-        { status: 409 },
-      )
-    }
     if (error) throw error
     return NextResponse.json({ success: true, link: data })
   } catch (error) {

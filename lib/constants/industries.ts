@@ -83,6 +83,7 @@ export const INDUSTRIES_LIST: IndustryFamily[] = [
     label: "Services aux Entreprises & Juridique",
     subCategories: [
       { id: "legal", label: "Juridique & Avocats (LegalTech)" },
+      { id: "notarial", label: "Services notariaux" },
       { id: "consulting", label: "Audit, Comptabilité & Conseil en Stratégie" },
       { id: "facility", label: "Services Généraux & Facility Management" }
     ]

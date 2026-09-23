@@ -3,7 +3,6 @@
 import {
   AlertTriangle,
   Check,
-  ChevronLeft,
   ChevronRight,
   Database,
   Download,
@@ -16,11 +15,14 @@ import {
   X,
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { useCallback, useDeferredValue, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 
 import Toast from '@/components/Toast'
 import { useAuth } from '@/lib/auth'
-import type { BenchSourceKey, UnifiedBenchModel } from '@/lib/bench-llm/admin-unified'
+import type { BenchProviderGroup, BenchSourceKey, UnifiedBenchModel } from '@/lib/bench-llm/admin-unified'
+import type { ProviderLifecycle } from '@/lib/bench-llm/provider-lifecycle'
+import { groupUnifiedBenchModelsByProvider, splitBenchProviderGroupsByQuestionnaire } from '@/lib/bench-llm/admin-unified'
+import { parseComplAiCsv } from '@/lib/bench-llm/compl-ai-csv'
 import { parseApiJson, toTitleCase } from '@/lib/utils'
 
 const BenchLlmDetailContent = dynamic(
@@ -80,15 +82,179 @@ function Presence({ available }: { available: boolean }) {
   )
 }
 
+function LifecycleBadge({ lifecycle }: { lifecycle: ProviderLifecycle | null }) {
+  if (!lifecycle) return <span className="text-gray-400">—</span>
+  const tone = {
+    active: 'bg-emerald-50 text-emerald-800',
+    legacy: 'bg-amber-50 text-amber-800',
+    deprecated: 'bg-orange-50 text-orange-800',
+    retired: 'bg-red-50 text-red-800',
+  }[lifecycle.status]
+  const title = [
+    `Source ${lifecycle.source}`,
+    lifecycle.sourceModelId,
+    lifecycle.replacement ? `remplacé par ${lifecycle.replacement}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  return (
+    <span title={title} className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${tone}`}>
+      {lifecycle.label}
+    </span>
+  )
+}
+
+function RankCell({ rank }: { rank: number | null }) {
+  if (rank == null) return <span className="text-gray-400">—</span>
+  return <span className="font-medium text-gray-900">#{rank}</span>
+}
+
+function RatioCell({ filled, total, emptyDash = false }: { filled: number; total: number; emptyDash?: boolean }) {
+  if (emptyDash && filled === 0) return <span className="text-gray-400">—</span>
+  const complete = filled > 0 && filled >= total
+  return (
+    <span className={complete ? 'font-medium text-emerald-700' : filled === 0 ? 'text-gray-400' : 'font-medium text-gray-900'}>
+      {filled}/{total}
+    </span>
+  )
+}
+
+function groupModelCount(groups: BenchProviderGroup[]): number {
+  return groups.reduce((count, group) => count + group.models.length, 0)
+}
+
+function QuestionnaireSectionHeader({
+  title,
+  description,
+  groups,
+  tone,
+}: {
+  title: string
+  description: string
+  groups: BenchProviderGroup[]
+  tone: 'questionnaire' | 'catalog'
+}) {
+  const toneClass =
+    tone === 'questionnaire'
+      ? 'bg-emerald-50 text-emerald-950'
+      : 'bg-slate-100 text-slate-900'
+  const metaClass = tone === 'questionnaire' ? 'text-emerald-800/80' : 'text-slate-600'
+  return (
+    <tr>
+              <td colSpan={9} className={`px-4 py-3 ${toneClass}`}>
+        <div className="font-semibold">{title}</div>
+        <div className={`mt-0.5 text-xs font-normal ${metaClass}`}>
+          {description} · {groups.length} fournisseur(s) · {groupModelCount(groups)} modèle(s)
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+function ProviderGroupRows({
+  groups,
+  openProviders,
+  onToggle,
+  onSelect,
+}: {
+  groups: BenchProviderGroup[]
+  openProviders: Set<string>
+  onToggle: (providerName: string) => void
+  onSelect: (entityId: string) => void
+}) {
+  return (
+    <>
+      {groups.map((group) => {
+        const isOpen = openProviders.has(group.provider)
+        return (
+          <Fragment key={group.provider}>
+            <tr className="bg-gray-50">
+              <td colSpan={9} className="px-2 py-1">
+                <button
+                  type="button"
+                  onClick={() => onToggle(group.provider)}
+                  aria-expanded={isOpen}
+                  className="flex w-full flex-wrap items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0080A3]"
+                >
+                  <ChevronRight className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                  <span className="font-semibold text-gray-900">{group.provider}</span>
+                  <span className="text-sm font-normal text-gray-500">
+                    ({group.scoredCount}/{group.models.length} scorés)
+                  </span>
+                  {group.inQuestionnaire ? (
+                    <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 sm:ml-2">
+                      Questionnaire
+                    </span>
+                  ) : (
+                    <span className="ml-auto rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600 sm:ml-2">
+                      Catalogue
+                    </span>
+                  )}
+                </button>
+              </td>
+            </tr>
+            {isOpen
+              ? group.models.map((model) => (
+                  <tr
+                    key={model.entityId}
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => onSelect(model.entityId)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        onSelect(model.entityId)
+                      }
+                    }}
+                    className="cursor-pointer hover:bg-sky-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#0080A3]"
+                  >
+                    <td className="px-4 py-3 pl-10">
+                      <div className="font-medium text-gray-900">{model.rawName || model.slug}</div>
+                      <div className="text-xs text-gray-500">
+                        {model.slug}
+                        {model.active ? '' : ' · inactif'}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <LifecycleBadge lifecycle={model.lifecycle} />
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <RatioCell filled={model.metrics.sourcesFilled} total={model.metrics.sourcesTotal} />
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      {model.metrics.maydaiScore == null ? (
+                        <span className="text-gray-400">—</span>
+                      ) : (
+                        <span className="font-medium text-gray-900">{model.metrics.maydaiScore}/100</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <RatioCell filled={model.metrics.complAiFilled} total={model.metrics.complAiTotal} />
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <RankCell rank={model.metrics.compariaRank} />
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <RankCell rank={model.metrics.llmStatsRank} />
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <Presence available={model.metrics.hasEcologits} />
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <Presence available={model.metrics.hasSystemCard} />
+                    </td>
+                  </tr>
+                ))
+              : null}
+          </Fragment>
+        )
+      })}
+    </>
+  )
+}
+
 function parseCsv(text: string): Record<string, string>[] {
-  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((line) => line.trim())
-  if (lines.length < 2) return []
-  const separator = lines[0]!.includes(';') ? ';' : ','
-  const headers = lines[0]!.split(separator).map((value) => value.trim().replace(/^"|"$/g, ''))
-  return lines.slice(1).map((line) => {
-    const values = line.split(separator).map((value) => value.trim().replace(/^"|"$/g, ''))
-    return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? '']))
-  })
+  return parseComplAiCsv(text)
 }
 
 function formatHistoryDate(row: HistoryRow): string {
@@ -179,9 +345,25 @@ export default function BenchLlmsAdminPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
+  const [openProviders, setOpenProviders] = useState<Set<string>>(new Set())
   const [importMode, setImportMode] = useState<'create' | 'update'>('update')
   const [createForm, setCreateForm] = useState({ model_name: '', model_provider: '', model_type: 'large-language-model', version: '' })
-  const pageSize = 25
+  const pageSize = 5000
+
+  const providerGroups = useMemo(() => groupUnifiedBenchModelsByProvider(models), [models])
+  const { inQuestionnaire: questionnaireGroups, catalogOnly: catalogGroups } = useMemo(
+    () => splitBenchProviderGroupsByQuestionnaire(providerGroups),
+    [providerGroups],
+  )
+
+  const toggleProvider = useCallback((providerName: string) => {
+    setOpenProviders((current) => {
+      const next = new Set(current)
+      if (next.has(providerName)) next.delete(providerName)
+      else next.add(providerName)
+      return next
+    })
+  }, [])
 
   const fetchModels = useCallback(async () => {
     const token = getAccessToken()
@@ -216,6 +398,17 @@ export default function BenchLlmsAdminPage() {
 
   useEffect(() => void fetchModels(), [fetchModels])
   useEffect(() => setPage(1), [active, availability, deferredSearch, provider, source])
+  useEffect(() => {
+    if (deferredSearch.trim()) {
+      setOpenProviders(new Set(providerGroups.map((group) => group.provider)))
+    }
+  }, [deferredSearch, providerGroups])
+  const previousSearch = useRef(deferredSearch)
+  useEffect(() => {
+    const hadSearch = previousSearch.current.trim()
+    previousSearch.current = deferredSearch
+    if (hadSearch && !deferredSearch.trim()) setOpenProviders(new Set())
+  }, [deferredSearch])
 
   const callAction = useCallback(async (name: string, url: string, options?: RequestInit) => {
     const token = getAccessToken()
@@ -233,8 +426,10 @@ export default function BenchLlmsAdminPage() {
           ...(options?.headers ?? {}),
         },
       })
-      const payload = await parseApiJson<{ error?: string; message?: string }>(response)
-      if (!response.ok && response.status !== 207) throw new Error(payload.error || payload.message || `${name} impossible`)
+      const payload = await parseApiJson<{ error?: string; message?: string; success?: boolean }>(response)
+      if ((!response.ok && response.status !== 207) || payload.success === false) {
+        throw new Error(payload.error || payload.message || `${name} impossible`)
+      }
       const successText = payload.message || `${name} terminé avec succès.`
       setMessage(successText)
       setToast({ message: successText, type: 'success' })
@@ -310,8 +505,6 @@ export default function BenchLlmsAdminPage() {
     }
   }, [getAccessToken])
 
-  const pages = Math.max(1, Math.ceil(total / pageSize))
-
   return (
     <div className="pb-12">
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -373,37 +566,66 @@ export default function BenchLlmsAdminPage() {
 
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
+          <table className="min-w-[960px] w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
-              <tr><th className="px-4 py-3">Modèle</th>{SOURCES.map((item) => <th key={item.key} className="px-4 py-3 text-center">{item.label}</th>)}</tr>
+              <tr>
+                <th className="px-4 py-3">Modèle</th>
+                <th className="px-3 py-3 text-center">Statut</th>
+                <th className="px-3 py-3 text-center">All</th>
+                <th className="px-3 py-3 text-center">MaydAI</th>
+                <th className="px-3 py-3 text-center">COMPL-AI</th>
+                <th className="px-3 py-3 text-center">Compar:IA</th>
+                <th className="px-3 py-3 text-center">LLM Stats</th>
+                <th className="px-3 py-3 text-center">EcoLogits</th>
+                <th className="px-3 py-3 text-center">System Card</th>
+              </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {models.map((model) => (
-                <tr
-                  key={model.entityId}
-                  role="link"
-                  tabIndex={0}
-                  onClick={() => setSelectedModelId(model.entityId)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      setSelectedModelId(model.entityId)
-                    }
-                  }}
-                  className="cursor-pointer hover:bg-sky-50/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#0080A3]"
-                >
-                  <td className="px-4 py-3"><div className="font-medium text-gray-900">{model.slug}</div><div className="text-xs text-gray-500">{toTitleCase(model.provider)}{model.active ? '' : ' · inactif'}</div></td>
-                  {SOURCES.map((item) => <td key={item.key} className="px-4 py-3 text-center"><Presence available={model.sources[item.key]} /></td>)}
+              {questionnaireGroups.length > 0 ? (
+                <>
+                  <QuestionnaireSectionHeader
+                    title="Disponibles dans les questionnaires MaydAI"
+                    description="Proposées à la création d’un cas d’usage"
+                    groups={questionnaireGroups}
+                    tone="questionnaire"
+                  />
+                  <ProviderGroupRows
+                    groups={questionnaireGroups}
+                    openProviders={openProviders}
+                    onToggle={toggleProvider}
+                    onSelect={setSelectedModelId}
+                  />
+                </>
+              ) : null}
+              {catalogGroups.length > 0 ? (
+                <>
+                  <QuestionnaireSectionHeader
+                    title="Pas encore dans les questionnaires"
+                    description="Présentes au catalogue, pas encore listées pour les utilisateurs"
+                    groups={catalogGroups}
+                    tone="catalog"
+                  />
+                  <ProviderGroupRows
+                    groups={catalogGroups}
+                    openProviders={openProviders}
+                    onToggle={toggleProvider}
+                    onSelect={setSelectedModelId}
+                  />
+                </>
+              ) : null}
+              {!loading && models.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-10 text-center text-gray-500">
+                    Aucun modèle.
+                  </td>
                 </tr>
-              ))}
-              {!loading && models.length === 0 ? <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-500">Aucun modèle.</td></tr> : null}
+              ) : null}
             </tbody>
           </table>
         </div>
         {loading ? <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-[#0080A3]" /></div> : null}
-        <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-          <span className="text-sm text-gray-500">{total} modèle(s) · page {page}/{pages}</span>
-          <div className="flex gap-2"><button disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className="rounded border p-2 disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button><button disabled={page >= pages} onClick={() => setPage((value) => value + 1)} className="rounded border p-2 disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button></div>
+        <div className="border-t border-gray-200 px-4 py-3 text-sm text-gray-500">
+          {total} modèle(s) · {questionnaireGroups.length} fournisseur(s) dans les questionnaires · {catalogGroups.length} hors questionnaires
         </div>
       </div>
 

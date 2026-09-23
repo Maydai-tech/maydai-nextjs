@@ -5,6 +5,7 @@ import {
   attachSourceIdsToCanonicalModels,
   buildUnifiedBenchModels,
   countDistinctEvaluatedModels,
+  DEFAULT_COMPL_AI_BENCHMARK_TOTAL,
   filterUnifiedBenchModels,
   overlayLatestModelsCount,
   withNormalizedModelsFetched,
@@ -38,10 +39,13 @@ export async function GET(request: NextRequest) {
       { data: compariaRuns },
       { data: complRuns },
       { data: complAiScoredModels, error: complAiCountError },
+      { count: complAiBenchmarkTotal, error: benchmarkCountError },
+      { data: systemCards, error: systemCardsError },
+      { data: questionnaireProviders, error: questionnaireProvidersError },
     ] = await Promise.all([
       supabase
         .from('compl_ai_models')
-        .select('id, slug, model_name, model_provider, model_type, updated_at'),
+        .select('id, slug, model_name, model_provider, model_provider_id, model_type, updated_at, llm_leader_rank, comparia_rank, lifecycle_status'),
       supabase
         .from('compl_ai_evaluations')
         .select('model_id, score, maydai_score, rang_compar_ia')
@@ -64,6 +68,12 @@ export async function GET(request: NextRequest) {
         .select('model_id')
         .not('score', 'is', null)
         .limit(CATALOG_ROW_LIMIT),
+      supabase.from('compl_ai_benchmarks').select('id', { count: 'exact', head: true }),
+      supabase.from('llm_system_cards').select('model_identifier'),
+      supabase
+        .from('model_providers')
+        .select('id')
+        .not('tooltip_title', 'is', null),
     ])
     if (modelsError) throw modelsError
     if (evaluationsError) throw evaluationsError
@@ -71,13 +81,26 @@ export async function GET(request: NextRequest) {
     if (compariaError) throw compariaError
     if (sourceIdsError) throw sourceIdsError
     if (complAiCountError) throw complAiCountError
+    if (benchmarkCountError) throw benchmarkCountError
+    if (systemCardsError) throw systemCardsError
+    if (questionnaireProvidersError) throw questionnaireProvidersError
 
     const unified = buildUnifiedBenchModels(
       attachSourceIdsToCanonicalModels(canonicalModels ?? [], sourceIds ?? []),
       evaluations ?? [],
       ecoModels ?? [],
       compariaModels ?? [],
-      { includeUnmatchedCatalogs: false },
+      {
+        includeUnmatchedCatalogs: false,
+        complAiBenchmarkTotal:
+          complAiBenchmarkTotal && complAiBenchmarkTotal > 0
+            ? complAiBenchmarkTotal
+            : DEFAULT_COMPL_AI_BENCHMARK_TOTAL,
+        systemCardSlugs: (systemCards ?? [])
+          .map((card) => card.model_identifier)
+          .filter((slug): slug is string => Boolean(slug)),
+        questionnaireProviderIds: (questionnaireProviders ?? []).map((provider) => provider.id),
+      },
     )
     const sourceParam = request.nextUrl.searchParams.get('source')
     const source = (
@@ -101,7 +124,7 @@ export async function GET(request: NextRequest) {
       availability,
     })
     const page = positiveInteger(request.nextUrl.searchParams.get('page'), 1, 10_000)
-    const pageSize = positiveInteger(request.nextUrl.searchParams.get('pageSize'), 25, 100)
+    const pageSize = positiveInteger(request.nextUrl.searchParams.get('pageSize'), 25, 20_000)
     const from = (page - 1) * pageSize
     const complAiModelCount = countDistinctEvaluatedModels(complAiScoredModels ?? [])
 
