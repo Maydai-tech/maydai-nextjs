@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { verifyAdminAuth } from '@/lib/admin-auth'
 import {
   buildComplAiWideCsv,
@@ -71,7 +71,7 @@ function normalizeScore(value: string | number | null | undefined): NormalizeSco
 }
 
 async function importBenchmarkScore(input: {
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient
   benchmarkMap: Map<string, { id: string; principle_id: string }>
   modelId: string
   cell: ComplAiCsvScore
@@ -94,12 +94,13 @@ async function importBenchmarkScore(input: {
   }
   const score = scoreResult.score
 
-  const { data: existingEvaluation, error: evaluationError } = await supabase
+  const { data, error: evaluationError } = await supabase
     .from('compl_ai_evaluations')
     .select('id, score, evaluation_date')
     .eq('model_id', modelId)
     .eq('benchmark_id', benchmark.id)
     .maybeSingle()
+  const existingEvaluation = data as { id: string; score: number | null; evaluation_date: string | null } | null
 
   if (evaluationError) {
     stats.errors.push(`Ligne ${rowNumber}: Erreur lors de la recherche d'évaluation - ${evaluationError.message}`)
