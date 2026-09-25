@@ -1,10 +1,12 @@
 /** @jest-environment node */
 
 import {
+  buildComplAiWideCsv,
   formatComplAiLifecycleStatus,
   normalizeComplAiCsvRow,
   parseComplAiCsv,
   parseComplAiLifecycleStatus,
+  parseComplAiModelCsvRow,
   parseCsvLine,
   summarizeComplAiCsvImport,
 } from '../compl-ai-csv'
@@ -127,6 +129,79 @@ describe('parseComplAiCsv', () => {
     expect(row.principle_code).toBe('transparency')
     expect(row.benchmark_code).toBe('human_eval')
     expect(row.score).toBe('0.3')
+  })
+})
+
+describe('wide COMPL-AI CSV', () => {
+  const codes = ['bbq', 'human_eval']
+
+  test('builds one row per model and leaves missing scores empty', () => {
+    const csv = buildComplAiWideCsv({
+      benchmarkCodes: codes,
+      models: [
+        {
+          id: 'dfaa8b19-9e91-4b18-b2eb-45cb64633a46',
+          model_name: 'Mistral Large 3',
+          model_provider: 'Mistral',
+          model_type: 'llm',
+          version: '',
+          statusLabel: 'Actif',
+        },
+      ],
+      scores: [
+        { modelId: 'dfaa8b19-9e91-4b18-b2eb-45cb64633a46', benchmarkCode: 'human_eval', score: 0.3 },
+      ],
+    })
+
+    expect(csv).toBe(
+      [
+        '\uFEFFModèle ID,Nom du Modèle,Fournisseur,Type,Version,Statut,bbq,human_eval',
+        'dfaa8b19-9e91-4b18-b2eb-45cb64633a46,Mistral Large 3,Mistral,llm,,Actif,,0.3',
+        '',
+      ].join('\n'),
+    )
+  })
+
+  test('reads score columns and skips empty cells', () => {
+    const raw = parseComplAiCsv(
+      'Modèle ID,Nom du Modèle,Fournisseur,Statut,bbq,human_eval\n' +
+        'dfaa8b19-9e91-4b18-b2eb-45cb64633a46,Mistral Large 3,Mistral,Actif,,0.3\n',
+    )[0]
+
+    expect(parseComplAiModelCsvRow(raw, codes)).toEqual({
+      model_id: 'dfaa8b19-9e91-4b18-b2eb-45cb64633a46',
+      model_name: 'Mistral Large 3',
+      model_provider: 'Mistral',
+      model_type: '',
+      version: '',
+      lifecycle_status: 'active',
+      scores: [
+        { benchmark_code: 'human_eval', score: '0.3', score_text: '', evaluation_date: '' },
+      ],
+    })
+  })
+
+  test('still reads a legacy long row as a single score', () => {
+    const row = parseComplAiModelCsvRow(
+      {
+        'Nom du Modèle': 'GPT-4o',
+        Fournisseur: 'OpenAI',
+        'Benchmark Code': 'human_eval',
+        'Score Original': '0.85',
+        'Score Text': '85%',
+        "Date d'Évaluation": '2026-09-17',
+      },
+      codes,
+    )
+
+    expect(row.scores).toEqual([
+      {
+        benchmark_code: 'human_eval',
+        score: '0.85',
+        score_text: '85%',
+        evaluation_date: '2026-09-17',
+      },
+    ])
   })
 })
 
