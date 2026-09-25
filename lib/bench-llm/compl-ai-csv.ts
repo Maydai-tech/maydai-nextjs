@@ -227,3 +227,143 @@ export function summarizeComplAiCsvImport(stats: ComplAiImportStats): ComplAiImp
     message: `Import CSV terminé : ${saved} score(s) enregistré(s).`,
   }
 }
+
+export const COMPL_AI_MODEL_CSV_HEADERS = [
+  'Modèle ID',
+  'Nom du Modèle',
+  'Fournisseur',
+  'Type',
+  'Version',
+  'Statut',
+] as const
+
+export type ComplAiCsvScore = {
+  benchmark_code: string
+  score: string
+  score_text: string
+  evaluation_date: string
+}
+
+export type ComplAiModelCsvRow = {
+  model_id: string | null
+  model_name: string
+  model_provider: string
+  model_type: string
+  version: string
+  lifecycle_status: ProviderLifecycleStatus | null
+  scores: ComplAiCsvScore[]
+}
+
+export type ComplAiWideCsvModel = {
+  id: string
+  model_name: string | null
+  model_provider: string | null
+  model_type: string | null
+  version: string | null
+  statusLabel: string
+}
+
+export type ComplAiWideCsvScore = {
+  modelId: string
+  benchmarkCode: string
+  score: number | null
+}
+
+const IDENTITY_FIELDS = new Set([
+  'model_id',
+  'model_name',
+  'model_provider',
+  'model_type',
+  'version',
+  'lifecycle_status',
+  'principle_code',
+  'benchmark_code',
+  'score',
+  'score_text',
+  'evaluation_date',
+])
+
+function csvCell(value: string | number | null | undefined): string {
+  const text = value == null ? '' : String(value)
+  if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`
+  return text
+}
+
+function benchmarkCodeFromHeader(header: string, knownCodes: Map<string, string>): string | null {
+  const canonical = HEADER_ALIASES[normalizeHeader(header)]
+  if (canonical && IDENTITY_FIELDS.has(canonical)) return null
+  const key = normalizeHeader(header).replace(/[\s-]+/g, '_')
+  return knownCodes.get(key) ?? null
+}
+
+export function parseComplAiModelCsvRow(
+  raw: Record<string, unknown> | null | undefined,
+  benchmarkCodes: string[],
+): ComplAiModelCsvRow {
+  const long = normalizeComplAiCsvRow(raw)
+  const knownCodes = new Map(benchmarkCodes.map((code) => [normalizeHeader(code).replace(/[\s-]+/g, '_'), code]))
+  const isLongFormat = Boolean(long.principle_code || long.benchmark_code)
+  const scores: ComplAiCsvScore[] = []
+
+  if (isLongFormat) {
+    if (long.benchmark_code && long.score) {
+      scores.push({
+        benchmark_code: long.benchmark_code,
+        score: long.score,
+        score_text: long.score_text,
+        evaluation_date: long.evaluation_date,
+      })
+    }
+  } else {
+    for (const [key, value] of Object.entries(raw ?? {})) {
+      const benchmarkCode = benchmarkCodeFromHeader(key, knownCodes)
+      const score = blankToEmpty(value)
+      if (!benchmarkCode || !score) continue
+      scores.push({
+        benchmark_code: benchmarkCode,
+        score,
+        score_text: '',
+        evaluation_date: '',
+      })
+    }
+  }
+
+  return {
+    model_id: long.model_id,
+    model_name: long.model_name,
+    model_provider: long.model_provider,
+    model_type: long.model_type,
+    version: long.version,
+    lifecycle_status: long.lifecycle_status,
+    scores,
+  }
+}
+
+export function buildComplAiWideCsv(input: {
+  models: ComplAiWideCsvModel[]
+  benchmarkCodes: string[]
+  scores: ComplAiWideCsvScore[]
+}): string {
+  const scoreByKey = new Map<string, string>()
+  for (const score of input.scores) {
+    if (score.score == null || Number.isNaN(score.score)) continue
+    scoreByKey.set(`${score.modelId}:${score.benchmarkCode}`, String(score.score))
+  }
+
+  const lines = [[...COMPL_AI_MODEL_CSV_HEADERS, ...input.benchmarkCodes].map(csvCell).join(',')]
+  for (const model of input.models) {
+    lines.push(
+      [
+        csvCell(model.id),
+        csvCell(model.model_name),
+        csvCell(model.model_provider),
+        csvCell(model.model_type),
+        csvCell(model.version),
+        csvCell(model.statusLabel),
+        ...input.benchmarkCodes.map((code) => csvCell(scoreByKey.get(`${model.id}:${code}`) ?? '')),
+      ].join(','),
+    )
+  }
+
+  return `\uFEFF${lines.join('\n')}\n`
+}
