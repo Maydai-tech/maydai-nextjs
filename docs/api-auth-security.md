@@ -41,6 +41,8 @@ if (auth.error) return auth.error
 
 Routes user System Cards (`GET /api/system-cards/…`, `POST /api/dossiers/pillar-completion`) : Bearer via `getAuthenticatedSupabaseClient`. Le POST vérifie `user_companies` sur le `company_id` du cas d’usage. Détail : [llm-system-cards.md](./llm-system-cards.md).
 
+`GET` / `POST /api/admin/monitoring` : `verifyAdminAuth` **et** sources JSON hôte restreintes (`lib/monitoring-source.ts`). Runbook : [admin-monitoring.md](./admin-monitoring.md).
+
 Sans `CRON_SECRET` / `INTERNAL_API_KEY`, les routes concernées répondent 401 ou 500 (config incomplète). Vercel Cron envoie `Authorization: Bearer $CRON_SECRET`.
 
 ## 3. Durcissements août 2026 (à ne pas régresser)
@@ -55,8 +57,28 @@ Sans `CRON_SECRET` / `INTERNAL_API_KEY`, les routes concernées répondent 401 o
 
 ### Admin / debug
 
-- `GET /api/admin/monitoring` : `verifyAdminAuth` (admin).
+- `GET` / `POST /api/admin/monitoring` : `verifyAdminAuth` (admin). Les JSON disque / email / purges ne sont fetchés que si l’URL est loopback HTTP **ou** HTTPS + `MONITORING_BEARER_TOKEN` / basic auth. HTTP public (IP ou hostname) → source ignorée (`Source monitoring non configurée`).
 - `GET /api/debug` : `verifyAdminAuth(request, 'super_admin')` uniquement.
+
+### Rôles `profiles` (septembre 2026)
+
+`role` ∈ `user` | `admin` | `super_admin`. Ne jamais faire confiance à un `role` envoyé par le client.
+
+Trigger `ensure_role_security` → `prevent_role_escalation()` (`supabase/migrations/20260911154400_secure_profiles_role.sql`) :
+
+- JWT `service_role` ou rôle DB `postgres` : pas de réécriture.
+- `authenticated` / `anon` : `INSERT` force `role = NULL` ; `UPDATE` restaure `OLD.role`.
+
+`PATCH /api/admin/users/[id]` (`verifyAdminAuth` + client service) :
+
+| Règle | Réponse |
+|-------|---------|
+| L’appelant change **son** rôle | 403 `You cannot modify your own role` |
+| `admin` promeut en `super_admin` | 403 `Only a super_admin can promote a user to super_admin` |
+| `admin` modifie un `super_admin` | 403 `An admin cannot modify a super_admin profile` |
+| Lecture rôle cible en échec | 500 `Failed to verify target user role` (pas d’update) |
+
+Les invitations (`POST /api/collaboration/profile`) figent déjà `role: 'user'` côté API. Le trigger est la 2ᵉ ligne de défense si un client tape `profiles` en direct.
 
 ### Mistral / Stripe
 
@@ -71,5 +93,6 @@ Les messages d’erreur Stripe côté client sont génériques (`lib/stripe/util
 2. Ne pas faire confiance à `company_id` / `role` / `session_id` du client : recouper avec le JWT et la base.
 3. Pour un job Vercel Cron : lire `CRON_SECRET` comme les crons existants (pas un nouveau header maison sans doc).
 4. Ne pas logger de tokens. `verifyAdminAuth` logue déjà beaucoup : éviter d’ajouter le JWT dans les logs.
+5. Sources monitoring hôte : passer par `resolveMonitoringFetchTarget` (pas d’HTTP public, pas de credentials dans l’URL).
 
 Détail pages : `.cursor/rules/authentication-patterns.mdc`.
