@@ -83,6 +83,7 @@ Les invitations (`POST /api/collaboration/profile`) figent déjà `role: 'user'`
 ### Mistral / Stripe
 
 - `POST /api/mistral/generate-description` : Bearer obligatoire.
+- `POST /api/stripe/create-checkout-session` : Bearer obligatoire. Le `userId` du body est **ignoré**. `client_reference_id`, `metadata.user_id` / `metadata.userId` et le customer Stripe sont calés sur `user.id` du JWT. Sans Bearer → 401, Stripe n’est pas appelé. (`#439`)
 - `GET /api/stripe/retrieve-session` : Bearer + le `session_id` doit appartenir à l’utilisateur (`client_reference_id` ou `metadata.user_id`). Sinon 403.
 
 Les messages d’erreur Stripe côté client sont génériques (`lib/stripe/utils/error-handling.ts`) : ne pas renvoyer la stack Stripe au navigateur.
@@ -90,7 +91,7 @@ Les messages d’erreur Stripe côté client sont génériques (`lib/stripe/util
 ## 4. Checklist nouvelle route
 
 1. Choisir **un** garde-fou (user / admin / secret). Pas de route « interne » sans secret.
-2. Ne pas faire confiance à `company_id` / `role` / `session_id` du client : recouper avec le JWT et la base.
+2. Ne pas faire confiance à `company_id` / `role` / `session_id` / `userId` du client : recouper avec le JWT et la base.
 3. Pour un job Vercel Cron : lire `CRON_SECRET` comme les crons existants (pas un nouveau header maison sans doc).
 4. Ne pas logger de tokens. `verifyAdminAuth` logue déjà beaucoup : éviter d’ajouter le JWT dans les logs.
 5. Sources monitoring hôte : passer par `resolveMonitoringFetchTarget` (pas d’HTTP public, pas de credentials dans l’URL).
