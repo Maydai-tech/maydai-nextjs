@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, AppWindow } from 'lucide-react'
 import TrustBadges from '@/components/ui/TrustBadges'
+import NotairesCongressBanner from '@/app/(marketing)/conformite-ia/components/NotairesCongressBanner'
 import { useAIActCountdown } from '@/app/(marketing)/conformite-ia/hooks/useAIActCountdown'
 import { sendLandingCtaClick } from '@/lib/gtm'
 import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
@@ -93,11 +94,13 @@ export default function Hero() {
             <span className="text-[#0080a3]">projets IA</span> avec MaydAI
           </h2>
 
-          <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-10">
+          <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
             La plateforme tout-en-un pour naviguer l&apos;AI Act et accélérer
             votre déploiement. Audit assisté, gestion des risques et
             gouvernance IA en un seul outil.
           </p>
+
+          <NotairesCongressBanner />
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

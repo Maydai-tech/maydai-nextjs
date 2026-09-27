@@ -1,5 +1,6 @@
 import HeroSection from '@/components/site-vitrine/HeroSection';
 import DashboardSection from '@/components/site-vitrine/DashboardSection';
+import SovereignTechSection from '@/components/site-vitrine/SovereignTechSection';
 import TechnologiesSection from '@/components/site-vitrine/TechnologiesSection';
 import FeaturesSection from '@/components/site-vitrine/FeaturesSection';
 import MistralDashboard from '@/components/MistralDashboard';
@@ -116,6 +117,7 @@ export default function HomePage() {
       <main>
         <HeroSection />
         <DashboardSection />
+        <SovereignTechSection />
         <TechnologiesSection />
         <FeaturesSection />
         <MistralDashboard />
