@@ -83,7 +83,7 @@ lib/                         # Shared utilities & services
 ├── api-auth.ts              # Bearer user (getAuthenticatedSupabaseClient)
 ├── admin-auth.ts            # verifyAdminAuth (admin / super_admin)
 ├── mistral/                 # Agents chat, graphe V3, rapport
-├── bench-llm/               # Hub canonique + sync LLM Stats / Control Tower / System Cards
+├── bench-llm/               # Hub canonique + cycle de vie + CSV COMPL-AI + Control Tower / System Cards
 ├── comparia/                # Import Drive + pivot
 ├── rag-ingestion.ts         # RAG AI Act (pgvector)
 ├── openai-client.ts         # Rapports File Search (hors chat)
