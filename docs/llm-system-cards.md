@@ -65,6 +65,8 @@ Boutons sur `/admin/bench-llms`. Auth : `verifyAdminAuth` (Bearer admin). Pas d�
 
 Colonnes : ID Supabase, provider, nom, nom Hermes (`slug` avec `_`), statuts, lien dossier, date MAJ, action Hermes (`CREATE` / `NONE`), prêt (`Non` / `Déjà importé`). La colonne Markdown est laissée vide — Hermes la remplit.
 
+`Statut LLM` (`resolveControlTowerLlmStatus`) : snapshot `provider-lifecycle.ts` (slug, nom, ids pivot) **surchargé** par `compl_ai_models.lifecycle_status` si renseigné. Si `GOOGLE_SHEETS_CONTROL_TOWER_ID` est défini, la sync réécrit aussi cette colonne sur le **premier onglet** du Sheet (insert après `Statut Fiche Technique` si absente). Matching des lignes : colonne A = `id` Supabase. Hub : [llm-models-hub.md](./llm-models-hub.md) §6.
+
 ### Import Markdown (Sheet → Supabase)
 
 `importSystemCardsFromControlTower` (`lib/bench-llm/system-cards-import.ts`) :

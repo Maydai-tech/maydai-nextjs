@@ -17,7 +17,7 @@ Chat IA (3 étapes, `/api/chat/*`) : règle `.cursor/rules/mistral-conversationa
 
 | Document | Sujet |
 |----------|--------|
-| [llm-models-hub.md](./llm-models-hub.md) | `compl_ai_models` + pivot `llm_model_source_ids`, crons, Compar:IA |
+| [llm-models-hub.md](./llm-models-hub.md) | Hub : slug + pivot, cycle de vie, CSV COMPL-AI, EcoLogits, crons |
 | [llm-system-cards.md](./llm-system-cards.md) | Fiches GPAI, Tour de contrôle Drive, bonus score, PDF |
 | [ai-act-rag.md](./ai-act-rag.md) | Ingestion veille `AI_Act_Index.json` → pgvector (pas encore consommé par le chat) |
 
@@ -27,7 +27,7 @@ Hub canonique LLM : `.cursor/rules/llm-models-hub.mdc`. Sync Drive Hermes : `.cu
 
 | Document | Sujet |
 |----------|--------|
-| [api-auth-security.md](./api-auth-security.md) | Bearer, `verifyAdminAuth`, crons, webhooks, invitations, rôles `profiles` |
+| [api-auth-security.md](./api-auth-security.md) | Bearer, `verifyAdminAuth`, crons, webhooks, invitations, rôles `profiles`, checkout Stripe |
 | [admin-monitoring.md](./admin-monitoring.md) | `/admin/monitoring`, allowlist JSON hôte, Caddy / nginx |
 | [e2e-playwright.md](./e2e-playwright.md) | Playwright local + CI, mots de passe uniques, plus de rapport OVH |
 | [guide-installation-mcp-supabase.md](./guide-installation-mcp-supabase.md) | MCP Supabase OVH |
@@ -37,7 +37,7 @@ Auth API : `.cursor/rules/api-architecture.mdc`, `.cursor/rules/authentication-p
 
 ## Notes historiques (ne plus suivre pour de nouvelles colonnes)
 
-Les notes Perplexity / enrichissement décrivent d’anciens chemins admin. Toute source externe passe par `llm_model_source_ids`, jamais par une colonne dénormalisée sur `compl_ai_models`.
+Les notes Perplexity / enrichissement décrivent d’anciens chemins admin. Toute source externe passe par `llm_model_source_ids` (LLM Stats / Compar:IA) ou `ecologits_model_links` (EcoLogits), jamais par une colonne dénormalisée sur `compl_ai_models`.
 
 - [PERPLEXITY_MODELS_IMPLEMENTATION.md](./PERPLEXITY_MODELS_IMPLEMENTATION.md)
 - [ENRICHISSEMENT_MODELS_IMPLEMENTATION.md](./ENRICHISSEMENT_MODELS_IMPLEMENTATION.md)
