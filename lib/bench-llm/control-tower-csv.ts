@@ -1,4 +1,5 @@
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { z } from 'zod'
 
 import {
   applyLifecycleStatusOverride,
@@ -122,27 +123,136 @@ function quoteSheetTitle(title: string): string {
   return `'${title.replace(/'/g, "''")}'`
 }
 
+function createControlTowerServiceClient(): SupabaseClient {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY manquant(e)')
+  }
+  return createClient(supabaseUrl, serviceRoleKey)
+}
+
+const controlTowerSheetRowSchema = z.tuple([
+  z.string().min(1),
+  z.string(),
+  z.string(),
+  z.string().min(1),
+  z.literal(STATUT_BASE_IMPORTE),
+  z.enum([STATUT_FICHE_GENEREE, STATUT_FICHE_MANQUANTE]),
+  z.string(),
+  z.string().min(1),
+  z.string(),
+  z.string(),
+  z.string(),
+  z.enum(['NONE', 'CREATE']),
+  z.enum(['Déjà importé', 'Non']),
+])
+
+const controlTowerSheetRowsSchema = z.array(controlTowerSheetRowSchema)
+
+async function resolveFirstControlTowerSheet(
+  sheets: ReturnType<typeof getSheetsClient>,
+  spreadsheetId: string,
+): Promise<{ title: string; sheetId: number }> {
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: 'sheets.properties(sheetId,title,index)',
+  })
+  const properties = [...(meta.data.sheets ?? [])].sort(
+    (a, b) => (a.properties?.index ?? 0) - (b.properties?.index ?? 0),
+  )[0]?.properties
+  const title = properties?.title
+  const sheetId = properties?.sheetId
+  if (!title || sheetId == null) {
+    throw new Error('Aucun onglet dans le Google Sheet de la tour de contrôle')
+  }
+  return { title, sheetId }
+}
+
+export function buildControlTowerSheetRow(row: ControlTowerModelRow): string[] {
+  const statutFiche = row.hasSystemCard ? STATUT_FICHE_GENEREE : STATUT_FICHE_MANQUANTE
+  return [
+    row.id,
+    row.model_provider ?? '',
+    row.model_name ?? '',
+    toHermesFileName(row.slug),
+    STATUT_BASE_IMPORTE,
+    statutFiche,
+    row.llmStatus,
+    CONTROL_TOWER_DRIVE_FOLDER_URL,
+    '',
+    formatControlTowerDate(row.updated_at),
+    '',
+    row.hasSystemCard ? 'NONE' : 'CREATE',
+    row.hasSystemCard ? 'Déjà importé' : 'Non',
+  ]
+}
+
+export async function appendMissingModelsToSheet(spreadsheetId: string): Promise<number> {
+  const parsedSpreadsheetId = z.string().trim().min(1).parse(spreadsheetId)
+  const supabase = createControlTowerServiceClient()
+  const sheets = getSheetsClient()
+  const { title } = await resolveFirstControlTowerSheet(sheets, parsedSpreadsheetId)
+  const quotedTitle = quoteSheetTitle(title)
+
+  const existingData = await sheets.spreadsheets.values.get({
+    spreadsheetId: parsedSpreadsheetId,
+    range: `${quotedTitle}!A:A`,
+  })
+  const columnA = Array.isArray(existingData.data.values) ? existingData.data.values : []
+  const populatedIds = columnA
+    .map((row) => String(row?.[0] ?? '').trim())
+    .filter((value) => value.length > 0)
+  const headerPresent = foldHeader(populatedIds[0] ?? '') === foldHeader('ID Supabase')
+  const existingIds = new Set(headerPresent ? populatedIds.slice(1) : populatedIds)
+
+  let models: ControlTowerModelRow[]
+  try {
+    models = await fetchControlTowerRows(supabase)
+  } catch (error) {
+    console.error('[appendMissingModelsToSheet]', error)
+    throw error
+  }
+
+  if (models.length === 0) return 0
+
+  const rowsToAdd = models
+    .filter((model) => !existingIds.has(model.id))
+    .map((model) => buildControlTowerSheetRow(model))
+
+  if (rowsToAdd.length === 0) return 0
+
+  const parsedRows = controlTowerSheetRowsSchema.parse(rowsToAdd)
+  const values = populatedIds.length === 0 ? [[...CSV_HEADERS], ...parsedRows] : parsedRows
+  const lastColumn = columnIndexToA1(CSV_HEADERS.length - 1)
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: parsedSpreadsheetId,
+    range: `${quotedTitle}!A:${lastColumn}`,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values },
+  })
+
+  return parsedRows.length
+}
+
 export async function writeControlTowerLlmStatusColumn(
-  rows: Array<{ id: string; llmStatus: string }>,
+  rowsOrSpreadsheetId: string | Array<{ id: string; llmStatus: string }>,
 ): Promise<{ updatedCells: number; inserted: boolean }> {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_CONTROL_TOWER_ID?.trim()
+  const explicitSheetId = typeof rowsOrSpreadsheetId === 'string'
+  const rows = explicitSheetId
+    ? await fetchControlTowerRows(createControlTowerServiceClient())
+    : rowsOrSpreadsheetId
+  const spreadsheetId = explicitSheetId
+    ? z.string().trim().min(1).parse(rowsOrSpreadsheetId)
+    : process.env.GOOGLE_SHEETS_CONTROL_TOWER_ID?.trim()
   if (!spreadsheetId) {
     return { updatedCells: 0, inserted: false }
   }
 
   const sheets = getSheetsClient()
-  const meta = await sheets.spreadsheets.get({
-    spreadsheetId,
-    fields: 'sheets.properties(sheetId,title,index)',
-  })
-  const sheet = [...(meta.data.sheets ?? [])].sort(
-    (a, b) => (a.properties?.index ?? 0) - (b.properties?.index ?? 0),
-  )[0]?.properties
-  const title = sheet?.title
-  const sheetId = sheet?.sheetId
-  if (!title || sheetId == null) {
-    throw new Error('Aucun onglet dans le Google Sheet de la tour de contrôle')
-  }
+  const { title, sheetId } = await resolveFirstControlTowerSheet(sheets, spreadsheetId)
 
   const quotedTitle = quoteSheetTitle(title)
   const headerRes = await sheets.spreadsheets.values.get({
@@ -215,24 +325,7 @@ export function buildControlTowerCsv(rows: ControlTowerModelRow[]): string {
   const lines = [CSV_HEADERS.join(',')]
 
   for (const row of rows) {
-    const statutFiche = row.hasSystemCard ? STATUT_FICHE_GENEREE : STATUT_FICHE_MANQUANTE
-    lines.push(
-      [
-        csvCell(row.id),
-        csvCell(row.model_provider),
-        csvCell(row.model_name),
-        csvCell(toHermesFileName(row.slug)),
-        csvCell(STATUT_BASE_IMPORTE),
-        csvCell(statutFiche),
-        csvCell(row.llmStatus),
-        csvCell(CONTROL_TOWER_DRIVE_FOLDER_URL),
-        csvCell(''),
-        csvCell(formatControlTowerDate(row.updated_at)),
-        csvCell(''),
-        csvCell(row.hasSystemCard ? 'NONE' : 'CREATE'),
-        csvCell(row.hasSystemCard ? 'Déjà importé' : 'Non'),
-      ].join(','),
-    )
+    lines.push(buildControlTowerSheetRow(row).map((cell) => csvCell(cell)).join(','))
   }
 
   return `${lines.join('\n')}\n`
