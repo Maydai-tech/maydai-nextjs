@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { extractDossierStoragePath } from '@/lib/dossier-storage-path'
+import { userCanAccessDossierPath } from '@/lib/dossier-signed-url'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -24,12 +26,18 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url)
     const filePath = url.searchParams.get('path')
 
-    if (!filePath) {
-      return NextResponse.json({ error: 'Missing path parameter' }, { status: 400 })
+    const storagePath = extractDossierStoragePath(filePath)
+    if (!storagePath) {
+      return NextResponse.json({ error: 'Invalid path' }, { status: 400 })
+    }
+
+    const allowed = await userCanAccessDossierPath(supabase, user.id, storagePath)
+    if (!allowed) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
     // List the file to get its metadata
-    const pathParts = filePath.split('/')
+    const pathParts = storagePath.split('/')
     const fileName = pathParts.pop()
     const folderPath = pathParts.join('/')
 

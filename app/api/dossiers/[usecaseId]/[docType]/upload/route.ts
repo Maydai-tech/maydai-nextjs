@@ -11,6 +11,7 @@ import {
   getAcceptedDossierApiDocTypeParams,
   resolveCanonicalDocType,
 } from "@/lib/canonical-actions";
+import { extractDossierStoragePath } from "@/lib/dossier-storage-path";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -278,12 +279,7 @@ export async function PUT(
     }
     console.log("[PUT /upload] Storage upload successful");
 
-    const { data: publicUrlData } = (supabase as any).storage
-      .from("dossiers")
-      .getPublicUrl(path);
-
-    const fileUrl = publicUrlData?.publicUrl || null;
-    console.log("[PUT /upload] Public URL generated:", fileUrl);
+    const fileUrl = path;
 
     // Upsert dossier_documents with file_url
     console.log(
@@ -465,14 +461,8 @@ export async function DELETE(
     const previousStatus = doc.status;
 
     // Delete file from storage if it exists
-    if (doc.file_url) {
-      const url = new URL(doc.file_url);
-      const pathMatch = url.pathname.match(
-        /\/storage\/v1\/object\/public\/dossiers\/(.+)/,
-      );
-      if (pathMatch && pathMatch[1]) {
-        const filePath = decodeURIComponent(pathMatch[1]);
-
+    const filePath = extractDossierStoragePath(doc.file_url);
+    if (filePath) {
         // Delete from storage
         const { error: deleteError } = await (supabase as any).storage
           .from("dossiers")
@@ -485,7 +475,6 @@ export async function DELETE(
           );
           // Continue anyway to update DB
         }
-      }
     }
 
     // Update document to remove file_url, form_data and set status to incomplete

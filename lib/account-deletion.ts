@@ -1,7 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/secure-logger'
+import { extractDossierStoragePath } from '@/lib/dossier-storage-path'
 import { getStripeClient } from '@/lib/stripe/config/client'
 import { cancelStripeSubscription } from '@/lib/stripe/services/subscription'
+
+export { extractDossierStoragePath }
 
 /**
  * Helpers de suppression de compte et de cascade des données associées.
@@ -14,23 +17,6 @@ import { cancelStripeSubscription } from '@/lib/stripe/services/subscription'
 
 /** Bucket Supabase Storage hébergeant les fichiers de dossiers. */
 const DOSSIERS_BUCKET = 'dossiers'
-
-/**
- * Extrait le chemin Storage à partir d'une URL publique de fichier dossier.
- * Format attendu : .../storage/v1/object/public/dossiers/<path>
- * Renvoie null si l'URL est absente ou non reconnue.
- * (Même logique que la route d'upload des dossiers.)
- */
-export function extractDossierStoragePath(fileUrl: string | null | undefined): string | null {
-  if (!fileUrl) return null
-  try {
-    const url = new URL(fileUrl)
-    const match = url.pathname.match(/\/storage\/v1\/object\/public\/dossiers\/(.+)/)
-    return match && match[1] ? decodeURIComponent(match[1]) : null
-  } catch {
-    return null
-  }
-}
 
 /**
  * Supprime les fichiers physiques du Storage (bucket "dossiers") rattachés aux
