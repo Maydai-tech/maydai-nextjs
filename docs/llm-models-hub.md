@@ -77,7 +77,7 @@ CSV Compar:IA attendu : `leaderboard.csv` par défaut (`COMPARIA_DRIVE_FILE_NAME
 | Compar:IA | `comparia_models` + pivot | cron, POST admin, webhook KB |
 | COMPL-AI scores | `compl_ai_evaluations` (+ `lifecycle_status` sur la fiche) | CSV admin §7 |
 
-Le cron EcoLogits (`lib/ecologits/sync.ts` → `planExactEcoLogitsLinks`) ne crée un lien `exact` que s’il reste **un** MaydAI libre pour la clé provider+nom, et **refuse** un 2ᵉ EcoLogits sur une fiche déjà liée (0 ou 2+ candidats → skip). Le rattachement de plusieurs alias (dated / latest) se fait à la main (`match_method = 'manual'`). Unique côté EcoLogits : `onConflict: 'ecologits_model_id'`. Unique côté MaydAI : **levée** (`20260919100000_…`).
+Le cron EcoLogits (`lib/ecologits/sync.ts` → `planExactEcoLogitsLinks`) ne crée un lien `exact` que s’il reste **un** MaydAI libre pour la clé provider+nom, et **refuse** un 2ᵉ EcoLogits sur une fiche déjà liée. Le rattachement de plusieurs alias (dated / latest) se fait à la main (`match_method = 'manual'`). Unique côté EcoLogits : `onConflict: 'ecologits_model_id'`. Unique côté MaydAI : **levée** (`20260919100000_…`).
 
 Admin Bench : `lib/bench-llm/admin-unified.ts` — une ligne par fiche. Badge EcoLogits = lien `ecologits_model_links` **ou** pivot `source = 'ecologits'`. Pas de colonnes `llm_stats_id` / `eco_*` sur le hub.
 
@@ -109,7 +109,7 @@ Matching Compar:IA automatique (`findCompariaHubLinks`) : id LLM Stats déjà pi
 
 ## 6. Cycle de vie fournisseur
 
-Ce n’est **pas** `ecologits_models.is_active` (présence catalogue). Snapshot officiel dans `lib/bench-llm/provider-lifecycle.ts` (daté **2026-09-22**) : Anthropic, OpenAI, Google, Mistral, xAI.
+Ce n’est **pas** `ecologits_models.is_active` (présence catalogue). Snapshot officiel dans `lib/bench-llm/provider-lifecycle.ts` (daté dans le fichier, ex. 2026-09-22) : Anthropic, OpenAI, Google, Mistral, xAI.
 
 | Statut | Label CSV / UI |
 |--------|----------------|
@@ -118,15 +118,15 @@ Ce n’est **pas** `ecologits_models.is_active` (présence catalogue). Snapshot 
 | `deprecated` | Déprécié |
 | `retired` | Retiré |
 
-`resolveProviderLifecycle(identifiants)` normalise (minuscules, non-alphanum → tiret), matche l’id exact ou une variante datée `id-YYYYMMDD`, et garde le **pire** statut si plusieurs ids matchent (`retired` > `deprecated` > `legacy` > `active`). Une clé qui finit par `-0` réessaie aussi sans ce suffixe.
+`resolveProviderLifecycle(identifiants)` normalise (minuscules, non-alphanum → tiret), matche l’id exact ou une variante datée `id-YYYYMMDD`, et garde le **pire** statut si plusieurs ids matchent (`retired` > `deprecated` > `legacy` > `active`).
 
-`applyLifecycleStatusOverride(officiel, compl_ai_models.lifecycle_status)` : si la colonne CSV est renseignée, elle **remplace** le statut et le label. La source officielle est conservée s’il y a un match ; sinon `source = 'csv'` (et `sourceModelId` vaut alors le token de statut, pas un id modèle).
+`applyLifecycleStatusOverride(officiel, compl_ai_models.lifecycle_status)` : si la colonne CSV est renseignée, elle **remplace** le statut (le label aussi). Source affichée : `csv` si aucun match officiel.
 
 Consommateurs : dashboard `/admin/bench-llms`, export COMPL-AI, colonne `Statut LLM` de la Tour de contrôle (`resolveControlTowerLlmStatus`).
 
 ## 7. CSV COMPL-AI (une ligne par modèle)
 
-Saisie admin depuis `/admin/bench-llms`. Parser : `lib/bench-llm/compl-ai-csv.ts`. Après `verifyAdminAuth`, l’import / le template utilisent un client **service role** (bypass RLS).
+Saisie admin depuis `/admin/bench-llms`. Parser : `lib/bench-llm/compl-ai-csv.ts`.
 
 | Action | Route | Auth | Durée |
 |--------|-------|------|-------|
@@ -145,7 +145,7 @@ Modèle ID,Nom du Modèle,Fournisseur,Type,Version,Statut,bbq,human_eval
 <uuid>,Mistral Large 3,Mistral,llm,,Actif,,0.3
 ```
 
-BOM UTF-8. Séparateur `,` sauf si la 1ʳᵉ ligne n’a que des `;`. Scores **entre 0 et 1** (pas 0–100). Cellule vide / `N/A` / `na` → pas de score (skip silencieux). Score numérique hors `[0, 1]` → **erreur** de ligne. Date d’évaluation absente en large : date déjà en base, sinon aujourd’hui (`YYYY-MM-DD`). `data_source = 'csv-import'`.
+BOM UTF-8. Séparateur `,` sauf si la 1ʳᵉ ligne n’a que des `;`. Scores **entre 0 et 1** (pas 0–100). Cellule vide / `N/A` / `na` → pas de score. Date d’évaluation absente en large : date déjà en base, sinon aujourd’hui (`YYYY-MM-DD`). `data_source = 'csv-import'`.
 
 Matching modèle : UUID d’export d’abord, sinon `model_name` exact. Sans match → insert (l’UUID d’export est réutilisé si fourni).
 
@@ -155,7 +155,7 @@ Si `Principe Code` ou `Benchmark Code` est présent, une ligne = un score. Conse
 
 ### Statut CSV
 
-Alias (accents ignorés) : Actif / Active → `active` ; Déprécié / Deprecated → `deprecated` ; Retiré / Retired → `retired` ; Legacy → `legacy`. **`Évalué` n’est pas un statut** → ignoré (`null`). Une cellule Statut vide **ne remet pas** `lifecycle_status` à `NULL`.
+Alias (accents ignorés) : Actif / Active → `active` ; Déprécié / Deprecated → `deprecated` ; Retiré / Retired → `retired` ; Legacy → `legacy`. **`Évalué` n’est pas un statut** → ignoré (`null`).
 
 ### Après import
 
@@ -176,14 +176,14 @@ python3 scripts/export_sync_tracking_to_gsheets.py \
   --folder "https://drive.google.com/drive/folders/FOLDER_ID"
 ```
 
-Auth : même compte de service Drive (`GOOGLE_DRIVE_CLIENT_EMAIL` + `GOOGLE_DRIVE_PRIVATE_KEY` dans `.env.local`), ou `--credentials`. Dossier : `--folder` ou `GOOGLE_DRIVE_FOLDER_ID` (ID nu ou URL — **pas** dans `.env.example`). Partager le dossier en **Éditeur** avec le SA. Lecture Supabase : `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`.
+Auth : même compte de service Drive (`GOOGLE_DRIVE_CLIENT_EMAIL` + `GOOGLE_DRIVE_PRIVATE_KEY` dans `.env.local`), ou `--credentials`. Dossier : `--folder` ou `GOOGLE_DRIVE_FOLDER_ID` (ID nu ou URL). Partager le dossier en **Éditeur** avec le SA.
 
 Catalogue lu : `compl_ai_models` + évaluations + liens EcoLogits / Compar:IA / pivot / System Cards. Cycle de vie : parse le même `provider-lifecycle.ts`. Fournisseurs suivis par défaut : Anthropic, DeepSeek, Google, Meta, Microsoft, Mistral, OpenAI, Perplexity, Qwen, xAI. Les autres sont ignorés sauf `--all-providers`.
 
 ## 9. Pièges
 
 - Une source orpheline n’est **pas** une raison d’ajouter une colonne sur `compl_ai_models`.
-- EcoLogits : le cron n’écrit **pas** `llm_model_source_ids`. Plusieurs alias → lien **manuel**. La fiche détail (`GET /api/admin/bench-llms/models/[id]`) fait un `.maybeSingle()` sur `maydai_model_id` : 2+ liens → erreur PostgREST. Le dashboard unifié garde le **dernier** EcoLogits rencontré dans le fetch (pas d’`order` sur `last_seen_at`) pour `ecoModelId`.
+- EcoLogits : le cron n’écrit **pas** `llm_model_source_ids`. Plusieurs alias → lien **manuel**. La fiche détail (`GET /api/admin/bench-llms/models/[id]`) fait un `.maybeSingle()` sur `maydai_model_id` : 2+ liens → erreur PostgREST. Le dashboard unifié garde le **dernier** EcoLogits vu pour `ecoModelId`.
 - CSV mal recollé : UUID dans « Nom du modèle » et nom dans « Fournisseur » → le parser promote l’UUID et récupère le nom.
 - Score CSV hors `[0, 1]` → ligne rejetée. Import « succès » avec 0 score = 422 (ne plus afficher un faux 200).
 - `matchComplAiModelId` (chat setup) fait un `ILIKE` sur `model_name` uniquement — pas le slug. Ambigu ou absent → `primary_model_id` null.
