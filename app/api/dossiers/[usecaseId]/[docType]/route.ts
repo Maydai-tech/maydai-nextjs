@@ -12,6 +12,7 @@ import {
   normalizeHumanOversightFormData,
   resolveCanonicalDocType,
 } from '@/lib/canonical-actions'
+import { extractDossierStoragePath } from '@/lib/dossier-storage-path'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -99,7 +100,7 @@ export async function GET(
 
     return NextResponse.json({
       formData,
-      fileUrl: doc?.file_url ?? null,
+      fileUrl: extractDossierStoragePath(doc?.file_url),
       status: doc?.status ?? 'incomplete',
       updatedAt: doc?.updated_at ?? null,
       dossierId: dossierRow.id,

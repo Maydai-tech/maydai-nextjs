@@ -4,6 +4,7 @@ import {
   getAcceptedDossierApiDocTypeParams,
   resolveCanonicalDocType,
 } from '@/lib/canonical-actions'
+import { extractDossierStoragePath } from '@/lib/dossier-storage-path'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -158,7 +159,7 @@ export async function GET(request: NextRequest) {
           usecaseId,
           docType,
           formData: doc?.form_data ?? null,
-          fileUrl: doc?.file_url ?? null,
+          fileUrl: extractDossierStoragePath(doc?.file_url),
           status,
           updatedAt: doc?.updated_at ?? null
         })
