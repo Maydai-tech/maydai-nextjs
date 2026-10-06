@@ -114,6 +114,47 @@ export function isUuid(value: string | null | undefined): value is string {
   return Boolean(value && UUID_RE.test(value))
 }
 
+/**
+ * Parse un score COMPL-AI (0–1). Les CSV FR (Excel / Sheets) envoient souvent
+ * une virgule décimale : `parseFloat("0,85") === 0`, ce qui écraserait le score.
+ */
+export function parseComplAiNumericScore(
+  value: string | number | null | undefined,
+): { score: number | null; error: string | null } {
+  if (value === null || value === undefined) {
+    return { score: null, error: null }
+  }
+
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || value < 0 || value > 1) {
+      return { score: null, error: 'Score doit être un nombre entre 0 et 1' }
+    }
+    return { score: value, error: null }
+  }
+
+  const trimmed = String(value).trim()
+  if (!trimmed) {
+    return { score: null, error: null }
+  }
+
+  const lowered = trimmed.toLowerCase()
+  if (lowered === 'n/a' || lowered === 'na') {
+    return { score: null, error: null }
+  }
+
+  const normalized = trimmed.replace(/\s/g, '').replace(',', '.')
+  if (!/^(?:\d+|\d*\.\d+)$/.test(normalized)) {
+    return { score: null, error: 'Score doit être un nombre entre 0 et 1' }
+  }
+
+  const numValue = Number(normalized)
+  if (!Number.isFinite(numValue) || numValue < 0 || numValue > 1) {
+    return { score: null, error: 'Score doit être un nombre entre 0 et 1' }
+  }
+
+  return { score: numValue, error: null }
+}
+
 export function parseCsvLine(line: string, separator = ','): string[] {
   const fields: string[] = []
   let current = ''

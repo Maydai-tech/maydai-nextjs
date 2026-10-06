@@ -7,9 +7,30 @@ import {
   parseComplAiCsv,
   parseComplAiLifecycleStatus,
   parseComplAiModelCsvRow,
+  parseComplAiNumericScore,
   parseCsvLine,
   summarizeComplAiCsvImport,
 } from '../compl-ai-csv'
+
+describe('parseComplAiNumericScore', () => {
+  test('reads a French decimal comma instead of truncating to 0', () => {
+    expect(parseComplAiNumericScore('0,85')).toEqual({ score: 0.85, error: null })
+    expect(parseComplAiNumericScore('0,3')).toEqual({ score: 0.3, error: null })
+  })
+
+  test('still reads a period decimal and integer bounds', () => {
+    expect(parseComplAiNumericScore('0.85')).toEqual({ score: 0.85, error: null })
+    expect(parseComplAiNumericScore('0')).toEqual({ score: 0, error: null })
+    expect(parseComplAiNumericScore('1')).toEqual({ score: 1, error: null })
+    expect(parseComplAiNumericScore(0.42)).toEqual({ score: 0.42, error: null })
+  })
+
+  test('rejects junk that parseFloat would silently truncate', () => {
+    expect(parseComplAiNumericScore('0.85abc').error).toBeTruthy()
+    expect(parseComplAiNumericScore('85').error).toBeTruthy()
+    expect(parseComplAiNumericScore('0,85,1').error).toBeTruthy()
+  })
+})
 
 describe('parseCsvLine', () => {
   test('keeps commas inside quoted fields', () => {

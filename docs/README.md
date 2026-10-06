@@ -37,7 +37,7 @@ Auth API : `.cursor/rules/api-architecture.mdc`, `.cursor/rules/authentication-p
 
 ## Notes historiques (ne plus suivre pour de nouvelles colonnes)
 
-Les notes Perplexity / enrichissement décrivent d’anciens chemins admin. Toute source externe passe par `llm_model_source_ids`, jamais par une colonne dénormalisée sur `compl_ai_models`.
+Les notes Perplexity / enrichissement décrivent d’anciens chemins admin. Toute source externe passe par `llm_model_source_ids` (LLM Stats / Compar:IA) ou `ecologits_model_links` (EcoLogits), jamais par une colonne dénormalisée sur `compl_ai_models`.
 
 - [PERPLEXITY_MODELS_IMPLEMENTATION.md](./PERPLEXITY_MODELS_IMPLEMENTATION.md)
 - [ENRICHISSEMENT_MODELS_IMPLEMENTATION.md](./ENRICHISSEMENT_MODELS_IMPLEMENTATION.md)
