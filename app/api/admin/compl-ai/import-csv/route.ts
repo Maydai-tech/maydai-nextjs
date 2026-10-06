@@ -5,6 +5,7 @@ import {
   buildComplAiWideCsv,
   isUuid,
   parseComplAiModelCsvRow,
+  parseComplAiNumericScore,
   summarizeComplAiCsvImport,
   type ComplAiCsvScore,
 } from '@/lib/bench-llm/compl-ai-csv'
@@ -55,19 +56,8 @@ function normalizeScore(value: string | number | null | undefined): NormalizeSco
     }
   }
 
-  // Cas nombre valide
-  const numValue = typeof value === 'number' ? value : parseFloat(String(value))
-  
-  if (!isNaN(numValue)) {
-    if (numValue >= 0 && numValue <= 1) {
-      return { score: numValue, isNA: false, error: null }
-    } else {
-      return { score: null, isNA: false, error: 'Score doit être un nombre entre 0 et 1' }
-    }
-  }
-
-  // Cas valeur non numérique invalide (autre que N/A)
-  return { score: null, isNA: false, error: 'Score doit être un nombre entre 0 et 1' }
+  const parsed = parseComplAiNumericScore(value)
+  return { score: parsed.score, isNA: false, error: parsed.error }
 }
 
 async function importBenchmarkScore(input: {
