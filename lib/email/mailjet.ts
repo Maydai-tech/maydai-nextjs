@@ -16,7 +16,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://www.maydai.io';
 // Client Mailjet
 const mailjet = Mailjet.apiConnect(
   process.env.MAILJET_API_KEY!,
-  process.env.MAILJET_SECRET_KEY!
+  process.env.MAILJET_SECRET_KEY || process.env.MAILJET_API_SECRET!
 );
 
 // Fonction d'envoi pour invitation au niveau registre (registry-level)
