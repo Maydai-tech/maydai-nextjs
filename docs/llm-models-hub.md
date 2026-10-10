@@ -50,7 +50,7 @@ Déclarées dans `vercel.json` :
 | EcoLogits | `GET /api/cron/sync-ecologits` | `0 3 * * *` | idem |
 | Compar:IA Drive | `GET /api/admin/comparia/sync` | `0 2 * * 0` (dimanche) | cron **ou** admin |
 
-System Cards / Tour de contrôle : **pas** de cron — boutons admin uniquement. Runbook : [llm-system-cards.md](./llm-system-cards.md).
+System Cards / Tour de contrôle : **pas** de cron — boutons admin uniquement. Sync = append Sheet + CSV Drive (`#447`). Runbook : [llm-system-cards.md](./llm-system-cards.md).
 
 Compar:IA accepte aussi `x-cron-secret: $CRON_SECRET` (comparaison `timingSafeEqual`).  
 `GET` = cron only. `POST` = cron **ou** `verifyAdminAuth` (admin). Body optionnel `{ "file_name": "…" }`.
@@ -93,7 +93,7 @@ System Cards : table séparée `llm_system_cards.model_identifier` = slug. Pas u
 | `ECOLOGITS_BASE_URL` / `ECOLOGITS_API_KEY` | Catalogue + estimations |
 | `COMPARIA_DRIVE_FILE_NAME` | Défaut `leaderboard.csv` |
 | `GOOGLE_DRIVE_*` | Service Account Shared Drive |
-| `GOOGLE_SHEETS_CONTROL_TOWER_ID` | Sheet Tour de contrôle (import System Cards + write-back `Statut LLM`) |
+| `GOOGLE_SHEETS_CONTROL_TOWER_ID` | Sheet Tour de contrôle : **requis** pour `POST /api/admin/llm-control-tower-sync` (append des ids hub absents + write-back `Statut LLM`) et pour l’import System Cards |
 | `GOOGLE_DRIVE_FOLDER_CONTROL_TOWER` | Dossier CSV snapshot (export Control Tower) |
 | `GOOGLE_DRIVE_FOLDER_ID` | Dossier du script de suivi Sheets (§8) — **pas** le dossier Control Tower |
 | `INTERNAL_API_KEY` | Webhook KB + sync SIREN |
