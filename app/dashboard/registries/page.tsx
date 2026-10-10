@@ -1,5 +1,3 @@
-import RegistriesPage from './RegistriesPage'
+export { default } from './RegistriesRoute'
 
-export default function CompanySelection() {
-  return <RegistriesPage />
-}
+export const dynamic = 'force-dynamic'

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { CheckCircle, X, AlertTriangle, Info } from 'lucide-react'
 
 interface ToastProps {
@@ -19,43 +19,51 @@ export default function Toast({
   duration = 5000
 }: ToastProps) {
   const [isAnimating, setIsAnimating] = useState(false)
+  const onCloseRef = useRef(onClose)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => { onCloseRef.current = onClose }, [onClose])
+
+  const handleClose = useCallback(() => {
+    if (closeTimer.current !== null) return
+    setIsAnimating(false)
+    closeTimer.current = setTimeout(() => {
+      closeTimer.current = null
+      onCloseRef.current()
+    }, 300)
+  }, [])
 
   useEffect(() => {
     if (isVisible) {
-      // Small delay to trigger animation
-      requestAnimationFrame(() => {
+      setIsAnimating(false)
+      const frame = requestAnimationFrame(() => {
         setIsAnimating(true)
       })
 
-      // Auto close after duration
-      const timer = setTimeout(() => {
-        handleClose()
-      }, duration)
-
-      return () => clearTimeout(timer)
+      const timer = setTimeout(handleClose, duration)
+      return () => {
+        cancelAnimationFrame(frame)
+        clearTimeout(timer)
+        if (closeTimer.current !== null) {
+          clearTimeout(closeTimer.current)
+          closeTimer.current = null
+        }
+      }
     }
-  }, [isVisible, duration])
-
-  const handleClose = () => {
-    setIsAnimating(false)
-    // Wait for animation to complete before calling onClose
-    setTimeout(() => {
-      onClose()
-    }, 300)
-  }
+  }, [isVisible, message, duration, handleClose])
 
   if (!isVisible) return null
 
   const getIcon = () => {
     switch (type) {
       case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-500" />
+        return <CheckCircle className="h-5 w-5 shrink-0 text-green-500" aria-hidden="true" />
       case 'error':
-        return <AlertTriangle className="h-5 w-5 text-red-500" />
+        return <AlertTriangle className="h-5 w-5 shrink-0 text-red-500" aria-hidden="true" />
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-500" />
+        return <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-500" aria-hidden="true" />
       case 'info':
-        return <Info className="h-5 w-5 text-blue-500" />
+        return <Info className="h-5 w-5 shrink-0 text-blue-500" aria-hidden="true" />
     }
   }
 
@@ -73,21 +81,25 @@ export default function Toast({
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-4 left-4 right-4 sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-md z-50">
       <div
+        role="status"
+        aria-atomic="true"
         className={`
           flex items-center gap-3 px-4 py-3 bg-white rounded-lg shadow-lg border border-gray-200 border-l-4 ${getBorderColor()}
-          transform transition-all duration-300 ease-out
-          ${isAnimating ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
+          transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none motion-reduce:transform-none
+          ${isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'}
         `}
       >
         {getIcon()}
-        <p className="text-sm font-medium text-gray-800">{message}</p>
+        <p className="min-w-0 text-sm font-medium text-gray-800 break-words">{message}</p>
         <button
+          type="button"
+          aria-label="Fermer la notification"
           onClick={handleClose}
-          className="ml-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+          className="ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3]"
         >
-          <X className="h-4 w-4 text-gray-400" />
+          <X className="h-4 w-4 text-gray-400" aria-hidden="true" />
         </button>
       </div>
     </div>
