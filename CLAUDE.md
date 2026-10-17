@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
 **Files:**
 - Client auth: [lib/auth.tsx](lib/auth.tsx)
 - API auth: [lib/api-auth.ts](lib/api-auth.ts)
-- Admin / cron / webhook: [docs/api-auth-security.md](docs/api-auth-security.md)
+- Admin / cron / webhook / invitations / preuves dossier: [docs/api-auth-security.md](docs/api-auth-security.md)
 - Monitoring hôte: [docs/admin-monitoring.md](docs/admin-monitoring.md)
 - E2E Playwright: [docs/e2e-playwright.md](docs/e2e-playwright.md)
 - Protected route component: [components/ProtectedRoute.tsx](components/ProtectedRoute.tsx)

@@ -36,8 +36,10 @@ if (auth.error) return auth.error
 | `POST /api/admin/comparia/sync` | cron **ou** admin | si `x-cron-secret` est envoyé et faux → 401 même pour un admin |
 | `POST /api/webhooks/kb-update` | `INTERNAL_API_KEY` | `x-api-key` |
 | `POST /api/webhooks/sync-siren` | `INTERNAL_API_KEY` | même schéma |
-| `POST /api/admin/llm-control-tower-sync` | admin | `verifyAdminAuth` (pas de cron) |
+| `POST /api/admin/llm-control-tower-sync` | admin | `verifyAdminAuth` (pas de cron). Exige `GOOGLE_SHEETS_CONTROL_TOWER_ID` |
 | `POST /api/admin/llm-system-cards-import` | admin | idem |
+| `GET /api/storage/signed-url` | user JWT | Bearer + `user_companies` sur le `companyId` du path (`#448`) |
+| `GET /api/storage/file-metadata` | user JWT | idem |
 
 Routes user System Cards (`GET /api/system-cards/…`, `POST /api/dossiers/pillar-completion`) : Bearer via `getAuthenticatedSupabaseClient`. Le POST vérifie `user_companies` sur le `company_id` du cas d’usage. Détail : [llm-system-cards.md](./llm-system-cards.md).
 
@@ -47,13 +49,35 @@ Sans `CRON_SECRET` / `INTERNAL_API_KEY`, les routes concernées répondent 401 o
 
 ## 3. Durcissements août 2026 (à ne pas régresser)
 
-### Invitations
+### Invitations (Zero Overwrite)
 
-`POST /api/collaboration/profile` et `POST /api/companies/[id]/collaborators` :
+Si l’email existe déjà dans `auth.users`, **aucune** de ces routes n’appelle `createProfileForUser` (service role : un appel réécrirait `first_name` / `last_name` avec le payload de l’inviteur). Self-invite interdit.
 
-- ignorent `role` du body client ;
-- si l’email existe déjà dans `auth.users` : **pas** d’appel `createProfileForUser` (pas d’écrasement de profil) ;
-- self-invite interdit.
+| Route | `#` | Notes |
+|-------|-----|--------|
+| `POST /api/collaboration/profile` | août 2026 | Ignore `role` du body ; fige `user_companies.role = 'user'` |
+| `POST /api/companies/[id]/collaborators` | août 2026 | Idem |
+| `POST /api/profiles/[profileId]/collaborators` | `#448` | Même Zero Overwrite ; `user_companies.role` figé à `'user'` |
+| `POST /api/usecases/[id]/collaborators` | `#448` | Même Zero Overwrite. Le `role` du body sert au **lien** (`user_usecases`, ex. `human_oversight`), pas à `profiles.role` |
+
+`createProfileForUser` (`lib/invite-user.ts`) **update encore** un profil existant s’il est appelé. Ne le brancher que après `inviteUserByEmail` pour un **nouvel** utilisateur Auth.
+
+### Preuves de dossier (octobre 2026, `#448`)
+
+Les uploads ne persistent plus une URL publique Storage (`getPublicUrl`). `dossier_documents.file_url` = chemin relatif `{companyId}/{usecaseId}/{docType}/{fichier}`. Les GET dossier / batch normalisent les URL historiques via `extractDossierStoragePath` (token de signed URL retiré).
+
+| Route | Auth | Contrôle |
+|-------|------|----------|
+| `GET /api/storage/signed-url?path=` | Bearer | `extractDossierStoragePath` + `userCanAccessDossierPath` (`user_companies` sur le 1er segment = `companyId`) |
+| `GET /api/storage/file-metadata?path=` | Bearer | Même gate (avant : JWT seul, pas de check entreprise) |
+
+Signature : service role (`SUPABASE_SERVICE_ROLE_KEY`), bucket `dossiers`, TTL **300 s**. 401 sans Bearer ; 400 chemin invalide (`..`, mauvais bucket, moins de 2 segments) ; 403 hors `user_companies` ; 500 si la signature échoue.
+
+UI : `UploadedFileDisplay` ouvre via signed-url (`window.open`), jamais `<a href={fileUrl}>`. Ne pas réintroduire un lien public.
+
+Le 1er segment du path = `company_id`. Un collaborateur seulement dans `user_usecases` (sans `user_companies`) reçoit **403** à l’ouverture — aligné sur GET / upload dossier, pas sur `hasAccess` de `lib/collaborators.ts`.
+
+Les anciennes URL publiques en base restent normalisées en lecture. Si le bucket est encore public, une URL déjà divulguée peut rester joignable hors app.
 
 ### Admin / debug
 
@@ -91,7 +115,7 @@ Les messages d’erreur Stripe côté client sont génériques (`lib/stripe/util
 ## 4. Checklist nouvelle route
 
 1. Choisir **un** garde-fou (user / admin / secret). Pas de route « interne » sans secret.
-2. Ne pas faire confiance à `company_id` / `role` / `session_id` / `userId` du client : recouper avec le JWT et la base.
+2. Ne pas faire confiance à `company_id` / `role` / `session_id` / `userId` du client : recouper avec le JWT et la base. Preuves dossier : chemin relatif + signed URL, pas `getPublicUrl`.
 3. Pour un job Vercel Cron : lire `CRON_SECRET` comme les crons existants (pas un nouveau header maison sans doc).
 4. Ne pas logger de tokens. `verifyAdminAuth` logue déjà beaucoup : éviter d’ajouter le JWT dans les logs.
 5. Sources monitoring hôte : passer par `resolveMonitoringFetchTarget` (pas d’HTTP public, pas de credentials dans l’URL).
