@@ -8,9 +8,9 @@ MaydAI is a Next.js 15 application for AI Act (EU) compliance management. It hel
 
 **Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), Mistral Agents (chat + RAG), OpenAI (rapports File Search), Stripe
 
-**Docs techniques :** [docs/README.md](docs/README.md) — Chat IA, hub LLM, System Cards, auth API, monitoring, E2E, RAG AI Act.
+**Docs techniques :** [docs/README.md](docs/README.md) — Chat IA, hub LLM, System Cards, auth API, inscription OTP / landings partenaires, monitoring, E2E, RAG AI Act.
 
-Runbooks : [docs/README.md](docs/README.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). Monitoring : [docs/admin-monitoring.md](docs/admin-monitoring.md). E2E : [docs/e2e-playwright.md](docs/e2e-playwright.md). RAG veille AI Act : [docs/ai-act-rag.md](docs/ai-act-rag.md).
+Runbooks : [docs/README.md](docs/README.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). Monitoring : [docs/admin-monitoring.md](docs/admin-monitoring.md). E2E : [docs/e2e-playwright.md](docs/e2e-playwright.md). RAG veille AI Act : [docs/ai-act-rag.md](docs/ai-act-rag.md). Inscription / Learning Gate : [docs/signup-partner-landings.md](docs/signup-partner-landings.md).
 
 ## Development Commands
 
