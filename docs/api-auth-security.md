@@ -88,6 +88,17 @@ Les invitations (`POST /api/collaboration/profile`) figent déjà `role: 'user'`
 
 Les messages d’erreur Stripe côté client sont génériques (`lib/stripe/utils/error-handling.ts`) : ne pas renvoyer la stack Stripe au navigateur.
 
+### Inscription
+
+| Route | Auth | Notes |
+|-------|------|--------|
+| `POST /api/auth/check-email` | aucune | Existence dans `auth.users` (service role). Énumération d’e-mails possible. |
+| `POST /api/auth/complete-signup` | Bearer | Upsert `profiles` sur `user.id`. Champ omis (`phone`, `siren`, `gclid`, `utm_*`, noms…) → `null`. Pas de fusion avec la ligne existante. |
+| `POST /api/leads/website-direct` | Bearer | Lead `website_direct` si attribution utile et pas de `lead_id`. Insert 201 ; doublon `23505` → 200. |
+| `POST /api/leads/link-to-user` | Bearer | 403 si l’e-mail du lead ≠ e-mail JWT. |
+
+Landings co-brandées (`/p/learning-gate`) : même wizard, UTM défaut partenaire. Runbook : [signup-partner-landings.md](./signup-partner-landings.md).
+
 ## 4. Checklist nouvelle route
 
 1. Choisir **un** garde-fou (user / admin / secret). Pas de route « interne » sans secret.
