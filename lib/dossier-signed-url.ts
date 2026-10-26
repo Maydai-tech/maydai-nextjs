@@ -13,6 +13,32 @@ function getServiceRoleClient(): SupabaseClient | null {
   })
 }
 
+/**
+ * Soft-delete admin (`is_active = false`) = plus d'accès.
+ * Les lignes sans drapeau (owners créés sans le champ) restent autorisées.
+ */
+export function isActiveCompanyMembership(isActive: boolean | null | undefined): boolean {
+  return isActive !== false
+}
+
+export async function userHasActiveCompanyMembership(
+  supabase: SupabaseClient,
+  userId: string,
+  companyId: string
+): Promise<boolean> {
+  if (!userId || !companyId) return false
+
+  const { data, error } = await supabase
+    .from('user_companies')
+    .select('user_id, is_active')
+    .eq('user_id', userId)
+    .eq('company_id', companyId)
+    .maybeSingle()
+
+  if (error || !data) return false
+  return isActiveCompanyMembership((data as { is_active?: boolean | null }).is_active)
+}
+
 export async function userCanAccessDossierPath(
   supabase: SupabaseClient,
   userId: string,
@@ -20,16 +46,7 @@ export async function userCanAccessDossierPath(
 ): Promise<boolean> {
   const companyId = storagePath.split('/')[0]
   if (!companyId) return false
-
-  const { data, error } = await supabase
-    .from('user_companies')
-    .select('user_id')
-    .eq('user_id', userId)
-    .eq('company_id', companyId)
-    .maybeSingle()
-
-  if (error || !data) return false
-  return true
+  return userHasActiveCompanyMembership(supabase, userId, companyId)
 }
 
 export async function createDossierSignedUrl(storagePath: string): Promise<string | null> {

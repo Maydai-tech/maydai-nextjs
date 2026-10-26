@@ -5,6 +5,7 @@ import {
   resolveCanonicalDocType,
 } from '@/lib/canonical-actions'
 import { extractDossierStoragePath } from '@/lib/dossier-storage-path'
+import { isActiveCompanyMembership } from '@/lib/dossier-signed-url'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -98,11 +99,15 @@ export async function GET(request: NextRequest) {
     // Verify user has access to all companies in one query
     const { data: userCompanies } = await supabase
       .from('user_companies')
-      .select('company_id')
+      .select('company_id, is_active')
       .eq('user_id', user.id)
       .in('company_id', companyIds)
 
-    const accessibleCompanyIds = new Set(userCompanies?.map((uc: any) => uc.company_id) || [])
+    const accessibleCompanyIds = new Set(
+      (userCompanies || [])
+        .filter((uc: { is_active?: boolean | null }) => isActiveCompanyMembership(uc.is_active))
+        .map((uc: { company_id: string }) => uc.company_id)
+    )
 
     // Filter dossiers to only those the user can access
     const accessibleDossiers = dossiers.filter((d: any) => accessibleCompanyIds.has(d.company_id))
