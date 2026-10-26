@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
+import { userHasActiveCompanyMembership } from '@/lib/dossier-signed-url'
 import { updateDossierPillarCompletion } from '@/lib/services/system-card-service'
 import {
   PILLAR_CODE_TO_DOC_TYPE,
@@ -55,14 +56,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Cas d’usage introuvable' }, { status: 404 })
   }
 
-  const { data: access } = await supabase
-    .from('user_companies')
-    .select('user_id')
-    .eq('user_id', user.id)
-    .eq('company_id', usecase.company_id)
-    .maybeSingle()
-
-  if (!access) {
+  const hasAccess = await userHasActiveCompanyMembership(supabase, user.id, usecase.company_id)
+  if (!hasAccess) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 

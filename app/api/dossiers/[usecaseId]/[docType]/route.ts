@@ -13,6 +13,7 @@ import {
   resolveCanonicalDocType,
 } from '@/lib/canonical-actions'
 import { extractDossierStoragePath } from '@/lib/dossier-storage-path'
+import { userHasActiveCompanyMembership } from '@/lib/dossier-signed-url'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -73,14 +74,8 @@ export async function GET(
       })
     }
 
-    const { data: access } = await supabase
-      .from('user_companies')
-      .select('user_id')
-      .eq('user_id', user.id)
-      .eq('company_id', dossierRow.company_id)
-      .maybeSingle()
-
-    if (!access) {
+    const hasAccess = await userHasActiveCompanyMembership(supabase, user.id, dossierRow.company_id)
+    if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -155,15 +150,8 @@ export async function POST(
         return NextResponse.json({ error: 'Usecase not found' }, { status: 404 })
       }
 
-      // Access check
-      const { data: access } = await supabase
-        .from('user_companies')
-        .select('user_id')
-        .eq('user_id', user.id)
-        .eq('company_id', usecase.company_id)
-        .maybeSingle()
-
-      if (!access) {
+      const hasAccess = await userHasActiveCompanyMembership(supabase, user.id, usecase.company_id)
+      if (!hasAccess) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
 
@@ -178,14 +166,12 @@ export async function POST(
       }
       dossierId = inserted.id
     } else {
-      // Access check on existing dossier
-      const { data: access } = await supabase
-        .from('user_companies')
-        .select('user_id')
-        .eq('user_id', user.id)
-        .eq('company_id', existingDossier.company_id)
-        .maybeSingle()
-      if (!access) {
+      const hasAccess = await userHasActiveCompanyMembership(
+        supabase,
+        user.id,
+        existingDossier.company_id
+      )
+      if (!hasAccess) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
     }

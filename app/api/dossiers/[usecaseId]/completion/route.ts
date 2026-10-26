@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { userHasActiveCompanyMembership } from '@/lib/dossier-signed-url'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -37,14 +38,8 @@ export async function GET(
       return NextResponse.json({ error: 'Use case not found' }, { status: 404 })
     }
 
-    const { data: access } = await supabase
-      .from('user_companies')
-      .select('user_id')
-      .eq('user_id', user.id)
-      .eq('company_id', usecase.company_id)
-      .maybeSingle()
-
-    if (!access) {
+    const hasAccess = await userHasActiveCompanyMembership(supabase, user.id, usecase.company_id)
+    if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
