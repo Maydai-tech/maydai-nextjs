@@ -8,9 +8,9 @@ MaydAI is a Next.js 15 application for AI Act (EU) compliance management. It hel
 
 **Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), Mistral Agents (chat + RAG), OpenAI (rapports File Search), Stripe
 
-**Docs techniques :** [docs/README.md](docs/README.md) — Chat IA, hub LLM, System Cards, auth API, monitoring, E2E, RAG AI Act.
+**Docs techniques :** [docs/README.md](docs/README.md) — Chat IA, hub LLM, System Cards, auth API, inscription / landings partenaires, monitoring, E2E, RAG AI Act.
 
-Runbooks : [docs/README.md](docs/README.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). Monitoring : [docs/admin-monitoring.md](docs/admin-monitoring.md). E2E : [docs/e2e-playwright.md](docs/e2e-playwright.md). RAG veille AI Act : [docs/ai-act-rag.md](docs/ai-act-rag.md).
+Runbooks : [docs/README.md](docs/README.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). Inscription : [docs/signup-partner-landings.md](docs/signup-partner-landings.md). Monitoring : [docs/admin-monitoring.md](docs/admin-monitoring.md). E2E : [docs/e2e-playwright.md](docs/e2e-playwright.md). RAG veille AI Act : [docs/ai-act-rag.md](docs/ai-act-rag.md).
 
 ## Development Commands
 
@@ -425,7 +425,7 @@ MAILJET_API_SECRET=
 ```
 
 Jobs / webhooks (prod) : `CRON_SECRET`, `INTERNAL_API_KEY`, `LLM_STATS_API_KEY`, `GOOGLE_DRIVE_*`.  
-Hub LLM : [docs/llm-models-hub.md](docs/llm-models-hub.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). RAG : [docs/ai-act-rag.md](docs/ai-act-rag.md).
+Hub LLM : [docs/llm-models-hub.md](docs/llm-models-hub.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). Inscription : [docs/signup-partner-landings.md](docs/signup-partner-landings.md). RAG : [docs/ai-act-rag.md](docs/ai-act-rag.md).
 
 ### TypeScript
 - Path alias: `@/*` maps to project root
