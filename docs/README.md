@@ -28,6 +28,7 @@ Hub canonique LLM : `.cursor/rules/llm-models-hub.mdc`. Sync Drive Hermes : `.cu
 | Document | Sujet |
 |----------|--------|
 | [api-auth-security.md](./api-auth-security.md) | Bearer, `verifyAdminAuth`, crons, webhooks, invitations, rôles `profiles`, checkout Stripe |
+| [signup-partner-landings.md](./signup-partner-landings.md) | Inscription OTP, landings `/p/…` (Learning Gate), UTM, `complete-signup` |
 | [admin-monitoring.md](./admin-monitoring.md) | `/admin/monitoring`, allowlist JSON hôte, Caddy / nginx |
 | [e2e-playwright.md](./e2e-playwright.md) | Playwright local + CI, mots de passe uniques, plus de rapport OVH |
 | [guide-installation-mcp-supabase.md](./guide-installation-mcp-supabase.md) | MCP Supabase OVH |

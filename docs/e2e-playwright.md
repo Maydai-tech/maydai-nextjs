@@ -52,3 +52,4 @@ Le workflow le rappelle : la base Supabase préprod **est** la prod. Les specs i
 - **`e2e/old/`** n’est pas exécuté. Le modifier ne change pas CI.
 - **Rapport HTML public = régression.** Le lire via l’artifact GitHub (ou `playwright-report/` en local).
 - Notion : toute **création / modification / suppression** de spec Playwright doit mettre à jour la doc tests Notion (règle projet) — ce runbook repo ne remplace pas cette page.
+- **Landings partenaires.** `e2e/auth/signup.spec.ts` (`@prod`) teste `POST /api/auth/complete-signup` (payload minimal / complet). Aucune spec ne charge `/p/learning-gate` ni le merge UTM partenaire. Runbook : [signup-partner-landings.md](./signup-partner-landings.md).
