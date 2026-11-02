@@ -10,6 +10,9 @@ export const DEFAULT_EVALUATION_AGENT_ID = 'ag_01a01a725c2a768192011ff9cbed2c8a'
 /** Agent génération rapport AI Act. Surcharge : `MISTRAL_REPORT_AGENT_ID`. */
 export const DEFAULT_REPORT_AGENT_ID = 'ag_01a01a87fd80764da399c641001c764e'
 
+/** Agent génération de résumé / description de cas d’usage. Surcharge : `MISTRAL_DESCRIPTION_AGENT_ID`. */
+export const DEFAULT_DESCRIPTION_AGENT_ID = 'ag:91e23ddf:20250707:resume-cas-usage-ia:9c55ed1d'
+
 export type MistralAgentRole = 'user' | 'assistant' | 'system'
 
 export type MistralAgentMessage = {
@@ -30,6 +33,11 @@ export function getEvaluationAgentId(): string {
 export function getReportAgentId(): string {
   const fromEnv = process.env.MISTRAL_REPORT_AGENT_ID?.trim()
   return fromEnv || DEFAULT_REPORT_AGENT_ID
+}
+
+export function getDescriptionAgentId(): string {
+  const fromEnv = process.env.MISTRAL_DESCRIPTION_AGENT_ID?.trim()
+  return fromEnv || DEFAULT_DESCRIPTION_AGENT_ID
 }
 
 export function extractAgentTextContent(content: unknown): string {

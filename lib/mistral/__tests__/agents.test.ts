@@ -11,8 +11,10 @@ jest.mock('@/lib/mistral/client', () => ({
 import {
   completeMistralAgent,
   DEFAULT_CONVERSATION_AGENT_ID,
+  DEFAULT_DESCRIPTION_AGENT_ID,
   DEFAULT_REPORT_AGENT_ID,
   extractAgentTextContent,
+  getDescriptionAgentId,
   getReportAgentId,
 } from '@/lib/mistral/agents'
 
@@ -58,5 +60,14 @@ describe('completeMistralAgent', () => {
   test('getReportAgentId utilise l’agent rapport par défaut', () => {
     delete process.env.MISTRAL_REPORT_AGENT_ID
     expect(getReportAgentId()).toBe(DEFAULT_REPORT_AGENT_ID)
+  })
+
+  test('getDescriptionAgentId lit MISTRAL_DESCRIPTION_AGENT_ID à l’appel', () => {
+    delete process.env.MISTRAL_DESCRIPTION_AGENT_ID
+    expect(getDescriptionAgentId()).toBe(DEFAULT_DESCRIPTION_AGENT_ID)
+
+    process.env.MISTRAL_DESCRIPTION_AGENT_ID = '  ag_override  '
+    expect(getDescriptionAgentId()).toBe('ag_override')
+    delete process.env.MISTRAL_DESCRIPTION_AGENT_ID
   })
 })
