@@ -4,7 +4,11 @@ import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { planIdSchema } from '@/lib/validations/pricing'
-import { CompleteSignupSchema } from '@/lib/validations/signup'
+import {
+  CompleteSignupSchema,
+  mergeCompleteSignupProfile,
+  type SignupProfileFields,
+} from '@/lib/validations/signup'
 import { calculateAndSaveProfileCompleteness, computeProfileCompletenessScoreFromRow } from '@/lib/services/profileScoreService'
 
 const ACQUISITION_FIELD_MAX_LEN = 512
@@ -136,34 +140,44 @@ export async function POST(request: NextRequest) {
     const utm_medium = sanitizeAcquisitionField(rawUtmMedium)
     const utm_campaign = sanitizeAcquisitionField(rawUtmCampaign)
 
+    const { data: existingProfile, error: existingProfileError } = await supabase
+      .from('profiles')
+      .select(
+        'first_name, last_name, company_name, industry, sub_category_id, phone, siren, gclid, utm_source, utm_medium, utm_campaign'
+      )
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (existingProfileError) {
+      console.error('Profile read error:', existingProfileError)
+      return NextResponse.json(
+        { error: 'Erreur lors de la création du profil' },
+        { status: 500 }
+      )
+    }
+
+    const patch: Partial<SignupProfileFields> = {}
+    if (firstName !== undefined) patch.first_name = firstName.trim() || null
+    if (lastName !== undefined) patch.last_name = lastName.trim() || null
+    if (companyName !== undefined) patch.company_name = companyName.trim() || null
+    if (mainIndustryId !== undefined) patch.industry = mainIndustryId.trim() || null
+    if (subCategoryId !== undefined) patch.sub_category_id = subCategoryId.trim() || null
+    if (phone !== undefined) patch.phone = cleanedPhone
+    if (siren !== undefined) patch.siren = cleanedSiren
+    if (rawGclid !== undefined) patch.gclid = gclid
+    if (rawUtmSource !== undefined) patch.utm_source = utm_source
+    if (rawUtmMedium !== undefined) patch.utm_medium = utm_medium
+    if (rawUtmCampaign !== undefined) patch.utm_campaign = utm_campaign
+
+    const merged = mergeCompleteSignupProfile(existingProfile, patch)
+
     // Create/update profile with all signup data
     // Note: email is stored in auth.users, not in profiles table
     // Store mainIndustryId in industry field and subCategoryId in sub_category_id field
     const profileData = {
       id: user.id,
-      first_name: firstName?.trim() ?? null,
-      last_name: lastName?.trim() ?? null,
-      company_name: companyName?.trim() ?? null,
-      industry: mainIndustryId?.trim() ?? null,
-      sub_category_id: subCategoryId?.trim() ?? null,
-      phone: cleanedPhone,
-      siren: cleanedSiren,
-      gclid,
-      utm_source,
-      utm_medium,
-      utm_campaign,
-      completeness_score: computeProfileCompletenessScoreFromRow(
-        {
-          first_name: firstName?.trim() ?? null,
-          last_name: lastName?.trim() ?? null,
-          company_name: companyName?.trim() ?? null,
-          industry: mainIndustryId?.trim() ?? null,
-          sub_category_id: subCategoryId?.trim() ?? null,
-          phone: cleanedPhone,
-          siren: cleanedSiren,
-        },
-        false
-      ),
+      ...merged,
+      completeness_score: computeProfileCompletenessScoreFromRow(merged, false),
       updated_at: new Date().toISOString(),
     }
 
