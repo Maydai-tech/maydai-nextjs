@@ -2,7 +2,7 @@
 
 Fiches d’audit GPAI (5 piliers) rattachées au **slug** canonique, pas à une colonne de `compl_ai_models`. Hub : [llm-models-hub.md](./llm-models-hub.md). Règle : `.cursor/rules/llm-models-hub.mdc`.
 
-Livré en septembre 2026 (`#430`, `#431`, `#432`). Vérifié contre le code de ces chemins.
+Livré en septembre 2026 (`#430`, `#431`, `#432`). Sync Sheet : `#447` (octobre 2026). Vérifié contre le code de ces chemins.
 
 ## 1. Intention
 
@@ -51,21 +51,26 @@ Boutons sur `/admin/bench-llms`. Auth : `verifyAdminAuth` (Bearer admin). Pas d�
 
 | Action | Route | Durée | Effet |
 |--------|-------|-------|--------|
-| Sync LLM Control | `POST /api/admin/llm-control-tower-sync` | 60 s | Exporte un CSV snapshot vers Drive |
+| Sync LLM Control | `POST /api/admin/llm-control-tower-sync` | 60 s | Append les modèles hub absents du Sheet, réécrit `Statut LLM`, exporte le CSV Drive |
 | Import System Cards | `POST /api/admin/llm-system-cards-import` | 300 s | Lit le **Google Sheet**, importe les lignes `Prêt pour import = Oui` |
 
-### Export CSV (MaydAI → Drive)
+### Sync LLM Control (Sheet puis CSV)
 
-`exportControlTowerCsv` (`lib/bench-llm/control-tower-csv.ts`) :
+`POST /api/admin/llm-control-tower-sync` (`lib/bench-llm/control-tower-csv.ts`), bouton « Sync LLM Control ». Body vide. `GOOGLE_SHEETS_CONTROL_TOWER_ID` est **obligatoire** (sinon 500 `GOOGLE_SHEETS_CONTROL_TOWER_ID is not defined`).
 
-1. Page `compl_ai_models` (1000 / page).
-2. Marque `hasSystemCard` si `llm_system_cards.model_identifier === slug`.
-3. Écrit `MaydAI_LLM_Control_Tower.csv` via `upsertTextFileInFolder`.
-4. Dossier : `GOOGLE_DRIVE_FOLDER_CONTROL_TOWER` ou constante `CONTROL_TOWER_FOLDER_ID`.
+Ordre après `verifyAdminAuth` :
 
-Colonnes : ID Supabase, provider, nom, nom Hermes (`slug` avec `_`), statuts, lien dossier, date MAJ, action Hermes (`CREATE` / `NONE`), prêt (`Non` / `Déjà importé`). La colonne Markdown est laissée vide — Hermes la remplit.
+1. `appendMissingModelsToSheet` — lit la colonne A du **premier onglet** (index le plus bas). Présents = UUID `compl_ai_models.id` (en-tête détecté si la 1ʳᵉ cellule non vide fold en `id supabase`). Ajoute une ligne `A:M` par id manquant. Sheet vide → écrit d’abord l’en-tête. **N’update pas** les lignes déjà présentes (provider / nom / action Hermes restent ceux d’Hermes).
+2. `writeControlTowerLlmStatusColumn` — réécrit toute la colonne `Statut LLM` (insert après `Statut Fiche Technique` si absente). Matching : colonne A = `id` Supabase.
+3. `exportControlTowerCsv` — upsert `MaydAI_LLM_Control_Tower.csv` via `upsertTextFileInFolder`. Dossier : `GOOGLE_DRIVE_FOLDER_CONTROL_TOWER` ou constante `CONTROL_TOWER_FOLDER_ID`. Réécrit `Statut LLM` une 2ᵉ fois (même Sheet).
 
-`Statut LLM` (`resolveControlTowerLlmStatus`) : snapshot `provider-lifecycle.ts` (slug, nom, ids pivot) **surchargé** par `compl_ai_models.lifecycle_status` si renseigné. Si `GOOGLE_SHEETS_CONTROL_TOWER_ID` est défini, la sync réécrit aussi cette colonne sur le **premier onglet** du Sheet (insert après `Statut Fiche Technique` si absente). Matching des lignes : colonne A = `id` Supabase. Hub : [llm-models-hub.md](./llm-models-hub.md) §6.
+200 : `{ success, message, fileId, rowCount, updated, modelsAppended }`. Append + write-back Sheet peuvent réussir **avant** un échec Drive (500 partiel).
+
+Nouvelle ligne (`buildControlTowerSheetRow`) : `Statut Supabase = Importé` ; fiche `Générée` / `Manquante` ; action Hermes `NONE` / `CREATE` ; prêt `Déjà importé` / `Non` ; lien Markdown vide ; dossier Drive = constante `CONTROL_TOWER_DRIVE_FOLDER_URL`.
+
+Colonnes (13) : ID Supabase, provider, nom, nom Hermes (`slug` avec `_`), statuts, lien dossier, date MAJ, action Hermes, prêt. Hub data : page `compl_ai_models` (1000 / page) + `hasSystemCard` si `llm_system_cards.model_identifier === slug`.
+
+`Statut LLM` (`resolveControlTowerLlmStatus`) : snapshot `provider-lifecycle.ts` (slug, nom, ids pivot) **surchargé** par `compl_ai_models.lifecycle_status` si renseigné. Hub : [llm-models-hub.md](./llm-models-hub.md) §6.
 
 ### Import Markdown (Sheet → Supabase)
 
@@ -83,7 +88,7 @@ Colonnes : ID Supabase, provider, nom, nom Hermes (`slug` avec `_`), statuts, li
 
 HTTP import : `200` si `errors` vide ; `207` si insert + erreurs ; `500` si erreurs et `inserted === 0`. Le write-back Sheet en échec est logué, pas fatal.
 
-Deux artefacts Drive distincts : le **CSV snapshot** (export) et le **Sheet** (import + statuts). Ne pas les confondre.
+Deux artefacts Drive distincts : le **CSV snapshot** (export, pas lu par l’import) et le **Sheet** (import + statuts + append sync). La sync **écrit** les nouvelles lignes hub sur le Sheet que l’import lit. Ne pas confondre le fichier CSV Drive avec le Spreadsheet.
 
 ### Dates de fiche (`card_month`)
 
@@ -141,7 +146,7 @@ Exemple tests : doc technique, question encore négative → +1,5 (MaydAI seul) 
 
 | Variable | Usage |
 |----------|--------|
-| `GOOGLE_SHEETS_CONTROL_TOWER_ID` | **Requis** pour l’import (lecture + write-back). Absent → throw à l’export Sheet / no-op write-back si manquant au write. |
+| `GOOGLE_SHEETS_CONTROL_TOWER_ID` | **Requis** pour la sync (append + `Statut LLM`) **et** pour l’import (lecture + write-back). Absent à la sync → 500 dès le départ. |
 | `GOOGLE_DRIVE_FOLDER_CONTROL_TOWER` | Dossier de l’export CSV (sinon `CONTROL_TOWER_FOLDER_ID`). |
 | `GOOGLE_DRIVE_*` | Service Account Shared Drive (même stack que Compar:IA / RAG). |
 | `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Client service des routes admin. |
@@ -152,7 +157,8 @@ Pas de cron secret : ces deux routes sont admin-only.
 
 - **Import ≠ piliers.** Le seed SQL crée les 5 piliers de Claude Sonnet 4.5. L’import Drive n’écrit que la carte + Markdown. Dossier / score / PDF lisent `llm_system_card_pillars`.
 - **Pas de colonne hub.** Ne pas ajouter `system_card_id` sur `compl_ai_models`.
-- **CSV ≠ Sheet.** Sync Control Tower n’alimente pas l’import.
+- **CSV Drive ≠ Sheet.** Le CSV est un snapshot. L’import lit le Sheet. Depuis `#447`, la sync **ajoute** au Sheet les ids hub absents de la colonne A — c’est bien l’entrée de l’import, pas le fichier CSV.
+- **Append-only.** Un rename provider / nom dans Supabase ne met pas à jour une ligne Sheet déjà présente. Premier onglet uniquement : un onglet mal ordonné reçoit l’append.
 - **Lookup Markdown par nom** ignore `GOOGLE_DRIVE_FOLDER_CONTROL_TOWER` (constante uniquement).
 - **`Prêt pour import`** = exactement `oui` après normalisation. `Déjà importé` / `Non` sont ignorés.
 - **Garde-fou version** : date plus ancienne ignorée ; deux `XX` du même mois → overwrite + warning (comparaison jour non fiable).
