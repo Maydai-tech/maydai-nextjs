@@ -127,8 +127,7 @@ export async function POST(
     const userCompaniesInserts = newCompanyIds.map(companyId => ({
       user_id: collaboratorProfileId,
       company_id: companyId,
-      role: 'user',
-      is_active: true
+      role: 'user'
     }))
 
     const { error: insertError } = await supabase
