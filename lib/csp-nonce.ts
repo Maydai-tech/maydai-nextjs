@@ -35,8 +35,8 @@ export async function getNonce(): Promise<string | undefined> {
   try {
     const headersList = await headers()
     return headersList.get('x-nonce') || undefined
-  } catch {
-    // En cas d'erreur (ex: composant client), retourner undefined
+  } catch (error) {
+    console.error('[CSP Nonce] Impossible de lire les headers:', error)
     return undefined
   }
 }
@@ -67,19 +67,19 @@ export function createCSPHeader(nonce: string): string {
   return [
     "default-src 'self'",
     // Scripts : GTM, Google Ads, CookieYes
-    `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com`,
+    `script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://challenges.cloudflare.com`,
     // Script elements : même liste pour les navigateurs supportant script-src-elem
-    `script-src-elem 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com`,
+    `script-src-elem 'self' 'nonce-${nonce}' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://challenges.cloudflare.com`,
     // Styles : permet inline + domaines externes
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn-cookieyes.com https://app.cookieyes.com https://www.googletagmanager.com https://tagmanager.google.com",
     "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn-cookieyes.com https://app.cookieyes.com https://www.googletagmanager.com https://tagmanager.google.com",
     // Images : tracking pixels, analytics et Google Ads conversion
     "img-src 'self' data: https: https://www.google.com https://www.google-analytics.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://*.doubleclick.net https://*.google.com https://*.google.fr https://www.google.fr https://*.googlesyndication.com https://pagead2.googlesyndication.com https://google.com/pagead/ https://cdn-cookieyes.com https://app.cookieyes.com",
     // Connexions : APIs, logs et Google Ads conversion (CRITIQUE pour formulaires et consentement)
-    "connect-src 'self' https://*.supabase.co https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://region1.google-analytics.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://*.doubleclick.net https://*.google.com https://*.google.fr https://www.google.fr https://*.googlesyndication.com https://pagead2.googlesyndication.com https://google.com/pagead/ https://www.googletagmanager.com https://cookieyes.com https://cdn-cookieyes.com https://app.cookieyes.com https://log.cookieyes.com https://api.cookieyes.com https://widget.cookieyes.com",
+    "connect-src 'self' https://*.supabase.co https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://region1.google-analytics.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://*.doubleclick.net https://*.google.com https://*.google.fr https://www.google.fr https://*.googlesyndication.com https://pagead2.googlesyndication.com https://google.com/pagead/ https://www.googletagmanager.com https://cookieyes.com https://cdn-cookieyes.com https://app.cookieyes.com https://log.cookieyes.com https://api.cookieyes.com https://widget.cookieyes.com https://challenges.cloudflare.com",
     // Polices
     "font-src 'self' data: https://fonts.gstatic.com https://cdn-cookieyes.com https://app.cookieyes.com",
-    "frame-src 'self' https://www.googletagmanager.com https://cookieyes.com https://app.cookieyes.com https://widget.cookieyes.com",
+    "frame-src 'self' https://www.googletagmanager.com https://cookieyes.com https://app.cookieyes.com https://widget.cookieyes.com https://challenges.cloudflare.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

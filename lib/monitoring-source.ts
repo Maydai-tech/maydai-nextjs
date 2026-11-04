@@ -14,6 +14,13 @@ export type MonitoringFetchTarget = {
   headers: Record<string, string>
 }
 
+export type MonitoringEnv = {
+  MONITORING_BEARER_TOKEN?: string
+  MONITORING_HTTP_USER?: string
+  MONITORING_HTTP_PASSWORD?: string
+  [key: string]: string | undefined
+}
+
 function hostnameOf(url: URL): string {
   return url.hostname.replace(/^\[|\]$/g, '').toLowerCase()
 }
@@ -47,7 +54,7 @@ export function isAllowedMonitoringSourceUrl(raw: string): boolean {
 }
 
 export function buildMonitoringAuthorizationHeader(
-  env: NodeJS.ProcessEnv = process.env
+  env: MonitoringEnv = process.env
 ): string | null {
   const bearer = env.MONITORING_BEARER_TOKEN?.trim()
   if (bearer) {
@@ -65,7 +72,7 @@ export function buildMonitoringAuthorizationHeader(
 
 export function resolveMonitoringFetchTarget(
   rawUrl: string | undefined,
-  env: NodeJS.ProcessEnv = process.env
+  env: MonitoringEnv = process.env
 ): MonitoringFetchTarget | null {
   const value = rawUrl?.trim()
   if (!value || !isAllowedMonitoringSourceUrl(value)) {

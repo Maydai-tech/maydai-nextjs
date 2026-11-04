@@ -5,7 +5,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ||
 
 const mockVerifyAdminAuth = jest.fn()
 const mockFrom = jest.fn()
-const mockCreateClient = jest.fn(() => ({ from: mockFrom }))
+const mockCreateClient = jest.fn((..._args: unknown[]) => ({ from: mockFrom }))
 const mockRecalculate = jest.fn()
 
 jest.mock('@supabase/supabase-js', () => ({

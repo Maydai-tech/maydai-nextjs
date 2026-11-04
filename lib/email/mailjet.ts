@@ -49,7 +49,7 @@ function mailjetNotConfiguredError(): { success: false; error: Error } {
   };
 }
 
-function escapeHtml(value: unknown): string {
+export function escapeHtml(value: unknown): string {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -462,6 +462,57 @@ export type ContactNotificationPayload = {
   source?: string;
 };
 
+/**
+ * Neutralise (Defanging SOC/CERT) toutes les URLs et noms de domaine présents dans un texte
+ * en remplaçant http(s) par hxxp(s), le dernier point du domaine par [.] et en enveloppant dans <code>.
+ * Le texte d'entrée est d'abord échappé contre le XSS HTML.
+ */
+export function defangUrlsForEmail(rawText: string): string {
+  const escaped = escapeHtml(rawText);
+
+  const urlOrDomainRegex =
+    /(?:https?:\/\/|www\.)[^\s<"]+|\b(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}\b(?:\/[^\s<"]*)?/gi;
+
+  const defanged = escaped.replace(urlOrDomainRegex, (match) => {
+    // Séparer la ponctuation finale éventuelle (.,;!) sans casser une entité HTML (&gt;, &amp;…).
+    let end = match.length;
+    while (end > 0 && /[.,;!?]/.test(match[end - 1])) {
+      if (match[end - 1] === ';' && /&(?:#\d+|[a-z]+)$/i.test(match.slice(0, end - 1))) {
+        break;
+      }
+      end -= 1;
+    }
+    const trailingPunct = match.slice(end);
+    const cleanMatch = match.slice(0, end);
+
+    // 1. Neutraliser le protocole http/https -> hxxp/hxxps
+    const protocolNeutralized = cleanMatch.replace(/^http(s?):\/\//i, 'hxxp$1://');
+
+    // 2. Neutraliser le dernier point du hostname (domaine[.]tld)
+    const slashIndex = protocolNeutralized.indexOf('/', protocolNeutralized.indexOf('://') + 3);
+    const hasProtocol = /^hxxps?:\/\//i.test(protocolNeutralized);
+    const hostSplitIndex = hasProtocol
+      ? slashIndex
+      : protocolNeutralized.indexOf('/');
+
+    let hostPart =
+      hostSplitIndex === -1
+        ? protocolNeutralized
+        : protocolNeutralized.slice(0, hostSplitIndex);
+    const pathPart =
+      hostSplitIndex === -1 ? '' : protocolNeutralized.slice(hostSplitIndex);
+
+    const lastDotIndex = hostPart.lastIndexOf('.');
+    if (lastDotIndex !== -1) {
+      hostPart = `${hostPart.slice(0, lastDotIndex)}[.]${hostPart.slice(lastDotIndex + 1)}`;
+    }
+
+    return `<code style="background:#f3f4f6;padding:2px 4px;border-radius:3px;font-family:monospace;color:#111827;">${hostPart}${pathPart}</code>${trailingPunct}`;
+  });
+
+  return defanged.replace(/\r?\n/g, '<br />');
+}
+
 export async function sendAdminContactNotification(data: ContactNotificationPayload) {
   const mailjet = getMailjetClient();
   if (!mailjet) {
@@ -470,15 +521,25 @@ export async function sendAdminContactNotification(data: ContactNotificationPayl
 
   const originLabel =
     data.source === 'contact_page' ? 'Site Vitrine (Commercial)' : 'Centre de Support';
+
+  const safeSubject = escapeHtml(data.subject);
+  const safeFirstName = escapeHtml(data.first_name);
+  const safeLastName = escapeHtml(data.last_name);
+  const safeEmail = defangUrlsForEmail(data.email);
+  const safePhone = data.phone ? escapeHtml(data.phone) : 'Non renseigné';
+  const safeMessage = data.message
+    ? defangUrlsForEmail(data.message)
+    : 'Aucun message.';
+
   const htmlContent = `
-    <h3>Nouvelle demande : ${data.subject}</h3>
+    <h3>Nouvelle demande : ${safeSubject}</h3>
     <ul>
       <li><strong>Origine :</strong> ${originLabel}</li>
-      <li><strong>Utilisateur :</strong> ${data.first_name} ${data.last_name} (${data.email})</li>
-      <li><strong>Téléphone :</strong> ${data.phone || 'Non renseigné'}</li>
+      <li><strong>Utilisateur :</strong> ${safeFirstName} ${safeLastName} (${safeEmail})</li>
+      <li><strong>Téléphone :</strong> ${safePhone}</li>
     </ul>
     <h4>Message :</h4>
-    <p>${data.message || 'Aucun message.'}</p>
+    <p>${safeMessage}</p>
   `;
 
   try {
@@ -495,6 +556,10 @@ export async function sendAdminContactNotification(data: ContactNotificationPayl
               Name: 'MaydAI Tech Team',
             },
           ],
+          ReplyTo: {
+            Email: data.email,
+            Name: `${data.first_name} ${data.last_name}`.trim(),
+          },
           Subject: `Nouveau Contact Site Web : ${data.subject} - ${data.first_name} ${data.last_name}`,
           HTMLPart: htmlContent,
         },

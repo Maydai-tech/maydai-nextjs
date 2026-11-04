@@ -5,6 +5,7 @@ import { Lock } from 'lucide-react'
 import { submitContactForm } from '@/app/actions/contact'
 import { sendContactFormSuccess } from '@/lib/gtm'
 import EmailChangeNotice from '@/components/support/EmailChangeNotice'
+import TurnstileWidget from '@/components/contact/TurnstileWidget'
 import { COMMERCIAL_SUBJECTS, SUPPORT_SUBJECTS, type ContactSource } from '@/lib/validations/contact'
 
 const EMAIL_CHANGE_SUBJECT = 'Compte — changement d\'email'
@@ -59,18 +60,27 @@ export default function ContactForm({
 }: ContactFormProps) {
   const [state, formAction, isPending] = useActionState(submitContactForm, initialState)
   const [subject, setSubject] = useState('')
+  const [formLoadedAt, setFormLoadedAt] = useState('')
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0)
 
-  const isAuthenticatedContext = source === 'dashboard_support'
+  const isAuthenticatedContext = source === 'dashboard_support' && Boolean(userId)
   const isFirstNameLocked = isAuthenticatedContext && isPrefilledValue(defaultFirstName)
   const isLastNameLocked = isAuthenticatedContext && isPrefilledValue(defaultLastName)
   const isEmailLocked = isAuthenticatedContext && isPrefilledValue(defaultEmail)
   const showEmailSecurityHelp = isEmailLocked
 
   useEffect(() => {
+    setFormLoadedAt(Date.now().toString())
+  }, [])
+
+  useEffect(() => {
     if (state?.success) {
       sendContactFormSuccess()
+    } else if (state?.error || state?.errors) {
+      // Le jeton Turnstile étant à usage unique, on force sa régénération après une erreur de validation
+      setTurnstileResetKey((prev) => prev + 1)
     }
-  }, [state?.success])
+  }, [state])
 
   if (state?.success) {
     return (
@@ -103,9 +113,22 @@ export default function ContactForm({
   return (
     <form action={formAction} className="space-y-5" noValidate>
       <input type="hidden" name="source" value={source} />
+      <input type="hidden" name="form_loaded_at" value={formLoadedAt} />
       {userId ? <input type="hidden" name="user_id" value={userId} /> : null}
       {companyId ? <input type="hidden" name="company_id" value={companyId} /> : null}
       {usecaseId ? <input type="hidden" name="usecase_id" value={usecaseId} /> : null}
+
+      {/* Honeypot anti-bot invisible pour les humains et lecteurs d'écran */}
+      <div className="hidden" aria-hidden="true">
+        <label htmlFor="company_fax">Fax de l&apos;entreprise (ne pas remplir)</label>
+        <input
+          id="company_fax"
+          name="company_fax"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+        />
+      </div>
 
       {state?.error && (
         <div
@@ -147,149 +170,151 @@ export default function ContactForm({
       {subject !== '' || alwaysExpanded ? (
         <div className="animate-in fade-in slide-in-from-top-4 mt-5 space-y-5 border-t border-slate-100 pt-5 duration-500 ease-out">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <div>
-          <label htmlFor="first_name" className="mb-2 block text-sm font-medium text-gray-700">
-            Prénom <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="first_name"
-            name="first_name"
-            type="text"
-            required
-            aria-required="true"
-            minLength={2}
-            autoComplete="given-name"
-            disabled={isPending}
-            readOnly={isFirstNameLocked}
-            className={`${inputClassName} ${isFirstNameLocked ? lockedInputClassName : ''}`}
-            placeholder="Jean"
-            defaultValue={defaultFirstName}
-            aria-invalid={Boolean(fieldErrors.first_name)}
-            aria-describedby={fieldErrors.first_name ? 'first_name-error' : undefined}
-          />
-          <FieldError id="first_name-error" messages={fieldErrors.first_name} />
-        </div>
+            <div>
+              <label htmlFor="first_name" className="mb-2 block text-sm font-medium text-gray-700">
+                Prénom <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="first_name"
+                name="first_name"
+                type="text"
+                required
+                aria-required="true"
+                minLength={2}
+                autoComplete="given-name"
+                disabled={isPending}
+                readOnly={isFirstNameLocked}
+                className={`${inputClassName} ${isFirstNameLocked ? lockedInputClassName : ''}`}
+                placeholder="Jean"
+                defaultValue={defaultFirstName}
+                aria-invalid={Boolean(fieldErrors.first_name)}
+                aria-describedby={fieldErrors.first_name ? 'first_name-error' : undefined}
+              />
+              <FieldError id="first_name-error" messages={fieldErrors.first_name} />
+            </div>
 
-        <div>
-          <label htmlFor="last_name" className="mb-2 block text-sm font-medium text-gray-700">
-            Nom <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="last_name"
-            name="last_name"
-            type="text"
-            required
-            aria-required="true"
-            minLength={2}
-            autoComplete="family-name"
-            disabled={isPending}
-            readOnly={isLastNameLocked}
-            className={`${inputClassName} ${isLastNameLocked ? lockedInputClassName : ''}`}
-            placeholder="Dupont"
-            defaultValue={defaultLastName}
-            aria-invalid={Boolean(fieldErrors.last_name)}
-            aria-describedby={fieldErrors.last_name ? 'last_name-error' : undefined}
-          />
-          <FieldError id="last_name-error" messages={fieldErrors.last_name} />
-        </div>
-      </div>
+            <div>
+              <label htmlFor="last_name" className="mb-2 block text-sm font-medium text-gray-700">
+                Nom <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="last_name"
+                name="last_name"
+                type="text"
+                required
+                aria-required="true"
+                minLength={2}
+                autoComplete="family-name"
+                disabled={isPending}
+                readOnly={isLastNameLocked}
+                className={`${inputClassName} ${isLastNameLocked ? lockedInputClassName : ''}`}
+                placeholder="Dupont"
+                defaultValue={defaultLastName}
+                aria-invalid={Boolean(fieldErrors.last_name)}
+                aria-describedby={fieldErrors.last_name ? 'last_name-error' : undefined}
+              />
+              <FieldError id="last_name-error" messages={fieldErrors.last_name} />
+            </div>
+          </div>
 
-      <div>
-        <label htmlFor="email" className="mb-2 block text-sm font-medium text-gray-700">
-          Email <span className="text-red-500">*</span>
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          required
-          aria-required="true"
-          autoComplete="email"
-          disabled={isPending}
-          readOnly={isEmailLocked}
-          className={`${inputClassName} ${isEmailLocked ? lockedInputClassName : ''}`}
-          placeholder="vous@entreprise.com"
-          defaultValue={defaultEmail}
-          aria-invalid={emailHasError}
-          aria-describedby={emailDescribedBy}
-        />
-        {showEmailSecurityHelp ? (
-          <p
-            id="email-security-help"
-            className="mt-2 flex items-start gap-1.5 font-sans text-sm text-slate-500 sm:items-center"
+          <div>
+            <label htmlFor="email" className="mb-2 block text-sm font-medium text-gray-700">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              aria-required="true"
+              autoComplete="email"
+              disabled={isPending}
+              readOnly={isEmailLocked}
+              className={`${inputClassName} ${isEmailLocked ? lockedInputClassName : ''}`}
+              placeholder="vous@entreprise.com"
+              defaultValue={defaultEmail}
+              aria-invalid={emailHasError}
+              aria-describedby={emailDescribedBy}
+            />
+            {showEmailSecurityHelp ? (
+              <p
+                id="email-security-help"
+                className="mt-2 flex items-start gap-1.5 font-sans text-sm text-slate-500 sm:items-center"
+              >
+                <Lock aria-hidden="true" className="h-4 w-4 shrink-0 text-slate-400" />
+                Adresse sécurisée liée à votre session. Utilisez le menu déroulant ci-dessus pour
+                demander une modification.
+              </p>
+            ) : null}
+            <FieldError id="email-error" messages={fieldErrors.email} />
+          </div>
+
+          {subject === EMAIL_CHANGE_SUBJECT ? <EmailChangeNotice /> : null}
+
+          <div>
+            <label htmlFor="phone" className="mb-2 block text-sm font-medium text-gray-700">
+              Téléphone
+            </label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              disabled={isPending}
+              className={inputClassName}
+              placeholder="+33 6 12 34 56 78"
+              aria-invalid={Boolean(fieldErrors.phone)}
+              aria-describedby={fieldErrors.phone ? 'phone-error' : undefined}
+            />
+            <FieldError id="phone-error" messages={fieldErrors.phone} />
+          </div>
+
+          <div>
+            <label htmlFor="message" className="mb-2 block text-sm font-medium text-gray-700">
+              Message
+            </label>
+            <textarea
+              id="message"
+              name="message"
+              rows={4}
+              disabled={isPending}
+              className={`${inputClassName} resize-none`}
+              placeholder="Décrivez votre demande..."
+              aria-invalid={Boolean(fieldErrors.message)}
+              aria-describedby={fieldErrors.message ? 'message-error' : undefined}
+            />
+            <FieldError id="message-error" messages={fieldErrors.message} />
+          </div>
+
+          <div className="flex items-start gap-3">
+            <input
+              id="marketing_consent"
+              name="marketing_consent"
+              type="checkbox"
+              value="on"
+              disabled={isPending}
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-[#0080A3] focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:outline-none"
+              aria-invalid={Boolean(fieldErrors.marketing_consent)}
+              aria-describedby={
+                fieldErrors.marketing_consent ? 'marketing_consent-error' : undefined
+              }
+            />
+            <label htmlFor="marketing_consent" className="text-sm text-gray-600 leading-relaxed">
+              J&apos;accepte de recevoir des communications marketing de MaydAI.
+            </label>
+          </div>
+          <FieldError id="marketing_consent-error" messages={fieldErrors.marketing_consent} />
+
+          {!isAuthenticatedContext ? <TurnstileWidget resetKey={turnstileResetKey} /> : null}
+
+          <button
+            type="submit"
+            disabled={isPending}
+            aria-busy={isPending}
+            className="w-full rounded-lg bg-[#0080A3] px-6 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-[#006280] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Lock className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
-            Adresse sécurisée liée à votre session. Utilisez le menu déroulant ci-dessus pour
-            demander une modification.
-          </p>
-        ) : null}
-        <FieldError id="email-error" messages={fieldErrors.email} />
-      </div>
-
-      {subject === EMAIL_CHANGE_SUBJECT ? (
-        <EmailChangeNotice />
-      ) : null}
-
-      <div>
-        <label htmlFor="phone" className="mb-2 block text-sm font-medium text-gray-700">
-          Téléphone
-        </label>
-        <input
-          id="phone"
-          name="phone"
-          type="tel"
-          autoComplete="tel"
-          disabled={isPending}
-          className={inputClassName}
-          placeholder="+33 6 12 34 56 78"
-          aria-invalid={Boolean(fieldErrors.phone)}
-          aria-describedby={fieldErrors.phone ? 'phone-error' : undefined}
-        />
-        <FieldError id="phone-error" messages={fieldErrors.phone} />
-      </div>
-
-      <div>
-        <label htmlFor="message" className="mb-2 block text-sm font-medium text-gray-700">
-          Message
-        </label>
-        <textarea
-          id="message"
-          name="message"
-          rows={4}
-          disabled={isPending}
-          className={`${inputClassName} resize-none`}
-          placeholder="Décrivez votre demande..."
-          aria-invalid={Boolean(fieldErrors.message)}
-          aria-describedby={fieldErrors.message ? 'message-error' : undefined}
-        />
-        <FieldError id="message-error" messages={fieldErrors.message} />
-      </div>
-
-      <div className="flex items-start gap-3">
-        <input
-          id="marketing_consent"
-          name="marketing_consent"
-          type="checkbox"
-          value="on"
-          disabled={isPending}
-          className="mt-1 h-4 w-4 rounded border-gray-300 text-[#0080A3] focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:outline-none"
-          aria-invalid={Boolean(fieldErrors.marketing_consent)}
-          aria-describedby={fieldErrors.marketing_consent ? 'marketing_consent-error' : undefined}
-        />
-        <label htmlFor="marketing_consent" className="text-sm text-gray-600 leading-relaxed">
-          J&apos;accepte de recevoir des communications marketing de MaydAI.
-        </label>
-      </div>
-      <FieldError id="marketing_consent-error" messages={fieldErrors.marketing_consent} />
-
-      <button
-        type="submit"
-        disabled={isPending}
-        aria-busy={isPending}
-        className="w-full rounded-lg bg-[#0080A3] px-6 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-[#006280] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isPending ? 'Envoi en cours…' : 'Envoyer le message'}
-      </button>
+            {isPending ? 'Envoi en cours…' : 'Envoyer le message'}
+          </button>
         </div>
       ) : null}
     </form>

@@ -21,9 +21,37 @@ import {
   readStoredAttribution,
   hasMeaningfulAttribution,
   clearStoredAttribution,
+  type StoredAttribution,
 } from '@/lib/tracking/capture-params'
 import { planIdSchema } from '@/lib/validations/pricing'
 import type { PlanId } from '@/lib/stripe/config/plans'
+
+export interface PartnerSignupConfig {
+  partnerName: string
+  partnerLogoSrc: string
+  partnerLogoAlt: string
+  partnerLogoWidth?: number
+  partnerLogoHeight?: number
+  partnerWebsiteUrl?: string
+  badgeText?: string
+  headline: string
+  subheadline: string
+  secondarySubheadline?: string
+  partnerTitle: string
+  partnerDescription: string
+  partnerHighlights?: string[]
+  freeNoteTitle?: string
+  freeNoteSubtitle?: string
+  defaultAttribution: {
+    utm_source: string
+    utm_medium: string
+    utm_campaign?: string
+  }
+}
+
+export interface SignupPageProps {
+  partnerConfig?: PartnerSignupConfig
+}
 
 type SignupStep = 'form' | 'otp' | 'processing'
 
@@ -36,7 +64,7 @@ interface SignupFormData {
   subCategoryId: string
 }
 
-export default function SignupPage() {
+export default function SignupPage({ partnerConfig }: SignupPageProps = {}) {
   // Router and auth
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -179,7 +207,7 @@ export default function SignupPage() {
         setEmailError('Cet email est déjà utilisé. Veuillez vous connecter.')
       }
     } catch (err) {
-      console.error('Error checking email:', err)
+      console.error('[signup] Vérification email', err)
       // Don't show error to user for network issues
     } finally {
       setCheckingEmail(false)
@@ -251,7 +279,7 @@ export default function SignupPage() {
       setSignupStep('otp')
       setFormLoading(false)
     } catch (err) {
-      console.error('Signup error:', err)
+      console.error('[signup] Envoi OTP', err)
       setError('Une erreur est survenue. Veuillez réessayer.')
       setFormLoading(false)
     }
@@ -280,13 +308,45 @@ export default function SignupPage() {
       }
 
       const storedAttr = readStoredAttribution()
-      const acquisition: CompleteSignUpAcquisitionFields = {}
+      const partnerDefaults = partnerConfig?.defaultAttribution
+
+      const fillEmptyUtm = (current: string | null, fallback: string | undefined): string | null => {
+        if (current?.trim()) return current
+        if (!partnerDefaults) return current
+        const next = fallback?.trim()
+        return next || current
+      }
+
+      let effectiveAttribution: StoredAttribution | null
       if (storedAttr && hasMeaningfulAttribution(storedAttr)) {
-        if (storedAttr.gclid?.trim()) acquisition.gclid = storedAttr.gclid.trim()
-        if (storedAttr.utm_source?.trim()) acquisition.utm_source = storedAttr.utm_source.trim()
-        if (storedAttr.utm_medium?.trim()) acquisition.utm_medium = storedAttr.utm_medium.trim()
-        if (storedAttr.utm_campaign?.trim()) {
-          acquisition.utm_campaign = storedAttr.utm_campaign.trim()
+        effectiveAttribution = {
+          click_id: storedAttr.click_id,
+          gclid: storedAttr.gclid,
+          utm_source: fillEmptyUtm(storedAttr.utm_source, partnerDefaults?.utm_source),
+          utm_medium: fillEmptyUtm(storedAttr.utm_medium, partnerDefaults?.utm_medium),
+          utm_campaign: fillEmptyUtm(storedAttr.utm_campaign, partnerDefaults?.utm_campaign),
+          captured_at: storedAttr.captured_at,
+        }
+      } else if (partnerDefaults) {
+        effectiveAttribution = {
+          click_id: storedAttr?.click_id ?? null,
+          gclid: storedAttr?.gclid ?? null,
+          utm_source: partnerDefaults.utm_source,
+          utm_medium: partnerDefaults.utm_medium,
+          utm_campaign: partnerDefaults.utm_campaign ?? null,
+          captured_at: storedAttr?.captured_at ?? new Date().toISOString(),
+        }
+      } else {
+        effectiveAttribution = storedAttr
+      }
+
+      const acquisition: CompleteSignUpAcquisitionFields = {}
+      if (effectiveAttribution && hasMeaningfulAttribution(effectiveAttribution)) {
+        if (effectiveAttribution.gclid?.trim()) acquisition.gclid = effectiveAttribution.gclid.trim()
+        if (effectiveAttribution.utm_source?.trim()) acquisition.utm_source = effectiveAttribution.utm_source.trim()
+        if (effectiveAttribution.utm_medium?.trim()) acquisition.utm_medium = effectiveAttribution.utm_medium.trim()
+        if (effectiveAttribution.utm_campaign?.trim()) {
+          acquisition.utm_campaign = effectiveAttribution.utm_campaign.trim()
         }
       }
 
@@ -326,7 +386,10 @@ export default function SignupPage() {
             body: JSON.stringify({ leadId }),
           })
           if (!linkRes.ok) {
-            const errText = await linkRes.text().catch(() => '')
+            const errText = await linkRes.text().catch((readErr) => {
+              console.error('[signup] Lecture réponse link-to-user', readErr)
+              return ''
+            })
             console.error(
               '[signup] Liaison lead ignorée (non bloquant):',
               linkRes.status,
@@ -336,31 +399,31 @@ export default function SignupPage() {
         } catch (linkErr) {
           console.error('[signup] Liaison lead ignorée (non bloquant):', linkErr)
         }
-      } else {
-        const attribution = readStoredAttribution()
-        if (attribution && hasMeaningfulAttribution(attribution)) {
-          try {
-            const wdRes = await fetch('/api/leads/website-direct', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({ attribution }),
+      } else if (effectiveAttribution && hasMeaningfulAttribution(effectiveAttribution)) {
+        try {
+          const wdRes = await fetch('/api/leads/website-direct', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ attribution: effectiveAttribution }),
+          })
+          if (wdRes.ok) {
+            clearStoredAttribution()
+          } else {
+            const t = await wdRes.text().catch((readErr) => {
+              console.error('[signup] Lecture réponse website-direct', readErr)
+              return ''
             })
-            if (wdRes.ok) {
-              clearStoredAttribution()
-            } else {
-              const t = await wdRes.text().catch(() => '')
-              console.error(
-                '[signup] Lead website_direct ignoré (non bloquant):',
-                wdRes.status,
-                t
-              )
-            }
-          } catch (wdErr) {
-            console.error('[signup] Lead website_direct ignoré (non bloquant):', wdErr)
+            console.error(
+              '[signup] Lead website_direct ignoré (non bloquant):',
+              wdRes.status,
+              t
+            )
           }
+        } catch (wdErr) {
+          console.error('[signup] Lead website_direct ignoré (non bloquant):', wdErr)
         }
       }
 
@@ -382,7 +445,7 @@ export default function SignupPage() {
       router.refresh()
       router.push('/dashboard/registries')
     } catch (err) {
-      console.error('Complete signup error:', err)
+      console.error('[signup] Complete signup', err)
       setError(err instanceof Error ? err.message : 'Erreur lors de la création du profil')
       setSignupStep('form')
     }
@@ -419,26 +482,59 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-2xl w-full space-y-8">
-        <div className="flex justify-center">
-          <Image
-            src="/logos/logo-maydai/logo-maydai-complet.png"
-            alt="MaydAI Logo"
-            width={200}
-            height={50}
-            className="w-auto"
-            priority
-          />
-        </div>
+        {partnerConfig ? (
+          <div className="flex justify-center">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 rounded-2xl border border-slate-200 bg-white/80 px-5 py-3 shadow-sm">
+              <Image
+                src="/logos/logo-maydai/logo-maydai-complet.png"
+                alt="MaydAI Logo"
+                width={170}
+                height={42}
+                className="h-10 w-auto object-contain"
+                priority
+              />
+              <span className="text-slate-300 font-light text-2xl select-none" aria-hidden="true">
+                ×
+              </span>
+              <Image
+                src={partnerConfig.partnerLogoSrc}
+                alt={partnerConfig.partnerLogoAlt}
+                width={partnerConfig.partnerLogoWidth ?? 180}
+                height={partnerConfig.partnerLogoHeight ?? 52}
+                className="h-11 w-auto object-contain"
+                priority
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            <Image
+              src="/logos/logo-maydai/logo-maydai-complet.png"
+              alt="MaydAI Logo"
+              width={200}
+              height={50}
+              className="w-auto"
+              priority
+            />
+          </div>
+        )}
 
         <div className="text-center flex flex-col gap-2 mb-8">
-          <h1 className={signupHeadingAccentClass}>Créer un compte</h1>
+          {partnerConfig?.badgeText ? (
+            <span className="inline-flex items-center gap-1.5 self-center px-3 py-1 rounded-full text-xs font-semibold bg-[#0080A3]/10 text-[#0080A3] mb-1">
+              {partnerConfig.badgeText}
+            </span>
+          ) : null}
+          <h1 className={signupHeadingAccentClass}>
+            {partnerConfig ? partnerConfig.headline : 'Créer un compte'}
+          </h1>
           <p className="text-base font-bold text-slate-900">
-            Commencez votre parcours de conformité AI Act.
+            {partnerConfig ? partnerConfig.subheadline : 'Commencez votre parcours de conformité AI Act.'}
           </p>
           {step === 1 && (
             <>
               <p className="text-base font-bold text-slate-900">
-                Évaluation rapide, intuitive et strictement confidentielle.
+                {partnerConfig?.secondarySubheadline ?? 'Évaluation rapide, intuitive et strictement confidentielle.'}
               </p>
               {!isMounted ? (
                 <div className="invisible" aria-hidden="true">
@@ -472,6 +568,40 @@ export default function SignupPage() {
             </>
           )}
         </div>
+
+        {partnerConfig && step === 1 && (
+          <div className="bg-white/90 backdrop-blur-sm border border-[#0080A3]/20 rounded-xl p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-sm font-bold text-slate-900">{partnerConfig.partnerTitle}</p>
+              {partnerConfig.partnerWebsiteUrl ? (
+                <a
+                  href={partnerConfig.partnerWebsiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-xs font-medium text-[#0080A3] hover:text-[#006280] transition-colors"
+                >
+                  {partnerConfig.partnerName}
+                </a>
+              ) : null}
+            </div>
+            <p className="text-sm text-slate-600 leading-relaxed mt-1.5">
+              {partnerConfig.partnerDescription}
+            </p>
+            {partnerConfig.partnerHighlights && partnerConfig.partnerHighlights.length > 0 ? (
+              <ul className="flex flex-wrap gap-2 mt-3 list-none m-0 p-0">
+                {partnerConfig.partnerHighlights.map((highlight) => (
+                  <li
+                    key={highlight}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700"
+                  >
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#0080A3]" aria-hidden="true" />
+                    {highlight}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        )}
 
         {/* Form */}
         <div className="bg-white rounded-xl shadow-lg p-8">
@@ -594,9 +724,9 @@ export default function SignupPage() {
                   aria-hidden="true"
                 />
                 <p className="text-sm text-slate-600 font-medium">
-                  Inscription gratuite.{' '}
+                  {partnerConfig?.freeNoteTitle ?? 'Inscription gratuite.'}{' '}
                   <span className="text-slate-500 font-normal">
-                    Aucune carte bancaire requise pour votre 1er registre.
+                    {partnerConfig?.freeNoteSubtitle ?? 'Aucune carte bancaire requise pour votre 1er registre.'}
                   </span>
                 </p>
               </div>

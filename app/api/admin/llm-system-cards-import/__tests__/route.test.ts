@@ -3,7 +3,7 @@
 const mockVerifyAdminAuth = jest.fn()
 const mockImport = jest.fn()
 const mockCreateClient = jest.fn((..._args: unknown[]) => ({ service: true }))
-const mockCreateDeps = jest.fn((supabase: unknown) => ({ deps: true, supabase }))
+const mockCreateDeps = jest.fn((supabase?: unknown, ..._args: unknown[]) => ({ deps: true, supabase }))
 
 jest.mock('@/lib/admin-auth', () => ({
   verifyAdminAuth: (...args: unknown[]) => mockVerifyAdminAuth(...args),
