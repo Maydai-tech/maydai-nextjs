@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { getStripeClient } from '@/lib/stripe/config/client'
 import { validateSessionId } from '@/lib/stripe/utils/validation'
+import { getStripeSubscriptionPeriodUnix } from '@/lib/stripe/utils/subscription-period'
 import { handleStripeError, handleValidationError } from '@/lib/stripe/utils/error-handling'
 import type { RetrieveSessionResponse } from '@/lib/stripe/types'
 
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       subscription: session.subscription ? {
         id: typeof session.subscription === 'object' ? session.subscription.id : session.subscription,
         current_period_end: typeof session.subscription === 'object'
-          ? (session.subscription as any).current_period_end
+          ? getStripeSubscriptionPeriodUnix(session.subscription).end ?? undefined
           : undefined
       } : undefined
     }

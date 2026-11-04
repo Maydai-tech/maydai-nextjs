@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
+import { getStripeSubscriptionPeriodIso } from '@/lib/stripe/utils/subscription-period'
 
 interface SubscriptionData {
   user_id: string
@@ -208,18 +209,21 @@ export async function syncSubscriptionFromStripe(stripeSubscription: Stripe.Subs
     ? stripeSubscription.customer
     : stripeSubscription.customer?.id || ''
 
+  const period = getStripeSubscriptionPeriodIso(stripeSubscription)
+  if (!period.start || !period.end) {
+    throw new Error(
+      `Période d’abonnement introuvable (API Basil : items.data[0].current_period_*) pour ${stripeSubscription.id}`
+    )
+  }
+
   const subscriptionData: SubscriptionData = {
     user_id: userId,
     stripe_subscription_id: stripeSubscription.id,
     stripe_customer_id: customerId,
     plan_id: planUuid,
     status: stripeSubscription.status,
-    current_period_start: (stripeSubscription as any).current_period_start 
-      ? new Date((stripeSubscription as any).current_period_start * 1000).toISOString()
-      : new Date().toISOString(),
-    current_period_end: (stripeSubscription as any).current_period_end 
-      ? new Date((stripeSubscription as any).current_period_end * 1000).toISOString()
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    current_period_start: period.start,
+    current_period_end: period.end,
     cancel_at_period_end: stripeSubscription.cancel_at_period_end,
   }
 
