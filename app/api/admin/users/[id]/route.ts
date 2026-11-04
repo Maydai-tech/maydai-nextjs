@@ -70,8 +70,7 @@ export async function PATCH(
         .upsert({
           user_id: targetUserId,
           company_id: add_company_id,
-          role: 'user',
-          is_active: true
+          role: 'user'
         }, {
           onConflict: 'user_id,company_id'
         })
@@ -86,10 +85,9 @@ export async function PATCH(
     }
 
     if (remove_company_id) {
-      // Supprimer l'association dans user_companies (soft delete)
       const { error: deleteError } = await supabase
         .from('user_companies')
-        .update({ is_active: false })
+        .delete()
         .eq('user_id', targetUserId)
         .eq('company_id', remove_company_id)
 
@@ -104,19 +102,25 @@ export async function PATCH(
 
     // Remplacer toutes les entreprises si company_ids est fourni
     if (company_ids !== undefined) {
-      // Désactiver toutes les associations existantes
-      await supabase
+      const { error: clearError } = await supabase
         .from('user_companies')
-        .update({ is_active: false })
+        .delete()
         .eq('user_id', targetUserId)
+
+      if (clearError) {
+        console.error('Error clearing company associations:', clearError)
+        return NextResponse.json(
+          { error: 'Failed to update company associations' },
+          { status: 500 }
+        )
+      }
 
       // Ajouter les nouvelles associations
       if (company_ids && company_ids.length > 0) {
         const associations = company_ids.map((companyId: string) => ({
           user_id: targetUserId,
           company_id: companyId,
-          role: 'user',
-          is_active: true
+          role: 'user'
         }))
 
         const { error: insertError } = await supabase
@@ -195,7 +199,6 @@ export async function PATCH(
           user_companies (
             company_id,
             role,
-            is_active,
             companies (
               id,
               name
@@ -224,7 +227,6 @@ export async function PATCH(
           user_companies (
             company_id,
             role,
-            is_active,
             companies (
               id,
               name
@@ -265,7 +267,7 @@ export async function PATCH(
 
     // Formater la réponse
     const userCompanies = updatedProfile.user_companies
-      ?.filter((uc: any) => uc.is_active && uc.companies)
+      ?.filter((uc: { companies?: unknown }) => Boolean(uc.companies))
       ?.map((uc: any) => ({
         id: uc.companies.id,
         name: uc.companies.name,
@@ -328,7 +330,6 @@ export async function GET(
         user_companies (
           company_id,
           role,
-          is_active,
           companies (
             id,
             name
@@ -350,7 +351,7 @@ export async function GET(
 
     // Formater la réponse
     const userCompanies = profile.user_companies
-      ?.filter((uc: any) => uc.is_active && uc.companies)
+      ?.filter((uc: { companies?: unknown }) => Boolean(uc.companies))
       ?.map((uc: any) => ({
         id: uc.companies.id,
         name: uc.companies.name,
