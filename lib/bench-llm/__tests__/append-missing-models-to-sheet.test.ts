@@ -30,9 +30,15 @@ import {
 
 type QueryResult = { data: unknown; error: { message: string } | null }
 
+type RangeBuilder = {
+  select: jest.Mock
+  order: jest.Mock
+  range: jest.Mock
+}
+
 function createRangeBuilder(pages: QueryResult[]) {
   let rangeCalls = 0
-  const builder = {
+  const builder: RangeBuilder = {
     select: jest.fn(() => builder),
     order: jest.fn(() => builder),
     range: jest.fn(async () => {
