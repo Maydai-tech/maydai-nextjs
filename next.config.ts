@@ -111,10 +111,10 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               
               // Scripts - Autoriser GTM, Google Ads, CookieYes, Stripe et les scripts nécessaires à Next.js
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://js.stripe.com https://bat.bing.com https://bat.bing.net",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://js.stripe.com https://bat.bing.com https://bat.bing.net https://challenges.cloudflare.com",
               
               // Script elements - Même liste que script-src pour les navigateurs supportant script-src-elem
-              "script-src-elem 'self' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://js.stripe.com https://bat.bing.com https://bat.bing.net",
+              "script-src-elem 'self' 'unsafe-inline' https://www.googletagmanager.com https://tagmanager.google.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://cdn-cookieyes.com https://app.cookieyes.com https://js.stripe.com https://bat.bing.com https://bat.bing.net https://challenges.cloudflare.com",
               
               // Styles - Autoriser les styles inline (nécessaire pour Next.js et les bandeaux)
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn-cookieyes.com https://app.cookieyes.com https://www.googletagmanager.com https://tagmanager.google.com",
@@ -126,13 +126,13 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: https: https://www.google.com https://www.google-analytics.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://www.googleadservices.com https://*.doubleclick.net https://*.google.com https://*.google.fr https://www.google.fr https://*.googlesyndication.com https://pagead2.googlesyndication.com https://google.com/pagead/ https://cdn-cookieyes.com https://app.cookieyes.com",
               
               // Connexions - Autoriser les appels API nécessaires (Supabase + GA4 + GTM + Google Ads + CookieYes + Stripe)
-              "connect-src 'self' https://*.supabase.co https://api.maydai.io https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://region1.google-analytics.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://*.doubleclick.net https://*.google.com https://*.google.fr https://www.google.fr https://*.googlesyndication.com https://pagead2.googlesyndication.com https://google.com/pagead/ https://www.googletagmanager.com https://cookieyes.com https://cdn-cookieyes.com https://app.cookieyes.com https://log.cookieyes.com https://api.cookieyes.com https://widget.cookieyes.com https://api.stripe.com https://bat.bing.com https://bat.bing.net",
+              "connect-src 'self' https://*.supabase.co https://api.maydai.io https://www.google.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://region1.google-analytics.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://*.doubleclick.net https://*.google.com https://*.google.fr https://www.google.fr https://*.googlesyndication.com https://pagead2.googlesyndication.com https://google.com/pagead/ https://www.googletagmanager.com https://cookieyes.com https://cdn-cookieyes.com https://app.cookieyes.com https://log.cookieyes.com https://api.cookieyes.com https://widget.cookieyes.com https://api.stripe.com https://bat.bing.com https://bat.bing.net https://challenges.cloudflare.com",
               
               // Polices - Autoriser les polices personnalisées et Google Fonts
               "font-src 'self' data: https://fonts.gstatic.com https://cdn-cookieyes.com https://app.cookieyes.com",
               
               // Frames - Autoriser les iframes pour GTM noscript, Stripe Checkout et YouTube
-              "frame-src 'self' https://www.googletagmanager.com https://js.stripe.com https://cookieyes.com https://app.cookieyes.com https://widget.cookieyes.com https://www.youtube.com https://www.youtube-nocookie.com",
+              "frame-src 'self' https://www.googletagmanager.com https://js.stripe.com https://cookieyes.com https://app.cookieyes.com https://widget.cookieyes.com https://www.youtube.com https://www.youtube-nocookie.com https://challenges.cloudflare.com",
               
               // Objets - Interdire tous les objets pour la sécurité
               "object-src 'none'",
