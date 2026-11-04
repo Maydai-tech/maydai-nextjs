@@ -1,8 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { sendAdminContactNotification } from '@/lib/email/mailjet'
-import { contactSiteSchema } from '@/lib/validations/contact'
+import { verifyTurnstileToken } from '@/lib/security/turnstile'
+import { contactSiteSchema, evaluateBotTrap } from '@/lib/validations/contact'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 const MAILJET_SEND_URL = 'https://api.mailjet.com/v3.1/send'
@@ -94,6 +96,7 @@ async function sendContactConfirmationEmail(data: {
         },
       ],
     }),
+    cache: 'no-store',
   })
 
   if (!response.ok) {
@@ -138,6 +141,30 @@ async function sendContactEmailsSafely(data: {
 }
 
 export async function submitContactForm(prevState: unknown, formData: FormData) {
+  // 0. Protection Anti-Bot (Honeypot & Time-Trap < 3000 ms) -> Silent Drop
+  const companyFax =
+    typeof formData.get('company_fax') === 'string'
+      ? (formData.get('company_fax') as string)
+      : undefined
+  const formLoadedAt =
+    typeof formData.get('form_loaded_at') === 'string'
+      ? (formData.get('form_loaded_at') as string)
+      : undefined
+
+  const botCheck = evaluateBotTrap({
+    companyFax,
+    formLoadedAt,
+  })
+
+  if (botCheck.isBot) {
+    console.warn('[Action: Contact][AntiBot] Silent drop déclenché:', {
+      reason: botCheck.reason,
+      email: formData.get('email'),
+    })
+    return { success: true as const }
+  }
+
+  // 1. Validation stricte Zod (champs + TLD Blacklist + Téléphone ARCEP)
   const validation = contactSiteSchema.safeParse(formDataToContactPayload(formData))
 
   if (!validation.success) {
@@ -164,6 +191,7 @@ export async function submitContactForm(prevState: unknown, formData: FormData) 
     usecase_id,
   } = validatedData
 
+  // 2. Client Supabase & contrôle d'authentification
   let supabase
   try {
     supabase = await createSupabaseServerClient()
@@ -190,6 +218,31 @@ export async function submitContactForm(prevState: unknown, formData: FormData) 
     }
   }
 
+  // 3. Vérification Cloudflare Turnstile obligatoire pour les soumissions publiques non authentifiées
+  const isVerifiedAuthenticatedUser = Boolean(user && user_id && user.id === user_id)
+
+  if (!isVerifiedAuthenticatedUser) {
+    const turnstileToken = readOptionalString(formData.get('cf-turnstile-response'))
+    let remoteIp: string | undefined
+    try {
+      const reqHeaders = await headers()
+      const forwardedFor = reqHeaders.get('x-forwarded-for')
+      remoteIp = forwardedFor ? forwardedFor.split(',')[0]?.trim() : undefined
+    } catch (error) {
+      console.error('[Action: Contact] Lecture headers IP impossible:', error)
+    }
+
+    const turnstileCheck = await verifyTurnstileToken(turnstileToken, remoteIp)
+    if (!turnstileCheck.success) {
+      return {
+        success: false as const,
+        error:
+          'La vérification de sécurité anti-robot a échoué ou a expiré. Veuillez réessayer.',
+      }
+    }
+  }
+
+  // 4. Persistance dans contact_site
   const { error } = await supabase.from('contact_site').insert({
     subject,
     first_name,
@@ -214,6 +267,7 @@ export async function submitContactForm(prevState: unknown, formData: FormData) 
     }
   }
 
+  // 5. Envoi des emails Mailjet (Confirmation + Notification Admin neutralisée)
   await sendContactEmailsSafely({
     email,
     first_name,
