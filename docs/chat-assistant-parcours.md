@@ -129,19 +129,20 @@ Types : `NEW_QUESTION_NODE` | `PATH_COMPLETE` | `NOT_STARTED` (GET uniquement).
 
 | Variable | Rôle |
 |----------|------|
-| `MISTRAL_API_KEY` | SDK agents + embeddings RAG |
-| `MISTRAL_CONVERSATION_AGENT_ID` | Accueil / tool setup (optionnel, défaut en code) |
+| `MISTRAL_API_KEY` | SDK agents + embeddings RAG. Lue **à chaque** `getMistralClient()` ; instance recréée si la clé change |
+| `MISTRAL_CONVERSATION_AGENT_ID` | Accueil / tool setup (optionnel, défaut `DEFAULT_CONVERSATION_AGENT_ID`) |
 | `MISTRAL_EVALUATION_AGENT_ID` | Évaluateur |
 | `MISTRAL_REPORT_AGENT_ID` | Rapport structuré |
+| `MISTRAL_DESCRIPTION_AGENT_ID` | Résumé cas d’usage (`POST /api/mistral/generate-description`, GuidedChat / formulaire classique) |
 
-Sans clé : `getMistralClient()` échoue au runtime.
+Sans clé : `getMistralClient()` throw `Clé API Mistral manquante`. Les `get*AgentId()` trimment l’env à l’**appel** (pas au `import` du module) : un override tests / preview Vercel est pris en compte sans réinstancier `mistralAI`. `resetMistralClient()` est réservé aux tests.
 
 ## 7. Pièges
 
 - **Ne pas faire choisir la prochaine question par Mistral.** Toute navigation passe par `resolveNextEvaluationStep`.
 - **Ne pas forcer `E4.N7.Q1.2.A`** dans le moteur. Le frontend affiche des boutons ; le backend lit la réponse pour le ton.
 - **`/api/mistral/conversation`** est une route distincte (conversation générique). Le parcours cas d’usage passe par `/api/chat/*`.
-- **`/api/mistral/generate-description`** exige un Bearer (plus d’accès anonyme).
+- **`/api/mistral/generate-description`** exige un Bearer (plus d’accès anonyme). Ne pas capturer `MISTRAL_DESCRIPTION_AGENT_ID` dans une constante de module.
 - Le RAG AI Act est **ingéré** (webhook KB) mais **aucune** route chat n’appelle `match_ai_act_chunks` aujourd’hui. Voir [ai-act-rag.md](./ai-act-rag.md).
 - `SetupChatInterviewer` n’est pas le chemin UI : le modifier ne change pas `/setup-chat`.
 
@@ -151,6 +152,7 @@ Sans clé : `getMistralClient()` échoue au runtime.
 |--------|----------|
 | Pages | `SetupChatPage.tsx`, `ChatEvaluationPage.tsx`, `ChatLandingPage.tsx` |
 | Interviewers | `components/chat/WelcomeChatInterviewer.tsx`, `EvaluationChatInterviewer.tsx` |
-| APIs | `app/api/chat/setup`, `evaluation`, `generate-report` |
+| APIs | `app/api/chat/setup`, `evaluation`, `generate-report` ; description : `app/api/mistral/generate-description` |
+| Client Mistral | `lib/mistral/client.ts` (`getMistralClient`), `lib/mistral/agents.ts` (`get*AgentId`) |
 | Moteur | `lib/mistral/evaluation-graph-orchestrator.ts`, `load-evaluation-context.ts` |
 | Persist | `persist-company-profile.ts`, `persist-evaluation-answers.ts`, `persist-chat-report.ts` |
