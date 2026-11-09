@@ -58,20 +58,20 @@ preset: 'ts-jest'
 ### Tests
 ```bash
 # Tests de base
-npm test                    # Tous les tests
-npm run test:watch         # Mode surveillance
-npm run test:coverage      # Couverture de code
+pnpm test                    # Tous les tests
+pnpm test:watch         # Mode surveillance
+pnpm test:coverage      # Couverture de code
 
 # Tests spécifiques
-npm test -- "scoring"      # Tests de scoring
-npm test -- --verbose      # Mode détaillé
+pnpm test -- "scoring"      # Tests de scoring
+pnpm test -- --verbose      # Mode détaillé
 ```
 
 ### Application
 ```bash
-npm run dev                # Serveur de développement
-npm run build              # Build de production
-npm run start              # Serveur de production
+pnpm dev                # Serveur de développement
+pnpm build              # Build de production
+pnpm start              # Serveur de production
 ```
 
 ## Bonnes Pratiques

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { canCreateCompany } from '@/lib/collaborators'
+import { getCurrentUserPlan } from '@/lib/subscription/user-plan'
+import { countActiveOwnedRegistries } from '@/lib/subscription/quota-guards'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { RegistrySchema } from '@/lib/validations/registry'
 import {
@@ -78,6 +80,7 @@ export async function GET(request: NextRequest) {
       .from('companies')
       .select('*')
       .in('id', companyIdsArray)
+      .neq('lifecycle_status', 'soft_deleted')
 
     if (companiesError) {
       console.error('Error fetching companies:', companiesError)
@@ -271,6 +274,27 @@ export async function POST(request: NextRequest) {
     }
     if (validated.role !== undefined) {
       insertData.role = validated.role
+    }
+
+    let currentRegistries = 0
+    try {
+      const userPlan = await getCurrentUserPlan(user.id, serviceClient)
+      const maxRegistries = userPlan.planInfo.maxRegistries ?? 1
+      currentRegistries = await countActiveOwnedRegistries(user.id, serviceClient)
+      if (currentRegistries >= maxRegistries) {
+        return NextResponse.json(
+          {
+            error: 'Limite de registres du plan atteinte',
+            code: 'PLAN_LIMIT_REACHED',
+            limit: maxRegistries,
+            current: currentRegistries,
+          },
+          { status: 403 }
+        )
+      }
+    } catch (quotaError) {
+      console.error('[POST /api/companies] quota registres', quotaError)
+      return NextResponse.json({ error: 'Erreur lors de la vérification de la limite du plan' }, { status: 500 })
     }
 
     // Créer la compagnie

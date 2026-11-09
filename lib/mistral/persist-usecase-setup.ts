@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { SupabaseClient, User } from '@supabase/supabase-js'
 import { getRegistryOwnerPlan } from '@/lib/subscription/user-plan'
+import { countActiveUseCasesForRegistry } from '@/lib/subscription/quota-guards'
 import { QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 import { recordUseCaseHistory } from '@/lib/usecase-history'
 import { logger } from '@/lib/secure-logger'
@@ -59,14 +60,13 @@ export async function persistUseCaseSetup(
   const ownerPlan = await getRegistryOwnerPlan(companyId, supabase)
   const maxUseCases = ownerPlan.planInfo.maxUseCasesPerRegistry || 3
 
-  const { count: currentUseCaseCount, error: countError } = await supabase
-    .from('usecases')
-    .select('*', { count: 'exact', head: true })
-    .eq('company_id', companyId)
-
-  if (countError) {
+  let currentUseCaseCount = 0
+  try {
+    currentUseCaseCount = await countActiveUseCasesForRegistry(companyId, supabase)
+  } catch (countError) {
+    console.error('[persistUseCaseSetup] quota', countError)
     logger.error('persistUseCaseSetup: comptage usecases', undefined, {
-      details: countError.message,
+      details: countError instanceof Error ? countError.message : 'Erreur DB',
     })
     return {
       ok: false,

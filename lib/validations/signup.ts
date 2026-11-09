@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ProfileTypeSchema } from '@/lib/validations/governance-scores'
 
 /**
  * Schéma de validation pour le body `POST /api/auth/complete-signup`.
@@ -14,6 +15,11 @@ export const CompleteSignupSchema = z.object({
   subCategoryId: z.string().trim().optional(),
   phone: z.string().trim().optional(),
   siren: z.string().trim().optional(),
+  profileType: ProfileTypeSchema.optional(),
+  nafCode: z.string().trim().optional(),
+  sirenVerifiedPappers: z.boolean().optional(),
+  academicInstitution: z.string().trim().optional(),
+  academicDepartment: z.string().trim().optional(),
   planIntent: z.string().trim().optional(),
   gclid: z.string().trim().optional(),
   utm_source: z.string().trim().optional(),
@@ -32,6 +38,11 @@ export type SignupProfileFields = {
   sub_category_id: string | null
   phone: string | null
   siren: string | null
+  profile_type: string | null
+  naf_code: string | null
+  siren_verified_pappers: boolean | null
+  academic_institution: string | null
+  academic_department: string | null
   gclid: string | null
   utm_source: string | null
   utm_medium: string | null
@@ -47,6 +58,11 @@ export function emptySignupProfileFields(): SignupProfileFields {
     sub_category_id: null,
     phone: null,
     siren: null,
+    profile_type: 'company',
+    naf_code: null,
+    siren_verified_pappers: false,
+    academic_institution: null,
+    academic_department: null,
     gclid: null,
     utm_source: null,
     utm_medium: null,
@@ -76,6 +92,20 @@ export function mergeCompleteSignupProfile(
       patch.sub_category_id !== undefined ? patch.sub_category_id : base.sub_category_id,
     phone: patch.phone !== undefined ? patch.phone : base.phone,
     siren: patch.siren !== undefined ? patch.siren : base.siren,
+    profile_type: patch.profile_type !== undefined ? patch.profile_type : base.profile_type,
+    naf_code: patch.naf_code !== undefined ? patch.naf_code : base.naf_code,
+    siren_verified_pappers:
+      patch.siren_verified_pappers !== undefined
+        ? patch.siren_verified_pappers
+        : base.siren_verified_pappers,
+    academic_institution:
+      patch.academic_institution !== undefined
+        ? patch.academic_institution
+        : base.academic_institution,
+    academic_department:
+      patch.academic_department !== undefined
+        ? patch.academic_department
+        : base.academic_department,
     gclid: patch.gclid !== undefined ? patch.gclid : base.gclid,
     utm_source: patch.utm_source !== undefined ? patch.utm_source : base.utm_source,
     utm_medium: patch.utm_medium !== undefined ? patch.utm_medium : base.utm_medium,

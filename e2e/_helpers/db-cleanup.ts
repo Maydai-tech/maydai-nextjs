@@ -120,6 +120,30 @@ export async function cleanupTestData(
 
   if (userId) {
     try {
+      const { error } = await supabase.from('user_device_sessions').delete().eq('user_id', userId)
+      if (error) console.warn('[cleanupTestData] user_device_sessions:', error.message)
+    } catch (err) {
+      console.warn(
+        '[cleanupTestData] user_device_sessions:',
+        err instanceof Error ? err.message : String(err)
+      )
+    }
+  }
+
+  if (userId) {
+    try {
+      const { error } = await supabase
+        .from('admin_alerts')
+        .delete()
+        .or(`primary_profile_id.eq.${userId},secondary_profile_id.eq.${userId}`)
+      if (error) console.warn('[cleanupTestData] admin_alerts:', error.message)
+    } catch (err) {
+      console.warn('[cleanupTestData] admin_alerts:', err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  if (userId) {
+    try {
       const { error } = await supabase.from('profiles').delete().eq('id', userId)
       if (error) console.warn('[cleanupTestData] profiles:', error.message)
     } catch (err) {

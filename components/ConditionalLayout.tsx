@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useEffect, useState } from 'react';
 import { useCleanupBrowserExtensions } from '@/hooks/useCleanupBrowserExtensions';
+import AccountSharingBanner from '@/components/Collaboration/AccountSharingBanner';
 
 /** Chargé à la demande — évite de bloquer l'hydratation sur les pages publiques / 404 */
 const Sidebar = dynamic(() => import('@/components/Sidebar'), { ssr: false });
@@ -60,6 +61,7 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
       <div className="min-h-screen bg-gray-50">
         <Sidebar />
         <div className="lg:ml-64">
+          <AccountSharingBanner />
           <main className="min-h-screen p-4 lg:p-8">
             {children}
           </main>

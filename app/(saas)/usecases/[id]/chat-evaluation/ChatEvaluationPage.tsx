@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useInputVelocityTelemetry } from '@/hooks/useInputVelocityTelemetry'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
@@ -48,6 +49,7 @@ export function ChatEvaluationPageContent() {
   const [evaluationRunId, setEvaluationRunId] = useState<string | null>(null)
   const generatingReport = useRef(false)
   const pathRunCompletedSent = useRef(false)
+  const { handleKeyDown, handlePaste, getTelemetrySnapshot } = useInputVelocityTelemetry()
 
   useEffect(() => {
     if (!usecaseId || !session?.access_token) return
@@ -151,12 +153,14 @@ export function ChatEvaluationPageContent() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          input_telemetry: getTelemetrySnapshot(),
+        }),
       })
     } catch {
       pathRunCompletedSent.current = false
     }
-  }, [evaluationRunId, session?.access_token, usecaseId])
+  }, [evaluationRunId, getTelemetrySnapshot, session?.access_token, usecaseId])
 
   const generateReport = useCallback(async () => {
     if (generatingReport.current) return
@@ -284,6 +288,8 @@ export function ChatEvaluationPageContent() {
               usecaseName={usecaseName}
               usecaseDescription={usecaseDescription}
               onPathComplete={handlePathComplete}
+              onInputKeyDown={handleKeyDown}
+              onInputPaste={handlePaste}
             />
           </>
         )}

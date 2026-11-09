@@ -14,35 +14,37 @@ Runbooks : [docs/README.md](docs/README.md). System Cards : [docs/llm-system-car
 
 ## Development Commands
 
+> **Règle d'Architecture (Pilier 3.2 - PNPM Exclusif) :** Ce projet utilise exclusivement **PNPM** (`pnpm@11.1.3`) et **Node.js 24.x** (`.nvmrc`). L'utilisation de `npm` ou `yarn` est strictement interdite. Ne jamais générer de fichier `package-lock.json`.
+
 ### Running the Application
 ```bash
-npm run dev              # Development server (clears .next cache first)
-npm run dev:clean        # Deep clean (removes .next and node_modules/.cache)
-npm run build            # Production build
-npm run start            # Production server
-npm run clean            # Clean cache using scripts/clean-cache.sh
+pnpm dev              # Development server (clears .next cache first)
+pnpm dev:clean        # Deep clean (removes .next and node_modules/.cache)
+pnpm build            # Production build
+pnpm start            # Production server
+pnpm clean            # Clean cache using scripts/clean-cache.sh
 ```
 
-⚠️ **CRITICAL:** Never run `npm run build` or `npm run dev` without explicit user authorization.
+⚠️ **CRITICAL:** Never run `pnpm build` or `pnpm dev` without explicit user authorization.
 
 ### Testing
 ```bash
-npm test                      # Run all tests
-npm run test:watch           # Watch mode
-npm run test:coverage        # Coverage report
-npm test -- "scoring"        # Run specific test suite
-npm test -- --verbose        # Verbose output
+pnpm test                      # Run all tests
+pnpm test:watch           # Watch mode
+pnpm test:coverage        # Coverage report
+pnpm test -- "scoring"        # Run specific test suite
+pnpm test -- --verbose        # Verbose output
 
 # E2E tests (Playwright)
-npm run e2e                  # Run all E2E tests
-npm run e2e:ui               # Interactive UI mode
-npm run e2e:headed           # Run with visible browser
-npm run e2e:debug            # Debug mode
+pnpm e2e                  # Run all E2E tests
+pnpm e2e:ui               # Interactive UI mode
+pnpm e2e:headed           # Run with visible browser
+pnpm e2e:debug            # Debug mode
 ```
 
 ### Linting
 ```bash
-npm run lint                 # ESLint check
+pnpm lint                 # ESLint check
 ```
 
 ### Utility Scripts
@@ -373,9 +375,9 @@ The `thomas` branch is updated by a non-technical contributor. **ALL merges requ
 
 2. **Build Tests:**
    ```bash
-   npm run build        # Must succeed
-   npm run lint         # No critical errors
-   npm test            # All tests pass
+   pnpm build        # Must succeed
+   pnpm lint         # No critical errors
+   pnpm test            # All tests pass
    ```
 
 3. **Manual Verification:**
@@ -400,9 +402,9 @@ git checkout dev
 git merge thomas
 
 # 3. Re-test
-npm run build
-npm run test
-npm run dev
+pnpm build
+pnpm test
+pnpm dev
 ```
 
 ## Configuration Files

@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "pnpm run build",
   "outputDirectory": ".next",
   "framework": "nextjs",
   "env": {
@@ -7,6 +7,9 @@
   },
   "functions": {
     "app/api/cron/sync-llm-stats/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/cron/process-purges/route.ts": {
       "maxDuration": 60
     },
     "app/api/admin/llm-stats-sync-runs/route.ts": {
@@ -35,6 +38,10 @@
     {
       "path": "/api/cron/sync-llm-stats",
       "schedule": "0 4 * * 3"
+    },
+    {
+      "path": "/api/cron/process-purges",
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/sync-ecologits",

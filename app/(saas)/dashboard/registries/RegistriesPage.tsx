@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState, useRef } from 'react'
+import { z } from 'zod'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -29,7 +30,9 @@ import Footer from '@/components/site-vitrine/Footer'
 import NavBar from '@/components/NavBar/NavBar'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import { trackLimitReached } from '@/lib/gtm'
-import DeleteRegistryModal from '@/app/(saas)/dashboard/[id]/components/DeleteRegistryModal'
+import FreemiumDeletionModal, { PurgeStatusBadge } from '@/components/governance/FreemiumDeletionModal'
+import CompleteProfileModal from '@/components/auth/CompleteProfileModal'
+import { ProfileTypeSchema, type ProfileType } from '@/lib/validations/governance-scores'
 import SecurityLogosGrid from '@/components/ui/SecurityLogosGrid'
 import type { DashboardMetrics } from '@/lib/validations/dashboard-metrics'
 
@@ -37,12 +40,31 @@ export interface Company {
   id: string
   name: string
   role: string
+  lifecycle_status?: string | null
+  purge_available_at?: string | null
 }
 
 interface RegistriesPageProps {
   initialMetrics: DashboardMetrics
   initialCompanies: Company[]
 }
+
+const DashboardProfileSchema = z.object({
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  companyName: z.string().nullable().optional(),
+  mainIndustryId: z.string().nullable().optional(),
+  subCategoryId: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  siren: z.string().nullable().optional(),
+  profile_type: z.string().nullable().optional(),
+  naf_code: z.string().nullable().optional(),
+  siren_verified_pappers: z.boolean().nullable().optional(),
+  academic_institution: z.string().nullable().optional(),
+  academic_department: z.string().nullable().optional(),
+})
+
+type DashboardProfile = z.infer<typeof DashboardProfileSchema>
 
 const FOCUS_RING =
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0080A3] focus-visible:ring-offset-2'
@@ -102,8 +124,12 @@ export default function RegistriesPage({
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [quotaReachedError, setQuotaReachedError] = useState<string | null>(null)
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null)
   const [registryToDelete, setRegistryToDelete] = useState<Company | null>(null)
   const [isDeletingRegistry, setIsDeletingRegistry] = useState(false)
+  const [accountProfile, setAccountProfile] = useState<DashboardProfile | null>(null)
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const api = useApiCall()
   const { plan } = useUserPlan()
@@ -189,6 +215,29 @@ export default function RegistriesPage({
     void refetchProfileCompleteness()
   }, [user?.id])
 
+  const loadAccountProfile = useCallback(async () => {
+    const token = session?.access_token
+    if (!token) return
+    try {
+      const response = await fetch('/api/profile', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.ok) return
+      const parsed = DashboardProfileSchema.safeParse(await response.json())
+      if (!parsed.success) {
+        console.error('[RegistriesPage] profil', parsed.error)
+        return
+      }
+      setAccountProfile(parsed.data)
+    } catch (profileError) {
+      console.error('[RegistriesPage] profil', profileError)
+    }
+  }, [session?.access_token])
+
+  useEffect(() => {
+    void loadAccountProfile()
+  }, [loadAccountProfile])
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -228,9 +277,26 @@ export default function RegistriesPage({
         },
       })
 
+      const payload = await response.json().catch(() => ({}))
+      if (response.status === 403 && payload?.code === 'MONTHLY_RESET_QUOTA_REACHED') {
+        setQuotaReachedError(payload.error || 'Quota mensuel atteint')
+        setIsDeletingRegistry(false)
+        return
+      }
+      if (response.status === 202) {
+        setConfirmationMessage(payload.message || 'Un email de confirmation vous a été envoyé pour lancer le délai de 24h.')
+        setCompanies((current) =>
+          current.map((company) =>
+            company.id === registryToDelete.id
+              ? { ...company, lifecycle_status: 'awaiting_email_confirm' }
+              : company
+          )
+        )
+        setIsDeletingRegistry(false)
+        return
+      }
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Erreur lors de la suppression')
+        throw new Error(payload?.error || 'Erreur lors de la suppression')
       }
 
       router.push('/dashboard/registries?deleted=true')
@@ -270,6 +336,12 @@ export default function RegistriesPage({
 
   const isEmpty = companies.length === 0
   const profileScore = dashboardMetrics.profileCompleteness
+  const profileTypeParsed = ProfileTypeSchema.safeParse(accountProfile?.profile_type)
+  const modalProfileType: ProfileType = profileTypeParsed.success ? profileTypeParsed.data : 'company'
+  const showFastTrack =
+    accountProfile != null &&
+    ((accountProfile.siren_verified_pappers !== true && accountProfile.profile_type !== 'academic') ||
+      profileScore < 100)
 
   return (
     <div className="min-h-screen bg-white">
@@ -316,6 +388,21 @@ export default function RegistriesPage({
             </button>
           </div>
         )}
+
+        {showFastTrack ? (
+          <div className="mb-8 rounded-xl border border-[#0080A3]/20 bg-[#0080A3]/5 p-4 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-gray-800">
+              Compléter le profil entreprise (Vérification Pappers & pré-remplissage AI Act)
+            </p>
+            <button
+              type="button"
+              onClick={() => setProfileModalOpen(true)}
+              className={`inline-flex min-h-11 items-center justify-center rounded-lg bg-[#0080A3] px-4 py-2 text-sm font-medium text-white hover:bg-[#006280] ${FOCUS_RING}`}
+            >
+              Compléter le profil entreprise (Vérification Pappers & pré-remplissage AI Act)
+            </button>
+          </div>
+        ) : null}
 
         <div className="mt-8 mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -452,6 +539,7 @@ export default function RegistriesPage({
                               <h4 className="text-lg font-semibold text-gray-900 group-hover:text-[#0080A3] transition-colors">
                                 {company.name}
                               </h4>
+                              <PurgeStatusBadge entity={company} />
                               <p className="text-xs text-gray-500">Propriétaire</p>
                             </div>
                           </div>
@@ -529,6 +617,7 @@ export default function RegistriesPage({
                             <h4 className="text-lg font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
                               {company.name}
                             </h4>
+                            <PurgeStatusBadge entity={company} />
                             <p className="text-xs text-gray-500">Collaborateur</p>
                           </div>
                         </div>
@@ -591,15 +680,81 @@ export default function RegistriesPage({
         resourceType="registry"
       />
 
-      <DeleteRegistryModal
+      <CompleteProfileModal
+        isOpen={profileModalOpen}
+        initialData={{
+          firstName: accountProfile?.firstName || '',
+          lastName: accountProfile?.lastName || '',
+          companyName: accountProfile?.companyName || '',
+          mainIndustryId: accountProfile?.mainIndustryId || '',
+          subCategoryId: accountProfile?.subCategoryId || '',
+          phone: accountProfile?.phone || '',
+          siren: accountProfile?.siren || '',
+          profileType: modalProfileType,
+          nafCode: accountProfile?.naf_code || '',
+          sirenVerifiedPappers: accountProfile?.siren_verified_pappers === true,
+          academicInstitution: accountProfile?.academic_institution || '',
+          academicDepartment: accountProfile?.academic_department || '',
+        }}
+        onComplete={async (data) => {
+          const token = session?.access_token
+          if (!token) throw new Error('Session expirée')
+          const response = await fetch('/api/profile', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              firstName: data.firstName,
+              lastName: data.lastName,
+              companyName: data.companyName,
+              mainIndustryId: data.mainIndustryId,
+              subCategoryId: data.subCategoryId,
+              phone: data.phone ?? '',
+              siren: data.siren ?? '',
+              profileType: data.profileType,
+              nafCode: data.nafCode ?? '',
+              sirenVerifiedPappers: data.sirenVerifiedPappers,
+              academicInstitution: data.academicInstitution ?? '',
+              academicDepartment: data.academicDepartment ?? '',
+            }),
+          })
+          const body = await response.json().catch(() => ({}))
+          if (!response.ok) {
+            throw new Error(typeof body?.error === 'string' ? body.error : 'Erreur lors de la mise à jour du profil')
+          }
+          setProfileModalOpen(false)
+          setSuccessMessage('Profil entreprise mis à jour.')
+          await loadAccountProfile()
+          const { data: scoreRow, error: scoreError } = await supabase
+            .from('profiles')
+            .select('completeness_score')
+            .eq('id', user.id)
+            .maybeSingle()
+          if (scoreError) {
+            console.error('[RegistriesPage] completeness', scoreError)
+          } else if (typeof scoreRow?.completeness_score === 'number') {
+            setDashboardMetrics((prev) => ({ ...prev, profileCompleteness: scoreRow.completeness_score }))
+          }
+        }}
+      />
+
+      <FreemiumDeletionModal
         isOpen={deleteModalOpen}
         onClose={() => {
           setDeleteModalOpen(false)
           setRegistryToDelete(null)
+          setQuotaReachedError(null)
+          setConfirmationMessage(null)
         }}
-        onConfirm={handleDeleteRegistry}
-        registryName={registryToDelete?.name || ''}
-        deleting={isDeletingRegistry}
+        onConfirmDelete={handleDeleteRegistry}
+        isDeleting={isDeletingRegistry}
+        entityType="company"
+        entityName={registryToDelete?.name || ''}
+        isFreemium={plan.isFree}
+        quotaReachedError={quotaReachedError}
+        confirmationMessage={confirmationMessage}
       />
     </div>
   )

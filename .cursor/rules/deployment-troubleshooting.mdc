@@ -10,8 +10,8 @@ alwaysApply: false
 **TOUJOURS** exécuter ces commandes avant de déployer :
 
 ```bash
-npm run build      # Vérification build
-npm run type-check # Si disponible
+pnpm build      # Vérification build
+pnpm type-check # Si disponible
 ```
 
 ## Erreurs TypeScript Courantes
@@ -28,7 +28,7 @@ npm run type-check # Si disponible
 **Solution** :
 1. Vérifier la définition du type dans [lib/supabase.ts](mdc:lib/supabase.ts)
 2. Adapter le code pour utiliser les nouvelles propriétés
-3. Tester localement avec `npm run build`
+3. Tester localement avec `pnpm build`
 
 ### 2. Erreurs de Migration de Données
 
@@ -43,10 +43,10 @@ Voir [data-migration-questionnaire.mdc](mdc:data-migration-questionnaire.mdc) po
 ### Avant Commit
 ```bash
 # Vérification TypeScript
-npm run build
+pnpm build
 
 # Si erreurs, corriger puis re-tester
-npm run build
+pnpm build
 ```
 
 ### Structure de Débogage

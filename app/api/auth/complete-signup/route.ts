@@ -10,6 +10,11 @@ import {
   type SignupProfileFields,
 } from '@/lib/validations/signup'
 import { calculateAndSaveProfileCompleteness, computeProfileCompletenessScoreFromRow } from '@/lib/services/profileScoreService'
+import {
+  calculateAndPersistEngagementScore,
+  calculateAndPersistEntityTrustScore,
+  detectAndRecordSirenCollision,
+} from '@/lib/services/governanceScoreService'
 
 const ACQUISITION_FIELD_MAX_LEN = 512
 
@@ -71,6 +76,11 @@ export async function POST(request: NextRequest) {
       subCategoryId,
       phone,
       siren,
+      profileType,
+      nafCode,
+      sirenVerifiedPappers,
+      academicInstitution,
+      academicDepartment,
       gclid: rawGclid,
       utm_source: rawUtmSource,
       utm_medium: rawUtmMedium,
@@ -143,7 +153,7 @@ export async function POST(request: NextRequest) {
     const { data: existingProfile, error: existingProfileError } = await supabase
       .from('profiles')
       .select(
-        'first_name, last_name, company_name, industry, sub_category_id, phone, siren, gclid, utm_source, utm_medium, utm_campaign'
+        'first_name, last_name, company_name, industry, sub_category_id, phone, siren, profile_type, naf_code, siren_verified_pappers, academic_institution, academic_department, gclid, utm_source, utm_medium, utm_campaign'
       )
       .eq('id', user.id)
       .maybeSingle()
@@ -164,6 +174,11 @@ export async function POST(request: NextRequest) {
     if (subCategoryId !== undefined) patch.sub_category_id = subCategoryId.trim() || null
     if (phone !== undefined) patch.phone = cleanedPhone
     if (siren !== undefined) patch.siren = cleanedSiren
+    if (profileType !== undefined) patch.profile_type = profileType
+    if (nafCode !== undefined) patch.naf_code = nafCode.trim() || null
+    if (sirenVerifiedPappers !== undefined) patch.siren_verified_pappers = sirenVerifiedPappers
+    if (academicInstitution !== undefined) patch.academic_institution = academicInstitution.trim() || null
+    if (academicDepartment !== undefined) patch.academic_department = academicDepartment.trim() || null
     if (rawGclid !== undefined) patch.gclid = gclid
     if (rawUtmSource !== undefined) patch.utm_source = utm_source
     if (rawUtmMedium !== undefined) patch.utm_medium = utm_medium
@@ -199,6 +214,14 @@ export async function POST(request: NextRequest) {
 
     await calculateAndSaveProfileCompleteness(user.id, supabase)
     revalidatePath('/dashboard/registries')
+
+    try {
+      await detectAndRecordSirenCollision(user.id, merged.siren)
+      await calculateAndPersistEntityTrustScore(user.id)
+      await calculateAndPersistEngagementScore(user.id)
+    } catch (governanceError) {
+      console.error('[complete-signup] scores gouvernance', governanceError)
+    }
 
     // Intention de forfait (URL ?plan=) — re-valider, ignorer si invalide (ne bloque pas l’inscription)
     if (rawPlanIntent !== undefined && rawPlanIntent !== null && rawPlanIntent !== '') {

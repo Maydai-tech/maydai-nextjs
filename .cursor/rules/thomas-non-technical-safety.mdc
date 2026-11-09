@@ -14,7 +14,7 @@ TOUTE ERREUR peut casser l'application déployée sur Vercel et affecter les uti
 ### Configuration Critique
 - `middleware.ts` - Gestion des headers de sécurité CSP
 - `next.config.ts` - Configuration Next.js et headers HTTP
-- `package.json` / `package-lock.json` - Dépendances npm
+- `package.json` / `pnpm-lock.yaml` - Dépendances pnpm (interdiction d'utiliser npm ou package-lock.json)
 - `.env*` - Variables d'environnement
 - `tailwind.config.*` - Configuration CSS
 
@@ -72,18 +72,18 @@ Après ajout d'image, TOUJOURS vérifier :
 
 ### Avant Toute Modification
 ```bash
-npm run dev  # Vérifier que tout fonctionne
+pnpm dev  # Vérifier que tout fonctionne
 ```
 
 ### Après Chaque Modification
 ```bash
-npm run dev  # Re-tester l'application
+pnpm dev  # Re-tester l'application
 # Vérifier dans le navigateur que tout fonctionne
 ```
 
 ### Avant Chaque Commit
 ```bash
-npm run build  # Test de production obligatoire
+pnpm build  # Test de production obligatoire
 ```
 
 ## 🚨 SIGNAUX D'ALARME - ARRÊTER IMMÉDIATEMENT
@@ -105,7 +105,7 @@ Si tu vois :
 ✅ "Ce fichier est critique pour la production. Je recommande de demander l'aide de l'équipe technique pour cette modification."
 
 ### Pour installation de packages
-❌ "Installe ce package avec npm install..."
+❌ "Installe ce package avec pnpm install..."
 ✅ "L'ajout de nouveaux packages nécessite une validation technique pour éviter les conflits de dépendances."
 
 ### Pour erreurs complexes

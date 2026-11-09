@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordUseCaseHistory } from '@/lib/usecase-history'
 import { getRegistryOwnerPlan } from '@/lib/subscription/user-plan'
+import { countActiveUseCasesForRegistry } from '@/lib/subscription/quota-guards'
 import {
   buildV2DuplicateInsertPayload,
   isEligibleV1SourceForV2Duplicate,
@@ -95,12 +96,11 @@ export async function POST(
     const ownerPlan = await getRegistryOwnerPlan(source.company_id, supabase)
     const maxUseCases = ownerPlan.planInfo.maxUseCasesPerRegistry || 3
 
-    const { count: currentUseCaseCount, error: countError } = await supabase
-      .from('usecases')
-      .select('*', { count: 'exact', head: true })
-      .eq('company_id', source.company_id)
-
-    if (countError) {
+    let currentUseCaseCount = 0
+    try {
+      currentUseCaseCount = await countActiveUseCasesForRegistry(source.company_id, supabase)
+    } catch (countError) {
+      console.error('[POST /api/usecases/duplicate-to-v2] quota', countError)
       return NextResponse.json({ error: 'Error checking use case limit' }, { status: 500 })
     }
 

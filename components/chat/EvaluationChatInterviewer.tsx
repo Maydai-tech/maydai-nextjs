@@ -35,6 +35,8 @@ interface EvaluationChatInterviewerProps {
   usecaseDescription?: string | null
   /** Appelé une seule fois quand le graphe V3 renvoie PATH_COMPLETE. */
   onPathComplete?: () => void
+  onInputKeyDown?: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void
+  onInputPaste?: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void
 }
 
 export default function EvaluationChatInterviewer({
@@ -44,6 +46,8 @@ export default function EvaluationChatInterviewer({
   usecaseName = null,
   usecaseDescription = null,
   onPathComplete,
+  onInputKeyDown,
+  onInputPaste,
 }: EvaluationChatInterviewerProps) {
   const { session } = useAuth()
   const [messages, setMessages] = useState<EvaluationChatMessage[]>([])
@@ -522,7 +526,13 @@ export default function EvaluationChatInterviewer({
               rows={1}
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              onKeyDown={onKeyDown}
+              onKeyDown={(event) => {
+                onInputKeyDown?.(event)
+                onKeyDown(event)
+              }}
+              onPaste={(event) => {
+                onInputPaste?.(event)
+              }}
               disabled={!hydrated || isPending || pathComplete}
               placeholder={
                 pathComplete ? 'Parcours terminé' : 'Répondez à l’assistant…'

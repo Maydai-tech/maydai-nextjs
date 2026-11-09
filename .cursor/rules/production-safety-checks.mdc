@@ -40,9 +40,9 @@ grep -r "\.png\|\.jpg\|\.svg" components/ app/ | grep -E "[ éèàç]"
 ### 3. Tests de Build
 ```bash
 # Tests obligatoires avant merge
-npm run build        # Compilation production
-npm run lint         # Vérification code
-npm test            # Tests unitaires
+pnpm build        # Compilation production
+pnpm lint         # Vérification code
+pnpm test            # Tests unitaires
 ```
 
 **Résultats attendus** :
@@ -54,7 +54,7 @@ npm test            # Tests unitaires
 ### 4. Test de Production Simulé
 ```bash
 # Test avec build de production
-npm run build && npm run start
+pnpm build && pnpm start
 ```
 
 **Vérifications manuelles** :
@@ -101,9 +101,9 @@ git merge thomas
 ### Étape 4 : Vérification Post-Merge
 ```bash
 # Re-tests complets après merge
-npm run build
-npm run test
-npm run dev  # Test manuel
+pnpm build
+pnpm test
+pnpm dev  # Test manuel
 ```
 
 ## 🚨 GESTION DES PROBLÈMES
@@ -112,7 +112,7 @@ npm run dev  # Test manuel
 1. **Identifier** : `git diff dev~1..dev --name-only`
 2. **Analyser** : Vérifier les fichiers modifiés
 3. **Corriger** : Renommer assets problématiques
-4. **Re-tester** : `npm run build`
+4. **Re-tester** : `pnpm build`
 
 ### Erreurs CSP/Headers
 1. **Vérifier** : `middleware.ts` non modifié
@@ -152,10 +152,10 @@ echo "🔍 Vérification branche thomas..."
 find . -name "* *" -o -name "*é*" | wc -l
 
 # 2. Test build
-npm run build
+pnpm build
 
 # 3. Test lint
-npm run lint
+pnpm lint
 
 # 4. Rapport final
 echo "✅ Vérification terminée"

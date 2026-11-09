@@ -28,6 +28,66 @@ import {
   sanitizePdfReportData,
 } from '@/lib/pdf-payload-service'
 import { getSystemCardPillarsByModel } from '@/lib/services/system-card-service'
+import { getServiceRoleClient } from '@/lib/maydai-calculator'
+import { getAuditIntegrityBadge } from '@/lib/validations/governance-scores'
+
+interface RegistryOwnerGovernance {
+  profile_type?: string | null
+  siren_collision_flag?: boolean | null
+}
+
+function readAuditIntegrityScore(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const numeric = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+async function loadRegistryOwnerGovernance(
+  companyId: string | null | undefined
+): Promise<RegistryOwnerGovernance | null> {
+  if (!companyId) return null
+  try {
+    const admin = getServiceRoleClient()
+    const { data: ownerData, error: ownerError } = await admin
+      .from('user_companies')
+      .select('user_id')
+      .eq('company_id', companyId)
+      .in('role', ['owner', 'company_owner'])
+      .order('created_at', { ascending: true })
+      .limit(1)
+
+    if (ownerError) {
+      console.error('[generate-pdf] owner registre', ownerError)
+      throw new Error(ownerError.message || ownerError.details || 'Erreur DB')
+    }
+
+    const ownerRow = Array.isArray(ownerData) ? ownerData[0] : ownerData
+    const ownerUserId =
+      ownerRow && typeof ownerRow.user_id === 'string' ? ownerRow.user_id : null
+    if (!ownerUserId) return null
+
+    const { data: profileData, error: profileError } = await admin
+      .from('profiles')
+      .select('profile_type, siren_collision_flag')
+      .eq('id', ownerUserId)
+      .limit(1)
+
+    if (profileError) {
+      console.error('[generate-pdf] profil owner', profileError)
+      throw new Error(profileError.message || profileError.details || 'Erreur DB')
+    }
+
+    const profile = Array.isArray(profileData) ? profileData[0] : profileData
+    if (!profile) return null
+    return {
+      profile_type: profile.profile_type ?? null,
+      siren_collision_flag: profile.siren_collision_flag ?? false,
+    }
+  } catch (error) {
+    console.error('[generate-pdf] résolution owner', error)
+    return null
+  }
+}
 
 function stringSetsEqual(a: Set<string>, b: Set<string>): boolean {
   if (a.size !== b.size) return false
@@ -414,8 +474,16 @@ export async function GET(
       notesByDocType
     )
 
+    const ownerProfile = await loadRegistryOwnerGovernance(useCase.company_id)
+    const governanceStamp = getAuditIntegrityBadge({
+      audit_integrity_score: readAuditIntegrityScore(useCase.audit_integrity_score),
+      profile_type: ownerProfile?.profile_type ?? null,
+      siren_collision_flag: ownerProfile?.siren_collision_flag ?? false,
+    })
+
     // Prepare PDF data
     const pdfData: PDFReportData = sanitizePdfReportData({
+      governanceStamp,
       pdfCtaBaseUrl: pdfCtaBaseUrl || undefined,
       canonicalPlanItems,
       useCase: safeUseCase,

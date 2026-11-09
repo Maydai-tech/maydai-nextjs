@@ -36,6 +36,7 @@ import {
   getV3ShortPathSegmentOrder,
 } from '../../utils/questionnaire-v3-short-path-ux'
 import { V3ShortPathStepper } from './V3ShortPathStepper'
+import { useInputVelocityTelemetry } from '@/hooks/useInputVelocityTelemetry'
 
 /**
  * Interface définissant les props du composant StepByStepQuestionnaire
@@ -69,6 +70,7 @@ export function StepByStepQuestionnaire({
 }: StepByStepQuestionnaireProps) {
   // Auth et informations de la company pour la collaboration
   const { session } = useAuth()
+  const { handleKeyDown, handlePaste, getTelemetrySnapshot } = useInputVelocityTelemetry()
   const { isOwner } = useCompanyInfo(useCase.company_id)
 
   // État pour le nom de la company
@@ -253,13 +255,17 @@ export function StepByStepQuestionnaire({
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        ...body,
+        input_telemetry: getTelemetrySnapshot(),
+      }),
     }).catch(() => {
       /* best-effort */
     })
   }, [
     isCompleted,
     evaluationRunId,
+    getTelemetrySnapshot,
     session?.access_token,
     useCase.id,
     useCase.classification_status,
@@ -312,7 +318,11 @@ export function StepByStepQuestionnaire({
   // Interface principale du questionnaire
   return (
     <>
-      <div className="bg-white rounded-xl shadow-sm p-6 sm:p-8">
+      <div
+        className="bg-white rounded-xl shadow-sm p-6 sm:p-8"
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
+      >
         {/* Header avec navigation et informations du cas d'usage */}
         <div className="text-center mb-8">
           <Link
