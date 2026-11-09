@@ -46,7 +46,7 @@ export default defineConfig({
   // Run the dev server only when tests target a local URL.
   webServer: shouldStartLocalServer
     ? {
-        command: 'npm run dev',
+        command: 'pnpm run dev',
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120000, // 2 minutes for CI

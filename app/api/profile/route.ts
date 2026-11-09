@@ -1,9 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPlansFetchUrl } from '@/lib/api/plans'
+import { z } from 'zod'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { calculateAndSaveProfileCompleteness } from '@/lib/services/profileScoreService'
+import { syncProfileSirenToRegistries } from '@/lib/services/registryScoreService'
+import {
+  calculateAndPersistEngagementScore,
+  calculateAndPersistEntityTrustScore,
+  detectAndRecordSirenCollision,
+} from '@/lib/services/governanceScoreService'
+import { ProfileTypeSchema } from '@/lib/validations/governance-scores'
+
+const ProfileUpdateSchema = z.object({
+  firstName: z.string(),
+  lastName: z.string(),
+  companyName: z.string().optional().nullable(),
+  mainIndustryId: z.string(),
+  subCategoryId: z.string(),
+  phone: z.string().optional().nullable(),
+  siren: z.string().optional().nullable(),
+  profileType: ProfileTypeSchema.optional(),
+  nafCode: z.string().optional().nullable(),
+  sirenVerifiedPappers: z.boolean().optional(),
+  academicInstitution: z.string().optional().nullable(),
+  academicDepartment: z.string().optional().nullable(),
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +34,9 @@ export async function GET(request: NextRequest) {
     // Get profile data
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('first_name, last_name, company_name, industry, sub_category_id, phone, siren')
+      .select(
+        'first_name, last_name, company_name, industry, sub_category_id, phone, siren, profile_type, naf_code, siren_verified_pappers, academic_institution, academic_department, entity_trust_score, engagement_score, siren_collision_flag, monthly_reset_count, last_reset_at'
+      )
       .eq('id', user.id)
       .single()
 
@@ -29,7 +53,17 @@ export async function GET(request: NextRequest) {
       mainIndustryId: profile?.industry || '',
       subCategoryId: profile?.sub_category_id || '',
       phone: profile?.phone || '',
-      siren: profile?.siren || ''
+      siren: profile?.siren || '',
+      profile_type: profile?.profile_type ?? 'company',
+      naf_code: profile?.naf_code ?? null,
+      siren_verified_pappers: profile?.siren_verified_pappers ?? false,
+      academic_institution: profile?.academic_institution ?? null,
+      academic_department: profile?.academic_department ?? null,
+      entity_trust_score: profile?.entity_trust_score ?? 50,
+      engagement_score: profile?.engagement_score ?? 0,
+      siren_collision_flag: profile?.siren_collision_flag ?? false,
+      monthly_reset_count: profile?.monthly_reset_count ?? 0,
+      last_reset_at: profile?.last_reset_at ?? null,
     })
 
   } catch (error) {
@@ -45,8 +79,34 @@ export async function PATCH(request: NextRequest) {
   try {
     const { supabase, user } = await getAuthenticatedSupabaseClient(request)
 
-    const body = await request.json()
-    const { firstName, lastName, companyName, mainIndustryId, subCategoryId, phone, siren } = body
+    const rawBody = await request.json()
+    const parsedBody = ProfileUpdateSchema.safeParse(rawBody)
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: 'Payload invalide', details: parsedBody.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    const {
+      firstName,
+      lastName,
+      companyName,
+      mainIndustryId,
+      subCategoryId,
+      phone,
+      siren,
+      profileType,
+      nafCode,
+      sirenVerifiedPappers,
+      academicInstitution,
+      academicDepartment,
+    } = parsedBody.data
+
+    const academicInstitutionName = academicInstitution?.trim() || ''
+    const resolvedCompanyName =
+      companyName?.trim() ||
+      (profileType === 'academic' ? academicInstitutionName : '')
 
     const { data: existingProfile } = await supabase
       .from('profiles')
@@ -56,10 +116,9 @@ export async function PATCH(request: NextRequest) {
 
     const previousSiren = existingProfile?.siren?.trim() || null
     const nextSiren = siren ? cleanSIREN(siren) : null
-    const sirenChanged = 'siren' in body && nextSiren !== previousSiren
+    const sirenChanged = 'siren' in rawBody && nextSiren !== previousSiren
 
-    // Validate required fields
-    if (!firstName || !lastName || !companyName || !mainIndustryId || !subCategoryId) {
+    if (!firstName.trim() || !lastName.trim() || !resolvedCompanyName || !mainIndustryId.trim() || !subCategoryId.trim()) {
       return NextResponse.json(
         { error: 'Les champs prénom, nom, entreprise, secteur principal et sous-catégorie sont obligatoires' },
         { status: 400 }
@@ -88,18 +147,31 @@ export async function PATCH(request: NextRequest) {
 
     // Update profile
     // Store mainIndustryId in industry field and subCategoryId in sub_category_id field
+    const profileUpdate: Record<string, unknown> = {
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      company_name: resolvedCompanyName,
+      industry: mainIndustryId.trim(),
+      sub_category_id: subCategoryId.trim(),
+      phone: phone?.trim() || null,
+      siren: siren ? cleanSIREN(siren) : null,
+      updated_at: new Date().toISOString(),
+    }
+    if (profileType) profileUpdate.profile_type = profileType
+    if (nafCode !== undefined) profileUpdate.naf_code = nafCode?.trim() || null
+    if (typeof sirenVerifiedPappers === 'boolean') {
+      profileUpdate.siren_verified_pappers = sirenVerifiedPappers
+    }
+    if (academicInstitution !== undefined) {
+      profileUpdate.academic_institution = academicInstitution?.trim() || null
+    }
+    if (academicDepartment !== undefined) {
+      profileUpdate.academic_department = academicDepartment?.trim() || null
+    }
+
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        company_name: companyName.trim(),
-        industry: mainIndustryId.trim(),
-        sub_category_id: subCategoryId.trim(),
-        phone: phone?.trim() || null,
-        siren: siren ? cleanSIREN(siren) : null,
-        updated_at: new Date().toISOString()
-      })
+      .update(profileUpdate)
       .eq('id', user.id)
 
     if (updateError) {
@@ -112,15 +184,29 @@ export async function PATCH(request: NextRequest) {
 
     await calculateAndSaveProfileCompleteness(user.id, supabase)
 
+    const cleanedSiren = nextSiren ?? ''
     if (sirenChanged) {
-      fetch(getPlansFetchUrl('/api/webhooks/sync-siren'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-internal-api-key': process.env.INTERNAL_API_KEY || '',
-        },
-        body: JSON.stringify({ userId: user.id, siren: nextSiren ?? '' }),
-      }).catch((e) => console.error('[Sync Siren Error]', e))
+      try {
+        await syncProfileSirenToRegistries(user.id, cleanedSiren)
+      } catch (syncError) {
+        console.error('[PATCH /api/profile] sync SIREN', syncError)
+        return NextResponse.json(
+          { error: syncError instanceof Error ? syncError.message : 'Erreur DB' },
+          { status: 500 }
+        )
+      }
+    }
+
+    try {
+      await detectAndRecordSirenCollision(user.id, cleanedSiren || null)
+      await calculateAndPersistEntityTrustScore(user.id)
+      await calculateAndPersistEngagementScore(user.id)
+    } catch (scoreError) {
+      console.error('[PATCH /api/profile] scores gouvernance', scoreError)
+      return NextResponse.json(
+        { error: scoreError instanceof Error ? scoreError.message : 'Erreur DB' },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({ success: true })

@@ -4,6 +4,9 @@ import { logger, createRequestContext } from '@/lib/secure-logger'
 import { getUserByEmail, inviteUserByEmail, createProfileForUser } from '@/lib/invite-user'
 import { sendAccountCollaborationInvite } from '@/lib/email/mailjet'
 import { calculateAndSaveProfileCompleteness } from '@/lib/services/profileScoreService'
+import { getServiceRoleClient } from '@/lib/maydai-calculator'
+import { getCurrentUserPlan } from '@/lib/subscription/user-plan'
+import { countAccountCollaborators, listAccountCollaboratorIds } from '@/lib/subscription/quota-guards'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -102,6 +105,32 @@ export async function POST(request: NextRequest) {
 
     if (existingCollaboration) {
       return NextResponse.json({ error: 'This user is already a collaborator at profile level' }, { status: 400 })
+    }
+
+    try {
+      const serviceClient = getServiceRoleClient()
+      const alreadyOnAccount = (await listAccountCollaboratorIds(user.id, serviceClient)).has(
+        collaboratorProfileId
+      )
+      if (!alreadyOnAccount) {
+        const userPlan = await getCurrentUserPlan(user.id, serviceClient)
+        const maxCollaborators = userPlan.planInfo.maxCollaborators ?? 2
+        const currentCollaborators = await countAccountCollaborators(user.id, serviceClient)
+        if (currentCollaborators >= maxCollaborators) {
+          return NextResponse.json(
+            {
+              error: 'Limite de collaborateurs du plan atteinte',
+              code: 'PLAN_LIMIT_REACHED',
+              limit: maxCollaborators,
+              current: currentCollaborators,
+            },
+            { status: 403 }
+          )
+        }
+      }
+    } catch (quotaError) {
+      console.error('[POST /api/collaboration/profile] quota', quotaError)
+      return NextResponse.json({ error: 'Erreur lors de la vérification de la limite du plan' }, { status: 500 })
     }
 
     // Create user_profiles entry

@@ -103,6 +103,52 @@ export interface DeletionPreview {
  *
  * Lève une Error en cas d'échec d'une étape (hors Storage).
  */
+/**
+ * Supprime un cas d'usage et ses enfants, dans l'ordre des clés étrangères.
+ * Les fichiers Storage sont retirés avant les lignes de dossier.
+ */
+export async function deleteUseCaseCascade(
+  supabase: SupabaseClient,
+  usecaseId: string
+): Promise<void> {
+  const del = async (table: string, apply: (q: any) => any) => {
+    const { error } = await apply(supabase.from(table).delete())
+    if (error) {
+      console.error(`[deleteUseCaseCascade] ${table}`, error)
+      throw new Error(error.message || error.details || 'Erreur DB')
+    }
+  }
+
+  await del('usecase_responses', (q) => q.eq('usecase_id', usecaseId))
+  await del('usecase_history', (q) => q.eq('usecase_id', usecaseId))
+  await del('usecase_nextsteps', (q) => q.eq('usecase_id', usecaseId))
+  await del('user_usecases', (q) => q.eq('usecase_id', usecaseId))
+  await del('contact_requests', (q) => q.eq('usecase_id', usecaseId))
+  await del('evaluation_path_runs', (q) => q.eq('usecase_id', usecaseId))
+
+  const { data: dossierRows, error: dossierError } = await supabase
+    .from('dossiers')
+    .select('id')
+    .eq('usecase_id', usecaseId)
+
+  if (dossierError) {
+    console.error('[deleteUseCaseCascade] dossiers', dossierError)
+    throw new Error(dossierError.message || dossierError.details || 'Erreur DB')
+  }
+
+  const dossierIds = (dossierRows ?? [])
+    .map((row) => row.id as string)
+    .filter((id) => typeof id === 'string' && id.length > 0)
+
+  if (dossierIds.length > 0) {
+    await removeDossierStorageFiles(supabase, dossierIds)
+    await del('dossier_documents', (q) => q.in('dossier_id', dossierIds))
+  }
+
+  await del('dossiers', (q) => q.eq('usecase_id', usecaseId))
+  await del('usecases', (q) => q.eq('id', usecaseId))
+}
+
 export async function deleteCompanyCascade(
   supabase: SupabaseClient,
   companyId: string

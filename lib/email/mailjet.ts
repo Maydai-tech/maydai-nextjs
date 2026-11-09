@@ -1,11 +1,19 @@
 import Mailjet from 'node-mailjet';
 import type { LlmStatsSyncResult } from '@/lib/bench-llm/llm-stats-sync';
+import {
+  MailjetGovernanceSendResultSchema,
+  SendDeletionConfirmationEmailParamsSchema,
+  SendPurgeCompletedEmailParamsSchema,
+  type MailjetGovernanceSendResult,
+} from '@/lib/validations/mailjet-governance';
 
 // Configuration
 const TEMPLATES = {
   COLLABORATION_INVITE: 7438322, // Template pour invitation au niveau registre
   ACCOUNT_COLLABORATION_INVITE: 7576574, // Template pour invitation au niveau compte
   HUMAN_OVERSIGHT_INVITE: 8083771, // Template invitation surveillance humaine (cas d'usage)
+  DELETION_CONFIRM: 8508863,
+  PURGE_COMPLETED: 8508931,
 } as const;
 
 /** Template Mailjet — campagne acquisition (lead Google Ads). */
@@ -571,5 +579,213 @@ export async function sendAdminContactNotification(data: ContactNotificationPayl
   } catch (error) {
     console.error('[Contact Web] Erreur critique envoi notification admin:', error);
     return { success: false, error };
+  }
+}
+
+function resolveTemplateId(envName: string, defaultTemplateId: number): number {
+  const raw = process.env[envName]?.trim()
+  if (!raw) return defaultTemplateId
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return defaultTemplateId
+  return parsed
+}
+
+function entityTypeLabel(entityType: 'company' | 'usecase'): string {
+  return entityType === 'company' ? 'registre' : "cas d'usage"
+}
+
+interface MailjetSendResponseBody {
+  Messages?: Array<{
+    Status?: string
+    To?: Array<{
+      MessageID?: string | number
+      MessageUUID?: string
+    }>
+  }>
+}
+
+function readMailjetStatusCode(source: unknown): number | null {
+  if (!source || typeof source !== 'object') return null
+  const status = (source as { status?: unknown; statusCode?: unknown }).status
+  const statusCode = (source as { statusCode?: unknown }).statusCode
+  if (typeof status === 'number') return status
+  if (typeof statusCode === 'number') return statusCode
+  return null
+}
+
+function buildGovernanceSendResult(input: {
+  templateId: number
+  body?: unknown
+  statusCode?: number | null
+  error?: unknown
+}): MailjetGovernanceSendResult {
+  const body = input.body as MailjetSendResponseBody | undefined
+  const message = body?.Messages?.[0]
+  const recipient = message?.To?.[0]
+  const errorMessage =
+    input.error instanceof Error
+      ? input.error.message
+      : input.error
+        ? String(input.error)
+        : null
+
+  return MailjetGovernanceSendResultSchema.parse({
+    success: !input.error && message?.Status === 'success',
+    templateId: input.templateId,
+    statusCode: input.statusCode ?? null,
+    messageStatus: typeof message?.Status === 'string' ? message.Status : null,
+    messageId: recipient?.MessageID ?? null,
+    messageUuid: typeof recipient?.MessageUUID === 'string' ? recipient.MessageUUID : null,
+    errorMessage,
+  })
+}
+
+export async function sendDeletionConfirmationEmail(params: {
+  toEmail: string
+  firstName?: string | null
+  entityName: string
+  entityType: 'company' | 'usecase'
+  confirmationLink: string
+}): Promise<MailjetGovernanceSendResult> {
+  const templateId = resolveTemplateId(
+    'MAILJET_DELETION_CONFIRM_TEMPLATE_ID',
+    TEMPLATES.DELETION_CONFIRM
+  )
+  const parsed = SendDeletionConfirmationEmailParamsSchema.safeParse(params)
+  if (!parsed.success) {
+    console.error('[Mailjet sendDeletionConfirmationEmail]', parsed.error)
+    return buildGovernanceSendResult({
+      templateId,
+      error: new Error('Paramètres de confirmation de suppression invalides'),
+    })
+  }
+
+  const mailjet = getMailjetClient()
+  if (!mailjet) {
+    const error = new Error('Client Mailjet absent')
+    console.error('[Mailjet sendDeletionConfirmationEmail]', error)
+    return buildGovernanceSendResult({ templateId, error })
+  }
+
+  const label = entityTypeLabel(parsed.data.entityType)
+  const upgradeLink = `${APP_URL}/abonnement`
+  const variables = {
+    first_name: parsed.data.firstName || '',
+    firstName: parsed.data.firstName || '',
+    entity_name: parsed.data.entityName,
+    entityName: parsed.data.entityName,
+    entity_type_label: label,
+    entityTypeLabel: label,
+    registryName: parsed.data.entityName,
+    confirmation_link: parsed.data.confirmationLink,
+    confirmationLink: parsed.data.confirmationLink,
+    ctaLink: parsed.data.confirmationLink,
+    upgrade_link: upgradeLink,
+    upgradeLink: upgradeLink,
+  }
+
+  try {
+    const result = await mailjet.post('send', { version: 'v3.1' }).request({
+      Messages: [
+        {
+          From: { Email: FROM_EMAIL, Name: FROM_NAME },
+          To: [{ Email: parsed.data.toEmail, Name: parsed.data.firstName || parsed.data.toEmail }],
+          TemplateID: templateId,
+          TemplateLanguage: true,
+          TemplateErrorReporting: { Email: FROM_EMAIL, Name: FROM_NAME },
+          TemplateErrorDeliver: false,
+          Subject: `Confirmation de demande de suppression – ${parsed.data.entityName} (Délai de sécurité 24h)`,
+          Variables: variables,
+        },
+      ],
+    })
+    return buildGovernanceSendResult({
+      templateId,
+      body: result.body,
+      statusCode: readMailjetStatusCode(result.response),
+    })
+  } catch (error) {
+    console.error('[Mailjet sendDeletionConfirmationEmail]', error)
+    const response = (error as { response?: { status?: number; body?: unknown } }).response
+    return buildGovernanceSendResult({
+      templateId,
+      body: response?.body,
+      statusCode: readMailjetStatusCode(response) ?? readMailjetStatusCode(error),
+      error,
+    })
+  }
+}
+
+export async function sendPurgeCompletedEmail(params: {
+  toEmail: string
+  firstName?: string | null
+  entityName: string
+  entityType: 'company' | 'usecase'
+  dashboardLink?: string
+}): Promise<MailjetGovernanceSendResult> {
+  const templateId = resolveTemplateId(
+    'MAILJET_PURGE_COMPLETED_TEMPLATE_ID',
+    TEMPLATES.PURGE_COMPLETED
+  )
+  const parsed = SendPurgeCompletedEmailParamsSchema.safeParse(params)
+  if (!parsed.success) {
+    console.error('[Mailjet sendPurgeCompletedEmail]', parsed.error)
+    return buildGovernanceSendResult({
+      templateId,
+      error: new Error('Paramètres de fin de purge invalides'),
+    })
+  }
+
+  const mailjet = getMailjetClient()
+  if (!mailjet) {
+    const error = new Error('Client Mailjet absent')
+    console.error('[Mailjet sendPurgeCompletedEmail]', error)
+    return buildGovernanceSendResult({ templateId, error })
+  }
+
+  const label = entityTypeLabel(parsed.data.entityType)
+  const dashboardLink = parsed.data.dashboardLink || `${APP_URL}/dashboard/registries`
+  const variables = {
+    first_name: parsed.data.firstName || '',
+    firstName: parsed.data.firstName || '',
+    entity_name: parsed.data.entityName,
+    entityName: parsed.data.entityName,
+    entity_type_label: label,
+    entityTypeLabel: label,
+    registryName: parsed.data.entityName,
+    dashboard_link: dashboardLink,
+    dashboardLink: dashboardLink,
+    ctaLink: dashboardLink,
+  }
+
+  try {
+    const result = await mailjet.post('send', { version: 'v3.1' }).request({
+      Messages: [
+        {
+          From: { Email: FROM_EMAIL, Name: FROM_NAME },
+          To: [{ Email: parsed.data.toEmail, Name: parsed.data.firstName || parsed.data.toEmail }],
+          TemplateID: templateId,
+          TemplateLanguage: true,
+          TemplateErrorReporting: { Email: FROM_EMAIL, Name: FROM_NAME },
+          TemplateErrorDeliver: false,
+          Subject: 'Suppression effectuée – Votre espace MaydAI est disponible',
+          Variables: variables,
+        },
+      ],
+    })
+    return buildGovernanceSendResult({
+      templateId,
+      body: result.body,
+      statusCode: readMailjetStatusCode(result.response),
+    })
+  } catch (error) {
+    console.error('[Mailjet sendPurgeCompletedEmail]', error)
+    const response = (error as { response?: { status?: number; body?: unknown } }).response
+    return buildGovernanceSendResult({
+      templateId,
+      body: response?.body,
+      statusCode: readMailjetStatusCode(response) ?? readMailjetStatusCode(error),
+      error,
+    })
   }
 }

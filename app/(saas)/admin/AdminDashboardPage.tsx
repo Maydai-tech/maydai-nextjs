@@ -191,6 +191,17 @@ export default function AdminDashboardPage() {
               </p>
             </a>
 
+            <Link
+              href="/admin/governance"
+              className="block rounded-lg border border-amber-200 bg-amber-50/40 p-4 transition-colors hover:border-[#0080A3] hover:shadow-md"
+            >
+              <ShieldCheck className="mb-2 h-6 w-6 text-amber-700" />
+              <h3 className="font-medium text-gray-900">Gouvernance, Scores & Collisions SIREN</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Suivi des utilisateurs : Trust Score, Intégrité Audit, Engagement, Matrice 2x2 et alertes de doublons SIREN
+              </p>
+            </Link>
+
             <a
               href="/admin/monitoring"
               className="block rounded-lg border border-gray-200 p-4 transition-colors hover:border-teal-500 hover:shadow-md"

@@ -4,12 +4,13 @@ import { useState, useEffect, useTransition, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuth } from '@/lib/auth'
+import { useUserPlan } from '@/app/(saas)/abonnement/hooks/useUserPlan'
+import FreemiumDeletionModal, { PurgeStatusBadge } from '@/components/governance/FreemiumDeletionModal'
 import { AlertTriangle, Save, Edit, X, Settings, ArrowLeft, ShieldCheck } from 'lucide-react'
 import {
   REGISTRE_MAYDAI_SEAL_ALT,
   REGISTRE_MAYDAI_SEAL_SRC,
 } from '../components/RegistreMaydaiBadge'
-import DeleteRegistryModal from '../components/DeleteRegistryModal'
 import ConfirmCentralizedRegistryModal from '../components/ConfirmCentralizedRegistryModal'
 import EditCentralizedRegistryModal from '../components/EditCentralizedRegistryModal'
 import { REGISTRY_TYPES, isCustomType, getTypeLabel } from '@/lib/registry-types'
@@ -42,6 +43,8 @@ interface Company {
   is_centralized_registry?: boolean
   completeness_score?: number | null
   has_collaborators?: boolean
+  lifecycle_status?: string | null
+  purge_available_at?: string | null
 }
 
 function isCompanyCentralized(company: Company): boolean {
@@ -81,6 +84,7 @@ function isAccessDeniedForSettings(company: Company | null): boolean {
 }
 
 export default function RegistrySettingsPage() {
+  const { plan } = useUserPlan()
   const router = useRouter()
   const resolvedParams = useParams()
   const { user, loading: authLoading, getAccessToken } = useAuth()
@@ -111,6 +115,8 @@ export default function RegistrySettingsPage() {
   // Danger zone state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [quotaReachedError, setQuotaReachedError] = useState<string | null>(null)
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null)
 
   // Centralized registry state
   const [showCentralizedRegistryModal, setShowCentralizedRegistryModal] = useState(false)
@@ -404,11 +410,24 @@ export default function RegistrySettingsPage() {
         }
       })
 
+      const payload = await response.json().catch(() => ({}))
+      if (response.status === 403 && payload?.code === 'MONTHLY_RESET_QUOTA_REACHED') {
+        setQuotaReachedError(payload.error || 'Quota mensuel atteint')
+        setDeleting(false)
+        return
+      }
+      if (response.status === 202) {
+        setConfirmationMessage(payload.message || 'Un email de confirmation vous a été envoyé pour lancer le délai de 24h.')
+        setCompany((current) =>
+          current ? { ...current, lifecycle_status: 'awaiting_email_confirm' } : current
+        )
+        setDeleting(false)
+        return
+      }
       if (!response.ok) {
-        throw new Error('Erreur lors de la suppression')
+        throw new Error(payload?.error || 'Erreur lors de la suppression')
       }
 
-      // Redirect to registries list
       router.push('/dashboard/registries')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue')
@@ -808,6 +827,7 @@ export default function RegistrySettingsPage() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     Supprimer ce registre
                   </h3>
+                  <PurgeStatusBadge entity={company} />
                   <p className="text-sm text-gray-700 mb-4">
                     Cette action est irréversible. Toutes les données associées à ce registre
                     seront définitivement supprimées, y compris tous les cas d'usage et
@@ -827,12 +847,20 @@ export default function RegistrySettingsPage() {
       </div>
 
       {/* Delete Modal */}
-      <DeleteRegistryModal
+      <FreemiumDeletionModal
         isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        onConfirm={handleDeleteRegistry}
-        registryName={company.name}
-        deleting={deleting}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setQuotaReachedError(null)
+          setConfirmationMessage(null)
+        }}
+        onConfirmDelete={handleDeleteRegistry}
+        isDeleting={deleting}
+        entityType="company"
+        entityName={company.name}
+        isFreemium={plan.isFree}
+        quotaReachedError={quotaReachedError}
+        confirmationMessage={confirmationMessage}
       />
 
       {/* Centralized Registry Confirmation Modal */}

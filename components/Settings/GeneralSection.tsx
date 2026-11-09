@@ -2,11 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { HardDrive, User, Building2, Phone, FileText, Pencil, X, Check, Loader2, AlertTriangle, Trash2 } from 'lucide-react'
+import { z } from 'zod'
+import { HardDrive, User, Phone, Pencil, X, Check, Loader2, AlertTriangle, Trash2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { useUserPlan } from '@/app/(saas)/abonnement/hooks/useUserPlan'
 import { validateSIREN, cleanSIREN, formatSIREN } from '@/lib/validation/siren'
 import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
+import ProfileGovernanceFields from '@/components/Profile/ProfileGovernanceFields'
+import { ProfileTypeSchema, type ProfileType } from '@/lib/validations/governance-scores'
 import { getIndustryDisplayText, getIndustryLabel, getSubCategoryLabel } from '@/lib/constants/industries'
 import DeleteAccountModal from '@/components/Settings/DeleteAccountModal'
 import ProfileCompletenessScore from '@/components/Settings/ProfileCompletenessScore'
@@ -34,6 +37,21 @@ interface GeneralSectionProps {
   highlightProfileOnMount?: boolean
 }
 
+const ProfileResponseSchema = z.object({
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+  companyName: z.string().nullable().optional(),
+  mainIndustryId: z.string().nullable().optional(),
+  subCategoryId: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  siren: z.string().nullable().optional(),
+  profile_type: z.string().nullable().optional(),
+  naf_code: z.string().nullable().optional(),
+  siren_verified_pappers: z.boolean().nullable().optional(),
+  academic_institution: z.string().nullable().optional(),
+  academic_department: z.string().nullable().optional(),
+})
+
 interface ProfileData {
   firstName: string
   lastName: string
@@ -42,6 +60,32 @@ interface ProfileData {
   subCategoryId: string
   phone: string
   siren: string
+  profileType: ProfileType
+  nafCode: string
+  sirenVerifiedPappers: boolean
+  academicInstitution: string
+  academicDepartment: string
+}
+
+const EMPTY_PROFILE: ProfileData = {
+  firstName: '',
+  lastName: '',
+  companyName: '',
+  mainIndustryId: '',
+  subCategoryId: '',
+  phone: '',
+  siren: '',
+  profileType: 'company',
+  nafCode: '',
+  sirenVerifiedPappers: false,
+  academicInstitution: '',
+  academicDepartment: '',
+}
+
+function profileTypeLabel(profileType: ProfileType): string {
+  if (profileType === 'advisor') return 'Avocat / Cabinet de conseil'
+  if (profileType === 'academic') return 'Étudiant / Professeur / Chercheur'
+  return 'Entreprise / Association'
 }
 
 export default function GeneralSection({
@@ -61,24 +105,8 @@ export default function GeneralSection({
   const [loadingStorage, setLoadingStorage] = useState(true)
 
   // Profile state
-  const [profileData, setProfileData] = useState<ProfileData>({
-    firstName: '',
-    lastName: '',
-    companyName: '',
-    mainIndustryId: '',
-    subCategoryId: '',
-    phone: '',
-    siren: ''
-  })
-  const [editedData, setEditedData] = useState<ProfileData>({
-    firstName: '',
-    lastName: '',
-    companyName: '',
-    mainIndustryId: '',
-    subCategoryId: '',
-    phone: '',
-    siren: ''
-  })
+  const [profileData, setProfileData] = useState<ProfileData>(EMPTY_PROFILE)
+  const [editedData, setEditedData] = useState<ProfileData>(EMPTY_PROFILE)
   const [industrySelection, setIndustrySelection] = useState<IndustrySelection>({
     mainIndustryId: '',
     subCategoryId: ''
@@ -115,15 +143,26 @@ export default function GeneralSection({
         })
 
         if (res.ok) {
-          const data = await res.json()
-          const profile = {
+          const parsed = ProfileResponseSchema.safeParse(await res.json())
+          if (!parsed.success) {
+            console.error('[GeneralSection] profil', parsed.error)
+            return
+          }
+          const data = parsed.data
+          const profileType = ProfileTypeSchema.safeParse(data.profile_type)
+          const profile: ProfileData = {
             firstName: data.firstName || '',
             lastName: data.lastName || '',
             companyName: data.companyName || '',
             mainIndustryId: data.mainIndustryId || '',
             subCategoryId: data.subCategoryId || '',
             phone: data.phone || '',
-            siren: data.siren || ''
+            siren: data.siren || '',
+            profileType: profileType.success ? profileType.data : 'company',
+            nafCode: data.naf_code || '',
+            sirenVerifiedPappers: data.siren_verified_pappers === true,
+            academicInstitution: data.academic_institution || '',
+            academicDepartment: data.academic_department || '',
           }
           setProfileData(profile)
           setEditedData(profile)
@@ -283,11 +322,21 @@ export default function GeneralSection({
     setSuccess('')
 
     // Validate required fields
-    if (!editedData.firstName || !editedData.lastName || !editedData.companyName || !editedData.mainIndustryId || !editedData.subCategoryId) {
-      setError('Les champs prénom, nom, entreprise, secteur principal et sous-catégorie sont obligatoires')
+    const isAcademic = editedData.profileType === 'academic'
+    const resolvedCompanyName = editedData.companyName.trim() || (isAcademic ? editedData.academicInstitution.trim() : '')
+    if (!editedData.firstName || !editedData.lastName || !editedData.mainIndustryId || !editedData.subCategoryId || (isAcademic ? !editedData.academicInstitution.trim() : !resolvedCompanyName)) {
+      setError(
+        isAcademic
+          ? 'Les champs prénom, nom, établissement, secteur principal et sous-catégorie sont obligatoires'
+          : 'Les champs prénom, nom, entreprise, secteur principal et sous-catégorie sont obligatoires'
+      )
       if (!editedData.mainIndustryId || !editedData.subCategoryId) {
         setIndustryError('Veuillez sélectionner un secteur d\'activité et une sous-catégorie')
       }
+      return
+    }
+    if (isAcademic && !editedData.academicDepartment.trim()) {
+      setError('La promotion, la classe ou le laboratoire est obligatoire')
       return
     }
 
@@ -318,11 +367,16 @@ export default function GeneralSection({
         body: JSON.stringify({
           firstName: editedData.firstName,
           lastName: editedData.lastName,
-          companyName: editedData.companyName,
+          companyName: resolvedCompanyName,
           mainIndustryId: editedData.mainIndustryId,
           subCategoryId: editedData.subCategoryId,
           phone: editedData.phone,
-          siren: editedData.siren ? cleanSIREN(editedData.siren) : ''
+          siren: isAcademic ? '' : editedData.siren ? cleanSIREN(editedData.siren) : '',
+          profileType: editedData.profileType,
+          nafCode: editedData.nafCode,
+          sirenVerifiedPappers: isAcademic ? false : editedData.sirenVerifiedPappers,
+          academicInstitution: editedData.academicInstitution,
+          academicDepartment: editedData.academicDepartment,
         })
       })
 
@@ -332,7 +386,12 @@ export default function GeneralSection({
       }
 
       // Update local state
-      setProfileData({ ...editedData, siren: editedData.siren ? cleanSIREN(editedData.siren) : '' })
+      setProfileData({
+        ...editedData,
+        companyName: resolvedCompanyName,
+        siren: isAcademic ? '' : editedData.siren ? cleanSIREN(editedData.siren) : '',
+        sirenVerifiedPappers: isAcademic ? false : editedData.sirenVerifiedPappers,
+      })
       setIndustrySelection({
         mainIndustryId: editedData.mainIndustryId,
         subCategoryId: editedData.subCategoryId
@@ -453,27 +512,61 @@ export default function GeneralSection({
               </div>
             </div>
 
-            {/* Entreprise */}
-            <div>
-              <label htmlFor="profile-companyName" className="block text-sm font-medium text-gray-700 mb-2">
-                Entreprise <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Building2 className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="profile-companyName"
-                  type="text"
-                  value={editedData.companyName}
-                  onChange={(e) => handleEditChange('companyName', e.target.value)}
-                  data-missing={!editedData.companyName}
-                  aria-invalid={highlightMissing && !editedData.companyName ? true : undefined}
-                  className={fieldInputClass(highlightMissing, !editedData.companyName)}
-                  placeholder="Nom de votre entreprise"
-                />
-              </div>
-            </div>
+            <ProfileGovernanceFields
+              idPrefix="profile-"
+              highlightMissing={highlightMissing}
+              disabled={saving}
+              profileType={editedData.profileType}
+              onProfileTypeChange={(profileType) => {
+                setEditedData((prev) => ({
+                  ...prev,
+                  profileType,
+                  sirenVerifiedPappers: profileType === 'academic' ? false : prev.sirenVerifiedPappers,
+                }))
+                setError('')
+                setSuccess('')
+              }}
+              companyName={editedData.companyName}
+              onCompanyNameChange={(name) => handleEditChange('companyName', name)}
+              siren={editedData.siren}
+              onSirenChange={(value) => handleEditChange('siren', cleanSIREN(value))}
+              nafCode={editedData.nafCode}
+              onNafCodeChange={(naf) => handleEditChange('nafCode', naf)}
+              sirenVerifiedPappers={editedData.sirenVerifiedPappers}
+              onSirenVerifiedPappersChange={(verified) =>
+                setEditedData((prev) => ({ ...prev, sirenVerifiedPappers: verified }))
+              }
+              academicInstitution={editedData.academicInstitution}
+              onAcademicInstitutionChange={(institution) =>
+                handleEditChange('academicInstitution', institution)
+              }
+              academicDepartment={editedData.academicDepartment}
+              onAcademicDepartmentChange={(department) =>
+                handleEditChange('academicDepartment', department)
+              }
+              onIndustryAutoSelect={(mapping) => {
+                setIndustrySelection({
+                  mainIndustryId: mapping.mainIndustryId,
+                  subCategoryId: mapping.subCategoryId,
+                })
+                setEditedData((prev) => ({
+                  ...prev,
+                  mainIndustryId: mapping.mainIndustryId,
+                  subCategoryId: mapping.subCategoryId,
+                }))
+                setIndustryError('')
+                setError('')
+              }}
+            />
+            {sirenError && editedData.profileType !== 'academic' ? (
+              <p className="text-sm text-red-600">{sirenError}</p>
+            ) : null}
+            {editedData.profileType !== 'academic' && editedData.siren && !sirenError && editedData.siren.length === 9 ? (
+              <p className="text-sm text-green-600 flex items-center gap-1">
+                <Check className="h-4 w-4" />
+                SIREN valide : {formatSIREN(editedData.siren)}
+              </p>
+            ) : null}
 
             {/* Secteur d'activité */}
             <div>
@@ -515,47 +608,6 @@ export default function GeneralSection({
                   placeholder="06 12 34 56 78"
                 />
               </div>
-            </div>
-
-            {/* SIREN */}
-            <div>
-              <label htmlFor="profile-siren" className="block text-sm font-medium text-gray-700 mb-2">
-                SIREN <span className="text-gray-500 text-xs">(recommandé pour le score)</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FileText className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="profile-siren"
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={9}
-                  value={editedData.siren}
-                  onChange={(e) => handleEditChange('siren', cleanSIREN(e.target.value))}
-                  data-missing={!editedData.siren}
-                  aria-invalid={highlightMissing && !editedData.siren ? true : undefined}
-                  className={fieldInputClass(
-                    highlightMissing,
-                    !editedData.siren,
-                    sirenError
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : editedData.siren && !sirenError && editedData.siren.length === 9
-                        ? 'border-green-300 focus:border-green-500'
-                        : ''
-                  )}
-                  placeholder="123456789"
-                />
-              </div>
-              {sirenError && (
-                <p className="mt-1 text-sm text-red-600">{sirenError}</p>
-              )}
-              {editedData.siren && !sirenError && editedData.siren.length === 9 && (
-                <p className="mt-1 text-sm text-green-600 flex items-center gap-1">
-                  <Check className="h-4 w-4" />
-                  SIREN valide : {formatSIREN(editedData.siren)}
-                </p>
-              )}
             </div>
 
             {!hasCollaborators && (
@@ -625,9 +677,26 @@ export default function GeneralSection({
             </div>
 
             <div className="p-4 bg-gray-50/80 border border-gray-100 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Entreprise</p>
-              <p className="text-gray-900 font-medium">{profileData.companyName || '-'}</p>
+              <p className="text-xs text-gray-500 mb-1">Type de profil</p>
+              <p className="text-gray-900 font-medium">{profileTypeLabel(profileData.profileType)}</p>
             </div>
+
+            <div className="p-4 bg-gray-50/80 border border-gray-100 rounded-lg">
+              <p className="text-xs text-gray-500 mb-1">
+                {profileData.profileType === 'academic' ? 'Établissement' : 'Entreprise'}
+              </p>
+              <p className="text-gray-900 font-medium">
+                {profileData.profileType === 'academic'
+                  ? profileData.academicInstitution || profileData.companyName || '-'
+                  : profileData.companyName || '-'}
+              </p>
+            </div>
+            {profileData.profileType === 'academic' ? (
+              <div className="p-4 bg-gray-50/80 border border-gray-100 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Promotion / Classe / Laboratoire</p>
+                <p className="text-gray-900 font-medium">{profileData.academicDepartment || '-'}</p>
+              </div>
+            ) : null}
 
             <div className="p-4 bg-gray-50/80 border border-gray-100 rounded-lg">
               <p className="text-xs text-gray-500 mb-1">Secteur d'activité</p>

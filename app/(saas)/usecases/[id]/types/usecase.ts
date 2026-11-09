@@ -7,6 +7,8 @@ export interface UseCase {
   deployment_date?: string
   deployment_phase?: string | null
   status: string
+  lifecycle_status?: string | null
+  purge_available_at?: string | null
   risk_level: string
   ai_category: string
   technology_partner: string

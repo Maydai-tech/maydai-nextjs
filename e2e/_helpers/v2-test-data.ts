@@ -154,6 +154,11 @@ export async function cleanupTestData(supabase: SupabaseClient, data: V2TestData
     await supabase.from('usecases').delete().eq('id', id)
 
     await supabase.from('user_companies').delete().eq('user_id', data.userId)
+    await supabase.from('user_device_sessions').delete().eq('user_id', data.userId)
+    await supabase
+      .from('admin_alerts')
+      .delete()
+      .or(`primary_profile_id.eq.${data.userId},secondary_profile_id.eq.${data.userId}`)
     await supabase.from('profiles').delete().eq('id', data.userId)
     await supabase.from('companies').delete().eq('id', data.registryId)
     await supabase.from('companies').delete().eq('id', data.companyId)

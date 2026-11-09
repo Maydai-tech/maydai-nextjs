@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { EvaluationPathRunMode } from '@/lib/evaluation-path-run-mode'
 import { completionSecondsFromTimestamps } from '@/lib/evaluation-path-runs-stats'
+import {
+  calculateAndPersistAuditIntegrityScore,
+  calculateAndPersistEngagementScore,
+} from '@/lib/services/governanceScoreService'
 import { logger } from '@/lib/secure-logger'
 
 /**
@@ -45,12 +49,31 @@ export async function completeOpenEvaluationPathRun(
       .is('completed_at', null)
 
     if (updErr) {
+      console.error('[completeOpenEvaluationPathRun] update', updErr)
       logger.error('completeOpenEvaluationPathRun: update', undefined, {
         details: updErr.message,
         usecaseId: options.usecaseId,
       })
+      return
+    }
+
+    try {
+      await calculateAndPersistAuditIntegrityScore(options.usecaseId)
+      const { data: usecaseRow, error: usecaseError } = await supabase
+        .from('usecases')
+        .select('updated_by')
+        .eq('id', options.usecaseId)
+        .maybeSingle()
+      if (usecaseError) {
+        console.error('[completeOpenEvaluationPathRun] updated_by', usecaseError)
+      } else if (usecaseRow?.updated_by) {
+        await calculateAndPersistEngagementScore(usecaseRow.updated_by)
+      }
+    } catch (scoreError) {
+      console.error('[completeOpenEvaluationPathRun] scores gouvernance', scoreError)
     }
   } catch (error) {
+    console.error('[completeOpenEvaluationPathRun] unexpected', error)
     logger.error('completeOpenEvaluationPathRun: unexpected', undefined, {
       details: error instanceof Error ? error.message : String(error),
       usecaseId: options.usecaseId,

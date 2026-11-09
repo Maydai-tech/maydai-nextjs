@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import { isOwner } from '@/lib/collaborators'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { deleteCompanyCascade } from '@/lib/account-deletion'
+import { getCurrentUserPlan } from '@/lib/subscription/user-plan'
+import { initiateFreemiumDeletionRequest } from '@/lib/services/governancePurgeService'
 import { updateUseCaseRegistryResponses } from '@/lib/registry-sync'
 import { cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
@@ -92,7 +94,7 @@ export async function GET(
     const { data: companyData, error: companyError } = await supabase
       .from('companies')
       .select(
-        'id, name, industry, sub_category_id, city, country, type, siren, maydai_as_registry, is_centralized_registry, completeness_score, created_at, updated_at'
+        'id, name, industry, sub_category_id, city, country, type, siren, maydai_as_registry, is_centralized_registry, completeness_score, created_at, updated_at, lifecycle_status, purge_requested_at, purge_available_at, soft_deleted_at'
       )
       .eq('id', id)
       .single()
@@ -102,6 +104,10 @@ export async function GET(
         return NextResponse.json({ error: 'Company not found' }, { status: 404 })
       }
       return NextResponse.json({ error: 'Error fetching company' }, { status: 500 })
+    }
+
+    if (companyData?.lifecycle_status === 'soft_deleted') {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
     const { count: memberCount } = await supabase
@@ -523,9 +529,37 @@ export async function DELETE(
     }
     const supabaseAdmin = createClient(supabaseUrl!, supabaseServiceRoleKey)
 
+    const ownerPlan = await getCurrentUserPlan(user.id, supabaseAdmin)
+    if (ownerPlan.planInfo.isFree === true) {
+      const res = await initiateFreemiumDeletionRequest({
+        actorUserId: user.id,
+        ownerUserId: user.id,
+        entityType: 'company',
+        entityId: companyId,
+      })
+      if (!res.ok) {
+        return NextResponse.json(
+          {
+            error: 'Quota mensuel de réinitialisation gratuite atteint (1 fois / mois). Passez au forfait supérieur.',
+            code: res.code,
+            nextAvailableAt: res.nextAvailableAt,
+          },
+          { status: 403 }
+        )
+      }
+      return NextResponse.json(
+        {
+          status: 'awaiting_email_confirm',
+          message: 'Un email de confirmation vous a été envoyé pour lancer le délai de 24h.',
+        },
+        { status: 202 }
+      )
+    }
+
     try {
       await deleteCompanyCascade(supabaseAdmin, companyId)
     } catch (cascadeError) {
+      console.error('[DELETE /api/companies] cascade', cascadeError)
       logger.error('Failed to delete company and associated data', cascadeError, {
         ...context,
         companyId

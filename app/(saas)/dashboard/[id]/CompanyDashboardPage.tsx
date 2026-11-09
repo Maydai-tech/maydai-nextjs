@@ -25,7 +25,7 @@ import {
 import WorldMap from '@/components/WorldMap'
 import ScoreCircle from '@/components/ScoreCircle'
 import RiskPyramid from '@/components/RiskPyramid'
-import DeleteConfirmationModal from '@/app/(saas)/usecases/[id]/components/DeleteConfirmationModal'
+import FreemiumDeletionModal, { PurgeStatusBadge } from '@/components/governance/FreemiumDeletionModal'
 import Toast from '@/components/Toast'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import { trackLimitReached } from '@/lib/gtm'
@@ -81,6 +81,8 @@ interface UseCase {
   deployment_phase?: string | null
   primary_model_id?: string
   score_final?: number | null
+  lifecycle_status?: string | null
+  purge_available_at?: string | null
   is_eliminated?: boolean
   elimination_reason?: string
   compl_ai_models?: {
@@ -117,6 +119,8 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [useCaseToDelete, setUseCaseToDelete] = useState<UseCase | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [quotaReachedError, setQuotaReachedError] = useState<string | null>(null)
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [showUseCaseLimitModal, setShowUseCaseLimitModal] = useState(false)
   const { plan } = useRegistryOwnerPlan(companyId)
@@ -279,12 +283,26 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
         },
       })
 
+      const payload = await response.json().catch(() => ({}))
+      if (response.status === 403 && payload?.code === 'MONTHLY_RESET_QUOTA_REACHED') {
+        setQuotaReachedError(payload.error || 'Quota mensuel atteint')
+        return
+      }
+      if (response.status === 202) {
+        setConfirmationMessage(payload.message || 'Un email de confirmation vous a été envoyé pour lancer le délai de 24h.')
+        setUseCases((current) =>
+          current.map((useCase) =>
+            useCase.id === useCaseToDelete.id
+              ? { ...useCase, lifecycle_status: 'awaiting_email_confirm' }
+              : useCase
+          )
+        )
+        return
+      }
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Erreur lors de la suppression')
+        throw new Error(payload?.error || 'Erreur lors de la suppression')
       }
 
-      // Rafraîchir la liste et afficher le toast
       setUseCases(useCases.filter(uc => uc.id !== useCaseToDelete.id))
       setDeleteModalOpen(false)
       setToastMessage(`Le use case "${useCaseToDelete.name}" a été supprimé avec succès`)
@@ -301,6 +319,8 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
   const handleDeleteCancel = () => {
     setDeleteModalOpen(false)
     setUseCaseToDelete(null)
+    setQuotaReachedError(null)
+    setConfirmationMessage(null)
   }
 
   const getRiskLevelColor = (riskLevel: string) => {
@@ -900,6 +920,7 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
                             <div className="flex-1 min-w-0">
                               <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
                                 <h3 className="font-medium text-gray-900 truncate">{useCase.name}</h3>
+                                <PurgeStatusBadge entity={useCase} />
                                 <div className="flex flex-wrap gap-2">
                                   <span
                                     className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(getUseCaseStatusInFrench(useCase.status))}`}
@@ -1262,12 +1283,16 @@ export default function CompanyDashboardPage({ params }: DashboardProps) {
       </div>
 
       {/* Delete Confirmation Modal */}
-      <DeleteConfirmationModal
+      <FreemiumDeletionModal
         isOpen={deleteModalOpen}
         onClose={handleDeleteCancel}
-        onConfirm={handleDeleteConfirm}
-        useCaseName={useCaseToDelete?.name || ''}
-        deleting={isDeleting}
+        onConfirmDelete={handleDeleteConfirm}
+        isDeleting={isDeleting}
+        entityType="usecase"
+        entityName={useCaseToDelete?.name || ''}
+        isFreemium={plan.isFree}
+        quotaReachedError={quotaReachedError}
+        confirmationMessage={confirmationMessage}
       />
 
       {/* Use Case Limit Modal */}

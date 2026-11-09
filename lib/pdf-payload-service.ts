@@ -390,6 +390,7 @@ function sanitizeCanonicalPlanItems(items: PdfCanonicalItem[] | undefined): PdfC
 export function sanitizePdfReportData(data: PDFReportData): PDFReportData {
   return {
     ...data,
+    governanceStamp: data.governanceStamp ?? null,
     nextSteps: sanitizeNextSteps(data.nextSteps),
     canonicalPlanItems: sanitizeCanonicalPlanItems(data.canonicalPlanItems),
     systemCardSections: (data.systemCardSections ?? []).map((section) => ({

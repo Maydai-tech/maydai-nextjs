@@ -132,7 +132,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!mounted) return
 
-    const section = searchParams.get('section')
+    const section = searchParams.get('section') ?? searchParams.get('tab')
     const highlightProfile = searchParams.get('highlight') === 'profile'
 
     if (section) {

@@ -3,6 +3,7 @@ import type { ReportCanonicalItem } from '@/lib/report-canonical-items'
 import type { CategoryScore } from '@/app/(saas)/usecases/[id]/types/usecase'
 import type { ActivityHistoryItem, PdfDocumentItem, PdfUseCase } from '@/lib/validations/pdf.schema'
 import type { SystemCardPillar } from '@/lib/validations/system-card'
+import type { AuditIntegrityBadgeDescriptor } from '@/lib/validations/governance-scores'
 
 export interface PdfSystemCardSection {
   pillar: SystemCardPillar
@@ -65,6 +66,8 @@ export interface UserProfile {
 
 // Interface principale pour les données du rapport PDF
 export interface PDFReportData {
+  /** Tampon d'intégrité. Null ou absent : aucun encart (rapports historiques). */
+  governanceStamp?: AuditIntegrityBadgeDescriptor | null
   /** Préfixe optionnel pour absolufiger les liens todo conformité / dossier du cas (ex. https://app.example.com). */
   pdfCtaBaseUrl?: string
   /** Plan d’action standard (9 items) — même logique que le rapport web (phase 5). Vide si cas inacceptable. */

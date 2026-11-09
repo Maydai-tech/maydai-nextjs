@@ -60,7 +60,7 @@ async function loadDashboardData(
           .from('company_stats')
           .select('usecase_count')
           .in('company_id', companyIdsArray),
-        supabase.from('companies').select('*').in('id', companyIdsArray),
+        supabase.from('companies').select('*').in('id', companyIdsArray).neq('lifecycle_status', 'soft_deleted'),
       ])
 
       if (statsResult.error) {

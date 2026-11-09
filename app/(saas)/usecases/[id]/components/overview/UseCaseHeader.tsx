@@ -26,7 +26,8 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 import ModelSelectorModal from '../ModelSelectorModal'
-import DeleteConfirmationModal from '../DeleteConfirmationModal'
+import FreemiumDeletionModal, { PurgeStatusBadge } from '@/components/governance/FreemiumDeletionModal'
+import { useRegistryOwnerPlan } from '@/app/(saas)/abonnement/hooks/useRegistryOwnerPlan'
 import { RiskLevelBadge } from './RiskLevelBadge'
 import { useUseCaseRisk } from '../../context/UseCaseRiskContext'
 import { CountryDeploymentDisplay } from './CountryDeploymentDisplay'
@@ -196,6 +197,9 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [quotaReachedError, setQuotaReachedError] = useState<string | null>(null)
+  const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null)
+  const { plan } = useRegistryOwnerPlan(useCase.company_id)
   const [isRecalculatingScore, setIsRecalculatingScore] = useState(false) // État local pour l'animation du score pendant le recalcul
   const [isScopeChoiceModalOpen, setIsScopeChoiceModalOpen] = useState(false)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
@@ -356,12 +360,26 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         },
       })
 
+      const payload = await response.json().catch(() => ({}))
+      if (response.status === 403 && payload?.code === 'MONTHLY_RESET_QUOTA_REACHED') {
+        setQuotaReachedError(payload.error || 'Quota mensuel atteint')
+        setIsDeleting(false)
+        return
+      }
+      if (response.status === 202) {
+        setConfirmationMessage(payload.message || 'Un email de confirmation vous a été envoyé pour lancer le délai de 24h.')
+        try {
+          await onUpdateUseCase?.({ lifecycle_status: 'awaiting_email_confirm' })
+        } catch (refreshError) {
+          console.error('[UseCaseHeader] rafraîchissement du cycle de vie', refreshError)
+        }
+        setIsDeleting(false)
+        return
+      }
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Erreur lors de la suppression')
+        throw new Error(payload?.error || 'Erreur lors de la suppression')
       }
 
-      // Redirection vers le dashboard avec un message de succès (pas de nom dans l'URL)
       router.push(`/dashboard/${useCase.company_id}?deleted=true`)
     } catch (error) {
       console.error('Erreur lors de la suppression:', error)
@@ -484,6 +502,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               {useCase.name}
             </h1>
+            <PurgeStatusBadge entity={useCase} />
 
             <div className="flex flex-wrap items-center justify-between gap-4 mt-4 mb-6 border-b border-gray-200 pb-4">
               <div className="flex flex-wrap items-center gap-3 min-w-0">
@@ -776,12 +795,20 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
       />
 
       {/* Modal de confirmation de suppression */}
-      <DeleteConfirmationModal
+      <FreemiumDeletionModal
         isOpen={isDeleteModalOpen}
-        onClose={handleDeleteCancel}
-        onConfirm={handleDeleteConfirm}
-        useCaseName={useCase.name}
-        deleting={isDeleting}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setQuotaReachedError(null)
+          setConfirmationMessage(null)
+        }}
+        onConfirmDelete={handleDeleteConfirm}
+        isDeleting={isDeleting}
+        entityType="usecase"
+        entityName={useCase.name}
+        isFreemium={plan.isFree}
+        quotaReachedError={quotaReachedError}
+        confirmationMessage={confirmationMessage}
       />
 
       {/* Modal de choix du scope d'invitation */}

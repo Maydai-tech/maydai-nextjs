@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { recordUseCaseHistory } from '@/lib/usecase-history'
 import { getRegistryOwnerPlan } from '@/lib/subscription/user-plan'
+import { countActiveUseCasesForRegistry } from '@/lib/subscription/quota-guards'
 import { QUESTIONNAIRE_VERSION_V1, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 import { convertDeploymentDateForDb } from '@/lib/convert-deployment-date'
 import { resolvePathModeFromBody } from '@/lib/journey-path-mode'
@@ -77,6 +78,7 @@ export async function GET(request: NextRequest) {
         companies(name)
       `)
       .in('company_id', companyIds)
+      .neq('lifecycle_status', 'soft_deleted')
       .order('created_at', { ascending: false })
 
     if (usecasesError) {
@@ -178,14 +180,11 @@ export async function POST(request: NextRequest) {
     const ownerPlan = await getRegistryOwnerPlan(company_id, supabase)
     const maxUseCases = ownerPlan.planInfo.maxUseCasesPerRegistry || 3
 
-    // Compter les use cases existants pour ce registre
-    const { count: currentUseCaseCount, error: countError } = await supabase
-      .from('usecases')
-      .select('*', { count: 'exact', head: true })
-      .eq('company_id', company_id)
-
-    if (countError) {
-      console.error('Erreur lors du comptage des use cases:', countError)
+    let currentUseCaseCount = 0
+    try {
+      currentUseCaseCount = await countActiveUseCasesForRegistry(company_id, supabase)
+    } catch (countError) {
+      console.error('[POST /api/usecases] quota', countError)
       return NextResponse.json({ error: 'Error checking use case limit' }, { status: 500 })
     }
 

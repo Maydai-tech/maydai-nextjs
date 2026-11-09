@@ -6,6 +6,8 @@ import { logger, createRequestContext } from '@/lib/secure-logger'
 import { getUserByEmail, inviteUserByEmail, createProfileForUser } from '@/lib/invite-user'
 import { sendRegistryCollaborationInvite } from '@/lib/email/mailjet'
 import { calculateRegistryCompletenessScore } from '@/lib/validations/registry-completeness'
+import { getRegistryOwnerPlan } from '@/lib/subscription/user-plan'
+import { countAccountCollaborators, listAccountCollaboratorIds } from '@/lib/subscription/quota-guards'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -123,6 +125,32 @@ export async function POST(
         return NextResponse.json({ error: 'This user is already an owner of this company' }, { status: 400 })
       }
       return NextResponse.json({ error: 'This user is already a collaborator on this company' }, { status: 400 })
+    }
+
+    try {
+      const serviceClient = createClient(supabaseUrl!, supabaseServiceRoleKey!)
+      const alreadyOnAccount = (await listAccountCollaboratorIds(user.id, serviceClient)).has(
+        collaboratorProfileId
+      )
+      if (!alreadyOnAccount) {
+        const ownerPlan = await getRegistryOwnerPlan(companyId, serviceClient)
+        const maxCollaborators = ownerPlan.planInfo.maxCollaborators ?? 2
+        const currentCollaborators = await countAccountCollaborators(user.id, serviceClient)
+        if (currentCollaborators >= maxCollaborators) {
+          return NextResponse.json(
+            {
+              error: 'Limite de collaborateurs du plan atteinte',
+              code: 'PLAN_LIMIT_REACHED',
+              limit: maxCollaborators,
+              current: currentCollaborators,
+            },
+            { status: 403 }
+          )
+        }
+      }
+    } catch (quotaError) {
+      console.error('[POST /api/companies/collaborators] quota', quotaError)
+      return NextResponse.json({ error: 'Erreur lors de la vérification de la limite du plan' }, { status: 500 })
     }
 
     // Create user_companies entry with default role 'user'

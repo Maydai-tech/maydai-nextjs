@@ -8,9 +8,19 @@ import { fr } from 'date-fns/locale'
 import { PDFFooter } from './PDFFooter'
 import { getPdfCanonicalDescription } from './pdf-content-utils'
 import type { ActivityHistoryItem } from '@/lib/validations/pdf.schema'
+import type { AuditIntegrityColorVariant } from '@/lib/validations/governance-scores'
 
 interface PDFDashboardFixedProps {
   data: PDFReportData
+}
+
+const GOVERNANCE_STAMP_PALETTE: Record<
+  AuditIntegrityColorVariant,
+  { backgroundColor: string; borderColor: string; color: string }
+> = {
+  red_orange: { backgroundColor: '#FEF2F2', borderColor: '#F97316', color: '#9A3412' },
+  blue: { backgroundColor: '#EFF6FF', borderColor: '#2563EB', color: '#1E40AF' },
+  green_gold: { backgroundColor: '#ECFDF5', borderColor: '#D97706', color: '#065F46' },
 }
 
 export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) => {
@@ -219,6 +229,53 @@ export const PDFDashboardFixed: React.FC<PDFDashboardFixedProps> = ({ data }) =>
             </Text>
           </View>
         </View>
+
+        {data.governanceStamp != null ? (
+          <View
+            style={{
+              marginTop: 12,
+              padding: 8,
+              borderRadius: 6,
+              backgroundColor: GOVERNANCE_STAMP_PALETTE[data.governanceStamp.colorVariant].backgroundColor,
+              border: `1px solid ${GOVERNANCE_STAMP_PALETTE[data.governanceStamp.colorVariant].borderColor}`,
+            }}
+          >
+            <Text
+              style={[
+                styles.textSmall,
+                styles.bold,
+                {
+                  marginBottom: 4,
+                  color: GOVERNANCE_STAMP_PALETTE[data.governanceStamp.colorVariant].color,
+                },
+              ]}
+            >
+              Tampon de Gouvernance
+            </Text>
+            <Text
+              style={[
+                styles.textSmall,
+                styles.bold,
+                { color: GOVERNANCE_STAMP_PALETTE[data.governanceStamp.colorVariant].color },
+              ]}
+            >
+              {`Score d'intégrité de l'audit : ${data.governanceStamp.score}/100 – ${data.governanceStamp.label}`}
+            </Text>
+            {data.governanceStamp.secondaryNotice ? (
+              <Text
+                style={[
+                  styles.textSmall,
+                  {
+                    marginTop: 4,
+                    color: GOVERNANCE_STAMP_PALETTE[data.governanceStamp.colorVariant].color,
+                  },
+                ]}
+              >
+                {`Mention de gouvernance : ${data.governanceStamp.secondaryNotice}`}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {activityHistory.length > 0 ? (
           <View style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${colors.gray[200]}` }}>

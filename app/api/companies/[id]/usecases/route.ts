@@ -84,6 +84,7 @@ export async function GET(
         companies(name)
       `)
       .eq('company_id', id)
+      .neq('lifecycle_status', 'soft_deleted')
       .order('created_at', { ascending: false })
 
     // Fetch model information separately if usecases have primary_model_id
