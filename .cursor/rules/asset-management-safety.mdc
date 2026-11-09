@@ -128,8 +128,8 @@ mv "Image été.jpg" "image-ete.jpg"
 ### Validation Build
 Toujours tester après modifications :
 ```bash
-npm run build  # Vérifier aucune erreur
-npm run dev    # Tester l'affichage
+pnpm build  # Vérifier aucune erreur
+pnpm dev    # Tester l'affichage
 ```
 
 ## 🎯 OBJECTIF
