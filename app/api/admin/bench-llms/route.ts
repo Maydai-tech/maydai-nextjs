@@ -4,12 +4,14 @@ import { verifyAdminAuth } from '@/lib/admin-auth'
 import {
   attachSourceIdsToCanonicalModels,
   buildUnifiedBenchModels,
+  computeSourceCoverageStats,
   countDistinctEvaluatedModels,
   DEFAULT_COMPL_AI_BENCHMARK_TOTAL,
   filterUnifiedBenchModels,
   overlayLatestModelsCount,
   withNormalizedModelsFetched,
-  type BenchSourceKey,
+  type BenchFilterableSourceKey,
+  type BenchLifecycleFilter,
 } from '@/lib/bench-llm/admin-unified'
 import { createEcoLogitsServiceClient } from '@/lib/ecologits/sync'
 
@@ -17,9 +19,79 @@ export const dynamic = 'force-dynamic'
 
 const CATALOG_ROW_LIMIT = 20_000
 
+const BENCH_FILTERABLE_SOURCES: readonly BenchFilterableSourceKey[] = [
+  'maydai',
+  'compl_ai',
+  'comparia',
+  'llm_stats',
+  'ecologits',
+  'system_card',
+]
+
+const LIFECYCLE_FILTERS: readonly BenchLifecycleFilter[] = [
+  'all',
+  'in_service',
+  'active',
+  'legacy',
+  'deprecated',
+  'retired',
+  'none',
+]
+
+type PostgrestErrorLike = { message?: string; details?: string }
+
+type SystemCardCatalogRow = {
+  model_identifier: string | null
+  updated_at: string | null
+  created_at: string | null
+}
+
 function positiveInteger(value: string | null, fallback: number, max: number) {
   const parsed = Number(value)
   return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, max) : fallback
+}
+
+function assertNoPostgrestError(err: PostgrestErrorLike | null, context: string) {
+  if (err) throw new Error(`[${context}] ${err.message || err.details || 'Erreur Supabase'}`)
+}
+
+function parseFilterableSource(value: string | null): BenchFilterableSourceKey | undefined {
+  if (!value) return undefined
+  return BENCH_FILTERABLE_SOURCES.find((source) => source === value)
+}
+
+function parseLifecycleFilter(value: string | null): BenchLifecycleFilter {
+  if (!value) return 'all'
+  return LIFECYCLE_FILTERS.find((status) => status === value) ?? 'all'
+}
+
+function readSystemCardRows(value: unknown): SystemCardCatalogRow[] {
+  if (!Array.isArray(value)) return []
+  const rows: SystemCardCatalogRow[] = []
+  for (const item of value) {
+    if (item == null || typeof item !== 'object') continue
+    const record = item as Record<string, unknown>
+    rows.push({
+      model_identifier: typeof record.model_identifier === 'string' ? record.model_identifier : null,
+      updated_at: typeof record.updated_at === 'string' ? record.updated_at : null,
+      created_at: typeof record.created_at === 'string' ? record.created_at : null,
+    })
+  }
+  return rows
+}
+
+function latestSystemCardTimestamp(rows: SystemCardCatalogRow[]): string | null {
+  let latest: string | null = null
+  let latestMs = Number.NEGATIVE_INFINITY
+  for (const row of rows) {
+    const value = row.updated_at ?? row.created_at
+    if (!value) continue
+    const ms = Date.parse(value)
+    if (!Number.isFinite(ms) || ms <= latestMs) continue
+    latestMs = ms
+    latest = value
+  }
+  return latest
 }
 
 export async function GET(request: NextRequest) {
@@ -45,7 +117,7 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       supabase
         .from('compl_ai_models')
-        .select('id, slug, model_name, model_provider, model_provider_id, model_type, updated_at, llm_leader_rank, comparia_rank, lifecycle_status'),
+        .select('id, slug, model_name, model_provider, model_provider_id, model_type, updated_at, release_date, llm_leader_rank, comparia_rank, lifecycle_status'),
       supabase
         .from('compl_ai_evaluations')
         .select('model_id, score, maydai_score, rang_compar_ia')
@@ -69,22 +141,23 @@ export async function GET(request: NextRequest) {
         .not('score', 'is', null)
         .limit(CATALOG_ROW_LIMIT),
       supabase.from('compl_ai_benchmarks').select('id', { count: 'exact', head: true }),
-      supabase.from('llm_system_cards').select('model_identifier'),
+      supabase.from('llm_system_cards').select('model_identifier, updated_at, created_at'),
       supabase
         .from('model_providers')
         .select('id')
         .not('tooltip_title', 'is', null),
     ])
-    if (modelsError) throw modelsError
-    if (evaluationsError) throw evaluationsError
-    if (ecoError) throw ecoError
-    if (compariaError) throw compariaError
-    if (sourceIdsError) throw sourceIdsError
-    if (complAiCountError) throw complAiCountError
-    if (benchmarkCountError) throw benchmarkCountError
-    if (systemCardsError) throw systemCardsError
-    if (questionnaireProvidersError) throw questionnaireProvidersError
+    assertNoPostgrestError(modelsError, 'compl_ai_models')
+    assertNoPostgrestError(evaluationsError, 'compl_ai_evaluations')
+    assertNoPostgrestError(ecoError, 'ecologits_models')
+    assertNoPostgrestError(compariaError, 'comparia_models')
+    assertNoPostgrestError(sourceIdsError, 'llm_model_source_ids')
+    assertNoPostgrestError(complAiCountError, 'compl_ai_evaluations_scored')
+    assertNoPostgrestError(benchmarkCountError, 'compl_ai_benchmarks')
+    assertNoPostgrestError(systemCardsError, 'llm_system_cards')
+    assertNoPostgrestError(questionnaireProvidersError, 'model_providers')
 
+    const systemCardRows = readSystemCardRows(systemCards)
     const unified = buildUnifiedBenchModels(
       attachSourceIdsToCanonicalModels(canonicalModels ?? [], sourceIds ?? []),
       evaluations ?? [],
@@ -96,18 +169,17 @@ export async function GET(request: NextRequest) {
           complAiBenchmarkTotal && complAiBenchmarkTotal > 0
             ? complAiBenchmarkTotal
             : DEFAULT_COMPL_AI_BENCHMARK_TOTAL,
-        systemCardSlugs: (systemCards ?? [])
+        systemCardSlugs: systemCardRows
           .map((card) => card.model_identifier)
           .filter((slug): slug is string => Boolean(slug)),
         questionnaireProviderIds: (questionnaireProviders ?? []).map((provider) => provider.id),
       },
     )
+    const sourceCoverage = computeSourceCoverageStats(unified)
+    const systemCardModelsCount = unified.filter((model) => model.metrics.hasSystemCard === true).length
+    const latestSystemCardDate = latestSystemCardTimestamp(systemCardRows)
     const sourceParam = request.nextUrl.searchParams.get('source')
-    const source = (
-      ['maydai', 'compl_ai', 'comparia', 'llm_stats', 'ecologits'].includes(sourceParam ?? '')
-        ? sourceParam
-        : undefined
-    ) as BenchSourceKey | undefined
+    const source = parseFilterableSource(sourceParam)
     const availabilityParam = request.nextUrl.searchParams.get('availability')
     const availability =
       availabilityParam === 'present' || availabilityParam === 'missing'
@@ -116,10 +188,12 @@ export async function GET(request: NextRequest) {
     const activeParam = request.nextUrl.searchParams.get('active')
     const active =
       activeParam === 'active' || activeParam === 'inactive' ? activeParam : 'all'
+    const lifecycleStatus = parseLifecycleFilter(request.nextUrl.searchParams.get('lifecycleStatus'))
     const filtered = filterUnifiedBenchModels(unified, {
       search: request.nextUrl.searchParams.get('search') ?? '',
       provider: request.nextUrl.searchParams.get('provider') ?? '',
       active,
+      lifecycleStatus,
       source,
       availability,
     })
@@ -134,6 +208,7 @@ export async function GET(request: NextRequest) {
       page,
       pageSize,
       providers: [...new Set(unified.map((model) => model.provider))].sort(),
+      sourceCoverage,
       histories: {
         llmStats: withNormalizedModelsFetched(llmRuns),
         ecologits: withNormalizedModelsFetched(ecoRuns),
@@ -142,6 +217,13 @@ export async function GET(request: NextRequest) {
           withNormalizedModelsFetched(complRuns),
           complAiModelCount,
         ),
+        systemCard: [
+          {
+            status: 'terminé',
+            models_fetched: systemCardModelsCount,
+            started_at: latestSystemCardDate,
+          },
+        ],
       },
       role: auth.user?.role,
     })

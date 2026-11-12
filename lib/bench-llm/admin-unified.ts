@@ -8,6 +8,46 @@ import {
 
 export type BenchSourceKey = 'maydai' | 'compl_ai' | 'comparia' | 'llm_stats' | 'ecologits'
 
+export type BenchFilterableSourceKey = BenchSourceKey | 'system_card'
+
+export type BenchLifecycleFilter = 'all' | 'in_service' | ProviderLifecycleStatus | 'none'
+
+export type BenchSortColumn =
+  | 'model'
+  | 'releaseDate'
+  | 'status'
+  | 'all'
+  | 'maydai'
+  | 'complAi'
+  | 'comparia'
+  | 'llmStats'
+  | 'ecologits'
+  | 'systemCard'
+
+export type BenchSortDirection = 'asc' | 'desc'
+
+export type SourceCrossCoverageKey =
+  | 'llm_stats'
+  | 'ecologits'
+  | 'comparia'
+  | 'compl_ai'
+  | 'maydai'
+  | 'system_card'
+
+export type SourceCoverageStat = {
+  source: SourceCrossCoverageKey
+  totalInCatalog: number
+  activeInCatalog: number
+  deprecatedInCatalog: number
+  inServiceInCatalog: number
+  catalogInServiceTotal: number
+  inServiceCompletionPercent: number
+  crossCoverage: Record<SourceCrossCoverageKey, number>
+  inServiceCrossCoverage: Record<SourceCrossCoverageKey, number>
+}
+
+export type BenchSourceCoverageMap = Record<SourceCrossCoverageKey, SourceCoverageStat>
+
 export const BENCH_SOURCE_KEYS: BenchSourceKey[] = [
   'maydai',
   'compl_ai',
@@ -37,6 +77,7 @@ export type CanonicalBenchModel = {
   llm_leader_rank?: number | null
   comparia_rank?: number | null
   updated_at?: string | null
+  release_date?: string | null
   lifecycle_status?: ProviderLifecycleStatus | null
 }
 
@@ -90,6 +131,7 @@ export type UnifiedBenchModel = {
   provider: string
   active: boolean
   updatedAt: string | null
+  releaseDate: string | null
   inQuestionnaire: boolean
   sources: BenchSourceAvailability
   metrics: BenchModelMetrics
@@ -100,7 +142,18 @@ export type BenchProviderGroup = {
   provider: string
   models: UnifiedBenchModel[]
   scoredCount: number
+  activeCount: number
+  activeMissingSystemCardCount: number
+  deprecatedCount: number
+  inServiceCount: number
+  inServiceMissingSystemCardCount: number
   inQuestionnaire: boolean
+}
+
+export function isInServiceLifecycleStatus(
+  status: ProviderLifecycleStatus | null | undefined,
+): boolean {
+  return status === 'active' || status === 'deprecated'
 }
 
 export type BuildUnifiedBenchModelsOptions = {
@@ -157,12 +210,36 @@ export function groupUnifiedBenchModelsByProvider(models: UnifiedBenchModel[]): 
 
   return [...groups.entries()]
     .sort(([left], [right]) => left.localeCompare(right, 'fr'))
-    .map(([provider, providerModels]) => ({
-      provider,
-      models: providerModels,
-      scoredCount: providerModels.filter((model) => model.sources.compl_ai).length,
-      inQuestionnaire: providerModels.some((model) => model.inQuestionnaire),
-    }))
+    .map(([provider, providerModels]) => {
+      let scoredCount = 0
+      let activeCount = 0
+      let activeMissingSystemCardCount = 0
+      let deprecatedCount = 0
+      let inServiceMissingSystemCardCount = 0
+      for (const model of providerModels) {
+        if (model.sources.compl_ai) scoredCount += 1
+        const status = model.lifecycle?.status
+        if (status === 'active') {
+          activeCount += 1
+          if (!model.metrics.hasSystemCard) activeMissingSystemCardCount += 1
+        }
+        if (status === 'deprecated') deprecatedCount += 1
+        if (isInServiceLifecycleStatus(status) && !model.metrics.hasSystemCard) {
+          inServiceMissingSystemCardCount += 1
+        }
+      }
+      return {
+        provider,
+        models: providerModels,
+        scoredCount,
+        activeCount,
+        activeMissingSystemCardCount,
+        deprecatedCount,
+        inServiceCount: activeCount + deprecatedCount,
+        inServiceMissingSystemCardCount,
+        inQuestionnaire: providerModels.some((model) => model.inQuestionnaire),
+      }
+    })
 }
 
 export function splitBenchProviderGroupsByQuestionnaire(groups: BenchProviderGroup[]): {
@@ -287,6 +364,130 @@ export function overlayLatestModelsCount(
   return [{ ...rows[0], models_fetched: count }, ...rows.slice(1)]
 }
 
+export function getLifecyclePriorityWeight(status: ProviderLifecycleStatus | null | undefined): number {
+  switch (status) {
+    case 'active':
+      return 1
+    case 'legacy':
+      return 2
+    case 'deprecated':
+      return 3
+    case 'retired':
+      return 4
+    case null:
+    case undefined:
+      return 5
+    default: {
+      const exhaustive: never = status
+      return exhaustive
+    }
+  }
+}
+
+function compareReleaseDatesNullsLast(left: string | null, right: string | null): number {
+  if (left === null && right === null) return 0
+  if (left === null) return 1
+  if (right === null) return -1
+  return right.localeCompare(left)
+}
+
+export function compareUnifiedBenchModelsDefault(a: UnifiedBenchModel, b: UnifiedBenchModel): number {
+  const releaseOrder = compareReleaseDatesNullsLast(a.releaseDate, b.releaseDate)
+  if (releaseOrder !== 0) return releaseOrder
+
+  const systemCardOrder = Number(a.metrics.hasSystemCard) - Number(b.metrics.hasSystemCard)
+  if (systemCardOrder !== 0) return systemCardOrder
+
+  const lifecycleOrder =
+    getLifecyclePriorityWeight(a.lifecycle?.status) - getLifecyclePriorityWeight(b.lifecycle?.status)
+  if (lifecycleOrder !== 0) return lifecycleOrder
+
+  return a.slug.localeCompare(b.slug)
+}
+
+function applySortDirection(delta: number, direction: BenchSortDirection): number {
+  if (delta === 0) return 0
+  return direction === 'desc' ? -delta : delta
+}
+
+function compareNullableNumbers(
+  left: number | null,
+  right: number | null,
+  direction: BenchSortDirection,
+): number {
+  if (left === null && right === null) return 0
+  if (left === null) return 1
+  if (right === null) return -1
+  return applySortDirection(left - right, direction)
+}
+
+function compareNullableReleaseDates(
+  left: string | null,
+  right: string | null,
+  direction: BenchSortDirection,
+): number {
+  if (left === null && right === null) return 0
+  if (left === null) return 1
+  if (right === null) return -1
+  return applySortDirection(left.localeCompare(right), direction)
+}
+
+function primaryBenchSortDelta(
+  a: UnifiedBenchModel,
+  b: UnifiedBenchModel,
+  sortColumn: BenchSortColumn,
+  sortDirection: BenchSortDirection,
+): number {
+  switch (sortColumn) {
+    case 'model':
+      return applySortDirection(a.slug.localeCompare(b.slug), sortDirection)
+    case 'releaseDate':
+      return compareNullableReleaseDates(a.releaseDate, b.releaseDate, sortDirection)
+    case 'status':
+      return applySortDirection(
+        getLifecyclePriorityWeight(a.lifecycle?.status) - getLifecyclePriorityWeight(b.lifecycle?.status),
+        sortDirection,
+      )
+    case 'all':
+      return applySortDirection(a.metrics.sourcesFilled - b.metrics.sourcesFilled, sortDirection)
+    case 'maydai':
+      return compareNullableNumbers(a.metrics.maydaiScore, b.metrics.maydaiScore, sortDirection)
+    case 'complAi':
+      return applySortDirection(a.metrics.complAiFilled - b.metrics.complAiFilled, sortDirection)
+    case 'comparia':
+      return compareNullableNumbers(a.metrics.compariaRank, b.metrics.compariaRank, sortDirection)
+    case 'llmStats':
+      return compareNullableNumbers(a.metrics.llmStatsRank, b.metrics.llmStatsRank, sortDirection)
+    case 'ecologits':
+      return applySortDirection(
+        Number(a.metrics.hasEcologits) - Number(b.metrics.hasEcologits),
+        sortDirection,
+      )
+    case 'systemCard':
+      return applySortDirection(
+        Number(a.metrics.hasSystemCard) - Number(b.metrics.hasSystemCard),
+        sortDirection,
+      )
+    default: {
+      const exhaustive: never = sortColumn
+      return exhaustive
+    }
+  }
+}
+
+export function sortUnifiedBenchModels(
+  models: UnifiedBenchModel[],
+  sortColumn?: BenchSortColumn | null,
+  sortDirection: BenchSortDirection = 'asc',
+): UnifiedBenchModel[] {
+  if (!sortColumn) return [...models].sort(compareUnifiedBenchModelsDefault)
+  return [...models].sort((a, b) => {
+    const primary = primaryBenchSortDelta(a, b, sortColumn, sortDirection)
+    if (primary !== 0) return primary
+    return compareUnifiedBenchModelsDefault(a, b)
+  })
+}
+
 export function buildUnifiedBenchModels(
   canonicalModels: CanonicalBenchModel[],
   evaluations: BenchEvaluationPresence[],
@@ -362,6 +563,7 @@ export function buildUnifiedBenchModels(
       provider: toTitleCase(model.model_provider ?? '') || '—',
       active: eco?.is_active ?? true,
       updatedAt: eco?.last_seen_at ?? model.updated_at ?? null,
+      releaseDate: model.release_date?.trim() || null,
       inQuestionnaire:
         model.model_provider_id != null && questionnaireProviderIds.has(model.model_provider_id),
       lifecycle: applyLifecycleStatusOverride(
@@ -405,6 +607,7 @@ export function buildUnifiedBenchModels(
       provider: toTitleCase(eco.provider) || eco.provider,
       active: eco.is_active,
       updatedAt: eco.last_seen_at,
+      releaseDate: null,
       inQuestionnaire: false,
       lifecycle: resolveProviderLifecycle([eco.name]),
       sources,
@@ -435,6 +638,7 @@ export function buildUnifiedBenchModels(
       provider: toTitleCase(comparia.organisation) || comparia.organisation,
       active: comparia.is_active,
       updatedAt: comparia.last_imported_at,
+      releaseDate: null,
       inQuestionnaire: false,
       lifecycle: resolveProviderLifecycle([comparia.source_id]),
       sources,
@@ -452,8 +656,33 @@ export function buildUnifiedBenchModels(
     : canonicalRows
 
   return rows.sort(
-    (a, b) => a.provider.localeCompare(b.provider) || a.slug.localeCompare(b.slug),
+    (a, b) => a.provider.localeCompare(b.provider) || compareUnifiedBenchModelsDefault(a, b),
   )
+}
+
+const SOURCE_CROSS_COVERAGE_KEYS: SourceCrossCoverageKey[] = [
+  'llm_stats',
+  'ecologits',
+  'comparia',
+  'compl_ai',
+  'maydai',
+  'system_card',
+]
+
+function isSourcePresent(model: UnifiedBenchModel, source: BenchFilterableSourceKey): boolean {
+  if (source === 'system_card') return model.metrics.hasSystemCard
+  return Boolean(model.sources[source])
+}
+
+function emptyCrossCoverage(): Record<SourceCrossCoverageKey, number> {
+  return {
+    llm_stats: 0,
+    ecologits: 0,
+    comparia: 0,
+    compl_ai: 0,
+    maydai: 0,
+    system_card: 0,
+  }
 }
 
 export function filterUnifiedBenchModels(
@@ -462,7 +691,8 @@ export function filterUnifiedBenchModels(
     search?: string
     provider?: string
     active?: 'all' | 'active' | 'inactive'
-    source?: BenchSourceKey
+    lifecycleStatus?: BenchLifecycleFilter
+    source?: BenchFilterableSourceKey
     availability?: 'all' | 'present' | 'missing'
   },
 ): UnifiedBenchModel[] {
@@ -477,8 +707,66 @@ export function filterUnifiedBenchModels(
     if (filters.provider && model.provider !== filters.provider) return false
     if (filters.active === 'active' && !model.active) return false
     if (filters.active === 'inactive' && model.active) return false
-    if (filters.source && filters.availability === 'present' && !model.sources[filters.source]) return false
-    if (filters.source && filters.availability === 'missing' && model.sources[filters.source]) return false
+    if (filters.lifecycleStatus && filters.lifecycleStatus !== 'all') {
+      if (filters.lifecycleStatus === 'none') {
+        if (model.lifecycle != null) return false
+      } else if (filters.lifecycleStatus === 'in_service') {
+        if (!isInServiceLifecycleStatus(model.lifecycle?.status)) return false
+      } else if (model.lifecycle?.status !== filters.lifecycleStatus) {
+        return false
+      }
+    }
+    if (filters.source && filters.availability === 'present' && !isSourcePresent(model, filters.source)) {
+      return false
+    }
+    if (filters.source && filters.availability === 'missing' && isSourcePresent(model, filters.source)) {
+      return false
+    }
     return true
   })
+}
+
+function sourceCoverageStat(models: UnifiedBenchModel[], source: SourceCrossCoverageKey): SourceCoverageStat {
+  const present = models.filter((model) => isSourcePresent(model, source))
+  const inServicePresent = present.filter((model) => isInServiceLifecycleStatus(model.lifecycle?.status))
+  let catalogInServiceTotal = 0
+  for (const model of models) {
+    if (isInServiceLifecycleStatus(model.lifecycle?.status)) catalogInServiceTotal += 1
+  }
+  let activeInCatalog = 0
+  let deprecatedInCatalog = 0
+  for (const model of present) {
+    if (model.lifecycle?.status === 'active') activeInCatalog += 1
+    if (model.lifecycle?.status === 'deprecated') deprecatedInCatalog += 1
+  }
+  const inServiceInCatalog = activeInCatalog + deprecatedInCatalog
+  const crossCoverage = emptyCrossCoverage()
+  const inServiceCrossCoverage = emptyCrossCoverage()
+  for (const other of SOURCE_CROSS_COVERAGE_KEYS) {
+    crossCoverage[other] = present.filter((model) => isSourcePresent(model, other)).length
+    inServiceCrossCoverage[other] = inServicePresent.filter((model) => isSourcePresent(model, other)).length
+  }
+  return {
+    source,
+    totalInCatalog: present.length,
+    activeInCatalog,
+    deprecatedInCatalog,
+    inServiceInCatalog,
+    catalogInServiceTotal,
+    inServiceCompletionPercent:
+      catalogInServiceTotal > 0 ? Math.round((inServiceInCatalog / catalogInServiceTotal) * 100) : 0,
+    crossCoverage,
+    inServiceCrossCoverage,
+  }
+}
+
+export function computeSourceCoverageStats(models: UnifiedBenchModel[]): BenchSourceCoverageMap {
+  return {
+    llm_stats: sourceCoverageStat(models, 'llm_stats'),
+    ecologits: sourceCoverageStat(models, 'ecologits'),
+    comparia: sourceCoverageStat(models, 'comparia'),
+    compl_ai: sourceCoverageStat(models, 'compl_ai'),
+    maydai: sourceCoverageStat(models, 'maydai'),
+    system_card: sourceCoverageStat(models, 'system_card'),
+  }
 }
