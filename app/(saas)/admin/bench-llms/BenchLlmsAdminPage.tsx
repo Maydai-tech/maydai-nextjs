@@ -2,6 +2,9 @@
 
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Check,
   ChevronRight,
   Database,
@@ -19,9 +22,17 @@ import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, us
 
 import Toast from '@/components/Toast'
 import { useAuth } from '@/lib/auth'
-import type { BenchProviderGroup, BenchSourceKey, UnifiedBenchModel } from '@/lib/bench-llm/admin-unified'
+import type {
+  BenchFilterableSourceKey,
+  BenchLifecycleFilter,
+  BenchProviderGroup,
+  BenchSortColumn,
+  BenchSortDirection,
+  BenchSourceCoverageMap,
+  UnifiedBenchModel,
+} from '@/lib/bench-llm/admin-unified'
 import type { ProviderLifecycle } from '@/lib/bench-llm/provider-lifecycle'
-import { groupUnifiedBenchModelsByProvider, splitBenchProviderGroupsByQuestionnaire } from '@/lib/bench-llm/admin-unified'
+import { groupUnifiedBenchModelsByProvider, sortUnifiedBenchModels, splitBenchProviderGroupsByQuestionnaire } from '@/lib/bench-llm/admin-unified'
 import { parseComplAiCsv } from '@/lib/bench-llm/compl-ai-csv'
 import { parseApiJson, toTitleCase } from '@/lib/utils'
 
@@ -36,13 +47,48 @@ const BenchLlmDetailContent = dynamic(
   },
 )
 
-const SOURCES: Array<{ key: BenchSourceKey; label: string }> = [
+const FILTER_SOURCES: Array<{ key: BenchFilterableSourceKey; label: string }> = [
   { key: 'maydai', label: 'MaydAI' },
   { key: 'compl_ai', label: 'COMPL-AI' },
   { key: 'comparia', label: 'Compar:IA' },
   { key: 'llm_stats', label: 'LLM Stats' },
   { key: 'ecologits', label: 'EcoLogits' },
+  { key: 'system_card', label: 'System Card' },
 ]
+
+const CONSOLIDATION_SOURCES: Array<{ key: keyof BenchSourceCoverageMap; label: string; historyKey: string }> = [
+  { key: 'llm_stats', label: 'LLM Stats', historyKey: 'llmStats' },
+  { key: 'ecologits', label: 'EcoLogits', historyKey: 'ecologits' },
+  { key: 'comparia', label: 'Compar:IA', historyKey: 'comparia' },
+  { key: 'compl_ai', label: 'COMPL-AI', historyKey: 'complAi' },
+  { key: 'system_card', label: 'System Card', historyKey: 'systemCard' },
+]
+
+const COVERAGE_KEYS: Array<keyof BenchSourceCoverageMap> = [
+  'llm_stats',
+  'ecologits',
+  'comparia',
+  'compl_ai',
+  'maydai',
+  'system_card',
+]
+
+const SORT_COLUMNS: Array<{ column: BenchSortColumn; label: string; align: 'left' | 'center' }> = [
+  { column: 'model', label: 'Modèle', align: 'left' },
+  { column: 'releaseDate', label: 'Date de sortie', align: 'center' },
+  { column: 'status', label: 'Statut', align: 'center' },
+  { column: 'all', label: 'All', align: 'center' },
+  { column: 'maydai', label: 'MaydAI', align: 'center' },
+  { column: 'complAi', label: 'COMPL-AI', align: 'center' },
+  { column: 'comparia', label: 'Compar:IA', align: 'center' },
+  { column: 'llmStats', label: 'LLM Stats', align: 'center' },
+  { column: 'ecologits', label: 'EcoLogits', align: 'center' },
+  { column: 'systemCard', label: 'System Card', align: 'center' },
+]
+
+const DESC_DEFAULT_SORTS = new Set<BenchSortColumn>(['releaseDate', 'all', 'maydai', 'complAi'])
+
+type CoverageStat = BenchSourceCoverageMap[keyof BenchSourceCoverageMap]
 
 type ApiResponse = {
   models: UnifiedBenchModel[]
@@ -51,6 +97,7 @@ type ApiResponse = {
   pageSize: number
   providers: string[]
   histories: Record<string, unknown[]>
+  sourceCoverage?: BenchSourceCoverageMap
   role: 'admin' | 'super_admin'
   error?: string
 }
@@ -70,6 +117,202 @@ type HistoryRow = {
 function historyModelsCount(row: HistoryRow): number | null {
   const value = row.models_fetched ?? row.rows_imported ?? row.models_synced ?? row.rows_received
   return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function readRecord(value: object): Record<string, unknown> {
+  const record: Record<string, unknown> = {}
+  for (const [key, entry] of Object.entries(value)) record[key] = entry
+  return record
+}
+
+function readHistoryRow(value: unknown): HistoryRow | null {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) return null
+  const record = readRecord(value)
+  const row: HistoryRow = {}
+  if (typeof record.id === 'string') row.id = record.id
+  if (typeof record.status === 'string') row.status = record.status
+  if (typeof record.started_at === 'string') row.started_at = record.started_at
+  if (typeof record.created_at === 'string') row.created_at = record.created_at
+  if (typeof record.models_fetched === 'number' && Number.isFinite(record.models_fetched)) row.models_fetched = record.models_fetched
+  if (typeof record.rows_imported === 'number' && Number.isFinite(record.rows_imported)) row.rows_imported = record.rows_imported
+  if (typeof record.models_synced === 'number' && Number.isFinite(record.models_synced)) row.models_synced = record.models_synced
+  if (typeof record.rows_received === 'number' && Number.isFinite(record.rows_received)) row.rows_received = record.rows_received
+  if ('errors' in record) row.errors = record.errors
+  return row
+}
+
+function readHistories(value: unknown): Record<string, HistoryRow[]> {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) return {}
+  const histories: Record<string, HistoryRow[]> = {}
+  for (const [key, rows] of Object.entries(value)) {
+    if (!Array.isArray(rows)) {
+      histories[key] = []
+      continue
+    }
+    histories[key] = rows.flatMap((item) => {
+      const row = readHistoryRow(item)
+      return row ? [row] : []
+    })
+  }
+  return histories
+}
+
+function isCoverageStat(value: unknown): value is CoverageStat {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) return false
+  const fields = readRecord(value)
+  if (typeof fields.totalInCatalog !== 'number' || !Number.isFinite(fields.totalInCatalog)) return false
+  if (typeof fields.activeInCatalog !== 'number' || !Number.isFinite(fields.activeInCatalog)) return false
+  if (typeof fields.deprecatedInCatalog !== 'number' || !Number.isFinite(fields.deprecatedInCatalog)) return false
+  if (typeof fields.inServiceInCatalog !== 'number' || !Number.isFinite(fields.inServiceInCatalog)) return false
+  if (typeof fields.catalogInServiceTotal !== 'number' || !Number.isFinite(fields.catalogInServiceTotal)) return false
+  if (typeof fields.inServiceCompletionPercent !== 'number' || !Number.isFinite(fields.inServiceCompletionPercent)) return false
+  if (fields.crossCoverage == null || typeof fields.crossCoverage !== 'object' || Array.isArray(fields.crossCoverage)) return false
+  const cross = readRecord(fields.crossCoverage)
+  return COVERAGE_KEYS.every((key) => typeof cross[key] === 'number' && Number.isFinite(cross[key]))
+}
+
+function readSourceCoverage(value: unknown): BenchSourceCoverageMap | null {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) return null
+  const record = readRecord(value)
+  const llmStats = record.llm_stats
+  const ecologits = record.ecologits
+  const comparia = record.comparia
+  const complAi = record.compl_ai
+  const maydai = record.maydai
+  const systemCard = record.system_card
+  if (!isCoverageStat(llmStats) || !isCoverageStat(ecologits) || !isCoverageStat(comparia)) return null
+  if (!isCoverageStat(complAi) || !isCoverageStat(maydai) || !isCoverageStat(systemCard)) return null
+  return {
+    llm_stats: llmStats,
+    ecologits,
+    comparia,
+    compl_ai: complAi,
+    maydai,
+    system_card: systemCard,
+  }
+}
+
+function crossCovered(stat: CoverageStat, key: keyof BenchSourceCoverageMap): number {
+  const value = stat.crossCoverage[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+function coverageBadgeClass(covered: number, total: number): string {
+  if (total > 0 && covered >= total) return 'bg-emerald-50 text-emerald-800 border-emerald-200'
+  if (covered > 0 && covered < total) return 'bg-amber-50 text-amber-800 border-amber-200'
+  return 'bg-red-50 text-red-800 border-red-200'
+}
+
+function SourceCompletionPie({
+  activeCount,
+  deprecatedCount,
+  totalInService,
+  percent,
+}: {
+  activeCount: number
+  deprecatedCount: number
+  totalInService: number
+  percent: number
+}) {
+  const safeTotal = Number.isFinite(totalInService) && totalInService > 0 ? totalInService : 0
+  const safeActive = Number.isFinite(activeCount) && activeCount > 0 ? activeCount : 0
+  const safeDeprecated = Number.isFinite(deprecatedCount) && deprecatedCount > 0 ? deprecatedCount : 0
+  const activeArc = safeTotal > 0 ? Math.min(100, (safeActive / safeTotal) * 100) : 0
+  const deprecatedArc = safeTotal > 0 ? Math.min(100 - activeArc, (safeDeprecated / safeTotal) * 100) : 0
+  const safePercent = Number.isFinite(percent) ? percent : 0
+  const title = `Couverture Actif + Déprécié : ${safeActive + safeDeprecated}/${safeTotal} (${safePercent}%) — ${safeActive} actif(s), ${safeDeprecated} déprécié(s)`
+
+  return (
+    <svg width={56} height={56} viewBox="0 0 36 36" role="img" aria-label={title} className="shrink-0">
+      <title>{title}</title>
+      <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#e5e7eb" strokeWidth="3.8" pathLength={100} />
+      {activeArc > 0 ? (
+        <circle
+          cx="18"
+          cy="18"
+          r="15.9155"
+          fill="none"
+          stroke="#10b981"
+          strokeWidth="3.8"
+          pathLength={100}
+          strokeDasharray={`${activeArc} ${100 - activeArc}`}
+          strokeDashoffset={25}
+        />
+      ) : null}
+      {deprecatedArc > 0 ? (
+        <circle
+          cx="18"
+          cy="18"
+          r="15.9155"
+          fill="none"
+          stroke="#f59e0b"
+          strokeWidth="3.8"
+          pathLength={100}
+          strokeDasharray={`${deprecatedArc} ${100 - deprecatedArc}`}
+          strokeDashoffset={25 - activeArc}
+        />
+      ) : null}
+      <text
+        x="18"
+        y="18"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill="currentColor"
+        className="text-[11px] font-bold text-gray-900"
+      >
+        {safePercent}%
+      </text>
+    </svg>
+  )
+}
+
+function parseLifecycleFilter(value: string): BenchLifecycleFilter {
+  switch (value) {
+    case 'all':
+    case 'in_service':
+    case 'active':
+    case 'legacy':
+    case 'deprecated':
+    case 'retired':
+    case 'none':
+      return value
+    default:
+      return 'all'
+  }
+}
+
+function parseSourceFilter(value: string): '' | BenchFilterableSourceKey {
+  switch (value) {
+    case 'maydai':
+    case 'compl_ai':
+    case 'comparia':
+    case 'llm_stats':
+    case 'ecologits':
+    case 'system_card':
+      return value
+    default:
+      return ''
+  }
+}
+
+function initialSortDirection(column: BenchSortColumn): BenchSortDirection {
+  return DESC_DEFAULT_SORTS.has(column) ? 'desc' : 'asc'
+}
+
+function formatReleaseDate(value: string | null | undefined): string | null {
+  if (value == null || value.trim() === '') return null
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  return parsed.toLocaleDateString('fr-FR')
+}
+
+function sourceDot(filled: number): { className: string; title: string } {
+  const safeFilled = Number.isFinite(filled) ? Math.trunc(filled) : 0
+  if (safeFilled <= 1) return { className: 'bg-red-700', title: '1/5 source renseignée' }
+  if (safeFilled === 2) return { className: 'bg-red-400', title: '2/5 sources renseignées' }
+  if (safeFilled === 3) return { className: 'bg-amber-500', title: '3/5 sources renseignées' }
+  if (safeFilled === 4) return { className: 'bg-emerald-400', title: '4/5 sources renseignées' }
+  return { className: 'bg-emerald-700', title: '5/5 sources renseignées' }
 }
 
 function Presence({ available }: { available: boolean }) {
@@ -141,7 +384,7 @@ function QuestionnaireSectionHeader({
   const metaClass = tone === 'questionnaire' ? 'text-emerald-800/80' : 'text-slate-600'
   return (
     <tr>
-              <td colSpan={9} className={`px-4 py-3 ${toneClass}`}>
+              <td colSpan={10} className={`px-4 py-3 ${toneClass}`}>
         <div className="font-semibold">{title}</div>
         <div className={`mt-0.5 text-xs font-normal ${metaClass}`}>
           {description} · {groups.length} fournisseur(s) · {groupModelCount(groups)} modèle(s)
@@ -169,7 +412,7 @@ function ProviderGroupRows({
         return (
           <Fragment key={group.provider}>
             <tr className="bg-gray-50">
-              <td colSpan={9} className="px-2 py-1">
+              <td colSpan={10} className="px-2 py-1">
                 <button
                   type="button"
                   onClick={() => onToggle(group.provider)}
@@ -181,6 +424,19 @@ function ProviderGroupRows({
                   <span className="text-sm font-normal text-gray-500">
                     ({group.scoredCount}/{group.models.length} scorés)
                   </span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${group.activeCount > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {group.activeCount} actif(s)
+                  </span>
+                  {group.deprecatedCount > 0 ? (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                      {group.deprecatedCount} déprécié(s)
+                    </span>
+                  ) : null}
+                  {group.inServiceMissingSystemCardCount > 0 ? (
+                    <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">
+                      ⚠️ {group.inServiceMissingSystemCardCount} actif(s)/déprécié(s) sans System Card
+                    </span>
+                  ) : null}
                   {group.inQuestionnaire ? (
                     <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 sm:ml-2">
                       Questionnaire
@@ -194,7 +450,10 @@ function ProviderGroupRows({
               </td>
             </tr>
             {isOpen
-              ? group.models.map((model) => (
+              ? group.models.map((model) => {
+                  const releaseDate = formatReleaseDate(model.releaseDate)
+                  const dot = sourceDot(model.metrics.sourcesFilled)
+                  return (
                   <tr
                     key={model.entityId}
                     role="link"
@@ -215,11 +474,19 @@ function ProviderGroupRows({
                         {model.active ? '' : ' · inactif'}
                       </div>
                     </td>
+                    <td className="whitespace-nowrap px-3 py-3 text-center">
+                      {releaseDate ?? <span className="text-gray-400">—</span>}
+                    </td>
                     <td className="px-3 py-3 text-center">
                       <LifecycleBadge lifecycle={model.lifecycle} />
                     </td>
                     <td className="px-3 py-3 text-center">
-                      <RatioCell filled={model.metrics.sourcesFilled} total={model.metrics.sourcesTotal} />
+                      <span className="inline-flex flex-col items-center gap-1">
+                        <span className="font-medium text-gray-900">
+                          {model.metrics.sourcesFilled}/{model.metrics.sourcesTotal}
+                        </span>
+                        <span className={`h-2.5 w-2.5 rounded-full ${dot.className}`} title={dot.title} />
+                      </span>
                     </td>
                     <td className="px-3 py-3 text-center">
                       {model.metrics.maydaiScore == null ? (
@@ -244,7 +511,8 @@ function ProviderGroupRows({
                       <Presence available={model.metrics.hasSystemCard} />
                     </td>
                   </tr>
-                ))
+                  )
+                })
               : null}
           </Fragment>
         )
@@ -331,13 +599,16 @@ export default function BenchLlmsAdminPage() {
   const [providers, setProviders] = useState<string[]>([])
   const [total, setTotal] = useState(0)
   const [histories, setHistories] = useState<Record<string, HistoryRow[]>>({})
+  const [sourceCoverage, setSourceCoverage] = useState<BenchSourceCoverageMap | null>(null)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const deferredSearch = useDeferredValue(search)
   const [provider, setProvider] = useState('')
-  const [active, setActive] = useState('all')
-  const [source, setSource] = useState('')
+  const [lifecycleStatus, setLifecycleStatus] = useState<BenchLifecycleFilter>('all')
+  const [source, setSource] = useState<'' | BenchFilterableSourceKey>('')
   const [availability, setAvailability] = useState('all')
+  const [sortColumn, setSortColumn] = useState<BenchSortColumn | null>(null)
+  const [sortDirection, setSortDirection] = useState<BenchSortDirection>('desc')
   const [loading, setLoading] = useState(true)
   const [action, setAction] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -350,11 +621,33 @@ export default function BenchLlmsAdminPage() {
   const [createForm, setCreateForm] = useState({ model_name: '', model_provider: '', model_type: 'large-language-model', version: '' })
   const pageSize = 5000
 
-  const providerGroups = useMemo(() => groupUnifiedBenchModelsByProvider(models), [models])
+  const providerGroups = useMemo(
+    () =>
+      groupUnifiedBenchModelsByProvider(models).map((group) => ({
+        ...group,
+        models: sortUnifiedBenchModels(group.models, sortColumn, sortDirection),
+      })),
+    [models, sortColumn, sortDirection],
+  )
   const { inQuestionnaire: questionnaireGroups, catalogOnly: catalogGroups } = useMemo(
     () => splitBenchProviderGroupsByQuestionnaire(providerGroups),
     [providerGroups],
   )
+
+  const handleSort = useCallback((column: BenchSortColumn) => {
+    if (sortColumn !== column) {
+      setSortColumn(column)
+      setSortDirection(initialSortDirection(column))
+      return
+    }
+    const initial = initialSortDirection(column)
+    if (sortDirection === initial) {
+      setSortDirection(initial === 'asc' ? 'desc' : 'asc')
+      return
+    }
+    setSortColumn(null)
+    setSortDirection('desc')
+  }, [sortColumn, sortDirection])
 
   const toggleProvider = useCallback((providerName: string) => {
     setOpenProviders((current) => {
@@ -376,7 +669,7 @@ export default function BenchLlmsAdminPage() {
         pageSize: String(pageSize),
         search: deferredSearch,
         provider,
-        active,
+        lifecycleStatus,
         source,
         availability,
       })
@@ -385,19 +678,20 @@ export default function BenchLlmsAdminPage() {
       })
       const payload = await parseApiJson<ApiResponse>(response)
       if (!response.ok) throw new Error(payload.error || 'Chargement impossible')
-      setModels(payload.models)
-      setProviders(payload.providers)
-      setTotal(payload.total)
-      setHistories(payload.histories as Record<string, HistoryRow[]>)
+      setModels(Array.isArray(payload.models) ? payload.models : [])
+      setProviders(Array.isArray(payload.providers) ? payload.providers : [])
+      setTotal(typeof payload.total === 'number' && Number.isFinite(payload.total) ? payload.total : 0)
+      setHistories(readHistories(payload.histories))
+      setSourceCoverage(readSourceCoverage(payload.sourceCoverage))
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Erreur inconnue')
     } finally {
       setLoading(false)
     }
-  }, [active, availability, deferredSearch, getAccessToken, page, provider, source])
+  }, [availability, deferredSearch, getAccessToken, lifecycleStatus, page, provider, source])
 
   useEffect(() => void fetchModels(), [fetchModels])
-  useEffect(() => setPage(1), [active, availability, deferredSearch, provider, source])
+  useEffect(() => setPage(1), [availability, deferredSearch, lifecycleStatus, provider, source])
   useEffect(() => {
     if (deferredSearch.trim()) {
       setOpenProviders(new Set(providerGroups.map((group) => group.provider)))
@@ -526,7 +820,7 @@ export default function BenchLlmsAdminPage() {
           <button onClick={() => callAction('Recalcul MaydAI', '/api/admin/compl-ai/recalculate-maydai-scores')} disabled={action != null} className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium">Recalcul MaydAI</button>
           <button onClick={exportCsv} disabled={action != null} className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium"><Download className="h-4 w-4" /> CSV</button>
           <button onClick={downloadTemplate} disabled={action != null} className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium">Modèle CSV</button>
-          <select value={importMode} onChange={(event) => setImportMode(event.target.value as 'create' | 'update')} className="rounded-md border border-gray-300 bg-white px-2 py-2 text-sm"><option value="update">Import : mettre à jour</option><option value="create">Import : créer</option></select>
+          <select value={importMode} onChange={(event) => setImportMode(event.target.value === 'create' ? 'create' : 'update')} className="rounded-md border border-gray-300 bg-white px-2 py-2 text-sm"><option value="update">Import : mettre à jour</option><option value="create">Import : créer</option></select>
           <button onClick={() => importInput.current?.click()} disabled={action != null} className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium"><Upload className="h-4 w-4" /> Import</button>
           <button onClick={() => { if (confirm('Supprimer toutes les données COMPL-AI ? Cette action est irréversible.')) void callAction('Suppression COMPL-AI', '/api/admin/compl-ai/clear') }} disabled={action != null} className="inline-flex items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700"><Trash2 className="h-4 w-4" /> Vider COMPL-AI</button>
           <input ref={importInput} type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importCsv(file); event.target.value = '' }} />
@@ -535,19 +829,65 @@ export default function BenchLlmsAdminPage() {
       </div>
 
       <section className="mt-7">
-        <h2 className="text-lg font-semibold text-gray-900">Synchronisations récentes</h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            ['LLM Stats', histories.llmStats ?? []],
-            ['EcoLogits', histories.ecologits ?? []],
-            ['Compar:IA', histories.comparia ?? []],
-            ['COMPL-AI', histories.complAi ?? []],
-          ].map(([label, rows]) => {
-            const latest = (rows as HistoryRow[])[0]
-            return <div key={String(label)} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="font-medium text-gray-900">{String(label)}</div>
-              {latest ? <div className="mt-2 text-sm text-gray-600"><div>Statut : {latest.status ?? 'terminé'}</div><div>{historyModelsCount(latest) ?? '—'} modèle(s)</div><div className="mt-1 text-xs text-gray-500">{formatHistoryDate(latest)}</div></div> : <div className="mt-2 text-sm text-gray-500">Aucun historique.</div>}
-            </div>
+        <h2 className="text-lg font-semibold text-gray-900">Synchronisations récentes & Consolidation des sources</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {CONSOLIDATION_SOURCES.map((card) => {
+            const latest = histories[card.historyKey]?.[0]
+            const stat = sourceCoverage?.[card.key] ?? null
+            return (
+              <div key={card.key} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-medium text-gray-900">{card.label}</div>
+                    {latest ? (
+                      <div className="mt-2 text-sm text-gray-600">
+                        <div>Statut : {latest.status ?? 'terminé'}</div>
+                        <div>{historyModelsCount(latest) ?? '—'} modèle(s) sync</div>
+                        <div className="mt-1 text-xs text-gray-500">{formatHistoryDate(latest)}</div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-sm text-gray-500">Aucun historique.</div>
+                    )}
+                  </div>
+                  {stat ? (
+                    <div className="flex shrink-0 flex-col items-center gap-1">
+                      <SourceCompletionPie
+                        activeCount={stat.activeInCatalog}
+                        deprecatedCount={stat.deprecatedInCatalog}
+                        totalInService={stat.catalogInServiceTotal}
+                        percent={stat.inServiceCompletionPercent}
+                      />
+                      <p className="max-w-24 text-center text-[10px] leading-tight text-gray-500">
+                        Actif + Déprécié : {stat.inServiceInCatalog}/{stat.catalogInServiceTotal}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+                {stat ? (
+                  <div className="mt-3 border-t border-gray-100 pt-3">
+                    <p className="text-sm text-gray-700">
+                      Consolidés : {stat.totalInCatalog} modèles ({stat.activeInCatalog} actif(s), {stat.deprecatedInCatalog} déprécié(s))
+                    </p>
+                    {stat.totalInCatalog > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {CONSOLIDATION_SOURCES.filter((other) => other.key !== card.key).map((other) => {
+                          const covered = crossCovered(stat, other.key)
+                          const pct = stat.totalInCatalog > 0 ? Math.round((covered / stat.totalInCatalog) * 100) : 0
+                          return (
+                            <span
+                              key={other.key}
+                              className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${coverageBadgeClass(covered, stat.totalInCatalog)}`}
+                            >
+                              {other.label} {pct}% ({covered}/{stat.totalInCatalog})
+                            </span>
+                          )
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            )
           })}
         </div>
       </section>
@@ -559,25 +899,54 @@ export default function BenchLlmsAdminPage() {
       <div className="mb-4 grid gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-5">
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Rechercher…" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
         <select value={provider} onChange={(event) => setProvider(event.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm"><option value="">Tous les fournisseurs</option>{providers.map((item) => <option key={item} value={item}>{toTitleCase(item)}</option>)}</select>
-        <select value={active} onChange={(event) => setActive(event.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm"><option value="all">Tous les statuts</option><option value="active">Actifs</option><option value="inactive">Inactifs</option></select>
-        <select value={source} onChange={(event) => setSource(event.target.value)} className="rounded-md border border-gray-300 px-3 py-2 text-sm"><option value="">Toutes les sources</option>{SOURCES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
+        <select value={lifecycleStatus} onChange={(event) => setLifecycleStatus(parseLifecycleFilter(event.target.value))} className="rounded-md border border-gray-300 px-3 py-2 text-sm">
+          <option value="all">Tous les statuts</option>
+          <option value="in_service">En activité (Actif + Déprécié)</option>
+          <option value="active">Actif</option>
+          <option value="legacy">Legacy</option>
+          <option value="deprecated">Déprécié</option>
+          <option value="retired">Retiré</option>
+          <option value="none">Sans statut</option>
+        </select>
+        <select value={source} onChange={(event) => setSource(parseSourceFilter(event.target.value))} className="rounded-md border border-gray-300 px-3 py-2 text-sm"><option value="">Toutes les sources</option>{FILTER_SOURCES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select>
         <select value={availability} onChange={(event) => setAvailability(event.target.value)} disabled={!source} className="rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"><option value="all">Disponible ou non</option><option value="present">Données présentes</option><option value="missing">Données absentes</option></select>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+        {sortColumn != null ? (
+          <div className="border-b border-gray-200 px-4 py-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSortColumn(null)
+                setSortDirection('desc')
+              }}
+              className="text-xs font-medium text-[#0080A3] hover:underline"
+            >
+              Réinitialiser le tri par défaut (Date &gt; System Card &gt; Statut)
+            </button>
+          </div>
+        ) : null}
         <div className="overflow-x-auto">
-          <table className="min-w-[960px] w-full divide-y divide-gray-200 text-sm">
+          <table className="min-w-[1120px] w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
               <tr>
-                <th className="px-4 py-3">Modèle</th>
-                <th className="px-3 py-3 text-center">Statut</th>
-                <th className="px-3 py-3 text-center">All</th>
-                <th className="px-3 py-3 text-center">MaydAI</th>
-                <th className="px-3 py-3 text-center">COMPL-AI</th>
-                <th className="px-3 py-3 text-center">Compar:IA</th>
-                <th className="px-3 py-3 text-center">LLM Stats</th>
-                <th className="px-3 py-3 text-center">EcoLogits</th>
-                <th className="px-3 py-3 text-center">System Card</th>
+                {SORT_COLUMNS.map((column) => {
+                  const active = sortColumn === column.column
+                  const Icon = !active ? ArrowUpDown : sortDirection === 'asc' ? ArrowUp : ArrowDown
+                  return (
+                    <th key={column.column} className={column.align === 'center' ? 'px-3 py-3 text-center' : 'px-4 py-3'}>
+                      <button
+                        type="button"
+                        onClick={() => handleSort(column.column)}
+                        className={`inline-flex items-center gap-1 uppercase tracking-wide ${column.align === 'center' ? 'justify-center' : ''} ${active ? 'text-[#0080A3]' : 'text-gray-500'}`}
+                      >
+                        {column.label}
+                        <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      </button>
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -615,7 +984,7 @@ export default function BenchLlmsAdminPage() {
               ) : null}
               {!loading && models.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-gray-500">
+                  <td colSpan={10} className="px-4 py-10 text-center text-gray-500">
                     Aucun modèle.
                   </td>
                 </tr>

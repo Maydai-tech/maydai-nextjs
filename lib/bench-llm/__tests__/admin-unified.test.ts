@@ -1,5 +1,6 @@
 import {
   buildUnifiedBenchModels,
+  computeSourceCoverageStats,
   filterUnifiedBenchModels,
   groupUnifiedBenchModelsByProvider,
   parseBenchEntityId,
@@ -232,6 +233,100 @@ describe('Bench LLMs admin unified registry', () => {
 
     expect(row?.lifecycle).toEqual(
       expect.objectContaining({ status: 'retired', label: 'Retiré', source: 'anthropic' }),
+    )
+  })
+})
+
+describe('Bench LLMs in-service lifecycle', () => {
+  const rows = buildUnifiedBenchModels(
+    [
+      {
+        id: 'active',
+        slug: 'svc-active',
+        model_name: 'Service Active',
+        model_provider: 'OpenAI',
+        lifecycle_status: 'active',
+        source_ids: [{ source: 'llm_stats', source_id: 'svc-active' }],
+      },
+      {
+        id: 'deprecated',
+        slug: 'svc-deprecated',
+        model_name: 'Service Deprecated',
+        model_provider: 'OpenAI',
+        lifecycle_status: 'deprecated',
+        source_ids: [{ source: 'llm_stats', source_id: 'svc-deprecated' }],
+      },
+      {
+        id: 'retired',
+        slug: 'svc-retired',
+        model_name: 'Service Retired',
+        model_provider: 'OpenAI',
+        lifecycle_status: 'retired',
+      },
+    ],
+    [],
+    [],
+    [],
+    { includeUnmatchedCatalogs: false, systemCardSlugs: ['svc-active'] },
+  )
+
+  test('counts deprecated models inside in-service provider totals', () => {
+    const [group] = groupUnifiedBenchModelsByProvider(rows)
+    expect(group?.provider).toBe('OpenAI')
+    expect(group).toEqual(
+      expect.objectContaining({
+        activeCount: 1,
+        activeMissingSystemCardCount: 0,
+        deprecatedCount: 1,
+        inServiceCount: 2,
+        inServiceMissingSystemCardCount: 1,
+      }),
+    )
+  })
+
+  test('filters active and deprecated models and drops retired ones', () => {
+    expect(
+      filterUnifiedBenchModels(rows, { lifecycleStatus: 'in_service' }).map((model) => model.slug),
+    ).toEqual(['svc-deprecated', 'svc-active'])
+  })
+
+  test('computes in-service coverage against the whole catalog', () => {
+    const coverage = computeSourceCoverageStats(rows)
+    expect(coverage.llm_stats).toEqual({
+      source: 'llm_stats',
+      totalInCatalog: 2,
+      activeInCatalog: 1,
+      deprecatedInCatalog: 1,
+      inServiceInCatalog: 2,
+      catalogInServiceTotal: 2,
+      inServiceCompletionPercent: 100,
+      crossCoverage: {
+        llm_stats: 2,
+        ecologits: 0,
+        comparia: 0,
+        compl_ai: 0,
+        maydai: 0,
+        system_card: 1,
+      },
+      inServiceCrossCoverage: {
+        llm_stats: 2,
+        ecologits: 0,
+        comparia: 0,
+        compl_ai: 0,
+        maydai: 0,
+        system_card: 1,
+      },
+    })
+    expect(coverage.system_card).toEqual(
+      expect.objectContaining({
+        totalInCatalog: 1,
+        activeInCatalog: 1,
+        deprecatedInCatalog: 0,
+        inServiceInCatalog: 1,
+        catalogInServiceTotal: 2,
+        inServiceCompletionPercent: 50,
+        inServiceCrossCoverage: expect.objectContaining({ system_card: 1, llm_stats: 1 }),
+      }),
     )
   })
 })
