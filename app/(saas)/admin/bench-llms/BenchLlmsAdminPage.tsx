@@ -308,11 +308,14 @@ function formatReleaseDate(value: string | null | undefined): string | null {
 
 function sourceDot(filled: number): { className: string; title: string } {
   const safeFilled = Number.isFinite(filled) ? Math.trunc(filled) : 0
-  if (safeFilled <= 1) return { className: 'bg-red-700', title: '1/5 source renseignée' }
-  if (safeFilled === 2) return { className: 'bg-red-400', title: '2/5 sources renseignées' }
-  if (safeFilled === 3) return { className: 'bg-amber-500', title: '3/5 sources renseignées' }
-  if (safeFilled === 4) return { className: 'bg-emerald-400', title: '4/5 sources renseignées' }
-  return { className: 'bg-emerald-700', title: '5/5 sources renseignées' }
+  if (safeFilled <= 1) {
+    return { className: 'bg-red-700', title: `${safeFilled}/6 source(s) renseignée(s)` }
+  }
+  if (safeFilled === 2) return { className: 'bg-red-400', title: '2/6 sources renseignées' }
+  if (safeFilled === 3) return { className: 'bg-amber-500', title: '3/6 sources renseignées' }
+  if (safeFilled === 4) return { className: 'bg-yellow-400', title: '4/6 sources renseignées' }
+  if (safeFilled === 5) return { className: 'bg-emerald-400', title: '5/6 sources renseignées' }
+  return { className: 'bg-emerald-700', title: '6/6 sources renseignées' }
 }
 
 function Presence({ available }: { available: boolean }) {

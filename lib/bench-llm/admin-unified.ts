@@ -56,6 +56,8 @@ export const BENCH_SOURCE_KEYS: BenchSourceKey[] = [
   'ecologits',
 ]
 
+export const BENCH_SOURCES_TOTAL_WITH_SYSTEM_CARD = 6 as const
+
 export const DEFAULT_COMPL_AI_BENCHMARK_TOTAL = 31
 
 export type BenchSourceAvailability = Record<BenchSourceKey, boolean>
@@ -110,7 +112,7 @@ export type CompariaCatalogPresence = {
 
 export type BenchModelMetrics = {
   sourcesFilled: number
-  sourcesTotal: 5
+  sourcesTotal: 6
   maydaiScore: number | null
   complAiFilled: number
   complAiTotal: number
@@ -118,6 +120,12 @@ export type BenchModelMetrics = {
   llmStatsRank: number | null
   hasEcologits: boolean
   hasSystemCard: boolean
+}
+
+export interface SystemCardRowLike {
+  model_identifier?: string | null
+  updated_at?: string | null
+  created_at?: string | null
 }
 
 export type UnifiedBenchModel = {
@@ -187,17 +195,39 @@ export function buildBenchModelMetrics(params: {
 }): BenchModelMetrics {
   const evaluations = params.evaluations ?? []
   const filled = evaluations.filter((row) => row.score != null).length
+  const hasSystemCard = Boolean(params.hasSystemCard)
   return {
-    sourcesFilled: countFilledBenchSources(params.sources),
-    sourcesTotal: 5,
+    sourcesFilled: countFilledBenchSources(params.sources) + (hasSystemCard ? 1 : 0),
+    sourcesTotal: BENCH_SOURCES_TOTAL_WITH_SYSTEM_CARD,
     maydaiScore: maydaiScoreFromEvaluations(evaluations),
     complAiFilled: filled,
     complAiTotal: params.complAiTotal ?? DEFAULT_COMPL_AI_BENCHMARK_TOTAL,
     compariaRank: params.compariaRank ?? null,
     llmStatsRank: params.llmStatsRank ?? null,
     hasEcologits: params.sources.ecologits,
-    hasSystemCard: Boolean(params.hasSystemCard),
+    hasSystemCard,
   }
+}
+
+export function isValidSystemCardRow(
+  row: SystemCardRowLike | null | undefined,
+): row is SystemCardRowLike & { model_identifier: string } {
+  if (!row) return false
+  const identifier = typeof row.model_identifier === 'string' ? row.model_identifier.trim() : ''
+  return identifier.length > 0
+}
+
+export function extractValidSystemCardSlugs(
+  rows: SystemCardRowLike[] | null | undefined,
+): string[] {
+  if (!rows || !Array.isArray(rows)) return []
+  const slugs: string[] = []
+  for (const row of rows) {
+    if (isValidSystemCardRow(row)) {
+      slugs.push(row.model_identifier.trim())
+    }
+  }
+  return slugs
 }
 
 export function groupUnifiedBenchModelsByProvider(models: UnifiedBenchModel[]): BenchProviderGroup[] {

@@ -139,6 +139,55 @@ export type Database = {
         }
       }
 
+      llm_system_cards: {
+        Row: {
+          id: string
+          model_identifier: string
+          model_name: string
+          provider: string
+          audit_date: string
+          created_at: string | null
+          updated_at: string | null
+          source_markdown: string | null
+          card_version_date: string | null
+          card_date_label: string | null
+          card_month: string | null
+          source_file_name: string | null
+          card_version_date_is_approx: boolean
+        }
+        Insert: {
+          id?: string
+          model_identifier: string
+          model_name: string
+          provider: string
+          audit_date: string
+          created_at?: string | null
+          updated_at?: string | null
+          source_markdown?: string | null
+          card_version_date?: string | null
+          card_date_label?: string | null
+          card_month?: string | null
+          source_file_name?: string | null
+          card_version_date_is_approx?: boolean
+        }
+        Update: {
+          id?: string
+          model_identifier?: string
+          model_name?: string
+          provider?: string
+          audit_date?: string
+          created_at?: string | null
+          updated_at?: string | null
+          source_markdown?: string | null
+          card_version_date?: string | null
+          card_date_label?: string | null
+          card_month?: string | null
+          source_file_name?: string | null
+          card_version_date_is_approx?: boolean
+        }
+        Relationships: []
+      }
+
       eco_methodology_versions: {
         Row: {
           id: string
