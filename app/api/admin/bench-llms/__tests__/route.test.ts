@@ -21,7 +21,7 @@ type QueryResult = {
 type ListedModel = {
   slug: string
   releaseDate: string | null
-  metrics: { hasSystemCard: boolean }
+  metrics: { hasSystemCard: boolean; sourcesFilled: number; sourcesTotal: number }
   lifecycle: { status: string } | null
 }
 
@@ -91,6 +91,11 @@ const SYSTEM_CARDS = [
     model_identifier: 'alpha-retired-card',
     updated_at: '2026-01-01',
     created_at: '2024-06-01',
+  },
+  {
+    model_identifier: '   ',
+    updated_at: '2026-12-01',
+    created_at: '2026-12-01',
   },
 ]
 
@@ -220,6 +225,27 @@ describe('GET /api/admin/bench-llms', () => {
     expect(body.histories.systemCard).toEqual([
       { status: 'terminé', models_fetched: 3, started_at: '2026-08-15' },
     ])
+    const metricsBySlug = Object.fromEntries(
+      body.models.map((model: ListedModel) => [model.slug, model.metrics]),
+    )
+    for (const slug of ['alpha-old', 'alpha-card-active', 'alpha-retired-card']) {
+      expect(metricsBySlug[slug]).toEqual(
+        expect.objectContaining({
+          hasSystemCard: true,
+          sourcesFilled: 1,
+          sourcesTotal: 6,
+        }),
+      )
+    }
+    for (const slug of ['alpha-new', 'alpha-plain-active', 'alpha-plain-retired']) {
+      expect(metricsBySlug[slug]).toEqual(
+        expect.objectContaining({
+          hasSystemCard: false,
+          sourcesFilled: 0,
+          sourcesTotal: 6,
+        }),
+      )
+    }
   })
 
   test('filters active models and models missing a system card without shrinking coverage', async () => {

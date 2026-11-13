@@ -1,10 +1,12 @@
 import {
   buildUnifiedBenchModels,
   computeSourceCoverageStats,
+  extractValidSystemCardSlugs,
   filterUnifiedBenchModels,
   groupUnifiedBenchModelsByProvider,
   parseBenchEntityId,
   splitBenchProviderGroupsByQuestionnaire,
+  type SystemCardRowLike,
 } from '../admin-unified'
 
 describe('Bench LLMs admin unified registry', () => {
@@ -107,40 +109,48 @@ describe('Bench LLMs admin unified registry', () => {
   })
 
   test('exposes coverage metrics, MaydAI average on 100, and COMPL-AI fill count', () => {
-    const [row] = buildUnifiedBenchModels(
-      [
-        {
-          id: 'model-1',
-          slug: 'gpt-4o',
-          model_name: 'GPT 4o',
-          model_provider: 'OpenAI',
-          llm_stats_id: 'gpt-4o',
-          llm_leader_rank: 4,
-          comparia_rank: 12,
-        },
-      ],
-      [
-        { model_id: 'model-1', score: 0.7, maydai_score: 3 },
-        { model_id: 'model-1', score: 0.5, maydai_score: 2 },
-        { model_id: 'model-1', score: null, maydai_score: null },
-      ],
-      [
-        {
-          id: 'eco-linked',
-          provider: 'openai',
-          name: 'gpt-4o',
-          is_active: true,
-          last_seen_at: '2026-07-24T12:00:00Z',
-          link: [{ maydai_model_id: 'model-1' }],
-        },
-      ],
+    const model = {
+      id: 'model-1',
+      slug: 'gpt-4o',
+      model_name: 'GPT 4o',
+      model_provider: 'OpenAI',
+      llm_stats_id: 'gpt-4o',
+      llm_leader_rank: 4,
+      comparia_rank: 12,
+    }
+    const modelEvaluations = [
+      { model_id: 'model-1', score: 0.7, maydai_score: 3 },
+      { model_id: 'model-1', score: 0.5, maydai_score: 2 },
+      { model_id: 'model-1', score: null, maydai_score: null },
+    ]
+    const linkedEco = [
+      {
+        id: 'eco-linked',
+        provider: 'openai',
+        name: 'gpt-4o',
+        is_active: true,
+        last_seen_at: '2026-07-24T12:00:00Z',
+        link: [{ maydai_model_id: 'model-1' }],
+      },
+    ]
+    const [withSystemCard] = buildUnifiedBenchModels(
+      [model],
+      modelEvaluations,
+      linkedEco,
       [],
       { includeUnmatchedCatalogs: false, systemCardSlugs: ['gpt-4o'] },
     )
+    const [withoutSystemCard] = buildUnifiedBenchModels(
+      [model],
+      modelEvaluations,
+      linkedEco,
+      [],
+      { includeUnmatchedCatalogs: false },
+    )
 
-    expect(row?.metrics).toEqual({
-      sourcesFilled: 5,
-      sourcesTotal: 5,
+    expect(withSystemCard?.metrics).toEqual({
+      sourcesFilled: 6,
+      sourcesTotal: 6,
       maydaiScore: 60,
       complAiFilled: 2,
       complAiTotal: 31,
@@ -149,6 +159,29 @@ describe('Bench LLMs admin unified registry', () => {
       hasEcologits: true,
       hasSystemCard: true,
     })
+    expect(withoutSystemCard?.metrics).toEqual({
+      sourcesFilled: 5,
+      sourcesTotal: 6,
+      maydaiScore: 60,
+      complAiFilled: 2,
+      complAiTotal: 31,
+      compariaRank: 12,
+      llmStatsRank: 4,
+      hasEcologits: true,
+      hasSystemCard: false,
+    })
+  })
+
+  test('extractValidSystemCardSlugs keeps only a non-empty model identifier', () => {
+    const rows = [
+      { model_identifier: 'gpt-4o' },
+      null,
+      { model_identifier: null },
+      { model_identifier: '' },
+      { model_identifier: '   ' },
+    ] as SystemCardRowLike[]
+
+    expect(extractValidSystemCardSlugs(rows)).toEqual(['gpt-4o'])
   })
 
   test('groups models by provider and counts scored COMPL-AI rows', () => {

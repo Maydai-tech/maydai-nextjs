@@ -7,7 +7,9 @@ import {
   computeSourceCoverageStats,
   countDistinctEvaluatedModels,
   DEFAULT_COMPL_AI_BENCHMARK_TOTAL,
+  extractValidSystemCardSlugs,
   filterUnifiedBenchModels,
+  isValidSystemCardRow,
   overlayLatestModelsCount,
   withNormalizedModelsFetched,
   type BenchFilterableSourceKey,
@@ -40,12 +42,6 @@ const LIFECYCLE_FILTERS: readonly BenchLifecycleFilter[] = [
 
 type PostgrestErrorLike = { message?: string; details?: string }
 
-type SystemCardCatalogRow = {
-  model_identifier: string | null
-  updated_at: string | null
-  created_at: string | null
-}
-
 function positiveInteger(value: string | null, fallback: number, max: number) {
   const parsed = Number(value)
   return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, max) : fallback
@@ -65,22 +61,9 @@ function parseLifecycleFilter(value: string | null): BenchLifecycleFilter {
   return LIFECYCLE_FILTERS.find((status) => status === value) ?? 'all'
 }
 
-function readSystemCardRows(value: unknown): SystemCardCatalogRow[] {
-  if (!Array.isArray(value)) return []
-  const rows: SystemCardCatalogRow[] = []
-  for (const item of value) {
-    if (item == null || typeof item !== 'object') continue
-    const record = item as Record<string, unknown>
-    rows.push({
-      model_identifier: typeof record.model_identifier === 'string' ? record.model_identifier : null,
-      updated_at: typeof record.updated_at === 'string' ? record.updated_at : null,
-      created_at: typeof record.created_at === 'string' ? record.created_at : null,
-    })
-  }
-  return rows
-}
-
-function latestSystemCardTimestamp(rows: SystemCardCatalogRow[]): string | null {
+function latestSystemCardTimestamp(
+  rows: ReadonlyArray<{ updated_at?: string | null; created_at?: string | null }>,
+): string | null {
   let latest: string | null = null
   let latestMs = Number.NEGATIVE_INFINITY
   for (const row of rows) {
@@ -157,7 +140,7 @@ export async function GET(request: NextRequest) {
     assertNoPostgrestError(systemCardsError, 'llm_system_cards')
     assertNoPostgrestError(questionnaireProvidersError, 'model_providers')
 
-    const systemCardRows = readSystemCardRows(systemCards)
+    const validSystemCards = (systemCards ?? []).filter(isValidSystemCardRow)
     const unified = buildUnifiedBenchModels(
       attachSourceIdsToCanonicalModels(canonicalModels ?? [], sourceIds ?? []),
       evaluations ?? [],
@@ -169,15 +152,13 @@ export async function GET(request: NextRequest) {
           complAiBenchmarkTotal && complAiBenchmarkTotal > 0
             ? complAiBenchmarkTotal
             : DEFAULT_COMPL_AI_BENCHMARK_TOTAL,
-        systemCardSlugs: systemCardRows
-          .map((card) => card.model_identifier)
-          .filter((slug): slug is string => Boolean(slug)),
+        systemCardSlugs: extractValidSystemCardSlugs(systemCards),
         questionnaireProviderIds: (questionnaireProviders ?? []).map((provider) => provider.id),
       },
     )
     const sourceCoverage = computeSourceCoverageStats(unified)
     const systemCardModelsCount = unified.filter((model) => model.metrics.hasSystemCard === true).length
-    const latestSystemCardDate = latestSystemCardTimestamp(systemCardRows)
+    const latestSystemCardDate = latestSystemCardTimestamp(validSystemCards)
     const sourceParam = request.nextUrl.searchParams.get('source')
     const source = parseFilterableSource(sourceParam)
     const availabilityParam = request.nextUrl.searchParams.get('availability')
