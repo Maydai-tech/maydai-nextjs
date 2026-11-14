@@ -13,7 +13,7 @@ Donner à un cas d’usage dont le modèle a une fiche :
 3. une section PDF une fois le préremplissage validé ;
 4. un aller-retour Drive (Tour de contrôle Hermes) pour importer le Markdown source.
 
-Ce n’est **pas** une source du pivot `llm_model_source_ids`. `model_identifier` = `compl_ai_models.slug`.
+Ce n’est **pas** une source du pivot `llm_model_source_ids`. `model_identifier` = `compl_ai_models.slug`. Le dashboard admin la compte quand même comme **6ᵉ source** de couverture (`hasSystemCard`, filtre `source=system_card`) — hub : [llm-models-hub.md](./llm-models-hub.md) §6.
 
 ## 2. Tables
 
@@ -165,3 +165,4 @@ Pas de cron secret : ces deux routes sont admin-only.
 - **`card_month` JJ/MM/AAAA** : format Hermes courant ; jour `32` ou mois `13` → `null` puis fallback nom Drive.
 - **Rollback 100 %** : passer un flag à `false` doit appeler `reverseTodoActionResponse`. Ne pas upsert les flags seuls.
 - **CMS questionnaire admin** (`/admin/questions`, `/admin/sections`) retiré en septembre 2026 — ne pas le recréer.
+- **Couverture ≠ piliers.** Une ligne `llm_system_cards` (Markdown importé) suffit à `hasSystemCard` / au camembert. Dossier / score / PDF exigent toujours `llm_system_card_pillars`.

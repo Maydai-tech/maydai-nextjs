@@ -52,6 +52,8 @@ Déclarées dans `vercel.json` :
 
 System Cards / Tour de contrôle : **pas** de cron — boutons admin uniquement. Sync = append Sheet + CSV Drive (`#447`). Runbook : [llm-system-cards.md](./llm-system-cards.md).
 
+Purge Freemium (`GET /api/cron/process-purges`, `*/15`) : **pas** un job hub LLM. Runbook : [freemium-governance.md](./freemium-governance.md).
+
 Compar:IA accepte aussi `x-cron-secret: $CRON_SECRET` (comparaison `timingSafeEqual`).  
 `GET` = cron only. `POST` = cron **ou** `verifyAdminAuth` (admin). Body optionnel `{ "file_name": "…" }`.
 
@@ -124,6 +126,26 @@ Ce n’est **pas** `ecologits_models.is_active` (présence catalogue). Snapshot 
 
 Consommateurs : dashboard `/admin/bench-llms`, export COMPL-AI, colonne `Statut LLM` de la Tour de contrôle (`resolveControlTowerLlmStatus`).
 
+### Couverture dashboard (`#465`, `#466`)
+
+`GET /api/admin/bench-llms` renvoie `sourceCoverage` (`computeSourceCoverageStats` dans `lib/bench-llm/admin-unified.ts`). Catalogue unifié = fiches canoniques seulement (`includeUnmatchedCatalogs: false`).
+
+« En activité » (`isInServiceLifecycleStatus`) = `active` **ou** `deprecated`. Ce n’est **pas** `ecologits_models.is_active`. Filtre UI : `lifecycleStatus=in_service`.
+
+Sixième source : System Card. `extractValidSystemCardSlugs` lit `llm_system_cards.model_identifier` (slug non vide). `hasSystemCard` si le slug canonique est dans cet ensemble. `sourcesFilled` = sources pivot/scores + 1 si fiche ; `sourcesTotal = 6` (`BENCH_SOURCES_TOTAL_WITH_SYSTEM_CARD`). **Pas** une ligne `llm_model_source_ids`.
+
+Pour chaque clé (`llm_stats`, `ecologits`, `comparia`, `compl_ai`, `maydai`, `system_card`) :
+
+| Champ | Sens |
+|-------|------|
+| `totalInCatalog` | modèles qui ont cette source |
+| `inServiceInCatalog` | parmi eux, Actif + Déprécié |
+| `catalogInServiceTotal` | Actif + Déprécié sur **tout** le catalogue unifié |
+| `inServiceCompletionPercent` | `round(inServiceInCatalog / catalogInServiceTotal * 100)` (camembert UI) |
+| `crossCoverage` | co-occurrence avec les autres sources (badges « Consolidés », dénominateur = `totalInCatalog`) |
+
+Cartes « Consolidation des sources » (`CONSOLIDATION_SOURCES`) : LLM Stats, EcoLogits, Compar:IA, COMPL-AI, **System Card**. MaydAI compte dans `sourcesFilled` / le tableau, **pas** dans ces 5 cartes. Warning fournisseur : `inServiceMissingSystemCardCount` (« actif(s)/déprécié(s) sans System Card »).
+
 ## 7. CSV COMPL-AI (une ligne par modèle)
 
 Saisie admin depuis `/admin/bench-llms`. Parser : `lib/bench-llm/compl-ai-csv.ts`.
@@ -189,3 +211,4 @@ Catalogue lu : `compl_ai_models` + évaluations + liens EcoLogits / Compar:IA / 
 - `matchComplAiModelId` (chat setup) fait un `ILIKE` sur `model_name` uniquement — pas le slug. Ambigu ou absent → `primary_model_id` null.
 - Docs historiques [PERPLEXITY_MODELS_IMPLEMENTATION.md](./PERPLEXITY_MODELS_IMPLEMENTATION.md) et [ENRICHISSEMENT_MODELS_IMPLEMENTATION.md](./ENRICHISSEMENT_MODELS_IMPLEMENTATION.md) : chemins admin anciens. Nouvelles APIs : `/api/admin/bench-llms` et `/api/admin/bench-llms/models/[id]`.
 - Cron Compar:IA : un `x-cron-secret` **faux** est rejeté même si un Bearer admin est présent (`hasRejectedCronSecret`).
+- Couverture « En activité » ≠ EcoLogits `is_active`. Le camembert est calé sur Actif+Déprécié ; les badges de consolidation utilisent `crossCoverage` (tous les modèles qui ont la source), pas `inServiceCrossCoverage`.

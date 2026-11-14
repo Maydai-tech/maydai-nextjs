@@ -6,11 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MaydAI is a Next.js 15 application for AI Act (EU) compliance management. It helps organizations assess and manage AI use cases, conduct risk evaluations, and generate compliance reports.
 
-**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), Mistral Agents (chat + RAG), OpenAI (rapports File Search), Stripe
+**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), Mistral Agents (chat + RAG), OpenAI (rapports File Search), Stripe. Runtime Node **24.x** (`.nvmrc`, `package.json` `engines`, CI E2E).
 
-**Docs techniques :** [docs/README.md](docs/README.md) — Chat IA, hub LLM, System Cards, auth API, monitoring, E2E, RAG AI Act.
+**Docs techniques :** [docs/README.md](docs/README.md) — Chat IA, hub LLM, System Cards, auth API, gouvernance Freemium, monitoring, E2E, RAG AI Act, contact Turnstile.
 
-Runbooks : [docs/README.md](docs/README.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). Monitoring : [docs/admin-monitoring.md](docs/admin-monitoring.md). E2E : [docs/e2e-playwright.md](docs/e2e-playwright.md). RAG veille AI Act : [docs/ai-act-rag.md](docs/ai-act-rag.md).
+Runbooks : [docs/README.md](docs/README.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). Gouvernance Freemium : [docs/freemium-governance.md](docs/freemium-governance.md). Monitoring : [docs/admin-monitoring.md](docs/admin-monitoring.md). E2E : [docs/e2e-playwright.md](docs/e2e-playwright.md). RAG veille AI Act : [docs/ai-act-rag.md](docs/ai-act-rag.md). Contact : [docs/contact-form-security.md](docs/contact-form-security.md).
 
 ## Development Commands
 
@@ -427,7 +427,9 @@ MAILJET_API_SECRET=
 ```
 
 Jobs / webhooks (prod) : `CRON_SECRET`, `INTERNAL_API_KEY`, `LLM_STATS_API_KEY`, `GOOGLE_DRIVE_*`.  
-Hub LLM : [docs/llm-models-hub.md](docs/llm-models-hub.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). RAG : [docs/ai-act-rag.md](docs/ai-act-rag.md).
+Contact public (prod) : `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`.  
+Gouvernance Freemium (prod) : Mailjet + `GET /api/cron/process-purges`.  
+Hub LLM : [docs/llm-models-hub.md](docs/llm-models-hub.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). RAG : [docs/ai-act-rag.md](docs/ai-act-rag.md). Gouvernance : [docs/freemium-governance.md](docs/freemium-governance.md). Contact : [docs/contact-form-security.md](docs/contact-form-security.md). Stripe Basil : [docs/api-auth-security.md](docs/api-auth-security.md).
 
 ### TypeScript
 - Path alias: `@/*` maps to project root
@@ -438,7 +440,7 @@ Hub LLM : [docs/llm-models-hub.md](docs/llm-models-hub.md). System Cards : [docs
 ### Next.js Configuration
 - ESLint disabled during production builds
 - Standalone output in production
-- CSP headers configured for GTM, CookieYes, Stripe
+- CSP headers configured for GTM, CookieYes, Stripe, Cloudflare Turnstile (`challenges.cloudflare.com`)
 - Automatic redirects for favicon and duplicate content
 
 ## Key Principles
