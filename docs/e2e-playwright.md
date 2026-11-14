@@ -1,6 +1,6 @@
 # Tests E2E Playwright
 
-Comment lancer, ce que CI fait vraiment, et les pièges (base partagée, mots de passe, rapports). Vérifié contre `playwright.config.ts`, `e2e/auth-helper.ts` et `.github/workflows/e2e-reusable.yml`.
+Comment lancer, ce que CI fait vraiment, et les pièges (base partagée, mots de passe, rapports, runtime Node). Vérifié contre `playwright.config.ts`, `e2e/auth-helper.ts`, `.github/workflows/e2e-reusable.yml`, `.nvmrc` et `package.json` `engines`.
 
 Le plan historique `docs/superpowers/plans/2026-05-29-e2e-test-workflow-redesign.md` décrit encore un déploiement HTML sur OVH : **ne plus le suivre**.
 
@@ -11,19 +11,21 @@ Couvrir les parcours UI (auth, registre, questionnaire, scoring, tracking) contr
 ## 2. Lancer en local
 
 ```bash
-npm run e2e          # Chromium, serveur local si PLAYWRIGHT_BASE_URL est localhost
-npm run e2e:ui       # UI Playwright
-npm run e2e:headed
-npm run e2e:debug
+pnpm e2e          # Chromium, serveur local si PLAYWRIGHT_BASE_URL est localhost
+pnpm e2e:ui       # UI Playwright
+pnpm e2e:headed
+pnpm e2e:debug
 ```
 
-Config : `playwright.config.ts` charge `.env.local`. `PLAYWRIGHT_BASE_URL` défaut `http://localhost:3000`. Si l’URL est locale, Playwright démarre `npm run dev` (sauf si un serveur tourne déjà, hors CI).
+Config : `playwright.config.ts` charge `.env.local`. `PLAYWRIGHT_BASE_URL` défaut `http://localhost:3000`. Si l’URL est locale, Playwright démarre `pnpm run dev` (sauf si un serveur tourne déjà, hors CI). Pas de `npm` : le projet est pnpm-only.
 
 Minimum : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`. En préprod protégée : `VERCEL_AUTOMATION_BYPASS_SECRET` (header `x-vercel-protection-bypass`).
 
 ## 3. CI (workflow réutilisable)
 
-`.github/workflows/e2e-reusable.yml` — `pnpm exec playwright test`, 2 workers, 2 retries, `failOnFlakyTests`.
+`.github/workflows/e2e-reusable.yml` — Node **24** (`actions/setup-node` `node-version: '24'`), `pnpm exec playwright test`, 2 workers, 2 retries, `failOnFlakyTests`.
+
+Aligné sur `.nvmrc` (`24`) et `package.json` `"engines": { "node": "24.x" }`. Le plan historique `docs/superpowers/plans/2026-05-29-e2e-test-workflow-redesign.md` cite encore Node 22 : **ne plus le suivre**.
 
 Secrets : URL / anon / service role Supabase, plus `OPENAI_API_KEY` et `STRIPE_SECRET_KEY` si les specs les touchent.
 
@@ -49,7 +51,10 @@ Le workflow le rappelle : la base Supabase préprod **est** la prod. Les specs i
 
 - **Base unique.** Un test qui oublie le teardown laisse des entreprises / cas d’usage en prod. Toujours identifier `@maydai-test.com`.
 - **Mot de passe unique.** Ne pas extraire une constante partagée entre fichiers.
+- **Node 24.** CI et `engines` pinent `24.x`. Un runner local en 22 peut passer Playwright et échouer plus tard sur une API Node 24-only. Utiliser `.nvmrc`.
 - **`e2e/old/`** n’est pas exécuté. Le modifier ne change pas CI.
 - **Rapport HTML public = régression.** Le lire via l’artifact GitHub (ou `playwright-report/` en local).
 - Notion : toute **création / modification / suppression** de spec Playwright doit mettre à jour la doc tests Notion (règle projet) — ce runbook repo ne remplace pas cette page.
 - **Landings partenaires.** `e2e/auth/signup.spec.ts` (`@prod`) teste `POST /api/auth/complete-signup` (payload minimal / complet). Aucune spec ne charge `/p/learning-gate` ni le merge UTM partenaire. Runbook : [signup-partner-landings.md](./signup-partner-landings.md).
+- **Formulaire contact.** Aucune spec Playwright sur `/contact` ni Turnstile. Runbook : [contact-form-security.md](./contact-form-security.md).
+- **Purge Freemium.** Aucune spec UI du sas 24 h. Les helpers E2E nettoient `user_device_sessions`. Runbook : [freemium-governance.md](./freemium-governance.md).

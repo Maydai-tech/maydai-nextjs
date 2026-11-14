@@ -32,6 +32,7 @@ if (auth.error) return auth.error
 |-------|--------|--------|
 | `GET /api/cron/sync-llm-stats` | `CRON_SECRET` | `Authorization: Bearer …` (égalité stricte) |
 | `GET /api/cron/sync-ecologits` | idem | idem |
+| `GET /api/cron/process-purges` | idem | idem (`*/15 * * * *`). Runbook : [freemium-governance.md](./freemium-governance.md) |
 | `GET /api/admin/comparia/sync` | `CRON_SECRET` | Bearer **ou** `x-cron-secret` (`timingSafeEqual`) |
 | `POST /api/admin/comparia/sync` | cron **ou** admin | si `x-cron-secret` est envoyé et faux → 401 même pour un admin |
 | `POST /api/webhooks/kb-update` | `INTERNAL_API_KEY` | `x-api-key` |
@@ -104,22 +105,47 @@ Trigger `ensure_role_security` → `prevent_role_escalation()` (`supabase/migrat
 
 Les invitations (`POST /api/collaboration/profile`) figent déjà `role: 'user'` côté API. Le trigger est la 2ᵉ ligne de défense si un client tape `profiles` en direct.
 
+### Accès entreprise (`user_companies`, novembre 2026, `#460`)
+
+La table `user_companies` n’a **pas** de colonne `is_active` (ne pas la confondre avec EcoLogits / Compar:IA / RAG). Révoquer un accès = **DELETE** de la ligne, pas un `UPDATE is_active = false` (rejeté par Postgres, l’UI admin croyait avoir révoqué).
+
+`userCanAccessDossierPath` (`lib/dossier-signed-url.ts`) teste uniquement l’existence de la ligne `user_id` + `company_id` (1er segment du path). Pas de flag « actif ».
+
+`PATCH /api/admin/users/[id]` — body (les clés peuvent se combiner ; le rôle a les gardes ci-dessus) :
+
+| Champ | Effet |
+|-------|--------|
+| `add_company_id` | upsert `{ user_id, company_id, role: 'user' }` (`onConflict: user_id,company_id`). 400 si l’entreprise n’existe pas |
+| `remove_company_id` | `DELETE` filtré `user_id` + `company_id` |
+| `company_ids` | `DELETE` toutes les lignes de l’utilisateur, puis upsert de la liste (tableau vide = plus aucun accès) |
+| `role` | update `profiles.role` (RBAC ci-dessus) |
+
+La réponse `companies[]` ne garde que les jointures `user_companies.companies` non nulles. `GET` du même path : même jointure, sans filtre `is_active`.
+
+`POST /api/profiles/[profileId]/collaborators` insert `{ user_id, company_id, role: 'user' }` — **sans** `is_active`. Ne pas le réintroduire : la colonne n’existe pas.
+
 ### Mistral / Stripe
 
-- `POST /api/mistral/generate-description` : Bearer obligatoire.
+- `POST /api/mistral/generate-description` : Bearer obligatoire. Agent lu **à l’appel** (`getDescriptionAgentId()`), pas au chargement du module. Détail : [chat-assistant-parcours.md](./chat-assistant-parcours.md).
 - `POST /api/stripe/create-checkout-session` : Bearer obligatoire. Le `userId` du body est **ignoré**. `client_reference_id`, `metadata.user_id` / `metadata.userId` et le customer Stripe sont calés sur `user.id` du JWT. Sans Bearer → 401, Stripe n’est pas appelé. (`#439`)
 - `GET /api/stripe/retrieve-session` : Bearer + le `session_id` doit appartenir à l’utilisateur (`client_reference_id` ou `metadata.user_id`). Sinon 403.
+- Période d’abonnement (**API Basil** `2025-08-27.basil`, `lib/stripe/config/client.ts`) : `current_period_start` / `current_period_end` sont sur **`items.data[0]`**, plus sur l’objet Subscription. Toujours passer par `getStripeSubscriptionPeriodIso` / `Unix` (`lib/stripe/utils/subscription-period.ts`). `syncSubscriptionFromStripe` **throw** si les deux dates manquent. Le webhook `customer.subscription.updated` omet simplement les champs nuls (n’invente pas now/+30 j).
 
 Les messages d’erreur Stripe côté client sont génériques (`lib/stripe/utils/error-handling.ts`) : ne pas renvoyer la stack Stripe au navigateur.
+
+Formulaire contact public (Turnstile, honeypot, TLD) : Server Action, pas une route `/api`. Runbook : [contact-form-security.md](./contact-form-security.md).
+
+Gouvernance Freemium (DELETE 202, confirm public, cron purge) : [freemium-governance.md](./freemium-governance.md). `GET` / `PATCH /api/admin/governance` : `verifyAdminAuth`. `GET` / `POST /api/governance/confirm-deletion` : **pas** de Bearer (jeton dans query/body).
 
 ### Inscription
 
 | Route | Auth | Notes |
 |-------|------|--------|
 | `POST /api/auth/check-email` | aucune | Existence dans `auth.users` (service role). Énumération d’e-mails possible. |
-| `POST /api/auth/complete-signup` | Bearer | Upsert `profiles` sur `user.id`. Acquisition `gclid` / `utm_*` : champ absent → `null`. |
+| `POST /api/auth/complete-signup` | Bearer | Upsert `profiles` sur `user.id` après `mergeCompleteSignupProfile` : champ JSON **absent** = valeur existante conservée (SIREN, téléphone, UTM). |
 | `POST /api/leads/website-direct` | Bearer | Lead `website_direct` si attribution utile et pas de `lead_id`. |
 | `POST /api/leads/link-to-user` | Bearer | 403 si l’e-mail du lead ≠ e-mail JWT. |
+| `GET /api/pappers/search?q=` | session | Recherche entreprise (settings / modal profil, clé `PAPPERS_API_KEY`). |
 
 Landings co-brandées (`/p/learning-gate`) : même wizard, UTM défaut partenaire. Runbook : [signup-partner-landings.md](./signup-partner-landings.md).
 
