@@ -1,5 +1,9 @@
 import { toTitleCase } from '@/lib/utils'
 import {
+  parseSheetSystemCardStatus,
+  type SystemCardStatus,
+} from '@/lib/validations/system-card'
+import {
   applyLifecycleStatusOverride,
   resolveProviderLifecycle,
   type ProviderLifecycle,
@@ -81,6 +85,7 @@ export type CanonicalBenchModel = {
   updated_at?: string | null
   release_date?: string | null
   lifecycle_status?: ProviderLifecycleStatus | null
+  system_card_status?: string | null
 }
 
 export type BenchEvaluationPresence = {
@@ -120,6 +125,7 @@ export type BenchModelMetrics = {
   llmStatsRank: number | null
   hasEcologits: boolean
   hasSystemCard: boolean
+  systemCardStatus: SystemCardStatus
 }
 
 export interface SystemCardRowLike {
@@ -191,6 +197,7 @@ export function buildBenchModelMetrics(params: {
   compariaRank?: number | null
   llmStatsRank?: number | null
   hasSystemCard?: boolean
+  systemCardStatus?: SystemCardStatus
   complAiTotal?: number
 }): BenchModelMetrics {
   const evaluations = params.evaluations ?? []
@@ -206,6 +213,7 @@ export function buildBenchModelMetrics(params: {
     llmStatsRank: params.llmStatsRank ?? null,
     hasEcologits: params.sources.ecologits,
     hasSystemCard,
+    systemCardStatus: hasSystemCard ? 'generated' : params.systemCardStatus === 'error_no_system_card' ? 'error_no_system_card' : 'missing',
   }
 }
 
@@ -462,6 +470,12 @@ function compareNullableReleaseDates(
   return applySortDirection(left.localeCompare(right), direction)
 }
 
+function systemCardSortWeight(status: SystemCardStatus | undefined): number {
+  if (status === 'generated') return 2
+  if (status === 'error_no_system_card') return 1
+  return 0
+}
+
 function primaryBenchSortDelta(
   a: UnifiedBenchModel,
   b: UnifiedBenchModel,
@@ -495,7 +509,7 @@ function primaryBenchSortDelta(
       )
     case 'systemCard':
       return applySortDirection(
-        Number(a.metrics.hasSystemCard) - Number(b.metrics.hasSystemCard),
+        systemCardSortWeight(a.metrics.systemCardStatus) - systemCardSortWeight(b.metrics.systemCardStatus),
         sortDirection,
       )
     default: {
@@ -613,6 +627,7 @@ export function buildUnifiedBenchModels(
         compariaRank,
         llmStatsRank: model.llm_leader_rank ?? null,
         hasSystemCard: systemCardSlugs.has(slug),
+        systemCardStatus: systemCardSlugs.has(slug) ? 'generated' : parseSheetSystemCardStatus(model.system_card_status),
         complAiTotal,
       }),
     }

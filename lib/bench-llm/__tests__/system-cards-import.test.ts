@@ -354,7 +354,14 @@ describe('importSystemCardsFromControlTower', () => {
       supabase: {
         from: jest.fn((table: string) => {
           if (table === 'compl_ai_models') {
-            return { select: () => ({ eq: () => ({ maybeSingle }) }) }
+            return {
+              select: () => ({ eq: () => ({ maybeSingle }) }),
+              update: () => ({
+                eq: () => ({
+                  select: async () => ({ data: [{ id: 'updated' }], error: null }),
+                }),
+              }),
+            }
           }
           return cardsTable(upsert)
         }),
@@ -410,7 +417,14 @@ describe('importSystemCardsFromControlTower', () => {
       supabase: {
         from: jest.fn((table: string) => {
           if (table === 'compl_ai_models') {
-            return { select: () => ({ eq: () => ({ maybeSingle }) }) }
+            return {
+              select: () => ({ eq: () => ({ maybeSingle }) }),
+              update: () => ({
+                eq: () => ({
+                  select: async () => ({ data: [{ id: 'updated' }], error: null }),
+                }),
+              }),
+            }
           }
           return cardsTable(upsert)
         }),
@@ -445,6 +459,11 @@ describe('importSystemCardsFromControlTower', () => {
           return {
             select: () => ({
               eq: () => ({ maybeSingle }),
+            }),
+            update: () => ({
+              eq: () => ({
+                select: async () => ({ data: [{ id: 'updated' }], error: null }),
+              }),
             }),
           }
         }
@@ -529,7 +548,14 @@ describe('importSystemCardsFromControlTower', () => {
       supabase: {
         from: jest.fn((table: string) => {
           if (table === 'compl_ai_models') {
-            return { select: () => ({ eq: () => ({ maybeSingle }) }) }
+            return {
+              select: () => ({ eq: () => ({ maybeSingle }) }),
+              update: () => ({
+                eq: () => ({
+                  select: async () => ({ data: [{ id: 'updated' }], error: null }),
+                }),
+              }),
+            }
           }
           return cardsTable(upsert)
         }),
@@ -574,7 +600,14 @@ describe('importSystemCardsFromControlTower', () => {
       supabase: {
         from: jest.fn((table: string) => {
           if (table === 'compl_ai_models') {
-            return { select: () => ({ eq: () => ({ maybeSingle }) }) }
+            return {
+              select: () => ({ eq: () => ({ maybeSingle }) }),
+              update: () => ({
+                eq: () => ({
+                  select: async () => ({ data: [{ id: 'updated' }], error: null }),
+                }),
+              }),
+            }
           }
           return cardsTable(upsert, { card_version_date: '2024-06-20' })
         }),
@@ -624,7 +657,14 @@ describe('importSystemCardsFromControlTower', () => {
       supabase: {
         from: jest.fn((table: string) => {
           if (table === 'compl_ai_models') {
-            return { select: () => ({ eq: () => ({ maybeSingle }) }) }
+            return {
+              select: () => ({ eq: () => ({ maybeSingle }) }),
+              update: () => ({
+                eq: () => ({
+                  select: async () => ({ data: [{ id: 'updated' }], error: null }),
+                }),
+              }),
+            }
           }
           return cardsTable(upsert)
         }),
@@ -685,7 +725,14 @@ describe('importSystemCardsFromControlTower', () => {
       supabase: {
         from: jest.fn((table: string) => {
           if (table === 'compl_ai_models') {
-            return { select: () => ({ eq: () => ({ maybeSingle }) }) }
+            return {
+              select: () => ({ eq: () => ({ maybeSingle }) }),
+              update: () => ({
+                eq: () => ({
+                  select: async () => ({ data: [{ id: 'updated' }], error: null }),
+                }),
+              }),
+            }
           }
           return cardsTable(upsert, {
             card_version_date: '2025-10-15',

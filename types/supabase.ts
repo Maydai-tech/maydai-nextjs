@@ -44,6 +44,7 @@ export type Database = {
           slug: string
           created_at: string
           updated_at: string
+          system_card_status: string
         }
         Insert: {
           id?: string
@@ -75,6 +76,7 @@ export type Database = {
           slug?: string
           created_at?: string
           updated_at?: string
+          system_card_status?: string
         }
         Update: {
           id?: string
@@ -106,6 +108,7 @@ export type Database = {
           slug?: string
           created_at?: string
           updated_at?: string
+          system_card_status?: string
         }
       }
 
