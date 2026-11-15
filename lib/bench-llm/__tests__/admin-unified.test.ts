@@ -158,6 +158,7 @@ describe('Bench LLMs admin unified registry', () => {
       llmStatsRank: 4,
       hasEcologits: true,
       hasSystemCard: true,
+      systemCardStatus: 'generated',
     })
     expect(withoutSystemCard?.metrics).toEqual({
       sourcesFilled: 5,
@@ -169,6 +170,7 @@ describe('Bench LLMs admin unified registry', () => {
       llmStatsRank: 4,
       hasEcologits: true,
       hasSystemCard: false,
+      systemCardStatus: 'missing',
     })
   })
 

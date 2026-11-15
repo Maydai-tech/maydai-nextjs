@@ -4,6 +4,11 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { CONTROL_TOWER_FOLDER_ID } from '@/lib/bench-llm/control-tower-csv'
 import { normalizeLlmModelSlug } from '@/lib/bench-llm/model-slug'
 import {
+  parseSheetSystemCardStatus,
+  STATUT_FICHE_ERREUR,
+  type SystemCardStatus,
+} from '@/lib/validations/system-card'
+import {
   escapeDriveName,
   getDriveClient,
   getDriveFileText,
@@ -21,6 +26,7 @@ export type ControlTowerImportRow = {
   hermesName: string
   markdownLink: string
   readyForImport: string
+  statutFicheTechnique?: string
 }
 
 export type DriveMarkdownRef = {
@@ -34,6 +40,7 @@ export type ImportSystemCardsResult = {
   inserted: number
   skipped: string[]
   errors: string[]
+  errorStatusesSynced?: number
 }
 
 export type ControlTowerStatusUpdate = {
@@ -141,6 +148,7 @@ export function parseControlTowerCsv(csvContent: string): ControlTowerImportRow[
       hermesName: cell(row, 'Nom du LLM (Standard Hermes/Fichier)'),
       markdownLink: markdownFileNameFromRow(row),
       readyForImport: cell(row, 'Prêt pour import'),
+      statutFicheTechnique: cell(row, 'Statut Fiche Technique'),
     }
   })
 }
@@ -395,6 +403,60 @@ export async function resolveModelIdentifier(
   throw new Error('Impossible de résoudre le slug du modèle')
 }
 
+async function syncModelSystemCardStatus(
+  supabase: SupabaseClient,
+  row: ControlTowerImportRow,
+  status: SystemCardStatus,
+): Promise<boolean> {
+  if (UUID_RE.test(row.idSupabase)) {
+    const { data, error } = await supabase
+      .from('compl_ai_models')
+      .update({ system_card_status: status })
+      .eq('id', row.idSupabase)
+      .select('id')
+    if (error) {
+      throw new Error(error.message || error.details || 'Erreur update system_card_status par id')
+    }
+    if (data && data.length > 0) return true
+  }
+
+  const model = await resolveModelIdentifier(supabase, row)
+  const { data: slugData, error: slugError } = await supabase
+    .from('compl_ai_models')
+    .update({ system_card_status: status })
+    .eq('slug', model.slug)
+    .select('id')
+  if (slugError) {
+    throw new Error(slugError.message || slugError.details || 'Erreur update system_card_status par slug')
+  }
+  return Boolean(slugData && slugData.length > 0)
+}
+
+export async function syncControlTowerSystemCardStatuses(
+  supabase: SupabaseClient,
+  preloadedRows?: ControlTowerImportRow[],
+): Promise<{ errorStatusesSynced: number }> {
+  let rows = preloadedRows
+  if (!rows) {
+    const csv = await downloadControlTowerCsvFromDrive()
+    rows = parseControlTowerCsv(csv)
+  }
+
+  let errorStatusesSynced = 0
+  for (const row of rows) {
+    if (parseSheetSystemCardStatus(row.statutFicheTechnique) !== 'error_no_system_card') continue
+    try {
+      const updated = await syncModelSystemCardStatus(supabase, row, 'error_no_system_card')
+      if (updated === true) errorStatusesSynced += 1
+    } catch (error) {
+      console.error('[LLM Control Tower Sync] sync error_no_system_card failed', error)
+    }
+  }
+
+  console.log('[LLM Control Tower Sync] Statuts erreur synchronisés en DB :', { errorStatusesSynced })
+  return { errorStatusesSynced }
+}
+
 export function controlTowerFolderId(): string {
   return process.env.GOOGLE_DRIVE_FOLDER_CONTROL_TOWER?.trim() || CONTROL_TOWER_FOLDER_ID
 }
@@ -638,9 +700,10 @@ export async function importSystemCardsFromControlTower(
   deps: SystemCardsImportDeps,
 ): Promise<ImportSystemCardsResult> {
   const csv = await deps.downloadControlTowerCsv()
-  const readyRows = parseControlTowerCsv(csv).filter((row) =>
-    isReadyForImport(row.readyForImport),
-  )
+  const allRows = parseControlTowerCsv(csv)
+  const { errorStatusesSynced } = await syncControlTowerSystemCardStatuses(deps.supabase, allRows)
+
+  const readyRows = allRows.filter((row) => isReadyForImport(row.readyForImport))
 
   console.log('[LLM System Cards Import] Lignes prêtes (Prêt pour import = Oui)', {
     processed: readyRows.length,
@@ -662,6 +725,19 @@ export async function importSystemCardsFromControlTower(
     })
 
     try {
+      if (parseSheetSystemCardStatus(row.statutFicheTechnique) === 'error_no_system_card') {
+        await syncModelSystemCardStatus(deps.supabase, row, 'error_no_system_card')
+        statusUpdates.push({
+          idSupabase: row.idSupabase,
+          hermesName: row.hermesName,
+          modelName: row.modelName,
+          success: true,
+          statutSupabase: STATUT_FICHE_ERREUR,
+          importedOn,
+        })
+        continue
+      }
+
       const markdownRef = resolveDriveMarkdownRef(row.markdownLink)
       console.log('[LLM System Cards Import] Fichier Markdown recherché', {
         modele: label,
@@ -815,6 +891,8 @@ export async function importSystemCardsFromControlTower(
       if (error) {
         throw new Error(error.message)
       }
+
+      await syncModelSystemCardStatus(deps.supabase, row, 'generated')
       inserted += 1
       statusUpdates.push({
         idSupabase: row.idSupabase,
@@ -864,5 +942,6 @@ export async function importSystemCardsFromControlTower(
     inserted,
     skipped,
     errors,
+    errorStatusesSynced,
   }
 }

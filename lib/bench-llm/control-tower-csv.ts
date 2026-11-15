@@ -7,6 +7,11 @@ import {
   type ProviderLifecycleStatus,
 } from '@/lib/bench-llm/provider-lifecycle'
 import { getSheetsClient, upsertTextFileInFolder } from '@/lib/google-drive'
+import {
+  parseSheetSystemCardStatus,
+  STATUT_FICHE_ERREUR,
+  type SystemCardStatus,
+} from '@/lib/validations/system-card'
 
 export const CONTROL_TOWER_FILE_NAME = 'MaydAI_LLM_Control_Tower.csv'
 export const CONTROL_TOWER_FOLDER_ID = '1XKR_mqtxiHOkXB3BGY5wszm3ODK1gNUZ'
@@ -50,6 +55,8 @@ export type ControlTowerModelRow = {
   model_name: string | null
   updated_at: string | null
   hasSystemCard: boolean
+  system_card_status?: string | null
+  systemCardStatus?: SystemCardStatus
   llmStatus: string
 }
 
@@ -60,6 +67,8 @@ type ComplAiModelPageRow = {
   model_name: string | null
   updated_at: string | null
   lifecycle_status: string | null
+  system_card_status?: string | null
+  systemCardStatus?: SystemCardStatus
 }
 
 export type ExportControlTowerCsvResult = {
@@ -138,7 +147,7 @@ const controlTowerSheetRowSchema = z.tuple([
   z.string(),
   z.string().min(1),
   z.literal(STATUT_BASE_IMPORTE),
-  z.enum([STATUT_FICHE_GENEREE, STATUT_FICHE_MANQUANTE]),
+  z.enum([STATUT_FICHE_GENEREE, STATUT_FICHE_MANQUANTE, STATUT_FICHE_ERREUR]),
   z.string(),
   z.string().min(1),
   z.string(),
@@ -170,7 +179,7 @@ async function resolveFirstControlTowerSheet(
 }
 
 export function buildControlTowerSheetRow(row: ControlTowerModelRow): string[] {
-  const statutFiche = row.hasSystemCard ? STATUT_FICHE_GENEREE : STATUT_FICHE_MANQUANTE
+  const statutFiche = row.hasSystemCard ? STATUT_FICHE_GENEREE : row.systemCardStatus === 'error_no_system_card' ? STATUT_FICHE_ERREUR : STATUT_FICHE_MANQUANTE
   return [
     row.id,
     row.model_provider ?? '',
@@ -412,7 +421,7 @@ async function fetchControlTowerRows(
       Promise.resolve(
         supabase
           .from('compl_ai_models')
-          .select('id, slug, model_provider, model_name, updated_at, lifecycle_status')
+          .select('id, slug, model_provider, model_name, updated_at, lifecycle_status, system_card_status')
           .order('slug', { ascending: true })
           .range(from, to),
       ),
@@ -422,6 +431,9 @@ async function fetchControlTowerRows(
   return models.map((model) => ({
     ...model,
     hasSystemCard: systemCardIds.has(model.slug),
+    systemCardStatus: systemCardIds.has(model.slug)
+      ? 'generated'
+      : parseSheetSystemCardStatus(model.system_card_status),
     llmStatus: resolveControlTowerLlmStatus({
       slug: model.slug,
       modelName: model.model_name,

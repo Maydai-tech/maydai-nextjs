@@ -7,6 +7,7 @@ import {
   exportControlTowerCsv,
   writeControlTowerLlmStatusColumn,
 } from '@/lib/bench-llm/control-tower-csv'
+import { syncControlTowerSystemCardStatuses } from '@/lib/bench-llm/system-cards-import'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest) {
     await writeControlTowerLlmStatusColumn(spreadsheetId)
 
     const supabase = createServiceClient()
+    const { errorStatusesSynced } = await syncControlTowerSystemCardStatuses(supabase)
     const modelsAppended = addedCount
     const result = await exportControlTowerCsv(supabase)
     const baseMessage = result.updated
@@ -58,6 +60,7 @@ export async function POST(request: NextRequest) {
       rowCount: result.rowCount,
       updated: result.updated,
       modelsAppended,
+      errorStatusesSynced,
     })
   } catch (error) {
     console.error('[API Admin Sync LLM Control]', error)

@@ -181,7 +181,7 @@ describe('GET /api/admin/bench-llms', () => {
         {
           table: 'compl_ai_models',
           columns:
-            'id, slug, model_name, model_provider, model_provider_id, model_type, updated_at, release_date, llm_leader_rank, comparia_rank, lifecycle_status',
+            'id, slug, model_name, model_provider, model_provider_id, model_type, updated_at, release_date, llm_leader_rank, comparia_rank, lifecycle_status, system_card_status',
         },
         {
           table: 'llm_system_cards',

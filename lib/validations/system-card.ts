@@ -41,6 +41,27 @@ export const SystemCardPillarSchema = z.object({
 })
 export type SystemCardPillar = z.infer<typeof SystemCardPillarSchema>
 
+export const SystemCardStatusSchema = z.enum(['generated', 'missing', 'error_no_system_card'])
+export type SystemCardStatus = z.infer<typeof SystemCardStatusSchema>
+
+export const STATUT_FICHE_GENEREE = 'Générée'
+export const STATUT_FICHE_MANQUANTE = 'Manquante'
+export const STATUT_FICHE_ERREUR = 'Erreur : Pas de System Card publiée'
+
+export function parseSheetSystemCardStatus(raw: string | null | undefined): SystemCardStatus {
+  const value = (raw || '').trim().toLowerCase()
+  if (value === 'générée' || value === 'generee' || value === 'generated') return 'generated'
+  if (
+    value === 'erreur : pas de system card publiée' ||
+    value === 'erreur : pas de system card publiee' ||
+    value === 'error_no_system_card' ||
+    value.startsWith('erreur')
+  ) {
+    return 'error_no_system_card'
+  }
+  return 'missing'
+}
+
 export const SystemCardSchema = z.object({
   id: z.string().uuid(),
   model_identifier: z.string(),

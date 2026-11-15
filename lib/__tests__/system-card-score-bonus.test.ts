@@ -29,7 +29,7 @@ describe('computeSystemCardPrefillBonus', () => {
   const negativeDocQuestion = [{ question_code: 'E5.N9.Q4', single_value: 'E5.N9.Q4.B' }]
   const positiveDocQuestion = [{ question_code: 'E5.N9.Q4', single_value: 'E5.N9.Q4.A' }]
 
-  test('attribue +1.5 si seul le préremplissage MaydAI est appliqué', () => {
+  test('attribue +2.5 si seul le préremplissage MaydAI est appliqué', () => {
     const bonus = computeSystemCardPrefillBonus(
       [
         {
@@ -40,10 +40,10 @@ describe('computeSystemCardPrefillBonus', () => {
       ],
       negativeDocQuestion
     )
-    expect(bonus).toBe(1.5)
+    expect(bonus).toBe(2.5)
   })
 
-  test('attribue +3 si les deux flags sont vrais mais la question n’est pas à 100 %', () => {
+  test('attribue +5 si les deux flags sont vrais mais la question n’est pas à 100 %', () => {
     const bonus = computeSystemCardPrefillBonus(
       [
         {
@@ -54,7 +54,7 @@ describe('computeSystemCardPrefillBonus', () => {
       ],
       negativeDocQuestion
     )
-    expect(bonus).toBe(3)
+    expect(bonus).toBe(5)
   })
 
   test('n’ajoute rien si la question est déjà validée à 100 %', () => {

@@ -328,6 +328,31 @@ function Presence({ available }: { available: boolean }) {
   )
 }
 
+function SystemCardStatusBadge({
+  status,
+  hasSystemCard,
+}: {
+  status?: 'generated' | 'missing' | 'error_no_system_card'
+  hasSystemCard: boolean
+}) {
+  const resolved = status ?? (hasSystemCard ? 'generated' : 'missing')
+  if (resolved === 'generated') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
+        <Check className="h-3.5 w-3.5" /> Générée
+      </span>
+    )
+  }
+  if (resolved === 'error_no_system_card') {
+    return (
+      <span title="Erreur : Pas de System Card publiée" className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-xs font-medium text-red-700">
+        Erreur
+      </span>
+    )
+  }
+  return <span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-500">Manquante</span>
+}
+
 function LifecycleBadge({ lifecycle }: { lifecycle: ProviderLifecycle | null }) {
   if (!lifecycle) return <span className="text-gray-400">—</span>
   const tone = {
@@ -511,7 +536,7 @@ function ProviderGroupRows({
                       <Presence available={model.metrics.hasEcologits} />
                     </td>
                     <td className="px-3 py-3 text-center">
-                      <Presence available={model.metrics.hasSystemCard} />
+                      <SystemCardStatusBadge status={model.metrics.systemCardStatus} hasSystemCard={model.metrics.hasSystemCard} />
                     </td>
                   </tr>
                   )
