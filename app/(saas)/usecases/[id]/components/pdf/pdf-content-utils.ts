@@ -1,3 +1,4 @@
+import { displayStatusLabel } from '@/lib/bench-llm/system-card-status-categories'
 import type { PDFReportData } from './types'
 
 function nonEmpty(value: unknown): value is string {
@@ -24,16 +25,7 @@ export function getPdfReportDateIso(data: PDFReportData): string {
   return data.generatedDate
 }
 
-export function formatComplianceStatusForPdf(status: string): string {
-  switch (status) {
-    case 'COMPLIANT':
-      return 'Conforme'
-    case 'PARTIAL':
-      return 'Partiel'
-    case 'NON_COMPLIANT':
-      return 'Non conforme'
-    default:
-      return status
-  }
+export function formatComplianceStatusForPdf(status: string, statusLabel?: string): string {
+  return displayStatusLabel(statusLabel, status)
 }
 

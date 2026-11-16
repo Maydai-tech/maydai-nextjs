@@ -646,6 +646,8 @@ export default function BenchLlmsAdminPage() {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
   const [openProviders, setOpenProviders] = useState<Set<string>>(new Set())
   const [importMode, setImportMode] = useState<'create' | 'update'>('update')
+  const [writePillars, setWritePillars] = useState(false)
+  const [replaceSeededPillars, setReplaceSeededPillars] = useState(false)
   const [createForm, setCreateForm] = useState({ model_name: '', model_provider: '', model_type: 'large-language-model', version: '' })
   const pageSize = 5000
 
@@ -804,6 +806,63 @@ export default function BenchLlmsAdminPage() {
     }
   }, [getAccessToken])
 
+  const regeneratePillars = useCallback(async () => {
+    const token = getAccessToken()
+    if (!token) return
+    const write = writePillars
+    const replaceSeededCard = write && replaceSeededPillars
+    if (write && !confirm(replaceSeededCard
+      ? 'Écrire les piliers de toutes les fiches, y compris claude-sonnet-4-5 ?'
+      : 'Écrire les piliers générés ? Les piliers existants de claude-sonnet-4-5 sont conservés.')) {
+      return
+    }
+    setAction('Régénération des piliers')
+    setError(null)
+    setMessage(null)
+    try {
+      const response = await fetch('/api/admin/llm-system-cards-pillars', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ write, replaceSeededCard }),
+      })
+      const payload = await parseApiJson<{
+        success?: boolean
+        error?: string
+        message?: string
+        report?: {
+          dryRun: boolean
+          parsed: number
+          failed: number
+          byRule: { partie: number; partie_without_1: number; english: number }
+          unmapped: Array<{ label: string; count: number }>
+          seedComparison: { existingPillarCount: number; generated: boolean; diffs: Array<{ pillarCode: string; summaryEqual: boolean }> } | null
+        }
+      }>(response)
+      if (!response.ok || payload.success === false || !payload.report) {
+        throw new Error(payload.error || payload.message || 'Régénération impossible')
+      }
+      const report = payload.report
+      const unmapped = report.unmapped.map((item) => `${item.label} (${item.count})`).join(', ')
+      const seed = report.seedComparison
+      const seedText = seed
+        ? ` Comparaison claude-sonnet-4-5 : ${seed.existingPillarCount} pilier(s) en base, génération ${seed.generated ? 'ok' : 'en échec'}, ${seed.diffs.filter((diff) => !diff.summaryEqual).length} résumé(s) différent(s).`
+        : ''
+      setMessage(
+        `${report.dryRun ? 'Simulation' : 'Écriture'} : ${report.parsed} découpée(s), ${report.failed} en échec. Règles : gabarit ${report.byRule.partie}, sans partie 1 ${report.byRule.partie_without_1}, anglais ${report.byRule.english}. Libellés non reconnus : ${unmapped || 'aucun'}.${seedText}`,
+      )
+      setToast({ message: payload.message || 'Régénération terminée.', type: 'success' })
+    } catch (regenerateError) {
+      const errorText = regenerateError instanceof Error ? regenerateError.message : 'Erreur inconnue'
+      setError(errorText)
+      setToast({ message: errorText, type: 'error' })
+    } finally {
+      setAction(null)
+    }
+  }, [getAccessToken, replaceSeededPillars, writePillars])
+
   const downloadTemplate = useCallback(async () => {
     const token = getAccessToken()
     if (!token) return
@@ -842,6 +901,15 @@ export default function BenchLlmsAdminPage() {
           <button onClick={() => callAction('Synchronisation LLM Stats', '/api/admin/llm-stats-sync-runs')} disabled={action != null} className="rounded-md bg-sky-700 px-3 py-2 text-sm font-medium text-white">Sync LLM Stats</button>
           <button onClick={() => callAction('Synchronisation LLM Control', '/api/admin/llm-control-tower-sync')} disabled={action != null} className="rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white">Sync LLM Control</button>
           <button onClick={() => callAction('Import System Cards', '/api/admin/llm-system-cards-import')} disabled={action != null} className="rounded-md bg-amber-700 px-3 py-2 text-sm font-medium text-white">Import System Cards</button>
+          <button onClick={() => void regeneratePillars()} disabled={action != null} className="rounded-md bg-amber-900 px-3 py-2 text-sm font-medium text-white">Régénérer les piliers</button>
+          <label className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-2 text-xs text-gray-700">
+            <input type="checkbox" checked={writePillars} onChange={(event) => setWritePillars(event.target.checked)} />
+            Écrire
+          </label>
+          <label className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-2 text-xs text-gray-700">
+            <input type="checkbox" checked={replaceSeededPillars} disabled={!writePillars} onChange={(event) => setReplaceSeededPillars(event.target.checked)} />
+            Remplacer claude-sonnet-4-5
+          </label>
           <button onClick={() => callAction('Synchronisation EcoLogits', '/api/admin/ecologits/sync')} disabled={action != null} className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white"><Leaf className="h-4 w-4" /> Sync EcoLogits</button>
           <button onClick={() => callAction('Synchronisation Compar:IA', '/api/admin/comparia/sync')} disabled={action != null} className="rounded-md bg-violet-700 px-3 py-2 text-sm font-medium text-white">Sync Compar:IA</button>
           <button onClick={() => callAction('Synchronisation COMPL-AI', '/api/admin/compl-ai/sync')} disabled={action != null} className="rounded-md bg-indigo-700 px-3 py-2 text-sm font-medium text-white">Sync COMPL-AI</button>

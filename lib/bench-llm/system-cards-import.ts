@@ -4,6 +4,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { CONTROL_TOWER_FOLDER_ID } from '@/lib/bench-llm/control-tower-csv'
 import { normalizeLlmModelSlug } from '@/lib/bench-llm/model-slug'
 import {
+  formatImportedPillarStatus,
+  parseSystemCardPillars,
+  PILLAR_PARSE_FAILURE,
+  type ParsedPillar,
+} from './system-card-pillars-parser'
+import {
   parseSheetSystemCardStatus,
   STATUT_FICHE_ERREUR,
   type SystemCardStatus,
@@ -696,6 +702,39 @@ export function createDefaultSystemCardsImportDeps(
   }
 }
 
+async function persistParsedPillars(
+  supabase: SupabaseClient,
+  slug: string,
+  markdown: string,
+): Promise<{ ok: true; unmappedCount: number } | { ok: false; message: string }> {
+  const parsed = parseSystemCardPillars(markdown)
+  if (!parsed.ok) return { ok: false, message: parsed.error }
+
+  const { data: card, error: cardError } = await supabase
+    .from('llm_system_cards')
+    .select('id')
+    .eq('model_identifier', slug)
+    .maybeSingle()
+  if (cardError) return { ok: false, message: cardError.message }
+  if (!card?.id) return { ok: false, message: 'Fiche introuvable après import.' }
+
+  const rows = parsed.pillars.map((pillar: ParsedPillar) => ({
+    system_card_id: card.id,
+    pillar_code: pillar.pillar_code,
+    pillar_title: pillar.pillar_title,
+    sections_covered: pillar.sections_covered,
+    summary: pillar.summary,
+    key_points: pillar.key_points,
+    ai_act_compliance: pillar.ai_act_compliance,
+    recommendations: pillar.recommendations,
+  }))
+  const { error } = await supabase
+    .from('llm_system_card_pillars')
+    .upsert(rows, { onConflict: 'system_card_id,pillar_code' })
+  if (error) return { ok: false, message: error.message }
+  return { ok: true, unmappedCount: parsed.unmappedLabels.length }
+}
+
 export async function importSystemCardsFromControlTower(
   deps: SystemCardsImportDeps,
 ): Promise<ImportSystemCardsResult> {
@@ -894,12 +933,29 @@ export async function importSystemCardsFromControlTower(
 
       await syncModelSystemCardStatus(deps.supabase, row, 'generated')
       inserted += 1
+      const pillarOutcome = await persistParsedPillars(deps.supabase, model.slug, markdown)
+      if (!pillarOutcome.ok) {
+        errors.push(`${label}: ${pillarOutcome.message}`)
+        statusUpdates.push({
+          idSupabase: row.idSupabase,
+          hermesName: row.hermesName,
+          modelName: row.modelName,
+          success: false,
+          errorMessage: 'piliers non générés',
+          statutSupabase: PILLAR_PARSE_FAILURE,
+          importedOn,
+        })
+        continue
+      }
       statusUpdates.push({
         idSupabase: row.idSupabase,
         hermesName: row.hermesName,
         modelName: row.modelName,
         success: true,
         importedOn,
+        statutSupabase: pillarOutcome.unmappedCount > 0
+          ? formatImportedPillarStatus(importedOn, pillarOutcome.unmappedCount)
+          : undefined,
       })
       console.log('[LLM System Cards Import] Upsert OK', {
         modele: label,

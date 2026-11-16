@@ -45,9 +45,11 @@ describe('pdf-content-utils', () => {
 
   describe('formatComplianceStatusForPdf', () => {
     test('traduit les statuts AI Act', () => {
-      expect(formatComplianceStatusForPdf('COMPLIANT')).toBe('Conforme')
-      expect(formatComplianceStatusForPdf('PARTIAL')).toBe('Partiel')
-      expect(formatComplianceStatusForPdf('NON_COMPLIANT')).toBe('Non conforme')
+      expect(formatComplianceStatusForPdf('COMPLIANT')).toBe('Documenté')
+      expect(formatComplianceStatusForPdf('PARTIAL')).toBe('Réserve')
+      expect(formatComplianceStatusForPdf('NON_COMPLIANT')).toBe('Non documenté')
+      expect(formatComplianceStatusForPdf('DOWNSTREAM', "À charge de l'Intégrateur")).toBe("À charge de l'Intégrateur")
+      expect(formatComplianceStatusForPdf('DOCUMENTED', '✅')).toBe('Documenté')
     })
   })
 })
