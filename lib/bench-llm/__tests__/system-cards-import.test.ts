@@ -55,6 +55,7 @@ import {
   importSystemCardsFromControlTower,
   writeControlTowerStatusesToSheet,
 } from '../system-cards-import'
+import { auditedMarkdown } from './system-card-markdown-fixtures'
 
 function cardsTable(
   upsert: jest.Mock,
@@ -64,9 +65,14 @@ function cardsTable(
   } | null = null,
 ) {
   return {
-    select: () => ({
+    select: (columns?: string) => ({
       eq: () => ({
-        maybeSingle: async () => ({ data: existing, error: null }),
+        maybeSingle: async () => {
+          if (columns?.trim() === 'id') {
+            return { data: { id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' }, error: null }
+          }
+          return { data: existing, error: null }
+        },
       }),
     }),
     upsert,
@@ -334,7 +340,7 @@ describe('importSystemCardsFromControlTower', () => {
 
   test('downloads a Drive URL by fileId without files.list', async () => {
     mockGetDriveFileText.mockResolvedValue({
-      content: '# Fiche Claude 3.7\nDate de la fiche : Juin 2024\n',
+      content: auditedMarkdown('# Fiche Claude 3.7\nDate de la fiche : Juin 2024'),
       name: 'Claude_3.7_2024-06-20.md',
     })
     const upsert = jest.fn(async () => ({ error: null }))
@@ -388,7 +394,7 @@ describe('importSystemCardsFromControlTower', () => {
       expect.objectContaining({
         model_identifier: 'claude-3-7-sonnet',
         model_name: 'Claude 3.7 Sonnet',
-        source_markdown: '# Fiche Claude 3.7\nDate de la fiche : Juin 2024',
+        source_markdown: auditedMarkdown('# Fiche Claude 3.7\nDate de la fiche : Juin 2024'),
         source_file_name: 'Claude_3.7_2024-06-20.md',
         card_version_date: '2024-06-20',
         card_date_label: 'Juin 2024',
@@ -400,7 +406,7 @@ describe('importSystemCardsFromControlTower', () => {
 
   test('prefers JJ/MM/AAAA card_date_label over the file-name month', async () => {
     mockGetDriveFileText.mockResolvedValue({
-      content: '# Fiche\n**Date de la fiche :** 19/08/2026\n',
+      content: auditedMarkdown('# Fiche\n**Date de la fiche :** 19/08/2026'),
       name: 'Claude_3.7_2024-06-20.md',
     })
     const upsert = jest.fn(async () => ({ error: null }))
@@ -480,7 +486,7 @@ describe('importSystemCardsFromControlTower', () => {
           'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb,Broken,broken,,Oui',
         ].join('\n'),
       downloadMarkdown: async (ref) => {
-        if (ref.fileName === MARKDOWN_FILE_NAME) return '# Fiche Claude\n'
+        if (ref.fileName === MARKDOWN_FILE_NAME) return auditedMarkdown('# Fiche Claude')
         throw new Error(missingDriveFileMessage(ref.fileName ?? ''))
       },
     })
@@ -494,7 +500,7 @@ describe('importSystemCardsFromControlTower', () => {
         model_identifier: 'claude-sonnet-4-5',
         model_name: 'Claude Sonnet 4.5',
         provider: 'Anthropic',
-        source_markdown: '# Fiche Claude',
+        source_markdown: auditedMarkdown('# Fiche Claude'),
         source_file_name: MARKDOWN_FILE_NAME,
         card_version_date: '2024-06-20',
         card_month: '2024-06-01',
@@ -531,7 +537,7 @@ describe('importSystemCardsFromControlTower', () => {
       throw new Error('Sheets indisponible')
     })
     mockGetDriveFileText.mockResolvedValue({
-      content: '# Fiche Claude 3.7\n',
+      content: auditedMarkdown('# Fiche Claude 3.7'),
       name: 'Claude_3.7_2024-06-20.md',
     })
     const upsert = jest.fn(async () => ({ error: null }))
@@ -640,7 +646,7 @@ describe('importSystemCardsFromControlTower', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined)
     const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined)
     mockGetDriveFileText.mockResolvedValue({
-      content: '# Fiche Haiku\nDate de la fiche : XX Octobre 2025\n',
+      content: auditedMarkdown('# Fiche Haiku\nDate de la fiche : XX Octobre 2025'),
       name: 'Claude_Haiku_4.5_2025-10-XX_03_Audit_FR_V2.md',
     })
     const upsert = jest.fn(async () => ({ error: null }))
@@ -708,7 +714,7 @@ describe('importSystemCardsFromControlTower', () => {
   test('overwrites when both stored and incoming dates are approximate in the same month', async () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined)
     mockGetDriveFileText.mockResolvedValue({
-      content: '# Fiche Haiku\nDate de la fiche : XX Octobre 2025\n',
+      content: auditedMarkdown('# Fiche Haiku\nDate de la fiche : XX Octobre 2025'),
       name: 'Claude_Haiku_4.5_2025-10-XX_03_Audit_FR_V2.md',
     })
     const upsert = jest.fn(async () => ({ error: null }))
@@ -760,6 +766,89 @@ describe('importSystemCardsFromControlTower', () => {
       }),
     )
     warnSpy.mockRestore()
+  })
+
+  test('keeps the card and marks column E when the pillar split fails', async () => {
+    const upsert = jest.fn(async () => ({ error: null }))
+    const writeControlTowerStatuses = jest.fn(async () => undefined)
+    const maybeSingle = jest.fn(async () => ({
+      data: { slug: 'claude-3-7-sonnet', model_name: 'Claude 3.7 Sonnet', model_provider: 'Anthropic' },
+      error: null,
+    }))
+    const result = await importSystemCardsFromControlTower({
+      supabase: {
+        from: jest.fn((table: string) => {
+          if (table === 'compl_ai_models') {
+            return {
+              select: () => ({ eq: () => ({ maybeSingle }) }),
+              update: () => ({
+                eq: () => ({
+                  select: async () => ({ data: [{ id: 'updated' }], error: null }),
+                }),
+              }),
+            }
+          }
+          return cardsTable(upsert)
+        }),
+      } as never,
+      downloadControlTowerCsv: async () =>
+        [
+          'ID Supabase,Nom du LLM (Standard Supabase),Lien du fichier Markdown généré,Prêt pour import',
+          'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa,Claude 3.7 Sonnet,fiche.md,Oui',
+        ].join('\n'),
+      downloadMarkdown: async () => '# Seulement un titre',
+      writeControlTowerStatuses,
+    })
+
+    expect(result.inserted).toBe(1)
+    expect(result.success).toBe(false)
+    expect(result.errors[0]).toContain('cinq parties')
+    expect(writeControlTowerStatuses).toHaveBeenCalledWith([
+      expect.objectContaining({ statutSupabase: 'Échec : piliers non générés', success: false }),
+    ])
+    expect(upsert).toHaveBeenCalledTimes(1)
+  })
+
+  test('reports unrecognized status labels without failing the import', async () => {
+    const upsert = jest.fn(async () => ({ error: null }))
+    const writeControlTowerStatuses = jest.fn(async () => undefined)
+    const maybeSingle = jest.fn(async () => ({
+      data: { slug: 'claude-3-7-sonnet', model_name: 'Claude 3.7 Sonnet', model_provider: 'Anthropic' },
+      error: null,
+    }))
+    const result = await importSystemCardsFromControlTower({
+      supabase: {
+        from: jest.fn((table: string) => {
+          if (table === 'compl_ai_models') {
+            return {
+              select: () => ({ eq: () => ({ maybeSingle }) }),
+              update: () => ({
+                eq: () => ({
+                  select: async () => ({ data: [{ id: 'updated' }], error: null }),
+                }),
+              }),
+            }
+          }
+          return cardsTable(upsert)
+        }),
+      } as never,
+      downloadControlTowerCsv: async () =>
+        [
+          'ID Supabase,Nom du LLM (Standard Supabase),Lien du fichier Markdown généré,Prêt pour import',
+          'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa,Claude 3.7 Sonnet,fiche.md,Oui',
+        ].join('\n'),
+      downloadMarkdown: async () => auditedMarkdown('# Fiche', 'Formule libre'),
+      writeControlTowerStatuses,
+    })
+
+    expect(result).toMatchObject({ success: true, inserted: 1, errors: [] })
+    expect(writeControlTowerStatuses).toHaveBeenCalledWith([
+      expect.objectContaining({
+        success: true,
+        statutSupabase: expect.stringMatching(/^Importé le \d{4}-\d{2}-\d{2} \(5 statuts non reconnus\)$/),
+      }),
+    ])
+    expect(upsert).toHaveBeenCalledTimes(2)
   })
 })
 

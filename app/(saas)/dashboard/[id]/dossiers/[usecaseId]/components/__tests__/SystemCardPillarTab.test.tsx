@@ -61,7 +61,7 @@ describe('SystemCardPillarTab', () => {
     )
 
     expect(screen.getByText('Résumé d’audit')).toBeInTheDocument()
-    expect(screen.getByText('Conforme')).toBeInTheDocument()
+      expect(screen.getByText('Documenté')).toBeInTheDocument()
     expect(screen.getByText(/Fournisseur/)).toBeInTheDocument()
     expect(screen.getByText('Archiver')).toBeInTheDocument()
     expect(screen.queryByText('Point A')).not.toBeInTheDocument()
