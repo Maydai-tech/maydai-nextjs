@@ -50,6 +50,29 @@ function createSupabaseMock(matchedModelId: string | null) {
         }
       }
 
+      if (table === 'compl_ai_models_visible') {
+        modelLookups += 1
+        return {
+          select: jest.fn().mockReturnThis(),
+          ilike: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          limit: jest.fn().mockReturnThis(),
+          maybeSingle: jest.fn().mockResolvedValue({
+            data: matchedModelId && modelLookups === 1 ? { id: matchedModelId } : null,
+            error: null,
+          }),
+        }
+      }
+
+      if (table === 'llm_model_aliases') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          ilike: jest.fn().mockReturnThis(),
+          limit: jest.fn().mockReturnThis(),
+          maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+        }
+      }
+
       if (table === 'compl_ai_models') {
         modelLookups += 1
         return {

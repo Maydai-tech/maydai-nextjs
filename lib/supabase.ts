@@ -205,7 +205,31 @@ export interface ComplAIModel {
   country?: string | null
   created_at: string
   updated_at: string
+  role?: string | null
+  reference_model_id?: string | null
+  base_model_id?: string | null
+  merged_into_id?: string | null
+  deprecation_date?: string | null
+  retirement_date?: string | null
+  replacement_model_id?: string | null
+  lifecycle_source_url?: string | null
+  lifecycle_checked_at?: string | null
+  visibility_override?: boolean | null
+  search_labels?: string[]
 }
+
+export interface LlmModelAlias {
+  id: string
+  model_id: string
+  source: 'llm_stats' | 'comparia' | 'ecologits' | 'api' | 'huggingface' | 'manual'
+  source_id: string
+  raw_name: string
+  normalized_name: string
+  match_method: 'exact' | 'slug' | 'rule' | 'manual'
+  created_at: string
+}
+
+export interface ComplAiModelVisible extends ComplAIModel {}
 
 export interface ComplAIBenchmark {
   id: string

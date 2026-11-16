@@ -26,6 +26,7 @@ interface SystemCardPillarTabProps {
   acceptedFormats?: string
   onFileSelected?: (file: File) => void
   onFileDelete?: () => void
+  referenceMention?: string | null
   onUpdateSuccess: (payload?: {
     scoreChange?: {
       previousScore: number | null
@@ -50,6 +51,7 @@ export default function SystemCardPillarTab({
   acceptedFormats = '.pdf,.docx,.md',
   onFileSelected,
   onFileDelete,
+  referenceMention = null,
   onUpdateSuccess,
 }: SystemCardPillarTabProps) {
   const { getAccessToken } = useAuth()
@@ -183,9 +185,12 @@ export default function SystemCardPillarTab({
 
       <div className="border border-gray-200 rounded-xl bg-white p-4 sm:p-6 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-200 pb-4">
-          <div className="flex items-center gap-2 min-w-0">
-            <Sparkles className="w-5 h-5 text-[#0080A3] shrink-0" aria-hidden />
-            <h4 className="font-bold text-gray-900 text-base">Analyse MaydAI (pré-chargée)</h4>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#0080A3] shrink-0" aria-hidden />
+              <h4 className="font-bold text-gray-900 text-base">Analyse MaydAI (pré-chargée)</h4>
+            </div>
+            {referenceMention ? <p className="mt-1 text-sm text-gray-600">{referenceMention}</p> : null}
           </div>
           {maydaiApplied && (
             <div className="flex items-center gap-3 self-start sm:self-auto">

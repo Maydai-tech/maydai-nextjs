@@ -81,12 +81,14 @@ function statusColor(status: string): string {
 interface SystemCardPdfSectionProps {
   pillar: SystemCardPillar
   userNotes?: string
+  referenceMention?: string | null
 }
 
-export function SystemCardPdfSection({ pillar, userNotes }: SystemCardPdfSectionProps) {
+export function SystemCardPdfSection({ pillar, userNotes, referenceMention }: SystemCardPdfSectionProps) {
   return (
     <View style={sectionStyles.sectionContainer}>
       <Text style={sectionStyles.title}>Fiche d’audit MaydAI — {pillar.pillar_title}</Text>
+      {referenceMention ? <Text style={sectionStyles.subtitle}>{referenceMention}</Text> : null}
       <Text style={sectionStyles.subtitle}>Sections analysées : {pillar.sections_covered}</Text>
       <Text style={sectionStyles.summaryText}>{pillar.summary}</Text>
 

@@ -90,7 +90,8 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
         return (
           model.model_name.toLowerCase().includes(searchLower) ||
           provider.name.toLowerCase().includes(searchLower) ||
-          (model.model_type?.toLowerCase().includes(searchLower) ?? false)
+          (model.model_type?.toLowerCase().includes(searchLower) ?? false) ||
+          (model.search_labels ?? []).some((label) => label.toLowerCase().includes(searchLower))
         )
       })
       

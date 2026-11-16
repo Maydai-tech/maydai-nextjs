@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { normalizeLlmModelSlug } from '@/lib/bench-llm/model-slug'
+import { followMergedModelId, type AliasRecord } from '@/lib/bench-llm/model-lineage'
 
 const DEFAULT_LLM_STATS_BASE_URL = 'https://api.llm-stats.com/stats'
 const MODELS_PAGE_LIMIT = 200
@@ -97,12 +98,15 @@ interface ExistingModelRow {
   gpqa_score: number | null
   aime_2025_score: number | null
   llm_leader_rank: number | null
+  merged_into_id?: string | null
 }
 
 type ExistingModelsIndex = {
   byLlmStatsId: Map<string, ExistingModelRow>
   bySlug: Map<string, ExistingModelRow>
   byProviderAndName: Map<string, ExistingModelRow>
+  modelsById: Map<string, ExistingModelRow>
+  aliases: AliasRecord[]
 }
 
 export interface LlmStatsModelRecord {
@@ -520,7 +524,11 @@ async function ensureProvider(
 async function loadExistingModels(
   supabase: SupabaseClient,
 ): Promise<ExistingModelsIndex> {
-  const [{ data, error }, { data: sourceIds, error: sourceError }] = await Promise.all([
+  const [
+    { data, error },
+    { data: sourceIds, error: sourceError },
+    { data: aliasRows, error: aliasError },
+  ] = await Promise.all([
     supabase.from('compl_ai_models').select(`
       id,
       slug,
@@ -537,11 +545,16 @@ async function loadExistingModels(
       model_size,
       gpqa_score,
       aime_2025_score,
-      llm_leader_rank
+      llm_leader_rank,
+      merged_into_id
     `),
     supabase
       .from('llm_model_source_ids')
       .select('model_id, source_id')
+      .eq('source', 'llm_stats'),
+    supabase
+      .from('llm_model_aliases')
+      .select('model_id, source, source_id, normalized_name, raw_name')
       .eq('source', 'llm_stats'),
   ])
 
@@ -550,6 +563,9 @@ async function loadExistingModels(
   }
   if (sourceError) {
     throw new Error(`Erreur récupération llm_model_source_ids: ${sourceError.message}`)
+  }
+  if (aliasError) {
+    throw new Error(`Erreur récupération llm_model_aliases: ${aliasError.message}`)
   }
 
   const modelsById = new Map(
@@ -580,7 +596,13 @@ async function loadExistingModels(
     }
   }
 
-  return { byLlmStatsId, bySlug, byProviderAndName }
+  return { byLlmStatsId, bySlug, byProviderAndName, modelsById, aliases: (aliasRows ?? []).map((alias) => ({
+    modelId: alias.model_id,
+    source: alias.source,
+    sourceId: alias.source_id,
+    normalizedName: alias.normalized_name,
+    rawName: alias.raw_name,
+  })) }
 }
 
 function findExistingLlmStatsModel(
@@ -588,6 +610,24 @@ function findExistingLlmStatsModel(
   model: LlmStatsModelSummary,
   providerId: number,
 ): { row: ExistingModelRow; matchMethod: 'exact' | 'slug' } | null {
+  const lineage = new Map(
+    [...existingModels.modelsById.entries()].map(([id, row]) => [id, {
+      id,
+      mergedIntoId: row.merged_into_id ?? null,
+    }]),
+  )
+  const normalizedName = normalizeLlmModelSlug(model.name)
+  const nameMatches = normalizedName
+    ? existingModels.aliases.filter((item) => item.normalizedName === normalizedName)
+    : []
+  const alias = existingModels.aliases.find((item) => item.sourceId === model.id)
+    ?? (nameMatches.length === 1 ? nameMatches[0] : null)
+  if (alias) {
+    const resolvedId = followMergedModelId(alias.modelId, lineage)
+    const resolved = existingModels.modelsById.get(resolvedId)
+    if (resolved) return { row: resolved, matchMethod: 'exact' }
+  }
+
   const bySourceId = existingModels.byLlmStatsId.get(model.id)
   if (bySourceId) return { row: bySourceId, matchMethod: 'exact' }
 
@@ -617,6 +657,7 @@ function rememberExistingModel(
   if (row.llm_stats_id) existingModels.byLlmStatsId.set(row.llm_stats_id, row)
   if (row.slug) existingModels.bySlug.set(row.slug, row)
   existingModels.byProviderAndName.set(existingModelKey(providerId, row.model_name), row)
+  existingModels.modelsById.set(row.id, row)
 }
 
 async function upsertLlmStatsSourceLink(
@@ -714,7 +755,7 @@ export async function syncLlmStatsModels(
       if (!existing) {
         const { data, error } = await supabase
           .from('compl_ai_models')
-          .insert(databaseRecordFor(record))
+          .insert({ ...databaseRecordFor(record), role: 'a_classer' })
           .select('id, slug')
           .single()
 
@@ -737,6 +778,18 @@ export async function syncLlmStatsModels(
           matchMethod: 'exact',
           previousSourceId: null,
         })
+        const normalizedName = normalizeLlmModelSlug(model.name) ?? model.name.toLowerCase()
+        const { error: aliasError } = await supabase.from('llm_model_aliases').upsert({
+          model_id: createdId,
+          source: 'llm_stats',
+          source_id: record.llm_stats_id,
+          raw_name: model.name,
+          normalized_name: normalizedName,
+          match_method: 'exact',
+        }, { onConflict: 'source,source_id' })
+        if (aliasError) {
+          errors.push(`Alias ${model.organization.name}/${model.name}: ${aliasError.message}`)
+        }
 
         createdModels.push({
           id: createdId,

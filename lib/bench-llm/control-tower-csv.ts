@@ -23,7 +23,6 @@ const STATUT_FICHE_GENEREE = 'Générée'
 const STATUT_FICHE_MANQUANTE = 'Manquante'
 const STATUT_BASE_IMPORTE = 'Importé'
 export const STATUT_LLM_HEADER = 'Statut LLM'
-const STATUT_FICHE_HEADER = 'Statut Fiche Technique'
 
 const LIFECYCLE_STATUSES = new Set<ProviderLifecycleStatus>([
   'active',
@@ -153,7 +152,7 @@ const controlTowerSheetRowSchema = z.tuple([
   z.string(),
   z.string(),
   z.string(),
-  z.enum(['NONE', 'CREATE']),
+  z.enum(['NONE', 'CREATE', 'CLASSER']),
   z.enum(['Déjà importé', 'Non']),
 ])
 
@@ -227,7 +226,11 @@ export async function appendMissingModelsToSheet(spreadsheetId: string): Promise
 
   const rowsToAdd = models
     .filter((model) => !existingIds.has(model.id))
-    .map((model) => buildControlTowerSheetRow(model))
+    .map((model) => {
+      const row = buildControlTowerSheetRow(model)
+      row[11] = 'CLASSER'
+      return row
+    })
 
   if (rowsToAdd.length === 0) return 0
 
@@ -250,9 +253,6 @@ export async function writeControlTowerLlmStatusColumn(
   rowsOrSpreadsheetId: string | Array<{ id: string; llmStatus: string }>,
 ): Promise<{ updatedCells: number; inserted: boolean }> {
   const explicitSheetId = typeof rowsOrSpreadsheetId === 'string'
-  const rows = explicitSheetId
-    ? await fetchControlTowerRows(createControlTowerServiceClient())
-    : rowsOrSpreadsheetId
   const spreadsheetId = explicitSheetId
     ? z.string().trim().min(1).parse(rowsOrSpreadsheetId)
     : process.env.GOOGLE_SHEETS_CONTROL_TOWER_ID?.trim()
@@ -260,63 +260,203 @@ export async function writeControlTowerLlmStatusColumn(
     return { updatedCells: 0, inserted: false }
   }
 
+  const rows = explicitSheetId
+    ? await fetchControlTowerRows(createControlTowerServiceClient())
+    : rowsOrSpreadsheetId
   const sheets = getSheetsClient()
-  const { title, sheetId } = await resolveFirstControlTowerSheet(sheets, spreadsheetId)
-
+  const { title } = await resolveFirstControlTowerSheet(sheets, spreadsheetId)
   const quotedTitle = quoteSheetTitle(title)
   const headerRes = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range: `${quotedTitle}!1:1`,
   })
   const headers = (headerRes.data.values?.[0] ?? []).map((header) => String(header ?? ''))
-  let statusCol = headers.findIndex((header) => foldHeader(header) === foldHeader(STATUT_LLM_HEADER))
-  let inserted = false
+  const statusCol = headers.findIndex((header) => foldHeader(header) === foldHeader(STATUT_LLM_HEADER))
+  if (statusCol < 0) return { updatedCells: 0, inserted: false }
 
-  if (statusCol < 0) {
-    const ficheCol = headers.findIndex((header) => foldHeader(header) === foldHeader(STATUT_FICHE_HEADER))
-    const insertAt = ficheCol >= 0 ? ficheCol + 1 : headers.length
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId,
-      requestBody: {
-        requests: [
-          {
-            insertDimension: {
-              range: {
-                sheetId,
-                dimension: 'COLUMNS',
-                startIndex: insertAt,
-                endIndex: insertAt + 1,
-              },
-              inheritFromBefore: insertAt > 0,
-            },
-          },
-        ],
-      },
+  const column = columnIndexToA1(statusCol)
+  const [idRes, statusRes] = await Promise.all([
+    sheets.spreadsheets.values.get({ spreadsheetId, range: `${quotedTitle}!A:A` }),
+    sheets.spreadsheets.values.get({ spreadsheetId, range: `${quotedTitle}!${column}:${column}` }),
+  ])
+  const idRows = idRes.data.values ?? []
+  const statusRows = statusRes.data.values ?? []
+  const statusById = new Map(rows.map((row) => [row.id, row.llmStatus]))
+  const data: { range: string; values: string[][] }[] = []
+  for (let index = 1; index < idRows.length; index += 1) {
+    const id = String(idRows[index]?.[0] ?? '').trim()
+    const current = String(statusRows[index]?.[0] ?? '').trim()
+    const next = statusById.get(id)
+    if (!id || current || !next) continue
+    data.push({
+      range: `${quotedTitle}!${column}${index + 1}`,
+      values: [[next]],
     })
-    statusCol = insertAt
-    inserted = true
+  }
+  if (data.length === 0) return { updatedCells: 0, inserted: false }
+
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId,
+    requestBody: { valueInputOption: 'RAW', data },
+  })
+  return { updatedCells: data.length, inserted: false }
+}
+
+export async function readControlTowerSheetMatrix(spreadsheetId: string): Promise<string[][]> {
+  const parsedSpreadsheetId = z.string().trim().min(1).parse(spreadsheetId)
+  const sheets = getSheetsClient()
+  const { title } = await resolveFirstControlTowerSheet(sheets, parsedSpreadsheetId)
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId: parsedSpreadsheetId,
+    range: `${quoteSheetTitle(title)}!A:AA`,
+  })
+  return response.data.values ?? []
+}
+
+export async function writeControlTowerTaxonomyStatuses(
+  spreadsheetId: string,
+  updates: Array<{ sheetRow: number; value: string }>,
+): Promise<number> {
+  if (updates.length === 0) return 0
+  const parsedSpreadsheetId = z.string().trim().min(1).parse(spreadsheetId)
+  const sheets = getSheetsClient()
+  const { title } = await resolveFirstControlTowerSheet(sheets, parsedSpreadsheetId)
+  const quotedTitle = quoteSheetTitle(title)
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: parsedSpreadsheetId,
+    requestBody: {
+      valueInputOption: 'RAW',
+      data: updates.map((update) => ({
+        range: `${quotedTitle}!S${update.sheetRow}`,
+        values: [[update.value]],
+      })),
+    },
+  })
+  return updates.length
+}
+
+export async function writeControlTowerCells(
+  spreadsheetId: string,
+  updates: Array<{ sheetRow: number; column: string; value: string }>,
+): Promise<number> {
+  if (updates.length === 0) return 0
+  const parsedSpreadsheetId = z.string().trim().min(1).parse(spreadsheetId)
+  const sheets = getSheetsClient()
+  const { title } = await resolveFirstControlTowerSheet(sheets, parsedSpreadsheetId)
+  const quotedTitle = quoteSheetTitle(title)
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: parsedSpreadsheetId,
+    requestBody: {
+      valueInputOption: 'RAW',
+      data: updates.map((update) => ({
+        range: `${quotedTitle}!${update.column}${update.sheetRow}`,
+        values: [[update.value]],
+      })),
+    },
+  })
+  return updates.length
+}
+
+export function controlTowerFicheLabel(status: string | null | undefined): string {
+  if (status === 'generated') return STATUT_FICHE_GENEREE
+  if (status === 'error_no_system_card') return STATUT_FICHE_ERREUR
+  return STATUT_FICHE_MANQUANTE
+}
+
+export async function syncControlTowerDerivedColumns(spreadsheetId: string): Promise<{
+  ficheCells: number
+  visibilityCells: number
+  popularityCells: number
+}> {
+  const parsedSpreadsheetId = z.string().trim().min(1).parse(spreadsheetId)
+  const supabase = createControlTowerServiceClient()
+  const sheets = getSheetsClient()
+  const { title } = await resolveFirstControlTowerSheet(sheets, parsedSpreadsheetId)
+  const quotedTitle = quoteSheetTitle(title)
+  const [idRes, models, visibleRows, usecaseRows] = await Promise.all([
+    sheets.spreadsheets.values.get({
+      spreadsheetId: parsedSpreadsheetId,
+      range: `${quotedTitle}!A:A`,
+    }),
+    fetchAllPages<{ id: string; system_card_status: string | null }>(
+      (from, to) => Promise.resolve(
+        supabase
+          .from('compl_ai_models')
+          .select('id, system_card_status')
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
+      'Lecture compl_ai_models',
+    ),
+    fetchAllPages<{ id: string }>(
+      (from, to) => Promise.resolve(
+        supabase
+          .from('compl_ai_models_visible')
+          .select('id')
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
+      'Lecture compl_ai_models_visible',
+    ),
+    fetchAllPages<{ primary_model_id: string }>(
+      (from, to) => Promise.resolve(
+        supabase
+          .from('usecases')
+          .select('primary_model_id')
+          .not('primary_model_id', 'is', null)
+          .is('soft_deleted_at', null)
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
+      'Lecture usecases',
+    ),
+  ])
+
+  const statusById = new Map(models.map((model) => [model.id, model.system_card_status]))
+  const visibleIds = new Set(visibleRows.map((row) => row.id))
+  const popularity = new Map<string, number>()
+  for (const row of usecaseRows) {
+    popularity.set(row.primary_model_id, (popularity.get(row.primary_model_id) ?? 0) + 1)
   }
 
-  const idRes = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `${quotedTitle}!A:A`,
-  })
-  const idRows = idRes.data.values ?? []
-  const statusById = new Map(rows.map((row) => [row.id, row.llmStatus]))
-  const column = columnIndexToA1(statusCol)
-  const values = idRows.map((row, index) => {
-    if (index === 0) return [STATUT_LLM_HEADER]
-    return [statusById.get(String(row[0] ?? '').trim()) ?? '']
+  const idRows = (idRes.data.values ?? []).slice(1)
+  if (idRows.length === 0) {
+    return { ficheCells: 0, visibilityCells: 0, popularityCells: 0 }
+  }
+  const lastRow = idRows.length + 1
+  const fiche: string[][] = []
+  const visibility: string[][] = []
+  const counts: number[][] = []
+  for (const row of idRows) {
+    const id = String(row?.[0] ?? '').trim()
+    if (!id) {
+      fiche.push([''])
+      visibility.push([''])
+      counts.push([0])
+      continue
+    }
+    fiche.push([controlTowerFicheLabel(statusById.get(id))])
+    visibility.push([visibleIds.has(id) ? 'Oui' : 'Non'])
+    counts.push([popularity.get(id) ?? 0])
+  }
+
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: parsedSpreadsheetId,
+    requestBody: {
+      valueInputOption: 'RAW',
+      data: [
+        { range: `${quotedTitle}!F2:F${lastRow}`, values: fiche },
+        { range: `${quotedTitle}!Z2:Z${lastRow}`, values: visibility },
+        { range: `${quotedTitle}!AA2:AA${lastRow}`, values: counts },
+      ],
+    },
   })
 
-  await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range: `${quotedTitle}!${column}1:${column}${Math.max(values.length, 1)}`,
-    valueInputOption: 'RAW',
-    requestBody: { values },
-  })
-
-  return { updatedCells: Math.max(values.length - 1, 0), inserted }
+  return {
+    ficheCells: fiche.length,
+    visibilityCells: visibility.length,
+    popularityCells: counts.length,
+  }
 }
 
 export function formatControlTowerDate(value: string | null | undefined): string {
@@ -447,7 +587,6 @@ export async function exportControlTowerCsv(
   supabase: SupabaseClient,
 ): Promise<ExportControlTowerCsvResult> {
   const rows = await fetchControlTowerRows(supabase)
-  await writeControlTowerLlmStatusColumn(rows)
   const csv = buildControlTowerCsv(rows)
   const folderId =
     process.env.GOOGLE_DRIVE_FOLDER_CONTROL_TOWER?.trim() || CONTROL_TOWER_FOLDER_ID

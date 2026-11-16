@@ -2,6 +2,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import { exactEcoLogitsMatchKey, normalizeEcoLogitsIdentifier, normalizeEcoLogitsProvider } from './normalization'
 import { flattenEcoLogitsEstimate } from './parsing'
+import { createUnclassifiedModel } from '@/lib/bench-llm/create-unclassified-model'
+import { resolveAliasTargetId, type AliasRecord, type LineageModel } from '@/lib/bench-llm/model-lineage'
 import {
   ECOLOGITS_ELECTRICITY_ZONE,
   ECOLOGITS_OUTPUT_TOKENS,
@@ -17,7 +19,7 @@ const ESTIMATION_CONCURRENCY = 5
 
 type TriggerSource = 'admin' | 'cron'
 type EcoModelRow = { id: string; provider: string; name: string }
-type MaydaiModelRow = { id: string; model_name: string; model_provider: string | null }
+type MaydaiModelRow = { id: string; model_name: string; model_provider: string | null; merged_into_id?: string | null }
 type ExistingLinkRow = { ecologits_model_id: string; maydai_model_id: string; match_method: 'exact' | 'manual' }
 
 export function buildCatalogModelRow(model: EcoLogitsCatalogModel, now: string) {
@@ -41,10 +43,15 @@ export function planExactEcoLogitsLinks(
   ecoModels: EcoModelRow[],
   maydaiModels: MaydaiModelRow[],
   existingLinks: ExistingLinkRow[],
+  aliases: readonly AliasRecord[] = [],
 ) {
   const linkedEcoIds = new Set(existingLinks.map((link) => link.ecologits_model_id))
   const linkedMaydaiIds = new Set(existingLinks.map((link) => link.maydai_model_id))
   const maydaiByKey = new Map<string, MaydaiModelRow[]>()
+  const lineage = new Map<string, LineageModel>(maydaiModels.map((model) => [model.id, {
+    id: model.id,
+    mergedIntoId: model.merged_into_id ?? null,
+  }]))
 
   for (const model of maydaiModels) {
     if (!model.model_provider) continue
@@ -61,6 +68,21 @@ export function planExactEcoLogitsLinks(
   }> = []
   for (const model of ecoModels) {
     if (linkedEcoIds.has(model.id)) continue
+    const aliasTarget = resolveAliasTargetId(aliases, [...lineage.values()], {
+      source: 'ecologits',
+      sourceId: model.id,
+      normalizedName: normalizeEcoLogitsIdentifier(model.name),
+    })
+    if (aliasTarget && !linkedMaydaiIds.has(aliasTarget)) {
+      newLinks.push({
+        ecologits_model_id: model.id,
+        maydai_model_id: aliasTarget,
+        match_method: 'exact',
+      })
+      linkedEcoIds.add(model.id)
+      linkedMaydaiIds.add(aliasTarget)
+      continue
+    }
     const matches = maydaiByKey.get(exactEcoLogitsMatchKey(model.provider, model.name)) ?? []
     const available = matches.filter((match) => !linkedMaydaiIds.has(match.id))
     if (available.length !== 1) continue
@@ -179,23 +201,63 @@ async function createExactLinks(
   supabase: SupabaseClient,
   ecoModels: EcoModelRow[],
 ): Promise<number> {
-  const [{ data: maydaiRows, error: maydaiError }, { data: linkRows, error: linksError }] =
+  const [{ data: maydaiRows, error: maydaiError }, { data: linkRows, error: linksError }, { data: aliasRows, error: aliasError }] =
     await Promise.all([
-      supabase.from('compl_ai_models').select('id, model_name, model_provider'),
+      supabase.from('compl_ai_models').select('id, model_name, model_provider, merged_into_id'),
       supabase
         .from('ecologits_model_links')
         .select('ecologits_model_id, maydai_model_id, match_method'),
+      supabase
+        .from('llm_model_aliases')
+        .select('model_id, source, source_id, normalized_name')
+        .eq('source', 'ecologits'),
     ])
 
   if (maydaiError) throw maydaiError
   if (linksError) throw linksError
+  if (aliasError) throw aliasError
 
+  const aliases = ((aliasRows ?? []) as Array<{
+    model_id: string
+    source: string
+    source_id: string
+    normalized_name: string
+  }>).map((alias): AliasRecord => ({
+    modelId: alias.model_id,
+    source: alias.source,
+    sourceId: alias.source_id,
+    normalizedName: alias.normalized_name,
+  }))
+  const maydaiModels = (maydaiRows ?? []) as MaydaiModelRow[]
   const now = new Date().toISOString()
   const newLinks = planExactEcoLogitsLinks(
     ecoModels,
-    (maydaiRows ?? []) as MaydaiModelRow[],
+    maydaiModels,
     (linkRows ?? []) as ExistingLinkRow[],
+    aliases,
   ).map((link) => ({ ...link, updated_at: now }))
+
+  const linkedEcoIds = new Set([
+    ...((linkRows ?? []) as ExistingLinkRow[]).map((link) => link.ecologits_model_id),
+    ...newLinks.map((link) => link.ecologits_model_id),
+  ])
+  for (const model of ecoModels) {
+    if (linkedEcoIds.has(model.id)) continue
+    const modelId = await createUnclassifiedModel(supabase, {
+      modelName: model.name,
+      provider: model.provider,
+      source: 'ecologits',
+      sourceId: model.id,
+      rawName: model.name,
+    })
+    newLinks.push({
+      ecologits_model_id: model.id,
+      maydai_model_id: modelId,
+      match_method: 'exact',
+      updated_at: now,
+    })
+    linkedEcoIds.add(model.id)
+  }
 
   if (newLinks.length === 0) return 0
   const { error } = await supabase.from('ecologits_model_links').insert(newLinks)

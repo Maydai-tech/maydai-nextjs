@@ -79,6 +79,7 @@ export function PDFCanonicalItemBlock({ item, baseUrl }: PDFCanonicalItemBlockPr
           <SystemCardPdfSection
             pillar={item.systemCardSection.pillar}
             userNotes={item.systemCardSection.userNotes}
+            referenceMention={item.systemCardSection.referenceMention}
           />
         </View>
       ) : null}
