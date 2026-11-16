@@ -149,7 +149,7 @@ describe('appendMissingModelsToSheet', () => {
           '',
           '2024-10-22',
           '',
-          'CREATE',
+          'CLASSER',
           'Non',
         ]],
       },

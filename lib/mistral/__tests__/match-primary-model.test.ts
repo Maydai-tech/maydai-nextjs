@@ -25,11 +25,15 @@ describe('matchComplAiModelId', () => {
     expect(exact.ilike).toHaveBeenCalledWith('model_name', 'Mistral Large')
   })
 
-  test('fait une recherche partielle si l’exact échoue', async () => {
+  test('fait une recherche partielle si l’exact et l’alias échouent', async () => {
     const exact = createIlikeChain({ data: null, error: null })
+    const alias = createIlikeChain({ data: null, error: null })
     const fuzzy = createIlikeChain({ data: { id: MODEL_ID }, error: null })
     const supabase = {
-      from: jest.fn().mockReturnValueOnce(exact).mockReturnValueOnce(fuzzy),
+      from: jest.fn()
+        .mockReturnValueOnce(exact)
+        .mockReturnValueOnce(alias)
+        .mockReturnValueOnce(fuzzy),
     }
 
     const id = await matchComplAiModelId(supabase as never, 'GPT-4')

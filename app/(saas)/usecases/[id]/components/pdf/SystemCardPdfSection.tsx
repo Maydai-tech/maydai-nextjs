@@ -1,5 +1,6 @@
 import React from 'react'
 import { Text, View, StyleSheet } from '@react-pdf/renderer'
+import { statusColorName } from '@/lib/bench-llm/system-card-status-categories'
 import type { AiActComplianceItem, SystemCardPillar } from '@/lib/validations/system-card'
 import { colors, fonts } from './styles'
 import { formatComplianceStatusForPdf } from './pdf-content-utils'
@@ -61,12 +62,16 @@ const sectionStyles = StyleSheet.create({
 })
 
 function statusColor(status: string): string {
-  switch (status) {
-    case 'COMPLIANT':
+  switch (statusColorName(status)) {
+    case 'green':
       return colors.success
-    case 'PARTIAL':
+    case 'blue':
+      return colors.primary
+    case 'gray':
+      return colors.gray[500]
+    case 'orange':
       return colors.warning
-    case 'NON_COMPLIANT':
+    case 'red':
       return colors.error
     default:
       return colors.gray[700]
@@ -76,12 +81,14 @@ function statusColor(status: string): string {
 interface SystemCardPdfSectionProps {
   pillar: SystemCardPillar
   userNotes?: string
+  referenceMention?: string | null
 }
 
-export function SystemCardPdfSection({ pillar, userNotes }: SystemCardPdfSectionProps) {
+export function SystemCardPdfSection({ pillar, userNotes, referenceMention }: SystemCardPdfSectionProps) {
   return (
     <View style={sectionStyles.sectionContainer}>
       <Text style={sectionStyles.title}>Fiche d’audit MaydAI — {pillar.pillar_title}</Text>
+      {referenceMention ? <Text style={sectionStyles.subtitle}>{referenceMention}</Text> : null}
       <Text style={sectionStyles.subtitle}>Sections analysées : {pillar.sections_covered}</Text>
       <Text style={sectionStyles.summaryText}>{pillar.summary}</Text>
 
@@ -97,7 +104,7 @@ export function SystemCardPdfSection({ pillar, userNotes }: SystemCardPdfSection
           <Text style={sectionStyles.colArticle}>{item.article}</Text>
           <Text style={sectionStyles.colApp}>{item.application}</Text>
           <Text style={[sectionStyles.colStatus, { color: statusColor(item.status) }]}>
-            {formatComplianceStatusForPdf(item.status)}
+            {formatComplianceStatusForPdf(item.status, item.status_label)}
           </Text>
         </View>
       ))}

@@ -3,6 +3,7 @@
 const mockVerifyAdminAuth = jest.fn()
 const mockExportControlTowerCsv = jest.fn()
 const mockAppendMissingModelsToSheet = jest.fn()
+const mockSyncControlTowerDerivedColumns = jest.fn()
 const mockWriteControlTowerLlmStatusColumn = jest.fn()
 const mockSyncControlTowerSystemCardStatuses = jest.fn()
 const mockCreateClient = jest.fn((..._args: unknown[]) => ({ service: true }))
@@ -14,6 +15,7 @@ jest.mock('@/lib/admin-auth', () => ({
 jest.mock('@/lib/bench-llm/control-tower-csv', () => ({
   exportControlTowerCsv: (...args: unknown[]) => mockExportControlTowerCsv(...args),
   appendMissingModelsToSheet: (...args: unknown[]) => mockAppendMissingModelsToSheet(...args),
+  syncControlTowerDerivedColumns: (...args: unknown[]) => mockSyncControlTowerDerivedColumns(...args),
   writeControlTowerLlmStatusColumn: (...args: unknown[]) => mockWriteControlTowerLlmStatusColumn(...args),
 }))
 
@@ -82,6 +84,11 @@ describe('POST /api/admin/llm-control-tower-sync', () => {
   test('appends missing models, refreshes statuses, then exports the CSV', async () => {
     process.env.GOOGLE_SHEETS_CONTROL_TOWER_ID = ' sheet-id '
     mockAppendMissingModelsToSheet.mockResolvedValue(2)
+    mockSyncControlTowerDerivedColumns.mockResolvedValue({
+      ficheCells: 14,
+      visibilityCells: 14,
+      popularityCells: 14,
+    })
     mockWriteControlTowerLlmStatusColumn.mockResolvedValue({ updatedCells: 14, inserted: false })
     mockSyncControlTowerSystemCardStatuses.mockResolvedValue({ errorStatusesSynced: 11 })
     mockExportControlTowerCsv.mockResolvedValue({
@@ -94,11 +101,15 @@ describe('POST /api/admin/llm-control-tower-sync', () => {
 
     expect(response.status).toBe(200)
     expect(mockAppendMissingModelsToSheet).toHaveBeenCalledWith('sheet-id')
+    expect(mockSyncControlTowerDerivedColumns).toHaveBeenCalledWith('sheet-id')
     expect(mockWriteControlTowerLlmStatusColumn).toHaveBeenCalledWith('sheet-id')
     expect(mockCreateClient).toHaveBeenCalledWith('http://localhost:54321', 'service-key')
     expect(mockSyncControlTowerSystemCardStatuses).toHaveBeenCalledWith({ service: true })
     expect(mockExportControlTowerCsv).toHaveBeenCalledWith({ service: true })
     expect(mockAppendMissingModelsToSheet.mock.invocationCallOrder[0]).toBeLessThan(
+      mockSyncControlTowerDerivedColumns.mock.invocationCallOrder[0],
+    )
+    expect(mockSyncControlTowerDerivedColumns.mock.invocationCallOrder[0]).toBeLessThan(
       mockWriteControlTowerLlmStatusColumn.mock.invocationCallOrder[0],
     )
     expect(mockWriteControlTowerLlmStatusColumn.mock.invocationCallOrder[0]).toBeLessThan(
@@ -121,6 +132,11 @@ describe('POST /api/admin/llm-control-tower-sync', () => {
   test('returns 500 when the export fails', async () => {
     process.env.GOOGLE_SHEETS_CONTROL_TOWER_ID = 'sheet-id'
     mockAppendMissingModelsToSheet.mockResolvedValue(0)
+    mockSyncControlTowerDerivedColumns.mockResolvedValue({
+      ficheCells: 0,
+      visibilityCells: 0,
+      popularityCells: 0,
+    })
     mockWriteControlTowerLlmStatusColumn.mockResolvedValue({ updatedCells: 1, inserted: false })
     mockSyncControlTowerSystemCardStatuses.mockResolvedValue({ errorStatusesSynced: 0 })
     mockExportControlTowerCsv.mockRejectedValue(new Error('Drive indisponible'))

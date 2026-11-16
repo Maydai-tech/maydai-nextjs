@@ -70,7 +70,14 @@ interface UseCase {
   questionnaire_version?: string | number | null
   status?: string | null
   llm_model_version?: string | null
-  compl_ai_models?: { slug?: string | null; model_name?: string | null } | null
+  compl_ai_models?: {
+    slug?: string | null
+    model_name?: string | null
+    reference_model_id?: string | null
+    merged_into_id?: string | null
+    card_slug?: string | null
+    card_mention?: string | null
+  } | null
 }
 
 interface UseCaseNextStepsPayload {
@@ -327,7 +334,10 @@ export default function DossierDetailPage() {
         setInitialTextContents(textData)
 
         const modelIdentifier =
-          usecaseData?.compl_ai_models?.slug || usecaseData?.llm_model_version || ''
+          usecaseData?.compl_ai_models?.card_slug
+          || usecaseData?.compl_ai_models?.slug
+          || usecaseData?.llm_model_version
+          || ''
         if (modelIdentifier) {
           const pillarCodes: SystemCardPillarCode[] = [
             'doc_technique',
@@ -941,6 +951,7 @@ export default function DossierDetailPage() {
           userApplied={Boolean(doc.userCompletionApplied)}
           halfPoints={halfPoints}
           initialUserNotes={notes}
+          referenceMention={useCase?.compl_ai_models?.card_mention ?? null}
           fileUrl={doc.fileUrl}
           isUploading={uploading[docType.key]}
           isDeleting={deleting[docType.key]}

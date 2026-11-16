@@ -1,7 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckCircle2, AlertTriangle, XCircle, FileText, Sparkles } from 'lucide-react'
+import { FileText, Sparkles } from 'lucide-react'
+import {
+  displayStatusLabel,
+  statusColorName,
+} from '@/lib/bench-llm/system-card-status-categories'
 import { useAuth } from '@/lib/auth'
 import ComplianceFileUpload from '@/components/ComplianceFileUpload'
 import UploadedFileDisplay from '@/components/UploadedFileDisplay'
@@ -22,6 +26,7 @@ interface SystemCardPillarTabProps {
   acceptedFormats?: string
   onFileSelected?: (file: File) => void
   onFileDelete?: () => void
+  referenceMention?: string | null
   onUpdateSuccess: (payload?: {
     scoreChange?: {
       previousScore: number | null
@@ -46,6 +51,7 @@ export default function SystemCardPillarTab({
   acceptedFormats = '.pdf,.docx,.md',
   onFileSelected,
   onFileDelete,
+  referenceMention = null,
   onUpdateSuccess,
 }: SystemCardPillarTabProps) {
   const { getAccessToken } = useAuth()
@@ -58,27 +64,21 @@ export default function SystemCardPillarTab({
     setUserNotes(initialUserNotes)
   }, [initialUserNotes])
 
-  const renderStatusBadge = (status: string) => {
-    switch (status) {
-      case 'COMPLIANT':
-        return (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded">
-            <CheckCircle2 className="w-3.5 h-3.5" aria-hidden /> Conforme
-          </span>
-        )
-      case 'PARTIAL':
-        return (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded">
-            <AlertTriangle className="w-3.5 h-3.5" aria-hidden /> Partiel
-          </span>
-        )
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-700 bg-rose-50 px-2 py-1 rounded">
-            <XCircle className="w-3.5 h-3.5" aria-hidden /> Non conforme
-          </span>
-        )
-    }
+  const renderStatusBadge = (status: string, statusLabel?: string) => {
+    const color = statusColorName(status)
+    const tone = {
+      green: 'text-emerald-700 bg-emerald-50',
+      blue: 'text-sky-800 bg-sky-50',
+      gray: 'text-gray-600 bg-gray-100',
+      orange: 'text-amber-800 bg-amber-50',
+      red: 'text-rose-700 bg-rose-50',
+      neutral: 'text-gray-800 bg-white border border-gray-300',
+    }[color]
+    return (
+      <span className={`inline-flex items-center text-xs font-semibold px-2 py-1 rounded ${tone}`}>
+        {displayStatusLabel(statusLabel, status)}
+      </span>
+    )
   }
 
   const postCompletion = async (body: Record<string, unknown>) => {
@@ -185,9 +185,12 @@ export default function SystemCardPillarTab({
 
       <div className="border border-gray-200 rounded-xl bg-white p-4 sm:p-6 shadow-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-200 pb-4">
-          <div className="flex items-center gap-2 min-w-0">
-            <Sparkles className="w-5 h-5 text-[#0080A3] shrink-0" aria-hidden />
-            <h4 className="font-bold text-gray-900 text-base">Analyse MaydAI (pré-chargée)</h4>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-[#0080A3] shrink-0" aria-hidden />
+              <h4 className="font-bold text-gray-900 text-base">Analyse MaydAI (pré-chargée)</h4>
+            </div>
+            {referenceMention ? <p className="mt-1 text-sm text-gray-600">{referenceMention}</p> : null}
           </div>
           {maydaiApplied && (
             <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -238,7 +241,7 @@ export default function SystemCardPillarTab({
                         <td className="p-2.5 font-medium">{item.exigence}</td>
                         <td className="p-2.5 text-gray-500 whitespace-nowrap">{item.article}</td>
                         <td className="p-2.5 text-gray-600">{item.application}</td>
-                        <td className="p-2.5">{renderStatusBadge(item.status)}</td>
+                        <td className="p-2.5">{renderStatusBadge(item.status, item.status_label)}</td>
                       </tr>
                     ))}
                   </tbody>

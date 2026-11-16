@@ -321,7 +321,8 @@ export async function POST(request: NextRequest) {
               model_name: modelInfo.name,
               model_provider: modelInfo.provider,
               model_type: modelInfo.type,
-              version: modelInfo.version
+              version: modelInfo.version,
+              role: 'a_classer',
             })
             .select()
             .single()

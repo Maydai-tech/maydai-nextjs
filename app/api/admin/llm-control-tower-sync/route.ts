@@ -5,6 +5,7 @@ import { verifyAdminAuth } from '@/lib/admin-auth'
 import {
   appendMissingModelsToSheet,
   exportControlTowerCsv,
+  syncControlTowerDerivedColumns,
   writeControlTowerLlmStatusColumn,
 } from '@/lib/bench-llm/control-tower-csv'
 import { syncControlTowerSystemCardStatuses } from '@/lib/bench-llm/system-cards-import'
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
     const addedCount = await appendMissingModelsToSheet(spreadsheetId)
     console.log(`[Sync LLM Control] ${addedCount} nouveaux modèles ajoutés au Sheet.`)
 
+    await syncControlTowerDerivedColumns(spreadsheetId)
     await writeControlTowerLlmStatusColumn(spreadsheetId)
 
     const supabase = createServiceClient()

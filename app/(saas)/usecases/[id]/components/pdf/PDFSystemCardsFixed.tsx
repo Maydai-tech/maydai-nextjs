@@ -39,7 +39,11 @@ export function PDFSystemCardsFixed({ data }: PDFSystemCardsFixedProps) {
           ) : null}
           {pageSections.map((section) => (
             <View key={section.pillar.id}>
-              <SystemCardPdfSection pillar={section.pillar} userNotes={section.userNotes} />
+              <SystemCardPdfSection
+                pillar={section.pillar}
+                userNotes={section.userNotes}
+                referenceMention={section.referenceMention}
+              />
             </View>
           ))}
           <PDFFooter pageNumber={11 + pageIndex} />

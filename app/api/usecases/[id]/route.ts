@@ -149,12 +149,30 @@ export async function GET(
     if (useCase.primary_model_id) {
       const { data: model } = await supabase
         .from('compl_ai_models')
-        .select('id, model_name, model_provider, model_type, version, slug')
+        .select('id, model_name, model_provider, model_type, version, slug, reference_model_id, merged_into_id')
         .eq('id', useCase.primary_model_id)
         .single()
 
       if (model) {
-        useCase.compl_ai_models = model
+        const targetId = model.merged_into_id || model.reference_model_id
+        useCase.compl_ai_models = {
+          ...model,
+          card_slug: model.slug,
+          card_mention: null as string | null,
+        }
+        if (targetId) {
+          const { data: reference } = await supabase
+            .from('compl_ai_models')
+            .select('model_name, slug')
+            .eq('id', targetId)
+            .maybeSingle()
+          if (reference?.slug) {
+            useCase.compl_ai_models.card_slug = reference.slug
+            useCase.compl_ai_models.card_mention = reference.model_name && reference.model_name !== model.model_name
+              ? `Fiche de ${reference.model_name}`
+              : null
+          }
+        }
       }
     }
 

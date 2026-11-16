@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { findCompariaHubLinks, type ParsedCompariaModel } from '@/lib/comparia/import'
+import { createUnclassifiedModel } from '@/lib/bench-llm/create-unclassified-model'
+import type { AliasRecord } from '@/lib/bench-llm/model-lineage'
 
 type CanonicalRow = {
   id: string
@@ -69,6 +71,7 @@ export async function persistCompariaCatalog(
       { data: canonicalModels, error: canonicalError },
       { data: existingRows, error: existingError },
       { data: llmStatsLinks, error: sourceError },
+      { data: aliasRows, error: aliasError },
     ] = await Promise.all([
       supabase.from('compl_ai_models').select('id, model_name, model_provider, slug'),
       supabase
@@ -78,10 +81,15 @@ export async function persistCompariaCatalog(
         .from('llm_model_source_ids')
         .select('model_id, source_id')
         .eq('source', 'llm_stats'),
+      supabase
+        .from('llm_model_aliases')
+        .select('model_id, source, source_id, normalized_name')
+        .eq('source', 'comparia'),
     ])
     if (canonicalError) throw canonicalError
     if (existingError) throw existingError
     if (sourceError) throw sourceError
+    if (aliasError) throw aliasError
 
     const llmStatsIdsByModel = new Map<string, string[]>()
     for (const link of (llmStatsLinks ?? []) as SourceIdRow[]) {
@@ -96,6 +104,17 @@ export async function persistCompariaCatalog(
       ((canonicalModels ?? []) as CanonicalRow[]).map((model) => ({
         ...model,
         llm_stats_ids: llmStatsIdsByModel.get(model.id) ?? [],
+      })),
+      ((aliasRows ?? []) as Array<{
+        model_id: string
+        source: string
+        source_id: string
+        normalized_name: string
+      }>).map((alias): AliasRecord => ({
+        modelId: alias.model_id,
+        source: alias.source,
+        sourceId: alias.source_id,
+        normalizedName: alias.normalized_name,
       })),
     )
 
@@ -123,6 +142,18 @@ export async function persistCompariaCatalog(
     const existingBySource = new Map(
       ((existingRows ?? []) as CompariaCatalogRow[]).map((row) => [row.source_id, row]),
     )
+    for (const row of params.rows) {
+      if (hubLinks.has(row.source_id)) continue
+      const existing = existingBySource.get(row.source_id)
+      if (existing?.match_method === 'manual' && existing.maydai_model_id) continue
+      const modelId = await createUnclassifiedModel(supabase, {
+        modelName: row.source_id,
+        provider: row.organisation,
+        source: 'comparia',
+        sourceId: row.source_id,
+      })
+      hubLinks.set(row.source_id, { modelId, matchMethod: 'exact' })
+    }
     const importedAt = new Date().toISOString()
     const payload = params.rows.map((row) => {
       const existing = existingBySource.get(row.source_id)

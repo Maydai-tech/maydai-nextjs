@@ -1,6 +1,18 @@
 import { z } from 'zod'
 
-export const ComplianceStatusSchema = z.enum(['COMPLIANT', 'PARTIAL', 'NON_COMPLIANT'])
+export const ComplianceStatusSchema = z.enum([
+  'DOCUMENTED',
+  'REFERENCED',
+  'DOWNSTREAM',
+  'NOT_PUBLISHED',
+  'NOT_APPLICABLE',
+  'RESERVATION',
+  'NOT_DOCUMENTED',
+  'UNMAPPED',
+  'COMPLIANT',
+  'PARTIAL',
+  'NON_COMPLIANT',
+])
 export type ComplianceStatus = z.infer<typeof ComplianceStatusSchema>
 
 export const AiActComplianceItemSchema = z.object({
@@ -8,6 +20,7 @@ export const AiActComplianceItemSchema = z.object({
   article: z.string(),
   application: z.string(),
   status: ComplianceStatusSchema,
+  status_label: z.string().optional(),
   notes: z.string().optional(),
 })
 export type AiActComplianceItem = z.infer<typeof AiActComplianceItemSchema>

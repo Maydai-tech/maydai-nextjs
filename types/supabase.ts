@@ -45,6 +45,16 @@ export type Database = {
           created_at: string
           updated_at: string
           system_card_status: string
+          role: string | null
+          reference_model_id: string | null
+          base_model_id: string | null
+          merged_into_id: string | null
+          deprecation_date: string | null
+          retirement_date: string | null
+          replacement_model_id: string | null
+          lifecycle_source_url: string | null
+          lifecycle_checked_at: string | null
+          visibility_override: boolean | null
         }
         Insert: {
           id?: string
@@ -77,6 +87,16 @@ export type Database = {
           created_at?: string
           updated_at?: string
           system_card_status?: string
+          role?: string | null
+          reference_model_id?: string | null
+          base_model_id?: string | null
+          merged_into_id?: string | null
+          deprecation_date?: string | null
+          retirement_date?: string | null
+          replacement_model_id?: string | null
+          lifecycle_source_url?: string | null
+          lifecycle_checked_at?: string | null
+          visibility_override?: boolean | null
         }
         Update: {
           id?: string
@@ -109,6 +129,49 @@ export type Database = {
           created_at?: string
           updated_at?: string
           system_card_status?: string
+          role?: string | null
+          reference_model_id?: string | null
+          base_model_id?: string | null
+          merged_into_id?: string | null
+          deprecation_date?: string | null
+          retirement_date?: string | null
+          replacement_model_id?: string | null
+          lifecycle_source_url?: string | null
+          lifecycle_checked_at?: string | null
+          visibility_override?: boolean | null
+        }
+      }
+
+      llm_model_aliases: {
+        Row: {
+          id: string
+          model_id: string
+          source: 'llm_stats' | 'comparia' | 'ecologits' | 'api' | 'huggingface' | 'manual'
+          source_id: string
+          raw_name: string
+          normalized_name: string
+          match_method: 'exact' | 'slug' | 'rule' | 'manual'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          model_id: string
+          source: 'llm_stats' | 'comparia' | 'ecologits' | 'api' | 'huggingface' | 'manual'
+          source_id: string
+          raw_name: string
+          normalized_name: string
+          match_method: 'exact' | 'slug' | 'rule' | 'manual'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          model_id?: string
+          source?: 'llm_stats' | 'comparia' | 'ecologits' | 'api' | 'huggingface' | 'manual'
+          source_id?: string
+          raw_name?: string
+          normalized_name?: string
+          match_method?: 'exact' | 'slug' | 'rule' | 'manual'
+          created_at?: string
         }
       }
 
@@ -738,7 +801,12 @@ export type Database = {
         }
       }
     }
-    Views: Record<string, never>
+    Views: {
+      compl_ai_models_visible: {
+        Row: Database['public']['Tables']['compl_ai_models']['Row']
+        Relationships: []
+      }
+    }
     Functions: {
       match_ai_act_chunks: {
         Args: {

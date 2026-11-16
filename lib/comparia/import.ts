@@ -1,6 +1,7 @@
 import { parse } from 'csv-parse/sync'
 
 import { normalizeLlmModelSlug } from '@/lib/bench-llm/model-slug'
+import { resolveAliasTargetId, type AliasRecord, type LineageModel } from '@/lib/bench-llm/model-lineage'
 import { exactEcoLogitsMatchKey } from '@/lib/ecologits/normalization'
 
 const REQUIRED_HEADERS = [
@@ -51,6 +52,7 @@ export type CompariaCanonicalModel = {
   slug?: string | null
   llm_stats_id?: string | null
   llm_stats_ids?: string[]
+  merged_into_id?: string | null
 }
 
 export type CompariaHubLink = {
@@ -166,7 +168,22 @@ function llmStatsIdsFor(model: CompariaCanonicalModel): string[] {
 export function findCompariaHubLinks(
   rows: ParsedCompariaModel[],
   canonicalModels: CompariaCanonicalModel[],
+  aliases: readonly AliasRecord[] = [],
 ): Map<string, CompariaHubLink> {
+  const lineage = new Map<string, LineageModel>(canonicalModels.map((model) => [model.id, {
+    id: model.id,
+    mergedIntoId: model.merged_into_id ?? null,
+  }]))
+  const links = new Map<string, CompariaHubLink>()
+  for (const row of rows) {
+    const target = resolveAliasTargetId(aliases, [...lineage.values()], {
+      source: 'comparia',
+      sourceId: row.source_id,
+      normalizedName: normalizeLlmModelSlug(row.source_id) ?? row.source_id.toLowerCase(),
+    })
+    if (target) links.set(row.source_id, { modelId: target, matchMethod: 'exact' })
+  }
+
   const candidates = new Map<string, CandidateHit[]>()
   for (const model of canonicalModels) {
     for (const sourceId of llmStatsIdsFor(model)) {
@@ -187,8 +204,8 @@ export function findCompariaHubLinks(
     )
   }
 
-  const links = new Map<string, CompariaHubLink>()
   for (const row of rows) {
+    if (links.has(row.source_id)) continue
     const lookups: Array<{ key: string | null; method: 'exact' | 'slug' }> = [
       { key: row.source_id.toLowerCase(), method: 'exact' },
       { key: exactEcoLogitsMatchKey(row.organisation, row.source_id), method: 'exact' },

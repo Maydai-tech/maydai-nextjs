@@ -34,6 +34,10 @@ import type {
 import type { ProviderLifecycle } from '@/lib/bench-llm/provider-lifecycle'
 import { groupUnifiedBenchModelsByProvider, sortUnifiedBenchModels, splitBenchProviderGroupsByQuestionnaire } from '@/lib/bench-llm/admin-unified'
 import { parseComplAiCsv } from '@/lib/bench-llm/compl-ai-csv'
+import type {
+  ModifiedControlTowerRow,
+  RejectedControlTowerValue,
+} from '@/lib/bench-llm/control-tower-apply'
 import { parseApiJson, toTitleCase } from '@/lib/utils'
 
 const BenchLlmDetailContent = dynamic(
@@ -642,10 +646,17 @@ export default function BenchLlmsAdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [applyReport, setApplyReport] = useState<{
+    dryRun: boolean
+    modifiedRows: ModifiedControlTowerRow[]
+    rejectedValues: RejectedControlTowerValue[]
+  } | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
   const [openProviders, setOpenProviders] = useState<Set<string>>(new Set())
   const [importMode, setImportMode] = useState<'create' | 'update'>('update')
+  const [writePillars, setWritePillars] = useState(false)
+  const [replaceSeededPillars, setReplaceSeededPillars] = useState(false)
   const [createForm, setCreateForm] = useState({ model_name: '', model_provider: '', model_type: 'large-language-model', version: '' })
   const pageSize = 5000
 
@@ -765,6 +776,52 @@ export default function BenchLlmsAdminPage() {
     }
   }, [fetchModels, getAccessToken])
 
+  const applyTaxonomy = useCallback(async (dryRun: boolean) => {
+    const token = getAccessToken()
+    if (!token) return
+    setAction(dryRun ? 'Simulation veille et taxonomie' : 'Application veille et taxonomie')
+    setError(null)
+    setMessage(null)
+    try {
+      const response = await fetch('/api/admin/llm-control-tower-apply', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ dryRun }),
+      })
+      const payload = await parseApiJson<{
+        error?: string
+        success?: boolean
+        dryRun?: boolean
+        modifiedRows?: ModifiedControlTowerRow[]
+        rejectedValues?: RejectedControlTowerValue[]
+      }>(response)
+      if (!response.ok || payload.success === false) {
+        throw new Error(payload.error || 'Application impossible')
+      }
+      const report = {
+        dryRun: payload.dryRun !== false,
+        modifiedRows: payload.modifiedRows ?? [],
+        rejectedValues: payload.rejectedValues ?? [],
+      }
+      setApplyReport(report)
+      const summary = report.dryRun
+        ? `Simulation : ${report.modifiedRows.length} ligne(s) à modifier, ${report.rejectedValues.length} valeur(s) refusée(s).`
+        : `Application réelle : ${report.modifiedRows.length} ligne(s) mise(s) à jour.`
+      setMessage(summary)
+      setToast({ message: summary, type: 'success' })
+      if (!report.dryRun) await fetchModels()
+    } catch (applyError) {
+      const errorText = applyError instanceof Error ? applyError.message : 'Erreur inconnue'
+      setError(errorText)
+      setToast({ message: errorText, type: 'error' })
+    } finally {
+      setAction(null)
+    }
+  }, [fetchModels, getAccessToken])
+
   const createModel = useCallback(async () => {
     await callAction('Création du modèle', '/api/admin/compl-ai/models', {
       headers: { 'Content-Type': 'application/json' },
@@ -804,6 +861,63 @@ export default function BenchLlmsAdminPage() {
     }
   }, [getAccessToken])
 
+  const regeneratePillars = useCallback(async () => {
+    const token = getAccessToken()
+    if (!token) return
+    const write = writePillars
+    const replaceSeededCard = write && replaceSeededPillars
+    if (write && !confirm(replaceSeededCard
+      ? 'Écrire les piliers de toutes les fiches, y compris claude-sonnet-4-5 ?'
+      : 'Écrire les piliers générés ? Les piliers existants de claude-sonnet-4-5 sont conservés.')) {
+      return
+    }
+    setAction('Régénération des piliers')
+    setError(null)
+    setMessage(null)
+    try {
+      const response = await fetch('/api/admin/llm-system-cards-pillars', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ write, replaceSeededCard }),
+      })
+      const payload = await parseApiJson<{
+        success?: boolean
+        error?: string
+        message?: string
+        report?: {
+          dryRun: boolean
+          parsed: number
+          failed: number
+          byRule: { partie: number; partie_without_1: number; english: number }
+          unmapped: Array<{ label: string; count: number }>
+          seedComparison: { existingPillarCount: number; generated: boolean; diffs: Array<{ pillarCode: string; summaryEqual: boolean }> } | null
+        }
+      }>(response)
+      if (!response.ok || payload.success === false || !payload.report) {
+        throw new Error(payload.error || payload.message || 'Régénération impossible')
+      }
+      const report = payload.report
+      const unmapped = report.unmapped.map((item) => `${item.label} (${item.count})`).join(', ')
+      const seed = report.seedComparison
+      const seedText = seed
+        ? ` Comparaison claude-sonnet-4-5 : ${seed.existingPillarCount} pilier(s) en base, génération ${seed.generated ? 'ok' : 'en échec'}, ${seed.diffs.filter((diff) => !diff.summaryEqual).length} résumé(s) différent(s).`
+        : ''
+      setMessage(
+        `${report.dryRun ? 'Simulation' : 'Écriture'} : ${report.parsed} découpée(s), ${report.failed} en échec. Règles : gabarit ${report.byRule.partie}, sans partie 1 ${report.byRule.partie_without_1}, anglais ${report.byRule.english}. Libellés non reconnus : ${unmapped || 'aucun'}.${seedText}`,
+      )
+      setToast({ message: payload.message || 'Régénération terminée.', type: 'success' })
+    } catch (regenerateError) {
+      const errorText = regenerateError instanceof Error ? regenerateError.message : 'Erreur inconnue'
+      setError(errorText)
+      setToast({ message: errorText, type: 'error' })
+    } finally {
+      setAction(null)
+    }
+  }, [getAccessToken, replaceSeededPillars, writePillars])
+
   const downloadTemplate = useCallback(async () => {
     const token = getAccessToken()
     if (!token) return
@@ -841,7 +955,17 @@ export default function BenchLlmsAdminPage() {
           <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium"><Plus className="h-4 w-4" /> Modèle</button>
           <button onClick={() => callAction('Synchronisation LLM Stats', '/api/admin/llm-stats-sync-runs')} disabled={action != null} className="rounded-md bg-sky-700 px-3 py-2 text-sm font-medium text-white">Sync LLM Stats</button>
           <button onClick={() => callAction('Synchronisation LLM Control', '/api/admin/llm-control-tower-sync')} disabled={action != null} className="rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white">Sync LLM Control</button>
+          <button onClick={() => void applyTaxonomy(true)} disabled={action != null} className="rounded-md bg-[#0080A3] px-3 py-2 text-sm font-medium text-white">Appliquer la veille et la taxonomie</button>
           <button onClick={() => callAction('Import System Cards', '/api/admin/llm-system-cards-import')} disabled={action != null} className="rounded-md bg-amber-700 px-3 py-2 text-sm font-medium text-white">Import System Cards</button>
+          <button onClick={() => void regeneratePillars()} disabled={action != null} className="rounded-md bg-amber-900 px-3 py-2 text-sm font-medium text-white">Régénérer les piliers</button>
+          <label className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-2 text-xs text-gray-700">
+            <input type="checkbox" checked={writePillars} onChange={(event) => setWritePillars(event.target.checked)} />
+            Écrire
+          </label>
+          <label className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-2 text-xs text-gray-700">
+            <input type="checkbox" checked={replaceSeededPillars} disabled={!writePillars} onChange={(event) => setReplaceSeededPillars(event.target.checked)} />
+            Remplacer claude-sonnet-4-5
+          </label>
           <button onClick={() => callAction('Synchronisation EcoLogits', '/api/admin/ecologits/sync')} disabled={action != null} className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white"><Leaf className="h-4 w-4" /> Sync EcoLogits</button>
           <button onClick={() => callAction('Synchronisation Compar:IA', '/api/admin/comparia/sync')} disabled={action != null} className="rounded-md bg-violet-700 px-3 py-2 text-sm font-medium text-white">Sync Compar:IA</button>
           <button onClick={() => callAction('Synchronisation COMPL-AI', '/api/admin/compl-ai/sync')} disabled={action != null} className="rounded-md bg-indigo-700 px-3 py-2 text-sm font-medium text-white">Sync COMPL-AI</button>
@@ -923,6 +1047,48 @@ export default function BenchLlmsAdminPage() {
       {action ? <div className="mb-4 flex items-center gap-2 rounded-md bg-sky-50 p-3 text-sm text-sky-800"><Loader2 className="h-4 w-4 animate-spin" /> {action}…</div> : null}
       {error ? <div className="mb-4 flex items-start gap-2 rounded-md bg-red-50 p-3 text-sm text-red-800"><AlertTriangle className="mt-0.5 h-4 w-4" /> {error}</div> : null}
       {message ? <div className="mb-4 rounded-md bg-emerald-50 p-3 text-sm text-emerald-800">{message}</div> : null}
+      {applyReport ? (
+        <section className="mb-4 rounded-lg border border-gray-200 bg-white p-4">
+          <h2 className="text-base font-semibold text-gray-900">
+            {applyReport.dryRun ? 'Simulation de la veille et de la taxonomie' : 'Application de la veille et de la taxonomie'}
+          </h2>
+          <p className="mt-1 text-sm text-gray-600">
+            {applyReport.modifiedRows.length} ligne(s), {applyReport.rejectedValues.length} valeur(s) refusée(s).
+          </p>
+          {applyReport.modifiedRows.length > 0 ? (
+            <ul className="mt-3 max-h-64 space-y-2 overflow-auto text-sm text-gray-800">
+              {applyReport.modifiedRows.slice(0, 30).map((row) => (
+                <li key={`${row.sheetRow}-${row.modelId}`} className="rounded-md bg-gray-50 p-2">
+                  Ligne {row.sheetRow}
+                  {row.veille ? ` · veille : ${Object.keys(row.veille).join(', ')}` : ''}
+                  {row.taxonomie ? ` · taxonomie : ${Object.keys(row.taxonomie).join(', ')}` : ''}
+                  {row.sheetStatus ? ` · ${row.sheetStatus}` : ''}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {applyReport.rejectedValues.length > 0 ? (
+            <ul className="mt-3 max-h-64 space-y-2 overflow-auto text-sm text-red-800">
+              {applyReport.rejectedValues.slice(0, 30).map((rejection, index) => (
+                <li key={`${rejection.sheetRow}-${rejection.column}-${index}`}>
+                  Ligne {rejection.sheetRow}, colonne {rejection.column} : {rejection.reason}
+                  {rejection.value ? ` (« ${rejection.value} »)` : ''}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {applyReport.dryRun ? (
+            <button
+              type="button"
+              onClick={() => void applyTaxonomy(false)}
+              disabled={action != null}
+              className="mt-4 rounded-md border border-[#0080A3] px-3 py-2 text-sm font-medium text-[#0080A3] disabled:opacity-50"
+            >
+              Confirmer l’application réelle
+            </button>
+          ) : null}
+        </section>
+      ) : null}
 
       <div className="mb-4 grid gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-5">
         <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Rechercher…" className="rounded-md border border-gray-300 px-3 py-2 text-sm" />
