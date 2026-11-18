@@ -94,7 +94,7 @@ describe('Liste Procurements', () => {
     render(<ProcurementsSection initialProcurements={[item]} initialError={null} />)
     expect(screen.getByText(item.title)).toBeVisible()
     expect(screen.getByText(item.description)).toBeVisible()
-    expect(screen.getByText('Créé le 9 oct. 2026')).toBeVisible()
+    expect(screen.getByText('Date limite non renseignée')).toBeVisible()
   })
 
   test('affiche une erreur plutôt qu’un état vide et permet de réessayer', async () => {
