@@ -235,7 +235,8 @@ async function importCSV(csvUrl: string) {
         // Création avec l'ID du CSV
         const insertData = {
           ...modelData,
-          id: modelId  // Utiliser l'ID du CSV
+          id: modelId,
+          role: 'a_classer',
         }
         
         // Ne pas inclure created_at, laissé à la base

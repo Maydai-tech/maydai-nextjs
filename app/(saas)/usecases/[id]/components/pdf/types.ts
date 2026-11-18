@@ -8,6 +8,7 @@ import type { AuditIntegrityBadgeDescriptor } from '@/lib/validations/governance
 export interface PdfSystemCardSection {
   pillar: SystemCardPillar
   userNotes?: string
+  referenceMention?: string | null
   maydai_prefill_applied?: boolean
   user_completion_applied?: boolean
 }

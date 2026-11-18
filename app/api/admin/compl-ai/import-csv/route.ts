@@ -266,6 +266,7 @@ export async function POST(request: NextRequest) {
             model_type: row.model_type || null,
             version: row.version || null,
             lifecycle_status: row.lifecycle_status,
+            role: 'a_classer',
           }
           if (row.model_id) insertPayload.id = row.model_id
 

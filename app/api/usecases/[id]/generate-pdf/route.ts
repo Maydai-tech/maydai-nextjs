@@ -459,8 +459,22 @@ export async function GET(
     const modelIdentifier =
       (typeof modelData?.slug === 'string' ? modelData.slug.trim() : '') ||
       (typeof useCase.llm_model_version === 'string' ? useCase.llm_model_version.trim() : '')
-    const systemCardPillars = modelIdentifier
-      ? await getSystemCardPillarsByModel(modelIdentifier)
+    const referenceTargetId = modelData?.merged_into_id || modelData?.reference_model_id
+    let cardIdentifier = modelIdentifier
+    let referenceMention: string | null = null
+    if (referenceTargetId) {
+      const { data: referenceModel } = await supabase
+        .from('compl_ai_models')
+        .select('slug, model_name')
+        .eq('id', referenceTargetId)
+        .maybeSingle()
+      if (referenceModel?.slug) cardIdentifier = referenceModel.slug
+      if (referenceModel?.model_name && referenceModel.model_name !== modelData?.model_name) {
+        referenceMention = `Fiche de ${referenceModel.model_name}`
+      }
+    }
+    const systemCardPillars = cardIdentifier
+      ? await getSystemCardPillarsByModel(cardIdentifier)
       : []
     const notesByDocType = extractPdfSystemCardNotesByDocType(useCase)
     canonicalPlanItems = attachSystemCardSectionsToCanonicalItems({
@@ -468,6 +482,7 @@ export async function GET(
       documents: pdfDocuments,
       pillars: systemCardPillars,
       notesByDocType,
+      referenceMention,
     })
     const systemCardSections = buildPdfSystemCardSections(
       systemCardPillars,

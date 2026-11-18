@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+import { visibleModelsForQuery, type SearchableModel } from '@/lib/bench-llm/model-lineage'
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -43,10 +45,11 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Get models for the specific provider
-    const { data: models, error: modelsError } = await supabase
-      .from('compl_ai_models')
-      .select('id, model_name, model_type, version, notes_short, notes_long, variants, launch_date')
+    const query = new URL(request.url).searchParams.get('q')?.trim() ?? ''
+    const modelSelect = 'id, model_name, model_type, version, notes_short, notes_long, variants, launch_date, reference_model_id, merged_into_id'
+    const { data: visibleModels, error: modelsError } = await supabase
+      .from('compl_ai_models_visible')
+      .select(modelSelect)
       .eq('model_provider_id', providerId)
       .order('launch_date', { ascending: false, nullsFirst: false })
       .order('model_name', { ascending: true })
@@ -59,12 +62,54 @@ export async function GET(
       )
     }
 
-    // Return empty array if no models found (no fallback)
-    if (!models || models.length === 0) {
-      return NextResponse.json([])
+    const visibleRows = visibleModels ?? []
+    const [{ data: variants }, { data: aliases }] = await Promise.all([
+      supabase
+        .from('compl_ai_models')
+        .select('id, model_name, reference_model_id, merged_into_id')
+        .eq('model_provider_id', providerId)
+        .not('reference_model_id', 'is', null),
+      supabase
+        .from('llm_model_aliases')
+        .select('model_id, raw_name, normalized_name'),
+    ])
+    const searchableVisible: SearchableModel[] = visibleRows.map((model) => ({
+      id: model.id,
+      modelName: model.model_name,
+      referenceModelId: model.reference_model_id,
+      mergedIntoId: model.merged_into_id,
+    }))
+    const labelsById = new Map<string, string[]>()
+    const remember = (modelId: string, label: string) => {
+      const current = labelsById.get(modelId) ?? []
+      current.push(label)
+      labelsById.set(modelId, current)
     }
+    for (const variant of variants ?? []) {
+      if (variant.reference_model_id) remember(variant.reference_model_id, variant.model_name)
+    }
+    for (const alias of aliases ?? []) remember(alias.model_id, alias.raw_name)
+    const withLabels = visibleRows.map((model) => ({
+      ...model,
+      search_labels: labelsById.get(model.id) ?? [],
+    }))
+    if (!query) return NextResponse.json(withLabels)
 
-    return NextResponse.json(models)
+    const matchedIds = new Set(visibleModelsForQuery({
+      visible: searchableVisible,
+      variants: (variants ?? []).map((model) => ({
+        id: model.id,
+        modelName: model.model_name,
+        referenceModelId: model.reference_model_id,
+        mergedIntoId: model.merged_into_id,
+      })),
+      aliases: (aliases ?? []).map((alias) => ({
+        modelId: alias.model_id,
+        names: [alias.raw_name, alias.normalized_name],
+      })),
+      query,
+    }).map((model) => model.id))
+    return NextResponse.json(withLabels.filter((model) => matchedIds.has(model.id)))
   } catch (error) {
     console.error('Error in model-providers/[id]/models API:', error)
     return NextResponse.json(

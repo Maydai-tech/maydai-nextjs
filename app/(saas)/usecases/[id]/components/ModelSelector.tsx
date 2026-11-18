@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ComplAIModel } from '@/lib/supabase'
+import { visibleModelsForQuery } from '@/lib/bench-llm/model-lineage'
 import { Bot, Search, X, ChevronDown } from 'lucide-react'
 
 interface ModelSelectorProps {
@@ -19,6 +20,8 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   disabled = false
 }) => {
   const [models, setModels] = useState<ComplAIModel[]>([])
+  const [variants, setVariants] = useState<Array<{ id: string; model_name: string; reference_model_id: string | null; merged_into_id: string | null }>>([])
+  const [aliases, setAliases] = useState<Array<{ model_id: string; raw_name: string; normalized_name: string }>>([])
   const [loading, setLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -41,14 +44,16 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   const fetchModels = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('compl_ai_models')
-        .select('*')
-        .order('model_provider', { ascending: true })
-        .order('model_name', { ascending: true })
+      const [{ data, error }, { data: variantRows }, { data: aliasRows }] = await Promise.all([
+        supabase.from('compl_ai_models_visible').select('*').order('model_provider', { ascending: true }).order('model_name', { ascending: true }),
+        supabase.from('compl_ai_models').select('id, model_name, reference_model_id, merged_into_id').not('reference_model_id', 'is', null),
+        supabase.from('llm_model_aliases').select('model_id, raw_name, normalized_name'),
+      ])
 
       if (error) throw error
       setModels(data || [])
+      setVariants(variantRows || [])
+      setAliases(aliasRows || [])
     } catch (error) {
       console.error('Erreur lors du chargement des modèles:', error)
     } finally {
@@ -71,15 +76,25 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
     }
   }
 
-  const filteredModels = models.filter(model => {
-    if (!searchTerm) return true
-    const searchLower = searchTerm.toLowerCase()
-    return (
-      model.model_name.toLowerCase().includes(searchLower) ||
-      (model.model_provider?.toLowerCase().includes(searchLower) ?? false) ||
-      (model.model_type?.toLowerCase().includes(searchLower) ?? false)
-    )
-  })
+  const filteredModels = visibleModelsForQuery({
+    visible: models.map((model) => ({
+      id: model.id,
+      modelName: model.model_name,
+      referenceModelId: model.reference_model_id,
+      mergedIntoId: model.merged_into_id,
+    })),
+    variants: variants.map((model) => ({
+      id: model.id,
+      modelName: model.model_name,
+      referenceModelId: model.reference_model_id,
+      mergedIntoId: model.merged_into_id,
+    })),
+    aliases: aliases.map((alias) => ({
+      modelId: alias.model_id,
+      names: [alias.raw_name, alias.normalized_name],
+    })),
+    query: searchTerm,
+  }).map((model) => models.find((item) => item.id === model.id)).filter((model): model is ComplAIModel => Boolean(model))
 
   const groupedModels = filteredModels.reduce((acc, model) => {
     const provider = model.model_provider || 'Autres'

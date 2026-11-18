@@ -441,6 +441,19 @@ Hub LLM : [docs/llm-models-hub.md](docs/llm-models-hub.md). System Cards : [docs
 - CSP headers configured for GTM, CookieYes, Stripe
 - Automatic redirects for favicon and duplicate content
 
+## Linear (tickets)
+
+Workspace **MaydAI** (`maydai`), équipe `MAY`. Passer par l'**API GraphQL avec `LINEAR_API_KEY`** (définie dans l'env Claude Code du projet), **pas le connecteur Linear de Claude** : il est branché sur un autre workspace (UP-check).
+
+```bash
+curl -s https://api.linear.app/graphql -H "Content-Type: application/json" \
+  -H "Authorization: $LINEAR_API_KEY" -d '{"query":"{ viewer { name } organization { urlKey } }"}'
+```
+
+- Vérifier d'abord que `organization.urlKey` vaut `maydai`.
+- Lecture libre ; création / modification de tickets uniquement à la demande d'Hugo.
+- Ne jamais afficher la clé.
+
 ## Key Principles
 
 1. **Security:** Always verify authentication server-side; client-side is UX only

@@ -35,7 +35,9 @@ export const USECASE_PDF_SELECT = `
     model_provider,
     model_type,
     version,
-    slug
+    slug,
+    reference_model_id,
+    merged_into_id
   ),
   usecase_history(
     id,
@@ -244,8 +246,9 @@ export function attachSystemCardSectionsToCanonicalItems(params: {
   documents: PdfDocumentItem[]
   pillars: SystemCardPillar[]
   notesByDocType: Record<string, string>
+  referenceMention?: string | null
 }): PdfCanonicalItem[] {
-  const { items, documents, pillars, notesByDocType } = params
+  const { items, documents, pillars, notesByDocType, referenceMention } = params
 
   return items.map((item) => {
     const docType = item.identity.doc_type_canonique
@@ -267,9 +270,11 @@ export function attachSystemCardSectionsToCanonicalItems(params: {
       ...item,
       maydai_prefill_applied: dbDoc.maydai_prefill_applied,
       user_completion_applied: dbDoc.user_completion_applied,
-      systemCardSection: userNotes
-        ? { pillar: matchingPillar, userNotes }
-        : { pillar: matchingPillar },
+      systemCardSection: {
+        pillar: matchingPillar,
+        ...(userNotes ? { userNotes } : {}),
+        ...(referenceMention ? { referenceMention } : {}),
+      },
     }
   })
 }
