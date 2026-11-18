@@ -6,23 +6,21 @@ import Link from 'next/link'
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
+import { AUTH_PATHS, authRedirectUrl, isAuthRateLimited } from '@/lib/auth-email-links'
+import { PASSWORD_HINT, validateNewPassword } from '@/lib/password-policy'
 import {
-  sendGoogleAdsSignupConversionWithUserData,
-  sendSignUpEvent,
-} from '@/lib/gtm'
-import { hashEmailForGoogleAds } from '@/lib/utils/crypto'
-import type { CompleteSignUpAcquisitionFields } from '@/lib/types/complete-signup-payload'
-import OTPVerification from '@/components/auth/OTPVerification'
+  acquisitionFields,
+  computeEffectiveAttribution,
+  finalizePendingSignup,
+  PENDING_SIGNUP_KEY,
+  type PendingSignup,
+} from '@/lib/signup-finalize'
+import PasswordInput from '@/components/auth/PasswordInput'
+import AuthShell, { AUTH_LINK_CLASS } from '@/components/auth/AuthShell'
 import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
 import SecurityLogosGrid from '@/components/ui/SecurityLogosGrid'
-import { User, Building2, ArrowRight, Mail, Info, Lock, ShieldCheck } from 'lucide-react'
+import { User, Building2, ArrowRight, Mail, MailCheck, Info, Lock, ShieldCheck } from 'lucide-react'
 import { useAIActCountdown } from '@/app/(marketing)/conformite-ia/hooks/useAIActCountdown'
-import {
-  readStoredAttribution,
-  hasMeaningfulAttribution,
-  clearStoredAttribution,
-  type StoredAttribution,
-} from '@/lib/tracking/capture-params'
 import { planIdSchema } from '@/lib/validations/pricing'
 import type { PlanId } from '@/lib/stripe/config/plans'
 
@@ -53,7 +51,7 @@ export interface SignupPageProps {
   partnerConfig?: PartnerSignupConfig
 }
 
-type SignupStep = 'form' | 'otp' | 'processing'
+type SignupStep = 'form' | 'check-email' | 'processing'
 
 interface SignupFormData {
   email: string
@@ -68,7 +66,7 @@ export default function SignupPage({ partnerConfig }: SignupPageProps = {}) {
   // Router and auth
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { signInWithOtp, verifyOtp, user, loading } = useAuth()
+  const { user, loading } = useAuth()
 
   /** `lead_id` depuis l’URL d’invitation (figé au montage pour éviter les courses avec l’URL). */
   const leadIdFromInviteRef = useRef<string | null>(null)
@@ -110,6 +108,9 @@ export default function SignupPage({ partnerConfig }: SignupPageProps = {}) {
     mainIndustryId: '',
     subCategoryId: '',
   })
+  const [password, setPassword] = useState('')
+  const [passwordConfirmation, setPasswordConfirmation] = useState('')
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
   // Industry selection state
   const [industrySelection, setIndustrySelection] = useState<IndustrySelection>({
@@ -137,12 +138,12 @@ export default function SignupPage({ partnerConfig }: SignupPageProps = {}) {
   useEffect(() => {
     if (!loading) {
       if (user) {
-        router.push('/dashboard/registries')
+        if (signupStep !== 'processing') router.push('/dashboard/registries')
       } else {
         setIsCheckingAuth(false)
       }
     }
-  }, [user, loading, router])
+  }, [user, loading, router, signupStep])
 
   // Loading state
   if (loading || isCheckingAuth) {
@@ -234,6 +235,12 @@ export default function SignupPage({ partnerConfig }: SignupPageProps = {}) {
 
     if (emailError) return
 
+    const passwordError = validateNewPassword(password, passwordConfirmation)
+    if (passwordError) {
+      setError(passwordError)
+      return
+    }
+
     setStep(2)
   }
 
@@ -260,197 +267,78 @@ export default function SignupPage({ partnerConfig }: SignupPageProps = {}) {
       return
     }
 
-    try {
-      // Send OTP to email (allow user creation)
-      const { error: otpError } = await signInWithOtp(formData.email, true)
-
-      if (otpError) {
-        if (otpError.message?.includes('already registered') ||
-          otpError.message?.includes('User already registered')) {
-          setError('Un compte existe déjà avec cette adresse email. Veuillez vous connecter.')
-        } else {
-          setError('Erreur lors de l\'envoi du code. Veuillez réessayer.')
-        }
-        setFormLoading(false)
-        return
-      }
-
-      // Move to OTP step
-      setSignupStep('otp')
-      setFormLoading(false)
-    } catch (err) {
-      console.error('[signup] Envoi OTP', err)
-      setError('Une erreur est survenue. Veuillez réessayer.')
-      setFormLoading(false)
+    const attribution = computeEffectiveAttribution(partnerConfig?.defaultAttribution)
+    const pending: PendingSignup = {
+      profile: {
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        companyName: formData.companyName,
+        mainIndustryId: formData.mainIndustryId,
+        subCategoryId: formData.subCategoryId,
+        ...acquisitionFields(attribution),
+        ...(intentPlan ? { planIntent: intentPlan } : {}),
+      },
+      leadId: leadIdFromInviteRef.current,
+      attribution,
     }
-  }
 
-  // ========== OTP & PROFILE COMPLETION ==========
-
-  const handleOtpSuccess = async () => {
-    // OTP verified, move to processing step
-    setSignupStep('processing')
-    // Complete signup with profile data
-    await completeSignup()
-  }
-
-  const completeSignup = async () => {
     try {
-      // Get fresh session directly from Supabase (not from React context)
-      // This ensures we have the token immediately after OTP verification
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
-      if (sessionError || !session?.access_token) {
-        console.error('Session error:', sessionError)
-        setError('Erreur de session. Veuillez réessayer.')
-        setSignupStep('form')
-        return
-      }
-
-      const storedAttr = readStoredAttribution()
-      const partnerDefaults = partnerConfig?.defaultAttribution
-
-      const fillEmptyUtm = (current: string | null, fallback: string | undefined): string | null => {
-        if (current?.trim()) return current
-        if (!partnerDefaults) return current
-        const next = fallback?.trim()
-        return next || current
-      }
-
-      let effectiveAttribution: StoredAttribution | null
-      if (storedAttr && hasMeaningfulAttribution(storedAttr)) {
-        effectiveAttribution = {
-          click_id: storedAttr.click_id,
-          gclid: storedAttr.gclid,
-          utm_source: fillEmptyUtm(storedAttr.utm_source, partnerDefaults?.utm_source),
-          utm_medium: fillEmptyUtm(storedAttr.utm_medium, partnerDefaults?.utm_medium),
-          utm_campaign: fillEmptyUtm(storedAttr.utm_campaign, partnerDefaults?.utm_campaign),
-          captured_at: storedAttr.captured_at,
-        }
-      } else if (partnerDefaults) {
-        effectiveAttribution = {
-          click_id: storedAttr?.click_id ?? null,
-          gclid: storedAttr?.gclid ?? null,
-          utm_source: partnerDefaults.utm_source,
-          utm_medium: partnerDefaults.utm_medium,
-          utm_campaign: partnerDefaults.utm_campaign ?? null,
-          captured_at: storedAttr?.captured_at ?? new Date().toISOString(),
-        }
-      } else {
-        effectiveAttribution = storedAttr
-      }
-
-      const acquisition: CompleteSignUpAcquisitionFields = {}
-      if (effectiveAttribution && hasMeaningfulAttribution(effectiveAttribution)) {
-        if (effectiveAttribution.gclid?.trim()) acquisition.gclid = effectiveAttribution.gclid.trim()
-        if (effectiveAttribution.utm_source?.trim()) acquisition.utm_source = effectiveAttribution.utm_source.trim()
-        if (effectiveAttribution.utm_medium?.trim()) acquisition.utm_medium = effectiveAttribution.utm_medium.trim()
-        if (effectiveAttribution.utm_campaign?.trim()) {
-          acquisition.utm_campaign = effectiveAttribution.utm_campaign.trim()
-        }
-      }
-
-      // Call complete-signup API with fresh token
-      const response = await fetch('/api/auth/complete-signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email.trim(),
+        password,
+        options: {
+          emailRedirectTo: authRedirectUrl(AUTH_PATHS.confirmSignup),
+          data: { [PENDING_SIGNUP_KEY]: pending },
         },
-        body: JSON.stringify({
-          email: formData.email,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          companyName: formData.companyName,
-          mainIndustryId: formData.mainIndustryId,
-          subCategoryId: formData.subCategoryId,
-          ...acquisition,
-          ...(intentPlan ? { planIntent: intentPlan } : {}),
-        }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Erreur lors de la création du profil')
+      // Email déjà confirmé : GoTrue renvoie un utilisateur sans identité plutôt qu'une erreur.
+      const alreadyRegistered =
+        (signUpError as { code?: string } | null)?.code === 'user_already_exists' ||
+        /already registered/i.test(signUpError?.message ?? '') ||
+        (!signUpError && data.user?.identities?.length === 0)
+
+      if (alreadyRegistered) {
+        setError('Un compte existe déjà avec cette adresse email. Veuillez vous connecter.')
+      } else if (signUpError) {
+        console.error('[signup] signUp', signUpError)
+        const code = (signUpError as { code?: string }).code
+        setError(
+          isAuthRateLimited(signUpError)
+            ? 'Trop de demandes. Réessayez d’ici quelques minutes.'
+            : code === 'weak_password'
+              ? 'Mot de passe trop faible. Choisissez-en un plus long.'
+              : 'Erreur lors de la création du compte. Veuillez réessayer.'
+        )
+      } else if (data.session) {
+        // Confirmation email désactivée côté serveur : session immédiate, on finalise ici.
+        setSignupStep('processing')
+        await finalizePendingSignup(data.session)
+        router.refresh()
+        router.push('/dashboard/registries')
+        return
+      } else {
+        setSignupStep('check-email')
       }
-
-      const leadId = leadIdFromInviteRef.current
-      if (leadId && session.user?.id) {
-        try {
-          const linkRes = await fetch('/api/leads/link-to-user', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({ leadId }),
-          })
-          if (!linkRes.ok) {
-            const errText = await linkRes.text().catch((readErr) => {
-              console.error('[signup] Lecture réponse link-to-user', readErr)
-              return ''
-            })
-            console.error(
-              '[signup] Liaison lead ignorée (non bloquant):',
-              linkRes.status,
-              errText
-            )
-          }
-        } catch (linkErr) {
-          console.error('[signup] Liaison lead ignorée (non bloquant):', linkErr)
-        }
-      } else if (effectiveAttribution && hasMeaningfulAttribution(effectiveAttribution)) {
-        try {
-          const wdRes = await fetch('/api/leads/website-direct', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({ attribution: effectiveAttribution }),
-          })
-          if (wdRes.ok) {
-            clearStoredAttribution()
-          } else {
-            const t = await wdRes.text().catch((readErr) => {
-              console.error('[signup] Lecture réponse website-direct', readErr)
-              return ''
-            })
-            console.error(
-              '[signup] Lead website_direct ignoré (non bloquant):',
-              wdRes.status,
-              t
-            )
-          }
-        } catch (wdErr) {
-          console.error('[signup] Lead website_direct ignoré (non bloquant):', wdErr)
-        }
-      }
-
-      const hashedEmail = await hashEmailForGoogleAds(session.user?.email || '')
-      try {
-        await Promise.all([
-          sendSignUpEvent('formulaire_landing', {
-            userId: session.user?.id,
-          }),
-          sendGoogleAdsSignupConversionWithUserData(hashedEmail),
-        ])
-      } catch (gtmErr) {
-        console.error('[gtm] Signup event tracking failed:', gtmErr)
-      }
-
-      // Temporisation réseau stricte (500ms) pour garantir l'envoi du payload GTM avant la destruction du contexte par le routeur Next.js
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      router.refresh()
-      router.push('/dashboard/registries')
+      setFormLoading(false)
     } catch (err) {
-      console.error('[signup] Complete signup', err)
-      setError(err instanceof Error ? err.message : 'Erreur lors de la création du profil')
+      console.error('[signup] Création du compte', err)
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue. Veuillez réessayer.')
       setSignupStep('form')
+      setFormLoading(false)
     }
   }
 
+  const handleResendConfirmation = async () => {
+    setResendState('sending')
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email: formData.email.trim(),
+      options: { emailRedirectTo: authRedirectUrl(AUTH_PATHS.confirmSignup) },
+    })
+    setResendState(resendError ? 'error' : 'sent')
+  }
 
   // ========== RENDER STEPS ==========
 
@@ -466,15 +354,37 @@ export default function SignupPage({ partnerConfig }: SignupPageProps = {}) {
     )
   }
 
-  if (signupStep === 'otp') {
+  if (signupStep === 'check-email') {
     return (
-      <OTPVerification
-        email={formData.email}
-        onVerify={(code) => verifyOtp(formData.email, code)}
-        onSuccess={handleOtpSuccess}
-        onBack={() => setSignupStep('form')}
-        onResend={() => signInWithOtp(formData.email, true)}
-      />
+      <AuthShell title="Confirmez votre adresse email">
+        <div className="text-center space-y-4">
+          <MailCheck className="h-12 w-12 text-[#0080A3] mx-auto" aria-hidden="true" />
+          <p className="text-gray-700 break-words">
+            Un email de confirmation a été envoyé à <strong>{formData.email.trim()}</strong>. Cliquez sur le lien
+            pour activer votre compte.
+          </p>
+          {resendState === 'sent' ? (
+            <p className="text-sm font-medium text-[#0080A3]">Email renvoyé.</p>
+          ) : (
+            <p className="text-sm text-gray-600">
+              Rien reçu ?{' '}
+              <button
+                type="button"
+                onClick={handleResendConfirmation}
+                disabled={resendState === 'sending'}
+                className={`${AUTH_LINK_CLASS} underline disabled:opacity-50`}
+              >
+                Renvoyer l&apos;email
+              </button>
+            </p>
+          )}
+          {resendState === 'error' && (
+            <p role="alert" className="text-sm text-red-600">
+              Envoi impossible. Réessayez dans quelques minutes.
+            </p>
+          )}
+        </div>
+      </AuthShell>
     )
   }
 
@@ -669,7 +579,7 @@ export default function SignupPage({ partnerConfig }: SignupPageProps = {}) {
               <div className="flex items-start gap-2 text-sm text-gray-500">
                 <Info className="h-4 w-4 mt-0.5 text-gray-400 flex-shrink-0" aria-hidden="true" />
                 <p id="signup-email-description">
-                  L&apos;adresse email permet de créer le compte et de recevoir votre code d&apos;activation.
+                  L&apos;adresse email permet de créer le compte et de recevoir votre lien d&apos;activation.
                 </p>
               </div>
 
@@ -713,6 +623,29 @@ export default function SignupPage({ partnerConfig }: SignupPageProps = {}) {
                   </p>
                 )}
               </div>
+
+              <PasswordInput
+                id="password"
+                label="Mot de passe"
+                value={password}
+                onChange={(value) => {
+                  setPassword(value)
+                  setError('')
+                }}
+                autoComplete="new-password"
+                hint={PASSWORD_HINT}
+              />
+
+              <PasswordInput
+                id="password-confirmation"
+                label="Confirmer le mot de passe"
+                value={passwordConfirmation}
+                onChange={(value) => {
+                  setPasswordConfirmation(value)
+                  setError('')
+                }}
+                autoComplete="new-password"
+              />
 
               <div
                 className="flex items-center justify-center gap-2 mb-4 p-3 bg-slate-50 rounded-md border border-slate-100"
@@ -832,7 +765,7 @@ export default function SignupPage({ partnerConfig }: SignupPageProps = {}) {
                   {formLoading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      Envoi en cours...
+                      Création en cours...
                     </>
                   ) : (
                     <>
