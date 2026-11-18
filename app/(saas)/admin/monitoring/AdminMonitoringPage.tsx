@@ -4,6 +4,21 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, Bell, HardDrive, RefreshCw, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { formatGo, nextPurgeFr, parseUsePercent, usageBarClass } from './utils/format'
+import { buildMonitoringChecks, type CheckTone, type MonitoringCheck } from './utils/checks'
+
+const CHECK_ICONS: Record<MonitoringCheck['key'], typeof Bell> = {
+  'disk-alert': AlertTriangle,
+  email: Bell,
+  logs: RefreshCw,
+  docker: HardDrive,
+}
+
+const TONE_CLASSES: Record<CheckTone, string> = {
+  ok: 'text-emerald-600',
+  warn: 'text-amber-600',
+  info: 'text-[#0080A3]',
+  muted: 'text-gray-400',
+}
 
 interface DiskUsage {
   total: string | number
@@ -40,9 +55,11 @@ export default function AdminMonitoringPage() {
   const [diskUsage, setDiskUsage] = useState<DiskUsage | null>(null)
   const [diskError, setDiskError] = useState<string | null>(null)
   const [emailStatus, setEmailStatus] = useState<EmailStatus | null>(null)
+  const [emailError, setEmailError] = useState<string | null>(null)
   const [loadingDiskUsage, setLoadingDiskUsage] = useState(true)
   const [purges, setPurges] = useState<DockerPurge[]>([])
   const [purgesError, setPurgesError] = useState<string | null>(null)
+  const [sourceIssues, setSourceIssues] = useState<string[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -87,6 +104,12 @@ export default function AdminMonitoringPage() {
         }
         if (!cancelled) {
           setPurgesError(typeof data?.purgesError === 'string' ? data.purgesError : null)
+          setEmailError(typeof data?.emailError === 'string' ? data.emailError : null)
+          setSourceIssues(
+            data?.sourceIssues && typeof data.sourceIssues === 'object'
+              ? Object.values(data.sourceIssues as Record<string, string>)
+              : []
+          )
         }
       } catch (error) {
         console.error('Erreur chargement occupation disque:', error)
@@ -105,39 +128,6 @@ export default function AdminMonitoringPage() {
       cancelled = true
     }
   }, [authLoading, session?.access_token])
-
-  const checks = [
-    {
-      title: 'Alerte disque',
-      value: 'Active',
-      details: 'Seuil d’alerte configuré à 85% d’occupation sur la partition racine (/).',
-      icon: AlertTriangle,
-      color: 'text-amber-600',
-    },
-    {
-      title: 'Canal email',
-      value: emailStatus?.active ? 'Actif' : 'À finaliser',
-      details: emailStatus?.lastSentAt
-        ? `Envoi vers ${emailStatus.recipient || 'thomas@mayday-consulting.ai'} · Dernier envoi: ${new Date(emailStatus.lastSentAt).toLocaleString('fr-FR')}`
-        : 'Envoi prévu vers thomas@mayday-consulting.ai après configuration SMTP.',
-      icon: Bell,
-      color: emailStatus?.active ? 'text-emerald-600' : 'text-[#0080A3]',
-    },
-    {
-      title: 'Rotation des logs',
-      value: 'Active',
-      details: 'Rotation quotidienne des logs système pour limiter la croissance disque.',
-      icon: RefreshCw,
-      color: 'text-emerald-600',
-    },
-    {
-      title: 'Nettoyage Docker',
-      value: 'Hebdomadaire',
-      details: 'Purge automatique des images/cache inutilisés pour éviter la saturation.',
-      icon: HardDrive,
-      color: 'text-indigo-600',
-    },
-  ]
 
   const usePercentNumber = parseUsePercent(diskUsage?.usePercent)
   const usageColorClass =
@@ -177,6 +167,16 @@ export default function AdminMonitoringPage() {
   const totalReclaimedBytes = sortedPurges.reduce((sum, p) => sum + p.totalReclaimedBytes, 0)
   const nextPurgeLabel = nextPurgeFr()
 
+  const checks = buildMonitoringChecks({
+    usePercent: diskUsage ? usePercentNumber : null,
+    diskError,
+    email: emailStatus,
+    emailError,
+    purges,
+    purgesError,
+    formatDate: formatUpdatedAtFr,
+  })
+
   return (
     <div className="space-y-6">
       <div>
@@ -208,6 +208,16 @@ export default function AdminMonitoringPage() {
                 {diskError}
               </p>
             )}
+          </div>
+        )}
+        {!loadingDiskUsage && sourceIssues.length > 0 && (
+          <div className="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            <p className="font-medium">Configuration des sources à corriger</p>
+            <ul className="mt-1 list-disc pl-5 space-y-0.5 break-words">
+              {sourceIssues.map((issue) => (
+                <li key={issue}>{issue}</li>
+              ))}
+            </ul>
           </div>
         )}
         {!loadingDiskUsage && diskUsage?.coherenceNote && (
@@ -278,17 +288,19 @@ export default function AdminMonitoringPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {checks.map((check) => {
-          const Icon = check.icon
+          const Icon = CHECK_ICONS[check.key]
           return (
-            <article key={check.title} className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+            <article key={check.key} className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm text-gray-500">{check.title}</p>
-                  <p className="text-xl font-semibold text-gray-900 mt-1">{check.value}</p>
+                  <p className="text-xl font-semibold text-gray-900 mt-1">
+                    {loadingDiskUsage ? '…' : check.value}
+                  </p>
                 </div>
-                <Icon className={`h-6 w-6 ${check.color}`} />
+                <Icon className={`h-6 w-6 ${loadingDiskUsage ? 'text-gray-300' : TONE_CLASSES[check.tone]}`} />
               </div>
-              <p className="text-sm text-gray-600 mt-4">{check.details}</p>
+              <p className="text-sm text-gray-600 mt-4">{loadingDiskUsage ? 'Chargement...' : check.details}</p>
             </article>
           )
         })}

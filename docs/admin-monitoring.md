@@ -26,6 +26,8 @@ Auth : `verifyAdminAuth` (rôle `admin` ou `super_admin`). 401 / 403 / 404 comme
 
 Timeout fetch source : 15 s, `redirect: 'error'`, `cache: 'no-store'`.
 
+`stats` et `disk` renvoient aussi `emailError` et `sourceIssues` : pour chaque source refusée, la variable en cause et la raison (variable absente, HTTP public, identifiants dans l’URL, authentification manquante). Jamais l’URL elle-même. La page les affiche sous « Configuration des sources à corriger ».
+
 ## 3. Sources JSON (hôte OVH)
 
 | Variable | Fichier typique | Consommateur |
@@ -46,6 +48,10 @@ Timeout fetch source : 15 s, `redirect: 'error'`, `cache: 'no-store'`.
 
 URL refusée ou absente → `Source monitoring non configurée`. En **dev** uniquement, le disque retombe sur `df -h /` de la machine locale. En prod : `disk: null` + `diskError`. Pas de fallback local pour les purges Docker.
 
+`email-status.json` en **404** = aucune alerte envoyée (l’hôte ne l’écrit qu’au premier envoi, disque > 85 %) : `email: null`, `emailError: null`.
+
+Les cartes d’état de la page (`utils/checks.ts`) sont dérivées de ces données : alerte disque (occupation vs 85 %), dernière alerte email, dernière purge Docker. « Rotation des logs » reste « Non suivie » tant que l’hôte ne publie pas cet état.
+
 JSON disque attendu : `total`, `used`, `free` (ou `available`), `usePercent`, `updatedAt`. Si `|total − (used+free)| > 12 %`, l’API recalcule total et % (`coherenceNote`).
 
 ## 4. Hôte (ne pas réouvrir)
@@ -57,6 +63,7 @@ Modèles dans `scripts/deploy/` :
 | `protect-ovh-monitoring.sh` | Audit SSH (`SUPABASE_OVH_SSH_HOST`) : Caddy public 404, nginx :8080 localhost-only |
 | `caddy-monitoring-basicauth.caddy` | HTTPS + basic auth pour le fetch Vercel |
 | `caddy-monitoring-localhost.caddy` | Variante loopback |
+| `docker-daemon.json` | Rotation des logs Docker (50 Mo × 3 par conteneur) → `/etc/docker/daemon.json`, puis `systemctl restart docker` et recréer les conteneurs (ne s’applique qu’aux conteneurs recréés) |
 | `nginx-monitoring.conf` | `allow 127.0.0.1; deny all` **ou** `auth_basic` sur vhost HTTPS |
 
 Vérifs attendues (depuis l’hôte vs Internet) : documentées dans `protect-ovh-monitoring.sh`. Jamais d’adresse IP dans le repo (`.env.example`).
