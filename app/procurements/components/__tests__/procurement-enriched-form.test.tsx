@@ -12,7 +12,7 @@ function fill() {
   fireEvent.change(screen.getByLabelText('Titre de l’appel d’offres'), { target: { value: ' Campagne ' } })
   fireEvent.change(screen.getByLabelText('Description du besoin'), { target: { value: ' Besoin marketing ' } })
   fireEvent.change(screen.getByLabelText('Date limite'), { target: { value: '2099-07-15' } })
-  fireEvent.change(screen.getByLabelText('Emails des fournisseurs prévus'), { target: { value: ' Alpha@Example.com, alpha@example.com, beta@example.com ' } })
+  fireEvent.change(screen.getByLabelText('Email du contact'), { target: { value: ' Alpha@Example.com, alpha@example.com, beta@example.com ' } })
 }
 function success() { postJson.mockResolvedValue({ ok: true, status: 201, json: async () => ({ id }) }) }
 test('sauvegarde les données nettoyées et ouvre le dashboard créé', async () => {
@@ -32,12 +32,12 @@ test('exige les champs obligatoires et focalise le résumé accessible', () => {
   expect(screen.getByRole('alert')).toHaveFocus()
   expect(screen.getByLabelText('Description du besoin')).toHaveAttribute('aria-invalid', 'true')
   expect(screen.getByLabelText('Date limite')).toHaveAttribute('aria-invalid', 'true')
-  expect(screen.getByLabelText('Emails des fournisseurs prévus')).toHaveAttribute('aria-invalid', 'true')
+  expect(screen.getByLabelText('Email du contact')).toHaveAttribute('aria-invalid', 'true')
   expect(postJson).not.toHaveBeenCalled()
 })
 test('ajoute, déduplique et retire les emails avec Entrée', () => {
   render(<NewProcurementForm />)
-  const input = screen.getByLabelText('Emails des fournisseurs prévus')
+  const input = screen.getByLabelText('Email du contact')
   fireEvent.change(input, { target: { value: 'Alpha@example.com, ALPHA@example.com' } })
   fireEvent.keyDown(input, { key: 'Enter' })
   expect(screen.getAllByRole('button', { name: 'Retirer alpha@example.com' })).toHaveLength(1)
@@ -47,7 +47,7 @@ test('ajoute, déduplique et retire les emails avec Entrée', () => {
 })
 test('bloque un email invalide encore dans le champ à la soumission', () => {
   render(<NewProcurementForm />); fill()
-  fireEvent.change(screen.getByLabelText('Emails des fournisseurs prévus'), { target: { value: 'invalid' } })
+  fireEvent.change(screen.getByLabelText('Email du contact'), { target: { value: 'invalid' } })
   fireEvent.click(screen.getByRole('button', { name: 'Créer l’appel d’offres' }))
   expect(screen.getByRole('alert')).toHaveTextContent('email')
   expect(postJson).not.toHaveBeenCalled()

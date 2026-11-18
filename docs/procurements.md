@@ -99,3 +99,18 @@ comporte des échecs préexistants de logique de scoring / statuts ; les tests
 ciblés Procurements passent. La fonctionnalité est adaptée à l’organisation
 de routes existante de `preprod` (sans groupe `(saas)`), sans fusion des changements
 ultérieurs de `main`.
+
+## Fournisseurs (MAY-24)
+
+Les fournisseurs vivent dans `public.procurement_suppliers` (`contact_email` unique par appel,
+`company_name`, `siren`, `city`, facultatifs). `procurements.supplier_emails` n'est plus lu :
+la migration `20261118213817_create_procurement_suppliers.sql` y reprend les emails existants
+(entreprise non renseignée, complétable depuis la page).
+
+- Création : `POST /api/procurements` accepte `suppliers` (détails des emails de `supplier_emails`).
+- `POST /api/procurements/:id/suppliers` : ajoute, ou complète le fournisseur qui a le même email.
+- `DELETE /api/procurements/:id/suppliers/:supplierId` : retire un fournisseur.
+- `GET /api/company-search?q=` : recherche Pappers par nom, SIREN ou SIRET (`PAPPERS_API_KEY` ;
+  `PAPPERS_MOCK_MODE=true` renvoie des entreprises fictives « RECETTE … »).
+
+RLS : seul le propriétaire de l'appel d'offre lit et gère ses fournisseurs.

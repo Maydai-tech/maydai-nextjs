@@ -39,14 +39,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0].message, fields: parsed.error.flatten().fieldErrors, issues: parsed.error.issues.map(({ path, message }) => ({ path: path.join('.'), message })) }, { status: 400 })
   }
 
+  const { suppliers = [], ...procurement } = parsed.data
   try {
     const { data, error } = await auth.supabase
       .from('procurements')
-      .insert({ ...parsed.data, user_id: auth.user.id })
+      .insert({ ...procurement, user_id: auth.user.id })
       .select(PROCUREMENT_COLUMNS)
       .single()
 
     if (error || !data) throw error ?? new Error('Aucun appel d’offres créé')
+    const rows = procurement.supplier_emails.map((email) => {
+      const details = suppliers.find((supplier) => supplier.contact_email === email)
+      return { procurement_id: data.id, contact_email: email, company_name: details?.company_name ?? null, siren: details?.siren ?? null, city: details?.city ?? null }
+    })
+    const { error: suppliersError } = await auth.supabase.from('procurement_suppliers').insert(rows)
+    if (suppliersError) {
+      // ponytail: compensation manuelle plutôt qu'une fonction SQL transactionnelle ; à revoir si la création s'enrichit.
+      await auth.supabase.from('procurements').delete().eq('id', data.id)
+      throw suppliersError
+    }
     return NextResponse.json(data, { status: 201 })
   } catch (error) {
     console.error('[Procurements] Échec de la création:', error)

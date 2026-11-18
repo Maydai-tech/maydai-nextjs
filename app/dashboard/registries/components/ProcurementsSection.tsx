@@ -137,7 +137,7 @@ export default function ProcurementsSection({ initialProcurements, initialError 
   function renderCard(procurement: Procurement) {
     const status = procurementStatus(procurement.deadline_at)
     const closed = status === 'closed'
-    const supplierCount = procurement.supplier_emails?.length ?? 0
+    const supplierCount = procurement.supplier_count ?? procurement.supplier_emails?.length ?? 0
     return (
       <li key={procurement.id} className="relative">
         <Link href={`/procurements/${procurement.id}`} className={`group block h-full bg-white border border-gray-200 rounded-xl p-5 shadow-sm transition-all hover:shadow-md hover:border-[#0080A3]/35 ${FOCUS_RING}`}>

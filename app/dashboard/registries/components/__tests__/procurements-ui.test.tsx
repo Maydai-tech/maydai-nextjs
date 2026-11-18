@@ -27,7 +27,7 @@ describe('Formulaire de création', () => {
     fireEvent.change(screen.getByLabelText(/Titre de l’appel/), { target: { value: ' Assistant RH ' } })
     fireEvent.change(screen.getByLabelText(/Description/), { target: { value: ' Besoin RH ' } })
     fireEvent.change(screen.getByLabelText('Date limite'), { target: { value: '2099-01-15' } })
-    fireEvent.change(screen.getByLabelText('Emails des fournisseurs prévus'), { target: { value: 'supplier@example.com' } })
+    fireEvent.change(screen.getByLabelText('Email du contact'), { target: { value: 'supplier@example.com' } })
   }
 
   test('soumet la saisie nettoyée et revient à la liste', async () => {

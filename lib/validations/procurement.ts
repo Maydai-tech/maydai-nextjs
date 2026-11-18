@@ -29,6 +29,21 @@ export type ProcurementQuestion = z.infer<typeof ProcurementQuestionSchema>
 export function normalizeSupplierEmails(emails: string[]): string[] {
   return [...new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean))]
 }
+export const ProcurementSupplierInputSchema = z.object({
+  contact_email: z.string().trim().toLowerCase().email('L’adresse email du fournisseur est invalide.'),
+  company_name: z.string().trim().min(1, 'Renseignez le nom de l’entreprise.').max(200, 'Le nom est limité à 200 caractères.').nullish(),
+  siren: z.string().regex(/^\d{9}$/, 'Le SIREN doit comporter 9 chiffres.').nullish(),
+  city: z.string().trim().max(120).nullish(),
+})
+export type ProcurementSupplierInput = z.infer<typeof ProcurementSupplierInputSchema>
+export interface ProcurementSupplier {
+  id: string
+  contact_email: string
+  company_name: string | null
+  siren: string | null
+  city: string | null
+  created_at?: string
+}
 export const ProcurementInputSchema = z.object({
   title: z.string().trim().min(1, 'Le titre est obligatoire.').max(200, 'Le titre est limité à 200 caractères.'),
   description: z.string().trim().min(1, 'La description du besoin est obligatoire.').max(5000, 'La description est limitée à 5 000 caractères.'),
@@ -37,6 +52,8 @@ export const ProcurementInputSchema = z.object({
   custom_questions: z.array(ProcurementQuestionSchema).refine((items) => new Set(items.map((item) => item.id)).size === items.length, 'Les questions doivent avoir des identifiants distincts.').default([]),
   deadline_at: z.string().datetime({ offset: true, message: 'Renseignez une date et une heure de clôture valides.' }).refine((value) => Date.parse(value) > Date.now(), 'La clôture doit être dans le futur.').transform((value) => new Date(value).toISOString()),
   supplier_emails: z.array(z.string().trim().email('L’adresse email du fournisseur est invalide.')).min(1, 'Ajoutez au moins un email fournisseur.').transform(normalizeSupplierEmails),
+  // Détails facultatifs (entreprise, SIREN) des emails listés dans supplier_emails.
+  suppliers: z.array(ProcurementSupplierInputSchema).max(200).optional(),
 })
 export type ProcurementInput = z.infer<typeof ProcurementInputSchema>
 // Nullable/absent configuration supports historical records and older list consumers.
@@ -51,4 +68,6 @@ export interface Procurement {
   custom_questions?: ProcurementQuestion[]
   deadline_at?: string | null
   supplier_emails?: string[]
+  suppliers?: ProcurementSupplier[]
+  supplier_count?: number
 }

@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, FileText, Plus, X } from 'lucide-react'
 import { z } from 'zod'
 import { useApiClient } from '@/lib/api-client'
-import { DEFAULT_IMPORTANCE, normalizeSupplierEmails, PROCUREMENT_PHASES, ProcurementInputSchema, type ProcurementInput, type ProcurementQuestion } from '@/lib/validations/procurement'
+import { DEFAULT_IMPORTANCE, normalizeSupplierEmails, PROCUREMENT_PHASES, ProcurementInputSchema, type ProcurementInput, type ProcurementQuestion, type ProcurementSupplierInput } from '@/lib/validations/procurement'
 import { parisDeadlineToUtc } from '@/lib/validations/procurement-deadline'
 import CriteriaFields from '../components/CriteriaFields'
 import CustomQuestionFields from '../components/CustomQuestionFields'
+import SupplierFields, { formatSiren, type CompanySelection } from '../components/SupplierFields'
 import { errorProps, FieldError, fieldId, FOCUS_RING, FormSection, INPUT_STYLE, PRIMARY_BUTTON, type FieldErrors } from '../components/form-ui'
 
 export default function NewProcurementForm() {
@@ -20,7 +21,8 @@ export default function NewProcurementForm() {
   const [questions, setQuestions] = useState<ProcurementQuestion[]>([])
   const [date, setDate] = useState('')
   const [time, setTime] = useState('18:00')
-  const [emails, setEmails] = useState<string[]>([])
+  const [suppliers, setSuppliers] = useState<ProcurementSupplierInput[]>([])
+  const [company, setCompany] = useState<CompanySelection | null>(null)
   const [emailDraft, setEmailDraft] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -31,15 +33,22 @@ export default function NewProcurementForm() {
   const { postJson } = useApiClient()
 
   useEffect(() => { if (Object.keys(fieldErrors).length) errorSummary.current?.focus() }, [fieldErrors])
-  function collectedEmails() { return normalizeSupplierEmails([...emails, ...emailDraft.split(/[,\n]+/)]) }
+  // Fournisseurs saisis + email encore dans le champ (plusieurs emails séparés par des virgules acceptés).
+  function collectedSuppliers(): ProcurementSupplierInput[] {
+    const drafts = normalizeSupplierEmails(emailDraft.split(/[,\n]+/))
+    const details = drafts.length === 1 && company ? { company_name: company.name, siren: company.siren, city: company.city } : {}
+    const known = new Set(suppliers.map((supplier) => supplier.contact_email))
+    return [...suppliers, ...drafts.filter((email) => !known.has(email)).map((contact_email) => ({ contact_email, ...details }))]
+  }
+  function resetPicker() { setEmailDraft(''); setCompany(null) }
   function commitEmails() {
     if (!emailDraft.trim()) return
-    const candidates = collectedEmails()
-    if (candidates.some((email) => !z.string().email().safeParse(email).success)) {
+    const candidates = collectedSuppliers()
+    if (candidates.some((supplier) => !z.string().email().safeParse(supplier.contact_email).success)) {
       setFieldErrors((current) => ({ ...current, supplier_emails: 'Vérifiez les adresses email des fournisseurs.' }))
       return
     }
-    setEmails(candidates); setEmailDraft('')
+    setSuppliers(candidates); resetPicker()
     setFieldErrors((current) => { const next = { ...current }; delete next.supplier_emails; return next })
   }
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -47,18 +56,19 @@ export default function NewProcurementForm() {
     if (pending.current) return
     setError(null)
     const deadline = parisDeadlineToUtc(date, time)
-    const parsed = ProcurementInputSchema.safeParse({ title, description, phase, criteria_importance: criteria, custom_questions: questions, deadline_at: deadline ?? '', supplier_emails: collectedEmails() })
+    const allSuppliers = collectedSuppliers()
+    const parsed = ProcurementInputSchema.safeParse({ title, description, phase, criteria_importance: criteria, custom_questions: questions, deadline_at: deadline ?? '', supplier_emails: allSuppliers.map((supplier) => supplier.contact_email), suppliers: allSuppliers })
     if (!parsed.success) {
       const errors: FieldErrors = {}
       for (const issue of parsed.error.issues) {
-        const path = issue.path[0] === 'supplier_emails' ? 'supplier_emails' : issue.path.join('.')
+        const path = issue.path[0] === 'supplier_emails' || issue.path[0] === 'suppliers' ? 'supplier_emails' : issue.path.join('.')
         errors[path] ??= path === 'deadline_at' && !deadline ? 'Renseignez une date et une heure de clôture valides (heure de Paris).' : issue.message
       }
       setFieldErrors(errors)
       return
     }
     setFieldErrors({})
-    setEmails(parsed.data.supplier_emails); setEmailDraft('')
+    setSuppliers(parsed.data.suppliers ?? []); resetPicker()
     pending.current = true; setLoading(true)
     try {
       const response = await postJson('/api/procurements', parsed.data)
@@ -68,7 +78,7 @@ export default function NewProcurementForm() {
         if (Array.isArray(body?.issues)) {
           const errors: FieldErrors = {}
           for (const issue of body.issues) {
-            if (typeof issue.path === 'string' && typeof issue.message === 'string') errors[issue.path.startsWith('supplier_emails') ? 'supplier_emails' : issue.path] = issue.message
+            if (typeof issue.path === 'string' && typeof issue.message === 'string') errors[issue.path.startsWith('supplier') ? 'supplier_emails' : issue.path] = issue.message
           }
           setFieldErrors(errors)
         }
@@ -95,11 +105,16 @@ export default function NewProcurementForm() {
         </FormSection>
         <FormSection number={2} title="Critères Maydai" description="Réglez l’importance de chaque critère. À 0, le critère reste présent avec une priorité minimale."><CriteriaFields values={criteria} onChange={(id, value) => setCriteria((current) => ({ ...current, [id]: value }))} disabled={loading} errors={fieldErrors} /></FormSection>
         <FormSection number={3} title="Questions sur mesure" description="Facultatives. Complétez votre future collecte avec vos questions métier."><CustomQuestionFields questions={questions} onChange={(items) => { setQuestions(items); setFieldErrors({}) }} disabled={loading} errors={fieldErrors} /></FormSection>
-        <FormSection number={4} title="Fournisseurs et échéance" description="Enregistrez les destinataires prévus et la date limite de réponse.">
+        <FormSection number={4} title="Fournisseurs et échéance" description="Ajoutez les entreprises consultées et la date limite de réponse. Vous pourrez compléter la liste ensuite.">
           <div className="grid sm:grid-cols-2 gap-4"><div><label htmlFor={fieldId('deadline_at')} className="block text-sm font-medium text-gray-700 mb-2">Date limite</label><input id={fieldId('deadline_at')} type="date" required disabled={loading} value={date} onChange={(event) => setDate(event.target.value)} className={INPUT_STYLE} {...errorProps('deadline_at', fieldErrors)} /></div><div><label htmlFor="procurement-deadline-time" className="block text-sm font-medium text-gray-700 mb-2">Heure de clôture</label><input id="procurement-deadline-time" type="time" required disabled={loading} value={time} onChange={(event) => setTime(event.target.value)} className={INPUT_STYLE} {...errorProps('deadline_at', fieldErrors)} /></div></div><p className="mt-2 text-sm text-gray-500">Heure de Paris · Europe/Paris</p><FieldError path="deadline_at" errors={fieldErrors} />
-          <label htmlFor={fieldId('supplier_emails')} className="block text-sm font-medium text-gray-700 mt-5 mb-2">Emails des fournisseurs prévus</label>
-          {emails.length > 0 && <ul className="flex flex-wrap gap-2 mb-3">{emails.map((email) => <li key={email} className="inline-flex max-w-full items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 pl-3"><span className="min-w-0 break-all text-sm text-gray-700">{email}</span><button type="button" disabled={loading} onClick={() => setEmails((current) => current.filter((item) => item !== email))} aria-label={`Retirer ${email}`} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-gray-200 ${FOCUS_RING}`}><X size={16} aria-hidden="true" /></button></li>)}</ul>}
-          <div className="flex flex-col sm:flex-row gap-2"><input id={fieldId('supplier_emails')} type="text" inputMode="email" autoComplete="off" value={emailDraft} disabled={loading} onChange={(event) => setEmailDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); commitEmails() } }} placeholder="contact@fournisseur.fr" className={INPUT_STYLE} {...errorProps('supplier_emails', fieldErrors)} /><button type="button" disabled={loading} onClick={commitEmails} className={`inline-flex shrink-0 min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 text-sm font-medium text-[#0080A3] hover:bg-gray-50 ${FOCUS_RING}`}><Plus size={18} aria-hidden="true" />Ajouter</button></div><p className="mt-2 text-sm text-gray-500">Entrée ou virgule pour ajouter · {emails.length} fournisseur{emails.length > 1 ? 's' : ''} prévu{emails.length > 1 ? 's' : ''}</p><FieldError path="supplier_emails" errors={fieldErrors} />
+          <h3 className="mt-7 mb-3 text-sm font-semibold text-gray-700">Fournisseurs consultés · {suppliers.length}</h3>
+          {suppliers.length > 0 && <ul className="mb-4 space-y-2">{suppliers.map((supplier) => <li key={supplier.contact_email} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-gray-200 bg-gray-50 py-1 pl-3.5 pr-1"><span className="min-w-0 flex-1 basis-56 text-sm font-semibold text-gray-900 break-words">{supplier.company_name ?? <span className="font-normal text-gray-500">Entreprise non renseignée</span>}{supplier.siren && <span className="font-normal text-gray-500"> · SIREN {formatSiren(supplier.siren)}</span>}</span><span className="min-w-0 flex-1 basis-48 break-all text-sm text-gray-700">{supplier.contact_email}</span><button type="button" disabled={loading} onClick={() => setSuppliers((current) => current.filter((item) => item.contact_email !== supplier.contact_email))} aria-label={`Retirer ${supplier.company_name ?? supplier.contact_email}`} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-200 ${FOCUS_RING}`}><X size={16} aria-hidden="true" /></button></li>)}</ul>}
+          <div className="rounded-xl border border-dashed border-gray-300 p-4 sm:p-5">
+            <p className="mb-3 text-sm font-semibold text-gray-900">Ajouter un fournisseur</p>
+            <SupplierFields idPrefix="procurement-new-supplier" emailId={fieldId('supplier_emails')} company={company} onCompanyChange={setCompany} email={emailDraft} onEmailChange={setEmailDraft} onEmailKeyDown={(event) => { if (event.key === 'Enter' || event.key === ',') { event.preventDefault(); commitEmails() } }} emailInputProps={errorProps('supplier_emails', fieldErrors)} disabled={loading} />
+            <div className="mt-3 flex justify-end"><button type="button" disabled={loading} onClick={commitEmails} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-[#0080A3] hover:bg-gray-50 ${FOCUS_RING}`}><Plus size={18} aria-hidden="true" />Ajouter</button></div>
+          </div>
+          <FieldError path="supplier_emails" errors={fieldErrors} />
         </FormSection>
         {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pb-4"><Link href="/dashboard/registries" aria-disabled={loading} tabIndex={loading ? -1 : undefined} className={`inline-flex min-h-11 items-center justify-center rounded-lg px-5 py-2.5 text-gray-700 hover:bg-gray-100 font-medium ${FOCUS_RING} ${loading ? 'pointer-events-none opacity-60' : ''}`}>Annuler</Link><button type="submit" disabled={loading} className={PRIMARY_BUTTON}>{loading ? 'Création en cours…' : 'Créer l’appel d’offres'}<ArrowRight size={18} aria-hidden="true" /></button></div>
