@@ -94,3 +94,39 @@ export function resolveMonitoringFetchTarget(
 
   return { url: value, headers }
 }
+
+/**
+ * Raison lisible pour laquelle `resolveMonitoringFetchTarget` refuse une source
+ * (null si la source est utilisable). Ne renvoie jamais l’URL ni les secrets.
+ */
+export function describeMonitoringSourceIssue(
+  rawUrl: string | undefined,
+  env: MonitoringEnv = process.env
+): string | null {
+  if (resolveMonitoringFetchTarget(rawUrl, env)) {
+    return null
+  }
+
+  const value = rawUrl?.trim()
+  if (!value) {
+    return 'variable absente'
+  }
+
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    return 'URL invalide'
+  }
+
+  if (url.username || url.password) {
+    return 'identifiants dans l’URL refusés (utiliser MONITORING_HTTP_USER / MONITORING_HTTP_PASSWORD)'
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    return 'protocole non supporté (HTTPS attendu)'
+  }
+  if (url.protocol === 'http:') {
+    return 'URL en HTTP public refusée (HTTPS requis)'
+  }
+  return 'authentification manquante (MONITORING_HTTP_USER + MONITORING_HTTP_PASSWORD ou MONITORING_BEARER_TOKEN)'
+}

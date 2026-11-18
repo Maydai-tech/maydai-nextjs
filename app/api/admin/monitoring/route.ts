@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorMonitor } from '@/lib/error-monitor'
 import { verifyAdminAuth } from '@/lib/admin-auth'
-import { resolveMonitoringFetchTarget } from '@/lib/monitoring-source'
+import {
+  describeMonitoringSourceIssue,
+  resolveMonitoringFetchTarget,
+} from '@/lib/monitoring-source'
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 
@@ -264,6 +267,10 @@ async function getProductionEmailStatus() {
     throw new Error(MONITORING_SOURCE_UNCONFIGURED)
   }
   const response = await monitoringFetch(target)
+  // L'hôte n'écrit email-status.json qu'au premier envoi d'alerte (disque > 85 %).
+  if (response.status === 404) {
+    return null
+  }
   if (!response.ok) {
     throw new Error(`Source statut email indisponible (${response.status})`)
   }
@@ -282,6 +289,30 @@ async function getProductionEmailStatus() {
     lastMessageId: typeof o.lastMessageId === 'string' ? o.lastMessageId : '',
     source: 'production',
   }
+}
+
+async function getEmailStatusResult() {
+  try {
+    return { email: await getProductionEmailStatus(), emailError: null }
+  } catch (error) {
+    return { email: null, emailError: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+const MONITORING_SOURCE_ENV = {
+  disk: 'MONITORING_PROD_DISK_JSON_URL',
+  email: 'MONITORING_PROD_EMAIL_STATUS_JSON_URL',
+  purges: 'MONITORING_PROD_DOCKER_PURGES_JSON_URL',
+} as const
+
+/** Diagnostic de configuration par source, pour comprendre « Source monitoring non configurée ». */
+function getSourceIssues(): Record<string, string> {
+  const issues: Record<string, string> = {}
+  for (const [source, envKey] of Object.entries(MONITORING_SOURCE_ENV)) {
+    const issue = describeMonitoringSourceIssue(process.env[envKey])
+    if (issue) issues[source] = `${envKey} : ${issue}`
+  }
+  return issues
 }
 
 // Type local intentionnellement (pattern existant du fichier). Redéfini côté composant.
@@ -362,45 +393,33 @@ export async function GET(req: NextRequest) {
 
     switch (action) {
       case 'stats': {
-        const [{ disk: diskUsage, diskError }, { purges, purgesError }] = await Promise.all([
-          getDiskUsageResult(),
-          getDockerPurgesResult(),
-        ])
-        let emailStatus = null
-        try {
-          emailStatus = await getProductionEmailStatus()
-        } catch {
-          emailStatus = null
-        }
+        const [{ disk: diskUsage, diskError }, { purges, purgesError }, { email, emailError }] =
+          await Promise.all([getDiskUsageResult(), getDockerPurgesResult(), getEmailStatusResult()])
         return NextResponse.json({
           errors: errorMonitor.getErrorStats(),
           performance: errorMonitor.getPerformanceStats(),
           issues: errorMonitor.checkForIssues(),
           disk: diskUsage,
           diskError,
-          email: emailStatus,
+          email,
+          emailError,
           purges,
           purgesError,
+          sourceIssues: getSourceIssues(),
         })
       }
 
       case 'disk': {
-        const [{ disk, diskError }, { purges, purgesError }] = await Promise.all([
-          getDiskUsageResult(),
-          getDockerPurgesResult(),
-        ])
-        let emailForDisk = null
-        try {
-          emailForDisk = await getProductionEmailStatus()
-        } catch {
-          emailForDisk = null
-        }
+        const [{ disk, diskError }, { purges, purgesError }, { email, emailError }] =
+          await Promise.all([getDiskUsageResult(), getDockerPurgesResult(), getEmailStatusResult()])
         return NextResponse.json({
           disk,
           diskError,
-          email: emailForDisk,
+          email,
+          emailError,
           purges,
           purgesError,
+          sourceIssues: getSourceIssues(),
         })
       }
 
