@@ -71,3 +71,17 @@ export interface Procurement {
   suppliers?: ProcurementSupplier[]
   supplier_count?: number
 }
+
+// Vue fournisseur (MAY-29) : sans pondérations ni autres fournisseurs.
+export interface ReceivedProcurement {
+  id: string
+  title: string
+  description: string
+  phase: ProcurementInput['phase'] | null
+  deadline_at: string | null
+  created_at: string
+  buyer_name: string
+  custom_questions?: ProcurementQuestion[]
+  supplier_company_name?: string | null
+  supplier_email?: string
+}

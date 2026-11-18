@@ -12,7 +12,7 @@ import Footer from '@/components/site-vitrine/Footer'
 import NavBar from '@/components/NavBar/NavBar'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
 import { trackLimitReached } from '@/lib/gtm'
-import type { Procurement } from '@/lib/validations/procurement'
+import type { Procurement, ReceivedProcurement } from '@/lib/validations/procurement'
 import ProcurementsSection from './components/ProcurementsSection'
 import DeleteRegistryModal from '@/app/dashboard/[id]/components/DeleteRegistryModal'
 
@@ -22,7 +22,7 @@ interface Company {
   role: string
 }
 
-export default function RegistriesPage({ initialProcurements, procurementsError }: { initialProcurements: Procurement[]; procurementsError: string | null }) {
+export default function RegistriesPage({ initialProcurements, procurementsError, initialReceived = [], receivedError = null }: { initialProcurements: Procurement[]; procurementsError: string | null; initialReceived?: ReceivedProcurement[]; receivedError?: string | null }) {
   const { user, loading, session } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -373,7 +373,7 @@ export default function RegistriesPage({ initialProcurements, procurementsError 
           </div>
         )}
 
-        <ProcurementsSection initialProcurements={initialProcurements} initialError={procurementsError} />
+        <ProcurementsSection initialProcurements={initialProcurements} initialError={procurementsError} initialReceived={initialReceived} receivedError={receivedError} />
 
           {/* Data protection reassurance */}
           <div className="mt-8 bg-[#0080A3]/5 border border-[#0080A3]/15 rounded-2xl px-6 sm:px-10 py-7 max-w-2xl mx-auto text-left">

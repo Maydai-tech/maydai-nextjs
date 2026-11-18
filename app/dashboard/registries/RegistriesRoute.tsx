@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { listProcurements } from '@/lib/services/procurementService'
-import type { Procurement } from '@/lib/validations/procurement'
+import { listProcurements, listReceivedProcurements } from '@/lib/services/procurementService'
+import type { Procurement, ReceivedProcurement } from '@/lib/validations/procurement'
 import RegistriesPage from './RegistriesPage'
 
 export default async function RegistriesRoute() {
@@ -16,5 +16,13 @@ export default async function RegistriesRoute() {
     console.error('[Procurements] Liste indisponible:', error)
     procurementsError = 'Impossible de charger vos appels d’offres. Veuillez réessayer.'
   }
-  return <RegistriesPage initialProcurements={procurements} procurementsError={procurementsError} />
+  let received: ReceivedProcurement[] = []
+  let receivedError: string | null = null
+  try {
+    received = await listReceivedProcurements(supabase)
+  } catch (error) {
+    console.error('[Procurements] Appels reçus indisponibles:', error)
+    receivedError = 'Impossible de charger les appels d’offres reçus. Rechargez la page.'
+  }
+  return <RegistriesPage initialProcurements={procurements} procurementsError={procurementsError} initialReceived={received} receivedError={receivedError} />
 }

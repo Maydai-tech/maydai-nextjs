@@ -114,3 +114,18 @@ la migration `20261118213817_create_procurement_suppliers.sql` y reprend les ema
   `PAPPERS_MOCK_MODE=true` renvoie des entreprises fictives « RECETTE … »).
 
 RLS : seul le propriétaire de l'appel d'offre lit et gère ses fournisseurs.
+
+## Acheteur et fournisseur (MAY-5, MAY-29)
+
+Les rôles sont déduits, sans réglage : on est acheteur de ses appels d'offre, fournisseur de ceux
+dont un fournisseur porte son email de connexion (comparaison insensible à la casse).
+
+- Accueil : bloc « Mes appels d'offres » (création) et bloc « Appels d'offres reçus », affiché
+  seulement s'il y en a ; recherche commune (titre, acheteur), regroupement En cours / Clôturés.
+- `/procurements/:id` : page propriétaire, sinon vue fournisseur en lecture seule
+  (`ReceivedProcurementPage` : acheteur, besoin, phase, date limite, questions), sinon 404.
+- Données : fonctions `list_received_procurements()` et `get_received_procurement(uuid)`
+  (SECURITY DEFINER, migration `20261118214431_procurement_supplier_access.sql`). Elles exposent
+  seulement les colonnes utiles : ni pondérations, ni autres fournisseurs. Aucune policy n'ouvre
+  `procurements` aux fournisseurs.
+- Test SQL : `supabase/tests/procurement_suppliers_rls.sql`.

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Procurement, ProcurementSupplier } from '@/lib/validations/procurement'
+import type { Procurement, ProcurementSupplier, ReceivedProcurement } from '@/lib/validations/procurement'
 
 export const PROCUREMENT_COLUMNS = 'id, user_id, title, description, created_at, phase, criteria_importance, custom_questions, deadline_at, supplier_emails'
 export const SUPPLIER_COLUMNS = 'id, contact_email, company_name, siren, city, created_at'
@@ -27,4 +27,16 @@ export async function listProcurements(supabase: SupabaseClient, userId: string)
     ...procurement,
     supplier_count: Array.isArray(supplier_count) ? supplier_count[0]?.count ?? 0 : undefined,
   }))
+}
+
+export async function listReceivedProcurements(supabase: SupabaseClient): Promise<ReceivedProcurement[]> {
+  const { data, error } = await supabase.rpc('list_received_procurements')
+  if (error) throw error
+  return data ?? []
+}
+
+export async function getReceivedProcurement(supabase: SupabaseClient, id: string): Promise<ReceivedProcurement | null> {
+  const { data, error } = await supabase.rpc('get_received_procurement', { p_id: id })
+  if (error) throw error
+  return data?.[0] ?? null
 }
