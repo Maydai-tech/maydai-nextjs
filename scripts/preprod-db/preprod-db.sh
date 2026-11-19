@@ -60,6 +60,13 @@ refresh() {
   [ "$(psql_in "$TARGET" -Atc 'show cluster_name')" = "maydai-preprod" ] || die "$TARGET n'est pas la base preprod"
   [ "$(psql_in "$SOURCE" -Atc 'show cluster_name')" != "maydai-preprod" ] || die "$SOURCE est une base preprod"
 
+  # Mots de passe des rôles techniques alignés sur celui de la preprod (une base neuve ne le fait pas).
+  docker exec -i "$TARGET" sh -c 'psql -U supabase_admin -d postgres -X -q -v ON_ERROR_STOP=1 -v p="$POSTGRES_PASSWORD"' <<'SQL'
+alter role authenticator password :'p';
+alter role supabase_auth_admin password :'p';
+alter role supabase_storage_admin password :'p';
+SQL
+
   local dump
   dump=$(mktemp)
   trap "rm -f '$dump'" EXIT
