@@ -1,0 +1,174 @@
+# Stack Supabase PREPROD (MAY-30), séparée de la prod (/opt/supabase).
+# Installée dans /opt/supabase-preprod. Voir docs/preprod-database.md.
+# Mêmes versions d'images que la prod ; ni realtime, ni studio, ni imgproxy (inutiles en preprod).
+name: supabase-preprod
+
+services:
+  db:
+    image: supabase/postgres:15.8.1.085
+    container_name: preprod-db
+    restart: unless-stopped
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - log_min_messages=fatal
+      - -c
+      - cluster_name=maydai-preprod # repère lu par les garde-fous de preprod-db.sh / anonymize.sql
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      PGPORT: 5432
+      POSTGRES_PORT: 5432
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: postgres
+      POSTGRES_DB: postgres
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXP: 3600
+    volumes:
+      - db-data:/var/lib/postgresql/data:Z
+      - ../supabase/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  auth:
+    image: supabase/gotrue:v2.164.0
+    container_name: preprod-auth
+    restart: unless-stopped
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      GOTRUE_SITE_URL: ${SITE_URL}
+      GOTRUE_URI_ALLOW_LIST: ${GOTRUE_URI_ALLOW_LIST}
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED: "false"
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
+      GOTRUE_MAILER_AUTOCONFIRM: "false"
+      GOTRUE_MAILER_OTP_ENABLED: "true"
+      # Tous les emails partent dans Mailpit (capturés, jamais envoyés).
+      GOTRUE_SMTP_HOST: mailpit
+      GOTRUE_SMTP_PORT: 1025
+      GOTRUE_SMTP_ADMIN_EMAIL: noreply@preprod.invalid
+      GOTRUE_SMTP_SENDER_NAME: MaydAI preprod
+      GOTRUE_MAILER_URLPATHS_INVITE: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
+      GOTRUE_MAILER_TEMPLATES_MAGIC_LINK: http://email-templates/magic_link.html
+      GOTRUE_MAILER_SUBJECTS_MAGIC_LINK: "[preprod] Code de connexion MayDai"
+      GOTRUE_MAILER_TEMPLATES_CONFIRMATION: http://email-templates/confirmation.html
+      GOTRUE_MAILER_SUBJECTS_CONFIRMATION: "[preprod] Confirmez votre compte MayDai"
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: 1000
+      GOTRUE_RATE_LIMIT_OTP: 0
+      GOTRUE_RATE_LIMIT_VERIFY: 0
+      GOTRUE_RATE_LIMIT_TOKEN_REFRESH: 0
+      GOTRUE_SECURITY_RATE_LIMIT_BY_IP: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  rest:
+    image: postgrest/postgrest:v12.2.3
+    container_name: preprod-rest
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+      PGRST_APP_SETTINGS_JWT_EXP: 3600
+    depends_on:
+      db:
+        condition: service_healthy
+
+  storage:
+    image: supabase/storage-api:v1.11.13
+    container_name: preprod-storage
+    restart: unless-stopped
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: eu-west-1
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+    volumes:
+      - storage-data:/var/lib/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+
+  # Seul service relié au réseau docker de la prod, pour que Caddy le joigne (reverse_proxy preprod-kong:8000).
+  # Nom de service distinct : aucun alias en double avec la prod (kong, auth, rest…) sur ce réseau.
+  preprod-kong:
+    image: kong:2.8.1
+    container_name: preprod-kong
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8100:8000" # tests depuis le serveur
+    entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+    volumes:
+      - ./kong.yml:/home/kong/temp.yml:ro
+    networks:
+      - default
+      - prod
+    depends_on:
+      - auth
+      - rest
+      - storage
+
+  mailpit:
+    image: axllent/mailpit:v1.21.8
+    container_name: preprod-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025" # boîte de réception, via tunnel SSH (voir la doc)
+
+  email-templates:
+    image: nginx:alpine
+    container_name: preprod-email-templates
+    restart: unless-stopped
+    volumes:
+      - ../supabase/volumes/auth/templates:/usr/share/nginx/html:ro
+
+volumes:
+  db-data:
+  storage-data:
+
+networks:
+  prod:
+    external: true
+    name: supabase_supabase # réseau de la stack prod (/opt/supabase), où tourne Caddy
