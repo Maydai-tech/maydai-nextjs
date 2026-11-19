@@ -6,7 +6,6 @@ import ConditionalLayout from '@/components/ConditionalLayout'
 import DeferredGoogleTagManager from '@/components/DeferredGoogleTagManager'
 import SmartLoader from '@/components/SmartLoader'
 import GTMPageViewTracker from '@/components/GTMPageViewTracker'
-import HubSpotTrigger from '@/components/tracking/HubSpotTrigger'
 import AttributionCapture from '@/components/tracking/AttributionCapture'
 
 const GTM_CONTAINER_ID = 'GTM-KLSD6BXG'
@@ -14,7 +13,7 @@ const GTM_CONTAINER_ID = 'GTM-KLSD6BXG'
 interface RootProvidersProps {
   children: React.ReactNode
   /** GTM prod uniquement — passé depuis le layout serveur */
-  loadOfficialGTM?: boolean
+  loadOfficialGTM: boolean
   nonce?: string
 }
 
@@ -24,7 +23,7 @@ interface RootProvidersProps {
  */
 export default function RootProviders({
   children,
-  loadOfficialGTM = false,
+  loadOfficialGTM,
   nonce,
 }: RootProvidersProps) {
   return (
@@ -42,7 +41,6 @@ export default function RootProviders({
           <AttributionCapture />
         </Suspense>
         <GTMPageViewTracker />
-        <HubSpotTrigger />
         <SmartLoader>
           <ConditionalLayout>{children}</ConditionalLayout>
         </SmartLoader>

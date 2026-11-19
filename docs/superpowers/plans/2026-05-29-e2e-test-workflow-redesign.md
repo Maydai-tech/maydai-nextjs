@@ -1,5 +1,7 @@
 # Refonte du workflow d'exécution des tests E2E — Plan d'implémentation
 
+> **Obsolète pour l’exploitation.** Runbook à jour : [e2e-playwright.md](../../e2e-playwright.md). Le step « Deploy report to OVH » a été retiré (septembre 2026) : artifacts GitHub uniquement.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Remplacer l'unique workflow E2E par 3 régimes — push preprod (non-bloquant), PR preprod→main (bloquant), nightly prod — partageant un workflow réutilisable, avec exclusion des tests à API payante hors nightly.
@@ -379,9 +381,9 @@ jobs:
           mkdir -p ~/.ssh
           echo "$OVH_SSH_KEY" | base64 -d > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H 57.130.47.254 >> ~/.ssh/known_hosts
-          ssh -i ~/.ssh/id_ed25519 ubuntu@57.130.47.254 "mkdir -p /var/www/e2e-reports/${{ github.run_id }}"
-          rsync -avz -e "ssh -i ~/.ssh/id_ed25519" --delete ./playwright-report/ ubuntu@57.130.47.254:/var/www/e2e-reports/${{ github.run_id }}/
+          ssh-keyscan -H $SUPABASE_OVH_SSH_HOST >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/id_ed25519 "$SUPABASE_OVH_SSH_HOST" "mkdir -p /var/www/e2e-reports/${{ github.run_id }}"
+          rsync -avz -e "ssh -i ~/.ssh/id_ed25519" --delete ./playwright-report/ "$SUPABASE_OVH_SSH_HOST":/var/www/e2e-reports/${{ github.run_id }}/
 
       - name: Build Slack success payload
         if: always() && steps.e2e.outcome == 'success'
@@ -398,7 +400,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          REPORT_URL: http://57.130.47.254:8080/${{ github.run_id }}/
+          REPORT_URL: ${E2E_REPORTS_BASE_URL}/${{ github.run_id }}/
         run: |
           PR_LINE="—"
           if [ -n "$PR_NUMBER" ]; then PR_LINE="#${PR_NUMBER} ${PR_TITLE}"; fi
@@ -465,7 +467,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          REPORT_URL: http://57.130.47.254:8080/${{ github.run_id }}/
+          REPORT_URL: ${E2E_REPORTS_BASE_URL}/${{ github.run_id }}/
         run: |
           PR_LINE="—"
           if [ -n "$PR_NUMBER" ]; then PR_LINE="#${PR_NUMBER} ${PR_TITLE}"; fi

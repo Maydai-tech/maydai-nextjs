@@ -5,6 +5,9 @@ import { isOwner, hasAccessToResource } from '@/lib/collaborators'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { getUserByEmail, inviteUserByEmail, createProfileForUser } from '@/lib/invite-user'
 import { sendRegistryCollaborationInvite } from '@/lib/email/mailjet'
+import { calculateRegistryCompletenessScore } from '@/lib/validations/registry-completeness'
+import { getRegistryOwnerPlan } from '@/lib/subscription/user-plan'
+import { countAccountCollaborators, listAccountCollaboratorIds } from '@/lib/subscription/quota-guards'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -75,26 +78,15 @@ export async function POST(
 
     if (existingAuthUser) {
       // User already exists in auth
-      // Check if user is trying to invite themselves
       if (existingAuthUser.id === user.id) {
         return NextResponse.json({ error: 'Cannot invite yourself' }, { status: 400 })
       }
 
       collaboratorProfileId = existingAuthUser.id
+      // VULNERABILITE CORRIGEE (Zero Overwrite) : On supprime createProfileForUser ici.
 
-      // Create or update profile for existing auth user with provided firstName/lastName
-      const { error: createProfileError } = await createProfileForUser(
-        existingAuthUser.id,
-        firstName,
-        lastName
-      )
-
-      if (createProfileError) {
-        logger.error('Failed to create/update profile for existing user', createProfileError, createRequestContext(request))
-        return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
-      }
     } else {
-      // User doesn't exist, create them (email will be sent via Mailjet)
+      // User doesn't exist, create them
       const { data: inviteData, error: inviteError } = await inviteUserByEmail(email, {
         firstName,
         lastName
@@ -107,7 +99,7 @@ export async function POST(
 
       collaboratorProfileId = inviteData.user.id
 
-      // Create profile for the invited user
+      // Create profile ONLY for the newly invited user
       const { error: createProfileError } = await createProfileForUser(
         inviteData.user.id,
         firstName,
@@ -133,6 +125,32 @@ export async function POST(
         return NextResponse.json({ error: 'This user is already an owner of this company' }, { status: 400 })
       }
       return NextResponse.json({ error: 'This user is already a collaborator on this company' }, { status: 400 })
+    }
+
+    try {
+      const serviceClient = createClient(supabaseUrl!, supabaseServiceRoleKey!)
+      const alreadyOnAccount = (await listAccountCollaboratorIds(user.id, serviceClient)).has(
+        collaboratorProfileId
+      )
+      if (!alreadyOnAccount) {
+        const ownerPlan = await getRegistryOwnerPlan(companyId, serviceClient)
+        const maxCollaborators = ownerPlan.planInfo.maxCollaborators ?? 2
+        const currentCollaborators = await countAccountCollaborators(user.id, serviceClient)
+        if (currentCollaborators >= maxCollaborators) {
+          return NextResponse.json(
+            {
+              error: 'Limite de collaborateurs du plan atteinte',
+              code: 'PLAN_LIMIT_REACHED',
+              limit: maxCollaborators,
+              current: currentCollaborators,
+            },
+            { status: 403 }
+          )
+        }
+      }
+    } catch (quotaError) {
+      console.error('[POST /api/companies/collaborators] quota', quotaError)
+      return NextResponse.json({ error: 'Erreur lors de la vérification de la limite du plan' }, { status: 500 })
     }
 
     // Create user_companies entry with default role 'user'
@@ -186,6 +204,58 @@ export async function POST(
       // Continue silently, email failure doesn't block user creation
     })
 
+    const { data: companyForScore } = await supabase
+      .from('companies')
+      .select(
+        'name, city, country, type, industry, sub_category_id, is_centralized_registry, maydai_as_registry, siren'
+      )
+      .eq('id', companyId)
+      .single()
+
+    const { count: memberCount } = await supabase
+      .from('user_companies')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+
+    const { data: ownerLink } = await supabase
+      .from('user_companies')
+      .select('user_id')
+      .eq('company_id', companyId)
+      .eq('role', 'owner')
+      .maybeSingle()
+
+    let ownerSiren = ''
+    if (ownerLink?.user_id) {
+      const { data: ownerProfile } = await supabase
+        .from('profiles')
+        .select('siren')
+        .eq('id', ownerLink.user_id)
+        .maybeSingle()
+      ownerSiren = ownerProfile?.siren?.trim() ?? ''
+    }
+
+    const isCentralized =
+      companyForScore?.is_centralized_registry === true ||
+      companyForScore?.maydai_as_registry === true
+
+    const completeness_score = calculateRegistryCompletenessScore({
+      name: companyForScore?.name,
+      industry: companyForScore?.industry,
+      sub_category_id: companyForScore?.sub_category_id,
+      city: companyForScore?.city,
+      country: companyForScore?.country,
+      type: companyForScore?.type,
+      siren: companyForScore?.siren,
+      profileSirenFallback: ownerSiren,
+      has_collaborators: (memberCount ?? 0) > 1,
+      is_centralized_registry: isCentralized,
+    })
+
+    await supabase
+      .from('companies')
+      .update({ completeness_score })
+      .eq('id', companyId)
+
     return NextResponse.json({
       success: true,
       collaborator: {
@@ -197,7 +267,9 @@ export async function POST(
       company: {
         id: companyId,
         name: company?.name
-      }
+      },
+      has_collaborators: (memberCount ?? 0) > 1,
+      completeness_score,
     })
 
   } catch (error) {

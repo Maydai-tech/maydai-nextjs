@@ -1,102 +1,73 @@
-interface MistralMessage {
-  role: 'user' | 'assistant' | 'system'
-  content: string
+import { completeMistralAgent, getDescriptionAgentId } from '@/lib/mistral/agents'
+
+export interface MistralDescriptionFormData {
+  company_name?: string | null
+  company_industry?: string | null
+  company_city?: string | null
+  company_country?: string | null
+  name?: string | null
+  ai_category?: string | null
+  system_type?: string | null
+  deployment_countries?: string | string[] | null
+  technology_partner?: string | null
+  llm_model_version?: string | null
+  responsible_service?: string | null
+  deployment_date?: string | null
 }
 
-interface MistralResponse {
-  choices: Array<{
-    message: {
-      content: string
-    }
-  }>
+function formatDeploymentCountries(countries?: string | string[] | null): string {
+  if (!countries) return 'Non spécifiés'
+  if (Array.isArray(countries)) {
+    const cleaned = countries.map((c) => (c || '').trim()).filter(Boolean)
+    return cleaned.length > 0 ? cleaned.join(', ') : 'Non spécifiés'
+  }
+  const trimmed = countries.trim()
+  return trimmed || 'Non spécifiés'
 }
 
 export class MistralAIService {
-  private apiKey: string
-  private agentId: string
-  private apiUrl: string
-
-  constructor() {
-    this.apiKey = process.env.MISTRAL_API_KEY || ''
-    this.agentId = 'ag:91e23ddf:20250707:resume-cas-usage-ia:9c55ed1d'
-    this.apiUrl = 'https://api.mistral.ai/v1'
-  }
-
-  async generateDescription(formData: any): Promise<string> {
-    // FORCER l'utilisation de l'agent - pas de fallback
-    if (!this.agentId) {
-      throw new Error('Agent Mistral non configuré. Vérifiez MISTRAL_ID_API')
-    }
-    
-    if (!this.apiKey) {
-      throw new Error('Clé API Mistral manquante. Vérifiez MISTRAL_API_KEY')
+  async generateDescription(formData: MistralDescriptionFormData): Promise<string> {
+    const agentId = getDescriptionAgentId()
+    if (!agentId) {
+      throw new Error('Agent Mistral non configuré. Vérifiez MISTRAL_DESCRIPTION_AGENT_ID')
     }
 
-    console.log('🚀 Utilisation de l\'agent Mistral:', this.agentId)
-    return await this.useAgent(formData)
-  }
+    const prompt = this.buildPrompt(formData)
 
-  private async useAgent(formData: any): Promise<string> {
     try {
-      const prompt = this.buildPrompt(formData)
-      
-      console.log('📡 Appel de l\'agent Mistral via /agents/completions avec agent_id:', this.agentId)
-      
-      // Utiliser l'endpoint spécifique pour les agents Mistral
-      const response = await fetch(`${this.apiUrl}/agents/completions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          agent_id: this.agentId,
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-        })
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('❌ Erreur API Agent Mistral:', response.status, errorText)
-        console.error('URL appelée:', `${this.apiUrl}/agents/completions`)
-        console.error('Agent ID utilisé:', this.agentId)
-        throw new Error(`Erreur API Agent Mistral: ${response.status} - ${errorText}`)
-      }
-
-      const data: MistralResponse = await response.json()
-      console.log('✅ Réponse de l\'agent Mistral reçue')
-      return data.choices[0]?.message?.content || 'Erreur lors de la génération avec l\'agent'
+      return await completeMistralAgent(
+        [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        { agentId }
+      )
     } catch (error) {
-      console.error('❌ Erreur Agent Mistral:', error)
-      throw new Error(`Erreur avec l'agent Mistral: ${error instanceof Error ? error.message : 'Erreur inconnue'}`)
+      console.error('[MistralAIService]', error)
+      throw new Error(
+        `Erreur avec l'agent Mistral: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+      )
     }
   }
 
-  private buildPrompt(formData: any): string {
+  private buildPrompt(formData: MistralDescriptionFormData): string {
     return `
-
-
 **Informations de l'entreprise :**
-- Nom de l'entreprise : ${formData.company_name || 'Non spécifié'}
-- Secteur d'activité : ${formData.company_industry || 'Non spécifié'}
-- Localisation : ${formData.company_city || 'Non spécifié'}, ${formData.company_country || 'Non spécifié'}
+- Nom de l'entreprise : ${formData?.company_name || 'Non spécifié'}
+- Secteur d'activité : ${formData?.company_industry || 'Non spécifié'}
+- Localisation : ${formData?.company_city || 'Non spécifié'}, ${formData?.company_country || 'Non spécifié'}
 
 **Informations du cas d'usage :**
-- Nom du cas d'usage : ${formData.name || 'Non spécifié'}
-- Catégorie d'IA : ${formData.ai_category || 'Non spécifiée'}
-- Type de système : ${formData.system_type || 'Non spécifié'}
-- Pays de déploiement : ${formData.deployment_countries || 'Non spécifiés'}
-- Partenaire technologique : ${formData.technology_partner || 'Non spécifié'}
-- Modèle LLM : ${formData.llm_model_version || 'Non spécifié'}
-- Service responsable : ${formData.responsible_service || 'Non spécifié'}
-- Date de déploiement : ${formData.deployment_date || 'Non spécifiée'}
-
-
+- Nom du cas d'usage : ${formData?.name || 'Non spécifié'}
+- Catégorie d'IA : ${formData?.ai_category || 'Non spécifiée'}
+- Type de système : ${formData?.system_type || 'Non spécifié'}
+- Pays de déploiement : ${formatDeploymentCountries(formData?.deployment_countries)}
+- Partenaire technologique : ${formData?.technology_partner || 'Non spécifié'}
+- Modèle LLM : ${formData?.llm_model_version || 'Non spécifié'}
+- Service responsable : ${formData?.responsible_service || 'Non spécifié'}
+- Date de déploiement : ${formData?.deployment_date || 'Non spécifiée'}
     `.trim()
   }
 }

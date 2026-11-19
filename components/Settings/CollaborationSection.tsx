@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Users, Settings } from 'lucide-react'
 import CollaboratorList from '@/components/Collaboration/CollaboratorList'
 import PlanLimitModal from '@/components/Shared/PlanLimitModal'
-import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
+import { useUserPlan } from '@/app/(saas)/abonnement/hooks/useUserPlan'
 import { trackLimitReached } from '@/lib/gtm'
 
 interface CollaborationSectionProps {

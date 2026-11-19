@@ -40,7 +40,7 @@ test.describe.skip('Account deletion (Settings › Zone de danger)', { tag: ['@p
   })
 
   async function openSettingsAndDeleteModal(page: import('@playwright/test').Page) {
-    await authenticateUser(page, ctx.email)
+    await authenticateUser(page, ctx.email, ctx.password)
     await page.goto(`${baseUrl}/settings`)
 
     // Gérer une éventuelle redirection auth transitoire

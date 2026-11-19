@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { AlertTriangle, CheckCircle, Loader2, X } from 'lucide-react'
-import { useCancelSubscriptionWithSync } from '@/app/abonnement/hooks/useCancelSubscriptionWithSync'
+import { useCancelSubscriptionWithSync } from '@/app/(saas)/abonnement/hooks/useCancelSubscriptionWithSync'
 import { createPortal } from 'react-dom'
 
 interface CancelSubscriptionWithSyncButtonProps {

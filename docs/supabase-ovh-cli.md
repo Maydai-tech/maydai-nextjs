@@ -8,7 +8,7 @@ The OVH Postgres container only exposes `127.0.0.1:5432` on the server, so local
 npm run supabase:ovh:tunnel -- start
 ```
 
-This forwards local `127.0.0.1:15432` to `127.0.0.1:5432` on `ubuntu@57.130.47.254`.
+This forwards local `127.0.0.1:15432` to `127.0.0.1:5432` on `$SUPABASE_OVH_SSH_HOST`.
 
 Stop it with:
 
@@ -65,4 +65,4 @@ Stop it only if it was started through the project script:
 npm run supabase:ovh:mcp:tunnel -- stop
 ```
 
-If you started the tunnel manually with `ssh -L 8080:localhost:8000 ubuntu@57.130.47.254`, Codex can use the same `.mcp.json` entry, but the project script cannot stop that manual SSH process.
+If you started the tunnel manually with `ssh -L 8080:localhost:8000 "$SUPABASE_OVH_SSH_HOST"`, Codex can use the same `.mcp.json` entry, but the project script cannot stop that manual SSH process.

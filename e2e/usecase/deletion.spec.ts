@@ -21,7 +21,7 @@ test.describe.skip('Use case deletion (V2)', () => {
     const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
     const cleanBaseUrl = baseUrl.replace(/\/$/, '')
 
-    await authenticateUser(page, testContext.email)
+    await authenticateUser(page, testContext.email, testContext.password)
 
     // Navigation directe vers le dashboard
     await page.goto(`${cleanBaseUrl}/dashboard/${testContext.registryId}`)

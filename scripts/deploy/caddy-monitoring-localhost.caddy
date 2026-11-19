@@ -1,0 +1,9 @@
+# Public IP HTTP: 404 only. Never reverse_proxy /monitoring.
+# (Replace PUBLIC_IPV4 on the host Caddyfile — do not commit the address.)
+#
+# http://PUBLIC_IPV4 {
+#     respond "Not Found" 404
+# }
+#
+# JSON remains on nginx 127.0.0.1:8080 (nginx-e2e-reports.conf).
+# Admin API on Vercel: HTTPS + basic_auth (caddy-monitoring-basicauth.caddy).

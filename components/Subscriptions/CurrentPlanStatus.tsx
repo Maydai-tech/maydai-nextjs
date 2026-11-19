@@ -4,8 +4,8 @@ import React, { useState } from 'react'
 import { CreditCard, Calendar, Download, Settings, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'
 import CancelSubscriptionModal from './CancelSubscriptionModal'
 import ReactivateSubscriptionModal from './ReactivateSubscriptionModal'
-import { useCancelSubscriptionWithSync } from '@/app/abonnement/hooks/useCancelSubscriptionWithSync'
-import { useReactivateSubscription } from '@/app/abonnement/hooks/useReactivateSubscription'
+import { useCancelSubscriptionWithSync } from '@/app/(saas)/abonnement/hooks/useCancelSubscriptionWithSync'
+import { useReactivateSubscription } from '@/app/(saas)/abonnement/hooks/useReactivateSubscription'
 
 interface CurrentPlanStatusProps {
   planName: string

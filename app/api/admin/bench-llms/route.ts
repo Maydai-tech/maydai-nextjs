@@ -1,0 +1,218 @@
+import { NextRequest, NextResponse } from 'next/server'
+
+import { verifyAdminAuth } from '@/lib/admin-auth'
+import {
+  attachSourceIdsToCanonicalModels,
+  buildUnifiedBenchModels,
+  computeSourceCoverageStats,
+  countDistinctEvaluatedModels,
+  DEFAULT_COMPL_AI_BENCHMARK_TOTAL,
+  extractValidSystemCardSlugs,
+  filterUnifiedBenchModels,
+  isValidSystemCardRow,
+  overlayLatestModelsCount,
+  withNormalizedModelsFetched,
+  type BenchFilterableSourceKey,
+  type BenchLifecycleFilter,
+} from '@/lib/bench-llm/admin-unified'
+import { createEcoLogitsServiceClient } from '@/lib/ecologits/sync'
+
+export const dynamic = 'force-dynamic'
+
+const CATALOG_ROW_LIMIT = 20_000
+
+const BENCH_FILTERABLE_SOURCES: readonly BenchFilterableSourceKey[] = [
+  'maydai',
+  'compl_ai',
+  'comparia',
+  'llm_stats',
+  'ecologits',
+  'system_card',
+]
+
+const LIFECYCLE_FILTERS: readonly BenchLifecycleFilter[] = [
+  'all',
+  'in_service',
+  'active',
+  'legacy',
+  'deprecated',
+  'retired',
+  'none',
+]
+
+type PostgrestErrorLike = { message?: string; details?: string }
+
+function positiveInteger(value: string | null, fallback: number, max: number) {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, max) : fallback
+}
+
+function assertNoPostgrestError(err: PostgrestErrorLike | null, context: string) {
+  if (err) throw new Error(`[${context}] ${err.message || err.details || 'Erreur Supabase'}`)
+}
+
+function parseFilterableSource(value: string | null): BenchFilterableSourceKey | undefined {
+  if (!value) return undefined
+  return BENCH_FILTERABLE_SOURCES.find((source) => source === value)
+}
+
+function parseLifecycleFilter(value: string | null): BenchLifecycleFilter {
+  if (!value) return 'all'
+  return LIFECYCLE_FILTERS.find((status) => status === value) ?? 'all'
+}
+
+function latestSystemCardTimestamp(
+  rows: ReadonlyArray<{ updated_at?: string | null; created_at?: string | null }>,
+): string | null {
+  let latest: string | null = null
+  let latestMs = Number.NEGATIVE_INFINITY
+  for (const row of rows) {
+    const value = row.updated_at ?? row.created_at
+    if (!value) continue
+    const ms = Date.parse(value)
+    if (!Number.isFinite(ms) || ms <= latestMs) continue
+    latestMs = ms
+    latest = value
+  }
+  return latest
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await verifyAdminAuth(request)
+    if (auth.error) return auth.error
+
+    const supabase = createEcoLogitsServiceClient()
+    const [
+      { data: canonicalModels, error: modelsError },
+      { data: evaluations, error: evaluationsError },
+      { data: ecoModels, error: ecoError },
+      { data: compariaModels, error: compariaError },
+      { data: sourceIds, error: sourceIdsError },
+      { data: llmRuns },
+      { data: ecoRuns },
+      { data: compariaRuns },
+      { data: complRuns },
+      { data: complAiScoredModels, error: complAiCountError },
+      { count: complAiBenchmarkTotal, error: benchmarkCountError },
+      { data: systemCards, error: systemCardsError },
+      { data: questionnaireProviders, error: questionnaireProvidersError },
+    ] = await Promise.all([
+      supabase
+        .from('compl_ai_models')
+        .select('id, slug, model_name, model_provider, model_provider_id, model_type, updated_at, release_date, llm_leader_rank, comparia_rank, lifecycle_status, system_card_status'),
+      supabase
+        .from('compl_ai_evaluations')
+        .select('model_id, score, maydai_score, rang_compar_ia')
+        .limit(CATALOG_ROW_LIMIT),
+      supabase
+        .from('ecologits_models')
+        .select('id, provider, name, is_active, last_seen_at, link:ecologits_model_links(maydai_model_id), estimate:ecologits_estimates(id)'),
+      supabase
+        .from('comparia_models')
+        .select('id, source_id, organisation, rank, is_active, last_imported_at, maydai_model_id'),
+      supabase
+        .from('llm_model_source_ids')
+        .select('model_id, source, source_id'),
+      supabase.from('llm_stats_sync_runs').select('*').order('started_at', { ascending: false }).limit(5),
+      supabase.from('ecologits_sync_runs').select('*').order('started_at', { ascending: false }).limit(5),
+      supabase.from('comparia_import_runs').select('*').order('started_at', { ascending: false }).limit(5),
+      supabase.from('compl_ai_sync_logs').select('*').order('created_at', { ascending: false }).limit(5),
+      supabase
+        .from('compl_ai_evaluations')
+        .select('model_id')
+        .not('score', 'is', null)
+        .limit(CATALOG_ROW_LIMIT),
+      supabase.from('compl_ai_benchmarks').select('id', { count: 'exact', head: true }),
+      supabase.from('llm_system_cards').select('model_identifier, updated_at, created_at'),
+      supabase
+        .from('model_providers')
+        .select('id')
+        .not('tooltip_title', 'is', null),
+    ])
+    assertNoPostgrestError(modelsError, 'compl_ai_models')
+    assertNoPostgrestError(evaluationsError, 'compl_ai_evaluations')
+    assertNoPostgrestError(ecoError, 'ecologits_models')
+    assertNoPostgrestError(compariaError, 'comparia_models')
+    assertNoPostgrestError(sourceIdsError, 'llm_model_source_ids')
+    assertNoPostgrestError(complAiCountError, 'compl_ai_evaluations_scored')
+    assertNoPostgrestError(benchmarkCountError, 'compl_ai_benchmarks')
+    assertNoPostgrestError(systemCardsError, 'llm_system_cards')
+    assertNoPostgrestError(questionnaireProvidersError, 'model_providers')
+
+    const validSystemCards = (systemCards ?? []).filter(isValidSystemCardRow)
+    const unified = buildUnifiedBenchModels(
+      attachSourceIdsToCanonicalModels(canonicalModels ?? [], sourceIds ?? []),
+      evaluations ?? [],
+      ecoModels ?? [],
+      compariaModels ?? [],
+      {
+        includeUnmatchedCatalogs: false,
+        complAiBenchmarkTotal:
+          complAiBenchmarkTotal && complAiBenchmarkTotal > 0
+            ? complAiBenchmarkTotal
+            : DEFAULT_COMPL_AI_BENCHMARK_TOTAL,
+        systemCardSlugs: extractValidSystemCardSlugs(systemCards),
+        questionnaireProviderIds: (questionnaireProviders ?? []).map((provider) => provider.id),
+      },
+    )
+    const sourceCoverage = computeSourceCoverageStats(unified)
+    const systemCardModelsCount = unified.filter((model) => model.metrics.hasSystemCard === true).length
+    const latestSystemCardDate = latestSystemCardTimestamp(validSystemCards)
+    const sourceParam = request.nextUrl.searchParams.get('source')
+    const source = parseFilterableSource(sourceParam)
+    const availabilityParam = request.nextUrl.searchParams.get('availability')
+    const availability =
+      availabilityParam === 'present' || availabilityParam === 'missing'
+        ? availabilityParam
+        : 'all'
+    const activeParam = request.nextUrl.searchParams.get('active')
+    const active =
+      activeParam === 'active' || activeParam === 'inactive' ? activeParam : 'all'
+    const lifecycleStatus = parseLifecycleFilter(request.nextUrl.searchParams.get('lifecycleStatus'))
+    const filtered = filterUnifiedBenchModels(unified, {
+      search: request.nextUrl.searchParams.get('search') ?? '',
+      provider: request.nextUrl.searchParams.get('provider') ?? '',
+      active,
+      lifecycleStatus,
+      source,
+      availability,
+    })
+    const page = positiveInteger(request.nextUrl.searchParams.get('page'), 1, 10_000)
+    const pageSize = positiveInteger(request.nextUrl.searchParams.get('pageSize'), 25, 20_000)
+    const from = (page - 1) * pageSize
+    const complAiModelCount = countDistinctEvaluatedModels(complAiScoredModels ?? [])
+
+    return NextResponse.json({
+      models: filtered.slice(from, from + pageSize),
+      total: filtered.length,
+      page,
+      pageSize,
+      providers: [...new Set(unified.map((model) => model.provider))].sort(),
+      sourceCoverage,
+      histories: {
+        llmStats: withNormalizedModelsFetched(llmRuns),
+        ecologits: withNormalizedModelsFetched(ecoRuns),
+        comparia: withNormalizedModelsFetched(compariaRuns),
+        complAi: overlayLatestModelsCount(
+          withNormalizedModelsFetched(complRuns),
+          complAiModelCount,
+        ),
+        systemCard: [
+          {
+            status: 'terminé',
+            models_fetched: systemCardModelsCount,
+            started_at: latestSystemCardDate,
+          },
+        ],
+      },
+      role: auth.user?.role,
+    })
+  } catch (error) {
+    console.error('[Bench LLMs Admin] Catalogue impossible:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Erreur interne du serveur' },
+      { status: 500 },
+    )
+  }
+}

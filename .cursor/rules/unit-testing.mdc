@@ -48,16 +48,16 @@ app/usecases/[id]/utils/__tests__/
 
 ### Commandes Principales
 ```bash
-npm test                    # Lancer tous les tests
-npm run test:watch         # Mode surveillance
-npm run test:coverage      # Rapport de couverture
+pnpm test                    # Lancer tous les tests
+pnpm test:watch         # Mode surveillance
+pnpm test:coverage      # Rapport de couverture
 ```
 
 ### Tests Spécifiques
 ```bash
-npm test -- "scoring-config"     # Tests de configuration
-npm test -- "score-calculator"   # Tests de calcul
-npm test -- "risk-categories"    # Tests de catégories
+pnpm test -- "scoring-config"     # Tests de configuration
+pnpm test -- "score-calculator"   # Tests de calcul
+pnpm test -- "risk-categories"    # Tests de catégories
 ```
 
 ## Dépendances de Test
@@ -170,8 +170,8 @@ describe('Module Name', () => {
 #### Avant de Committer
 ```bash
 # TOUJOURS exécuter avant un commit
-npm test                # Tous les tests doivent passer
-npm run test:coverage   # Vérifier la couverture
+pnpm test                # Tous les tests doivent passer
+pnpm test:coverage   # Vérifier la couverture
 ```
 
 #### En Cas de Test qui Échoue

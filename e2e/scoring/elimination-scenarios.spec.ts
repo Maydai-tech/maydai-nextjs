@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from '../auth-helper'
+import { authenticateUser, generateSecureTestPassword } from '../auth-helper'
 import { cleanupTestData } from '../_helpers/db-cleanup'
 import { seedV2Usecase } from '../_helpers/seed-usecase'
 
@@ -12,8 +12,6 @@ import { seedV2Usecase } from '../_helpers/seed-usecase'
  */
 
 test.describe.configure({ mode: 'serial' })
-
-const TEST_PASSWORD = 'TestPassword123!'
 
 function getAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -107,13 +105,14 @@ test.describe.skip('Élimination AI Act — interface V3 (ORS)', () => {
   let usecaseIdQ21: string | null = null
   let usecaseIdQ31: string | null = null
   let usecaseIdQ2: string | null = null
+  const testUserPassword = generateSecureTestPassword()
 
   test.beforeAll(async () => {
     const admin = getAdminClient()
 
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
       email: testUserEmail,
-      password: TEST_PASSWORD,
+      password: testUserPassword,
       email_confirm: true,
     })
     if (authError || !authData.user) {
@@ -324,7 +323,7 @@ test.describe.skip('Élimination AI Act — interface V3 (ORS)', () => {
   })
 
   test.beforeEach(async ({ page }) => {
-    await authenticateUser(page, testUserEmail)
+    await authenticateUser(page, testUserEmail, testUserPassword)
   })
 
   test.afterAll(async () => {

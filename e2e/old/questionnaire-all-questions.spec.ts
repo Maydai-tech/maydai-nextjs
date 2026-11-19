@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { authenticateUser } from '../auth-helper'
+import { authenticateUser, generateSecureTestPassword } from '../auth-helper'
 
 /**
  * E2E : parcours questionnaire V2 (ORS E4.N7 puis E4.N8, sans E5/E6).
@@ -13,6 +13,7 @@ interface TestData {
   registryId: string
   usecaseId: string
   email: string
+  password: string
 }
 
 const GEMINI_FLASH_MODEL_ID = 'c4ebe815-b69b-4da2-b366-20dce7349782'
@@ -58,10 +59,11 @@ function getAdminClient(): SupabaseClient {
 async function createTestData(testId: string): Promise<TestData> {
   const supabase = getAdminClient()
   const email = `e2e-v2-ors-${testId}-${Date.now()}@maydai-test.com`
+  const password = generateSecureTestPassword()
 
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email,
-    password: 'TestPassword123!',
+    password,
     email_confirm: true,
   })
 
@@ -142,7 +144,7 @@ async function createTestData(testId: string): Promise<TestData> {
 
   console.log(`✅ Test data created: ${email} (usecase: ${usecaseId})`)
 
-  return { userId, companyId, registryId, usecaseId, email }
+  return { userId, companyId, registryId, usecaseId, email, password }
 }
 
 async function cleanupTestData(data: TestData): Promise<void> {
@@ -299,7 +301,7 @@ async function completeQuestionnaireAndTrackQuestions(page: Page): Promise<strin
 }
 
 async function authenticateAndNavigate(page: Page, testData: TestData): Promise<void> {
-  await authenticateUser(page, testData.email)
+  await authenticateUser(page, testData.email, testData.password)
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     await page.goto(`/usecases/${testData.usecaseId}/evaluation`)

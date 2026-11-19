@@ -6,7 +6,7 @@ Ce dossier contient les fichiers de configuration pour l'instance Supabase self-
 
 | Info | Valeur |
 |------|--------|
-| **IP** | `57.130.47.254` |
+| **SSH** | `$SUPABASE_OVH_SSH_HOST` (jamais d’IP dans le repo) |
 | **User** | `ubuntu` |
 | **Chemin Supabase** | `/opt/supabase` |
 | **Studio URL** | `https://studio.maydai.io` |
@@ -14,10 +14,10 @@ Ce dossier contient les fichiers de configuration pour l'instance Supabase self-
 
 ```bash
 # Connexion SSH
-ssh ubuntu@57.130.47.254
+ssh "$SUPABASE_OVH_SSH_HOST"
 
 # Accès direct au dossier Supabase
-ssh ubuntu@57.130.47.254 -t "cd /opt/supabase && bash"
+ssh "$SUPABASE_OVH_SSH_HOST" -t "cd /opt/supabase && bash"
 ```
 
 ## Structure
@@ -105,10 +105,10 @@ nano supabase-selfhosted/templates/magic_link.html
 
 ```bash
 # Copier le template
-scp supabase-selfhosted/templates/magic_link.html ubuntu@57.130.47.254:/opt/supabase/volumes/auth/templates/
+scp supabase-selfhosted/templates/magic_link.html "$SUPABASE_OVH_SSH_HOST":/opt/supabase/volumes/auth/templates/
 
 # S'assurer des permissions (important!)
-ssh ubuntu@57.130.47.254 "chmod 644 /opt/supabase/volumes/auth/templates/*.html"
+ssh "$SUPABASE_OVH_SSH_HOST" "chmod 644 /opt/supabase/volumes/auth/templates/*.html"
 ```
 
 **Pas besoin de redémarrer** - GoTrue recharge le template à chaque envoi d'email.
@@ -116,7 +116,7 @@ ssh ubuntu@57.130.47.254 "chmod 644 /opt/supabase/volumes/auth/templates/*.html"
 ### 3. Modifier directement sur le serveur
 
 ```bash
-ssh ubuntu@57.130.47.254
+ssh "$SUPABASE_OVH_SSH_HOST"
 nano /opt/supabase/volumes/auth/templates/magic_link.html
 ```
 

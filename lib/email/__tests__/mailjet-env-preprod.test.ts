@@ -2,7 +2,7 @@
 
 jest.mock('node-mailjet', () => ({
   __esModule: true,
-  default: { apiConnect: jest.fn(() => ({})) },
+  default: { apiConnect: jest.fn(() => ({ post: () => ({ request: async () => ({ body: {} }) }) })) },
 }));
 
 describe('Mailjet environment compatibility', () => {
@@ -22,7 +22,9 @@ describe('Mailjet environment compatibility', () => {
   it('uses the API secret configured on Vercel', async () => {
     process.env.MAILJET_API_SECRET = 'test-vercel-secret';
     await jest.isolateModulesAsync(async () => {
-      await import('../mailjet');
+      const { sendLlmStatsSyncFailureEmail } = await import('../mailjet');
+      // Le client Mailjet est créé au premier envoi (plus au chargement du module).
+      await sendLlmStatsSyncFailureEmail(new Error('test')).catch(() => undefined);
       const { default: client } = await import('node-mailjet');
       expect(client.apiConnect).toHaveBeenCalledWith('test-api-key', 'test-vercel-secret');
     });
@@ -32,7 +34,9 @@ describe('Mailjet environment compatibility', () => {
     process.env.MAILJET_SECRET_KEY = 'test-legacy-secret';
     process.env.MAILJET_API_SECRET = 'test-vercel-secret';
     await jest.isolateModulesAsync(async () => {
-      await import('../mailjet');
+      const { sendLlmStatsSyncFailureEmail } = await import('../mailjet');
+      // Le client Mailjet est créé au premier envoi (plus au chargement du module).
+      await sendLlmStatsSyncFailureEmail(new Error('test')).catch(() => undefined);
       const { default: client } = await import('node-mailjet');
       expect(client.apiConnect).toHaveBeenCalledWith('test-api-key', 'test-legacy-secret');
     });

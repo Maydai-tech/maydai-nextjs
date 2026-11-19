@@ -70,37 +70,6 @@ export const supabase = createSupabaseClient()
 export { createClient } from '@supabase/supabase-js'
 
 // Types pour la base de données
-export interface QuestionnaireSection {
-  id: string
-  code: string
-  name: string
-  description?: string
-  display_order: number
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface QuestionnaireQuestion {
-  id: string
-  section_id?: string
-  code: string
-  question_text: string
-  question_type: 'text' | 'textarea' | 'select' | 'multiselect' | 'boolean' | 'number' | 'date'
-  options?: Array<string | { 
-    value: string
-    label: string
-    next_question_id?: string 
-  }>
-  next_question_id?: string
-  is_required: boolean
-  display_order: number
-  help_text?: string
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
 export interface UseCase {
   id: string
   name: string
@@ -168,6 +137,7 @@ export interface UseCaseResponse {
   answered_at: string
   created_at: string
   updated_at: string
+  metadata?: Record<string, any> | null
 }
 
 export interface QuestionnaireResponseInput {
@@ -215,10 +185,6 @@ export interface ComplAIModel {
   long_name?: string
   launch_date?: string
   model_provider_id?: number
-  eco_provider?: string | null
-  eco_model?: string | null
-  eco_status?: string | null
-  eco_resolved_at?: string | null
   notes_short?: string
   notes_long?: string
   variants?: string[]
@@ -235,10 +201,35 @@ export interface ComplAIModel {
   consumption_wh_per_1k_tokens?: number | null
   release_date?: string | null
   knowledge_cutoff?: string | null
+  slug?: string | null
   country?: string | null
   created_at: string
   updated_at: string
+  role?: string | null
+  reference_model_id?: string | null
+  base_model_id?: string | null
+  merged_into_id?: string | null
+  deprecation_date?: string | null
+  retirement_date?: string | null
+  replacement_model_id?: string | null
+  lifecycle_source_url?: string | null
+  lifecycle_checked_at?: string | null
+  visibility_override?: boolean | null
+  search_labels?: string[]
 }
+
+export interface LlmModelAlias {
+  id: string
+  model_id: string
+  source: 'llm_stats' | 'comparia' | 'ecologits' | 'api' | 'huggingface' | 'manual'
+  source_id: string
+  raw_name: string
+  normalized_name: string
+  match_method: 'exact' | 'slug' | 'rule' | 'manual'
+  created_at: string
+}
+
+export interface ComplAiModelVisible extends ComplAIModel {}
 
 export interface ComplAIBenchmark {
   id: string

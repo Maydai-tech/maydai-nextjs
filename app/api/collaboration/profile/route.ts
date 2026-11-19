@@ -3,6 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { getUserByEmail, inviteUserByEmail, createProfileForUser } from '@/lib/invite-user'
 import { sendAccountCollaborationInvite } from '@/lib/email/mailjet'
+import { calculateAndSaveProfileCompleteness } from '@/lib/services/profileScoreService'
+import { getServiceRoleClient } from '@/lib/maydai-calculator'
+import { getCurrentUserPlan } from '@/lib/subscription/user-plan'
+import { countAccountCollaborators, listAccountCollaboratorIds } from '@/lib/subscription/quota-guards'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -37,7 +41,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { email, firstName, lastName, role = 'user' } = body
+    // VULNERABILITE CORRIGEE : On extrait les données, mais on ignore 'role' du payload client
+    const { email, firstName, lastName } = body
 
     if (!email || !firstName || !lastName) {
       return NextResponse.json({ error: 'Missing required fields: email, firstName, lastName' }, { status: 400 })
@@ -49,36 +54,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
     }
 
-    // Validate role
-    const validRoles = ['owner', 'user']
-    if (!validRoles.includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
-    }
-
     // Check if user exists in auth.users by email
     let collaboratorProfileId: string | null = null
     const { user: existingAuthUser } = await getUserByEmail(email)
 
     if (existingAuthUser) {
       // User already exists in auth
-      // Check if user is trying to invite themselves
       if (existingAuthUser.id === user.id) {
         return NextResponse.json({ error: 'Cannot invite yourself' }, { status: 400 })
       }
 
       collaboratorProfileId = existingAuthUser.id
+      // VULNERABILITE CORRIGEE (Zero Overwrite) : Aucun appel à createProfileForUser ici.
+      // On respecte l'identité existante de l'utilisateur.
 
-      // Create or update profile for existing auth user with provided firstName/lastName
-      const { error: createProfileError } = await createProfileForUser(
-        existingAuthUser.id,
-        firstName,
-        lastName
-      )
-
-      if (createProfileError) {
-        logger.error('Failed to create/update profile for existing user', createProfileError, createRequestContext(request))
-        return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
-      }
     } else {
       // User doesn't exist, create them (email will be sent via Mailjet)
       const { data: inviteData, error: inviteError } = await inviteUserByEmail(email, {
@@ -93,7 +82,7 @@ export async function POST(request: NextRequest) {
 
       collaboratorProfileId = inviteData.user.id
 
-      // Create profile for the invited user
+      // Create profile for the newly invited user ONLY
       const { error: createProfileError } = await createProfileForUser(
         inviteData.user.id,
         firstName,
@@ -118,19 +107,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'This user is already a collaborator at profile level' }, { status: 400 })
     }
 
+    try {
+      const serviceClient = getServiceRoleClient()
+      const alreadyOnAccount = (await listAccountCollaboratorIds(user.id, serviceClient)).has(
+        collaboratorProfileId
+      )
+      if (!alreadyOnAccount) {
+        const userPlan = await getCurrentUserPlan(user.id, serviceClient)
+        const maxCollaborators = userPlan.planInfo.maxCollaborators ?? 2
+        const currentCollaborators = await countAccountCollaborators(user.id, serviceClient)
+        if (currentCollaborators >= maxCollaborators) {
+          return NextResponse.json(
+            {
+              error: 'Limite de collaborateurs du plan atteinte',
+              code: 'PLAN_LIMIT_REACHED',
+              limit: maxCollaborators,
+              current: currentCollaborators,
+            },
+            { status: 403 }
+          )
+        }
+      }
+    } catch (quotaError) {
+      console.error('[POST /api/collaboration/profile] quota', quotaError)
+      return NextResponse.json({ error: 'Erreur lors de la vérification de la limite du plan' }, { status: 500 })
+    }
+
     // Create user_profiles entry
     const { error: insertError } = await supabase
       .from('user_profiles')
       .insert({
         inviter_user_id: user.id,
         invited_user_id: collaboratorProfileId,
-        role: role,
+        role: 'user', // VULNERABILITE CORRIGEE : Figeage autoritaire du rôle à 'user'
         added_by: user.id
       })
 
     if (insertError) {
       logger.error('Failed to create user_profiles entry', insertError, createRequestContext(request))
       return NextResponse.json({ error: 'Failed to add collaborator' }, { status: 500 })
+    }
+
+    try {
+      await calculateAndSaveProfileCompleteness(user.id, supabase)
+    } catch (scoreError) {
+      logger.error(
+        'Failed to recalculate profile completeness after collaborator invite',
+        scoreError,
+        createRequestContext(request)
+      )
+      return NextResponse.json({ error: 'Failed to update profile completeness score' }, { status: 500 })
     }
 
     // Get collaborator details
@@ -147,32 +173,18 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    console.log('📧 [Profile Route] Inviter profile query:', {
-      userId: user.id,
-      inviterProfile,
-      inviterProfileError
-    })
-
     const inviterFullName = inviterProfile?.first_name && inviterProfile?.last_name
       ? `${inviterProfile.first_name} ${inviterProfile.last_name}`
       : 'Équipe MaydAI'
 
-    console.log('📧 [Profile Route] Email params:', {
-      collaboratorEmail: email,
-      collaboratorFirstName: firstName,
-      inviterName: inviterFullName,
-      orgName: inviterProfile?.company_name || 'votre organisation'
-    })
-
     // Envoi email via Mailjet (non-bloquant, ne fait pas échouer la création)
     sendAccountCollaborationInvite({
       collaboratorEmail: email,
-      collaboratorFirstName: firstName,
+      collaboratorFirstName: collaboratorProfile?.first_name || firstName, // Utilise le vrai nom si existant
       inviterName: inviterFullName,
       orgName: inviterProfile?.company_name || 'votre organisation'
     }).catch(err => {
       console.error('Failed to send account invitation email:', err)
-      // Continue silently, email failure doesn't block user creation
     })
 
     return NextResponse.json({
@@ -182,7 +194,7 @@ export async function POST(request: NextRequest) {
         firstName: collaboratorProfile?.first_name,
         lastName: collaboratorProfile?.last_name,
         email,
-        role
+        role: 'user' // Reflète le rôle figé
       }
     })
 
@@ -281,7 +293,7 @@ export async function GET(request: NextRequest) {
         lastName: (pc.profiles as any)?.last_name,
         role: pc.role,
         scope: 'account' as const,
-        companiesCount: ownedCompanyIds.length, // Account-level = all companies
+        companiesCount: ownedCompanyIds.length,
         addedAt: pc.created_at
       })
     })

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { calculateScore } from '@/app/usecases/[id]/utils/score-calculator'
-import { CategoryScore } from '@/app/usecases/[id]/types/usecase'
-import { RISK_CATEGORIES } from '@/app/usecases/[id]/utils/risk-categories'
+import { calculateScore } from '@/app/(saas)/usecases/[id]/utils/score-calculator'
+import { CategoryScore } from '@/app/(saas)/usecases/[id]/types/usecase'
+import { RISK_CATEGORIES } from '@/app/(saas)/usecases/[id]/utils/risk-categories'
 import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL

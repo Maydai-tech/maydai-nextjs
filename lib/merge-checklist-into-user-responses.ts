@@ -4,8 +4,8 @@
  * que les réponses individuelles).
  */
 
-import { loadQuestions } from '@/app/usecases/[id]/utils/questions-loader'
-import type { Question } from '@/app/usecases/[id]/types/usecase'
+import { loadQuestions } from '@/app/(saas)/usecases/[id]/utils/questions-loader'
+import type { Question } from '@/app/(saas)/usecases/[id]/types/usecase'
 
 /** Sous-ensemble des champs `UserResponse` nécessaires à la fusion (évite import circulaire). */
 export type MergeableUserResponse = {

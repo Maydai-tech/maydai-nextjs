@@ -3,9 +3,13 @@ import { createClient } from '@supabase/supabase-js'
 import { isOwner } from '@/lib/collaborators'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { deleteCompanyCascade } from '@/lib/account-deletion'
+import { getCurrentUserPlan } from '@/lib/subscription/user-plan'
+import { initiateFreemiumDeletionRequest } from '@/lib/services/governancePurgeService'
 import { updateUseCaseRegistryResponses } from '@/lib/registry-sync'
+import { cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { RegistrySchema } from '@/lib/validations/registry'
+import { calculateRegistryCompletenessScore } from '@/lib/validations/registry-completeness'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -86,10 +90,12 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied to this company' }, { status: 403 })
     }
 
-    // Fetch the specific company
+    // Fetch the specific company (completeness_score requis pour l'UI registre)
     const { data: companyData, error: companyError } = await supabase
       .from('companies')
-      .select('*')
+      .select(
+        'id, name, industry, sub_category_id, city, country, type, siren, maydai_as_registry, is_centralized_registry, completeness_score, created_at, updated_at, lifecycle_status, purge_requested_at, purge_available_at, soft_deleted_at'
+      )
       .eq('id', id)
       .single()
 
@@ -100,11 +106,76 @@ export async function GET(
       return NextResponse.json({ error: 'Error fetching company' }, { status: 500 })
     }
 
+    if (companyData?.lifecycle_status === 'soft_deleted') {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+    }
+
+    const { count: memberCount } = await supabase
+      .from('user_companies')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', id)
+
+    const { data: ownerRecord } = await supabase
+      .from('user_companies')
+      .select('user_id')
+      .eq('company_id', id)
+      .eq('role', 'owner')
+      .maybeSingle()
+
+    let ownerProfileSiren = ''
+    if (ownerRecord?.user_id) {
+      const { data: ownerProfile } = await supabase
+        .from('profiles')
+        .select('siren')
+        .eq('id', ownerRecord.user_id)
+        .maybeSingle()
+      ownerProfileSiren = ownerProfile?.siren?.trim() ?? ''
+    }
+
+    const isCentralized =
+      companyData.is_centralized_registry === true ||
+      companyData.maydai_as_registry === true
+
+    const calculatedScore = calculateRegistryCompletenessScore({
+      name: companyData.name,
+      industry: companyData.industry,
+      sub_category_id: companyData.sub_category_id,
+      city: companyData.city,
+      country: companyData.country,
+      type: companyData.type,
+      siren: companyData.siren,
+      profileSirenFallback: ownerProfileSiren,
+      has_collaborators: (memberCount ?? 0) > 1,
+      is_centralized_registry: isCentralized,
+    })
+
+    let completenessScore = companyData.completeness_score ?? 0
+
+    if (calculatedScore !== completenessScore) {
+      const { error: healError } = await supabase
+        .from('companies')
+        .update({ completeness_score: calculatedScore })
+        .eq('id', id)
+
+      if (healError) {
+        console.error('[Registry Auto-Heal] Échec correction completeness_score', {
+          companyId: id,
+          calculatedScore,
+          storedScore: completenessScore,
+          error: healError,
+        })
+      } else {
+        completenessScore = calculatedScore
+      }
+    }
+
     // Include user's role in the response
     // Priority: direct role from user_companies, then profile-level role
     return NextResponse.json({
       ...companyData,
-      role: userCompany?.role || profileRole || null
+      completeness_score: completenessScore,
+      role: userCompany?.role || profileRole || null,
+      has_collaborators: (memberCount ?? 0) > 1,
     })
 
   } catch (error) {
@@ -170,27 +241,50 @@ export async function PUT(
     } else if (body.subCategoryId !== undefined) {
       registryUpdatePayload.sub_category_id = body.subCategoryId
     }
+    if (body.siren !== undefined) {
+      if (body.siren === null || body.siren === '') {
+        registryUpdatePayload.siren = null
+      } else if (typeof body.siren === 'string') {
+        registryUpdatePayload.siren = cleanSIREN(body.siren)
+      } else {
+        registryUpdatePayload.siren = body.siren
+      }
+    }
 
     const validation = RegistrySchema.partial().safeParse(registryUpdatePayload)
     if (!validation.success) {
       return NextResponse.json(validation.error.flatten().fieldErrors, { status: 400 })
     }
 
-    const { name, city, country, type, maydai_as_registry, mainIndustryId, subCategoryId } = body
+    const { name, city, country, type, maydai_as_registry, mainIndustryId, subCategoryId, siren } = body
 
     // Validate at least one field is provided
     const hasIndustryUpdate = mainIndustryId !== undefined || subCategoryId !== undefined
-    if (!name && !city && !country && !type && maydai_as_registry === undefined && !hasIndustryUpdate) {
+    if (
+      !name &&
+      !city &&
+      !country &&
+      !type &&
+      maydai_as_registry === undefined &&
+      !hasIndustryUpdate &&
+      siren === undefined
+    ) {
       return NextResponse.json({ error: 'At least one field must be provided' }, { status: 400 })
     }
 
     // Build update object with only provided fields
-    const updateData: Record<string, string | boolean | null> = {}
+    const updateData: Record<string, string | boolean | number | null> = {}
     if (name !== undefined) updateData.name = name
     if (city !== undefined) updateData.city = city
     if (country !== undefined) updateData.country = country
     if (type !== undefined) updateData.type = type
     if (maydai_as_registry !== undefined) updateData.maydai_as_registry = maydai_as_registry
+    if (validation.data.siren !== undefined) {
+      updateData.siren =
+        validation.data.siren === null || validation.data.siren === ''
+          ? null
+          : validation.data.siren
+    }
 
     // Map new business fields:
     // - mainIndustryId -> companies.industry
@@ -232,6 +326,56 @@ export async function PUT(
         updateData.sub_category_id = sub
       }
     }
+
+    // --- NOUVEAU MOTEUR DE SCORING ---
+    // 1. Récupération de l'état actuel pour fusion (mise à jour partielle)
+    const { data: currentCompany } = await supabase
+      .from('companies')
+      .select('name, city, country, type, industry, sub_category_id, is_centralized_registry, maydai_as_registry, siren')
+      .eq('id', companyId)
+      .single()
+
+    // 2. Récupération du SIREN profil
+    const { data: currentProfile } = await supabase
+      .from('profiles')
+      .select('siren')
+      .eq('id', user.id)
+      .single()
+
+    // 3. Vérification de la collaboration (Si > 1, cela veut dire qu'il y a le propriétaire + au moins 1 invité)
+    const { count: userCount } = await supabase
+      .from('user_companies')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+
+    // Fusion des données existantes avec les nouvelles valeurs entrantes
+    const mergedData = {
+      ...currentCompany,
+      ...updateData,
+    }
+
+    // Synchronisation des flags de registre centralisé
+    const isCentralized =
+      mergedData.is_centralized_registry === true || mergedData.maydai_as_registry === true
+
+    updateData.completeness_score = calculateRegistryCompletenessScore({
+      name: mergedData.name,
+      industry: mergedData.industry,
+      sub_category_id: mergedData.sub_category_id,
+      city: mergedData.city,
+      country: mergedData.country,
+      type: mergedData.type,
+      siren: mergedData.siren,
+      profileSirenFallback: currentProfile?.siren,
+      has_collaborators: (userCount || 0) > 1,
+      is_centralized_registry: isCentralized,
+    })
+
+    // Si le flag legacy a été mis à jour, on synchronise le nouveau flag propre
+    if (updateData.maydai_as_registry !== undefined) {
+      updateData.is_centralized_registry = isCentralized
+    }
+    // ---------------------------------
 
     // Update the company
     const { data: updatedCompany, error: updateError } = await supabase
@@ -297,8 +441,15 @@ export async function PUT(
       }
     }
 
+    const { count: memberCountAfterUpdate } = await supabase
+      .from('user_companies')
+      .select('*', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+
     return NextResponse.json({
       ...updatedCompany,
+      role: 'owner',
+      has_collaborators: (memberCountAfterUpdate ?? 0) > 1,
       useCasesUpdated,
       registryScoresRecalculated,
     })
@@ -369,9 +520,46 @@ export async function DELETE(
 
     // Cascade: usecase_responses → usecases → NULL profiles → user_companies → company
     // (logique partagée avec la suppression de compte, cf. lib/account-deletion.ts)
+    // Requiert un client service-role : la cascade vide des tables enfant sans
+    // policy DELETE (RLS) — un client utilisateur déclencherait une violation FK 23503.
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseServiceRoleKey) {
+      logger.error('SUPABASE_SERVICE_ROLE_KEY is not defined', undefined, context)
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+    const supabaseAdmin = createClient(supabaseUrl!, supabaseServiceRoleKey)
+
+    const ownerPlan = await getCurrentUserPlan(user.id, supabaseAdmin)
+    if (ownerPlan.planInfo.isFree === true) {
+      const res = await initiateFreemiumDeletionRequest({
+        actorUserId: user.id,
+        ownerUserId: user.id,
+        entityType: 'company',
+        entityId: companyId,
+      })
+      if (!res.ok) {
+        return NextResponse.json(
+          {
+            error: 'Quota mensuel de réinitialisation gratuite atteint (1 fois / mois). Passez au forfait supérieur.',
+            code: res.code,
+            nextAvailableAt: res.nextAvailableAt,
+          },
+          { status: 403 }
+        )
+      }
+      return NextResponse.json(
+        {
+          status: 'awaiting_email_confirm',
+          message: 'Un email de confirmation vous a été envoyé pour lancer le délai de 24h.',
+        },
+        { status: 202 }
+      )
+    }
+
     try {
-      await deleteCompanyCascade(supabase, companyId)
+      await deleteCompanyCascade(supabaseAdmin, companyId)
     } catch (cascadeError) {
+      console.error('[DELETE /api/companies] cascade', cascadeError)
       logger.error('Failed to delete company and associated data', cascadeError, {
         ...context,
         companyId

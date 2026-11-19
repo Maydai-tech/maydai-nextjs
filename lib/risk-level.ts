@@ -3,7 +3,7 @@
  * Hiérarchie : minimal < limited < high < unacceptable
  */
 
-import questionsData from '@/app/usecases/[id]/data/questions-with-scores.json'
+import questionsData from '@/app/(saas)/usecases/[id]/data/questions-with-scores.json'
 
 export type RiskLevelCode = 'minimal' | 'limited' | 'high' | 'unacceptable'
 

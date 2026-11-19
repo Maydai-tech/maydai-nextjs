@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth';
 import { linkLeadToUser } from '@/lib/leads/link-lead-to-user';
-import { leadQualifiesForGoogleAdsClickConversion } from '@/lib/google-ads/conversions';
+import { leadQualifiesForGoogleAdsOfflineSignupConversion } from '@/lib/google-ads/conversions';
 import { sendGoogleAdsOfflineSignupConversion } from '@/lib/google-ads/offline-signup-conversion';
 
 /**
@@ -83,15 +83,19 @@ export async function POST(request: NextRequest) {
 
     if (
       leadAfter &&
-      leadQualifiesForGoogleAdsClickConversion({
+      leadQualifiesForGoogleAdsOfflineSignupConversion({
         source: leadAfter.source,
         click_id: leadAfter.click_id,
       })
     ) {
-      await sendGoogleAdsOfflineSignupConversion({
-        clickId: String(leadAfter.click_id),
-        conversionValue: 0,
-      });
+      try {
+        await sendGoogleAdsOfflineSignupConversion({
+          clickId: String(leadAfter.click_id),
+          email: leadEmail,
+        })
+      } catch (err) {
+        console.error('[link-to-user] Google Ads offline conversion (non bloquant):', err)
+      }
     }
 
     return NextResponse.json({ success: true }, { status: 200 });

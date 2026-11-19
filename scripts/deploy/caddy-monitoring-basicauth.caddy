@@ -1,0 +1,15 @@
+# Sert /monitoring/* en HTTPS avec basic auth (fetch depuis l’API admin Vercel).
+# Hash : `caddy hash-password`
+# Ne pas coller ceci sur le site HTTP de l’IP publique.
+
+handle /monitoring* {
+	basic_auth {
+		MONITORING_USER $2a$14$REPLACE_WITH_BCRYPT_HASH
+	}
+	header {
+		Cache-Control "no-store"
+		X-Robots-Tag "noindex, nofollow"
+	}
+	root * /var/www
+	file_server
+}

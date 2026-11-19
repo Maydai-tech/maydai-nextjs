@@ -1,5 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
+import { recalculateUseCaseScoresForModel } from '@/lib/usecase-score-service'
+
+// La mutation d'un score déclenche le recalcul en cascade (maydai_score + score_final
+// de tous les use cases du modèle) de façon synchrone : on autorise une exécution plus
+// longue, comme les routes sync/import-csv, pour les modèles à nombreux use cases.
+export const maxDuration = 300
+
+/**
+ * Recalcule automatiquement (service-role) le maydai_score du modèle et le
+ * score final de tous les use cases qui l'utilisent. Ne fait jamais échouer la
+ * mutation appelante : en cas d'erreur, renvoie un message d'avertissement.
+ */
+async function cascadeModelScores(modelId: string): Promise<string | null> {
+  try {
+    await recalculateUseCaseScoresForModel(modelId)
+    return null
+  } catch (error) {
+    console.error('⚠️ Recalcul automatique des scores échoué pour le modèle', modelId, error)
+    return error instanceof Error ? error.message : 'Recalcul automatique des scores échoué'
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -89,10 +110,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Erreur lors de la création de l\'évaluation: ' + insertError.message }, { status: 500 })
     }
 
+    // Recalcul automatique des scores impactés par ce modèle
+    const recalcWarning = await cascadeModelScores(modelId)
+
     return NextResponse.json({
       success: true,
       message: 'Score ajouté avec succès',
-      evaluation: newEvaluation
+      evaluation: newEvaluation,
+      ...(recalcWarning ? { recalc_warning: recalcWarning } : {})
     })
 
   } catch (error) {
@@ -159,10 +184,14 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ error: 'Erreur lors de la mise à jour de l\'évaluation: ' + updateError.message }, { status: 500 })
       }
 
+      // Recalcul automatique des scores impactés par ce modèle
+      const recalcWarning = await cascadeModelScores(modelId)
+
       return NextResponse.json({
         success: true,
         message: 'Score mis à jour avec succès',
-        evaluation: updatedEvaluation
+        evaluation: updatedEvaluation,
+        ...(recalcWarning ? { recalc_warning: recalcWarning } : {})
       })
     }
 
@@ -203,10 +232,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Erreur lors de la mise à jour de l\'évaluation: ' + updateError.message }, { status: 500 })
     }
 
+    // Recalcul automatique des scores impactés par ce modèle
+    const recalcWarning = await cascadeModelScores(modelId)
+
     return NextResponse.json({
       success: true,
       message: 'Score mis à jour avec succès',
-      evaluation: updatedEvaluation
+      evaluation: updatedEvaluation,
+      ...(recalcWarning ? { recalc_warning: recalcWarning } : {})
     })
 
   } catch (error) {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, Loader2, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
-import { useUserPlan } from '@/app/abonnement/hooks/useUserPlan'
+import { useUserPlan } from '@/app/(saas)/abonnement/hooks/useUserPlan'
 import ComplianceFileUpload from './ComplianceFileUpload'
 import UploadedFileDisplay from './UploadedFileDisplay'
 

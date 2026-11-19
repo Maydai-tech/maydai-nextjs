@@ -524,6 +524,7 @@ function computeAction1(
     transparencyKeys,
     responsesMap.get('E5.N9.Q1')
   )
+  // Polarité questionnaire : Oui = mesure en place → slot OUI (idem quick_win / priorite).
   if (isOui('E5.N9.Q1', main)) return 'OUI'
   if (isNon('E5.N9.Q1', main)) return 'NON'
   return 'Information insuffisante'
@@ -540,8 +541,8 @@ function computeAction2(
     transparencyKeys,
     responsesMap.get('E5.N9.Q9')
   )
-  if (isNon('E5.N9.Q9', main)) return 'NON'
   if (isOui('E5.N9.Q9', main)) return 'OUI'
+  if (isNon('E5.N9.Q9', main)) return 'NON'
   return 'Information insuffisante'
 }
 

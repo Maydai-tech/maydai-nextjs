@@ -1,15 +1,57 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "pnpm run build",
   "outputDirectory": ".next",
   "framework": "nextjs",
   "env": {
     "NODE_ENV": "production"
   },
   "functions": {
+    "app/api/cron/sync-llm-stats/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/cron/process-purges/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/admin/llm-stats-sync-runs/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/admin/llm-control-tower-sync/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/admin/llm-system-cards-import/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/cron/sync-ecologits/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/admin/ecologits/sync/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/admin/comparia/sync/route.ts": {
+      "maxDuration": 300
+    },
     "app/api/**/*.js": {
       "maxDuration": 30
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/sync-llm-stats",
+      "schedule": "0 4 * * 3"
+    },
+    {
+      "path": "/api/cron/process-purges",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-ecologits",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/admin/comparia/sync",
+      "schedule": "0 2 * * 0"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

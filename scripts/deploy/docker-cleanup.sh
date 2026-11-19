@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Wrapper de purge Docker hebdomadaire pour MaydAI prod (57.130.47.254).
+# Wrapper de purge Docker hebdomadaire pour MaydAI prod.
 # Lance docker system prune + docker builder prune, parse l'espace récupéré,
 # et append une entrée dans /var/www/monitoring/docker-purges.json (max 30 entrées).
 #

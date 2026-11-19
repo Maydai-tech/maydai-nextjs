@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { completionSecondsFromTimestamps } from '@/lib/evaluation-path-runs-stats'
+import { getServiceRoleClient } from '@/lib/maydai-calculator'
+import {
+  calculateAndPersistAuditIntegrityScore,
+  calculateAndPersistEngagementScore,
+} from '@/lib/services/governanceScoreService'
+import { InputTelemetrySchema } from '@/lib/validations/governance-scores'
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -20,6 +26,28 @@ export async function PATCH(
     const body = (await request.json().catch(() => ({}))) as {
       classification_status?: string | null
       risk_level?: string | null
+      input_telemetry?: unknown
+    }
+
+    if ('input_telemetry' in body) {
+      const telemetry = InputTelemetrySchema.safeParse(body.input_telemetry)
+      if (!telemetry.success) {
+        return NextResponse.json(
+          { error: 'Télémétrie de saisie invalide', details: telemetry.error.flatten() },
+          { status: 400 }
+        )
+      }
+      const { error: telemetryError } = await getServiceRoleClient()
+        .from('usecases')
+        .update({ input_telemetry: telemetry.data })
+        .eq('id', useCaseId)
+      if (telemetryError) {
+        console.error('[PATCH evaluation-run] input_telemetry', telemetryError)
+        return NextResponse.json(
+          { error: telemetryError.message || telemetryError.details || 'Erreur DB' },
+          { status: 500 }
+        )
+      }
     }
 
     const { data: run, error: runErr } = await supabase
@@ -48,6 +76,18 @@ export async function PATCH(
     }
 
     if (run.completed_at) {
+      if ('input_telemetry' in body) {
+        try {
+          await calculateAndPersistAuditIntegrityScore(useCaseId)
+          await calculateAndPersistEngagementScore(user.id)
+        } catch (scoreError) {
+          console.error('[PATCH evaluation-run] scores gouvernance', scoreError)
+          return NextResponse.json(
+            { error: scoreError instanceof Error ? scoreError.message : 'Erreur DB' },
+            { status: 500 }
+          )
+        }
+      }
       return NextResponse.json({
         ok: true,
         idempotent: true,
@@ -86,7 +126,22 @@ export async function PATCH(
       .is('completed_at', null)
 
     if (updErr) {
-      return NextResponse.json({ error: updErr.message }, { status: 500 })
+      console.error('[PATCH evaluation-run] clôture', updErr)
+      return NextResponse.json(
+        { error: updErr.message || updErr.details || 'Erreur DB' },
+        { status: 500 }
+      )
+    }
+
+    try {
+      await calculateAndPersistAuditIntegrityScore(useCaseId)
+      await calculateAndPersistEngagementScore(user.id)
+    } catch (scoreError) {
+      console.error('[PATCH evaluation-run] scores gouvernance', scoreError)
+      return NextResponse.json(
+        { error: scoreError instanceof Error ? scoreError.message : 'Erreur DB' },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({

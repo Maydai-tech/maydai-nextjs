@@ -1,8 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { getAdminClient } from '@/e2e/_helpers/supabase-admin'
-
-const TEST_PASSWORD = 'TestPassword123!'
+import { generateSecureTestPassword } from '@/e2e/auth-helper'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -29,10 +28,12 @@ test.describe('Cas d\'usage — cycle de vie API (Zod POST / PUT)', { tag: ['@pr
   test.beforeAll(async () => {
     const adminClient = getAdminClient()
 
+    const password = generateSecureTestPassword()
+
     const { data: createUserData, error: createUserError } =
       await adminClient.auth.admin.createUser({
         email: testUserEmail,
-        password: TEST_PASSWORD,
+        password,
         email_confirm: true,
       })
 
@@ -59,7 +60,7 @@ test.describe('Cas d\'usage — cycle de vie API (Zod POST / PUT)', { tag: ['@pr
     const { data: signInData, error: signInError } =
       await authClient.auth.signInWithPassword({
         email: testUserEmail,
-        password: TEST_PASSWORD,
+        password,
       })
 
     if (signInError || !signInData.session?.access_token) {

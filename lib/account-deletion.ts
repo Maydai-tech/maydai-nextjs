@@ -1,7 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/secure-logger'
+import { extractDossierStoragePath } from '@/lib/dossier-storage-path'
 import { getStripeClient } from '@/lib/stripe/config/client'
 import { cancelStripeSubscription } from '@/lib/stripe/services/subscription'
+
+export { extractDossierStoragePath }
 
 /**
  * Helpers de suppression de compte et de cascade des données associées.
@@ -16,19 +19,42 @@ import { cancelStripeSubscription } from '@/lib/stripe/services/subscription'
 const DOSSIERS_BUCKET = 'dossiers'
 
 /**
- * Extrait le chemin Storage à partir d'une URL publique de fichier dossier.
- * Format attendu : .../storage/v1/object/public/dossiers/<path>
- * Renvoie null si l'URL est absente ou non reconnue.
- * (Même logique que la route d'upload des dossiers.)
+ * Supprime les fichiers physiques du Storage (bucket "dossiers") rattachés aux
+ * `dossier_documents` des dossiers fournis.
+ *
+ * Best-effort RGPD : on retire les binaires AVANT de purger les lignes en base.
+ * Un échec côté Storage est loggé mais ne lève pas — il ne doit pas bloquer la
+ * suppression des données en base.
  */
-export function extractDossierStoragePath(fileUrl: string | null | undefined): string | null {
-  if (!fileUrl) return null
-  try {
-    const url = new URL(fileUrl)
-    const match = url.pathname.match(/\/storage\/v1\/object\/public\/dossiers\/(.+)/)
-    return match && match[1] ? decodeURIComponent(match[1]) : null
-  } catch {
-    return null
+export async function removeDossierStorageFiles(
+  supabase: SupabaseClient,
+  dossierIds: string[]
+): Promise<void> {
+  if (dossierIds.length === 0) return
+
+  const { data: docs, error: docsFetchError } = await supabase
+    .from('dossier_documents')
+    .select('file_url')
+    .in('dossier_id', dossierIds)
+  if (docsFetchError) {
+    throw new Error(`Error fetching dossier_documents for storage cleanup: ${docsFetchError.message}`)
+  }
+
+  const storagePaths = (docs || [])
+    .map((d) => extractDossierStoragePath(d.file_url))
+    .filter((p): p is string => !!p)
+
+  if (storagePaths.length === 0) return
+
+  const { error: removeError } = await (supabase as any).storage
+    .from(DOSSIERS_BUCKET)
+    .remove(storagePaths)
+  if (removeError) {
+    // Best-effort : ne bloque pas la suppression des données en base
+    logger.warn('Could not remove dossier files from storage', {
+      dossierCount: dossierIds.length,
+      error: removeError.message
+    })
   }
 }
 
@@ -77,6 +103,52 @@ export interface DeletionPreview {
  *
  * Lève une Error en cas d'échec d'une étape (hors Storage).
  */
+/**
+ * Supprime un cas d'usage et ses enfants, dans l'ordre des clés étrangères.
+ * Les fichiers Storage sont retirés avant les lignes de dossier.
+ */
+export async function deleteUseCaseCascade(
+  supabase: SupabaseClient,
+  usecaseId: string
+): Promise<void> {
+  const del = async (table: string, apply: (q: any) => any) => {
+    const { error } = await apply(supabase.from(table).delete())
+    if (error) {
+      console.error(`[deleteUseCaseCascade] ${table}`, error)
+      throw new Error(error.message || error.details || 'Erreur DB')
+    }
+  }
+
+  await del('usecase_responses', (q) => q.eq('usecase_id', usecaseId))
+  await del('usecase_history', (q) => q.eq('usecase_id', usecaseId))
+  await del('usecase_nextsteps', (q) => q.eq('usecase_id', usecaseId))
+  await del('user_usecases', (q) => q.eq('usecase_id', usecaseId))
+  await del('contact_requests', (q) => q.eq('usecase_id', usecaseId))
+  await del('evaluation_path_runs', (q) => q.eq('usecase_id', usecaseId))
+
+  const { data: dossierRows, error: dossierError } = await supabase
+    .from('dossiers')
+    .select('id')
+    .eq('usecase_id', usecaseId)
+
+  if (dossierError) {
+    console.error('[deleteUseCaseCascade] dossiers', dossierError)
+    throw new Error(dossierError.message || dossierError.details || 'Erreur DB')
+  }
+
+  const dossierIds = (dossierRows ?? [])
+    .map((row) => row.id as string)
+    .filter((id) => typeof id === 'string' && id.length > 0)
+
+  if (dossierIds.length > 0) {
+    await removeDossierStorageFiles(supabase, dossierIds)
+    await del('dossier_documents', (q) => q.in('dossier_id', dossierIds))
+  }
+
+  await del('dossiers', (q) => q.eq('usecase_id', usecaseId))
+  await del('usecases', (q) => q.eq('id', usecaseId))
+}
+
 export async function deleteCompanyCascade(
   supabase: SupabaseClient,
   companyId: string
@@ -125,30 +197,7 @@ export async function deleteCompanyCascade(
     const ids = Array.from(dossierIds)
 
     // 1a. Supprimer les fichiers physiques du Storage avant de purger les lignes
-    const { data: docs, error: docsFetchError } = await supabase
-      .from('dossier_documents')
-      .select('file_url')
-      .in('dossier_id', ids)
-    if (docsFetchError) {
-      throw new Error(`Error fetching dossier_documents for company ${companyId}: ${docsFetchError.message}`)
-    }
-
-    const storagePaths = (docs || [])
-      .map((d) => extractDossierStoragePath(d.file_url))
-      .filter((p): p is string => !!p)
-
-    if (storagePaths.length > 0) {
-      const { error: removeError } = await (supabase as any).storage
-        .from(DOSSIERS_BUCKET)
-        .remove(storagePaths)
-      if (removeError) {
-        // Best-effort : ne bloque pas la suppression des données en base
-        logger.warn('Could not remove dossier files from storage', {
-          companyId,
-          error: removeError.message
-        })
-      }
-    }
+    await removeDossierStorageFiles(supabase, ids)
 
     await del('dossier_documents', (q) => q.in('dossier_id', ids))
     await del('dossiers', (q) => q.in('id', ids))

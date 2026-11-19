@@ -61,9 +61,13 @@ interface StorageAlertEvent {
   percentage: number
 }
 
-interface HubSpotFormSuccessEvent {
-  event: 'hubspot_form_success'
-  form_id: string
+interface ContactFormSuccessEvent {
+  event: 'contact_form_success'
+}
+
+interface DownloadPdfEvent {
+  event: 'download_pdf'
+  usecase_id: string
 }
 
 /** CTA landing conformité IA (header / hero / footer). */
@@ -74,13 +78,6 @@ interface ClickButtonLandingEvent {
   event: 'click_button'
   button_intent: LandingCtaIntent
   button_location: LandingCtaLocation
-}
-
-/** Lead généré depuis le formulaire HubSpot « demande démo » (page contact). */
-interface GenerateLeadHubspotDemoEvent {
-  event: 'generate_lead'
-  lead_type: 'demande_demo'
-  method: 'hubspot_form'
 }
 
 /**
@@ -109,9 +106,9 @@ export type GTMEvent =
   | PricingClickEvent
   | LimitReachedEvent
   | StorageAlertEvent
-  | HubSpotFormSuccessEvent
+  | ContactFormSuccessEvent
+  | DownloadPdfEvent
   | ClickButtonLandingEvent
-  | GenerateLeadHubspotDemoEvent
   | GoogleAdsEnhancedConversionDataLayerEvent
   | CustomEvent
 
@@ -126,10 +123,19 @@ function isDataLayerAvailable(): boolean {
   return getDataLayer() !== undefined
 }
 
-export function sendGTMEvent(event: GTMEvent): void {
-  const dataLayer = getDataLayer()
-  if (!dataLayer) return
-  dataLayer.push(event)
+/** Laisse le tour de event loop pour que GTM traite le push avant la suite (règle 6.4). */
+function resolveAfterDataLayerFlush(resolve: () => void): void {
+  setTimeout(() => resolve(), 0)
+}
+
+export function sendGTMEvent(event: GTMEvent): Promise<void> {
+  if (!isDataLayerAvailable()) {
+    return Promise.resolve()
+  }
+  return new Promise<void>((resolve) => {
+    getDataLayer()?.push(event)
+    resolveAfterDataLayerFlush(resolve)
+  })
 }
 
 /**
@@ -138,29 +144,30 @@ export function sendGTMEvent(event: GTMEvent): void {
  */
 export function sendCustomGTMEvent(
   payload: Record<string, unknown> & { event: string },
-): void {
-  sendGTMEvent(payload as GTMEvent)
+): Promise<void> {
+  return sendGTMEvent(payload as GTMEvent)
 }
 
 /** Tracking CTA landing conformité IA (essai gratuit / démo). */
 export function sendLandingCtaClick(params: {
   button_intent: LandingCtaIntent
   button_location: LandingCtaLocation
-}): void {
-  sendGTMEvent({
+}): Promise<void> {
+  return sendGTMEvent({
     event: 'click_button',
     button_intent: params.button_intent,
     button_location: params.button_location,
   })
 }
 
-/** Soumission réussie du formulaire HubSpot « demande démo » (page contact). */
-export function sendGenerateLeadHubspotDemo(): void {
-  sendGTMEvent({
-    event: 'generate_lead',
-    lead_type: 'demande_demo',
-    method: 'hubspot_form',
-  })
+export function sendContactFormSuccess(): Promise<void> {
+  if (typeof window !== 'undefined' && window.dataLayer) {
+    return new Promise<void>((resolve) => {
+      window.dataLayer.push({ event: 'contact_form_success' })
+      resolveAfterDataLayerFlush(resolve)
+    })
+  }
+  return Promise.resolve()
 }
 
 const CONSENT_DELAY_MS = 1000
@@ -184,7 +191,7 @@ function sendGTMEventAfterConsentDelay(event: GTMEvent): Promise<void> {
 
 export function sendSignUpEvent(
   method: SignUpMethod,
-  options?: { userId?: string }
+  options?: { userId?: string },
 ): Promise<void> {
   return sendGTMEventAfterConsentDelay({
     event: 'sign_up',
@@ -212,7 +219,7 @@ export function sendGoogleAdsSignupConversionWithUserData(
 
 export function sendLoginEvent(
   method: SignUpMethod,
-  options?: { userId?: string }
+  options?: { userId?: string },
 ): Promise<void> {
   return sendGTMEventAfterConsentDelay({
     event: 'login',
@@ -221,8 +228,8 @@ export function sendLoginEvent(
   })
 }
 
-export function sendPageViewEvent(pagePath: string, pageTitle?: string): void {
-  sendGTMEvent({
+export function sendPageViewEvent(pagePath: string, pageTitle?: string): Promise<void> {
+  return sendGTMEvent({
     event: 'page_view',
     page_path: pagePath,
     ...(pageTitle && { page_title: pageTitle }),
@@ -233,8 +240,8 @@ export function trackRegistryCreation(
   type: RegistryType,
   plan: PlanName,
   isFirstRegistry: boolean,
-): void {
-  sendGTMEvent({
+): Promise<void> {
+  return sendGTMEventAfterConsentDelay({
     event: 'registry_creation',
     registry_type: type,
     plan,
@@ -242,38 +249,49 @@ export function trackRegistryCreation(
   })
 }
 
-export function trackUseCaseCreation(registryId: string, aiCategory: string): void {
-  sendGTMEvent({
+export function trackUseCaseCreation(registryId: string, aiCategory: string): Promise<void> {
+  return sendGTMEventAfterConsentDelay({
     event: 'usecase_creation',
     registry_id: registryId,
     ai_category: aiCategory,
   })
 }
 
-export function trackCollaboratorInvite(role: CollaboratorRole): void {
-  sendGTMEvent({
+export function sendDownloadPdfEvent(usecaseId: string): Promise<void> {
+  const trimmed = usecaseId.trim()
+  if (!trimmed) {
+    return Promise.resolve()
+  }
+  return sendGTMEventAfterConsentDelay({
+    event: 'download_pdf',
+    usecase_id: trimmed,
+  })
+}
+
+export function trackCollaboratorInvite(role: CollaboratorRole): Promise<void> {
+  return sendGTMEvent({
     event: 'collaborator_invite',
     role_invited: role,
   })
 }
 
-export function trackPricingClick(planName: PlanName): void {
+export function trackPricingClick(planName: PlanName): Promise<void> {
   const titleCase = planName.charAt(0).toUpperCase() + planName.slice(1)
-  sendGTMEvent({
+  return sendGTMEvent({
     event: 'pricing_click',
     plan_name: titleCase,
   })
 }
 
-export function trackLimitReached(limitType: LimitType): void {
-  sendGTMEvent({
+export function trackLimitReached(limitType: LimitType): Promise<void> {
+  return sendGTMEvent({
     event: 'limit_reached',
     limit_type: limitType,
   })
 }
 
-export function trackStorageAlert(percentage: number): void {
-  sendGTMEvent({
+export function trackStorageAlert(percentage: number): Promise<void> {
+  return sendGTMEvent({
     event: 'storage_alert',
     percentage,
   })

@@ -79,7 +79,7 @@ son enregistrement dans l’historique peuvent être enveloppés dans un bloc
 
 ```bash
 pnpm exec jest --runInBand --runTestsByPath lib/validations/__tests__/procurement.test.ts app/api/procurements/__tests__/route.test.ts 'app/api/procurements/[id]/__tests__/get-procurement.test.ts' 'app/api/procurements/[id]/__tests__/delete-procurement.test.ts'
-pnpm exec jest --runInBand --runTestsByPath app/procurements/components/__tests__/*.test.tsx app/dashboard/registries/components/__tests__/*.test.tsx components/__tests__/Toast.test.tsx
+pnpm exec jest --runInBand --runTestsByPath app/(saas)/procurements/components/__tests__/*.test.tsx app/(saas)/dashboard/registries/components/__tests__/*.test.tsx components/__tests__/Toast.test.tsx
 npm run supabase:ovh -- query -f supabase/tests/procurements_rls.sql
 pnpm exec tsc --noEmit
 ```

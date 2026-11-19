@@ -13,14 +13,14 @@ export function createErrorResponse(message: string, status: number = 500): Next
 export function handleStripeError(error: any): NextResponse<ApiError> {
   console.error('❌ Erreur Stripe:', error)
 
-  // Erreur de configuration Stripe avec détails
+  // Erreur de configuration Stripe (message générique côté client)
   if (error.message?.includes('Impossible d\'initialiser le client Stripe')) {
-    return createErrorResponse(`Configuration Stripe invalide: ${error.message}`, 500)
+    return createErrorResponse('Erreur de configuration du service de paiement.', 500)
   }
 
-  // Erreur de variable d'environnement manquante
+  // Erreur de variable d'environnement manquante (message générique côté client)
   if (error.message?.includes('Variable d\'environnement manquante')) {
-    return createErrorResponse(error.message, 500)
+    return createErrorResponse('Erreur de configuration du service de paiement.', 500)
   }
 
   // Erreur de signature webhook
@@ -28,13 +28,13 @@ export function handleStripeError(error: any): NextResponse<ApiError> {
     return createErrorResponse('Invalid signature', 400)
   }
 
-  // Erreur Stripe API
+  // Erreur Stripe API (ne pas exposer error.message au client)
   if (error.type && error.type.startsWith('Stripe')) {
-    return createErrorResponse(`Erreur Stripe: ${error.message}`, 400)
+    return createErrorResponse('Une erreur est survenue lors du traitement du paiement.', 400)
   }
 
-  // Erreur générique
-  return createErrorResponse(`Erreur interne: ${error.message || 'Erreur inconnue'}`, 500)
+  // Erreur générique (ne pas exposer error.message au client)
+  return createErrorResponse('Erreur serveur interne.', 500)
 }
 
 // Gérer les erreurs de validation

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { verifyAdminAuth, isSuperAdmin, UserRole } from '@/lib/admin-auth'
+import { verifyAdminAuth, UserRole } from '@/lib/admin-auth'
 
 export async function PATCH(
   request: NextRequest,
@@ -33,32 +33,19 @@ export async function PATCH(
       .single()
 
     if (profileError || !targetProfile) {
+      if (profileError) {
+        console.error('[Admin User Update]', profileError)
+      }
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       )
     }
 
-    // Vérifications des permissions
-    if (role !== undefined) {
-      const newRole = role as UserRole
-      const targetCurrentRole = targetProfile.role as UserRole
-
-      // Empêcher un admin de se retirer ses propres droits admin
-      if (targetUserId === currentUser.id && 
-          (targetCurrentRole === 'admin' || targetCurrentRole === 'super_admin') &&
-          newRole === 'user') {
-        return NextResponse.json(
-          { error: 'You cannot remove your own admin privileges' },
-          { status: 400 }
-        )
-      }
-    }
-
     // Préparer les données de mise à jour du profil
-    const updateData: any = {}
+    const updateData: { role?: UserRole } = {}
     if (role !== undefined) {
-      updateData.role = role
+      updateData.role = role as UserRole
     }
 
     // Gérer les associations d'entreprises
@@ -83,8 +70,7 @@ export async function PATCH(
         .upsert({
           user_id: targetUserId,
           company_id: add_company_id,
-          role: 'user',
-          is_active: true
+          role: 'user'
         }, {
           onConflict: 'user_id,company_id'
         })
@@ -99,10 +85,9 @@ export async function PATCH(
     }
 
     if (remove_company_id) {
-      // Supprimer l'association dans user_companies (soft delete)
       const { error: deleteError } = await supabase
         .from('user_companies')
-        .update({ is_active: false })
+        .delete()
         .eq('user_id', targetUserId)
         .eq('company_id', remove_company_id)
 
@@ -117,19 +102,25 @@ export async function PATCH(
 
     // Remplacer toutes les entreprises si company_ids est fourni
     if (company_ids !== undefined) {
-      // Désactiver toutes les associations existantes
-      await supabase
+      const { error: clearError } = await supabase
         .from('user_companies')
-        .update({ is_active: false })
+        .delete()
         .eq('user_id', targetUserId)
+
+      if (clearError) {
+        console.error('Error clearing company associations:', clearError)
+        return NextResponse.json(
+          { error: 'Failed to update company associations' },
+          { status: 500 }
+        )
+      }
 
       // Ajouter les nouvelles associations
       if (company_ids && company_ids.length > 0) {
         const associations = company_ids.map((companyId: string) => ({
           user_id: targetUserId,
           company_id: companyId,
-          role: 'user',
-          is_active: true
+          role: 'user'
         }))
 
         const { error: insertError } = await supabase
@@ -151,6 +142,48 @@ export async function PATCH(
     // Mettre à jour le profil si nécessaire
     let updatedProfile = null
     if (Object.keys(updateData).length > 0) {
+      // 1. Anti-self-modification : un admin ne peut pas changer son propre rôle
+      if (currentUser.id === targetUserId) {
+        return NextResponse.json(
+          { error: 'You cannot modify your own role' },
+          { status: 403 }
+        )
+      }
+
+      // Rôle actuel de la cible (service_role, hors RLS)
+      const { data: targetRoleRow, error: targetRoleError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', targetUserId)
+        .single()
+
+      if (targetRoleError) {
+        console.error('[Admin User Update]', targetRoleError)
+        return NextResponse.json(
+          { error: 'Failed to verify target user role' },
+          { status: 500 }
+        )
+      }
+
+      const callerRole = currentUser.role
+      const targetCurrentRole = targetRoleRow?.role as UserRole | undefined
+
+      // 2. Un admin simple ne peut pas promouvoir en super_admin
+      if (callerRole === 'admin' && updateData.role === 'super_admin') {
+        return NextResponse.json(
+          { error: 'Only a super_admin can promote a user to super_admin' },
+          { status: 403 }
+        )
+      }
+
+      // 3. Un admin simple ne peut pas modifier un super_admin existant
+      if (callerRole === 'admin' && targetCurrentRole === 'super_admin') {
+        return NextResponse.json(
+          { error: 'An admin cannot modify a super_admin profile' },
+          { status: 403 }
+        )
+      }
+
       const { data, error: updateError } = await supabase
         .from('profiles')
         .update({
@@ -166,7 +199,6 @@ export async function PATCH(
           user_companies (
             company_id,
             role,
-            is_active,
             companies (
               id,
               name
@@ -176,7 +208,7 @@ export async function PATCH(
         .single()
 
       if (updateError) {
-        console.error('Error updating profile:', updateError)
+        console.error('[Admin User Update]', updateError)
         return NextResponse.json(
           { error: 'Failed to update user' },
           { status: 500 }
@@ -195,7 +227,6 @@ export async function PATCH(
           user_companies (
             company_id,
             role,
-            is_active,
             companies (
               id,
               name
@@ -236,7 +267,7 @@ export async function PATCH(
 
     // Formater la réponse
     const userCompanies = updatedProfile.user_companies
-      ?.filter((uc: any) => uc.is_active && uc.companies)
+      ?.filter((uc: { companies?: unknown }) => Boolean(uc.companies))
       ?.map((uc: any) => ({
         id: uc.companies.id,
         name: uc.companies.name,
@@ -299,7 +330,6 @@ export async function GET(
         user_companies (
           company_id,
           role,
-          is_active,
           companies (
             id,
             name
@@ -321,7 +351,7 @@ export async function GET(
 
     // Formater la réponse
     const userCompanies = profile.user_companies
-      ?.filter((uc: any) => uc.is_active && uc.companies)
+      ?.filter((uc: { companies?: unknown }) => Boolean(uc.companies))
       ?.map((uc: any) => ({
         id: uc.companies.id,
         name: uc.companies.name,

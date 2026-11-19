@@ -11,7 +11,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 // Créer un client Supabase avec service role pour contourner les RLS
-function getServiceRoleClient(): SupabaseClient {
+export function getServiceRoleClient(): SupabaseClient {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 

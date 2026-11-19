@@ -78,27 +78,7 @@ export async function POST(
       }
 
       collaboratorProfileId = existingAuthUser.id
-
-      // Check if profile exists, if not create it
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', existingAuthUser.id)
-        .single()
-
-      if (!existingProfile) {
-        // Create profile for existing auth user
-        const { error: createProfileError } = await createProfileForUser(
-          existingAuthUser.id,
-          firstName,
-          lastName
-        )
-
-        if (createProfileError) {
-          logger.error('Failed to create profile for existing user', createProfileError, createRequestContext(request))
-          return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
-        }
-      }
+      // VULNERABILITE CORRIGEE (Zero Overwrite) : On supprime createProfileForUser ici.
     } else {
       // User doesn't exist, create them (email sent via Mailjet in parent routes)
       const { data: inviteData, error: inviteError } = await inviteUserByEmail(email, {
@@ -113,7 +93,7 @@ export async function POST(
 
       collaboratorProfileId = inviteData.user.id
 
-      // Create profile for the invited user
+      // Create profile ONLY for the newly invited user
       const { error: createProfileError } = await createProfileForUser(
         inviteData.user.id,
         firstName,
@@ -147,8 +127,7 @@ export async function POST(
     const userCompaniesInserts = newCompanyIds.map(companyId => ({
       user_id: collaboratorProfileId,
       company_id: companyId,
-      role: 'user',
-      is_active: true
+      role: 'user'
     }))
 
     const { error: insertError } = await supabase

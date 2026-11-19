@@ -57,3 +57,20 @@ next-env.d.ts
 
 # Claude config
 /.claude
+
+# --- Ajouts Sécurité & Cache ---
+# pnpm cache
+.pnpm-store/
+
+# next.js build cache
+.swc/
+
+# extra local env files
+.env.eco-test
+.env.supabase.example1
+
+# Compte de service Google (export Sheets) — ne jamais committer
+config/google_credentials.json
+
+# editors
+.vscode/

@@ -12,7 +12,7 @@ L'unique workflow CI de tests est `.github/workflows/e2e-tests.yml` (~600 lignes
 - attend un déploiement **preview Vercel** réussi pour le SHA cible (poll API GitHub deployments, environnement `Preview`, timeout 15 min) ;
 - lance **toute** la suite Playwright (`pnpm exec playwright test`) contre l'URL preview ;
 - parse `test-results.json`, construit des payloads Slack riches (succès / échec tests / échec build Vercel) ;
-- déploie le rapport HTML sur le serveur OVH (`57.130.47.254`) via rsync SSH ;
+- déploie le rapport HTML sur le serveur OVH (`$SUPABASE_OVH_SSH_HOST`) via rsync SSH ;
 - est **bloquant** (step final `Fail workflow on E2E failure` → `exit 1`).
 
 **Données importantes :**

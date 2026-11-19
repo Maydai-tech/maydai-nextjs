@@ -113,7 +113,7 @@ test.describe.skip('Scoring V3 — association modèle COMPL-AI', () => {
 
       const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
         email: testData.email,
-        password: 'TestPassword123!',
+        password: testData.password,
       })
 
       expect(authError).toBeNull()

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from '../auth-helper'
+import { authenticateUser, generateSecureTestPassword } from '../auth-helper'
 import { cleanupTestData } from '../_helpers/db-cleanup'
 import { CompleteSignupSchema } from '@/lib/validations/signup'
 
@@ -11,7 +11,6 @@ import { CompleteSignupSchema } from '@/lib/validations/signup'
  * → packs courts → synthèse → bascule « Passer au Parcours Complet » → radios pré-cochées.
  */
 
-const TEST_PASSWORD = 'TestPassword123!'
 const USECASE_NAME = 'Test E2E Playwright Hydratation'
 
 const PROVIDER_Q1 = 'E4.N7.Q1.A'
@@ -219,13 +218,14 @@ test.describe.skip('Hydratation parcours court → long (E2E réel)', () => {
   let testCompanyId: string | null = null
   let testRegistryId: string | null = null
   let testUsecaseId: string | null = null
+  const testUserPassword = generateSecureTestPassword()
 
   test.beforeAll(async () => {
     const admin = getAdminClient()
 
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
       email: testUserEmail,
-      password: TEST_PASSWORD,
+      password: testUserPassword,
       email_confirm: true,
     })
     if (authError || !authData.user) {
@@ -289,7 +289,7 @@ test.describe.skip('Hydratation parcours court → long (E2E réel)', () => {
   })
 
   test.beforeEach(async ({ page }) => {
-    await authenticateUser(page, testUserEmail)
+    await authenticateUser(page, testUserEmail, testUserPassword)
   })
 
   // TODO: Fix UI hydration binding (Data is well persisted in DB but UI needs F5)

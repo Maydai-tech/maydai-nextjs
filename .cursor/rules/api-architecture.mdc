@@ -14,10 +14,13 @@ Use [lib/auth.tsx](mdc:lib/auth.tsx) for all client-side authentication:
 - Manages session refresh and error handling
 
 ### Server-Side Authentication
-Use [lib/api-auth.ts](mdc:lib/api-auth.ts) for API route protection:
-- `getAuthenticatedSupabaseClient()` verifies Bearer tokens
+Use [lib/api-auth.ts](mdc:lib/api-auth.ts) for user API route protection:
+- `getAuthenticatedSupabaseClient()` verifies Bearer tokens (RLS)
 - `useApiCall()` hook handles automatic token refresh and logout
-- All API routes must validate authentication before processing
+- Admin routes: `verifyAdminAuth` in [lib/admin-auth.ts](mdc:lib/admin-auth.ts) (`admin` or `super_admin`)
+- Crons: `Authorization: Bearer $CRON_SECRET` (Compar:IA accepte aussi `x-cron-secret`)
+- Webhooks Drive / SIREN: header `x-api-key: $INTERNAL_API_KEY`
+- Runbook: [docs/api-auth-security.md](mdc:docs/api-auth-security.md)
 
 ## API Route Structure
 
@@ -48,6 +51,9 @@ export async function GET(request: NextRequest) {
 - Handle authentication errors gracefully with automatic logout
 - Implement proper CORS and security headers
 - Log authentication failures for security monitoring
+- Webhooks Hermes (`/api/webhooks/kb-update`, `/api/webhooks/sync-siren`) : header `x-api-key` === `INTERNAL_API_KEY` (pas un Bearer utilisateur)
+- Crons Vercel : Bearer === `CRON_SECRET`
+- Admin : `verifyAdminAuth` — ne pas se contenter d'un check client
 
 ## File Structure
 

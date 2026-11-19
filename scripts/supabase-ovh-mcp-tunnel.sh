@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SSH_HOST="${SUPABASE_OVH_SSH_HOST:-ubuntu@57.130.47.254}"
+if [[ -z "${SUPABASE_OVH_SSH_HOST:-}" ]]; then
+  echo "SUPABASE_OVH_SSH_HOST is required (example: ubuntu@your.host)" >&2
+  exit 2
+fi
+SSH_HOST="$SUPABASE_OVH_SSH_HOST"
 LOCAL_PORT="${SUPABASE_OVH_LOCAL_MCP_PORT:-8080}"
 REMOTE_HOST="${SUPABASE_OVH_REMOTE_API_HOST:-127.0.0.1}"
 REMOTE_PORT="${SUPABASE_OVH_REMOTE_API_PORT:-8000}"

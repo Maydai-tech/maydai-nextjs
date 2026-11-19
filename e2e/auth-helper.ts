@@ -1,8 +1,12 @@
 import type { Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
+import crypto from 'node:crypto'
 
-const TEST_PASSWORD = 'TestPassword123!'
 const COOKIE_CHUNK_SIZE = 3180
+
+export function generateSecureTestPassword(): string {
+  return crypto.randomBytes(12).toString('hex') + 'A1!'
+}
 
 function getRequiredEnv(name: string): string {
   const value = process.env[name]
@@ -45,7 +49,7 @@ function createCookieChunks(name: string, value: string): Array<{ name: string; 
   return chunks
 }
 
-export async function authenticateUser(page: Page, email: string): Promise<void> {
+export async function authenticateUser(page: Page, email: string, password: string): Promise<void> {
   const supabaseUrl = getRequiredEnv('NEXT_PUBLIC_SUPABASE_URL')
   const supabaseAnonKey = getRequiredEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY')
   const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
@@ -59,7 +63,7 @@ export async function authenticateUser(page: Page, email: string): Promise<void>
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
-    password: TEST_PASSWORD,
+    password,
   })
 
   if (error || !data.session) {

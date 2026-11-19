@@ -15,14 +15,19 @@ interface CompanySectorSelectorProps {
   error?: string
   required?: boolean
   disabled?: boolean
+  highlightMissing?: boolean
 }
+
+const HIGHLIGHT_RING_CLASS =
+  'ring-2 ring-[#ffab5a] border-transparent transition-all duration-300'
 
 export default function CompanySectorSelector({
   value,
   onChange,
   error,
   required = false,
-  disabled = false
+  disabled = false,
+  highlightMissing = false,
 }: CompanySectorSelectorProps) {
   const [mainIndustryId, setMainIndustryId] = useState(value?.mainIndustryId || '')
   const [subCategoryId, setSubCategoryId] = useState(value?.subCategoryId || '')
@@ -78,10 +83,14 @@ export default function CompanySectorSelector({
             disabled={disabled}
             value={mainIndustryId}
             onChange={handleMainIndustryChange}
+            data-missing={!mainIndustryId}
+            aria-invalid={highlightMissing && !mainIndustryId ? true : undefined}
             className={`w-full px-4 py-3 pl-10 border rounded-lg bg-white text-gray-900 focus:ring-2 focus:outline-none transition-colors appearance-none ${
-              error
-                ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:border-[#0080A3] focus:ring-[#0080A3]'
+              highlightMissing && !mainIndustryId
+                ? HIGHLIGHT_RING_CLASS
+                : error
+                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:border-[#0080A3] focus:ring-[#0080A3]'
             } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <option value="">Sélectionnez un secteur principal</option>
@@ -111,10 +120,14 @@ export default function CompanySectorSelector({
               disabled={disabled || !mainIndustryId}
               value={subCategoryId}
               onChange={handleSubCategoryChange}
+              data-missing={!subCategoryId}
+              aria-invalid={highlightMissing && !subCategoryId ? true : undefined}
               className={`w-full px-4 py-3 pl-10 border rounded-lg bg-white text-gray-900 focus:ring-2 focus:outline-none transition-colors appearance-none ${
-                error
-                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                  : 'border-gray-300 focus:border-[#0080A3] focus:ring-[#0080A3]'
+                highlightMissing && !subCategoryId
+                  ? HIGHLIGHT_RING_CLASS
+                  : error
+                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                    : 'border-gray-300 focus:border-[#0080A3] focus:ring-[#0080A3]'
               } ${disabled || !mainIndustryId ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <option value="">Sélectionnez une sous-catégorie</option>

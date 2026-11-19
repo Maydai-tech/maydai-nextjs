@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Trash2, AlertTriangle, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
+import { extractDossierStoragePath } from '@/lib/dossier-storage-path'
 
 interface Props {
   fileUrl: string
@@ -13,27 +14,19 @@ interface Props {
 export default function UploadedFileDisplay({ fileUrl, onDelete, isDeleting }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [fileSize, setFileSize] = useState<number | null>(null)
+  const [opening, setOpening] = useState(false)
+  const [openError, setOpenError] = useState('')
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const { getAccessToken } = useAuth()
 
-  // Extract filename from URL
-  const extractFilename = (url: string): string => {
+  const storagePath = extractDossierStoragePath(fileUrl) || ''
+
+  const extractFilename = (value: string): string => {
     try {
-      const parts = url.split('/')
-      return decodeURIComponent(parts[parts.length - 1])
+      const parts = value.split('?')[0].split('/')
+      return decodeURIComponent(parts[parts.length - 1] || 'fichier')
     } catch {
       return 'fichier'
-    }
-  }
-
-  // Extract file path from URL for storage API
-  const extractFilePath = (url: string): string => {
-    try {
-      const urlObj = new URL(url)
-      const pathMatch = urlObj.pathname.match(/\/storage\/v1\/object\/public\/dossiers\/(.+)/)
-      return pathMatch ? pathMatch[1] : ''
-    } catch {
-      return ''
     }
   }
 
@@ -57,11 +50,9 @@ export default function UploadedFileDisplay({ fileUrl, onDelete, isDeleting }: P
         const token = getAccessToken()
         if (!token) return
 
-        const filePath = extractFilePath(fileUrl)
-        if (!filePath) return
+        if (!storagePath) return
 
-        // Fetch file metadata from Supabase
-        const response = await fetch(`/api/storage/file-metadata?path=${encodeURIComponent(filePath)}`, {
+        const response = await fetch(`/api/storage/file-metadata?path=${encodeURIComponent(storagePath)}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
 
@@ -75,7 +66,7 @@ export default function UploadedFileDisplay({ fileUrl, onDelete, isDeleting }: P
     }
 
     fetchFileMetadata()
-  }, [fileUrl, getAccessToken])
+  }, [storagePath, getAccessToken])
 
   // Reset confirmation after 3 seconds
   useEffect(() => {
@@ -97,6 +88,32 @@ export default function UploadedFileDisplay({ fileUrl, onDelete, isDeleting }: P
       onDelete()
     } else {
       setConfirmDelete(true)
+    }
+  }
+
+  const handleOpenFile = async () => {
+    if (!storagePath || opening) return
+    setOpenError('')
+    setOpening(true)
+    try {
+      const token = getAccessToken()
+      if (!token) {
+        setOpenError('Connexion requise pour ouvrir le fichier.')
+        return
+      }
+      const response = await fetch(`/api/storage/signed-url?path=${encodeURIComponent(storagePath)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data.url) {
+        setOpenError('Impossible d\'ouvrir le fichier.')
+        return
+      }
+      window.open(data.url, '_blank', 'noopener,noreferrer')
+    } catch {
+      setOpenError('Impossible d\'ouvrir le fichier.')
+    } finally {
+      setOpening(false)
     }
   }
 
@@ -123,15 +140,18 @@ export default function UploadedFileDisplay({ fileUrl, onDelete, isDeleting }: P
                 </span>
               )}
             </div>
-            <a
-              href={fileUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-[#0080A3] hover:underline mt-1"
+            <button
+              type="button"
+              onClick={handleOpenFile}
+              disabled={opening || !storagePath}
+              className="inline-flex items-center gap-1 text-xs text-[#0080A3] hover:underline mt-1 disabled:opacity-50"
             >
               <ExternalLink className="w-3 h-3" />
-              Voir le fichier
-            </a>
+              {opening ? 'Ouverture...' : 'Voir le fichier'}
+            </button>
+            {openError && (
+              <p className="text-xs text-red-600 mt-1">{openError}</p>
+            )}
           </div>
         </div>
         

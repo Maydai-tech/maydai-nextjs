@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { canCreateCompany } from '@/lib/collaborators'
+import { getCurrentUserPlan } from '@/lib/subscription/user-plan'
+import { countActiveOwnedRegistries } from '@/lib/subscription/quota-guards'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { RegistrySchema } from '@/lib/validations/registry'
 import {
   LEAD_FUNNEL_STAGE,
   updateLeadFunnelStage,
 } from '@/lib/leads/lead-funnel-service'
+import {
+  CompanyAccessError,
+  getUserAccessibleCompanies,
+} from '@/lib/services/companyAccessService'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -51,105 +57,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // TEMPORARY: Use hybrid approach - check both user_companies and profiles.company_id
-    // This ensures compatibility while RLS policies are being updated
+    let companyIdsArray: string[]
+    let roleMap: Map<string, string>
 
-    // Get companies the user has direct access to via user_companies
-    const { data: userCompanies, error: userCompaniesError } = await supabase
-      .from('user_companies')
-      .select('company_id, role')
-      .eq('user_id', user.id)
-
-    if (userCompaniesError) {
-      return NextResponse.json({ error: 'Error fetching user companies' }, { status: 500 })
-    }
-
-    const companyIds = new Set<string>()
-    const roleMap = new Map<string, string>()
-
-    // Add companies from user_companies
-    if (userCompanies) {
-      userCompanies.forEach(uc => {
-        companyIds.add(uc.company_id)
-        roleMap.set(uc.company_id, uc.role)
-      })
-    }
-
-    // Check if user has profile-level access
-    const { data: profileAccess, error: profileAccessError } = await supabase
-      .from('user_profiles')
-      .select('inviter_user_id, role')
-      .eq('invited_user_id', user.id)
-
-    if (profileAccessError) {
-      console.error('Error fetching profile access:', profileAccessError)
-    }
-
-    // If user has profile-level access, get only companies where the inviter is owner
-    if (profileAccess && profileAccess.length > 0) {
-      for (const access of profileAccess) {
-        const { data: inviterCompanies } = await supabase
-          .from('user_companies')
-          .select('company_id')
-          .eq('user_id', access.inviter_user_id)
-          .in('role', ['owner', 'company_owner'])
-
-        if (inviterCompanies) {
-          inviterCompanies.forEach(ic => {
-            companyIds.add(ic.company_id)
-            // Profile-level access inherits the role from user_profiles
-            if (!roleMap.has(ic.company_id)) {
-              roleMap.set(ic.company_id, access.role)
-            }
-          })
-        }
+    try {
+      const access = await getUserAccessibleCompanies(user.id, supabase)
+      companyIdsArray = access.companyIdsArray
+      roleMap = access.roleMap
+    } catch (error) {
+      if (error instanceof CompanyAccessError) {
+        return NextResponse.json({ error: 'Error fetching user companies' }, { status: 500 })
       }
+      throw error
     }
 
-    // Get companies from use cases the user has access to
-    // Use left join (no !inner) to avoid RLS errors when usecase access was revoked
-    const { data: usecaseAccess, error: usecaseAccessError } = await supabase
-      .from('user_usecases')
-      .select(`
-        usecase_id,
-        usecases (
-          company_id
-        )
-      `)
-      .eq('user_id', user.id)
-
-    if (usecaseAccessError) {
-      console.error('Error fetching usecase access:', usecaseAccessError)
-      // Don't fail the whole request, just continue without usecase-level access
-    }
-
-    if (usecaseAccess) {
-      usecaseAccess.forEach(ua => {
-        // Skip entries where usecase access was revoked (RLS blocks the join)
-        // Supabase returns the joined relation as an object (not array) for single FK relationships
-        const usecases = ua.usecases as unknown as { company_id: string } | null
-        if (!usecases || !usecases.company_id) return
-
-        const companyId = usecases.company_id
-        companyIds.add(companyId)
-        // Only set role if not already set by higher-level access
-        if (!roleMap.has(companyId)) {
-          roleMap.set(companyId, 'user')
-        }
-      })
-    }
-
-    if (companyIds.size === 0) {
+    if (companyIdsArray.length === 0) {
       return NextResponse.json([])
     }
-
-    const companyIdsArray = Array.from(companyIds)
 
     // Fetch companies using the .in() method
     const { data: companies, error: companiesError } = await supabase
       .from('companies')
       .select('*')
       .in('id', companyIdsArray)
+      .neq('lifecycle_status', 'soft_deleted')
 
     if (companiesError) {
       console.error('Error fetching companies:', companiesError)
@@ -343,6 +274,27 @@ export async function POST(request: NextRequest) {
     }
     if (validated.role !== undefined) {
       insertData.role = validated.role
+    }
+
+    let currentRegistries = 0
+    try {
+      const userPlan = await getCurrentUserPlan(user.id, serviceClient)
+      const maxRegistries = userPlan.planInfo.maxRegistries ?? 1
+      currentRegistries = await countActiveOwnedRegistries(user.id, serviceClient)
+      if (currentRegistries >= maxRegistries) {
+        return NextResponse.json(
+          {
+            error: 'Limite de registres du plan atteinte',
+            code: 'PLAN_LIMIT_REACHED',
+            limit: maxRegistries,
+            current: currentRegistries,
+          },
+          { status: 403 }
+        )
+      }
+    } catch (quotaError) {
+      console.error('[POST /api/companies] quota registres', quotaError)
+      return NextResponse.json({ error: 'Erreur lors de la vérification de la limite du plan' }, { status: 500 })
     }
 
     // Créer la compagnie

@@ -1,7 +1,7 @@
 import {
   collectE5DeclaredOptionCodes,
   collectE6DeclaredOptionCodes,
-} from '@/app/usecases/[id]/utils/bpgv-transparency-checklist-save'
+} from '@/app/(saas)/usecases/[id]/utils/bpgv-transparency-checklist-save'
 
 function extractOptionCodesFromAnswer(raw: unknown): string[] {
   if (typeof raw === 'string' && raw.length > 0) return [raw]

@@ -1,10 +1,20 @@
+import { revalidatePath } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
-import { sendGoogleAdsOfflineSignupConversion } from '@/lib/google-ads/offline-signup-conversion'
 import { validateSIREN, cleanSIREN } from '@/lib/validation/siren'
 import { validateIndustrySelection } from '@/lib/validation/industries'
 import { planIdSchema } from '@/lib/validations/pricing'
-import { CompleteSignupSchema } from '@/lib/validations/signup'
+import {
+  CompleteSignupSchema,
+  mergeCompleteSignupProfile,
+  type SignupProfileFields,
+} from '@/lib/validations/signup'
+import { calculateAndSaveProfileCompleteness, computeProfileCompletenessScoreFromRow } from '@/lib/services/profileScoreService'
+import {
+  calculateAndPersistEngagementScore,
+  calculateAndPersistEntityTrustScore,
+  detectAndRecordSirenCollision,
+} from '@/lib/services/governanceScoreService'
 
 const ACQUISITION_FIELD_MAX_LEN = 512
 
@@ -66,6 +76,11 @@ export async function POST(request: NextRequest) {
       subCategoryId,
       phone,
       siren,
+      profileType,
+      nafCode,
+      sirenVerifiedPappers,
+      academicInstitution,
+      academicDepartment,
       gclid: rawGclid,
       utm_source: rawUtmSource,
       utm_medium: rawUtmMedium,
@@ -135,22 +150,49 @@ export async function POST(request: NextRequest) {
     const utm_medium = sanitizeAcquisitionField(rawUtmMedium)
     const utm_campaign = sanitizeAcquisitionField(rawUtmCampaign)
 
+    const { data: existingProfile, error: existingProfileError } = await supabase
+      .from('profiles')
+      .select(
+        'first_name, last_name, company_name, industry, sub_category_id, phone, siren, profile_type, naf_code, siren_verified_pappers, academic_institution, academic_department, gclid, utm_source, utm_medium, utm_campaign'
+      )
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (existingProfileError) {
+      console.error('Profile read error:', existingProfileError)
+      return NextResponse.json(
+        { error: 'Erreur lors de la création du profil' },
+        { status: 500 }
+      )
+    }
+
+    const patch: Partial<SignupProfileFields> = {}
+    if (firstName !== undefined) patch.first_name = firstName.trim() || null
+    if (lastName !== undefined) patch.last_name = lastName.trim() || null
+    if (companyName !== undefined) patch.company_name = companyName.trim() || null
+    if (mainIndustryId !== undefined) patch.industry = mainIndustryId.trim() || null
+    if (subCategoryId !== undefined) patch.sub_category_id = subCategoryId.trim() || null
+    if (phone !== undefined) patch.phone = cleanedPhone
+    if (siren !== undefined) patch.siren = cleanedSiren
+    if (profileType !== undefined) patch.profile_type = profileType
+    if (nafCode !== undefined) patch.naf_code = nafCode.trim() || null
+    if (sirenVerifiedPappers !== undefined) patch.siren_verified_pappers = sirenVerifiedPappers
+    if (academicInstitution !== undefined) patch.academic_institution = academicInstitution.trim() || null
+    if (academicDepartment !== undefined) patch.academic_department = academicDepartment.trim() || null
+    if (rawGclid !== undefined) patch.gclid = gclid
+    if (rawUtmSource !== undefined) patch.utm_source = utm_source
+    if (rawUtmMedium !== undefined) patch.utm_medium = utm_medium
+    if (rawUtmCampaign !== undefined) patch.utm_campaign = utm_campaign
+
+    const merged = mergeCompleteSignupProfile(existingProfile, patch)
+
     // Create/update profile with all signup data
     // Note: email is stored in auth.users, not in profiles table
     // Store mainIndustryId in industry field and subCategoryId in sub_category_id field
     const profileData = {
       id: user.id,
-      first_name: firstName?.trim() ?? null,
-      last_name: lastName?.trim() ?? null,
-      company_name: companyName?.trim() ?? null,
-      industry: mainIndustryId?.trim() ?? null,
-      sub_category_id: subCategoryId?.trim() ?? null,
-      phone: cleanedPhone,
-      siren: cleanedSiren,
-      gclid,
-      utm_source,
-      utm_medium,
-      utm_campaign,
+      ...merged,
+      completeness_score: computeProfileCompletenessScoreFromRow(merged, false),
       updated_at: new Date().toISOString(),
     }
 
@@ -170,6 +212,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    await calculateAndSaveProfileCompleteness(user.id, supabase)
+    revalidatePath('/dashboard/registries')
+
+    try {
+      await detectAndRecordSirenCollision(user.id, merged.siren)
+      await calculateAndPersistEntityTrustScore(user.id)
+      await calculateAndPersistEngagementScore(user.id)
+    } catch (governanceError) {
+      console.error('[complete-signup] scores gouvernance', governanceError)
+    }
+
     // Intention de forfait (URL ?plan=) — re-valider, ignorer si invalide (ne bloque pas l’inscription)
     if (rawPlanIntent !== undefined && rawPlanIntent !== null && rawPlanIntent !== '') {
       const planParsed = planIdSchema.safeParse(
@@ -186,27 +239,6 @@ export async function POST(request: NextRequest) {
           )
         }
       }
-    }
-
-    if (gclid) {
-      const emailForConversion =
-        (user.email?.trim().toLowerCase() ||
-          (typeof body.email === 'string' ? body.email.trim().toLowerCase() : '')) ||
-        ''
-      void (async () => {
-        try {
-          await sendGoogleAdsOfflineSignupConversion({
-            clickId: gclid,
-            conversionValue: 0,
-            ...(emailForConversion ? { email: emailForConversion } : {}),
-          })
-        } catch (err) {
-          console.error(
-            '[complete-signup] Google Ads offline conversion (non bloquant):',
-            err
-          )
-        }
-      })()
     }
 
     return NextResponse.json({ profile }, { status: 200 })

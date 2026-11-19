@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger, createRequestContext } from '@/lib/secure-logger'
+import { calculateAndSaveProfileCompleteness } from '@/lib/services/profileScoreService'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -73,6 +74,17 @@ export async function DELETE(
     if (deleteError) {
       logger.error('Failed to delete profile-level collaborator', deleteError, createRequestContext(request))
       return NextResponse.json({ error: 'Failed to delete collaborator' }, { status: 500 })
+    }
+
+    try {
+      await calculateAndSaveProfileCompleteness(user.id, supabase)
+    } catch (scoreError) {
+      logger.error(
+        'Failed to recalculate profile completeness after collaborator removal',
+        scoreError,
+        createRequestContext(request)
+      )
+      return NextResponse.json({ error: 'Failed to update profile completeness score' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })

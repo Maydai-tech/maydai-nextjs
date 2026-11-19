@@ -1,5 +1,5 @@
-import { loadQuestions } from '@/app/usecases/[id]/utils/questions-loader'
-import { RISK_CATEGORIES } from '@/app/usecases/[id]/utils/risk-categories'
+import { loadQuestions } from '@/app/(saas)/usecases/[id]/utils/questions-loader'
+import { RISK_CATEGORIES } from '@/app/(saas)/usecases/[id]/utils/risk-categories'
 
 /**
  * Clés `category_impacts` du JSON questionnaire → id pilier (`RISK_CATEGORIES`).

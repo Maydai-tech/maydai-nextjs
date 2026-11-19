@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from '../auth-helper'
+import { authenticateUser, generateSecureTestPassword } from '../auth-helper'
 
 /**
  * E2E Test: UseCase Deletion
@@ -13,7 +13,7 @@ import { authenticateUser } from '../auth-helper'
 // Test user data
 const TEST_USER = {
   email: `e2e-usecase-delete-${Date.now()}@maydai-test.com`,
-  password: 'TestPassword123!',
+  password: generateSecureTestPassword(),
   firstName: 'E2E',
   lastName: 'DeleteTest',
   companyName: 'E2E Delete Test Company',
@@ -227,7 +227,7 @@ test.describe('UseCase Deletion', () => {
   test('should delete a use case via the 3-dot menu and show toast notification', async ({ page }) => {
     const supabase = getAdminClient()
 
-    await authenticateUser(page, TEST_USER.email)
+    await authenticateUser(page, TEST_USER.email, TEST_USER.password)
 
     // Navigate to registry dashboard
     await page.goto(`/dashboard/${testRegistryId}`)

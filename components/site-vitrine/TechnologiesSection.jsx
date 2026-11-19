@@ -85,7 +85,7 @@ export default function TechnologiesSection() {
             width={600}
             height={400}
             className="rounded-lg shadow-lg object-cover w-auto max-w-full h-auto"
-            priority
+            loading="lazy"
           />
         </div>
         

@@ -5,6 +5,7 @@ Guide simple pour configurer l'accès au serveur MCP Supabase hébergé sur OVH.
 ## Prérequis
 
 - Un Mac (ce guide est pour macOS)
+- La variable `SUPABASE_OVH_SSH_HOST` (Hugo te la donnera, ex. `ubuntu@<hôte>`)
 - Le mot de passe du serveur OVH (Hugo te le donnera)
 
 ## Étape 1 : Ouvrir le Terminal
@@ -43,7 +44,7 @@ Envoie le contenu (Cmd+V) à Hugo par Slack/email. Il l'ajoutera au serveur.
 Une fois que Hugo confirme avoir ajouté ta clé, teste la connexion :
 
 ```bash
-ssh ubuntu@57.130.47.254
+ssh "$SUPABASE_OVH_SSH_HOST"
 ```
 
 Tu devrais voir un message de bienvenue du serveur. Tape `exit` pour te déconnecter.
@@ -53,7 +54,7 @@ Tu devrais voir un message de bienvenue du serveur. Tape `exit` pour te déconne
 Chaque fois que tu veux utiliser le MCP Supabase avec Claude Code, lance cette commande **dans un Terminal séparé** (et laisse-le ouvert) :
 
 ```bash
-ssh -L 8080:localhost:8000 ubuntu@57.130.47.254
+ssh -L 8080:localhost:8000 "$SUPABASE_OVH_SSH_HOST"
 ```
 
 ⚠️ **Important** : Ce Terminal doit rester ouvert pendant que tu utilises Claude Code.
@@ -79,7 +80,7 @@ Ajoute ou modifie la configuration pour inclure le MCP Supabase (Hugo te donnera
 Chaque jour, pour utiliser le MCP :
 
 1. Ouvre un Terminal
-2. Lance : `ssh -L 8080:localhost:8000 ubuntu@57.130.47.254`
+2. Lance : `ssh -L 8080:localhost:8000 "$SUPABASE_OVH_SSH_HOST"`
 3. Laisse ce Terminal ouvert
 4. Utilise Claude Code normalement
 
@@ -94,7 +95,7 @@ Quand un utilisateur t'envoie sa clé publique SSH :
 1. Connecte-toi au serveur OVH :
 
 ```bash
-ssh ubuntu@57.130.47.254
+ssh "$SUPABASE_OVH_SSH_HOST"
 ```
 
 2. Ouvre le fichier des clés autorisées :

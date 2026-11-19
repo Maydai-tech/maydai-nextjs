@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { renderToBuffer, Document } from '@react-pdf/renderer'
 import React from 'react'
-import { PDFDocument } from '@/app/usecases/[id]/components/pdf/PDFDocument'
-import { PDFReportData } from '@/app/usecases/[id]/components/pdf/types'
-import { resolveAuthoritativeRiskCodeForPdf } from '@/app/usecases/[id]/components/pdf/pdf-risk-logic'
+import { PDFDocument } from '@/app/(saas)/usecases/[id]/components/pdf/PDFDocument'
+import { PDFReportData } from '@/app/(saas)/usecases/[id]/components/pdf/types'
+import { resolveAuthoritativeRiskCodeForPdf } from '@/app/(saas)/usecases/[id]/components/pdf/pdf-risk-logic'
 import { REPORT_STANDARD_SLOT_KEYS_ORDERED } from '@/lib/canonical-actions'
 import { buildAllStandardPlanCanonicalItems } from '@/lib/report-canonical-items'
 import { logger, createRequestContext } from '@/lib/secure-logger'
@@ -19,11 +19,75 @@ import { mergeChecklistIntoDbResponseRows } from '@/lib/merge-checklist-into-use
 import {
   USECASE_PDF_SELECT,
   applyRule67PointsSync,
+  attachSystemCardSectionsToCanonicalItems,
+  buildPdfSystemCardSections,
   extractPdfDocumentsFromUseCaseRow,
   extractPdfHistoryFromUseCaseRow,
+  extractPdfSystemCardNotesByDocType,
   mergePdfDocumentsToStatusMap,
   sanitizePdfReportData,
 } from '@/lib/pdf-payload-service'
+import { getSystemCardPillarsByModel } from '@/lib/services/system-card-service'
+import { getServiceRoleClient } from '@/lib/maydai-calculator'
+import { getAuditIntegrityBadge } from '@/lib/validations/governance-scores'
+
+interface RegistryOwnerGovernance {
+  profile_type?: string | null
+  siren_collision_flag?: boolean | null
+}
+
+function readAuditIntegrityScore(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const numeric = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+async function loadRegistryOwnerGovernance(
+  companyId: string | null | undefined
+): Promise<RegistryOwnerGovernance | null> {
+  if (!companyId) return null
+  try {
+    const admin = getServiceRoleClient()
+    const { data: ownerData, error: ownerError } = await admin
+      .from('user_companies')
+      .select('user_id')
+      .eq('company_id', companyId)
+      .in('role', ['owner', 'company_owner'])
+      .order('created_at', { ascending: true })
+      .limit(1)
+
+    if (ownerError) {
+      console.error('[generate-pdf] owner registre', ownerError)
+      throw new Error(ownerError.message || ownerError.details || 'Erreur DB')
+    }
+
+    const ownerRow = Array.isArray(ownerData) ? ownerData[0] : ownerData
+    const ownerUserId =
+      ownerRow && typeof ownerRow.user_id === 'string' ? ownerRow.user_id : null
+    if (!ownerUserId) return null
+
+    const { data: profileData, error: profileError } = await admin
+      .from('profiles')
+      .select('profile_type, siren_collision_flag')
+      .eq('id', ownerUserId)
+      .limit(1)
+
+    if (profileError) {
+      console.error('[generate-pdf] profil owner', profileError)
+      throw new Error(profileError.message || profileError.details || 'Erreur DB')
+    }
+
+    const profile = Array.isArray(profileData) ? profileData[0] : profileData
+    if (!profile) return null
+    return {
+      profile_type: profile.profile_type ?? null,
+      siren_collision_flag: profile.siren_collision_flag ?? false,
+    }
+  } catch (error) {
+    console.error('[generate-pdf] résolution owner', error)
+    return null
+  }
+}
 
 function stringSetsEqual(a: Set<string>, b: Set<string>): boolean {
   if (a.size !== b.size) return false
@@ -214,7 +278,7 @@ export async function GET(
     // Calculer le score complet pour obtenir les category_scores avec gestion d'erreur
     let fullScoreData
     try {
-      const { calculateScore } = await import('@/app/usecases/[id]/utils/score-calculator')
+      const { calculateScore } = await import('@/app/(saas)/usecases/[id]/utils/score-calculator')
       const dbPdfPath = (useCase as { path_mode?: string | null }).path_mode
       const v3PathModeForPdf =
         pdfQuestionnaireVersion === QUESTIONNAIRE_VERSION_V3
@@ -392,8 +456,49 @@ export async function GET(
       documents: pdfDocuments,
     }
 
+    const modelIdentifier =
+      (typeof modelData?.slug === 'string' ? modelData.slug.trim() : '') ||
+      (typeof useCase.llm_model_version === 'string' ? useCase.llm_model_version.trim() : '')
+    const referenceTargetId = modelData?.merged_into_id || modelData?.reference_model_id
+    let cardIdentifier = modelIdentifier
+    let referenceMention: string | null = null
+    if (referenceTargetId) {
+      const { data: referenceModel } = await supabase
+        .from('compl_ai_models')
+        .select('slug, model_name')
+        .eq('id', referenceTargetId)
+        .maybeSingle()
+      if (referenceModel?.slug) cardIdentifier = referenceModel.slug
+      if (referenceModel?.model_name && referenceModel.model_name !== modelData?.model_name) {
+        referenceMention = `Fiche de ${referenceModel.model_name}`
+      }
+    }
+    const systemCardPillars = cardIdentifier
+      ? await getSystemCardPillarsByModel(cardIdentifier)
+      : []
+    const notesByDocType = extractPdfSystemCardNotesByDocType(useCase)
+    canonicalPlanItems = attachSystemCardSectionsToCanonicalItems({
+      items: canonicalPlanItems,
+      documents: pdfDocuments,
+      pillars: systemCardPillars,
+      notesByDocType,
+      referenceMention,
+    })
+    const systemCardSections = buildPdfSystemCardSections(
+      systemCardPillars,
+      notesByDocType
+    )
+
+    const ownerProfile = await loadRegistryOwnerGovernance(useCase.company_id)
+    const governanceStamp = getAuditIntegrityBadge({
+      audit_integrity_score: readAuditIntegrityScore(useCase.audit_integrity_score),
+      profile_type: ownerProfile?.profile_type ?? null,
+      siren_collision_flag: ownerProfile?.siren_collision_flag ?? false,
+    })
+
     // Prepare PDF data
     const pdfData: PDFReportData = sanitizePdfReportData({
+      governanceStamp,
       pdfCtaBaseUrl: pdfCtaBaseUrl || undefined,
       canonicalPlanItems,
       useCase: safeUseCase,
@@ -413,6 +518,7 @@ export async function GET(
         last_name: profileData.last_name,
       },
       generatedDate: new Date().toISOString(),
+      systemCardSections,
     })
 
     // Generate PDF

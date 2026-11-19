@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { generateSecureTestPassword } from '../auth-helper'
 
 /** Identifiers returned by {@link seedV2Usecase} for UI tests and teardown. */
 export interface V2TestData {
@@ -7,6 +8,7 @@ export interface V2TestData {
   registryId: string
   usecaseId: string
   email: string
+  password: string
   /** Exact `usecases.name` — utile pour les locators du dashboard. */
   usecaseName: string
 }
@@ -20,10 +22,11 @@ export async function seedV2Usecase(
   testId = 'deletion'
 ): Promise<V2TestData> {
   const email = `e2e-delete-${testId}-${Date.now()}@maydai-test.com`
+  const password = generateSecureTestPassword()
 
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email,
-    password: 'TestPassword123!', // mot de passe fixe pour les E2E (connexion par mot de passe)
+    password,
     email_confirm: true,
   })
 
@@ -130,7 +133,7 @@ export async function seedV2Usecase(
 
   console.log(`✅ V2 seed: ${email} (usecase: ${usecaseId})`)
 
-  return { userId, companyId, registryId, usecaseId, email, usecaseName }
+  return { userId, companyId, registryId, usecaseId, email, password, usecaseName }
 }
 
 /**
@@ -151,6 +154,11 @@ export async function cleanupTestData(supabase: SupabaseClient, data: V2TestData
     await supabase.from('usecases').delete().eq('id', id)
 
     await supabase.from('user_companies').delete().eq('user_id', data.userId)
+    await supabase.from('user_device_sessions').delete().eq('user_id', data.userId)
+    await supabase
+      .from('admin_alerts')
+      .delete()
+      .or(`primary_profile_id.eq.${data.userId},secondary_profile_id.eq.${data.userId}`)
     await supabase.from('profiles').delete().eq('id', data.userId)
     await supabase.from('companies').delete().eq('id', data.registryId)
     await supabase.from('companies').delete().eq('id', data.companyId)

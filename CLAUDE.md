@@ -6,39 +6,45 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MaydAI is a Next.js 15 application for AI Act (EU) compliance management. It helps organizations assess and manage AI use cases, conduct risk evaluations, and generate compliance reports.
 
-**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), OpenAI API, Stripe
+**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Supabase (PostgreSQL), Mistral Agents (chat + RAG), OpenAI (rapports File Search), Stripe
+
+**Docs techniques :** [docs/README.md](docs/README.md) — Chat IA, hub LLM, System Cards, auth API, monitoring, E2E, RAG AI Act.
+
+Runbooks : [docs/README.md](docs/README.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). Monitoring : [docs/admin-monitoring.md](docs/admin-monitoring.md). E2E : [docs/e2e-playwright.md](docs/e2e-playwright.md). RAG veille AI Act : [docs/ai-act-rag.md](docs/ai-act-rag.md).
 
 ## Development Commands
 
+> **Règle d'Architecture (Pilier 3.2 - PNPM Exclusif) :** Ce projet utilise exclusivement **PNPM** (`pnpm@11.1.3`) et **Node.js 24.x** (`.nvmrc`). L'utilisation de `npm` ou `yarn` est strictement interdite. Ne jamais générer de fichier `package-lock.json`.
+
 ### Running the Application
 ```bash
-npm run dev              # Development server (clears .next cache first)
-npm run dev:clean        # Deep clean (removes .next and node_modules/.cache)
-npm run build            # Production build
-npm run start            # Production server
-npm run clean            # Clean cache using scripts/clean-cache.sh
+pnpm dev              # Development server (clears .next cache first)
+pnpm dev:clean        # Deep clean (removes .next and node_modules/.cache)
+pnpm build            # Production build
+pnpm start            # Production server
+pnpm clean            # Clean cache using scripts/clean-cache.sh
 ```
 
-⚠️ **CRITICAL:** Never run `npm run build` or `npm run dev` without explicit user authorization.
+⚠️ **CRITICAL:** Never run `pnpm build` or `pnpm dev` without explicit user authorization.
 
 ### Testing
 ```bash
-npm test                      # Run all tests
-npm run test:watch           # Watch mode
-npm run test:coverage        # Coverage report
-npm test -- "scoring"        # Run specific test suite
-npm test -- --verbose        # Verbose output
+pnpm test                      # Run all tests
+pnpm test:watch           # Watch mode
+pnpm test:coverage        # Coverage report
+pnpm test -- "scoring"        # Run specific test suite
+pnpm test -- --verbose        # Verbose output
 
 # E2E tests (Playwright)
-npm run e2e                  # Run all E2E tests
-npm run e2e:ui               # Interactive UI mode
-npm run e2e:headed           # Run with visible browser
-npm run e2e:debug            # Debug mode
+pnpm e2e                  # Run all E2E tests
+pnpm e2e:ui               # Interactive UI mode
+pnpm e2e:headed           # Run with visible browser
+pnpm e2e:debug            # Debug mode
 ```
 
 ### Linting
 ```bash
-npm run lint                 # ESLint check
+pnpm lint                 # ESLint check
 ```
 
 ### Utility Scripts
@@ -55,11 +61,20 @@ bash scripts/clean-cache.sh            # Clean build cache
 ```
 app/                          # Next.js 15 App Router
 ├── api/                      # API routes (protected with auth)
-│   ├── usecases/            # UseCase endpoints
+│   ├── chat/                # Setup welcome, évaluation conversationnelle, rapport
+│   ├── usecases/            # UseCase endpoints + evaluation-runs
 │   ├── companies/           # Company management
 │   ├── collaboration/       # Team collaboration
-│   ├── questionnaire/       # Questionnaire responses
+│   ├── admin/               # Admin (verifyAdminAuth) + crons Compar:IA
+│   ├── cron/                # LLM Stats / EcoLogits (CRON_SECRET)
+│   ├── webhooks/            # KB Drive (INTERNAL_API_KEY), Stripe, SIREN
 │   └── stripe/              # Subscription & billing
+├── (saas)/chat/             # Landing Chat IA
+├── (saas)/usecases/         # Hub création, setup-chat, chat-evaluation
+│   ├── questionnaire/       # Questionnaire responses
+│   ├── stripe/              # Subscription & billing
+│   ├── chat/                # Agents Mistral (setup, evaluation, rapport)
+│   └── webhooks/            # Hermes Drive (Compar:IA CSV + RAG AI_Act_Index.json)
 ├── dashboard/[id]/          # Company dashboards
 ├── usecases/[id]/           # UseCase pages (overview, evaluation, rapport)
 ├── admin/                   # Admin panel (role-protected)
@@ -67,10 +82,13 @@ app/                          # Next.js 15 App Router
 
 lib/                         # Shared utilities & services
 ├── auth.tsx                 # Client-side auth hook (useAuth)
-├── api-auth.ts              # Server-side auth (getAuthenticatedSupabaseClient)
-├── supabase.ts              # Supabase client setup
-├── questionnaire-api.ts     # Questionnaire data layer
-├── openai-client.ts         # OpenAI integration
+├── api-auth.ts              # Bearer user (getAuthenticatedSupabaseClient)
+├── admin-auth.ts            # verifyAdminAuth (admin / super_admin)
+├── mistral/                 # Agents chat, graphe V3, rapport
+├── bench-llm/               # Hub canonique + cycle de vie + CSV COMPL-AI + Control Tower / System Cards
+├── comparia/                # Import Drive + pivot
+├── rag-ingestion.ts         # RAG AI Act (pgvector)
+├── openai-client.ts         # Rapports File Search (hors chat)
 └── stripe/                  # Stripe subscription logic
 
 components/                  # Reusable UI components
@@ -198,14 +216,24 @@ export async function GET(request: NextRequest) {
 **Files:**
 - Client auth: [lib/auth.tsx](lib/auth.tsx)
 - API auth: [lib/api-auth.ts](lib/api-auth.ts)
+- Admin / cron / webhook / invitations / preuves dossier: [docs/api-auth-security.md](docs/api-auth-security.md)
+- Monitoring hôte: [docs/admin-monitoring.md](docs/admin-monitoring.md)
+- E2E Playwright: [docs/e2e-playwright.md](docs/e2e-playwright.md)
 - Protected route component: [components/ProtectedRoute.tsx](components/ProtectedRoute.tsx)
 
 ### UseCase System
 
-**3-Page Structure:**
+**3-Page Structure (questionnaire):**
 - `/usecases/[id]` - Overview (main view)
 - `/usecases/[id]/evaluation` - Questionnaire (drafts only)
 - `/usecases/[id]/rapport` - Compliance report (completed only)
+
+**Chat IA (3 étapes, distinct du questionnaire) :**
+- Hub `/chat` ou `/usecases/new?company=` → `/usecases/new/setup-chat`
+- Accueil Mistral (`phase=welcome`) puis brouillon `GuidedChat`
+- `/usecases/[id]/chat-evaluation` puis `POST /api/chat/generate-report`
+- Tracking first-party : `evaluation_path_runs.path_mode = assistant`
+- Détail : [docs/chat-assistant-parcours.md](docs/chat-assistant-parcours.md)
 
 **Smart Navigation:**
 - Draft usecases auto-redirect to `/evaluation`
@@ -347,9 +375,9 @@ The `thomas` branch is updated by a non-technical contributor. **ALL merges requ
 
 2. **Build Tests:**
    ```bash
-   npm run build        # Must succeed
-   npm run lint         # No critical errors
-   npm test            # All tests pass
+   pnpm build        # Must succeed
+   pnpm lint         # No critical errors
+   pnpm test            # All tests pass
    ```
 
 3. **Manual Verification:**
@@ -374,31 +402,32 @@ git checkout dev
 git merge thomas
 
 # 3. Re-test
-npm run build
-npm run test
-npm run dev
+pnpm build
+pnpm test
+pnpm dev
 ```
 
 ## Configuration Files
 
 ### Environment Variables
-Required variables in `.env.local`:
+Référence complète : [`.env.example`](.env.example). Minimum local :
+
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_COOKIEYES_ID=
 OPENAI_API_KEY=
+MISTRAL_API_KEY=
 OPENAI_ASSISTANT_ID=
+MISTRAL_API_KEY=
+INTERNAL_API_KEY=
 MAILJET_API_KEY=
-MAILJET_SECRET_KEY=
+MAILJET_API_SECRET=
 ```
 
-Optional:
-```bash
-AIRTABLE_API_KEY=
-AIRTABLE_BASE_ID=
-```
+Jobs / webhooks (prod) : `CRON_SECRET`, `INTERNAL_API_KEY`, `LLM_STATS_API_KEY`, `GOOGLE_DRIVE_*`.  
+Hub LLM : [docs/llm-models-hub.md](docs/llm-models-hub.md). System Cards : [docs/llm-system-cards.md](docs/llm-system-cards.md). RAG : [docs/ai-act-rag.md](docs/ai-act-rag.md).
 
 ### TypeScript
 - Path alias: `@/*` maps to project root
@@ -409,8 +438,21 @@ AIRTABLE_BASE_ID=
 ### Next.js Configuration
 - ESLint disabled during production builds
 - Standalone output in production
-- CSP headers configured for GTM, CookieYes, Stripe, HubSpot
+- CSP headers configured for GTM, CookieYes, Stripe
 - Automatic redirects for favicon and duplicate content
+
+## Linear (tickets)
+
+Workspace **MaydAI** (`maydai`), équipe `MAY`. Passer par l'**API GraphQL avec `LINEAR_API_KEY`** (définie dans l'env Claude Code du projet), **pas le connecteur Linear de Claude** : il est branché sur un autre workspace (UP-check).
+
+```bash
+curl -s https://api.linear.app/graphql -H "Content-Type: application/json" \
+  -H "Authorization: $LINEAR_API_KEY" -d '{"query":"{ viewer { name } organization { urlKey } }"}'
+```
+
+- Vérifier d'abord que `organization.urlKey` vaut `maydai`.
+- Lecture libre ; création / modification de tickets uniquement à la demande d'Hugo.
+- Ne jamais afficher la clé.
 
 ## Key Principles
 

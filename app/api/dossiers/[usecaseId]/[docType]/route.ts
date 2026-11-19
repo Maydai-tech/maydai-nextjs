@@ -12,6 +12,7 @@ import {
   normalizeHumanOversightFormData,
   resolveCanonicalDocType,
 } from '@/lib/canonical-actions'
+import { extractDossierStoragePath } from '@/lib/dossier-storage-path'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -61,7 +62,15 @@ export async function GET(
       .maybeSingle()
 
     if (!dossierRow) {
-      return NextResponse.json({ textContent: null, fileUrl: null, status: 'incomplete', updatedAt: null })
+      return NextResponse.json({
+        textContent: null,
+        fileUrl: null,
+        status: 'incomplete',
+        updatedAt: null,
+        dossierId: null,
+        maydaiPrefillApplied: false,
+        userCompletionApplied: false,
+      })
     }
 
     const { data: access } = await supabase
@@ -79,7 +88,7 @@ export async function GET(
 
     const { data: doc } = await supabase
       .from('dossier_documents')
-      .select('form_data, file_url, status, updated_at, doc_type')
+      .select('form_data, file_url, status, updated_at, doc_type, maydai_prefill_applied, user_completion_applied')
       .eq('dossier_id', dossierRow.id)
       .eq('doc_type', storageDocType)
       .maybeSingle()
@@ -91,9 +100,12 @@ export async function GET(
 
     return NextResponse.json({
       formData,
-      fileUrl: doc?.file_url ?? null,
+      fileUrl: extractDossierStoragePath(doc?.file_url),
       status: doc?.status ?? 'incomplete',
       updatedAt: doc?.updated_at ?? null,
+      dossierId: dossierRow.id,
+      maydaiPrefillApplied: Boolean(doc?.maydai_prefill_applied),
+      userCompletionApplied: Boolean(doc?.user_completion_applied),
     })
   } catch (e) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

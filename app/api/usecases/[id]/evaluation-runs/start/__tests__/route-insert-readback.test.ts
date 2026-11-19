@@ -183,4 +183,46 @@ describe('POST evaluation-runs/start insert + readback', () => {
       step: 'service_role_probe',
     })
   })
+
+  test('accepte path_mode assistant (Chat IA)', async () => {
+    const userSupabase = {
+      from: (table: string) => {
+        if (table === 'usecases') return usecaseChain()
+        if (table === 'user_companies') return userCompanyChain()
+        throw new Error(`JWT client must not query ${table}`)
+      },
+    }
+
+    const { supabaseRuns, insertMock } = makeRunsSupabase()
+    ;(createClient as jest.Mock).mockImplementation((_url: string, key: string) => {
+      if (key === SERVICE_KEY) return supabaseRuns
+      throw new Error(`unexpected createClient key`)
+    })
+
+    ;(getAuthenticatedSupabaseClient as jest.Mock).mockResolvedValue({
+      supabase: userSupabase,
+      user: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' },
+    })
+
+    const request = new NextRequest(`http://localhost/api/usecases/${USECASE_ID}/evaluation-runs/start`, {
+      method: 'POST',
+      body: JSON.stringify({
+        path_mode: 'assistant',
+        entry_surface: 'chat_evaluation',
+        questionnaire_version: 3,
+      }),
+      headers: { 'content-type': 'application/json' },
+    })
+
+    const response = await POST(request, { params: Promise.resolve({ id: USECASE_ID }) })
+    expect(response.status).toBe(200)
+    const json = await response.json()
+    expect(json).toEqual({ run_id: RUN_ID, reused: false })
+    expect(insertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path_mode: 'assistant',
+        entry_surface: 'chat_evaluation',
+      })
+    )
+  })
 })

@@ -50,15 +50,15 @@ function dbUrl() {
 const args = process.argv.slice(2);
 if (args.length === 0 || args.includes("-h") || args.includes("--help")) {
   console.log(`Usage:
-  npm run supabase:ovh -- query "select now();"
-  npm run supabase:ovh -- query -f path/to/file.sql
-  npm run supabase:ovh -- push --dry-run
-  npm run supabase:ovh -- diff --schema public
-  npm run supabase:ovh -- pull snapshot_name --schema public
-  npm run supabase:ovh -- migration list
+  pnpm supabase:ovh -- query "select now();"
+  pnpm supabase:ovh -- query -f path/to/file.sql
+  pnpm supabase:ovh -- push --dry-run
+  pnpm supabase:ovh -- diff --schema public
+  pnpm supabase:ovh -- pull snapshot_name --schema public
+  pnpm supabase:ovh -- migration list
 
 Before using it, start the SSH tunnel:
-  npm run supabase:ovh:tunnel -- start
+  pnpm supabase:ovh:tunnel -- start
 
 The wrapper calls "supabase db <args>" by default.
 Pass "migration ..." to call "supabase migration ...".

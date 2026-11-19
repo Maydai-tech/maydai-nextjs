@@ -164,10 +164,10 @@ export async function POST(request: NextRequest) {
       })
       return NextResponse.json(
         {
-          error: 'duplicate_email',
-          message: 'Un lead avec cet e-mail existe déjà.',
+          success: true,
+          message: 'Lead ignoré car déjà existant',
         },
-        { status: 409 }
+        { status: 200 }
       )
     }
 

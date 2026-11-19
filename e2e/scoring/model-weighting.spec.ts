@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from '../auth-helper'
+import { authenticateUser, generateSecureTestPassword } from '../auth-helper'
 import { cleanupTestData } from '../_helpers/db-cleanup'
 import { seedV2Usecase } from '../_helpers/seed-usecase'
 
@@ -39,13 +39,14 @@ test.describe.skip('Calcul de score avec modèle COMPL-AI', () => {
   let testUserId: string | null = null
   let testCompanyId: string | null = null
   let testUsecaseId: string | null = null
+  const testUserPassword = generateSecureTestPassword()
 
   test.beforeAll(async () => {
     const supabaseAdmin = getAdminClient()
 
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: testUserEmail,
-      password: 'TestPassword123!',
+      password: testUserPassword,
       email_confirm: true,
     })
     if (authError || !authData.user) {
@@ -126,7 +127,7 @@ test.describe.skip('Calcul de score avec modèle COMPL-AI', () => {
   })
 
   test.beforeEach(async ({ page }) => {
-    await authenticateUser(page, testUserEmail)
+    await authenticateUser(page, testUserEmail, testUserPassword)
   })
 
   // TODO: Update assertions to match the new COMPL-AI multiplier (2.5) and base score (90) before unskipping.

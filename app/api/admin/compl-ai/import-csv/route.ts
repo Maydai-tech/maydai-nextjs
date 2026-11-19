@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { verifyAdminAuth } from '@/lib/admin-auth'
+import {
+  buildComplAiWideCsv,
+  isUuid,
+  parseComplAiModelCsvRow,
+  parseComplAiNumericScore,
+  summarizeComplAiCsvImport,
+  type ComplAiCsvScore,
+} from '@/lib/bench-llm/compl-ai-csv'
+import { recalculateUseCaseScoresForModel } from '@/lib/usecase-score-service'
 
-interface CSVRow {
-  model_name: string
-  model_provider: string
-  model_type: string
-  version: string
-  principle_code: string
-  benchmark_code: string
-  score: number | null
-  score_text: string
-  evaluation_date: string
-}
+// Un import peut toucher plusieurs modèles et déclencher le recalcul de nombreux
+// use cases : on autorise une exécution plus longue (recalcul synchrone).
+export const maxDuration = 300
 
 interface ImportStats {
   totalRows: number
@@ -55,19 +56,90 @@ function normalizeScore(value: string | number | null | undefined): NormalizeSco
     }
   }
 
-  // Cas nombre valide
-  const numValue = typeof value === 'number' ? value : parseFloat(String(value))
-  
-  if (!isNaN(numValue)) {
-    if (numValue >= 0 && numValue <= 1) {
-      return { score: numValue, isNA: false, error: null }
-    } else {
-      return { score: null, isNA: false, error: 'Score doit être un nombre entre 0 et 1' }
-    }
+  const parsed = parseComplAiNumericScore(value)
+  return { score: parsed.score, isNA: false, error: parsed.error }
+}
+
+async function importBenchmarkScore(input: {
+  supabase: SupabaseClient
+  benchmarkMap: Map<string, { id: string; principle_id: string }>
+  modelId: string
+  cell: ComplAiCsvScore
+  rowNumber: number
+  replaceExisting: boolean
+  importedBy: string
+  stats: ImportStats
+}): Promise<boolean> {
+  const { supabase, benchmarkMap, modelId, cell, rowNumber, replaceExisting, importedBy, stats } = input
+  const benchmark = benchmarkMap.get(cell.benchmark_code)
+  if (!benchmark) {
+    stats.errors.push(`Ligne ${rowNumber}: Benchmark '${cell.benchmark_code}' non trouvé`)
+    return false
   }
 
-  // Cas valeur non numérique invalide (autre que N/A)
-  return { score: null, isNA: false, error: 'Score doit être un nombre entre 0 et 1' }
+  const scoreResult = normalizeScore(cell.score)
+  if (scoreResult.error || scoreResult.score === null) {
+    stats.errors.push(`Ligne ${rowNumber}, ${cell.benchmark_code}: ${scoreResult.error || 'Score vide'}`)
+    return false
+  }
+  const score = scoreResult.score
+
+  const { data, error: evaluationError } = await supabase
+    .from('compl_ai_evaluations')
+    .select('id, score, evaluation_date')
+    .eq('model_id', modelId)
+    .eq('benchmark_id', benchmark.id)
+    .maybeSingle()
+  const existingEvaluation = data as { id: string; score: number | null; evaluation_date: string | null } | null
+
+  if (evaluationError) {
+    stats.errors.push(`Ligne ${rowNumber}: Erreur lors de la recherche d'évaluation - ${evaluationError.message}`)
+    return false
+  }
+
+  const evaluationData = {
+    model_id: modelId,
+    principle_id: benchmark.principle_id,
+    benchmark_id: benchmark.id,
+    score,
+    score_text: cell.score_text || `${Math.round(score * 100)}%`,
+    evaluation_date: cell.evaluation_date || existingEvaluation?.evaluation_date || new Date().toISOString().split('T')[0],
+    data_source: 'csv-import',
+    raw_data: {
+      csv_import: true,
+      imported_by: importedBy,
+      import_timestamp: new Date().toISOString(),
+      row_number: rowNumber,
+      benchmark_code: cell.benchmark_code,
+    },
+  }
+
+  if (existingEvaluation) {
+    if (!replaceExisting) {
+      stats.warnings.push(`Ligne ${rowNumber}: Évaluation ${cell.benchmark_code} existante ignorée`)
+      return false
+    }
+    const { error: updateError } = await supabase
+      .from('compl_ai_evaluations')
+      .update(evaluationData)
+      .eq('id', existingEvaluation.id)
+    if (updateError) {
+      stats.errors.push(`Ligne ${rowNumber}: Erreur mise à jour évaluation - ${updateError.message}`)
+      return false
+    }
+    stats.evaluationsUpdated++
+    return true
+  }
+
+  const { error: insertError } = await supabase
+    .from('compl_ai_evaluations')
+    .insert(evaluationData)
+  if (insertError) {
+    stats.errors.push(`Ligne ${rowNumber}: Erreur création évaluation - ${insertError.message}`)
+    return false
+  }
+  stats.evaluationsCreated++
+  return true
 }
 
 export async function POST(request: NextRequest) {
@@ -87,6 +159,7 @@ export async function POST(request: NextRequest) {
 
     // Récupérer les données CSV
     const { csvData, updateMode } = await request.json()
+    const replaceExisting = updateMode === 'update' || updateMode === true
     
     if (!csvData || !Array.isArray(csvData)) {
       return NextResponse.json({ error: 'Données CSV invalides' }, { status: 400 })
@@ -102,6 +175,10 @@ export async function POST(request: NextRequest) {
       warnings: []
     }
 
+    // Modèles dont au moins une évaluation a réellement changé (création/màj) :
+    // ils déclencheront un recalcul automatique des scores après l'import.
+    const touchedModelIds = new Set<string>()
+
     // Récupérer tous les principes et benchmarks pour validation
     const { data: principlesData } = await supabase
       .from('compl_ai_principles')
@@ -116,70 +193,63 @@ export async function POST(request: NextRequest) {
         )
       `)
 
-    const principleMap = new Map<string, any>()
-    const benchmarkMap = new Map<string, any>()
-    
+    const benchmarkMap = new Map<string, { id: string; principle_id: string }>()
+    const benchmarkCodes: string[] = []
     principlesData?.forEach(principle => {
-      principleMap.set(principle.code, principle)
       principle.compl_ai_benchmarks?.forEach(benchmark => {
-        benchmarkMap.set(benchmark.code, { ...benchmark, principle_id: principle.id })
+        benchmarkCodes.push(benchmark.code)
+        benchmarkMap.set(benchmark.code, { id: benchmark.id, principle_id: principle.id })
       })
     })
 
-    // Traiter chaque ligne du CSV
+    // Traiter chaque ligne du CSV : une ligne = un modèle, une colonne = un benchmark.
     for (let i = 0; i < csvData.length; i++) {
-      const row = csvData[i]
+      const row = parseComplAiModelCsvRow(csvData[i], benchmarkCodes)
       const rowNumber = i + 2 // +2 car on compte l'en-tête
 
       try {
-        // Validation des données obligatoires
-        if (!row.model_name || !row.principle_code || !row.benchmark_code) {
-          stats.errors.push(`Ligne ${rowNumber}: Nom du modèle, code principe et code benchmark sont obligatoires`)
+        if (!row.model_name) {
+          stats.errors.push(`Ligne ${rowNumber}: Nom du modèle obligatoire`)
           continue
         }
 
-        // Validation du principe
-        const principle = principleMap.get(row.principle_code)
-        if (!principle) {
-          stats.errors.push(`Ligne ${rowNumber}: Principe '${row.principle_code}' non trouvé`)
-          continue
-        }
-
-        // Validation du benchmark
-        const benchmark = benchmarkMap.get(row.benchmark_code)
-        if (!benchmark) {
-          stats.errors.push(`Ligne ${rowNumber}: Benchmark '${row.benchmark_code}' non trouvé`)
-          continue
-        }
-
-        // Validation et normalisation du score
-        const scoreResult = normalizeScore(row.score)
-        if (scoreResult.error) {
-          stats.errors.push(`Ligne ${rowNumber}: ${scoreResult.error}`)
-          continue
-        }
-        const score: number | null = scoreResult.score
-
-        // Gestion du modèle (upsert)
+        // Gestion du modèle (upsert) : UUID d'export d'abord, sinon nom exact
         let modelId: string
-        
-        // Chercher le modèle existant
-        const { data: existingModel } = await supabase
-          .from('compl_ai_models')
-          .select('id')
-          .eq('model_name', row.model_name)
-          .single()
+        let existingModel: { id: string } | null = null
+
+        if (row.model_id) {
+          const { data } = await supabase
+            .from('compl_ai_models')
+            .select('id')
+            .eq('id', row.model_id)
+            .maybeSingle()
+          existingModel = data
+        }
+
+        if (!existingModel) {
+          const { data } = await supabase
+            .from('compl_ai_models')
+            .select('id')
+            .eq('model_name', row.model_name)
+            .maybeSingle()
+          existingModel = data
+        }
 
         if (existingModel) {
-          // Mettre à jour le modèle existant
+          const modelUpdates: Record<string, unknown> = {
+            updated_at: new Date().toISOString(),
+          }
+          if (row.model_name && !isUuid(row.model_name)) {
+            modelUpdates.model_name = row.model_name
+          }
+          if (row.model_provider) modelUpdates.model_provider = row.model_provider
+          if (row.model_type) modelUpdates.model_type = row.model_type
+          if (row.version) modelUpdates.version = row.version
+          if (row.lifecycle_status) modelUpdates.lifecycle_status = row.lifecycle_status
+
           const { error: updateError } = await supabase
             .from('compl_ai_models')
-            .update({
-              model_provider: row.model_provider || null,
-              model_type: row.model_type || null,
-              version: row.version || null,
-              updated_at: new Date().toISOString()
-            })
+            .update(modelUpdates)
             .eq('id', existingModel.id)
 
           if (updateError) {
@@ -190,15 +260,19 @@ export async function POST(request: NextRequest) {
           modelId = existingModel.id
           stats.modelsUpdated++
         } else {
-          // Créer un nouveau modèle
+          const insertPayload: Record<string, unknown> = {
+            model_name: row.model_name,
+            model_provider: row.model_provider || null,
+            model_type: row.model_type || null,
+            version: row.version || null,
+            lifecycle_status: row.lifecycle_status,
+            role: 'a_classer',
+          }
+          if (row.model_id) insertPayload.id = row.model_id
+
           const { data: newModel, error: insertError } = await supabase
             .from('compl_ai_models')
-            .insert({
-              model_name: row.model_name,
-              model_provider: row.model_provider || null,
-              model_type: row.model_type || null,
-              version: row.version || null
-            })
+            .insert(insertPayload)
             .select()
             .single()
 
@@ -211,76 +285,18 @@ export async function POST(request: NextRequest) {
           stats.modelsCreated++
         }
 
-        // Gestion de l'évaluation
-        // Chercher l'évaluation existante (récupérer aussi le score existant)
-        const { data: existingEvaluation, error: evaluationError } = await supabase
-          .from('compl_ai_evaluations')
-          .select('id, score')
-          .eq('model_id', modelId)
-          .eq('benchmark_id', benchmark.id)
-          .maybeSingle()
-
-        // Vérifier s'il y a une erreur (avec .maybeSingle(), une erreur signifie un problème réel)
-        if (evaluationError) {
-          stats.errors.push(`Ligne ${rowNumber}: Erreur lors de la recherche d'évaluation - ${evaluationError.message}`)
-          continue
-        }
-
-        // Si évaluation existe avec un score non-null et qu'on importe N/A, préserver l'évaluation existante
-        if (existingEvaluation && existingEvaluation.score !== null && score === null) {
-          stats.warnings.push(`Ligne ${rowNumber}: Évaluation existante avec score, ignorée (import N/A)`)
-        } else {
-          // Préparer les données de l'évaluation
-          const scoreText = score !== null 
-            ? (row.score_text || `${Math.round(score * 100)}%`)
-            : (row.score_text || 'N/A')
-
-          const evaluationData = {
-            model_id: modelId,
-            principle_id: principle.id,
-            benchmark_id: benchmark.id,
-            score: score,
-            score_text: scoreText,
-            evaluation_date: row.evaluation_date || new Date().toISOString().split('T')[0],
-            data_source: 'csv-import',
-            raw_data: {
-              csv_import: true,
-              imported_by: currentUser.id,
-              import_timestamp: new Date().toISOString(),
-              row_number: rowNumber
-            }
-          }
-
-          if (existingEvaluation) {
-            // Mettre à jour l'évaluation existante
-            if (updateMode === 'update') {
-              const { error: updateError } = await supabase
-                .from('compl_ai_evaluations')
-                .update(evaluationData)
-                .eq('id', existingEvaluation.id)
-
-              if (updateError) {
-                stats.errors.push(`Ligne ${rowNumber}: Erreur mise à jour évaluation - ${updateError.message}`)
-                continue
-              }
-
-              stats.evaluationsUpdated++
-            } else {
-              stats.warnings.push(`Ligne ${rowNumber}: Évaluation existante ignorée (mode: ${updateMode})`)
-            }
-          } else {
-            // Créer une nouvelle évaluation
-            const { error: insertError } = await supabase
-              .from('compl_ai_evaluations')
-              .insert(evaluationData)
-
-            if (insertError) {
-              stats.errors.push(`Ligne ${rowNumber}: Erreur création évaluation - ${insertError.message}`)
-              continue
-            }
-
-            stats.evaluationsCreated++
-          }
+        for (const cell of row.scores) {
+          const saved = await importBenchmarkScore({
+            supabase,
+            benchmarkMap,
+            modelId,
+            cell,
+            rowNumber,
+            replaceExisting,
+            importedBy: currentUser.id,
+            stats,
+          })
+          if (saved) touchedModelIds.add(modelId)
         }
 
       } catch (error) {
@@ -288,11 +304,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Recalcul automatique des scores des use cases impactés par les modèles modifiés.
+    // Une erreur de recalcul ne fait pas échouer l'import (les scores modèle sont déjà persistés).
+    let usecasesRecalculated = 0
+    for (const modelId of touchedModelIds) {
+      try {
+        const summary = await recalculateUseCaseScoresForModel(modelId)
+        usecasesRecalculated += summary.success_count
+      } catch (recalcError) {
+        const msg = recalcError instanceof Error ? recalcError.message : 'Erreur inconnue'
+        stats.warnings.push(`Recalcul automatique des scores échoué pour le modèle ${modelId}: ${msg}`)
+      }
+    }
+
+    const summary = summarizeComplAiCsvImport(stats)
     return NextResponse.json({
-      success: true,
-      message: 'Import CSV terminé',
-      stats
-    })
+      success: summary.success,
+      message: summary.message,
+      error: summary.success ? undefined : summary.message,
+      stats,
+      models_recalculated: touchedModelIds.size,
+      usecases_recalculated: usecasesRecalculated
+    }, { status: summary.httpStatus })
 
   } catch (error) {
     console.error('Erreur import CSV COMPL-AI:', error)
@@ -331,39 +364,29 @@ export async function GET(request: NextRequest) {
       .order('code')
 
     // Créer le template CSV
-    const headers = [
-      'model_name',
-      'model_provider', 
-      'model_type',
-      'version',
-      'principle_code',
-      'benchmark_code',
-      'score',
-      'score_text',
-      'evaluation_date'
-    ]
+    const benchmarkCodes = [...(principlesData ?? [])]
+      .sort((a, b) => a.code.localeCompare(b.code))
+      .flatMap((principle) =>
+        [...(principle.compl_ai_benchmarks ?? [])].sort((a, b) => a.code.localeCompare(b.code)),
+      )
+      .map((benchmark) => benchmark.code)
 
-    const templateRows = [headers.join(',')]
-    
-    // Ajouter des exemples pour chaque principe
-    principlesData?.forEach(principle => {
-      principle.compl_ai_benchmarks?.slice(0, 2).forEach(benchmark => {
-        const exampleRow = [
-          'exemple-modele-ia',
-          'OpenAI',
-          'large-language-model',
-          '4.0',
-          principle.code,
-          benchmark.code,
-          '0.85',
-          '85%',
-          new Date().toISOString().split('T')[0]
-        ]
-        templateRows.push(exampleRow.join(','))
-      })
+    const csvContent = buildComplAiWideCsv({
+      benchmarkCodes,
+      models: [
+        {
+          id: '',
+          model_name: 'exemple-modele-ia',
+          model_provider: 'OpenAI',
+          model_type: 'large-language-model',
+          version: '4.0',
+          statusLabel: 'Actif',
+        },
+      ],
+      scores: benchmarkCodes[0]
+        ? [{ modelId: '', benchmarkCode: benchmarkCodes[0], score: 0.85 }]
+        : [],
     })
-
-    const csvContent = templateRows.join('\n')
     
     return new NextResponse(csvContent, {
       status: 200,

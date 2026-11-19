@@ -80,7 +80,7 @@ app/admin/monitoring/AdminMonitoringPage.tsx
 **Fichier** : `app/api/admin/monitoring/route.ts`
 
 **Modification** :
-- Nouvelle fonction `getProductionDockerPurges()` calquée sur `getProductionEmailStatus()` — fetch `http://57.130.47.254/monitoring/docker-purges.json`, parse, retourne array typé. URL overridable via `MONITORING_PROD_DOCKER_PURGES_JSON_URL` (default `http://57.130.47.254/monitoring/docker-purges.json`).
+- Nouvelle fonction `getProductionDockerPurges()` calquée sur `getProductionEmailStatus()` — fetch uniquement une source non publique (loopback ou HTTPS authentifié), parse, retourne array typé. URL via `MONITORING_PROD_DOCKER_PURGES_JSON_URL` (pas d’IP publique en dur).
 - Type retour :
   ```ts
   type DockerPurge = {
@@ -205,7 +205,7 @@ Pas de tests sur le wrapper bash (hors du repo, on peut le smoke-tester manuelle
 
 1. **Local (repo)** : implémenter route.ts + composant + tests, créer la PR `dev`.
 2. **Serveur prod (SSH)** : créer `/usr/local/bin/docker-cleanup.sh`, déplacer le cron, lancer manuellement le premier run.
-3. **Vérifier** : `curl http://57.130.47.254/monitoring/docker-purges.json` renvoie un array d'au moins 1 entrée.
+3. **Vérifier** : `curl http://127.0.0.1:8080/monitoring/docker-purges.json` depuis l’hôte renvoie un array d’au moins 1 entrée. Depuis Internet, `/monitoring/` doit répondre 403/404.
 4. **Merger la PR**, attendre déploiement Vercel, recharger la page.
 5. **Vérifier UI** : stacked bar visible, table d'historique avec 1 entrée, "prochaine purge dim XX mai à 05h00".
 
@@ -228,7 +228,7 @@ Volontairement non traités dans ce spec :
 
 ## Critères d'acceptation
 
-- [ ] `curl http://57.130.47.254/monitoring/docker-purges.json` renvoie un array JSON valide.
+- [ ] `curl http://127.0.0.1:8080/monitoring/docker-purges.json` depuis l’hôte renvoie un array JSON valide ; depuis Internet `/monitoring/` répond 403/404.
 - [ ] L'API Next.js `/api/admin/monitoring?action=disk` renvoie `purges` (array) et `purgesError` (string|null).
 - [ ] Sur https://www.maydai.io/admin/monitoring, le bloc "Occupation disque" affiche une stacked bar unique avec total / utilisé+légende / libre+légende.
 - [ ] Une nouvelle section "Historique des purges Docker" est présente avec au minimum 1 entrée (le premier run manuel) et la "prochaine purge" calculée correctement en heure de Paris.

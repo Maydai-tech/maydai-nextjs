@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, User, Building2, Phone, FileText, CheckCircle } from 'lucide-react'
+import { User, Phone } from 'lucide-react'
 import { validateSIREN, cleanSIREN, formatSIREN } from '@/lib/validation/siren'
 import CompanySectorSelector, { IndustrySelection } from '@/components/CompanySectorSelector'
+import ProfileGovernanceFields from '@/components/Profile/ProfileGovernanceFields'
+import type { ProfileType } from '@/lib/validations/governance-scores'
 
 interface CompleteProfileModalProps {
   isOpen: boolean
@@ -15,6 +17,11 @@ interface CompleteProfileModalProps {
     subCategoryId?: string
     phone?: string
     siren?: string
+    profileType?: ProfileType
+    nafCode?: string
+    sirenVerifiedPappers?: boolean
+    academicInstitution?: string
+    academicDepartment?: string
   }
   onComplete: (data: {
     firstName: string
@@ -24,6 +31,11 @@ interface CompleteProfileModalProps {
     subCategoryId: string
     phone?: string
     siren?: string
+    profileType: ProfileType
+    nafCode?: string
+    sirenVerifiedPappers: boolean
+    academicInstitution?: string
+    academicDepartment?: string
   }) => Promise<void>
 }
 
@@ -39,7 +51,12 @@ export default function CompleteProfileModal({
     mainIndustryId: initialData?.mainIndustryId || '',
     subCategoryId: initialData?.subCategoryId || '',
     phone: initialData?.phone || '',
-    siren: initialData?.siren || ''
+    siren: initialData?.siren || '',
+    profileType: initialData?.profileType || 'company',
+    nafCode: initialData?.nafCode || '',
+    sirenVerifiedPappers: initialData?.sirenVerifiedPappers || false,
+    academicInstitution: initialData?.academicInstitution || '',
+    academicDepartment: initialData?.academicDepartment || '',
   })
 
   const [industrySelection, setIndustrySelection] = useState<IndustrySelection>({
@@ -62,7 +79,12 @@ export default function CompleteProfileModal({
         mainIndustryId: initialData.mainIndustryId || '',
         subCategoryId: initialData.subCategoryId || '',
         phone: initialData.phone || '',
-        siren: initialData.siren || ''
+        siren: initialData.siren || '',
+        profileType: initialData.profileType || 'company',
+        nafCode: initialData.nafCode || '',
+        sirenVerifiedPappers: initialData.sirenVerifiedPappers || false,
+        academicInstitution: initialData.academicInstitution || '',
+        academicDepartment: initialData.academicDepartment || '',
       })
       setIndustrySelection({
         mainIndustryId: initialData.mainIndustryId || '',
@@ -111,7 +133,21 @@ export default function CompleteProfileModal({
       return
     }
 
-    if (!formData.companyName.trim()) {
+    const isAcademic = formData.profileType === 'academic'
+    const resolvedCompanyName = formData.companyName.trim() || (isAcademic ? formData.academicInstitution.trim() : '')
+
+    if (isAcademic) {
+      if (!formData.academicInstitution.trim()) {
+        setError('Le nom de l\'établissement est obligatoire')
+        setLoading(false)
+        return
+      }
+      if (!formData.academicDepartment.trim()) {
+        setError('La promotion, la classe ou le laboratoire est obligatoire')
+        setLoading(false)
+        return
+      }
+    } else if (!resolvedCompanyName) {
       setError('Le nom de l\'entreprise est obligatoire')
       setLoading(false)
       return
@@ -137,11 +173,16 @@ export default function CompleteProfileModal({
       await onComplete({
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
-        companyName: formData.companyName.trim(),
+        companyName: resolvedCompanyName,
         mainIndustryId: formData.mainIndustryId,
         subCategoryId: formData.subCategoryId,
         phone: formData.phone || undefined,
-        siren: formData.siren || undefined
+        siren: isAcademic ? undefined : formData.siren || undefined,
+        profileType: formData.profileType,
+        nafCode: formData.nafCode || undefined,
+        sirenVerifiedPappers: isAcademic ? false : formData.sirenVerifiedPappers,
+        academicInstitution: formData.academicInstitution || undefined,
+        academicDepartment: formData.academicDepartment || undefined,
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue')
@@ -217,27 +258,55 @@ export default function CompleteProfileModal({
             </div>
           </div>
 
-          {/* Company Name */}
-          <div>
-            <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-2">
-              Entreprise <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Building2 className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                id="companyName"
-                name="companyName"
-                type="text"
-                required
-                value={formData.companyName}
-                onChange={(e) => handleInputChange('companyName', e.target.value)}
-                className="w-full px-4 py-2.5 pl-10 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:border-[#0080A3] focus:outline-none transition-colors"
-                placeholder="Nom de votre entreprise"
-              />
-            </div>
-          </div>
+          <ProfileGovernanceFields
+            profileType={formData.profileType}
+            onProfileTypeChange={(profileType) => {
+              setFormData((prev) => ({
+                ...prev,
+                profileType,
+                sirenVerifiedPappers: profileType === 'academic' ? false : prev.sirenVerifiedPappers,
+              }))
+              setError('')
+            }}
+            companyName={formData.companyName}
+            onCompanyNameChange={(name) => handleInputChange('companyName', name)}
+            siren={formData.siren}
+            onSirenChange={handleSirenChange}
+            nafCode={formData.nafCode}
+            onNafCodeChange={(naf) => handleInputChange('nafCode', naf)}
+            sirenVerifiedPappers={formData.sirenVerifiedPappers}
+            onSirenVerifiedPappersChange={(verified) =>
+              setFormData((prev) => ({ ...prev, sirenVerifiedPappers: verified }))
+            }
+            academicInstitution={formData.academicInstitution}
+            onAcademicInstitutionChange={(institution) =>
+              handleInputChange('academicInstitution', institution)
+            }
+            academicDepartment={formData.academicDepartment}
+            onAcademicDepartmentChange={(department) =>
+              handleInputChange('academicDepartment', department)
+            }
+            onIndustryAutoSelect={(mapping) => {
+              setIndustrySelection({
+                mainIndustryId: mapping.mainIndustryId,
+                subCategoryId: mapping.subCategoryId,
+              })
+              setFormData((prev) => ({
+                ...prev,
+                mainIndustryId: mapping.mainIndustryId,
+                subCategoryId: mapping.subCategoryId,
+              }))
+              setIndustryError('')
+              setError('')
+            }}
+            disabled={loading}
+          />
+          {sirenError && formData.profileType !== 'academic' ? (
+            <p className="text-sm text-red-600">{sirenError}</p>
+          ) : null}
+          {formData.profileType !== 'academic' && formData.siren && !sirenError && formData.siren.length === 9 ? (
+            <p className="text-sm text-green-600">SIREN valide : {formatSIREN(formData.siren)}</p>
+          ) : null}
 
           {/* Industry */}
           <div>
@@ -277,43 +346,6 @@ export default function CompleteProfileModal({
                 placeholder="06 12 34 56 78"
               />
             </div>
-          </div>
-
-          {/* SIREN (optional) */}
-          <div>
-            <label htmlFor="siren" className="block text-sm font-medium text-gray-700 mb-2">
-              SIREN <span className="text-gray-500 text-xs">(optionnel)</span>
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FileText className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                id="siren"
-                name="siren"
-                type="text"
-                inputMode="numeric"
-                maxLength={9}
-                value={formData.siren}
-                onChange={(e) => handleSirenChange(e.target.value)}
-                className={`w-full px-4 py-2.5 pl-10 border rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-[#0080A3] focus:outline-none transition-colors ${sirenError
-                  ? 'border-red-300 focus:border-red-500'
-                  : formData.siren && !sirenError
-                    ? 'border-green-300 focus:border-green-500'
-                    : 'border-gray-300 focus:border-[#0080A3]'
-                  }`}
-                placeholder="123 456 789"
-              />
-            </div>
-            {sirenError && (
-              <p className="mt-1 text-sm text-red-600">{sirenError}</p>
-            )}
-            {formData.siren && !sirenError && formData.siren.length === 9 && (
-              <p className="mt-1 text-sm text-green-600 flex items-center gap-1">
-                <CheckCircle className="h-4 w-4" />
-                SIREN valide : {formatSIREN(formData.siren)}
-              </p>
-            )}
           </div>
 
           {/* Submit Button */}

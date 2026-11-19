@@ -2,6 +2,8 @@
 
 Instrumentation **côté client uniquement** via `sendGTMEvent` (`lib/gtm.ts`). Aucun appel serveur dédié, aucune donnée de réponses questionnaire ni texte libre.
 
+Le parcours **Chat IA** n’émet pas ces événements GTM. Il écrit `evaluation_path_runs.path_mode = assistant` (voir [chat-assistant-parcours.md](./chat-assistant-parcours.md)).
+
 **Panneau produit / ops (cartographie + recettes GA4, sans chiffres live)** : `/admin/analytics/v3-short-path` — code `app/admin/analytics/v3-short-path/`, définitions `lib/v3-short-path-pilotage.ts`.
 
 ## Événements

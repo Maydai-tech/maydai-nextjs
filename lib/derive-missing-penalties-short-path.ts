@@ -1,10 +1,10 @@
-import { expandE6TransparencyPackToLegacyOptionCodes } from '@/app/usecases/[id]/utils/bpgv-transparency-checklist-save'
+import { expandE6TransparencyPackToLegacyOptionCodes } from '@/app/(saas)/usecases/[id]/utils/bpgv-transparency-checklist-save'
 import {
   V3_SHORT_ENTREPRISE_ID,
   V3_SHORT_SOCIAL_ENV_ID,
   V3_SHORT_TRANSPARENCE_ID,
   V3_SHORT_USAGE_ID,
-} from '@/app/usecases/[id]/utils/questionnaire-v3-graph'
+} from '@/app/(saas)/usecases/[id]/utils/questionnaire-v3-graph'
 
 /** Pack court entreprise : pratiques positives attendues (tags) → malus « Non » du long si absentes. */
 const V3_SHORT_ENTREPRISE_IMPLICIT_RULES: ReadonlyArray<{

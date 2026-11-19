@@ -1,0 +1,6 @@
+"$schema" = "https://conductor.build/schemas/settings.repo.schema.json"
+
+[scripts]
+archive = "pkill -f 'next dev' || true; rm -rf \"$HOME/Library/Application Support/com.conductor.app.dev.$CONDUCTOR_WORKSPACE_NAME\""
+run = "npm run dev"
+setup = "npm install; cp $CONDUCTOR_ROOT_PATH/.env.local .env.local"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { HelpCircle, Info } from 'lucide-react'
 
 interface TooltipProps {
@@ -16,6 +16,8 @@ interface TooltipProps {
   triggerVariant?: 'help' | 'info'
   /** Empêche la remontée du clic (ex. sélection d’un radio dans une `<label>` parente). */
   isolateSelection?: boolean
+  /** Déclencheur personnalisé (ex. image) à la place de l’icône aide par défaut. */
+  children?: ReactNode
 }
 
 export default function Tooltip({ 
@@ -29,6 +31,7 @@ export default function Tooltip({
   rankText,
   triggerVariant = 'help',
   isolateSelection = false,
+  children,
 }: TooltipProps) {
   const [isHovering, setIsHovering] = useState(false)
   const [isMobileDevice, setIsMobileDevice] = useState(false)
@@ -172,31 +175,50 @@ export default function Tooltip({
       {/* Icône avec hover preview */}
       <div 
         ref={tooltipRef}
-        className={triggerVariant === 'info' ? 'relative inline-block' : 'relative inline-block ml-2'}
+        className={
+          children
+            ? 'relative inline-block shrink-0'
+            : triggerVariant === 'info'
+              ? 'relative inline-block'
+              : 'relative inline-block ml-2'
+        }
         onMouseEnter={() => !isMobileDevice && setIsHovering(true)}
         onMouseLeave={() => !isMobileDevice && setIsHovering(false)}
       >
-        <button
-          onClick={handleClick}
-          onMouseDown={isolateSelection ? (e) => e.stopPropagation() : undefined}
-          className="relative group"
-          type="button"
-          role="button"
-          tabIndex={0}
-          aria-label="Afficher l'infobulle"
-        >
-          {triggerVariant === 'info' ? (
-            <Info
-              size={16}
-              className="text-gray-400 transition-colors hover:text-[#0080A3]"
-              aria-hidden
-            />
-          ) : (
-            <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[#0080A3]/10 hover:bg-[#0080A3]/20 transition-colors">
-              <HelpCircle className="h-3.5 w-3.5 text-[#0080A3]" />
-            </div>
-          )}
-        </button>
+        {children ? (
+          <span
+            onClick={handleClick}
+            onMouseDown={isolateSelection ? (e) => e.stopPropagation() : undefined}
+            className="relative inline-flex cursor-default"
+            role="button"
+            tabIndex={0}
+            aria-label={title}
+          >
+            {children}
+          </span>
+        ) : (
+          <button
+            onClick={handleClick}
+            onMouseDown={isolateSelection ? (e) => e.stopPropagation() : undefined}
+            className="relative group"
+            type="button"
+            role="button"
+            tabIndex={0}
+            aria-label="Afficher l'infobulle"
+          >
+            {triggerVariant === 'info' ? (
+              <Info
+                size={16}
+                className="text-gray-400 transition-colors hover:text-[#0080A3]"
+                aria-hidden
+              />
+            ) : (
+              <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[#0080A3]/10 hover:bg-[#0080A3]/20 transition-colors">
+                <HelpCircle className="h-3.5 w-3.5 text-[#0080A3]" />
+              </div>
+            )}
+          </button>
+        )}
 
         {/* Tooltip au hover/survol - Desktop et mobile */}
         {isHovering && (

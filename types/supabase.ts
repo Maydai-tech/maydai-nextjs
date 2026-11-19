@@ -41,12 +41,20 @@ export type Database = {
           release_date: string | null
           knowledge_cutoff: string | null
           country: string | null
-          eco_provider: string | null
-          eco_model: string | null
-          eco_status: string | null
-          eco_resolved_at: string | null
+          slug: string
           created_at: string
           updated_at: string
+          system_card_status: string
+          role: string | null
+          reference_model_id: string | null
+          base_model_id: string | null
+          merged_into_id: string | null
+          deprecation_date: string | null
+          retirement_date: string | null
+          replacement_model_id: string | null
+          lifecycle_source_url: string | null
+          lifecycle_checked_at: string | null
+          visibility_override: boolean | null
         }
         Insert: {
           id?: string
@@ -75,12 +83,20 @@ export type Database = {
           release_date?: string | null
           knowledge_cutoff?: string | null
           country?: string | null
-          eco_provider?: string | null
-          eco_model?: string | null
-          eco_status?: string | null
-          eco_resolved_at?: string | null
+          slug?: string
           created_at?: string
           updated_at?: string
+          system_card_status?: string
+          role?: string | null
+          reference_model_id?: string | null
+          base_model_id?: string | null
+          merged_into_id?: string | null
+          deprecation_date?: string | null
+          retirement_date?: string | null
+          replacement_model_id?: string | null
+          lifecycle_source_url?: string | null
+          lifecycle_checked_at?: string | null
+          visibility_override?: boolean | null
         }
         Update: {
           id?: string
@@ -109,13 +125,133 @@ export type Database = {
           release_date?: string | null
           knowledge_cutoff?: string | null
           country?: string | null
-          eco_provider?: string | null
-          eco_model?: string | null
-          eco_status?: string | null
-          eco_resolved_at?: string | null
+          slug?: string
+          created_at?: string
+          updated_at?: string
+          system_card_status?: string
+          role?: string | null
+          reference_model_id?: string | null
+          base_model_id?: string | null
+          merged_into_id?: string | null
+          deprecation_date?: string | null
+          retirement_date?: string | null
+          replacement_model_id?: string | null
+          lifecycle_source_url?: string | null
+          lifecycle_checked_at?: string | null
+          visibility_override?: boolean | null
+        }
+      }
+
+      llm_model_aliases: {
+        Row: {
+          id: string
+          model_id: string
+          source: 'llm_stats' | 'comparia' | 'ecologits' | 'api' | 'huggingface' | 'manual'
+          source_id: string
+          raw_name: string
+          normalized_name: string
+          match_method: 'exact' | 'slug' | 'rule' | 'manual'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          model_id: string
+          source: 'llm_stats' | 'comparia' | 'ecologits' | 'api' | 'huggingface' | 'manual'
+          source_id: string
+          raw_name: string
+          normalized_name: string
+          match_method: 'exact' | 'slug' | 'rule' | 'manual'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          model_id?: string
+          source?: 'llm_stats' | 'comparia' | 'ecologits' | 'api' | 'huggingface' | 'manual'
+          source_id?: string
+          raw_name?: string
+          normalized_name?: string
+          match_method?: 'exact' | 'slug' | 'rule' | 'manual'
+          created_at?: string
+        }
+      }
+
+      llm_model_source_ids: {
+        Row: {
+          id: string
+          model_id: string
+          source: 'llm_stats' | 'ecologits' | 'comparia'
+          source_id: string
+          match_method: 'exact' | 'slug' | 'manual'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          model_id: string
+          source: 'llm_stats' | 'ecologits' | 'comparia'
+          source_id: string
+          match_method: 'exact' | 'slug' | 'manual'
           created_at?: string
           updated_at?: string
         }
+        Update: {
+          id?: string
+          model_id?: string
+          source?: 'llm_stats' | 'ecologits' | 'comparia'
+          source_id?: string
+          match_method?: 'exact' | 'slug' | 'manual'
+          created_at?: string
+          updated_at?: string
+        }
+      }
+
+      llm_system_cards: {
+        Row: {
+          id: string
+          model_identifier: string
+          model_name: string
+          provider: string
+          audit_date: string
+          created_at: string | null
+          updated_at: string | null
+          source_markdown: string | null
+          card_version_date: string | null
+          card_date_label: string | null
+          card_month: string | null
+          source_file_name: string | null
+          card_version_date_is_approx: boolean
+        }
+        Insert: {
+          id?: string
+          model_identifier: string
+          model_name: string
+          provider: string
+          audit_date: string
+          created_at?: string | null
+          updated_at?: string | null
+          source_markdown?: string | null
+          card_version_date?: string | null
+          card_date_label?: string | null
+          card_month?: string | null
+          source_file_name?: string | null
+          card_version_date_is_approx?: boolean
+        }
+        Update: {
+          id?: string
+          model_identifier?: string
+          model_name?: string
+          provider?: string
+          audit_date?: string
+          created_at?: string | null
+          updated_at?: string | null
+          source_markdown?: string | null
+          card_version_date?: string | null
+          card_date_label?: string | null
+          card_month?: string | null
+          source_file_name?: string | null
+          card_version_date_is_approx?: boolean
+        }
+        Relationships: []
       }
 
       eco_methodology_versions: {
@@ -594,9 +730,104 @@ export type Database = {
           updated_at?: string
         }
       }
+      ai_act_documents: {
+        Row: {
+          id: string
+          canonical_id: string
+          drive_file_id: string
+          file_name: string
+          source_url: string
+          version_date: string
+          document_type: string
+          hash: string
+          is_active: boolean
+          supersedes_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          canonical_id: string
+          drive_file_id: string
+          file_name: string
+          source_url: string
+          version_date: string
+          document_type: string
+          hash: string
+          is_active?: boolean
+          supersedes_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          canonical_id?: string
+          drive_file_id?: string
+          file_name?: string
+          source_url?: string
+          version_date?: string
+          document_type?: string
+          hash?: string
+          is_active?: boolean
+          supersedes_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      ai_act_chunks: {
+        Row: {
+          id: string
+          document_id: string
+          chunk_index: number
+          content: string
+          embedding: number[]
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          document_id: string
+          chunk_index: number
+          content: string
+          embedding: number[]
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          document_id?: string
+          chunk_index?: number
+          content?: string
+          embedding?: number[]
+          created_at?: string
+        }
+      }
     }
-    Views: Record<string, never>
-    Functions: Record<string, never>
+    Views: {
+      compl_ai_models_visible: {
+        Row: Database['public']['Tables']['compl_ai_models']['Row']
+        Relationships: []
+      }
+    }
+    Functions: {
+      match_ai_act_chunks: {
+        Args: {
+          query_embedding: number[]
+          match_count?: number
+          match_threshold?: number
+        }
+        Returns: {
+          id: string
+          document_id: string
+          content: string
+          chunk_index: number
+          similarity: number
+          canonical_id: string
+          source_url: string
+          version_date: string
+          document_type: string
+          file_name: string
+        }[]
+      }
+    }
     Enums: {
       doc_status: 'incomplete' | 'complete' | 'validated'
       doc_type:
@@ -614,4 +845,3 @@ export type Database = {
     CompositeTypes: Record<string, never>
   }
 }
-

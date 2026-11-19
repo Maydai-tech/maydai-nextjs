@@ -16,7 +16,7 @@ Il n'a pas d'expertise technique approfondie mais doit pouvoir contribuer effica
 # Vérifier que tout fonctionne avant de commencer
 git checkout thomas
 git pull origin thomas
-npm run dev
+pnpm dev
 
 # Ouvrir http://localhost:3000 et vérifier que tout s'affiche
 ```
@@ -72,7 +72,7 @@ export default function NouvellePage() {
 #### Étape 2 : Test Immédiat
 ```bash
 # Après chaque modification, vérifier
-npm run dev
+pnpm dev
 # Ouvrir le navigateur et voir si tout fonctionne
 ```
 
@@ -117,7 +117,7 @@ git commit -m "feat: Description claire du changement"
 
 #### Erreur de build
 ```bash
-npm run build
+pnpm build
 # Si erreurs → NE PAS essayer de corriger
 # → Revenir au commit précédent
 # → Demander l'aide technique
@@ -127,12 +127,12 @@ npm run build
 
 ### Test Local
 ```bash
-npm run dev          # Démarre l'application en local
+pnpm dev          # Démarre l'application en local
 ```
 
 ### Vérification Production
 ```bash
-npm run build        # Test de compilation (obligatoire avant commit)
+pnpm build        # Test de compilation (obligatoire avant commit)
 ```
 
 ### Git Basique

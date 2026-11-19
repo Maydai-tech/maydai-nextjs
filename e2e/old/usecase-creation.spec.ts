@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
-import { authenticateUser } from '../auth-helper'
+import { authenticateUser, generateSecureTestPassword } from '../auth-helper'
 
 /**
  * E2E Test: UseCase Creation
@@ -12,7 +12,7 @@ import { authenticateUser } from '../auth-helper'
 // Test user data
 const TEST_USER = {
   email: `e2e-usecase-${Date.now()}@maydai-test.com`,
-  password: 'TestPassword123!',
+  password: generateSecureTestPassword(),
   firstName: 'E2E',
   lastName: 'UseCaseTest',
   companyName: 'E2E UseCase Test Company',
@@ -61,7 +61,7 @@ function getAdminClient() {
 
 /** Arrive sur l’étape « Partenaire technologique » (wizard, steps 1–3). */
 async function goToTechnologyPartnerStep(page: Page, registryId: string) {
-  await authenticateUser(page, TEST_USER.email)
+  await authenticateUser(page, TEST_USER.email, TEST_USER.password)
 
   await page.goto(`/usecases/new?company=${registryId}`)
   await page.waitForLoadState('networkidle')
@@ -257,7 +257,7 @@ test.describe('UseCase Creation', () => {
   test('should create a new use case through the wizard', async ({ page }) => {
     test.setTimeout(90000)
 
-    await authenticateUser(page, TEST_USER.email)
+    await authenticateUser(page, TEST_USER.email, TEST_USER.password)
 
     // Navigate to use case creation page
     await page.goto(`/usecases/new?company=${testRegistryId}`)

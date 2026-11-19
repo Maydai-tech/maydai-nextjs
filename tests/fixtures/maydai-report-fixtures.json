@@ -25,7 +25,7 @@
       "priorite_3": "Information insuffisante",
       "action_1": "Information insuffisante",
       "action_2": "Information insuffisante",
-      "action_3": "NON"
+      "action_3": "OUI"
     }
   },
   {
@@ -52,7 +52,7 @@
       "priorite_3": "Information insuffisante",
       "action_1": "Information insuffisante",
       "action_2": "Information insuffisante",
-      "action_3": "NON"
+      "action_3": "OUI"
     }
   },
   {
@@ -79,7 +79,7 @@
       "priorite_3": "Information insuffisante",
       "action_1": "Information insuffisante",
       "action_2": "Information insuffisante",
-      "action_3": "NON"
+      "action_3": "OUI"
     }
   },
   {
@@ -106,7 +106,7 @@
       "priorite_3": "Information insuffisante",
       "action_1": "Information insuffisante",
       "action_2": "Information insuffisante",
-      "action_3": "NON"
+      "action_3": "OUI"
     }
   },
   {
@@ -133,7 +133,7 @@
       "priorite_3": "Information insuffisante",
       "action_1": "Information insuffisante",
       "action_2": "Information insuffisante",
-      "action_3": "NON"
+      "action_3": "OUI"
     }
   },
   {
@@ -160,7 +160,7 @@
       "priorite_3": "Information insuffisante",
       "action_1": "Information insuffisante",
       "action_2": "Information insuffisante",
-      "action_3": "NON"
+      "action_3": "OUI"
     }
   },
   {
@@ -187,7 +187,7 @@
       "priorite_3": "Information insuffisante",
       "action_1": "Information insuffisante",
       "action_2": "Information insuffisante",
-      "action_3": "NON"
+      "action_3": "OUI"
     }
   },
   {
@@ -214,7 +214,7 @@
       "priorite_3": "Information insuffisante",
       "action_1": "Information insuffisante",
       "action_2": "Information insuffisante",
-      "action_3": "NON"
+      "action_3": "OUI"
     }
   },
   {
@@ -241,7 +241,7 @@
       "priorite_3": "Information insuffisante",
       "action_1": "Information insuffisante",
       "action_2": "Information insuffisante",
-      "action_3": "NON"
+      "action_3": "OUI"
     }
   },
   {
@@ -268,12 +268,12 @@
       "priorite_3": "Information insuffisante",
       "action_1": "Information insuffisante",
       "action_2": "Information insuffisante",
-      "action_3": "NON"
+      "action_3": "OUI"
     }
   },
   {
     "id": "q12_explicit_no",
-    "description": "Q12=NON explicite → action_3 = NON (test de non-régression).",
+    "description": "Q12=NON explicite (E4.N8.Q12.A) → action_3 = NON (test de non-régression).",
     "uiReachable": true,
     "answers": [
       {
@@ -282,7 +282,7 @@
       },
       {
         "question_code": "E4.N8.Q12",
-        "single_value": "E4.N8.Q12.B"
+        "single_value": "E4.N8.Q12.A"
       }
     ],
     "expectedRisk": "minimal",
@@ -322,7 +322,7 @@
       "priorite_3": "Information insuffisante",
       "action_1": "Information insuffisante",
       "action_2": "Information insuffisante",
-      "action_3": "NON"
+      "action_3": "OUI"
     }
   },
   {
@@ -349,7 +349,7 @@
       "priorite_3": "Information insuffisante",
       "action_1": "Information insuffisante",
       "action_2": "Information insuffisante",
-      "action_3": "NON"
+      "action_3": "OUI"
     }
   }
 ]

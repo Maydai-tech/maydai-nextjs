@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { mistralAI } from '@/lib/mistral-ai'
 
 export async function POST(request: NextRequest) {
   try {
+    let user
+    try {
+      ;({ user } = await getAuthenticatedSupabaseClient(request))
+    } catch {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
+    if (!user) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
     const body = await request.json()
     const { formData } = body
 

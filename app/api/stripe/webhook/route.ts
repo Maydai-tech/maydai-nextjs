@@ -4,6 +4,7 @@ import { getStripeClient } from '@/lib/stripe/config/client'
 import { syncSubscriptionFromStripe, updateSubscription } from '@/lib/stripe/services/supabase'
 import { applyStripePaymentToLeads } from '@/lib/stripe/services/lead-ltv'
 import { validateWebhookSignature } from '@/lib/stripe/utils/validation'
+import { getStripeSubscriptionPeriodIso } from '@/lib/stripe/utils/subscription-period'
 import { handleWebhookError, handleValidationError, logError } from '@/lib/stripe/utils/error-handling'
 import type { WebhookResponse } from '@/lib/stripe/types'
 
@@ -272,15 +273,12 @@ export async function POST(request: NextRequest) {
             }
           }
 
+          const period = getStripeSubscriptionPeriodIso(updatedSubscription)
           await updateSubscription(updatedSubscription.id, {
             status: updatedSubscription.status,
             ...(planUuid && { plan_id: planUuid }),
-            current_period_start: (updatedSubscription as any).current_period_start
-              ? new Date((updatedSubscription as any).current_period_start * 1000).toISOString()
-              : new Date().toISOString(),
-            current_period_end: (updatedSubscription as any).current_period_end
-              ? new Date((updatedSubscription as any).current_period_end * 1000).toISOString()
-              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            ...(period.start ? { current_period_start: period.start } : {}),
+            ...(period.end ? { current_period_end: period.end } : {}),
             cancel_at_period_end: updatedSubscription.cancel_at_period_end,
           })
           console.log(`✅ Webhook: Abonnement ${updatedSubscription.id} mis à jour dans Supabase`)

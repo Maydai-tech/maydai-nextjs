@@ -5,6 +5,13 @@ import {
 } from '@/lib/google-ads/conversions'
 import { LEAD_FUNNEL_STAGE } from '@/lib/leads/lead-funnel-service'
 
+/** Action OCI Google Ads pour les leads convertis (paiement Stripe). */
+export const GOOGLE_ADS_PAID_LEAD_CONVERSION_NAME =
+  'Action de conversion créée automatiquement pour les leads convertis' as const
+
+/** Valeur VBB fixe envoyée à Google Ads (indépendante du montant Stripe en BDD). */
+export const GOOGLE_ADS_PAID_LEAD_CONVERSION_VALUE = 100 as const
+
 export type StripeLeadAttributionInput = {
   /** Libellé pour les logs (ex. type d’événement + id Stripe). */
   context: string
@@ -143,9 +150,8 @@ export async function applyStripePaymentToLeads(
               : undefined
           await sendGoogleAdsConversion({
             clickId: String(row.click_id),
-            conversionName:
-              'Action de conversion créée automatiquement pour les leads convertis',
-            conversionValue: amountEuros,
+            conversionName: GOOGLE_ADS_PAID_LEAD_CONVERSION_NAME,
+            conversionValue: GOOGLE_ADS_PAID_LEAD_CONVERSION_VALUE,
             ...(googleOrderId ? { orderId: googleOrderId } : {}),
           })
         }

@@ -1,10 +1,12 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next'
 
-// Base URL de votre site en production
-const baseUrl = 'https://www.maydai.io'
+/** URL canonique — alignée sur `metadataBase` dans app/layout.tsx */
+const DEFAULT_BASE_URL = 'https://www.maydai.io'
 
-// Pages publiques du site vitrine (synchronisées avec middleware.ts)
-const publicPages = [
+type ChangeFrequency = NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>
+
+// Pages publiques du site vitrine (synchronisées avec middleware.ts / robots.ts)
+const PUBLIC_PAGES = [
   '/',
   '/a-propos',
   '/conditions-generales',
@@ -18,93 +20,149 @@ const publicPages = [
   '/politique-confidentialite',
   '/tarifs',
   '/audit-ia-act',
-]
+  '/securite',
+] as const
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  // Pages statiques du site vitrine
-  const staticPages = publicPages.map((page) => ({
-    url: `${baseUrl}${page}`,
-    lastModified: getLastModified(page),
-    changeFrequency: getChangeFrequency(page),
-    priority: getPriority(page),
-  }))
-
-  // TODO: Ajouter ici vos articles de blog dynamiques si vous en avez
-  // const blogPosts = await getBlogPosts()
-  // const blogUrls = blogPosts.map((post) => ({
-  //   url: `${baseUrl}/blog/${post.slug}`,
-  //   lastModified: new Date(post.updatedAt),
-  //   changeFrequency: 'weekly' as const,
-  //   priority: 0.7,
-  // }))
-
-  return [
-    ...staticPages,
-    // ...blogUrls, // Décommenter quand vous aurez des articles
-  ]
+/** Dates de dernière modification connues (évite `new Date()` volatile à chaque build). */
+const LAST_MODIFIED_BY_PATH: Partial<Record<(typeof PUBLIC_PAGES)[number], string>> = {
+  '/audit-ia-act': '2026-05-28',
+  '/conformite-ia': '2026-05-28',
+  '/impact-environnemental': '2026-05-28',
 }
 
-// Fonction pour déterminer la fréquence de changement selon la page
-function getChangeFrequency(path: string): 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never' {
+const BUILD_LAST_MODIFIED = new Date().toISOString().slice(0, 10)
+
+function getBaseUrl(): string {
+  const candidates = [
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+  ]
+
+  for (const candidate of candidates) {
+    const normalized = normalizeBaseUrl(candidate)
+    if (normalized) return normalized
+  }
+
+  return DEFAULT_BASE_URL
+}
+
+function normalizeBaseUrl(value: string | undefined): string | null {
+  if (!value?.trim()) return null
+
+  try {
+    const withProtocol = value.startsWith('http') ? value : `https://${value}`
+    const url = new URL(withProtocol)
+    // Supprime le slash final pour éviter les doubles slash dans les entrées
+    return url.origin
+  } catch {
+    return null
+  }
+}
+
+function parseLastModified(path: (typeof PUBLIC_PAGES)[number]): Date {
+  const raw = LAST_MODIFIED_BY_PATH[path] ?? BUILD_LAST_MODIFIED
+  const parsed = new Date(`${raw}T12:00:00.000Z`)
+
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date(`${BUILD_LAST_MODIFIED}T12:00:00.000Z`)
+  }
+
+  return parsed
+}
+
+function getChangeFrequency(path: (typeof PUBLIC_PAGES)[number]): ChangeFrequency {
   switch (path) {
     case '/':
-      return 'weekly' // Page d'accueil mise à jour régulièrement
-    case '/contact':
-      return 'monthly' // Informations de contact stables
     case '/audit-ia-act':
     case '/conformite-ia':
     case '/impact-environnemental':
-      return 'weekly' // Pages de conversion, contenu susceptible d'évoluer souvent
+    case '/fonctionnalites':
+      return 'weekly'
+    case '/contact':
     case '/ia-act-ue':
     case '/ia-act-ue/calendrier':
     case '/ia-act-ue/risques':
-      return 'monthly' // Contenu réglementaire mis à jour périodiquement
     case '/tarifs':
-      return 'monthly' // Tarifs peuvent changer
-    case '/fonctionnalites':
-      return 'weekly' // Fonctionnalités évoluent avec le produit
+    case '/securite':
+      return 'monthly'
     case '/conditions-generales':
     case '/politique-confidentialite':
-      return 'yearly' // Documents légaux changent rarement
+      return 'yearly'
     default:
       return 'monthly'
   }
 }
 
-// Fonction pour déterminer la priorité selon la page
-function getPriority(path: string): number {
+function getPriority(path: (typeof PUBLIC_PAGES)[number]): number {
   switch (path) {
     case '/':
-      return 1.0 // Page d'accueil = priorité maximale
+      return 1
     case '/contact':
     case '/tarifs':
     case '/fonctionnalites':
-      return 0.9 // Pages importantes pour la conversion
     case '/conformite-ia':
     case '/impact-environnemental':
-      return 0.9 // Pages de conversion majeures
+      return 0.9
     case '/a-propos':
     case '/ia-act-ue':
     case '/audit-ia-act':
-      return 0.8 // Pages de contenu principal
+    case '/securite':
+      return 0.8
     case '/ia-act-ue/calendrier':
     case '/ia-act-ue/risques':
-      return 0.7 // Sous-pages importantes
+      return 0.7
     case '/conditions-generales':
     case '/politique-confidentialite':
-      return 0.3 // Pages légales = priorité faible
+      return 0.3
     default:
       return 0.5
   }
 }
 
-function getLastModified(path: string): Date {
-  switch (path) {
-    case '/audit-ia-act':
-    case '/conformite-ia':
-    case '/impact-environnemental':
-      return new Date('2026-05-28')
-    default:
-      return new Date()
+function buildStaticEntries(baseUrl: string): MetadataRoute.Sitemap {
+  return PUBLIC_PAGES.map((page) => ({
+    url: page === '/' ? `${baseUrl}/` : `${baseUrl}${page}`,
+    lastModified: parseLastModified(page),
+    changeFrequency: getChangeFrequency(page),
+    priority: getPriority(page),
+  }))
+}
+
+/**
+ * Point d'extension pour des routes dynamiques (blog, etc.).
+ * Retourne un tableau vide si la source n'est pas disponible — ne doit jamais throw.
+ */
+async function fetchDynamicEntries(_baseUrl: string): Promise<MetadataRoute.Sitemap> {
+  // Exemple futur :
+  // try {
+  //   const posts = await getBlogPosts()
+  //   return posts.map((post) => ({ url: `${baseUrl}/blog/${post.slug}`, ... }))
+  // } catch (error) {
+  //   console.error('[sitemap] dynamic entries skipped:', error)
+  //   return []
+  // }
+  return []
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const baseUrl = getBaseUrl()
+
+  try {
+    const staticEntries = buildStaticEntries(baseUrl)
+    const dynamicEntries = await fetchDynamicEntries(baseUrl)
+
+    return [...staticEntries, ...dynamicEntries]
+  } catch (error) {
+    console.error('[sitemap] generation failed, returning fallback:', error)
+
+    return [
+      {
+        url: `${baseUrl}/`,
+        lastModified: parseLastModified('/'),
+        changeFrequency: 'weekly',
+        priority: 1,
+      },
+    ]
   }
 }

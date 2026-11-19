@@ -2,11 +2,38 @@ import { createHash } from 'node:crypto'
 
 import { GoogleAdsApi, type Customer } from 'google-ads-api'
 
+import {
+  uploadClickConversionsViaRest,
+  type RestClickConversion,
+} from '@/lib/google-ads/oauth-client'
+
 const LOG_PREFIX = '[google-ads-api]'
 
 function hashEmailForGoogleAdsClickConversion(email: string): string | null {
-  const normalized = email.trim().toLowerCase()
-  if (!normalized) return null
+  const trimmed = email.trim().toLowerCase()
+  if (!trimmed) return null
+
+  const parts = trimmed.split('@')
+  let normalized = trimmed
+
+  if (parts.length === 2) {
+    let localPart = parts[0]
+    const domainPart = parts[1]
+
+    // 1. Suppression de la partie alias (tout ce qui suit le "+")
+    const plusIndex = localPart.indexOf('+')
+    if (plusIndex !== -1) {
+      localPart = localPart.substring(0, plusIndex)
+    }
+
+    // 2. Suppression des points (.) exclusivement pour Gmail
+    if (domainPart === 'gmail.com' || domainPart === 'googlemail.com') {
+      localPart = localPart.replace(/\./g, '')
+    }
+
+    normalized = `${localPart}@${domainPart}`
+  }
+
   return createHash('sha256').update(normalized, 'utf8').digest('hex')
 }
 
@@ -108,6 +135,20 @@ export function leadQualifiesForGoogleAdsClickConversion(row: {
   return source === 'google_ads_form' || source === 'website_direct'
 }
 
+/**
+ * Éligibilité OCI inscription « hors connexion (importation) » :
+ * uniquement leads issus du Lead Form Asset Google Ads (webhook).
+ */
+export function leadQualifiesForGoogleAdsOfflineSignupConversion(row: {
+  source?: string | null
+  click_id?: string | null
+}): boolean {
+  const source = (row.source ?? '').trim()
+  const clickId = (row.click_id ?? '').trim()
+  if (!clickId) return false
+  return source === 'google_ads_form'
+}
+
 async function resolveConversionActionResourceName(
   customer: Customer,
   conversionName: string
@@ -154,6 +195,8 @@ export type SendGoogleAdsConversionInput = {
    * Optionnel : les appels existants (Stripe, leads) restent inchangés si omis.
    */
   email?: string
+  /** Dry run Google Ads : valide le payload sans enregistrer la conversion. */
+  validateOnly?: boolean
 }
 
 /**
@@ -169,6 +212,7 @@ export async function sendGoogleAdsConversion({
   currencyCode = 'EUR',
   orderId,
   email,
+  validateOnly = false,
 }: SendGoogleAdsConversionInput): Promise<boolean> {
   try {
     const env = readGoogleAdsEnv()
@@ -211,32 +255,40 @@ export async function sendGoogleAdsConversion({
     const hashedEmail =
       typeof email === 'string' ? hashEmailForGoogleAdsClickConversion(email) : null
 
-    const clickPayload: Record<string, unknown> = {
-      gclid,
-      conversion_action: conversionAction,
-      conversion_date_time: formatConversionDateTime(new Date()),
-      conversion_value: conversionValue,
-      currency_code: currencyCode,
+    const clickIdLower = gclid.toLowerCase()
+    const clickIdentifierPayload: Record<string, string> =
+      clickIdLower.startsWith('wbraid')
+        ? { wbraid: gclid }
+        : clickIdLower.startsWith('gbraid')
+          ? { gbraid: gclid }
+          : { gclid }
+
+    const restConversion: RestClickConversion = {
+      ...clickIdentifierPayload,
+      conversionAction,
+      conversionDateTime: formatConversionDateTime(new Date()),
+      conversionValue,
+      currencyCode,
     }
     if (order_id) {
-      clickPayload.order_id = order_id
+      restConversion.orderId = order_id
     }
     if (hashedEmail) {
-      clickPayload.user_identifiers = [{ hashed_email: hashedEmail }]
+      restConversion.userIdentifiers = [{ hashedEmail: hashedEmail }]
     }
 
-    const response = await customer.conversionUploads.uploadClickConversions(
-      {
-        customer_id: env.customerId,
-        partial_failure: true,
-        validate_only: false,
-        conversions: [clickPayload],
-      } as never
+    // REST + OAuth2 explicite : le chemin gRPC de google-ads-api déclenche
+    // google-gax → GoogleAuth.getClient() → sonde metadata (169.254.169.254).
+    console.log(
+      `${LOG_PREFIX} uploadClickConversions — action="${conversionName}" conversionValue=${conversionValue} ${currencyCode}`
     )
+    const response = await uploadClickConversionsViaRest(env, {
+      partialFailure: true,
+      validateOnly,
+      conversions: [restConversion],
+    })
 
-    const partial =
-      (response as { partial_failure_error?: unknown }).partial_failure_error ??
-      (response as { partialFailureError?: unknown }).partialFailureError
+    const partial = response.partialFailureError
 
     if (partial) {
       console.error(`${LOG_PREFIX} partial_failure`, partial)

@@ -29,7 +29,10 @@ export type GoogleAdsLeadInsertPayload = {
   last_name: string | null
   phone: string | null
   company_name: string | null
+  /** Identifiant de clic (gclid, wbraid ou gbraid) — rétrocompatibilité colonne DB. */
   gclid: string | null
+  /** Même valeur que `gclid` lorsqu’un identifiant est trouvé. */
+  click_id: string | null
   campaign_name: string | null
   ad_group_name: string | null
   source: 'google_ads_form'
@@ -128,6 +131,27 @@ export function extractGclidFromGoogleLeadPayload(
 }
 
 /**
+ * Extrait l’identifiant de clic webhook (premier trouvé, ordre de priorité fixe).
+ * Assigné à `gclid` et `click_id` dans {@link extractGoogleLeadFields}.
+ */
+function extractClickIdentifierFromGoogleLeadPayload(
+  raw: unknown,
+  urlSearchParams: URLSearchParams
+): string | null {
+  const root =
+    raw && typeof raw === 'object' ? (raw as GoogleAdsWebhookBody) : null
+
+  return firstNonNull(
+    toTrimmedString(urlSearchParams.get('wbraid')),
+    toTrimmedString(urlSearchParams.get('gbraid')),
+    toTrimmedString(urlSearchParams.get('gclid')),
+    root ? toTrimmedString(root.gcl_id) : null,
+    root ? toTrimmedString(root.google_click_id) : null,
+    root ? toTrimmedString(root.gclid) : null
+  )
+}
+
+/**
  * Extrait les champs formulaire depuis `user_column_data` (recherche par `column_id`)
  * et les champs marketing à la racine du JSON et/ou dans les query params de l’URL.
  */
@@ -153,10 +177,9 @@ export function extractGoogleLeadFields(
   const root =
     raw && typeof raw === 'object' ? (raw as GoogleAdsWebhookBody) : null
 
-  const gclid = extractGclidFromGoogleLeadPayload(
+  const clickIdentifier = extractClickIdentifierFromGoogleLeadPayload(
     raw,
-    urlSearchParams,
-    byColumnId
+    urlSearchParams
   )
 
   const campaign_name = firstNonNull(
@@ -179,7 +202,8 @@ export function extractGoogleLeadFields(
     last_name: byColumnId.get(COLUMN_ID_LAST_NAME) ?? null,
     phone: byColumnId.get(COLUMN_ID_PHONE_NUMBER) ?? null,
     company_name: byColumnId.get(COLUMN_ID_COMPANY_NAME) ?? null,
-    gclid,
+    gclid: clickIdentifier,
+    click_id: clickIdentifier,
     campaign_name,
     ad_group_name,
     source: 'google_ads_form',

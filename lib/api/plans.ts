@@ -97,17 +97,17 @@ function generateDynamicFeatures(maxRegistries: number, maxCollaborators: number
 }
 
 /**
- * URL de l’endpoint plans : relatif en navigateur, absolu en SSR / RSC (fetch sans host invalide).
+ * URL d’endpoint interne : relatif en navigateur, absolu en SSR / API routes (fetch sans host invalide).
  */
-function getPlansFetchUrl(): string {
+export function getPlansFetchUrl(path = '/api/plans'): string {
   if (typeof window !== 'undefined') {
-    return '/api/plans'
+    return path
   }
   const base =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
     'http://localhost:3000'
-  return `${base}/api/plans`
+  return `${base}${path}`
 }
 
 /**

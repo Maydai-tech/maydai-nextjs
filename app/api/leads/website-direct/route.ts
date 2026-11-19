@@ -5,8 +5,6 @@ import {
   hasMeaningfulAttribution,
   type StoredAttribution,
 } from '@/lib/tracking/capture-params'
-import { leadQualifiesForGoogleAdsClickConversion } from '@/lib/google-ads/conversions'
-import { sendGoogleAdsOfflineSignupConversion } from '@/lib/google-ads/offline-signup-conversion'
 import { LeadInsertSchema } from '@/lib/validations/leads'
 
 type Body = {
@@ -109,18 +107,6 @@ export async function POST(request: NextRequest) {
       }
       console.error('[website-direct] Insert:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    if (
-      leadQualifiesForGoogleAdsClickConversion({
-        source: row.source,
-        click_id: row.click_id,
-      })
-    ) {
-      await sendGoogleAdsOfflineSignupConversion({
-        clickId: row.click_id as string,
-        conversionValue: 0,
-      })
     }
 
     return NextResponse.json(

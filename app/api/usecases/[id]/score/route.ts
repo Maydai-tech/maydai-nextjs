@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { calculateScore } from '../../../../usecases/[id]/utils/score-calculator'
+import { calculateScore } from '@/app/(saas)/usecases/[id]/utils/score-calculator'
 import { logger, createRequestContext } from '@/lib/secure-logger'
 import { normalizeQuestionnaireVersion, QUESTIONNAIRE_VERSION_V3 } from '@/lib/questionnaire-version'
 

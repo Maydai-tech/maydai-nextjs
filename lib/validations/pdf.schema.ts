@@ -23,6 +23,8 @@ export const ActivityHistoryItemSchema = z.object({
 export const PdfDocumentItemSchema = z.object({
   status: z.string(),
   doc_type: z.string(),
+  maydai_prefill_applied: z.boolean().optional(),
+  user_completion_applied: z.boolean().optional(),
 })
 
 /**

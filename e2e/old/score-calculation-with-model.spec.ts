@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { authenticateUser } from '../auth-helper'
+import { authenticateUser, generateSecureTestPassword } from '../auth-helper'
 
 /**
  * E2E Test: Score Calculation with COMPL-AI Model
@@ -20,6 +20,7 @@ interface TestData {
   registryId: string
   usecaseId: string
   email: string
+  password: string
 }
 
 // Gemini 1.5 Flash model ID (from compl_ai_models table)
@@ -70,11 +71,12 @@ function getAdminClient(): SupabaseClient {
 async function createTestData(testId: string): Promise<TestData> {
   const supabase = getAdminClient()
   const email = `e2e-score-model-${testId}-${Date.now()}@maydai-test.com`
+  const password = generateSecureTestPassword()
 
   // Create auth user
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email,
-    password: 'TestPassword123!',
+    password,
     email_confirm: true,
   })
 
@@ -183,7 +185,7 @@ async function createTestData(testId: string): Promise<TestData> {
 
   console.log(`✅ Test data created: ${email} (usecase: ${usecaseId}, model: Gemini 1.5 Flash)`)
 
-  return { userId, companyId, registryId, usecaseId, email }
+  return { userId, companyId, registryId, usecaseId, email, password }
 }
 
 /**
@@ -432,7 +434,7 @@ async function completeQuestionnaire(page: Page) {
  * Authenticate and navigate to evaluation page
  */
 async function authenticateAndNavigate(page: Page, testData: TestData): Promise<void> {
-  await authenticateUser(page, testData.email)
+  await authenticateUser(page, testData.email, testData.password)
 
   let navigationSuccess = false
   for (let attempt = 1; attempt <= 3; attempt++) {

@@ -7,7 +7,7 @@ const PgNumeric = z.union([z.number(), z.string()])
 const IsoDateTime = z.string()
 
 /**
- * `compl_ai_models` (subset utile + champs EcoLogist)
+ * `compl_ai_models` (subset utile Bench / EcoLogits)
  * Note: le schéma est strict pour éviter les champs inattendus.
  */
 export const ComplAiModelRowSchema = z
@@ -42,11 +42,6 @@ export const ComplAiModelRowSchema = z
     release_date: z.string().nullable().optional(),
     knowledge_cutoff: z.string().nullable().optional(),
     country: z.string().nullable().optional(),
-
-    eco_provider: z.string().nullable().optional(),
-    eco_model: z.string().nullable().optional(),
-    eco_status: z.string().nullable().optional(),
-    eco_resolved_at: IsoDateTime.nullable().optional(),
 
     created_at: IsoDateTime,
     updated_at: IsoDateTime,

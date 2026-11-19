@@ -9,7 +9,7 @@
  */
 
 // Import direct du JSON avec les tooltips
-import questionsDataRaw from '@/app/usecases/[id]/data/questions-with-scores.json'
+import questionsDataRaw from '@/app/(saas)/usecases/[id]/data/questions-with-scores.json'
 
 /**
  * Nettoie les tooltips des questions pour OpenAI

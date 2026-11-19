@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { errorMonitor } from '@/lib/error-monitor'
+import { verifyAdminAuth } from '@/lib/admin-auth'
+import {
+  describeMonitoringSourceIssue,
+  resolveMonitoringFetchTarget,
+} from '@/lib/monitoring-source'
 import { exec } from 'node:child_process'
 import { promisify } from 'node:util'
 
@@ -7,30 +12,8 @@ export const dynamic = 'force-dynamic'
 
 const execAsync = promisify(exec)
 
-const DEFAULT_PROD_DISK_JSON_URL = 'http://57.130.47.254/monitoring/disk.json'
-const DEFAULT_PROD_EMAIL_STATUS_JSON_URL = 'http://57.130.47.254/monitoring/email-status.json'
 const MONITORING_FETCH_TIMEOUT_MS = 15_000
-const DEFAULT_PROD_DOCKER_PURGES_JSON_URL = 'http://57.130.47.254/monitoring/docker-purges.json'
-
-function getProdDiskJsonUrl(): string {
-  return (
-    process.env.MONITORING_PROD_DISK_JSON_URL?.trim() || DEFAULT_PROD_DISK_JSON_URL
-  )
-}
-
-function getProdEmailStatusJsonUrl(): string {
-  return (
-    process.env.MONITORING_PROD_EMAIL_STATUS_JSON_URL?.trim() ||
-    DEFAULT_PROD_EMAIL_STATUS_JSON_URL
-  )
-}
-
-function getProdDockerPurgesJsonUrl(): string {
-  return (
-    process.env.MONITORING_PROD_DOCKER_PURGES_JSON_URL?.trim() ||
-    DEFAULT_PROD_DOCKER_PURGES_JSON_URL
-  )
-}
+const MONITORING_SOURCE_UNCONFIGURED = 'Source monitoring non configurée'
 
 type NormalizedProductionDiskUsage = {
   total: number | string
@@ -161,10 +144,15 @@ function normalizeMonitoringDiskPayload(json: unknown): NormalizedProductionDisk
   return { total, used, free, usePercent, updatedAt }
 }
 
-async function monitoringFetch(url: string): Promise<Response> {
+async function monitoringFetch(target: {
+  url: string
+  headers: Record<string, string>
+}): Promise<Response> {
   try {
-    return await fetch(url, {
+    return await fetch(target.url, {
       cache: 'no-store',
+      headers: target.headers,
+      redirect: 'error',
       signal: AbortSignal.timeout(MONITORING_FETCH_TIMEOUT_MS),
     })
   } catch (e) {
@@ -172,7 +160,7 @@ async function monitoringFetch(url: string): Promise<Response> {
     if (/abort|timeout|timed out/i.test(msg)) {
       throw new Error('Source monitoring injoignable (délai dépassé)')
     }
-    throw new Error(`Source monitoring injoignable (${msg})`)
+    throw new Error('Source monitoring injoignable')
   }
 }
 
@@ -221,8 +209,11 @@ async function getLocalDiskUsage() {
 }
 
 async function getProductionDiskUsage() {
-  const url = getProdDiskJsonUrl()
-  const response = await monitoringFetch(url)
+  const target = resolveMonitoringFetchTarget(process.env.MONITORING_PROD_DISK_JSON_URL)
+  if (!target) {
+    throw new Error(MONITORING_SOURCE_UNCONFIGURED)
+  }
+  const response = await monitoringFetch(target)
   if (!response.ok) {
     throw new Error(`Source monitoring indisponible (${response.status})`)
   }
@@ -271,8 +262,15 @@ async function getDiskUsageResult(): Promise<DiskUsageResult> {
 }
 
 async function getProductionEmailStatus() {
-  const url = getProdEmailStatusJsonUrl()
-  const response = await monitoringFetch(url)
+  const target = resolveMonitoringFetchTarget(process.env.MONITORING_PROD_EMAIL_STATUS_JSON_URL)
+  if (!target) {
+    throw new Error(MONITORING_SOURCE_UNCONFIGURED)
+  }
+  const response = await monitoringFetch(target)
+  // L'hôte n'écrit email-status.json qu'au premier envoi d'alerte (disque > 85 %).
+  if (response.status === 404) {
+    return null
+  }
   if (!response.ok) {
     throw new Error(`Source statut email indisponible (${response.status})`)
   }
@@ -291,6 +289,30 @@ async function getProductionEmailStatus() {
     lastMessageId: typeof o.lastMessageId === 'string' ? o.lastMessageId : '',
     source: 'production',
   }
+}
+
+async function getEmailStatusResult() {
+  try {
+    return { email: await getProductionEmailStatus(), emailError: null }
+  } catch (error) {
+    return { email: null, emailError: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+const MONITORING_SOURCE_ENV = {
+  disk: 'MONITORING_PROD_DISK_JSON_URL',
+  email: 'MONITORING_PROD_EMAIL_STATUS_JSON_URL',
+  purges: 'MONITORING_PROD_DOCKER_PURGES_JSON_URL',
+} as const
+
+/** Diagnostic de configuration par source, pour comprendre « Source monitoring non configurée ». */
+function getSourceIssues(): Record<string, string> {
+  const issues: Record<string, string> = {}
+  for (const [source, envKey] of Object.entries(MONITORING_SOURCE_ENV)) {
+    const issue = describeMonitoringSourceIssue(process.env[envKey])
+    if (issue) issues[source] = `${envKey} : ${issue}`
+  }
+  return issues
 }
 
 // Type local intentionnellement (pattern existant du fichier). Redéfini côté composant.
@@ -321,8 +343,11 @@ function isDockerPurge(value: unknown): value is DockerPurge {
 }
 
 async function getProductionDockerPurges(): Promise<DockerPurge[]> {
-  const url = getProdDockerPurgesJsonUrl()
-  const response = await monitoringFetch(url)
+  const target = resolveMonitoringFetchTarget(process.env.MONITORING_PROD_DOCKER_PURGES_JSON_URL)
+  if (!target) {
+    throw new Error(MONITORING_SOURCE_UNCONFIGURED)
+  }
+  const response = await monitoringFetch(target)
   if (!response.ok) {
     throw new Error(`Source purges Docker indisponible (${response.status})`)
   }
@@ -359,51 +384,42 @@ async function getDockerPurgesResult(): Promise<DockerPurgesResult> {
 // GET: Obtenir les statistiques de monitoring
 export async function GET(req: NextRequest) {
   try {
+    const authResult = await verifyAdminAuth(req)
+    if (authResult.error) return authResult.error
+
     const { searchParams } = new URL(req.url)
     const action = searchParams.get('action') || 'stats'
     const limit = parseInt(searchParams.get('limit') || '50')
 
     switch (action) {
       case 'stats': {
-        const [{ disk: diskUsage, diskError }, { purges, purgesError }] = await Promise.all([
-          getDiskUsageResult(),
-          getDockerPurgesResult(),
-        ])
-        let emailStatus = null
-        try {
-          emailStatus = await getProductionEmailStatus()
-        } catch {
-          emailStatus = null
-        }
+        const [{ disk: diskUsage, diskError }, { purges, purgesError }, { email, emailError }] =
+          await Promise.all([getDiskUsageResult(), getDockerPurgesResult(), getEmailStatusResult()])
         return NextResponse.json({
           errors: errorMonitor.getErrorStats(),
           performance: errorMonitor.getPerformanceStats(),
           issues: errorMonitor.checkForIssues(),
           disk: diskUsage,
           diskError,
-          email: emailStatus,
+          email,
+          emailError,
           purges,
           purgesError,
+          sourceIssues: getSourceIssues(),
         })
       }
 
       case 'disk': {
-        const [{ disk, diskError }, { purges, purgesError }] = await Promise.all([
-          getDiskUsageResult(),
-          getDockerPurgesResult(),
-        ])
-        let emailForDisk = null
-        try {
-          emailForDisk = await getProductionEmailStatus()
-        } catch {
-          emailForDisk = null
-        }
+        const [{ disk, diskError }, { purges, purgesError }, { email, emailError }] =
+          await Promise.all([getDiskUsageResult(), getDockerPurgesResult(), getEmailStatusResult()])
         return NextResponse.json({
           disk,
           diskError,
-          email: emailForDisk,
+          email,
+          emailError,
           purges,
           purgesError,
+          sourceIssues: getSourceIssues(),
         })
       }
 
@@ -445,6 +461,9 @@ export async function GET(req: NextRequest) {
 // POST: Actions de monitoring
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await verifyAdminAuth(req)
+    if (authResult.error) return authResult.error
+
     const { action, ...params } = await req.json()
 
     switch (action) {

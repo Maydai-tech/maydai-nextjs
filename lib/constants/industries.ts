@@ -83,6 +83,7 @@ export const INDUSTRIES_LIST: IndustryFamily[] = [
     label: "Services aux Entreprises & Juridique",
     subCategories: [
       { id: "legal", label: "Juridique & Avocats (LegalTech)" },
+      { id: "notarial", label: "Services notariaux" },
       { id: "consulting", label: "Audit, Comptabilité & Conseil en Stratégie" },
       { id: "facility", label: "Services Généraux & Facility Management" }
     ]
@@ -171,6 +172,23 @@ export function getIndustryDisplayText(mainIndustryId: string, subCategoryId: st
   const subLabel = getSubCategoryLabel(mainIndustryId, subCategoryId);
   if (!mainLabel || !subLabel) return undefined;
   return `${mainLabel} > ${subLabel}`;
+}
+
+/** Libellé secteur pour l’UI / le contexte agent (ID catalogue ou texte libre). */
+export function formatCompanySector(
+  industry?: string | null,
+  subCategoryId?: string | null
+): string {
+  const main = typeof industry === 'string' ? industry.trim() : ''
+  if (!main) return 'non renseigné'
+
+  const sub = typeof subCategoryId === 'string' ? subCategoryId.trim() : ''
+  if (sub) {
+    const display = getIndustryDisplayText(main, sub)
+    if (display) return display
+  }
+
+  return getIndustryLabel(main) || main
 }
 
 

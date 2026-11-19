@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
+import { buildComplAiWideCsv, formatComplAiLifecycleStatus } from '@/lib/bench-llm/compl-ai-csv'
+import { resolveProviderLifecycle } from '@/lib/bench-llm/provider-lifecycle'
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
     // Récupérer tous les modèles
     const { data: allModels, error: modelsError } = await supabase
       .from('compl_ai_models')
-      .select('id, model_name, model_provider, model_type, version')
+      .select('id, slug, model_name, model_provider, model_type, version, lifecycle_status')
       .order('model_name')
 
     if (modelsError) throw modelsError
@@ -152,62 +154,44 @@ export async function GET(request: NextRequest) {
 
     console.log(`Debug: Total évaluations mappées: ${evaluationMap.size}, doublons ignorés: ${duplicatesSkipped}`)
 
-    // Créer la structure des données CSV
-    const csvRows = []
-    
-    // En-têtes CSV - VERSION SIMPLIFIÉE
-    const headers = [
-      'Modèle ID',
-      'Nom du Modèle',
-      'Fournisseur',
-      'Type',
-      'Version',
-      'Principe Code',
-      'Principe Nom',
-      'Catégorie Principe',
-      'Benchmark Code',
-      'Benchmark Nom',
-      'Score Original',
-      'Score Text',
-      'Date d\'Évaluation',
-      'Statut'
-    ]
-    csvRows.push(headers.join(','))
+    const benchmarkCodes = [...(principlesData ?? [])]
+      .sort((a, b) => a.code.localeCompare(b.code))
+      .flatMap((principle) =>
+        [...(principle.compl_ai_benchmarks ?? [])].sort((a, b) => a.code.localeCompare(b.code)),
+      )
+      .map((benchmark) => benchmark.code)
 
-    // Parcourir tous les modèles et tous les benchmarks pour créer une matrice complète
-    allModels?.forEach(model => {
-      principlesData?.forEach(principle => {
-        principle.compl_ai_benchmarks?.forEach(benchmark => {
-          // Utiliser benchmark.id pour la cohérence avec la Map
-          const evaluationKey = `${model.id}-${benchmark.id}`
-          const evaluation = evaluationMap.get(evaluationKey)
-          
-          const row = [
-            model.id,
-            `"${model.model_name || 'N/A'}"`,
-            `"${model.model_provider || 'N/A'}"`,
-            `"${model.model_type || 'N/A'}"`,
-            `"${model.version || 'N/A'}"`,
-            `"${principle.code}"`,
-            `"${principle.name}"`,
-            `"${principle.category || 'N/A'}"`,
-            `"${benchmark.code}"`,
-            `"${benchmark.name}"`,
-            evaluation?.score?.toString() || 'N/A',
-            `"${evaluation?.score_text || 'N/A'}"`,
-            `"${evaluation?.evaluation_date || 'N/A'}"`,
-            evaluation ? 'Évalué' : 'Non évalué'
-          ]
-          
-          csvRows.push(row.join(','))
-        })
+    const benchmarkCodeById = new Map<string, string>()
+    principlesData?.forEach((principle) => {
+      principle.compl_ai_benchmarks?.forEach((benchmark) => {
+        benchmarkCodeById.set(benchmark.id, benchmark.code)
       })
     })
 
-    // Convertir en CSV
-    const csvContent = csvRows.join('\n')
-    
-    console.log(`Debug: CSV généré avec ${csvRows.length - 1} lignes de données`)
+    const csvContent = buildComplAiWideCsv({
+      benchmarkCodes,
+      models: (allModels ?? []).map((model) => {
+        const lifecycleStatus =
+          model.lifecycle_status ??
+          resolveProviderLifecycle([model.slug, model.model_name])?.status ??
+          null
+        return {
+          id: model.id,
+          model_name: model.model_name,
+          model_provider: model.model_provider,
+          model_type: model.model_type,
+          version: model.version,
+          statusLabel: formatComplAiLifecycleStatus(lifecycleStatus),
+        }
+      }),
+      scores: [...evaluationMap.values()].map((evaluation) => ({
+        modelId: evaluation.model.id,
+        benchmarkCode: benchmarkCodeById.get(evaluation.benchmark.id) ?? evaluation.benchmark.code,
+        score: typeof evaluation.score === 'number' ? evaluation.score : null,
+      })),
+    })
+
+    console.log(`Debug: CSV généré avec ${allModels?.length || 0} modèles`)
     
     // Retourner le fichier CSV
     return new NextResponse(csvContent, {

@@ -16,7 +16,7 @@ export default function HeroSection() {
           Démarrer l&apos;Audit AI Act
         </Link>
       </div>
-      {/* Logo conformité IA - Optimisé pour LCP */}
+      {/* Logo conformité IA - décoratif */}
       <Image 
         src="/content/compliance-ai-eu.webp" 
         alt="Logo conformité IA" 
