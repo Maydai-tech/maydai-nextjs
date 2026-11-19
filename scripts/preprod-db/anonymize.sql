@@ -96,6 +96,11 @@ update auth.users set
   email_change_token_current = '', reauthentication_token = '', phone_change_token = ''
 where id not in (select id from team_users);
 
+-- Équipe : compte gardé, mais pas le mot de passe de prod (l'API auth preprod est publique).
+-- Connexion par lien / code (Mailpit), ou mot de passe redéfini en preprod.
+update auth.users set encrypted_password = '', recovery_token = '', confirmation_token = ''
+where id in (select id from team_users);
+
 update auth.identities set
   provider_id = pg_temp.scrub(provider_id),
   identity_data = pg_temp.scrub(identity_data::text)::jsonb

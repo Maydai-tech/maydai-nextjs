@@ -71,11 +71,12 @@ services:
       GOTRUE_MAILER_SUBJECTS_MAGIC_LINK: "[preprod] Code de connexion MayDai"
       GOTRUE_MAILER_TEMPLATES_CONFIRMATION: http://email-templates/confirmation.html
       GOTRUE_MAILER_SUBJECTS_CONFIRMATION: "[preprod] Confirmez votre compte MayDai"
-      GOTRUE_RATE_LIMIT_EMAIL_SENT: 1000
-      GOTRUE_RATE_LIMIT_OTP: 0
-      GOTRUE_RATE_LIMIT_VERIFY: 0
-      GOTRUE_RATE_LIMIT_TOKEN_REFRESH: 0
-      GOTRUE_SECURITY_RATE_LIMIT_BY_IP: "false"
+      # Limites par IP (API publique, serveur partagé avec la prod), assez larges pour la recette et l'E2E.
+      GOTRUE_RATE_LIMIT_HEADER: X-Forwarded-For
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: 100
+      GOTRUE_RATE_LIMIT_OTP: 60
+      GOTRUE_RATE_LIMIT_VERIFY: 60
+      GOTRUE_RATE_LIMIT_TOKEN_REFRESH: 300
     depends_on:
       db:
         condition: service_healthy

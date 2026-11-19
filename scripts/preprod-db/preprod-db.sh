@@ -37,7 +37,7 @@ values = {
     "SERVICE_ROLE_KEY": jwt("service_role", jwt_secret),
     "API_EXTERNAL_URL": "https://api-preprod.maydai.io",
     "SITE_URL": "https://preprod.maydai.io",
-    "GOTRUE_URI_ALLOW_LIST": "http://localhost:3000,https://preprod.maydai.io,https://preprod.maydai.io/**,https://maydai-*.vercel.app/**",
+    "GOTRUE_URI_ALLOW_LIST": "http://localhost:3000,https://preprod.maydai.io,https://preprod.maydai.io/**,https://maydai-*-thomas-chippeauxs-projects.vercel.app/**",
     "PREPROD_KEEP_EMAILS": r"@maydai\.io$",
     "PREPROD_TEST_PASSWORD": secrets.token_urlsafe(18),
 }

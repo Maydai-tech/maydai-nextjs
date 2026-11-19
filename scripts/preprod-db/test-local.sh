@@ -147,9 +147,9 @@ login() {
     -H 'Content-Type: application/json' -d "{\"email\":\"$1\",\"password\":\"$2\"}"
 }
 [ "$(login recette-admin@preprod.invalid $TEST_PW)" = 200 ] || fail "connexion compte recette"
-[ "$(login alice@maydai.io alice-pw-123)" = 200 ] || fail "connexion compte équipe"
+[ "$(login alice@maydai.io alice-pw-123)" = 400 ] || fail "le mot de passe prod de l'équipe fonctionne encore"
 [ "$(login "$BOB" bob-pw-123)" = 400 ] || fail "le mot de passe client fonctionne encore"
-ok "connexion recette et équipe OK, mot de passe client invalidé"
+ok "connexion recette OK, mots de passe prod (clients et équipe) invalidés"
 curl -sf -X POST http://localhost:19999/otp -H 'Content-Type: application/json' -d '{"email":"alice@maydai.io"}' >/dev/null \
   || fail "envoi du code de connexion"
 sleep 1

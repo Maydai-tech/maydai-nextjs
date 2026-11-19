@@ -20,7 +20,7 @@ Fichiers : [`scripts/preprod-db/`](../scripts/preprod-db/).
 | Référentiels (modèles LLM, Compar:IA, EcoLogits, System Cards, plans, RAG AI Act) | Copiés tels quels |
 | Cas d'usage, réponses, dossiers, registres | Copiés (contenu métier gardé) |
 | Comptes clients | Email remplacé par `user-xxxx@preprod.invalid`, mot de passe invalidé, nom et téléphone effacés |
-| Comptes de l'équipe (`@maydai.io`) | Gardés tels quels : on se connecte comme en prod |
+| Comptes de l'équipe (`@maydai.io`) | Gardés (email, profil, entreprises), mot de passe de prod invalidé |
 | Entreprises, profils, prospects, contacts, fournisseurs | Noms, téléphones, adresses, SIREN, messages et tracking (gclid, utm) remplacés |
 | N'importe quel email client ailleurs (historique, json, réponses…) | Remplacé par le même faux email |
 | Abonnements | Plan gardé, identifiants Stripe effacés |
@@ -57,7 +57,7 @@ cd /opt/supabase-preprod && chmod +x preprod-db.sh && ./preprod-db.sh init
 ```
 
 `init` crée `.env` (droits 600) avec des secrets **propres à la preprod** (mot de passe base, JWT, clés anon/service, mot de passe des comptes de recette). Avant de continuer, vérifier dans `.env` :
-- `GOTRUE_URI_ALLOW_LIST` : remplacer `https://maydai-*.vercel.app/**` par le motif réel des URLs Preview Vercel, si besoin ;
+- `GOTRUE_URI_ALLOW_LIST` : limité aux URLs Preview de l'équipe Vercel (`maydai-*-thomas-chippeauxs-projects.vercel.app`) ;
 - `PREPROD_KEEP_EMAILS` : les adresses gardées telles quelles (par défaut `@maydai.io`).
 
 ```bash
@@ -123,7 +123,7 @@ Environ une minute, pendant laquelle l'API preprod est coupée. Tout ce qui avai
   ```bash
   ssh ubuntu@57.130.47.254 "grep PREPROD_TEST_PASSWORD /opt/supabase-preprod/.env"
   ```
-- **Comptes équipe** (`@maydai.io`) : même mot de passe qu'en prod, ou lien / code de connexion (à lire dans Mailpit).
+- **Comptes équipe** (`@maydai.io`) : lien / code de connexion, à lire dans Mailpit. Le mot de passe de prod ne fonctionne pas en preprod.
 - **Mailpit** (tous les emails envoyés par la preprod) : ouvrir le tunnel puis http://localhost:8025.
   ```bash
   ssh -N -L 8025:127.0.0.1:8025 ubuntu@57.130.47.254
@@ -147,7 +147,7 @@ Le test vérifie :
 - le refus d'écrire dans une base non preprod ;
 - l'absence de toute donnée client fictive après la copie ;
 - la conservation de l'équipe, des contenus et des plans ;
-- la connexion des comptes de recette et de l'équipe, et l'échec du mot de passe client ;
+- la connexion des comptes de recette, et l'échec des mots de passe de prod (clients et équipe) ;
 - la capture des emails dans Mailpit.
 
 `KEEP=1` garde les conteneurs pour diagnostiquer.
