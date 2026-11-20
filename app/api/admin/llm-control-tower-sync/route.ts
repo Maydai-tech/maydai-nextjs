@@ -4,9 +4,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdminAuth } from '@/lib/admin-auth'
 import {
   appendMissingModelsToSheet,
+  ensureControlTowerSyncHeaders,
   exportControlTowerCsv,
+  previewControlTowerSync,
   syncControlTowerDerivedColumns,
-  writeControlTowerLlmStatusColumn,
 } from '@/lib/bench-llm/control-tower-csv'
 import { syncControlTowerSystemCardStatuses } from '@/lib/bench-llm/system-cards-import'
 
@@ -38,11 +39,30 @@ export async function POST(request: NextRequest) {
       throw new Error('GOOGLE_SHEETS_CONTROL_TOWER_ID is not defined')
     }
 
+    let dryRun = false
+    try {
+      const body = await request.json() as { dryRun?: boolean }
+      dryRun = body?.dryRun === true
+    } catch {
+      dryRun = false
+    }
+
+    await ensureControlTowerSyncHeaders(spreadsheetId)
+    if (dryRun) {
+      const plan = await previewControlTowerSync(spreadsheetId)
+      return NextResponse.json({
+        success: true,
+        dryRun: true,
+        changedCells: plan.changedCells,
+        formulasRewritten: plan.formulasRewritten,
+        rowsAdded: plan.rowsAdded,
+      })
+    }
+
     const addedCount = await appendMissingModelsToSheet(spreadsheetId)
     console.log(`[Sync LLM Control] ${addedCount} nouveaux modèles ajoutés au Sheet.`)
 
     await syncControlTowerDerivedColumns(spreadsheetId)
-    await writeControlTowerLlmStatusColumn(spreadsheetId)
 
     const supabase = createServiceClient()
     const { errorStatusesSynced } = await syncControlTowerSystemCardStatuses(supabase)

@@ -4,7 +4,8 @@ const mockVerifyAdminAuth = jest.fn()
 const mockExportControlTowerCsv = jest.fn()
 const mockAppendMissingModelsToSheet = jest.fn()
 const mockSyncControlTowerDerivedColumns = jest.fn()
-const mockWriteControlTowerLlmStatusColumn = jest.fn()
+const mockEnsureControlTowerSyncHeaders = jest.fn()
+const mockPreviewControlTowerSync = jest.fn()
 const mockSyncControlTowerSystemCardStatuses = jest.fn()
 const mockCreateClient = jest.fn((..._args: unknown[]) => ({ service: true }))
 
@@ -16,7 +17,8 @@ jest.mock('@/lib/bench-llm/control-tower-csv', () => ({
   exportControlTowerCsv: (...args: unknown[]) => mockExportControlTowerCsv(...args),
   appendMissingModelsToSheet: (...args: unknown[]) => mockAppendMissingModelsToSheet(...args),
   syncControlTowerDerivedColumns: (...args: unknown[]) => mockSyncControlTowerDerivedColumns(...args),
-  writeControlTowerLlmStatusColumn: (...args: unknown[]) => mockWriteControlTowerLlmStatusColumn(...args),
+  ensureControlTowerSyncHeaders: (...args: unknown[]) => mockEnsureControlTowerSyncHeaders(...args),
+  previewControlTowerSync: (...args: unknown[]) => mockPreviewControlTowerSync(...args),
 }))
 
 jest.mock('@/lib/bench-llm/system-cards-import', () => ({
@@ -72,8 +74,8 @@ describe('POST /api/admin/llm-control-tower-sync', () => {
     const response = await POST(makeRequest())
 
     expect(response.status).toBe(500)
+    expect(mockEnsureControlTowerSyncHeaders).not.toHaveBeenCalled()
     expect(mockAppendMissingModelsToSheet).not.toHaveBeenCalled()
-    expect(mockWriteControlTowerLlmStatusColumn).not.toHaveBeenCalled()
     expect(mockExportControlTowerCsv).not.toHaveBeenCalled()
     expect(await response.json()).toEqual({
       success: false,
@@ -89,7 +91,6 @@ describe('POST /api/admin/llm-control-tower-sync', () => {
       visibilityCells: 14,
       popularityCells: 14,
     })
-    mockWriteControlTowerLlmStatusColumn.mockResolvedValue({ updatedCells: 14, inserted: false })
     mockSyncControlTowerSystemCardStatuses.mockResolvedValue({ errorStatusesSynced: 11 })
     mockExportControlTowerCsv.mockResolvedValue({
       fileId: 'file-1',
@@ -102,7 +103,7 @@ describe('POST /api/admin/llm-control-tower-sync', () => {
     expect(response.status).toBe(200)
     expect(mockAppendMissingModelsToSheet).toHaveBeenCalledWith('sheet-id')
     expect(mockSyncControlTowerDerivedColumns).toHaveBeenCalledWith('sheet-id')
-    expect(mockWriteControlTowerLlmStatusColumn).toHaveBeenCalledWith('sheet-id')
+    expect(mockEnsureControlTowerSyncHeaders).toHaveBeenCalledWith('sheet-id')
     expect(mockCreateClient).toHaveBeenCalledWith('http://localhost:54321', 'service-key')
     expect(mockSyncControlTowerSystemCardStatuses).toHaveBeenCalledWith({ service: true })
     expect(mockExportControlTowerCsv).toHaveBeenCalledWith({ service: true })
@@ -110,9 +111,6 @@ describe('POST /api/admin/llm-control-tower-sync', () => {
       mockSyncControlTowerDerivedColumns.mock.invocationCallOrder[0],
     )
     expect(mockSyncControlTowerDerivedColumns.mock.invocationCallOrder[0]).toBeLessThan(
-      mockWriteControlTowerLlmStatusColumn.mock.invocationCallOrder[0],
-    )
-    expect(mockWriteControlTowerLlmStatusColumn.mock.invocationCallOrder[0]).toBeLessThan(
       mockSyncControlTowerSystemCardStatuses.mock.invocationCallOrder[0],
     )
     expect(mockSyncControlTowerSystemCardStatuses.mock.invocationCallOrder[0]).toBeLessThan(
@@ -137,7 +135,6 @@ describe('POST /api/admin/llm-control-tower-sync', () => {
       visibilityCells: 0,
       popularityCells: 0,
     })
-    mockWriteControlTowerLlmStatusColumn.mockResolvedValue({ updatedCells: 1, inserted: false })
     mockSyncControlTowerSystemCardStatuses.mockResolvedValue({ errorStatusesSynced: 0 })
     mockExportControlTowerCsv.mockRejectedValue(new Error('Drive indisponible'))
 
@@ -147,6 +144,34 @@ describe('POST /api/admin/llm-control-tower-sync', () => {
     expect(await response.json()).toEqual({
       success: false,
       error: 'Drive indisponible',
+    })
+  })
+
+  test('simule sans écrire dans le Sheet, le CSV ou la base', async () => {
+    process.env.GOOGLE_SHEETS_CONTROL_TOWER_ID = 'sheet-id'
+    mockPreviewControlTowerSync.mockResolvedValue({
+      changedCells: [{ column: 'Statut MaydAI', row: 2, before: 'Catalogue', after: 'Questionnaire' }],
+      formulasRewritten: 4,
+      rowsAdded: [{ row: 5, id: 'new-id', modelName: 'Nouveau', fiche: 'Manquante', llmStatus: '' }],
+    })
+
+    const response = await POST(new NextRequest('http://localhost/api/admin/llm-control-tower-sync', {
+      method: 'POST',
+      headers: { authorization: 'Bearer admin-token', 'content-type': 'application/json' },
+      body: JSON.stringify({ dryRun: true }),
+    }))
+
+    expect(response.status).toBe(200)
+    expect(mockAppendMissingModelsToSheet).not.toHaveBeenCalled()
+    expect(mockSyncControlTowerDerivedColumns).not.toHaveBeenCalled()
+    expect(mockSyncControlTowerSystemCardStatuses).not.toHaveBeenCalled()
+    expect(mockExportControlTowerCsv).not.toHaveBeenCalled()
+    expect(await response.json()).toEqual({
+      success: true,
+      dryRun: true,
+      changedCells: [{ column: 'Statut MaydAI', row: 2, before: 'Catalogue', after: 'Questionnaire' }],
+      formulasRewritten: 4,
+      rowsAdded: [{ row: 5, id: 'new-id', modelName: 'Nouveau', fiche: 'Manquante', llmStatus: '' }],
     })
   })
 })

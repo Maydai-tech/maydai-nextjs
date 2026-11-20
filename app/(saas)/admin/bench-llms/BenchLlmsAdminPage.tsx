@@ -651,6 +651,12 @@ export default function BenchLlmsAdminPage() {
     modifiedRows: ModifiedControlTowerRow[]
     rejectedValues: RejectedControlTowerValue[]
   } | null>(null)
+  const [syncReport, setSyncReport] = useState<{
+    dryRun: boolean
+    changedCells: Array<{ column: string; row: number; before: string; after: string }>
+    formulasRewritten: number
+    rowsAdded: Array<{ row: number; id: string; modelName: string; fiche: string; llmStatus: string }>
+  } | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
   const [openProviders, setOpenProviders] = useState<Set<string>>(new Set())
@@ -822,6 +828,60 @@ export default function BenchLlmsAdminPage() {
     }
   }, [fetchModels, getAccessToken])
 
+  const syncControlTower = useCallback(async (dryRun: boolean) => {
+    const token = getAccessToken()
+    if (!token) return
+    setAction(dryRun ? 'Simulation synchronisation LLM Control' : 'Synchronisation LLM Control')
+    setError(null)
+    setMessage(null)
+    try {
+      const response = await fetch('/api/admin/llm-control-tower-sync', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ dryRun }),
+      })
+      const payload = await parseApiJson<{
+        error?: string
+        success?: boolean
+        dryRun?: boolean
+        message?: string
+        changedCells?: Array<{ column: string; row: number; before: string; after: string }>
+        formulasRewritten?: number
+        rowsAdded?: Array<{ row: number; id: string; modelName: string; fiche: string; llmStatus: string }>
+      }>(response)
+      if (!response.ok || payload.success === false) {
+        throw new Error(payload.error || 'Synchronisation impossible')
+      }
+      if (payload.dryRun) {
+        const report = {
+          dryRun: true,
+          changedCells: payload.changedCells ?? [],
+          formulasRewritten: payload.formulasRewritten ?? 0,
+          rowsAdded: payload.rowsAdded ?? [],
+        }
+        setSyncReport(report)
+        const summary = `Simulation : ${report.changedCells.length} cellule(s) à modifier, ${report.formulasRewritten} formule(s), ${report.rowsAdded.length} ligne(s) à ajouter.`
+        setMessage(summary)
+        setToast({ message: summary, type: 'success' })
+        return
+      }
+      setSyncReport(null)
+      const successText = payload.message || 'Synchronisation LLM Control terminée.'
+      setMessage(successText)
+      setToast({ message: successText, type: 'success' })
+      await fetchModels()
+    } catch (syncError) {
+      const errorText = syncError instanceof Error ? syncError.message : 'Erreur inconnue'
+      setError(errorText)
+      setToast({ message: errorText, type: 'error' })
+    } finally {
+      setAction(null)
+    }
+  }, [fetchModels, getAccessToken])
+
   const createModel = useCallback(async () => {
     await callAction('Création du modèle', '/api/admin/compl-ai/models', {
       headers: { 'Content-Type': 'application/json' },
@@ -954,7 +1014,7 @@ export default function BenchLlmsAdminPage() {
         <div className="flex flex-wrap gap-2">
           <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium"><Plus className="h-4 w-4" /> Modèle</button>
           <button onClick={() => callAction('Synchronisation LLM Stats', '/api/admin/llm-stats-sync-runs')} disabled={action != null} className="rounded-md bg-sky-700 px-3 py-2 text-sm font-medium text-white">Sync LLM Stats</button>
-          <button onClick={() => callAction('Synchronisation LLM Control', '/api/admin/llm-control-tower-sync')} disabled={action != null} className="rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white">Sync LLM Control</button>
+          <button onClick={() => void syncControlTower(true)} disabled={action != null} className="rounded-md bg-teal-700 px-3 py-2 text-sm font-medium text-white">Sync LLM Control</button>
           <button onClick={() => void applyTaxonomy(true)} disabled={action != null} className="rounded-md bg-[#0080A3] px-3 py-2 text-sm font-medium text-white">Appliquer la veille et la taxonomie</button>
           <button onClick={() => callAction('Import System Cards', '/api/admin/llm-system-cards-import')} disabled={action != null} className="rounded-md bg-amber-700 px-3 py-2 text-sm font-medium text-white">Import System Cards</button>
           <button onClick={() => void regeneratePillars()} disabled={action != null} className="rounded-md bg-amber-900 px-3 py-2 text-sm font-medium text-white">Régénérer les piliers</button>
@@ -1047,6 +1107,31 @@ export default function BenchLlmsAdminPage() {
       {action ? <div className="mb-4 flex items-center gap-2 rounded-md bg-sky-50 p-3 text-sm text-sky-800"><Loader2 className="h-4 w-4 animate-spin" /> {action}…</div> : null}
       {error ? <div className="mb-4 flex items-start gap-2 rounded-md bg-red-50 p-3 text-sm text-red-800"><AlertTriangle className="mt-0.5 h-4 w-4" /> {error}</div> : null}
       {message ? <div className="mb-4 rounded-md bg-emerald-50 p-3 text-sm text-emerald-800">{message}</div> : null}
+      {syncReport?.dryRun ? (
+        <section className="mb-4 rounded-lg border border-gray-200 bg-white p-4">
+          <h2 className="text-base font-semibold text-gray-900">Simulation de la synchronisation</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            {syncReport.changedCells.length} cellule(s) changeraient de valeur, {syncReport.formulasRewritten} formule(s) réécrite(s), {syncReport.rowsAdded.length} ligne(s) ajoutée(s). Aucune écriture n’a été faite.
+          </p>
+          {syncReport.changedCells.length > 0 ? (
+            <ul className="mt-3 max-h-64 space-y-2 overflow-auto text-sm text-gray-800">
+              {syncReport.changedCells.slice(0, 30).map((cell) => (
+                <li key={`${cell.row}-${cell.column}`} className="rounded-md bg-gray-50 p-2">
+                  Ligne {cell.row}, {cell.column} : « {cell.before || '∅'} » → « {cell.after || '∅'} »
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => void syncControlTower(false)}
+            disabled={action != null}
+            className="mt-4 rounded-md border border-teal-700 px-3 py-2 text-sm font-medium text-teal-800 disabled:opacity-50"
+          >
+            Confirmer la synchronisation réelle
+          </button>
+        </section>
+      ) : null}
       {applyReport ? (
         <section className="mb-4 rounded-lg border border-gray-200 bg-white p-4">
           <h2 className="text-base font-semibold text-gray-900">

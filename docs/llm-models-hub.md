@@ -47,10 +47,11 @@ Déclarées dans `vercel.json` :
 | Job | Chemin | Horloge (UTC) | Auth |
 |-----|--------|---------------|------|
 | LLM Stats | `GET /api/cron/sync-llm-stats` | `0 4 * * 3` (mercredi) | `Authorization: Bearer $CRON_SECRET` |
+| Tour de contrôle | `GET /api/cron/sync-llm-control` | `0 6 * * 3` (mercredi, 07:00 Paris en hiver) | idem |
 | EcoLogits | `GET /api/cron/sync-ecologits` | `0 3 * * *` | idem |
 | Compar:IA Drive | `GET /api/admin/comparia/sync` | `0 2 * * 0` (dimanche) | cron **ou** admin |
 
-System Cards / Tour de contrôle : **pas** de cron — boutons admin uniquement. Sync = append Sheet + CSV Drive (`#447`). Runbook : [llm-system-cards.md](./llm-system-cards.md).
+System Cards : bouton admin. La tour de contrôle a aussi le cron du mercredi `0 6 * * 3`, deux heures après LLM Stats. Sync = append Sheet + colonnes d’identification + formules d’action + CSV Drive. Elle ne réécrit pas le bloc Suivi du LLM. Runbook : [llm-system-cards.md](./llm-system-cards.md).
 
 Compar:IA accepte aussi `x-cron-secret: $CRON_SECRET` (comparaison `timingSafeEqual`).  
 `GET` = cron only. `POST` = cron **ou** `verifyAdminAuth` (admin). Body optionnel `{ "file_name": "…" }`.
