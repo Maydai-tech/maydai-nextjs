@@ -69,14 +69,16 @@ describe('lignage et alias', () => {
     expect(result).toEqual({ updateIds: ['keep'], deleteIds: ['dup'] })
   })
 
-  test('copie H et I seulement s’ils sont vides chez la ligne absorbante', () => {
-    const absorbed = Array.from({ length: 9 }, () => '')
-    absorbed[7] = 'https://drive.example/dossier'
-    absorbed[8] = 'https://drive.example/fichier'
-    const absorber = Array.from({ length: 9 }, () => '')
-    absorber[7] = 'https://drive.example/deja'
-    expect(sheetDriveCellsToCopy(absorbed, absorber)).toEqual([
-      { column: 'I', value: 'https://drive.example/fichier' },
+  test('copie le lien de fichier seulement s’il est vide chez la ligne absorbante', () => {
+    const headers = [
+      'ID Supabase',
+      'Lien du fichier Markdown généré',
+      'Lien du dossier Drive cible',
+    ]
+    const absorbed = ['id-1', 'https://drive.example/fichier', 'https://drive.example/dossier']
+    const absorber = ['id-2', '', 'https://drive.example/deja']
+    expect(sheetDriveCellsToCopy(headers, absorbed, absorber)).toEqual([
+      { header: 'Lien du fichier Markdown généré', value: 'https://drive.example/fichier' },
     ])
   })
 })

@@ -1,3 +1,8 @@
+import {
+  findControlTowerHeader,
+  MissingControlTowerHeaderError,
+} from '@/lib/bench-llm/control-tower-headers'
+
 export type LineageModel = {
   id: string
   mergedIntoId?: string | null
@@ -138,13 +143,17 @@ export function partitionUniqueMoves<T extends UniqueRow>(
 }
 
 export function sheetDriveCellsToCopy(
+  headers: readonly string[],
   absorbed: ReadonlyArray<string>,
   absorber: ReadonlyArray<string>,
-): Array<{ column: 'H' | 'I'; value: string }> {
-  const copies: Array<{ column: 'H' | 'I'; value: string }> = []
-  const absorbedDrive = absorbed[7]?.trim() ?? ''
-  const absorbedFile = absorbed[8]?.trim() ?? ''
-  if (!absorber[7]?.trim() && absorbedDrive) copies.push({ column: 'H', value: absorbed[7]!.trim() })
-  if (!absorber[8]?.trim() && absorbedFile) copies.push({ column: 'I', value: absorbed[8]!.trim() })
+): Array<{ header: string; value: string }> {
+  const copies: Array<{ header: string; value: string }> = []
+  for (const header of ['Lien du dossier Drive cible', 'Lien du fichier Markdown généré']) {
+    const index = findControlTowerHeader(headers, header)
+    if (index < 0) throw new MissingControlTowerHeaderError(header)
+    const fromAbsorbed = absorbed[index]?.trim() ?? ''
+    const alreadyThere = absorber[index]?.trim() ?? ''
+    if (fromAbsorbed && !alreadyThere) copies.push({ header, value: fromAbsorbed })
+  }
   return copies
 }

@@ -2,6 +2,7 @@ import { parse } from 'csv-parse/sync'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { CONTROL_TOWER_FOLDER_ID } from '@/lib/bench-llm/control-tower-csv'
+import { findControlTowerHeader } from '@/lib/bench-llm/control-tower-headers'
 import { normalizeLlmModelSlug } from '@/lib/bench-llm/model-slug'
 import {
   formatImportedPillarStatus,
@@ -475,9 +476,8 @@ export function controlTowerSpreadsheetId(): string {
   return id
 }
 
-export function findColumnIndexByHeader(headers: string[], label: string): number {
-  const wanted = foldHeader(label)
-  return headers.findIndex((header) => foldHeader(header) === wanted)
+export function findColumnIndexByHeader(headers: string[], ...labels: string[]): number {
+  return findControlTowerHeader(headers, ...labels)
 }
 
 export function columnIndexToA1(index: number): string {
@@ -599,15 +599,25 @@ export async function writeControlTowerStatusesToSheet(
   })
   const rows = valuesRes.data.values ?? []
   const headers = (rows[0] ?? []).map((header) => String(header ?? ''))
-  const statusCol = findColumnIndexByHeader(headers, STATUT_SUPABASE_HEADER)
+  const statusCol = findColumnIndexByHeader(headers, "Résultat de l'import", 'Statut Supabase')
   if (statusCol < 0) {
-    throw new Error(`Colonne "${STATUT_SUPABASE_HEADER}" introuvable dans l'en-tête`)
+    throw new Error(
+      "En-tête manquant : « Résultat de l'import » (ou « Statut Supabase »). Aucune colonne n'a été insérée.",
+    )
   }
-  const readyCol = findColumnIndexByHeader(headers, PRET_POUR_IMPORT_HEADER)
-  const actionCol = findColumnIndexByHeader(headers, ACTION_HERMES_HEADER)
+  const readyCol = findColumnIndexByHeader(headers, 'Prêt pour import')
+  const actionCol = findColumnIndexByHeader(headers, 'Action requise par Hermes')
+  const idCol = findColumnIndexByHeader(headers, 'ID Supabase')
+  if (idCol < 0) {
+    throw new Error("En-tête manquant : « ID Supabase ». Aucune colonne n'a été insérée.")
+  }
+  if (updates.some((update) => update.success) && (readyCol < 0 || actionCol < 0)) {
+    const missing = readyCol < 0 ? 'Prêt pour import' : 'Action requise par Hermes'
+    throw new Error(`En-tête manquant : « ${missing} ». Aucune colonne n'a été insérée.`)
+  }
 
   const matchCols = {
-    idCol: findColumnIndexByHeader(headers, 'ID Supabase'),
+    idCol,
     hermesCol: findColumnIndexByHeader(headers, 'Nom du LLM (Standard Hermes/Fichier)'),
     nameCol: findColumnIndexByHeader(headers, 'Nom du LLM (Standard Supabase)'),
   }
