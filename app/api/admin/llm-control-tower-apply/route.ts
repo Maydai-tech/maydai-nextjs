@@ -7,6 +7,7 @@ import {
   type ControlTowerModelRef,
   type ModifiedControlTowerRow,
 } from '@/lib/bench-llm/control-tower-apply'
+import { requireControlTowerGroup } from '@/lib/bench-llm/control-tower-headers'
 import {
   readControlTowerSheetMatrix,
   writeControlTowerCells,
@@ -48,7 +49,7 @@ async function loadModels(supabase: SupabaseClient): Promise<ControlTowerModelRe
   while (hasMore) {
     const { data, error } = await supabase
       .from('compl_ai_models')
-      .select('id, slug, merged_into_id')
+      .select('id, slug, model_name, merged_into_id, role, reference_model_id')
       .order('id', { ascending: true })
       .range(from, from + pageSize - 1)
     if (error) throw new Error(error.message)
@@ -56,7 +57,10 @@ async function loadModels(supabase: SupabaseClient): Promise<ControlTowerModelRe
     models.push(...rows.map((row) => ({
       id: row.id,
       slug: row.slug,
+      modelName: row.model_name,
       mergedIntoId: row.merged_into_id,
+      role: row.role,
+      referenceModelId: row.reference_model_id,
     })))
     hasMore = rows.length === pageSize
     from += pageSize
@@ -89,7 +93,9 @@ export async function POST(request: NextRequest) {
       readControlTowerSheetMatrix(spreadsheetId),
       loadModels(createServiceClient()),
     ])
+    const headers = (matrix[0] ?? []).map((header) => String(header ?? ''))
     const plan = planControlTowerApply({
+      headers,
       rows: matrix.map((cells, index) => ({ sheetRow: index + 1, cells })),
       models,
       today: parisToday(),
@@ -108,14 +114,16 @@ export async function POST(request: NextRequest) {
         if (row.taxonomie?.merged_into_id) {
           const absorberId = row.taxonomie.merged_into_id
           await reassignMergedModel(supabase, row.modelId, absorberId)
-          const absorbed = matrix.find((cells) => String(cells[0] ?? '').trim() === row.modelId) ?? []
-          const absorber = matrix.find((cells) => String(cells[0] ?? '').trim() === absorberId) ?? []
-          const copies = sheetDriveCellsToCopy(absorbed, absorber)
+          const idIndex = requireControlTowerGroup(headers, 'id')
+          const cellId = (cells: string[]) => String(cells[idIndex] ?? '').trim()
+          const absorbed = matrix.find((cells) => cellId(cells) === row.modelId) ?? []
+          const absorber = matrix.find((cells) => cellId(cells) === absorberId) ?? []
+          const copies = sheetDriveCellsToCopy(headers, absorbed, absorber)
           if (copies.length > 0) {
-            const absorberIndex = matrix.findIndex((cells) => String(cells[0] ?? '').trim() === absorberId)
+            const absorberIndex = matrix.findIndex((cells) => cellId(cells) === absorberId)
             await writeControlTowerCells(spreadsheetId, copies.map((copy) => ({
               sheetRow: absorberIndex + 1,
-              column: copy.column,
+              header: copy.header,
               value: copy.value,
             })))
           }
