@@ -4,7 +4,7 @@ Comment un compte est créé (`/signup`) et comment une landing co-brandée (`/p
 
 ## 1. Intention
 
-Une seule UI d’inscription (`SignupPage`) : OTP e-mail, puis hydratation du profil. Les landings partenaires ne changent **pas** le plan Stripe : elles changent le branding, le `noindex`, et les UTM par défaut.
+Une seule UI d’inscription (`SignupPage`) : mot de passe + lien de confirmation e-mail, puis hydratation du profil (voir [auth-mot-de-passe.md](./auth-mot-de-passe.md)). Les landings partenaires ne changent **pas** le plan Stripe : elles changent le branding, le `noindex`, et les UTM par défaut.
 
 Le Freemium n’est pas un SKU écrit à l’inscription. Sans abonnement Stripe, `lib/subscription/user-plan.ts` retombe sur le plan `freemium`.
 
@@ -29,12 +29,11 @@ Connecté → redirection `/dashboard/registries` (même comportement partenaire
 
 `SignupPage` (`app/(saas)/signup/SignupPage.tsx`) :
 
-1. Étape 1 — prénom, nom, e-mail (`POST /api/auth/check-email` au blur).
+1. Étape 1 — prénom, nom, e-mail (`POST /api/auth/check-email` au blur), mot de passe + confirmation.
 2. Étape 2 — entreprise, secteur (`CompanySectorSelector`), CGU.
-3. OTP — `signInWithOtp(email, true)` puis `verifyOtp` (`lib/auth.tsx`, type `email`).
-4. `POST /api/auth/complete-signup` avec le JWT frais (`supabase.auth.getSession()`, pas le contexte React).
-5. Optionnel : `POST /api/leads/link-to-user` si `?lead_id=` ; sinon `POST /api/leads/website-direct` si une attribution utile existe.
-6. GTM (`sendSignUpEvent` + conversion Google Ads), pause 500 ms, `router.push('/dashboard/registries')`.
+3. `supabase.auth.signUp` avec `emailRedirectTo = /signup/confirmation` et le payload `complete-signup` + `leadId` + attribution dans `user_metadata.pending_signup` (`lib/signup-finalize.ts`). Écran « Confirmez votre adresse email ».
+4. Clic sur le lien → `/signup/confirmation` → `finalizePendingSignup` : `POST /api/auth/complete-signup`, puis `POST /api/leads/link-to-user` si `?lead_id=` ; sinon `POST /api/leads/website-direct` si une attribution utile existe.
+5. GTM (`sendSignUpEvent` + conversion Google Ads), pause 500 ms, `router.push('/dashboard/registries')`.
 
 Query :
 
@@ -45,7 +44,7 @@ Query :
 
 `AttributionCapture` (layouts SaaS + marketing) fusionne à chaque navigation `gclid` / click ids / UTM vers localStorage + cookie `maydai_acquisition_v1` (90 jours). Premier click id gagnant, ordre dans `CLICK_PARAM_KEYS`. Sans UTM explicite, un click id déduit `utm_source` / `utm_medium` (ex. `gclid` → `google` / `cpc`).
 
-À `completeSignup`, si `partnerConfig.defaultAttribution` est fourni :
+Au `signUp` (`computeEffectiveAttribution`), si `partnerConfig.defaultAttribution` est fourni :
 
 | Situation | Résultat |
 |-----------|----------|

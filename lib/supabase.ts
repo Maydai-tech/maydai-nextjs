@@ -40,8 +40,11 @@ function createMockSupabaseClient(): SupabaseClient {
       onAuthStateChange: () => ({ data: { subscription: noopSubscription } }),
       signInWithPassword: authUnavailable,
       signUp: authUnavailable,
-      signInWithOtp: authUnavailable,
       verifyOtp: authUnavailable,
+      exchangeCodeForSession: authUnavailable,
+      resetPasswordForEmail: authUnavailable,
+      resend: authUnavailable,
+      updateUser: authUnavailable,
       signOut: async () => ({ error: null }),
     },
   } as unknown as SupabaseClient

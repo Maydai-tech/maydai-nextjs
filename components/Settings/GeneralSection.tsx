@@ -14,6 +14,7 @@ import { getIndustryDisplayText, getIndustryLabel, getSubCategoryLabel } from '@
 import DeleteAccountModal from '@/components/Settings/DeleteAccountModal'
 import ProfileCompletenessScore from '@/components/Settings/ProfileCompletenessScore'
 import ReadOnlyEmailBlock from '@/components/Settings/ReadOnlyEmailBlock'
+import PasswordChangeCard from '@/components/Settings/PasswordChangeCard'
 import {
   calculateProfileCompletenessScore,
   toProfileCompletenessInput,
@@ -437,6 +438,8 @@ export default function GeneralSection({
       )}
 
       <ReadOnlyEmailBlock userEmail={userEmail} isVerified={isEmailVerified} />
+
+      <PasswordChangeCard />
 
       {/* Carte Informations personnelles */}
       <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
