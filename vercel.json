@@ -18,6 +18,9 @@
     "app/api/admin/llm-control-tower-sync/route.ts": {
       "maxDuration": 60
     },
+    "app/api/cron/sync-llm-control/route.ts": {
+      "maxDuration": 60
+    },
     "app/api/admin/llm-system-cards-import/route.ts": {
       "maxDuration": 300
     },
@@ -38,6 +41,10 @@
     {
       "path": "/api/cron/sync-llm-stats",
       "schedule": "0 4 * * 3"
+    },
+    {
+      "path": "/api/cron/sync-llm-control",
+      "schedule": "0 6 * * 3"
     },
     {
       "path": "/api/cron/process-purges",

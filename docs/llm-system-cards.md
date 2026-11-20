@@ -45,14 +45,15 @@ L’upsert (`importSystemCardsFromControlTower`) écrit aussi `source_markdown`,
 
 Migrations **visibles dans le dépôt** : `source_markdown` (`20260909160000_…`) et `card_version_date_is_approx` (`20260910120000_…`). Les autres colonnes n’ont pas de `ALTER` listé — vérifier le schéma live avant un apply from scratch.
 
-## 3. Ops admin (pas de cron Vercel)
+## 3. Ops admin et cron du mercredi
 
-Boutons sur `/admin/bench-llms`. Auth : `verifyAdminAuth` (Bearer admin). Pas d’entrée dans `vercel.json` → `crons`.
+Boutons sur `/admin/bench-llms`. Auth admin : `verifyAdminAuth` (Bearer admin). Le cron `GET /api/cron/sync-llm-control` est dans `vercel.json` à `0 6 * * 3`, avec `Authorization: Bearer $CRON_SECRET`.
 
 | Action | Route | Durée | Effet |
 |--------|-------|-------|--------|
-| Sync LLM Control | `POST /api/admin/llm-control-tower-sync` | 60 s | Append les modèles hub absents du Sheet, réécrit `Statut LLM`, exporte le CSV Drive |
-| Import System Cards | `POST /api/admin/llm-system-cards-import` | 300 s | Lit le **Google Sheet**, importe les lignes `Prêt pour import = Oui` |
+| Sync LLM Control | `POST /api/admin/llm-control-tower-sync` | 60 s | Append les modèles absents, rafraîchit l’identification, ne remplit « Statut Fiche Technique » que si la cellule est vide, réécrit les formules d’action, exporte le CSV. N’écrit pas le bloc Suivi du LLM. `{ dryRun: true }` n’écrit rien. |
+| Cron tour de contrôle | `GET /api/cron/sync-llm-control` | 60 s | Même enchaînement réel que le bouton, CSV compris |
+| Import System Cards | `POST /api/admin/llm-system-cards-import` | 300 s | Lit le **Google Sheet**, importe les lignes `Prêt pour import = Oui`. Un import réussi écrit aussi `Générée`. |
 
 ### Sync LLM Control (Sheet puis CSV)
 
@@ -60,9 +61,9 @@ Boutons sur `/admin/bench-llms`. Auth : `verifyAdminAuth` (Bearer admin). Pas d�
 
 Ordre après `verifyAdminAuth` :
 
-1. `appendMissingModelsToSheet` — lit la colonne A du **premier onglet** (index le plus bas). Présents = UUID `compl_ai_models.id` (en-tête détecté si la 1ʳᵉ cellule non vide fold en `id supabase`). Ajoute une ligne `A:M` par id manquant. Sheet vide → écrit d’abord l’en-tête. **N’update pas** les lignes déjà présentes (provider / nom / action Hermes restent ceux d’Hermes).
-2. `writeControlTowerLlmStatusColumn` — réécrit toute la colonne `Statut LLM` (insert après `Statut Fiche Technique` si absente). Matching : colonne A = `id` Supabase.
-3. `exportControlTowerCsv` — upsert `MaydAI_LLM_Control_Tower.csv` via `upsertTextFileInFolder`. Dossier : `GOOGLE_DRIVE_FOLDER_CONTROL_TOWER` ou constante `CONTROL_TOWER_FOLDER_ID`. Réécrit `Statut LLM` une 2ᵉ fois (même Sheet).
+1. `appendMissingModelsToSheet` — ajoute les modèles absents. Une ligne nouvelle a « Statut Fiche Technique » à `Manquante` ou `Générée` si `llm_system_cards` contient le slug, et un « Statut LLM » vide.
+2. `syncControlTowerDerivedColumns` — réécrit le bloc Identification et les formules « Action humaine requise ». « Statut Fiche Technique » n’est écrit que dans une cellule vide. Le bloc Suivi du LLM n’est pas écrit.
+3. `exportControlTowerCsv` — upsert `MaydAI_LLM_Control_Tower.csv` via `upsertTextFileInFolder`. Dossier : `GOOGLE_DRIVE_FOLDER_CONTROL_TOWER` ou constante `CONTROL_TOWER_FOLDER_ID`.
 
 200 : `{ success, message, fileId, rowCount, updated, modelsAppended }`. Append + write-back Sheet peuvent réussir **avant** un échec Drive (500 partiel).
 
@@ -84,7 +85,7 @@ Colonnes (13) : ID Supabase, provider, nom, nom Hermes (`slug` avec `_`), statut
 6. Slug : `compl_ai_models.id` si UUID, sinon nom Hermes, sinon nom modèle (`normalizeLlmModelSlug`).
 7. Skip si une fiche existe déjà avec `card_version_date` **strictement plus récente**, sauf deux dates approximatives du **même mois** (upsert + warning).
 8. Upsert **uniquement** `llm_system_cards`. **Aucun** insert dans `llm_system_card_pillars`.
-9. Réécrit le Sheet : `Statut Supabase`, et si succès `Prêt pour import = Déjà importé`, `Action requise par Hermes = NONE`.
+9. Réécrit le Sheet : `Résultat de l'import`, et si succès `Prêt pour import = Déjà importé`, `Action requise par Hermes = NONE`, `Statut Fiche Technique = Générée`.
 
 HTTP import : `200` si `errors` vide ; `207` si insert + erreurs ; `500` si erreurs et `inserted === 0`. Le write-back Sheet en échec est logué, pas fatal.
 

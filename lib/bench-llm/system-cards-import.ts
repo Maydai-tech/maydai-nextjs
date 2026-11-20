@@ -13,6 +13,7 @@ import {
 import {
   parseSheetSystemCardStatus,
   STATUT_FICHE_ERREUR,
+  STATUT_FICHE_GENEREE,
   type SystemCardStatus,
 } from '@/lib/validations/system-card'
 import {
@@ -57,6 +58,7 @@ export type ControlTowerStatusUpdate = {
   success: boolean
   errorMessage?: string
   statutSupabase?: string
+  ficheTechnique?: string
   importedOn: string
 }
 
@@ -607,6 +609,7 @@ export async function writeControlTowerStatusesToSheet(
   }
   const readyCol = findColumnIndexByHeader(headers, 'Prêt pour import')
   const actionCol = findColumnIndexByHeader(headers, 'Action requise par Hermes')
+  const ficheCol = findColumnIndexByHeader(headers, 'Statut Fiche Technique')
   const idCol = findColumnIndexByHeader(headers, 'ID Supabase')
   if (idCol < 0) {
     throw new Error("En-tête manquant : « ID Supabase ». Aucune colonne n'a été insérée.")
@@ -614,6 +617,9 @@ export async function writeControlTowerStatusesToSheet(
   if (updates.some((update) => update.success) && (readyCol < 0 || actionCol < 0)) {
     const missing = readyCol < 0 ? 'Prêt pour import' : 'Action requise par Hermes'
     throw new Error(`En-tête manquant : « ${missing} ». Aucune colonne n'a été insérée.`)
+  }
+  if (updates.some((update) => update.ficheTechnique === STATUT_FICHE_GENEREE) && ficheCol < 0) {
+    throw new Error("En-tête manquant : « Statut Fiche Technique ». Aucune colonne n'a été insérée.")
   }
 
   const matchCols = {
@@ -649,6 +655,9 @@ export async function writeControlTowerStatusesToSheet(
     if (update.success) {
       pushCell(readyCol, sheetRow, 'Déjà importé', PRET_POUR_IMPORT_HEADER)
       pushCell(actionCol, sheetRow, 'NONE', ACTION_HERMES_HEADER)
+    }
+    if (update.ficheTechnique === STATUT_FICHE_GENEREE) {
+      pushCell(ficheCol, sheetRow, STATUT_FICHE_GENEREE, 'Statut Fiche Technique')
     }
   }
 
@@ -963,6 +972,7 @@ export async function importSystemCardsFromControlTower(
         modelName: row.modelName,
         success: true,
         importedOn,
+        ficheTechnique: STATUT_FICHE_GENEREE,
         statutSupabase: pillarOutcome.unmappedCount > 0
           ? formatImportedPillarStatus(importedOn, pillarOutcome.unmappedCount)
           : undefined,
