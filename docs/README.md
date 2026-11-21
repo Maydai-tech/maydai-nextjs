@@ -17,8 +17,8 @@ Chat IA (3 étapes, `/api/chat/*`) : règle `.cursor/rules/mistral-conversationa
 
 | Document | Sujet |
 |----------|--------|
-| [llm-models-hub.md](./llm-models-hub.md) | Hub : slug + pivot, cycle de vie, CSV COMPL-AI, EcoLogits, crons |
-| [llm-system-cards.md](./llm-system-cards.md) | Fiches GPAI, Tour de contrôle (append Sheet + CSV), bonus score, PDF |
+| [llm-models-hub.md](./llm-models-hub.md) | Hub : slug + pivot, taxonomie, cycle de vie, CSV COMPL-AI, EcoLogits, crons |
+| [llm-system-cards.md](./llm-system-cards.md) | Fiches GPAI, piliers Markdown, Tour de contrôle (sync / apply / A1–A8), bonus score, PDF |
 | [ai-act-rag.md](./ai-act-rag.md) | Ingestion veille `AI_Act_Index.json` → pgvector (pas encore consommé par le chat) |
 
 Hub canonique LLM : `.cursor/rules/llm-models-hub.mdc`. Sync Drive Hermes : `.cursor/rules/hermes-drive-sync.mdc`.
@@ -27,14 +27,16 @@ Hub canonique LLM : `.cursor/rules/llm-models-hub.mdc`. Sync Drive Hermes : `.cu
 
 | Document | Sujet |
 |----------|--------|
-| [api-auth-security.md](./api-auth-security.md) | Bearer, `verifyAdminAuth`, crons, webhooks, invitations (Zero Overwrite), rôles `profiles`, preuves dossier (signed URL), checkout Stripe |
-| [signup-partner-landings.md](./signup-partner-landings.md) | Inscription OTP, landings `/p/…` (Learning Gate), UTM, `complete-signup` |
-| [admin-monitoring.md](./admin-monitoring.md) | `/admin/monitoring`, allowlist JSON hôte, Caddy / nginx |
-| [e2e-playwright.md](./e2e-playwright.md) | Playwright local + CI, mots de passe uniques, plus de rapport OVH |
+| [api-auth-security.md](./api-auth-security.md) | Bearer, `verifyAdminAuth`, crons (LLM + purge), webhooks, invitations (Zero Overwrite), rôles `profiles`, preuves dossier (signed URL), checkout Stripe Basil, révocation `user_companies` |
+| [signup-partner-landings.md](./signup-partner-landings.md) | Inscription OTP, landings `/p/…` (Learning Gate), UTM, merge `complete-signup` |
+| [freemium-governance.md](./freemium-governance.md) | Quota Freemium, confirmation Mailjet, cron `process-purges`, `/admin/governance` |
+| [contact-form-security.md](./contact-form-security.md) | Formulaire contact : honeypot, Turnstile, TLD, CSP Cloudflare |
+| [admin-monitoring.md](./admin-monitoring.md) | `/admin/monitoring`, allowlist JSON hôte, diagnostics `sourceIssues`, Caddy / nginx |
+| [e2e-playwright.md](./e2e-playwright.md) | Playwright local + CI (Node 24, `pnpm`), mots de passe uniques, plus de rapport OVH |
 | [guide-installation-mcp-supabase.md](./guide-installation-mcp-supabase.md) | MCP Supabase OVH |
 | [supabase-ovh-cli.md](./supabase-ovh-cli.md) | CLI Supabase self-hosted |
 
-Auth API : `.cursor/rules/api-architecture.mdc`, `.cursor/rules/authentication-patterns.mdc`. Webhooks Hermes : header `x-api-key` = `INTERNAL_API_KEY`. Crons Vercel : Bearer `CRON_SECRET`. Monitoring hôte : jamais d’HTTP public.
+Auth API : `.cursor/rules/api-architecture.mdc`, `.cursor/rules/authentication-patterns.mdc`. Webhooks Hermes : header `x-api-key` = `INTERNAL_API_KEY`. Crons Vercel : Bearer `CRON_SECRET` (LLM Stats 04:00 UTC mercredi, Tour de contrôle 06:00 UTC mercredi, EcoLogits 03:00 UTC quotidien, Compar:IA dimanche 02:00, purges Freemium `*/15`). Monitoring hôte : jamais d’HTTP public.
 
 ## Notes historiques (ne plus suivre pour de nouvelles colonnes)
 
