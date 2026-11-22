@@ -18,7 +18,7 @@ alwaysApply: false
   Google Drive (via `lib/google-drive.ts`) -> Webhook/Cron Route -> Insertion dans Supabase via le Service Role (bypass RLS) -> Le Frontend lit uniquement Supabase.
 
 ## 3. Traitement des Formats Spécifiques
-- **ComparIA (Données Tabulaires)** : Utiliser `csv-parse` pour lire et normaliser le classement issu de Drive.
+- **Compar:IA (admin)** : ne pas relire Drive. L'import est l'upload CSV Etalab 2.0 (`POST /api/admin/comparia/preview` puis `POST /api/admin/comparia/import`). Contrat : `.cursor/rules/comparia-etalab.mdc`. Le webhook KB peut encore appeler `persistCompariaCatalog`, sans créer de fiche MaydAI.
 - **Veille AI Act (GRC)** : Cibler exclusivement le fichier `AI_Act_Index.json` (déclenché si `folder_name === '05_AI_Act_Docs'` ou `file_name === 'AI_Act_Index.json'`). Valider `{ documents: [...] }` via Zod dans `route.ts` (`content` déjà dans le JSON). Ne pas rappeler `ingestAiActKnowledgeBase`. Runbook : `docs/ai-act-rag.md`.
 - **Tour de contrôle / System Cards** : `POST /api/admin/llm-control-tower-sync` append d’abord les modèles hub absents du **Sheet** (`GOOGLE_SHEETS_CONTROL_TOWER_ID` obligatoire), réécrit `Statut LLM`, puis upsert le CSV Drive. L’import (`POST /api/admin/llm-system-cards-import`) lit le **Sheet**, pas le CSV. L’import upsert `llm_system_cards` (Markdown) et **n’écrit pas** les piliers. Runbook : `docs/llm-system-cards.md`. Ne pas dénormaliser sur `compl_ai_models`.
 

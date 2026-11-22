@@ -1,0 +1,32 @@
+---
+description: Contrat d'import et règles métier du benchmark Compar:IA (CSV Etalab 2.0) dans /admin/bench-llms et Supabase
+globs: "**/bench-llms/**, **/comparia/**, **/api/admin/comparia/**"
+alwaysApply: false
+---
+
+# Benchmark Compar:IA — Règles d'Architecture & Contrat de Données
+
+## Source & Endpoint
+- La synchronisation Compar:IA passe **exclusivement** par l'upload manuel (Drag & Drop dans `/admin/bench-llms`) du CSV officiel Etalab 2.0 (`comparia_model-ranking-DD_MM_YYYY-license_Etalab_2_0.csv`), indépendamment de la case « Écrire ».
+- Prévisualisation sans écriture : `POST /api/admin/comparia/preview`.
+- Écriture : `POST /api/admin/comparia/import`.
+- Rapprochement : `GET /api/admin/comparia/reconcile` (liste, compteurs, `suggestionId`). `POST` unitaire `{ action: "match" | "ignore" | "unignore", sourceId, maydaiModelId? }`, ou groupé `{ action: "match-many", links: [{ sourceId, maydaiModelId }] }` et `{ action: "ignore-many", sourceIds }`.
+- `suggestMaydaiModelForComparia` propose **au plus un** candidat déterministe (ordre des mots, suffixes techniques ou dates, `variants`, `short_name`, `long_name`). Deux fiches au même score : pas de suggestion. L'import n'écrit jamais ces suggestions.
+- Ne pas réintroduire de cron ni de lecture Google Drive pour ce flux admin. `createUnclassifiedModel` reste réservé aux autres benchmarks (EcoLogits), jamais à Compar:IA.
+
+## Schéma Supabase & Consolidation
+- **Table source :** `comparia_models` stocke l'intégralité des 17 colonnes du CSV (dont `ranking_class` pour `Class` et la consommation brute en **mWh**).
+- **Pivot & Statut :** Le rapprochement s'appuie sur `llm_model_source_ids` et le statut de lien (`matched`, `unmatched`, `ignored`).
+- **Zéro création automatique :** Ne jamais appeler `createUnclassifiedModel` ni créer de modèle MaydAI lors d'un import Compar:IA. Les inconnus restent dans le tableau **Modèles Compar:IA à rapprocher**.
+- **Suggestions seulement :** `suggestMaydaiModelForComparia` peut pré-remplir le sélecteur (ordre des mots, suffixes, `variants` / `short_name` / `long_name`). Aucune écriture tant que l'admin n'a pas validé, y compris via l'action groupée. Pas de fuzzy matching dans `persistCompariaCatalog`.
+
+## Garde-fous de transformation
+1. **Unité énergétique :** `Consumption mWh (1000 tokens)` reste en `mWh` dans `comparia_models`. Vers la fiche MaydAI (`consumption_wh_per_1k_tokens`), diviser par `1000` uniquement si la cellule est non vide (`N/A` et `""` → `null`) ; ne jamais écraser une valeur existante par `null`.
+2. **Dates `Release` :** Parser les dates JS (`GMT+0100` / `GMT+0200`) en jour calendaire écrit dans la chaîne, sans `Date.parse` (un horaire avant 01:00 reculerait au jour précédent en UTC).
+
+```ts
+// ❌ consumption_wh_per_1k_tokens = null si la cellule Compar:IA est vide
+// ✅ si mWh != null, consumption_wh_per_1k_tokens = mWh / 1000
+// ❌ new Date('Mon Nov 09 2026 01:00:00 GMT+0100')
+// ✅ extraire mois, jour, année → '2026-11-09'
+```

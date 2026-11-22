@@ -49,14 +49,19 @@ Déclarées dans `vercel.json` :
 | LLM Stats | `GET /api/cron/sync-llm-stats` | `0 4 * * 3` (mercredi) | `Authorization: Bearer $CRON_SECRET` |
 | Tour de contrôle | `GET /api/cron/sync-llm-control` | `0 6 * * 3` (mercredi, 07:00 Paris en hiver) | idem |
 | EcoLogits | `GET /api/cron/sync-ecologits` | `0 3 * * *` | idem |
-| Compar:IA Drive | `GET /api/admin/comparia/sync` | `0 2 * * 0` (dimanche) | cron **ou** admin |
+| Compar:IA | Upload admin du CSV Etalab | pas de cron | `verifyAdminAuth` |
 
 System Cards : bouton admin. La tour de contrôle a aussi le cron du mercredi `0 6 * * 3`, deux heures après LLM Stats. Sync = append Sheet + colonnes d’identification + formules d’action + CSV Drive. Elle ne réécrit pas le bloc Suivi du LLM. Runbook : [llm-system-cards.md](./llm-system-cards.md).
 
-Compar:IA accepte aussi `x-cron-secret: $CRON_SECRET` (comparaison `timingSafeEqual`).  
-`GET` = cron only. `POST` = cron **ou** `verifyAdminAuth` (admin). Body optionnel `{ "file_name": "…" }`.
+Compar:IA ne lit plus le Shared Drive. Le bouton violet **Sync Compar:IA** de `/admin/bench-llms` ouvre un dépôt du CSV officiel `comparia_model-ranking-JJ_MM_AAAA-license_Etalab_2_0.csv` :
 
-Durées Vercel : LLM Stats / Control Tower 60 s ; EcoLogits / Compar:IA / import System Cards 300 s.
+1. `POST /api/admin/comparia/preview` analyse le fichier sans écriture (lignes valides, liens, ignorés, inconnus).
+2. `POST /api/admin/comparia/import` upsert `comparia_models` (17 colonnes, conflit sur `source_id`) et journalise `comparia_import_runs`. Aucune fiche `compl_ai_models` n’est créée.
+3. `GET /api/admin/comparia/reconcile` liste les statuts et un `suggestionId` unique éventuel. `POST` associe ou ignore une ligne, ou un lot (`match-many`, `ignore-many`). La suggestion n’est pas écrite à l’import.
+
+La consommation du CSV est en **mWh / 1 000 tokens** (`comparia_models.consumption_mwh_per_1k_tokens`). La colonne consolidée `compl_ai_models.consumption_wh_per_1k_tokens` reçoit la valeur / 1000, et seulement si la cellule n’est pas vide. `comparia_rank` est mis à jour pour les modèles `matched`.
+
+Durées Vercel : LLM Stats / Control Tower 60 s ; EcoLogits / import Compar:IA / import System Cards 300 s.
 
 ### Webhook Drive (Hermes)
 
@@ -65,9 +70,9 @@ Durées Vercel : LLM Stats / Control Tower 60 s ; EcoLogits / Compar:IA / import
 | `folder_name` | Action |
 |---------------|--------|
 | `05_AI_Act_Docs` | Ingestion RAG ([ai-act-rag.md](./ai-act-rag.md)) — ignore `file_name` |
-| autre | Télécharge le CSV nommé `file_name` depuis Drive → `persistCompariaCatalog` |
+| autre | Télécharge le CSV nommé `file_name` depuis Drive → `persistCompariaCatalog` (sans créer de fiche MaydAI) |
 
-CSV Compar:IA attendu : `leaderboard.csv` par défaut (`COMPARIA_DRIVE_FILE_NAME` ou argument). Le script `test-webhook.sh` envoie un exemple `comparia_ranking_*.csv` : adapter le nom au fichier réel du Shared Drive.
+Hors dossier AI Act, le webhook télécharge le CSV nommé `file_name` et appelle `persistCompariaCatalog`. Ce n'est pas le parcours admin.
 
 ### Codepaths
 
@@ -75,7 +80,7 @@ CSV Compar:IA attendu : `leaderboard.csv` par défaut (`COMPARIA_DRIVE_FILE_NAME
 |--------|------------------|--------|
 | LLM Stats | pivot `llm_model_source_ids` | cron + admin `/api/admin/llm-stats-sync-runs` |
 | EcoLogits | `ecologits_model_links` (**pas** le pivot) | cron + `/api/admin/ecologits/sync` + `PUT /api/admin/ecologits/models/[id]/link` |
-| Compar:IA | `comparia_models` + pivot | cron, POST admin, webhook KB |
+| Compar:IA | `comparia_models` (`link_status`) + pivot | upload admin, rapprochement manuel. Drive historique sans cron |
 | COMPL-AI scores | `compl_ai_evaluations` (+ `lifecycle_status` sur la fiche) | CSV admin §7 |
 
 Le cron EcoLogits (`lib/ecologits/sync.ts` → `planExactEcoLogitsLinks`) ne crée un lien `exact` que s’il reste **un** MaydAI libre pour la clé provider+nom, et **refuse** un 2ᵉ EcoLogits sur une fiche déjà liée. Le rattachement de plusieurs alias (dated / latest) se fait à la main (`match_method = 'manual'`). Unique côté EcoLogits : `onConflict: 'ecologits_model_id'`. Unique côté MaydAI : **levée** (`20260919100000_…`).
@@ -88,12 +93,11 @@ System Cards : table séparée `llm_system_cards.model_identifier` = slug. Pas u
 
 | Variable | Usage |
 |----------|--------|
-| `CRON_SECRET` | Tous les crons ; Compar:IA GET refuse si absent |
+| `CRON_SECRET` | Crons LLM Stats, Control Tower, EcoLogits, purges |
 | `LLM_STATS_API_KEY` | Obligatoire pour le cron Stats |
 | `LLM_STATS_BASE_URL` | Défaut `https://api.llm-stats.com/stats` |
 | `ECOLOGITS_BASE_URL` / `ECOLOGITS_API_KEY` | Catalogue + estimations |
-| `COMPARIA_DRIVE_FILE_NAME` | Défaut `leaderboard.csv` |
-| `GOOGLE_DRIVE_*` | Service Account Shared Drive |
+| `GOOGLE_DRIVE_*` | Service Account Shared Drive (System Cards, Control Tower, webhook KB) |
 | `GOOGLE_SHEETS_CONTROL_TOWER_ID` | Sheet Tour de contrôle : **requis** pour `POST /api/admin/llm-control-tower-sync` (append des ids hub absents + write-back `Statut LLM`) et pour l’import System Cards |
 | `GOOGLE_DRIVE_FOLDER_CONTROL_TOWER` | Dossier CSV snapshot (export Control Tower) |
 | `GOOGLE_DRIVE_FOLDER_ID` | Dossier du script de suivi Sheets (§8) — **pas** le dossier Control Tower |
@@ -106,7 +110,7 @@ System Cards : table séparée `llm_system_cards.model_identifier` = slug. Pas u
 3. EcoLogits : `PUT /api/admin/ecologits/models/{ecoId}/link` body `{ "maydaiModelId": "<uuid>" }`. Body sans id → unlink (delete des lignes de cet `ecologits_model_id`). 404 si l’un des deux ids est inconnu.
 4. Ne pas recréer une fiche `compl_ai_models` pour « rattacher » une source orpheline.
 
-Matching Compar:IA automatique (`findCompariaHubLinks`) : id LLM Stats déjà pivoté, puis slug, puis nom.
+Matching Compar:IA à l’import (`planCompariaLinks`) : lien persistant `matched` ou `ignored`, alias explicite, puis égalité stricte du slug / id technique (et de l’id sans préfixe `fournisseur/`). Une normalisation `.` ↔ `-` n’est retenue que si elle vise un seul modèle. Le bouton admin et `POST /api/admin/comparia/reconcile` enregistrent un lien `manual`.
 
 ## 6. Cycle de vie fournisseur
 
