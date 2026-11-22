@@ -269,32 +269,34 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                 providerModels[provider.id]?.some(model => model.id === selectedModel.id)
               )
               return (
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-4">
-                  <div className="flex items-center gap-2 text-blue-800 mb-2">
-                    <Check className="w-4 h-4" />
-                    <span className="text-sm font-medium">Nouveau modèle sélectionné :</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bot className="w-4 h-4 text-blue-600" />
-                      <span className="font-medium text-blue-900">{selectedModel.model_name}</span>
-                      {selectedProvider && (
-                        <span className="text-blue-700">• {selectedProvider.name}</span>
-                      )}
-                      {selectedModel.version && (
-                        <span className="text-blue-600 text-sm">(v{selectedModel.version})</span>
-                      )}
+                <>
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-4">
+                    <div className="flex items-center gap-2 text-blue-800 mb-2">
+                      <Check className="w-4 h-4" />
+                      <span className="text-sm font-medium">Nouveau modèle sélectionné :</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bot className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium text-blue-900">{selectedModel.model_name}</span>
+                        {selectedProvider && (
+                          <span className="text-blue-700">• {selectedProvider.name}</span>
+                        )}
+                        {selectedModel.version && (
+                          <span className="text-blue-600 text-sm">(v{selectedModel.version})</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                {shouldShowEuLicenseAlert({
-                  licenseEuRestricted: selectedModel.license_eu_restricted === true,
-                  organizationCountry,
-                }) && (
-                  <div className="mt-3">
-                    <EuLicenseAlert />
-                  </div>
-                )}
+                  {shouldShowEuLicenseAlert({
+                    licenseEuRestricted: selectedModel.license_eu_restricted === true,
+                    organizationCountry,
+                  }) && (
+                    <div className="mt-3">
+                      <EuLicenseAlert />
+                    </div>
+                  )}
+                </>
               )
             })()}
 
