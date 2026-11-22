@@ -110,6 +110,7 @@ describe('actions humaines', () => {
     ['A6', row({ ficheStatus: 'Erreur : Pas de System Card publiée', importResult: 'Erreur : Pas de System Card publiée' }), "Décider de la suite de l'audit"],
     ['A7', row({ llmStatus: 'Déprécié', declaredUseCases: '2', ficheStatus: 'Manquante' }), "Suivre la migration des cas d'usage"],
     ['A8', row({ taxonomyValidated: 'Oui', ficheStatus: 'Manquante' }), 'Appliquer la taxonomie en base'],
+    ['A9', row({ licenseClass: 'Poids ouverts, licence à qualifier', ficheStatus: 'Manquante' }), 'Faire arbitrer la licence'],
   ])('%s produit une seule action', (_code, input, label) => {
     expect(humanActionsForRow(input)).toBe(label)
   })
@@ -201,6 +202,7 @@ describe('actions humaines', () => {
       "Résultat de l'import",
       'Statut LLM',
       "Cas d'usage déclarés",
+      'Type de modèle',
     ]) {
       expect(formula).toContain(`"${header}"`)
     }
@@ -233,6 +235,26 @@ describe('actions humaines', () => {
     }
     expect(columnIndexToA1(headers.indexOf(HUMAN_ACTION_HEADER))).toBe('Z')
     expect(columnIndexToA1(headers.indexOf('Date de dernière mise à jour (Supabase)'))).toBe('AD')
+  })
+
+  test('le bloc Licence des poids est éditable sans décaler les autres bandes', () => {
+    const headers = [
+      ...SHEET_HEADERS.slice(0, SHEET_HEADERS.indexOf('Validation juridique')),
+      HUMAN_ACTION_HEADER,
+      ...SHEET_HEADERS.slice(SHEET_HEADERS.indexOf('Validation juridique')),
+      'Type de modèle',
+      'Identifiant de la licence',
+      'Source de la licence',
+      'Exclusion UE',
+    ]
+    const bands = humanActionUnprotectedBands(headers)
+    expect(bands.map((item) => unprotectedRangeA1(item, 1141))).toEqual([
+      'H2:L1141',
+      'N2:T1141',
+      'U2:Y1141',
+      'AA2:AC1141',
+      'AE2:AH1141',
+    ])
   })
 
   test('l’onglet et le mode d’emploi calculent par en-tête', () => {

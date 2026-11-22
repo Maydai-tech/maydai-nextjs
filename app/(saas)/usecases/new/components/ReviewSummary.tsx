@@ -1,5 +1,6 @@
 'use client'
 
+import { EuLicenseAlert } from '@/components/EuLicenseAlert'
 import { getDeploymentPhaseLabel } from '@/lib/deployment-status'
 import { isoCodeToFrenchName } from '../lib/countries'
 import { CHAT_STEP_LABELS } from '../types'
@@ -11,6 +12,7 @@ interface ReviewSummaryProps {
   onSubmit: () => void
   submitting: boolean
   error?: string
+  showEuLicenseAlert?: boolean
 }
 
 const REVIEW_FIELDS: { stepId: ChatStepId; getValue: (d: GuidedChatDraft) => string }[] = [
@@ -45,6 +47,7 @@ export default function ReviewSummary({
   onSubmit,
   submitting,
   error,
+  showEuLicenseAlert = false,
 }: ReviewSummaryProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -71,6 +74,12 @@ export default function ReviewSummary({
           )
         })}
       </div>
+
+      {showEuLicenseAlert && (
+        <div className="px-4 py-3 border-t border-amber-100">
+          <EuLicenseAlert />
+        </div>
+      )}
 
       {error && (
         <div className="px-4 py-3 bg-red-50 border-t border-red-100">

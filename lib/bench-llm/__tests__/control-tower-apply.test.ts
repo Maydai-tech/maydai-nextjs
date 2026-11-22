@@ -92,6 +92,7 @@ describe('planControlTowerApply', () => {
         lifecycle_checked_at: '2026-11-16T00:00:00.000Z',
       },
       taxonomie: null,
+      licence: null,
       sheetStatus: null,
     }])
   })
@@ -289,6 +290,95 @@ describe('planControlTowerApply', () => {
 
     expect(plan.modifiedRows.filter((entry) => entry.taxonomie)).toEqual([])
     expect(plan.rejectedValues.map((rejection) => rejection.reason)).toEqual(cases.map((entry) => entry.reason))
+  })
+
+  test('applique la licence des poids sur une ligne Questionnaire, et refuse un libellé inconnu', () => {
+    const headers = [
+      ...LEGACY_HEADERS,
+      'Statut MaydAI',
+      'Type de modèle',
+      'Identifiant de la licence',
+      'Source de la licence',
+      'Exclusion UE',
+    ]
+    const cellsFor = (values: Record<string, string>) => headers.map((header) => values[header] ?? '')
+    const plan = planControlTowerApply({
+      headers,
+      rows: [
+        {
+          sheetRow: 2,
+          cells: cellsFor({
+            'ID Supabase': sonnet,
+            'Statut MaydAI': 'Questionnaire',
+            'Type de modèle': 'Poids ouverts, licence libre',
+            'Identifiant de la licence': 'apache-2.0',
+            'Source de la licence': 'https://www.apache.org/licenses/LICENSE-2.0',
+            'Exclusion UE': 'Oui',
+          }),
+        },
+        {
+          sheetRow: 3,
+          cells: cellsFor({
+            'ID Supabase': base,
+            'Statut MaydAI': 'Questionnaire',
+            'Type de modèle': 'Propriétaire',
+            'Identifiant de la licence': '-',
+            'Source de la licence': '-',
+          }),
+        },
+        {
+          sheetRow: 4,
+          cells: cellsFor({
+            'ID Supabase': other,
+            'Statut MaydAI': 'Catalogue',
+            'Type de modèle': 'Poids ouverts, licence libre',
+          }),
+        },
+        {
+          sheetRow: 5,
+          cells: cellsFor({
+            'ID Supabase': sonnet,
+            'Statut MaydAI': 'Questionnaire',
+            'Source du statut': 'https://example.com/status',
+            'Type de modèle': 'Semi-ouvert',
+          }),
+        },
+      ],
+      models,
+      today: '2026-11-16',
+    })
+
+    expect(plan.modifiedRows.filter((row) => row.licence)).toEqual([
+      expect.objectContaining({
+        sheetRow: 2,
+        modelId: sonnet,
+        licence: {
+          license_class: 'open_free',
+          license_id: 'apache-2.0',
+          license_url: 'https://www.apache.org/licenses/LICENSE-2.0',
+          license_eu_restricted: true,
+        },
+      }),
+      expect.objectContaining({
+        sheetRow: 3,
+        modelId: base,
+        licence: {
+          license_class: 'proprietary',
+          license_id: null,
+          license_url: null,
+          license_eu_restricted: false,
+        },
+      }),
+    ])
+    expect(plan.rejectedValues).toEqual([
+      expect.objectContaining({
+        sheetRow: 5,
+        column: 'Type de modèle',
+        value: 'Semi-ouvert',
+        reason: 'type de modèle inconnu',
+      }),
+    ])
+    expect(plan.modifiedRows.find((row) => row.sheetRow === 5)?.licence).toBeNull()
   })
 
   test('s’arrête si un en-tête attendu manque', () => {

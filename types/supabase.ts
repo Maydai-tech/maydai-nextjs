@@ -55,6 +55,10 @@ export type Database = {
           lifecycle_source_url: string | null
           lifecycle_checked_at: string | null
           visibility_override: boolean | null
+          license_class: string
+          license_id: string | null
+          license_url: string | null
+          license_eu_restricted: boolean
         }
         Insert: {
           id?: string
@@ -97,6 +101,10 @@ export type Database = {
           lifecycle_source_url?: string | null
           lifecycle_checked_at?: string | null
           visibility_override?: boolean | null
+          license_class?: string
+          license_id?: string | null
+          license_url?: string | null
+          license_eu_restricted?: boolean
         }
         Update: {
           id?: string
@@ -139,6 +147,10 @@ export type Database = {
           lifecycle_source_url?: string | null
           lifecycle_checked_at?: string | null
           visibility_override?: boolean | null
+          license_class?: string
+          license_id?: string | null
+          license_url?: string | null
+          license_eu_restricted?: boolean
         }
       }
 

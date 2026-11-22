@@ -80,6 +80,11 @@ export const HUMAN_ACTION_RULES = [
     label: 'Appliquer la taxonomie en base',
     condition: '« Taxonomie validée » vaut Oui : validée, pas encore appliquée par le bouton.',
   },
+  {
+    code: 'A9',
+    label: 'Faire arbitrer la licence',
+    condition: '« Licence des poids · Type de modèle » vaut « Poids ouverts, licence à qualifier ». Une cellule vide n’allume pas l’action.',
+  },
 ] as const
 
 export const JOURNAL_REMINDER = 'Consulter l’onglet « Journal veille » pour les lignes « à vérifier ».'
@@ -95,6 +100,7 @@ export type HumanActionInput = {
   importResult: string
   llmStatus: string
   declaredUseCases: string
+  licenseClass?: string
 }
 
 type UnprotectedBand = {
@@ -160,6 +166,9 @@ export function humanActionsForRow(input: HumanActionInput): string {
     labels.push(HUMAN_ACTION_RULES[6].label)
   }
   if (isOui(input.taxonomyValidated)) labels.push(HUMAN_ACTION_RULES[7].label)
+  if (clean(input.licenseClass ?? '') === 'Poids ouverts, licence à qualifier') {
+    labels.push(HUMAN_ACTION_RULES[8].label)
+  }
   return labels.join(HUMAN_ACTION_SEPARATOR)
 }
 
@@ -190,7 +199,8 @@ export function humanActionFormula(rowSpan = HUMAN_ACTION_ROW_SPAN): string {
     `IF(AND(questionnaire, REGEXMATCH(result, "(?i)^(erreur|échec)"), NOT(REGEXMATCH(result, "(?i)^erreur : pas de system card publiée"))), "${labels[4]}", ""),`,
     `IF(AND(questionnaire, REGEXMATCH(fiche, "^Erreur :")), "${labels[5]}", ""),`,
     `IF(AND(questionnaire, OR(text("Statut LLM")="Déprécié", text("Statut LLM")="Retiré"), IF(ISNUMBER(value("Cas d'usage déclarés")), value("Cas d'usage déclarés"), IFERROR(value("Cas d'usage déclarés")*1, 0))>0), "${labels[6]}", ""),`,
-    `IF(AND(questionnaire, is_oui("Taxonomie validée")), "${labels[7]}", "")`,
+    `IF(AND(questionnaire, is_oui("Taxonomie validée")), "${labels[7]}", ""),`,
+    `IF(AND(questionnaire, text("Type de modèle")="Poids ouverts, licence à qualifier"), "${labels[8]}", "")`,
     '))',
   ].join('')
 }
@@ -266,12 +276,19 @@ function band(headers: readonly string[], startName: string, endName: string, la
 
 /** Colonnes humaines éditables, retrouvées par en-tête. La date Supabase et l'action calculée restent protégées. */
 export function humanActionUnprotectedBands(headers: readonly string[]): UnprotectedBand[] {
-  return [
+  const bands = [
     band(headers, 'Type de ligne', 'Modèle de base (ID)', 'Classement'),
     band(headers, 'Statut LLM', 'Dernière vérification', 'Suivi du LLM'),
     band(headers, 'Statut Fiche Technique', 'Lien du fichier Markdown généré', 'Fiche AI Act'),
     band(headers, 'Validation juridique', "Résultat de l'import", 'Contrôle et import'),
   ]
+  if (
+    findControlTowerHeader(headers, 'Type de modèle') >= 0
+    && findControlTowerHeader(headers, 'Exclusion UE') >= 0
+  ) {
+    bands.push(band(headers, 'Type de modèle', 'Exclusion UE', 'Licence des poids'))
+  }
+  return bands
 }
 
 export function unprotectedRangeA1(bandRange: UnprotectedBand, endRow: number): string {

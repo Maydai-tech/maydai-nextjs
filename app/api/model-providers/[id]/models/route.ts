@@ -46,7 +46,7 @@ export async function GET(
     }
 
     const query = new URL(request.url).searchParams.get('q')?.trim() ?? ''
-    const modelSelect = 'id, model_name, model_type, version, notes_short, notes_long, variants, launch_date, reference_model_id, merged_into_id'
+    const modelSelect = 'id, model_name, model_type, version, notes_short, notes_long, variants, launch_date, reference_model_id, merged_into_id, lifecycle_status, license_class, license_eu_restricted'
     const { data: visibleModels, error: modelsError } = await supabase
       .from('compl_ai_models_visible')
       .select(modelSelect)
