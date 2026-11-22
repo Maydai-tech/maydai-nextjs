@@ -72,6 +72,7 @@ function databasePatch(row: ModifiedControlTowerRow): Record<string, unknown> {
   return {
     ...(row.veille ?? {}),
     ...(row.taxonomie ?? {}),
+    ...(row.licence ?? {}),
   }
 }
 

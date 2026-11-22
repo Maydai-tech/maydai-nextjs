@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { Send, HelpCircle } from 'lucide-react'
 import ModelTooltip from '@/components/ModelTooltip'
+import { EuLicenseAlert } from '@/components/EuLicenseAlert'
+import { shouldShowEuLicenseAlert } from '@/lib/eu-license-alert'
+import { retiredPublishedWeightsLabel } from '@/lib/bench-llm/model-visibility'
 import type { ModelOption } from '../../../types'
 
 interface ModelSelectStepProps {
@@ -13,6 +16,7 @@ interface ModelSelectStepProps {
   partnerName: string
   loading?: boolean
   error?: string
+  organizationCountry?: string | null
 }
 
 export default function ModelSelectStep({
@@ -23,6 +27,7 @@ export default function ModelSelectStep({
   partnerName,
   loading,
   error,
+  organizationCountry = null,
 }: ModelSelectStepProps) {
   const [customValue, setCustomValue] = useState(value || '')
 
@@ -145,6 +150,11 @@ export default function ModelSelectStep({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-900">{model.model_name}</span>
+                  {retiredPublishedWeightsLabel(model.lifecycle_status) && (
+                    <span className="text-xs font-medium text-amber-800">
+                      {retiredPublishedWeightsLabel(model.lifecycle_status)}
+                    </span>
+                  )}
                   <ModelTooltip
                     notesShort={model.notes_short}
                     notesLong={model.notes_long}
@@ -161,6 +171,10 @@ export default function ModelSelectStep({
           )
         })}
       </div>
+      {shouldShowEuLicenseAlert({
+        licenseEuRestricted: sortedModels.some((model) => model.model_name === value && model.license_eu_restricted === true),
+        organizationCountry,
+      }) && <EuLicenseAlert />}
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   )

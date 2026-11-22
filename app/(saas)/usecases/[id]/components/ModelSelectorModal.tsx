@@ -3,8 +3,11 @@ import { ComplAIModel } from '@/lib/supabase'
 import { useApiCall } from '@/lib/api-client-legacy'
 import { Bot, X, Search, Check } from 'lucide-react'
 import ComplAiScoreBadge from './ComplAiScoreBadge'
+import { EuLicenseAlert } from '@/components/EuLicenseAlert'
+import { shouldShowEuLicenseAlert } from '@/lib/eu-license-alert'
+import { retiredPublishedWeightsLabel } from '@/lib/bench-llm/model-visibility'
 
-type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
+type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at' | 'lifecycle_status' | 'license_eu_restricted'>>
 
 interface ModelProvider {
   id: number
@@ -17,6 +20,7 @@ interface ModelSelectorModalProps {
   currentModel?: PartialComplAIModel | null
   onSave: (model: PartialComplAIModel | null) => Promise<void>
   saving?: boolean
+  organizationCountry?: string | null
 }
 
 export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
@@ -24,7 +28,8 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   onClose,
   currentModel,
   onSave,
-  saving = false
+  saving = false,
+  organizationCountry = null,
 }) => {
   const [selectedModel, setSelectedModel] = useState<PartialComplAIModel | null>(currentModel || null)
   const [providers, setProviders] = useState<ModelProvider[]>([])
@@ -219,6 +224,11 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                                   <span className="font-semibold text-gray-900">
                                     {model.model_name}
                                   </span>
+                                  {retiredPublishedWeightsLabel(model.lifecycle_status) && (
+                                    <span className="text-xs font-medium text-amber-800">
+                                      {retiredPublishedWeightsLabel(model.lifecycle_status)}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
                                   <span>{provider.name}</span>
@@ -277,6 +287,14 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                     </div>
                   </div>
                 </div>
+                {shouldShowEuLicenseAlert({
+                  licenseEuRestricted: selectedModel.license_eu_restricted === true,
+                  organizationCountry,
+                }) && (
+                  <div className="mt-3">
+                    <EuLicenseAlert />
+                  </div>
+                )}
               )
             })()}
 

@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ComplAIModel } from '@/lib/supabase'
 import { visibleModelsForQuery } from '@/lib/bench-llm/model-lineage'
+import { retiredPublishedWeightsLabel } from '@/lib/bench-llm/model-visibility'
+import { EuLicenseAlert } from '@/components/EuLicenseAlert'
+import { shouldShowEuLicenseAlert } from '@/lib/eu-license-alert'
 import { Bot, Search, X, ChevronDown } from 'lucide-react'
 
 interface ModelSelectorProps {
@@ -10,6 +13,7 @@ interface ModelSelectorProps {
   placeholder?: string
   className?: string
   disabled?: boolean
+  organizationCountry?: string | null
 }
 
 export const ModelSelector: React.FC<ModelSelectorProps> = ({
@@ -17,7 +21,8 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   onChange,
   placeholder = "Sélectionner un modèle...",
   className = '',
-  disabled = false
+  disabled = false,
+  organizationCountry = null,
 }) => {
   const [models, setModels] = useState<ComplAIModel[]>([])
   const [variants, setVariants] = useState<Array<{ id: string; model_name: string; reference_model_id: string | null; merged_into_id: string | null }>>([])
@@ -219,6 +224,11 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                           <div className="font-medium text-gray-900">
                             {model.model_name}
                           </div>
+                          {retiredPublishedWeightsLabel(model.lifecycle_status) && (
+                            <div className="text-xs font-medium text-amber-800">
+                              {retiredPublishedWeightsLabel(model.lifecycle_status)}
+                            </div>
+                          )}
                           {model.version && (
                             <div className="text-xs text-gray-500">
                               Version: {model.version}
@@ -237,6 +247,14 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
               ))
             )}
           </div>
+        </div>
+      )}
+      {shouldShowEuLicenseAlert({
+        licenseEuRestricted: selectedModel?.license_eu_restricted === true,
+        organizationCountry,
+      }) && (
+        <div className="mt-2">
+          <EuLicenseAlert />
         </div>
       )}
     </div>

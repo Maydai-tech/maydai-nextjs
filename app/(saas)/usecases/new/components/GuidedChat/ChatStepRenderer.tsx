@@ -28,6 +28,7 @@ interface ChatStepRendererProps {
   onSelectAndAdvance: (field: keyof GuidedChatDraft, value: string) => void
   onPartnerSelect: (name: string, id?: number) => void
   onModelSelect: (name: string, id?: string) => void
+  organizationCountry?: string | null
   onCountriesChange: (countries: string[]) => void
   onGenerateDescription?: () => void
 }
@@ -51,6 +52,7 @@ export default function ChatStepRenderer({
   onSelectAndAdvance,
   onPartnerSelect,
   onModelSelect,
+  organizationCountry = null,
   onCountriesChange,
   onGenerateDescription,
 }: ChatStepRendererProps) {
@@ -112,6 +114,7 @@ export default function ChatStepRenderer({
           partnerName={draft.technology_partner}
           loading={loadingModels}
           error={error}
+          organizationCountry={organizationCountry}
         />
       )
 

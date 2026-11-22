@@ -20,6 +20,7 @@ import type { ChatStepId, GuidedChatDraft } from '../../types'
 import ChatMessage from './ChatMessage'
 import ChatStepRenderer from './ChatStepRenderer'
 import ReviewSummary from '../ReviewSummary'
+import { shouldShowEuLicenseAlert } from '@/lib/eu-license-alert'
 
 interface GuidedChatProps {
   companyId: string
@@ -369,6 +370,12 @@ export default function GuidedChat({ companyId, company }: GuidedChatProps) {
           onSubmit={handleSubmitUseCase}
           submitting={submitting}
           error={submitError || stepError}
+          showEuLicenseAlert={shouldShowEuLicenseAlert({
+            licenseEuRestricted: modelProviders.availableModels.some((model) => (
+              model.id === state.draft.primary_model_id && model.license_eu_restricted === true
+            )),
+            organizationCountry: company.country,
+          })}
         />
       ) : (
         <div className="flex min-h-[28rem] flex-col sm:min-h-[32rem]">
@@ -399,6 +406,7 @@ export default function GuidedChat({ companyId, company }: GuidedChatProps) {
               onSelectAndAdvance={handleSelectAndAdvance}
               onPartnerSelect={handlePartnerSelect}
               onModelSelect={handleModelSelect}
+              organizationCountry={company.country}
               onCountriesChange={handleCountriesChange}
               onGenerateDescription={handleGenerateDescription}
             />

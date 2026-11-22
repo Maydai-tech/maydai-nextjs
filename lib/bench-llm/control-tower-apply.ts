@@ -13,6 +13,11 @@ import {
   type LineKind,
 } from '@/lib/bench-llm/control-tower-taxonomy'
 import { type ControlTowerRole } from '@/lib/bench-llm/control-tower-roles'
+import {
+  blankLicenseText,
+  licenseClassFromLabel,
+  type LicenseClass,
+} from '@/lib/bench-llm/license-class'
 
 export type { ControlTowerRole }
 
@@ -54,11 +59,19 @@ export type TaxonomyPatch = {
   base_model_id: string | null
 }
 
+export type LicensePatch = {
+  license_class: LicenseClass
+  license_id: string | null
+  license_url: string | null
+  license_eu_restricted: boolean
+}
+
 export type ModifiedControlTowerRow = {
   sheetRow: number
   modelId: string
   veille: VeillePatch | null
   taxonomie: TaxonomyPatch | null
+  licence: LicensePatch | null
   sheetStatus: string | null
 }
 
@@ -180,6 +193,10 @@ function requireGroupName(group: ControlTowerHeaderGroup): string {
     ready: 'Prêt pour import',
     importResult: "Résultat de l'import",
     updatedAt: 'Date de dernière mise à jour (Supabase)',
+    licenseClass: 'Type de modèle',
+    licenseId: 'Identifiant de la licence',
+    licenseUrl: 'Source de la licence',
+    licenseEu: 'Exclusion UE',
   } as const
   return names[group]
 }
@@ -197,6 +214,52 @@ type TaxonomyDraft = {
   modelId: string
   modelName: string
   patch: TaxonomyPatch
+}
+
+function readLicensePatch(
+  headers: readonly string[],
+  row: readonly unknown[],
+  sheetRow: number,
+  modelId: string,
+): { patch: LicensePatch | null; rejections: RejectedControlTowerValue[] } {
+  const label = readGroup(headers, row, 'licenseClass')
+  const parsed = licenseClassFromLabel(label)
+  if (parsed === 'empty') return { patch: null, rejections: [] }
+  if (parsed === 'invalid') {
+    return {
+      patch: null,
+      rejections: [{
+        sheetRow,
+        modelId,
+        column: groupLabel('licenseClass'),
+        value: label,
+        reason: 'type de modèle inconnu',
+      }],
+    }
+  }
+  const exclusion = readGroup(headers, row, 'licenseEu')
+  const foldedExclusion = fold(exclusion)
+  if (exclusion && foldedExclusion !== 'oui') {
+    return {
+      patch: null,
+      rejections: [{
+        sheetRow,
+        modelId,
+        column: groupLabel('licenseEu'),
+        value: exclusion,
+        reason: 'exclusion UE inconnue',
+      }],
+    }
+  }
+  return {
+    patch: {
+      license_class: parsed,
+      license_id: blankLicenseText(readGroup(headers, row, 'licenseId')),
+      license_url: blankLicenseText(readGroup(headers, row, 'licenseUrl')),
+      license_eu_restricted: foldedExclusion === 'oui',
+    },
+    rejections: [],
+  }
 }
 
 function readTaxonomyRole(
@@ -268,7 +331,9 @@ export function planControlTowerApply(input: {
     const taxonomyMark = fold(readGroup(headers, row, 'taxonomyValidated'))
     const wantsVeille = sourceUrl.length > 0
     const wantsTaxonomy = taxonomyMark === 'oui'
-    if (!wantsVeille && !wantsTaxonomy) continue
+    const wantsLicense = findControlTowerGroup(headers, 'licenseClass') >= 0
+      && fold(readGroup(headers, row, 'statutMaydai')) === 'questionnaire'
+    if (!wantsVeille && !wantsTaxonomy && !wantsLicense) continue
 
     const model = UUID_PATTERN.test(rawId) ? byId.get(rawId.toLowerCase()) : undefined
     if (!model) {
@@ -383,12 +448,20 @@ export function planControlTowerApply(input: {
       }
     }
 
-    if (veille) {
+    let licence: LicensePatch | null = null
+    if (wantsLicense) {
+      const parsedLicense = readLicensePatch(headers, row, source.sheetRow, model.id)
+      rejectedValues.push(...parsedLicense.rejections)
+      licence = parsedLicense.patch
+    }
+
+    if (veille || licence) {
       modifiedRows.push({
         sheetRow: source.sheetRow,
         modelId: model.id,
         veille,
         taxonomie: null,
+        licence,
         sheetStatus: null,
       })
     }
@@ -452,6 +525,7 @@ export function planControlTowerApply(input: {
         modelId: draft.modelId,
         veille: null,
         taxonomie: draft.patch,
+        licence: null,
         sheetStatus,
       })
     }

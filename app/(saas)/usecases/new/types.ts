@@ -70,6 +70,9 @@ export interface ModelOption {
   notes_long?: string
   variants?: string[]
   launch_date?: string
+  lifecycle_status?: string | null
+  license_class?: string | null
+  license_eu_restricted?: boolean | null
 }
 
 // --- State UI du mode chat ---

@@ -67,6 +67,9 @@ export interface UseCase {
     model_provider: string
     model_type?: string
     version?: string
+    lifecycle_status?: string | null
+    license_class?: string | null
+    license_eu_restricted?: boolean | null
   }
 }
 

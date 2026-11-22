@@ -30,6 +30,10 @@ export const CONTROL_TOWER_HEADER_GROUPS = {
   ready: ['Prêt pour import'],
   importResult: ["Résultat de l'import", 'Statut Supabase'],
   updatedAt: ['Date de dernière mise à jour (Supabase)'],
+  licenseClass: ['Type de modèle'],
+  licenseId: ['Identifiant de la licence'],
+  licenseUrl: ['Source de la licence'],
+  licenseEu: ['Exclusion UE'],
 } as const
 
 export type ControlTowerHeaderGroup = keyof typeof CONTROL_TOWER_HEADER_GROUPS
