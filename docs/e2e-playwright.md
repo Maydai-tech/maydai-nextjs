@@ -1,6 +1,6 @@
 # Tests E2E Playwright
 
-Comment lancer, ce que CI fait vraiment, et les pièges (base partagée, mots de passe, rapports). Vérifié contre `playwright.config.ts`, `e2e/auth-helper.ts` et `.github/workflows/e2e-reusable.yml`.
+Comment lancer, ce que CI fait vraiment, et les pièges (base partagée, mots de passe, rapports, runtime Node). Vérifié contre `playwright.config.ts`, `e2e/auth-helper.ts`, `.github/workflows/e2e-reusable.yml`, `.nvmrc` et `package.json` `engines`.
 
 Le plan historique `docs/superpowers/plans/2026-05-29-e2e-test-workflow-redesign.md` décrit encore un déploiement HTML sur OVH : **ne plus le suivre**.
 
@@ -23,7 +23,9 @@ Minimum : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE
 
 ## 3. CI (workflow réutilisable)
 
-`.github/workflows/e2e-reusable.yml` — `pnpm exec playwright test`, 2 workers, 2 retries, `failOnFlakyTests`.
+`.github/workflows/e2e-reusable.yml` — Node **24** (`actions/setup-node` `node-version: '24'`), `pnpm exec playwright test`, 2 workers, 2 retries, `failOnFlakyTests`.
+
+Aligné sur `.nvmrc` (`24`) et `package.json` `"engines": { "node": "24.x" }`. Le plan historique `docs/superpowers/plans/2026-05-29-e2e-test-workflow-redesign.md` cite encore Node 22 : **ne plus le suivre**.
 
 Secrets : URL / anon / service role Supabase, plus `OPENAI_API_KEY` et `STRIPE_SECRET_KEY` si les specs les touchent.
 
@@ -49,7 +51,9 @@ Le workflow le rappelle : la base Supabase préprod **est** la prod. Les specs i
 
 - **Base unique.** Un test qui oublie le teardown laisse des entreprises / cas d’usage en prod. Toujours identifier `@maydai-test.com`.
 - **Mot de passe unique.** Ne pas extraire une constante partagée entre fichiers.
+- **Node 24.** CI et `engines` pinent `24.x`. Un runner local en 22 peut passer Playwright et échouer plus tard sur une API Node 24-only. Utiliser `.nvmrc`.
 - **`e2e/old/`** n’est pas exécuté. Le modifier ne change pas CI.
 - **Rapport HTML public = régression.** Le lire via l’artifact GitHub (ou `playwright-report/` en local).
 - Notion : toute **création / modification / suppression** de spec Playwright doit mettre à jour la doc tests Notion (règle projet) — ce runbook repo ne remplace pas cette page.
 - **Landings partenaires.** `e2e/auth/signup.spec.ts` (`@prod`) teste `POST /api/auth/complete-signup` (payload minimal / complet). Aucune spec ne charge `/p/learning-gate` ni le merge UTM partenaire. Runbook : [signup-partner-landings.md](./signup-partner-landings.md).
+- **Formulaire contact.** Aucune spec Playwright sur `/contact` ni Turnstile. Runbook : [contact-form-security.md](./contact-form-security.md).

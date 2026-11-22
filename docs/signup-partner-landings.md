@@ -74,7 +74,9 @@ Les CTA vitrine (`lib/signup-utm-hrefs.ts`) pointent vers `/signup?utm_source=ma
 
 `CompleteSignupSchema` : **tous** les champs optionnels. Le commentaire JSDoc de la route (phone required, etc.) est **périmé**. L’UI exige prénom / nom / e-mail / entreprise / secteur / CGU ; l’API accepte un payload minimal (E2E `e2e/auth/signup.spec.ts`).
 
-`complete-signup` écrit aussi `gclid` / `utm_*` sur `profiles` (tronqués à 512 caractères). Un champ acquisition **absent** du JSON devient `null` dans l’upsert — un second appel partiel peut effacer une attribution déjà stockée.
+`complete-signup` fusionne le payload avec la ligne `profiles` existante (`mergeCompleteSignupProfile`). Un champ **absent** du JSON est **conservé** (SIREN, téléphone, `gclid` / `utm_*`). Un champ **présent** (y compris `null` ou chaîne vide après sanitization) écrase. `gclid` / `utm_*` sont tronqués à 512 caractères.
+
+Un second OTP sur un compte déjà créé n’efface plus SIREN / téléphone : c’était le bug d’upsert total (`#451`). Pour **effacer** volontairement, envoyer la clé à `null` / `""`.
 
 `?plan=` valide → `auth.updateUser({ data: { signup_plan_intent } })` (non bloquant). **Aucun lecteur** in-repo de `signup_plan_intent` au moment de cette page.
 
@@ -94,5 +96,6 @@ Pas de layout dédié sous `(saas)/p/` : le layout SaaS monte déjà `Attributio
 
 - **Pas un autre tunnel de facturation.** Copy « Freemium » ≠ écriture d’un plan. Stripe checkout reste le seul chemin payant (`docs/api-auth-security.md`).
 - **UTM URL > UTM partenaire.** Un visiteur déjà tagué ads / vitrine garde sa source ; Learning Gate ne fait que combler les trous.
+- **Merge, pas upsert total.** Omettre `phone` / `siren` / `gclid` dans le JSON **préserve** la valeur en base. Envoyer `""` les met à `null`. Le JSDoc de la route (champs required) est **périmé**.
 - **`check-email` énumère les comptes.** Endpoint public ; `getUserByEmail` parcourt `listUsers` page par page (coût qui croît avec `auth.users`).
 - **Pas de spec UI partenaire.** Playwright couvre `POST /api/auth/complete-signup`, pas `/p/learning-gate`.
