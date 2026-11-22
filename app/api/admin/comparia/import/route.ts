@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { verifyAdminAuth } from '@/lib/admin-auth'
 import { persistCompariaCatalog } from '@/lib/comparia/catalog-sync'
-import { parseCompariaCsv } from '@/lib/comparia/import'
+import { parseCompariaEtalabCsv } from '@/lib/comparia/import'
+import { readCompariaCsvUpload } from '@/lib/comparia/upload'
 import { createEcoLogitsServiceClient } from '@/lib/ecologits/sync'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024
 
 export async function POST(request: NextRequest) {
   const auth = await verifyAdminAuth(request)
@@ -17,27 +16,25 @@ export async function POST(request: NextRequest) {
   const supabase = createEcoLogitsServiceClient()
 
   try {
-    const formData = await request.formData()
-    const file = formData.get('file')
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: 'Fichier CSV Compar:IA manquant.' }, { status: 400 })
-    }
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      return NextResponse.json({ error: 'Le fichier doit être au format CSV.' }, { status: 400 })
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: 'Le fichier CSV dépasse la limite de 5 Mo.' }, { status: 413 })
+    const upload = await readCompariaCsvUpload(request)
+    if (!upload.ok) {
+      return NextResponse.json({ error: upload.error }, { status: upload.status })
     }
 
-    const rows = parseCompariaCsv(await file.text())
+    const rows = parseCompariaEtalabCsv(upload.csv)
     const result = await persistCompariaCatalog(supabase, {
       rows,
-      fileName: file.name,
+      fileName: upload.fileName,
     })
 
     return NextResponse.json({
       success: true,
+      message: `${result.rowsImported} modèle(s) importés. ${result.matchedCount} mis à jour, ${result.ignoredCount} ignoré(s), ${result.unmatchedCount} à rapprocher.`,
       rowsImported: result.rowsImported,
+      matchedCount: result.matchedCount,
+      ignoredCount: result.ignoredCount,
+      unmatchedCount: result.unmatchedCount,
+      rankingDate: result.rankingDate,
       exactLinksCreated: result.exactLinksCreated,
       modelsDeactivated: result.modelsDeactivated,
     })

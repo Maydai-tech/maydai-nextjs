@@ -30,8 +30,14 @@
     "app/api/admin/ecologits/sync/route.ts": {
       "maxDuration": 300
     },
-    "app/api/admin/comparia/sync/route.ts": {
+    "app/api/admin/comparia/import/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/admin/comparia/preview/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/admin/comparia/reconcile/route.ts": {
+      "maxDuration": 60
     },
     "app/api/**/*.js": {
       "maxDuration": 30
@@ -53,10 +59,6 @@
     {
       "path": "/api/cron/sync-ecologits",
       "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/admin/comparia/sync",
-      "schedule": "0 2 * * 0"
     }
   ],
   "headers": [

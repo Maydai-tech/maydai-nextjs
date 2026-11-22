@@ -19,7 +19,7 @@ jest.mock('@/lib/bench-llm/system-cards-import', () => ({
 }))
 
 jest.mock('@supabase/supabase-js', () => ({
-  createClient: (...args: unknown[]) => mockCreateClient(...args),
+  createClient: () => mockCreateClient(),
 }))
 
 import { NextRequest } from 'next/server'

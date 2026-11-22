@@ -22,6 +22,7 @@ import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, us
 
 import Toast from '@/components/Toast'
 import { useAuth } from '@/lib/auth'
+import { CompariaReconcileSection, CompariaSyncDialog } from './CompariaSyncPanel'
 import type {
   BenchFilterableSourceKey,
   BenchLifecycleFilter,
@@ -663,6 +664,10 @@ export default function BenchLlmsAdminPage() {
   const [importMode, setImportMode] = useState<'create' | 'update'>('update')
   const [writePillars, setWritePillars] = useState(false)
   const [replaceSeededPillars, setReplaceSeededPillars] = useState(false)
+  const [compariaOpen, setCompariaOpen] = useState(false)
+  const [compariaRefresh, setCompariaRefresh] = useState(0)
+  const [unmatchedComparia, setUnmatchedComparia] = useState(0)
+  const reportUnmatchedComparia = useCallback((count: number) => setUnmatchedComparia(count), [])
   const [createForm, setCreateForm] = useState({ model_name: '', model_provider: '', model_type: 'large-language-model', version: '' })
   const pageSize = 5000
 
@@ -734,6 +739,11 @@ export default function BenchLlmsAdminPage() {
       setLoading(false)
     }
   }, [availability, deferredSearch, getAccessToken, lifecycleStatus, page, provider, source])
+
+  const refreshComparia = useCallback(() => {
+    setCompariaRefresh((value) => value + 1)
+    void fetchModels()
+  }, [fetchModels])
 
   useEffect(() => void fetchModels(), [fetchModels])
   useEffect(() => setPage(1), [availability, deferredSearch, lifecycleStatus, provider, source])
@@ -1027,7 +1037,10 @@ export default function BenchLlmsAdminPage() {
             Remplacer claude-sonnet-4-5
           </label>
           <button onClick={() => callAction('Synchronisation EcoLogits', '/api/admin/ecologits/sync')} disabled={action != null} className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white"><Leaf className="h-4 w-4" /> Sync EcoLogits</button>
-          <button onClick={() => callAction('Synchronisation Compar:IA', '/api/admin/comparia/sync')} disabled={action != null} className="rounded-md bg-violet-700 px-3 py-2 text-sm font-medium text-white">Sync Compar:IA</button>
+          <button type="button" onClick={() => setCompariaOpen(true)} disabled={action != null} className="rounded-md bg-violet-700 px-3 py-2 text-sm font-medium text-white">
+            Sync Compar:IA
+            {unmatchedComparia > 0 ? <span className="ml-2 rounded-full bg-white/20 px-1.5 py-0.5 text-xs">{unmatchedComparia}</span> : null}
+          </button>
           <button onClick={() => callAction('Synchronisation COMPL-AI', '/api/admin/compl-ai/sync')} disabled={action != null} className="rounded-md bg-indigo-700 px-3 py-2 text-sm font-medium text-white">Sync COMPL-AI</button>
           <button onClick={() => callAction('Recalcul MaydAI', '/api/admin/compl-ai/recalculate-maydai-scores')} disabled={action != null} className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium">Recalcul MaydAI</button>
           <button onClick={exportCsv} disabled={action != null} className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium"><Download className="h-4 w-4" /> CSV</button>
@@ -1103,6 +1116,14 @@ export default function BenchLlmsAdminPage() {
           })}
         </div>
       </section>
+
+      <CompariaReconcileSection
+        getAccessToken={getAccessToken}
+        refreshToken={compariaRefresh}
+        disabled={action != null}
+        onUnmatchedCount={reportUnmatchedComparia}
+        onChanged={refreshComparia}
+      />
 
       {action ? <div className="mb-4 flex items-center gap-2 rounded-md bg-sky-50 p-3 text-sm text-sky-800"><Loader2 className="h-4 w-4 animate-spin" /> {action}…</div> : null}
       {error ? <div className="mb-4 flex items-start gap-2 rounded-md bg-red-50 p-3 text-sm text-red-800"><AlertTriangle className="mt-0.5 h-4 w-4" /> {error}</div> : null}
@@ -1298,6 +1319,15 @@ export default function BenchLlmsAdminPage() {
           onDeleted={() => void fetchModels()}
         />
       ) : null}
+
+      <CompariaSyncDialog
+        open={compariaOpen}
+        busy={action != null}
+        getAccessToken={getAccessToken}
+        onClose={() => { if (action == null) setCompariaOpen(false) }}
+        onBusy={setAction}
+        onImported={refreshComparia}
+      />
 
       <Toast
         message={toast?.message ?? ''}
