@@ -54,6 +54,7 @@ export type Database = {
           replacement_model_id: string | null
           lifecycle_source_url: string | null
           lifecycle_checked_at: string | null
+          lifecycle_status: string | null
           visibility_override: boolean | null
           license_class: string
           license_id: string | null
@@ -100,6 +101,7 @@ export type Database = {
           replacement_model_id?: string | null
           lifecycle_source_url?: string | null
           lifecycle_checked_at?: string | null
+          lifecycle_status?: string | null
           visibility_override?: boolean | null
           license_class?: string
           license_id?: string | null
@@ -146,6 +148,7 @@ export type Database = {
           replacement_model_id?: string | null
           lifecycle_source_url?: string | null
           lifecycle_checked_at?: string | null
+          lifecycle_status?: string | null
           visibility_override?: boolean | null
           license_class?: string
           license_id?: string | null

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import type { AliasRecord } from '@/lib/bench-llm/model-lineage'
+import { omitVeilleColumns } from '@/lib/bench-llm/veille-columns'
 import {
   compariaConsumptionToWhPer1k,
   compariaRankingDateFromFileName,
@@ -58,7 +59,7 @@ function hubUpdate(
   }
   const wh = compariaConsumptionToWhPer1k(consumptionMwh)
   if (wh != null) update.consumption_wh_per_1k_tokens = wh
-  return update
+  return omitVeilleColumns(update)
 }
 
 async function loadCompariaCatalogContext(supabase: SupabaseClient) {

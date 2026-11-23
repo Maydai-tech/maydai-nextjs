@@ -18,6 +18,7 @@ import {
   licenseClassFromLabel,
   type LicenseClass,
 } from '@/lib/bench-llm/license-class'
+import { isModelProposedToUser } from '@/lib/bench-llm/model-visibility'
 
 export type { ControlTowerRole }
 
@@ -29,6 +30,15 @@ const LIFECYCLE_BY_LABEL: Record<string, 'active' | 'legacy' | 'deprecated' | 'r
   deprecated: 'deprecated',
   retire: 'retired',
   retired: 'retired',
+}
+
+export type SheetLifecycleStatus = 'active' | 'legacy' | 'deprecated' | 'retired'
+
+/** Actif, Legacy, Déprécié, Retiré. Vide → null. Libellé inconnu → invalid. */
+export function lifecycleStatusFromSheetLabel(label: string): SheetLifecycleStatus | null | 'invalid' {
+  const folded = fold(label)
+  if (!folded) return null
+  return LIFECYCLE_BY_LABEL[folded] ?? 'invalid'
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -351,8 +361,8 @@ export function planControlTowerApply(input: {
     if (wantsVeille) {
       const rejections: RejectedControlTowerValue[] = []
       const statusText = readGroup(headers, row, 'llmStatus')
-      const status = statusText ? LIFECYCLE_BY_LABEL[fold(statusText)] : null
-      if (statusText && !status) {
+      const status = lifecycleStatusFromSheetLabel(statusText)
+      if (status === 'invalid') {
         rejections.push({
           sheetRow: source.sheetRow,
           modelId: model.id,
@@ -392,9 +402,8 @@ export function planControlTowerApply(input: {
         })
       }
       rejectedValues.push(...rejections)
-      const rejectedColumns = new Set(rejections.map((rejection) => rejection.column))
       veille = { lifecycle_source_url: sourceUrl }
-      if (!rejectedColumns.has(groupLabel('llmStatus'))) veille.lifecycle_status = status
+      if (status && status !== 'invalid') veille.lifecycle_status = status
       if (launchDate !== 'invalid') veille.launch_date = launchDate
       if (deprecationDate !== 'invalid') veille.deprecation_date = deprecationDate
       if (retirementDate !== 'invalid') veille.retirement_date = retirementDate
@@ -533,4 +542,73 @@ export function planControlTowerApply(input: {
 
   modifiedRows.sort((a, b) => a.sheetRow - b.sheetRow)
   return { modifiedRows, rejectedValues }
+}
+
+/** Objet envoyé à compl_ai_models. Le statut reconnu est toujours inclus. */
+export function controlTowerDatabasePatch(row: ModifiedControlTowerRow): Record<string, unknown> {
+  return {
+    ...(row.veille ?? {}),
+    ...(row.taxonomie ?? {}),
+    ...(row.licence ?? {}),
+  }
+}
+
+export type SelectorModelState = {
+  id: string
+  providerInQuestionnaire: boolean
+  role: string | null
+  lifecycleStatus: string | null
+  mergedIntoId: string | null
+  visibilityOverride: boolean | null
+  licenseClass: string | null
+}
+
+export type SelectorProjection = {
+  before: number
+  after: number
+  hidden: number
+}
+
+function visibilityOf(model: SelectorModelState) {
+  return isModelProposedToUser({
+    providerInQuestionnaire: model.providerInQuestionnaire,
+    role: model.role,
+    lifecycleStatus: model.lifecycleStatus,
+    mergedIntoId: model.mergedIntoId,
+    visibilityOverride: model.visibilityOverride,
+    licenseClass: model.licenseClass,
+  })
+}
+
+/** Applique le même patch que l’écriture, puis recalcule le sélecteur. */
+export function projectSelectorAfterApply(
+  models: SelectorModelState[],
+  rows: ModifiedControlTowerRow[],
+): SelectorProjection {
+  const nextById = new Map(models.map((model) => [model.id, { ...model }]))
+  for (const row of rows) {
+    const model = nextById.get(row.modelId)
+    if (!model) continue
+    const patch = controlTowerDatabasePatch(row)
+    if (Object.prototype.hasOwnProperty.call(patch, 'lifecycle_status')) {
+      model.lifecycleStatus = (patch.lifecycle_status as string | null) ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'role')) {
+      model.role = (patch.role as string | null) ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'merged_into_id')) {
+      model.mergedIntoId = (patch.merged_into_id as string | null) ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'license_class')) {
+      model.licenseClass = String(patch.license_class)
+    }
+  }
+  const next = [...nextById.values()]
+  const before = models.filter((model) => visibilityOf(model)).length
+  const after = next.filter((model) => visibilityOf(model)).length
+  const hidden = models.filter((model) => {
+    const projected = nextById.get(model.id) ?? model
+    return visibilityOf(model) && !visibilityOf(projected)
+  }).length
+  return { before, after, hidden }
 }

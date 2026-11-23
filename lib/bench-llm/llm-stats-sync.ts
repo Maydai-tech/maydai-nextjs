@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { normalizeLlmModelSlug } from '@/lib/bench-llm/model-slug'
 import { followMergedModelId, type AliasRecord } from '@/lib/bench-llm/model-lineage'
+import { omitVeilleColumns } from '@/lib/bench-llm/veille-columns'
 
 const DEFAULT_LLM_STATS_BASE_URL = 'https://api.llm-stats.com/stats'
 const MODELS_PAGE_LIMIT = 200
@@ -376,11 +377,9 @@ function existingModelKey(providerId: number, modelName: string): string {
   return `${providerId}:${normalizeLlmStatsMatchValue(modelName)}`
 }
 
-function databaseRecordFor(
-  record: LlmStatsModelRecord,
-): Omit<LlmStatsModelRecord, 'llm_stats_id'> {
+export function llmStatsDatabaseUpdate(record: LlmStatsModelRecord): Record<string, unknown> {
   const { llm_stats_id: _llmStatsId, ...databaseRecord } = record
-  return databaseRecord
+  return omitVeilleColumns(databaseRecord as Record<string, unknown>)
 }
 
 function valuesEqual(a: unknown, b: unknown): boolean {
@@ -755,7 +754,7 @@ export async function syncLlmStatsModels(
       if (!existing) {
         const { data, error } = await supabase
           .from('compl_ai_models')
-          .insert({ ...databaseRecordFor(record), role: 'a_classer' })
+          .insert({ ...llmStatsDatabaseUpdate(record), role: 'a_classer' })
           .select('id, slug')
           .single()
 
@@ -822,7 +821,7 @@ export async function syncLlmStatsModels(
       if (modelFieldChanges.length > 0) {
         const { error } = await supabase
           .from('compl_ai_models')
-          .update(databaseRecordFor(record))
+          .update(llmStatsDatabaseUpdate(record))
           .eq('id', existing.id)
 
         if (error) {

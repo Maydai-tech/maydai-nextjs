@@ -38,6 +38,7 @@ import { parseComplAiCsv } from '@/lib/bench-llm/compl-ai-csv'
 import type {
   ModifiedControlTowerRow,
   RejectedControlTowerValue,
+  SelectorProjection,
 } from '@/lib/bench-llm/control-tower-apply'
 import { parseApiJson, toTitleCase } from '@/lib/utils'
 
@@ -651,6 +652,7 @@ export default function BenchLlmsAdminPage() {
     dryRun: boolean
     modifiedRows: ModifiedControlTowerRow[]
     rejectedValues: RejectedControlTowerValue[]
+    selector: SelectorProjection | null
   } | null>(null)
   const [syncReport, setSyncReport] = useState<{
     dryRun: boolean
@@ -813,6 +815,7 @@ export default function BenchLlmsAdminPage() {
         dryRun?: boolean
         modifiedRows?: ModifiedControlTowerRow[]
         rejectedValues?: RejectedControlTowerValue[]
+        selector?: SelectorProjection
       }>(response)
       if (!response.ok || payload.success === false) {
         throw new Error(payload.error || 'Application impossible')
@@ -821,11 +824,15 @@ export default function BenchLlmsAdminPage() {
         dryRun: payload.dryRun !== false,
         modifiedRows: payload.modifiedRows ?? [],
         rejectedValues: payload.rejectedValues ?? [],
+        selector: payload.selector ?? null,
       }
       setApplyReport(report)
+      const selectorText = report.selector
+        ? ` Sélecteur : ${report.selector.before} aujourd’hui, ${report.selector.after} après, ${report.selector.hidden} modèle(s) masqué(s).`
+        : ''
       const summary = report.dryRun
-        ? `Simulation : ${report.modifiedRows.length} ligne(s) à modifier, ${report.rejectedValues.length} valeur(s) refusée(s).`
-        : `Application réelle : ${report.modifiedRows.length} ligne(s) mise(s) à jour.`
+        ? `Simulation : ${report.modifiedRows.length} ligne(s) à modifier, ${report.rejectedValues.length} valeur(s) refusée(s).${selectorText}`
+        : `Application réelle : ${report.modifiedRows.length} ligne(s) mise(s) à jour.${selectorText}`
       setMessage(summary)
       setToast({ message: summary, type: 'success' })
       if (!report.dryRun) await fetchModels()
@@ -1160,6 +1167,9 @@ export default function BenchLlmsAdminPage() {
           </h2>
           <p className="mt-1 text-sm text-gray-600">
             {applyReport.modifiedRows.length} ligne(s), {applyReport.rejectedValues.length} valeur(s) refusée(s).
+            {applyReport.selector
+              ? ` Sélecteur : ${applyReport.selector.before} aujourd’hui, ${applyReport.selector.after} après application. ${applyReport.selector.hidden} modèle(s) sortiront du sélecteur.`
+              : ''}
           </p>
           {applyReport.modifiedRows.length > 0 ? (
             <ul className="mt-3 max-h-64 space-y-2 overflow-auto text-sm text-gray-800">

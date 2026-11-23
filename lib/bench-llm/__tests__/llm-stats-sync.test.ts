@@ -1,9 +1,12 @@
+import { VEILLE_COLUMNS } from '../veille-columns'
 import {
   buildBestScoreMap,
   deriveModelSizeFromParamCount,
+  llmStatsDatabaseUpdate,
   mapLlmStatsModelToRecord,
   selectCanonicalLlmStatsModels,
 } from '../llm-stats-sync'
+import type { LlmStatsModelRecord } from '../llm-stats-sync'
 
 describe('LLM Stats sync mapping', () => {
   test('derive model size from parameter count', () => {
@@ -162,5 +165,35 @@ describe('LLM Stats sync mapping', () => {
       'gpt-4o-2024-08-06',
       'gpt-4o-mini-2024-07-18',
     ])
+  })
+
+  test('un import llm-stats ne modifie pas lifecycle_status ni les autres colonnes de veille', () => {
+    const record = mapLlmStatsModelToRecord({
+      providerId: 42,
+      now: '2026-11-22T18:00:00.000Z',
+      model: {
+        id: 'gpt-4',
+        name: 'GPT-4',
+        organization: { id: 'openai', name: 'OpenAI' },
+        license: { id: 'proprietary', name: 'Proprietary' },
+        open_weight: false,
+        model_type: 'chat',
+        providers: [],
+      },
+    })
+    const update = llmStatsDatabaseUpdate({
+      ...record,
+      lifecycle_status: 'retired',
+      launch_date: '2023-03-14',
+      deprecation_date: '2026-04-22',
+      retirement_date: '2026-10-23',
+      replacement_model_id: 'gpt-4o',
+      lifecycle_checked_at: '2026-11-20T00:00:00.000Z',
+    } as LlmStatsModelRecord)
+
+    for (const column of VEILLE_COLUMNS) {
+      expect(update).not.toHaveProperty(column)
+    }
+    expect(update.model_name).toBe('GPT-4')
   })
 })

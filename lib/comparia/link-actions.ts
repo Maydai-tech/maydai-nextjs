@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { omitVeilleColumns } from '@/lib/bench-llm/veille-columns'
 import { compariaConsumptionToWhPer1k } from '@/lib/comparia/import'
 import type { CompariaLinkStatus, CompariaMatchMethod } from '@/lib/comparia/matching'
 
@@ -69,7 +70,7 @@ function hubPatch(row: StoredCompariaRow): { comparia_rank: number; consumption_
   }
   const wh = compariaConsumptionToWhPer1k(row.consumption_mwh_per_1k_tokens)
   if (wh != null) patch.consumption_wh_per_1k_tokens = wh
-  return patch
+  return omitVeilleColumns(patch)
 }
 
 export async function updateCompariaLink(
