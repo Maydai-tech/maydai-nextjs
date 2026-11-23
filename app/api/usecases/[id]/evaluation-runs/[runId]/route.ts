@@ -6,7 +6,7 @@ import {
   calculateAndPersistAuditIntegrityScore,
   calculateAndPersistEngagementScore,
 } from '@/lib/services/governanceScoreService'
-import { InputTelemetrySchema } from '@/lib/validations/governance-scores'
+import { InputTelemetrySchema, type InputTelemetry } from '@/lib/validations/governance-scores'
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -29,6 +29,7 @@ export async function PATCH(
       input_telemetry?: unknown
     }
 
+    let parsedTelemetry: InputTelemetry | undefined
     if ('input_telemetry' in body) {
       const telemetry = InputTelemetrySchema.safeParse(body.input_telemetry)
       if (!telemetry.success) {
@@ -37,17 +38,7 @@ export async function PATCH(
           { status: 400 }
         )
       }
-      const { error: telemetryError } = await getServiceRoleClient()
-        .from('usecases')
-        .update({ input_telemetry: telemetry.data })
-        .eq('id', useCaseId)
-      if (telemetryError) {
-        console.error('[PATCH evaluation-run] input_telemetry', telemetryError)
-        return NextResponse.json(
-          { error: telemetryError.message || telemetryError.details || 'Erreur DB' },
-          { status: 500 }
-        )
-      }
+      parsedTelemetry = telemetry.data
     }
 
     const { data: run, error: runErr } = await supabase
@@ -73,6 +64,20 @@ export async function PATCH(
 
     if (ucCoError || !userCompany) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    if (parsedTelemetry) {
+      const { error: telemetryError } = await getServiceRoleClient()
+        .from('usecases')
+        .update({ input_telemetry: parsedTelemetry })
+        .eq('id', useCaseId)
+      if (telemetryError) {
+        console.error('[PATCH evaluation-run] input_telemetry', telemetryError)
+        return NextResponse.json(
+          { error: telemetryError.message || telemetryError.details || 'Erreur DB' },
+          { status: 500 }
+        )
+      }
     }
 
     if (run.completed_at) {
