@@ -11,6 +11,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { omitVeilleColumns } from '../lib/bench-llm/veille-columns'
 import * as dotenv from 'dotenv'
 import * as path from 'path'
 import { parse } from 'csv-parse/sync'
@@ -47,7 +48,6 @@ interface CSVRow {
   model_provider_id?: string
   short_name?: string
   long_name?: string
-  launch_date?: string
   notes_short?: string
   notes_long?: string
   variants?: string
@@ -66,29 +66,6 @@ function parseVariants(variantsStr: string | undefined): any[] {
     console.warn(`⚠️  Erreur parsing variants: ${variantsStr}, utilisation de []`)
     return []
   }
-}
-
-function parseDate(dateStr: string | undefined): string | null {
-  if (!dateStr || dateStr.trim() === '') return null
-  
-  // Gérer différents formats de date
-  // Format PostgreSQL: 2024-07-23
-  // Format avec timestamp: 2024-07-23 12:00:00
-  const dateOnly = dateStr.split(' ')[0].trim()
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/
-  
-  if (dateRegex.test(dateOnly)) {
-    return dateOnly
-  }
-  
-  // Essayer de parser avec Date
-  const date = new Date(dateStr)
-  if (!isNaN(date.getTime())) {
-    return date.toISOString().split('T')[0]
-  }
-  
-  console.warn(`⚠️  Format de date invalide: ${dateStr}, ignoré`)
-  return null
 }
 
 function parseInteger(intStr: string | undefined): number | null {
@@ -180,7 +157,6 @@ async function importCSV(csvUrl: string) {
         version: row.version?.trim() || null,
         short_name: row.short_name?.trim() || null,
         long_name: row.long_name?.trim() || null,
-        launch_date: parseDate(row.launch_date),
         model_provider_id: parseInteger(row.model_provider_id),
         notes_short: row.notes_short?.trim() || null,
         notes_long: row.notes_long?.trim() || null,
@@ -220,7 +196,7 @@ async function importCSV(csvUrl: string) {
         // Mise à jour par ID
         const { error } = await supabase
           .from('compl_ai_models')
-          .update(modelData)
+          .update(omitVeilleColumns(modelData))
           .eq('id', modelId)
         
         if (error) {
@@ -244,7 +220,7 @@ async function importCSV(csvUrl: string) {
         
         const { error } = await supabase
           .from('compl_ai_models')
-          .insert(insertData)
+          .insert(omitVeilleColumns(insertData))
         
         if (error) {
           stats.errors++

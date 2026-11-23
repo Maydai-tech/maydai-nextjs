@@ -14,6 +14,8 @@ import { parse } from 'csv-parse/sync'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { config as loadEnv } from 'dotenv'
 
+import { VEILLE_COLUMNS, omitVeilleColumns } from '../lib/bench-llm/veille-columns'
+
 loadEnv({ path: path.resolve(process.cwd(), '.env.local') })
 loadEnv({ path: path.resolve(process.cwd(), '.env') })
 
@@ -26,7 +28,6 @@ const ALLOWED_COLUMNS = new Set([
   'version',
   'short_name',
   'long_name',
-  'launch_date',
   'model_provider_id',
   'notes_short',
   'notes_long',
@@ -66,7 +67,8 @@ const DECIMAL_COLUMNS = new Set([
 ])
 
 /** Champs date « jour seulement » (ISO YYYY-MM-DD). */
-const DATE_ONLY_COLUMNS = new Set(['launch_date', 'release_date', 'knowledge_cutoff'])
+const DATE_ONLY_COLUMNS = new Set(['release_date', 'knowledge_cutoff'])
+const IGNORED_VEILLE_COLUMNS = new Set<string>(VEILLE_COLUMNS)
 
 /** Horodatages complets ISO 8601. */
 const TIMESTAMP_COLUMNS = new Set(['created_at', 'updated_at'])
@@ -148,6 +150,7 @@ function mapCsvRowToRecord(row: CsvRow, rowNumber: number): Record<string, unkno
   for (const [rawKey, rawVal] of Object.entries(row)) {
     const key = normalizeColumnKey(rawKey)
     if (!key) continue
+    if (IGNORED_VEILLE_COLUMNS.has(key)) continue
     if (!ALLOWED_COLUMNS.has(key)) {
       unknownKeys.add(key)
       continue
@@ -196,7 +199,7 @@ function mapCsvRowToRecord(row: CsvRow, rowNumber: number): Record<string, unkno
     )
   }
 
-  return record
+  return omitVeilleColumns(record)
 }
 
 function validateRecord(

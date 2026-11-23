@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedSupabaseClient } from '@/lib/api-auth'
 import { recalculateUseCaseScoresForModel } from '@/lib/usecase-score-service'
+import { omitVeilleColumns } from '@/lib/bench-llm/veille-columns'
 import fs from 'fs'
 import path from 'path'
 
@@ -298,12 +299,12 @@ export async function POST(request: NextRequest) {
           // Modèle existant trouvé, le mettre à jour avec les nouvelles infos
           const { error: updateError } = await supabase
             .from('compl_ai_models')
-            .update({
-              model_provider: modelInfo.provider, // Mettre à jour le provider aussi
+            .update(omitVeilleColumns({
+              model_provider: modelInfo.provider,
               model_type: modelInfo.type,
               version: modelInfo.version,
-              updated_at: new Date().toISOString()
-            })
+              updated_at: new Date().toISOString(),
+            }))
             .eq('id', existingModel.id)
 
           if (updateError) {

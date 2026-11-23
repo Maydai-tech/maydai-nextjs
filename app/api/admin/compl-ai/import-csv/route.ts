@@ -10,6 +10,7 @@ import {
   type ComplAiCsvScore,
 } from '@/lib/bench-llm/compl-ai-csv'
 import { recalculateUseCaseScoresForModel } from '@/lib/usecase-score-service'
+import { omitVeilleColumns } from '@/lib/bench-llm/veille-columns'
 
 // Un import peut toucher plusieurs modèles et déclencher le recalcul de nombreux
 // use cases : on autorise une exécution plus longue (recalcul synchrone).
@@ -236,16 +237,15 @@ export async function POST(request: NextRequest) {
         }
 
         if (existingModel) {
-          const modelUpdates: Record<string, unknown> = {
+          const modelUpdates: Record<string, unknown> = omitVeilleColumns({
             updated_at: new Date().toISOString(),
-          }
+          })
           if (row.model_name && !isUuid(row.model_name)) {
             modelUpdates.model_name = row.model_name
           }
           if (row.model_provider) modelUpdates.model_provider = row.model_provider
           if (row.model_type) modelUpdates.model_type = row.model_type
           if (row.version) modelUpdates.version = row.version
-          if (row.lifecycle_status) modelUpdates.lifecycle_status = row.lifecycle_status
 
           const { error: updateError } = await supabase
             .from('compl_ai_models')
@@ -260,14 +260,13 @@ export async function POST(request: NextRequest) {
           modelId = existingModel.id
           stats.modelsUpdated++
         } else {
-          const insertPayload: Record<string, unknown> = {
+          const insertPayload: Record<string, unknown> = omitVeilleColumns({
             model_name: row.model_name,
             model_provider: row.model_provider || null,
             model_type: row.model_type || null,
             version: row.version || null,
-            lifecycle_status: row.lifecycle_status,
             role: 'a_classer',
-          }
+          })
           if (row.model_id) insertPayload.id = row.model_id
 
           const { data: newModel, error: insertError } = await supabase

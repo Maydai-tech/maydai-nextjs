@@ -3,9 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { verifyAdminAuth } from '@/lib/admin-auth'
 import {
+  controlTowerDatabasePatch,
   planControlTowerApply,
+  projectSelectorAfterApply,
   type ControlTowerModelRef,
-  type ModifiedControlTowerRow,
+  type SelectorModelState,
 } from '@/lib/bench-llm/control-tower-apply'
 import { requireControlTowerGroup } from '@/lib/bench-llm/control-tower-headers'
 import {
@@ -41,39 +43,57 @@ function parisToday(): string {
   }).format(new Date())
 }
 
-async function loadModels(supabase: SupabaseClient): Promise<ControlTowerModelRef[]> {
-  const models: ControlTowerModelRef[] = []
+async function loadApplyModels(supabase: SupabaseClient): Promise<{
+  refs: ControlTowerModelRef[]
+  selectorModels: SelectorModelState[]
+}> {
+  const { data: providers, error: providerError } = await supabase
+    .from('model_providers')
+    .select('id, tooltip_title')
+  if (providerError) throw new Error(providerError.message)
+  const questionnaireProviderIds = new Set(
+    (providers ?? [])
+      .filter((provider) => provider.tooltip_title != null)
+      .map((provider) => provider.id),
+  )
+
+  const refs: ControlTowerModelRef[] = []
+  const selectorModels: SelectorModelState[] = []
   const pageSize = 1000
   let from = 0
   let hasMore = true
   while (hasMore) {
     const { data, error } = await supabase
       .from('compl_ai_models')
-      .select('id, slug, model_name, merged_into_id, role, reference_model_id')
+      .select('id, slug, model_name, merged_into_id, role, reference_model_id, model_provider_id, lifecycle_status, visibility_override, license_class')
       .order('id', { ascending: true })
       .range(from, from + pageSize - 1)
     if (error) throw new Error(error.message)
     const rows = data ?? []
-    models.push(...rows.map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      modelName: row.model_name,
-      mergedIntoId: row.merged_into_id,
-      role: row.role,
-      referenceModelId: row.reference_model_id,
-    })))
+    for (const row of rows) {
+      refs.push({
+        id: row.id,
+        slug: row.slug,
+        modelName: row.model_name,
+        mergedIntoId: row.merged_into_id,
+        role: row.role,
+        referenceModelId: row.reference_model_id,
+      })
+      selectorModels.push({
+        id: row.id,
+        providerInQuestionnaire: row.model_provider_id != null
+          && questionnaireProviderIds.has(row.model_provider_id),
+        role: row.role,
+        lifecycleStatus: row.lifecycle_status,
+        mergedIntoId: row.merged_into_id,
+        visibilityOverride: row.visibility_override,
+        licenseClass: row.license_class,
+      })
+    }
     hasMore = rows.length === pageSize
     from += pageSize
   }
-  return models
-}
-
-function databasePatch(row: ModifiedControlTowerRow): Record<string, unknown> {
-  return {
-    ...(row.veille ?? {}),
-    ...(row.taxonomie ?? {}),
-    ...(row.licence ?? {}),
-  }
+  return { refs, selectorModels }
 }
 
 export async function POST(request: NextRequest) {
@@ -90,22 +110,24 @@ export async function POST(request: NextRequest) {
     }
 
     const spreadsheetId = getRequiredEnv('GOOGLE_SHEETS_CONTROL_TOWER_ID')
-    const [matrix, models] = await Promise.all([
+    const supabase = createServiceClient()
+    const [matrix, loaded] = await Promise.all([
       readControlTowerSheetMatrix(spreadsheetId),
-      loadModels(createServiceClient()),
+      loadApplyModels(supabase),
     ])
     const headers = (matrix[0] ?? []).map((header) => String(header ?? ''))
     const plan = planControlTowerApply({
       headers,
       rows: matrix.map((cells, index) => ({ sheetRow: index + 1, cells })),
-      models,
+      models: loaded.refs,
       today: parisToday(),
     })
 
+    const selector = projectSelectorAfterApply(loaded.selectorModels, plan.modifiedRows)
+
     if (!dryRun) {
-      const supabase = createServiceClient()
       for (const row of plan.modifiedRows) {
-        const patch = databasePatch(row)
+        const patch = controlTowerDatabasePatch(row)
         if (Object.keys(patch).length === 0) continue
         const { error } = await supabase
           .from('compl_ai_models')
@@ -143,6 +165,7 @@ export async function POST(request: NextRequest) {
       dryRun,
       modifiedRows: plan.modifiedRows,
       rejectedValues: plan.rejectedValues,
+      selector,
     })
   } catch (error) {
     console.error('[API Admin Apply LLM Control]', error)

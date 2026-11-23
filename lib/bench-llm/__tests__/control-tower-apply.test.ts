@@ -1,4 +1,9 @@
-import { planControlTowerApply, type ControlTowerModelRef } from '../control-tower-apply'
+import {
+  controlTowerDatabasePatch,
+  planControlTowerApply,
+  projectSelectorAfterApply,
+  type ControlTowerModelRef,
+} from '../control-tower-apply'
 
 const sonnet = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const base = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
@@ -379,6 +384,100 @@ describe('planControlTowerApply', () => {
       }),
     ])
     expect(plan.modifiedRows.find((row) => row.sheetRow === 5)?.licence).toBeNull()
+  })
+
+  test('Retiré donne retired, avec ou sans date de retrait, sans regarder les cas d’usage', () => {
+    const plan = planControlTowerApply({
+      rows: [
+        {
+          sheetRow: 4,
+          cells: row({ 0: sonnet, 6: 'Retiré', 23: 'https://example.com/status' }),
+        },
+        {
+          sheetRow: 5,
+          cells: row({
+            0: base,
+            6: 'Retiré',
+            21: '2026-10-23',
+            23: 'https://example.com/status',
+          }),
+        },
+      ],
+      headers: LEGACY_HEADERS,
+      models,
+      today: '2026-11-22',
+    })
+
+    expect(plan.rejectedValues).toEqual([])
+    expect(plan.modifiedRows.map((item) => item.veille?.lifecycle_status)).toEqual(['retired', 'retired'])
+    expect(plan.modifiedRows[0]?.veille?.retirement_date).toBeNull()
+    expect(plan.modifiedRows[1]?.veille?.retirement_date).toBe('2026-10-23')
+    expect(controlTowerDatabasePatch(plan.modifiedRows[0]).lifecycle_status).toBe('retired')
+    expect(controlTowerDatabasePatch(plan.modifiedRows[1]).lifecycle_status).toBe('retired')
+  })
+
+  test('un libellé de statut inconnu est refusé et n’écrit pas lifecycle_status', () => {
+    const plan = planControlTowerApply({
+      rows: [{
+        sheetRow: 4,
+        cells: row({ 0: sonnet, 6: 'Brouillon', 23: 'https://example.com/status' }),
+      }],
+      headers: LEGACY_HEADERS,
+      models,
+      today: '2026-11-22',
+    })
+
+    expect(plan.rejectedValues).toEqual([{
+      sheetRow: 4,
+      modelId: sonnet,
+      column: 'Statut LLM',
+      value: 'Brouillon',
+      reason: 'statut LLM inconnu',
+    }])
+    expect(plan.modifiedRows[0]?.veille).not.toHaveProperty('lifecycle_status')
+  })
+
+  test('la simulation et le patch d’application masquent le même nombre de modèles', () => {
+    const plan = planControlTowerApply({
+      rows: [{
+        sheetRow: 4,
+        cells: row({ 0: sonnet, 6: 'Retiré', 23: 'https://example.com/status' }),
+      }],
+      headers: LEGACY_HEADERS,
+      models,
+      today: '2026-11-22',
+    })
+    const current = [
+      {
+        id: sonnet,
+        providerInQuestionnaire: true,
+        role: null,
+        lifecycleStatus: 'deprecated',
+        mergedIntoId: null,
+        visibilityOverride: null,
+        licenseClass: 'proprietary',
+      },
+      {
+        id: base,
+        providerInQuestionnaire: true,
+        role: null,
+        lifecycleStatus: 'active',
+        mergedIntoId: null,
+        visibilityOverride: null,
+        licenseClass: 'proprietary',
+      },
+    ]
+    const fromPlan = projectSelectorAfterApply(current, plan.modifiedRows)
+    const fromPatch = projectSelectorAfterApply(current, plan.modifiedRows.map((item) => ({
+      ...item,
+      veille: {
+        lifecycle_source_url: 'https://example.com/status',
+        lifecycle_status: controlTowerDatabasePatch(item).lifecycle_status as 'retired',
+      },
+    })))
+
+    expect(fromPlan).toEqual({ before: 2, after: 1, hidden: 1 })
+    expect(fromPatch).toEqual(fromPlan)
   })
 
   test('s’arrête si un en-tête attendu manque', () => {
