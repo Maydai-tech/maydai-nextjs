@@ -2,7 +2,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { normalizeLlmModelSlug } from '@/lib/bench-llm/model-slug'
 import { followMergedModelId, type AliasRecord } from '@/lib/bench-llm/model-lineage'
-import { omitVeilleColumns } from '@/lib/bench-llm/veille-columns'
+import { omitImmutableExternalUpdateColumns, omitVeilleColumns } from '@/lib/bench-llm/veille-columns'
+import { toExplicitError } from '@/lib/errors/postgrest-error'
 
 const DEFAULT_LLM_STATS_BASE_URL = 'https://api.llm-stats.com/stats'
 const MODELS_PAGE_LIMIT = 200
@@ -377,9 +378,14 @@ function existingModelKey(providerId: number, modelName: string): string {
   return `${providerId}:${normalizeLlmStatsMatchValue(modelName)}`
 }
 
-export function llmStatsDatabaseUpdate(record: LlmStatsModelRecord): Record<string, unknown> {
+export function llmStatsDatabaseInsert(record: LlmStatsModelRecord): Record<string, unknown> {
   const { llm_stats_id: _llmStatsId, ...databaseRecord } = record
   return omitVeilleColumns(databaseRecord as Record<string, unknown>)
+}
+
+export function llmStatsDatabaseUpdate(record: LlmStatsModelRecord): Record<string, unknown> {
+  const { llm_stats_id: _llmStatsId, ...databaseRecord } = record
+  return omitImmutableExternalUpdateColumns(databaseRecord as Record<string, unknown>)
 }
 
 function valuesEqual(a: unknown, b: unknown): boolean {
@@ -395,23 +401,11 @@ function changedFieldsForRecord(
   existing: ExistingModelRow,
   record: LlmStatsModelRecord,
 ): string[] {
-  const fields = [
-    'model_provider',
-    'model_provider_id',
-    'model_type',
-    'license',
-    'context_length',
-    'release_date',
-    'knowledge_cutoff',
-    'input_cost_per_million',
-    'output_cost_per_million',
-    'model_size',
-    'gpqa_score',
-    'aime_2025_score',
-    'llm_leader_rank',
-  ] as const
-
-  return fields.filter((field) => !valuesEqual(existing[field], record[field]))
+  const update = llmStatsDatabaseUpdate(record)
+  const current = existing as unknown as Record<string, unknown>
+  return Object.keys(update).filter(
+    (field) => field !== 'updated_at' && !valuesEqual(current[field], update[field]),
+  )
 }
 
 async function fetchAllModels(): Promise<LlmStatsModelSummary[]> {
@@ -557,15 +551,9 @@ async function loadExistingModels(
       .eq('source', 'llm_stats'),
   ])
 
-  if (error) {
-    throw new Error(`Erreur récupération compl_ai_models: ${error.message}`)
-  }
-  if (sourceError) {
-    throw new Error(`Erreur récupération llm_model_source_ids: ${sourceError.message}`)
-  }
-  if (aliasError) {
-    throw new Error(`Erreur récupération llm_model_aliases: ${aliasError.message}`)
-  }
+  if (error) throw toExplicitError('LLM Stats Sync - compl_ai_models', error)
+  if (sourceError) throw toExplicitError('LLM Stats Sync - llm_model_source_ids', sourceError)
+  if (aliasError) throw toExplicitError('LLM Stats Sync - llm_model_aliases', aliasError)
 
   const modelsById = new Map(
     ((data || []) as Omit<ExistingModelRow, 'llm_stats_id'>[]).map((model) => [
@@ -683,7 +671,7 @@ async function upsertLlmStatsSourceLink(
       source_id: params.sourceId,
       match_method: params.matchMethod,
     })
-    if (error) throw error
+    if (error) throw toExplicitError('LLM Stats Sync - source_ids', error)
   } else if (owner.id === params.modelId) {
     const { error } = await supabase
       .from('llm_model_source_ids')
@@ -693,7 +681,7 @@ async function upsertLlmStatsSourceLink(
       })
       .eq('source', 'llm_stats')
       .eq('source_id', params.sourceId)
-    if (error) throw error
+    if (error) throw toExplicitError('LLM Stats Sync - source_ids', error)
   }
 
   if (params.previousSourceId && params.previousSourceId !== params.sourceId) {
@@ -703,7 +691,7 @@ async function upsertLlmStatsSourceLink(
       .eq('source', 'llm_stats')
       .eq('source_id', params.previousSourceId)
       .eq('model_id', params.modelId)
-    if (error) throw error
+    if (error) throw toExplicitError('LLM Stats Sync - source_ids', error)
     existingModels.byLlmStatsId.delete(params.previousSourceId)
   }
 }
@@ -754,12 +742,13 @@ export async function syncLlmStatsModels(
       if (!existing) {
         const { data, error } = await supabase
           .from('compl_ai_models')
-          .insert({ ...llmStatsDatabaseUpdate(record), role: 'a_classer' })
+          .insert({ ...llmStatsDatabaseInsert(record), role: 'a_classer' })
           .select('id, slug')
           .single()
 
         if (error) {
-          errors.push(`Création ${model.organization.name}/${model.name}: ${error.message}`)
+          const explicit = toExplicitError('LLM Stats Sync', error)
+          errors.push(`Création ${model.organization.name}/${model.name}: ${explicit.message}`)
           continue
         }
 
@@ -787,13 +776,14 @@ export async function syncLlmStatsModels(
           match_method: 'exact',
         }, { onConflict: 'source,source_id' })
         if (aliasError) {
-          errors.push(`Alias ${model.organization.name}/${model.name}: ${aliasError.message}`)
+          const explicit = toExplicitError('LLM Stats Sync', aliasError)
+          errors.push(`Alias ${model.organization.name}/${model.name}: ${explicit.message}`)
         }
 
         createdModels.push({
           id: createdId,
           model_name: model.name,
-          model_provider: model.organization.name,
+          model_provider: provider.name || model.organization.name || 'Inconnu',
         })
         rememberExistingModel(
           existingModels,
@@ -808,7 +798,10 @@ export async function syncLlmStatsModels(
         continue
       }
 
-      const changedFields = changedFieldsForRecord(existing, record)
+      const metricTarget = existing.merged_into_id
+        ? existingModels.modelsById.get(existing.merged_into_id) ?? existing
+        : existing
+      const changedFields = changedFieldsForRecord(metricTarget, record)
       const needsSourceLink = existing.llm_stats_id !== record.llm_stats_id
       if (needsSourceLink) changedFields.push('source_id')
 
@@ -822,10 +815,11 @@ export async function syncLlmStatsModels(
         const { error } = await supabase
           .from('compl_ai_models')
           .update(llmStatsDatabaseUpdate(record))
-          .eq('id', existing.id)
+          .eq('id', metricTarget.id)
 
         if (error) {
-          errors.push(`Mise à jour ${model.organization.name}/${model.name}: ${error.message}`)
+          const explicit = toExplicitError('LLM Stats Sync', error)
+          errors.push(`Mise à jour ${model.organization.name}/${model.name}: ${explicit.message}`)
           continue
         }
       }
@@ -840,25 +834,36 @@ export async function syncLlmStatsModels(
       }
 
       updatedModels.push({
-        id: existing.id,
+        id: metricTarget.id,
         model_name: model.name,
-        model_provider: model.organization.name,
+        model_provider: provider.name || model.organization.name || 'Inconnu',
         changedFields,
       })
 
+      const updatePayload = llmStatsDatabaseUpdate(record)
       const updatedRow: ExistingModelRow = {
-        ...existing,
-        ...record,
-        id: existing.id,
-        slug: existing.slug ?? normalizeLlmModelSlug(record.model_name),
+        ...metricTarget,
+        context_length: updatePayload.context_length as number | null,
+        release_date: updatePayload.release_date as string | null,
+        knowledge_cutoff: updatePayload.knowledge_cutoff as string | null,
+        input_cost_per_million: updatePayload.input_cost_per_million as number | null,
+        output_cost_per_million: updatePayload.output_cost_per_million as number | null,
+        model_size: updatePayload.model_size as string | null,
+        gpqa_score: updatePayload.gpqa_score as number | null,
+        aime_2025_score: updatePayload.aime_2025_score as number | null,
+        llm_leader_rank: updatePayload.llm_leader_rank as number | null,
+        id: metricTarget.id,
+        slug: metricTarget.slug,
+        model_name: metricTarget.model_name,
+        model_provider: metricTarget.model_provider,
+        model_provider_id: metricTarget.model_provider_id,
+        model_type: metricTarget.model_type,
+        license: metricTarget.license,
       }
-      rememberExistingModel(existingModels, updatedRow, provider.id)
+      rememberExistingModel(existingModels, updatedRow, metricTarget.model_provider_id ?? provider.id)
     } catch (error) {
-      errors.push(
-        `${model.organization.name}/${model.name}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      )
+      const explicit = toExplicitError('LLM Stats Sync', error)
+      errors.push(`${model.organization.name}/${model.name}: ${explicit.message}`)
     }
   }
 

@@ -2,6 +2,7 @@ import { VEILLE_COLUMNS } from '../veille-columns'
 import {
   buildBestScoreMap,
   deriveModelSizeFromParamCount,
+  llmStatsDatabaseInsert,
   llmStatsDatabaseUpdate,
   mapLlmStatsModelToRecord,
   selectCanonicalLlmStatsModels,
@@ -167,9 +168,12 @@ describe('LLM Stats sync mapping', () => {
     ])
   })
 
-  test('un import llm-stats ne modifie pas lifecycle_status ni les autres colonnes de veille', () => {
+  test('un update llm-stats ne réécrit ni l’identité ni les colonnes de veille', () => {
     const record = mapLlmStatsModelToRecord({
       providerId: 42,
+      rank: 3,
+      gpqaScore: 0.5,
+      aime2025Score: 0.25,
       now: '2026-11-22T18:00:00.000Z',
       model: {
         id: 'gpt-4',
@@ -178,22 +182,69 @@ describe('LLM Stats sync mapping', () => {
         license: { id: 'proprietary', name: 'Proprietary' },
         open_weight: false,
         model_type: 'chat',
-        providers: [],
+        context_window: 8_192,
+        param_count: 20_000_000_000,
+        release_date: '2023-03-14',
+        knowledge_cutoff: '2021-09-01',
+        providers: [
+          {
+            provider_id: 'openai',
+            provider_name: 'OpenAI',
+            input_price_per_m: 30,
+            output_price_per_m: 60,
+            status: 'available',
+          },
+        ],
       },
     })
-    const update = llmStatsDatabaseUpdate({
+    const enriched = {
       ...record,
+      slug: 'gpt-4',
       lifecycle_status: 'retired',
       launch_date: '2023-03-14',
       deprecation_date: '2026-04-22',
       retirement_date: '2026-10-23',
       replacement_model_id: 'gpt-4o',
       lifecycle_checked_at: '2026-11-20T00:00:00.000Z',
-    } as LlmStatsModelRecord)
+    } as LlmStatsModelRecord
 
-    for (const column of VEILLE_COLUMNS) {
+    const update = llmStatsDatabaseUpdate(enriched)
+    const insert = llmStatsDatabaseInsert(enriched)
+
+    for (const column of [
+      ...VEILLE_COLUMNS,
+      'model_name',
+      'model_provider',
+      'model_provider_id',
+      'slug',
+      'model_type',
+      'license',
+    ]) {
       expect(update).not.toHaveProperty(column)
     }
-    expect(update.model_name).toBe('GPT-4')
+    expect(update).toMatchObject({
+      context_length: 8_192,
+      input_cost_per_million: 30,
+      output_cost_per_million: 60,
+      gpqa_score: 50,
+      aime_2025_score: 25,
+      llm_leader_rank: 3,
+      model_size: 'M',
+      release_date: '2023-03-14',
+      knowledge_cutoff: '2021-09-01',
+      updated_at: '2026-11-22T18:00:00.000Z',
+    })
+
+    expect(insert).not.toHaveProperty('llm_stats_id')
+    for (const column of VEILLE_COLUMNS) {
+      expect(insert).not.toHaveProperty(column)
+    }
+    expect(insert).toMatchObject({
+      model_name: 'GPT-4',
+      model_provider: 'OpenAI',
+      model_provider_id: 42,
+      model_type: 'chat',
+      license: 'Proprietary',
+    })
   })
 })

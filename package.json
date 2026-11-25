@@ -24,6 +24,7 @@
     "debug:governance-lot4": "pnpm dlx tsx scripts/debug-governance-lot4.ts",
     "debug:governance-admin": "pnpm dlx tsx scripts/debug-governance-admin.ts",
     "debug:mailjet-governance": "pnpm dlx tsx scripts/debug-mailjet-governance.ts",
+    "debug:llm-sync-check": "pnpm dlx tsx scripts/debug-llm-sync-check.ts",
     "test:e2e:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run test:e2e\"",
     "test:worldmap": "node scripts/test-worldmap-corrections.js",
     "supabase:ovh": "node scripts/supabase-ovh.mjs",
