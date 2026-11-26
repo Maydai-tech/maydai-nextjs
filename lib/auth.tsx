@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
+import { AUTH_PATHS, authRedirectUrl } from './auth-email-links'
 
 interface AuthContextType {
   user: User | null
@@ -10,6 +11,7 @@ interface AuthContextType {
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
+  /** Connexion par code : réservée aux anciens comptes sans mot de passe (MAY-6). */
   signInWithOtp: (email: string, shouldCreateUser?: boolean) => Promise<{ error: Error | null }>
   verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
@@ -166,11 +168,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithOtp = useCallback(async (email: string, shouldCreateUser = false) => {
     try {
+      // emailRedirectTo : un compte jamais confirmé reçoit l'email « Confirm signup » (code + lien).
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          shouldCreateUser,
-        }
+        options: { shouldCreateUser, emailRedirectTo: authRedirectUrl(AUTH_PATHS.confirmSignup) },
       })
       return { error }
     } catch (error) {
@@ -181,11 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verifyOtp = useCallback(async (email: string, token: string) => {
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'email'
-      })
+      const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
       return { error }
     } catch (error) {
       console.error('Error in verifyOtp:', error)
@@ -199,13 +196,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signIn,
     signUp,
+    signInWithOtp,
+    verifyOtp,
     signOut,
     deleteAccount,
     refreshSession,
-    signInWithOtp,
-    verifyOtp,
     getAccessToken
-  }), [user, session, loading, signIn, signUp, signOut, deleteAccount, refreshSession, signInWithOtp, verifyOtp, getAccessToken])
+  }), [user, session, loading, signIn, signUp, signInWithOtp, verifyOtp, signOut, deleteAccount, refreshSession, getAccessToken])
 
   return (
     <AuthContext.Provider value={value}>

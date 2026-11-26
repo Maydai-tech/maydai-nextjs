@@ -72,6 +72,16 @@ test.describe('GTM tracking — Phases 1 & 2 (règle 6.6)', { tag: ['@tracking',
         })
         .catch(() => null)
 
+      // MAY-6 : après l'email, l'app demande quel écran afficher. On simule un ancien
+      // compte (connexion par code) ; l'email de test n'existe pas en base.
+      await page.route('**/api/auth/login-method', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ method: 'code' }),
+        })
+      })
+
       await page.route('**/auth/v1/otp**', async (route) => {
         if (route.request().method() === 'POST') {
           await route.fulfill({
@@ -111,7 +121,7 @@ test.describe('GTM tracking — Phases 1 & 2 (règle 6.6)', { tag: ['@tracking',
       await page.goto(urlBefore, { waitUntil: 'domcontentloaded' })
 
       await page.getByLabel(/^email$/i).fill(LOGIN_TEST_EMAIL)
-      await page.getByRole('button', { name: /se connecter/i }).click()
+      await page.getByRole('button', { name: /continuer/i }).click()
 
       await expect(page.getByText(/code à 6 chiffres/i)).toBeVisible({
         timeout: 30_000,

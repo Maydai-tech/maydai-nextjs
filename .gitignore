@@ -74,3 +74,6 @@ config/google_credentials.json
 
 # editors
 .vscode/
+
+# Traces locales du MCP Playwright
+.playwright-mcp/
