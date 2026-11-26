@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Lock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
-import { HAS_PASSWORD_KEY, PASSWORD_HINT, validateNewPassword } from '@/lib/password-policy'
+import { HAS_PASSWORD_KEY, PASSWORD_HINT, passwordServerErrorMessage, validateNewPassword } from '@/lib/password-policy'
 import PasswordInput from '@/components/auth/PasswordInput'
 
 export default function PasswordChangeCard() {
@@ -38,16 +38,7 @@ export default function PasswordChangeCard() {
     const { error } = await supabase.auth.updateUser({ password, data: { [HAS_PASSWORD_KEY]: true } })
     setSaving(false)
     if (error) {
-      const code = (error as { code?: string }).code
-      setMessage({
-        type: 'error',
-        text:
-          code === 'same_password'
-            ? 'Choisissez un mot de passe différent de l’actuel.'
-            : code === 'weak_password'
-              ? 'Mot de passe trop faible. Choisissez-en un plus long.'
-              : 'Impossible d’enregistrer le mot de passe. Veuillez réessayer.',
-      })
+      setMessage({ type: 'error', text: passwordServerErrorMessage(error, 'Impossible d’enregistrer le mot de passe. Veuillez réessayer.') })
       return
     }
     // Nouveau mot de passe : fermer les autres sessions (appareil perdu, session volée).

@@ -14,7 +14,7 @@ Les nouveaux comptes se connectent par email + mot de passe, avec des **liens** 
 
 Le marqueur `has_password` (`HAS_PASSWORD_KEY`, `lib/password-policy.ts`) est posé dans le même appel que le mot de passe : inscription, réinitialisation, paramètres. La base ne suffit pas : GoTrue stocke un mot de passe aléatoire pour chaque compte créé par code.
 
-Règle unique : 8 caractères minimum, confirmation identique (`lib/password-policy.ts`).
+Règle unique (`lib/password-policy.ts`), alignée sur la recommandation CNIL : 12 caractères minimum avec majuscule, minuscule, chiffre et caractère spécial, confirmation identique. Le serveur applique la même règle et refuse les mots de passe présents dans une fuite connue (Have I Been Pwned). Les mots de passe créés avant ce changement restent valables.
 
 ## Pages
 
@@ -55,7 +55,15 @@ Rien ne change pour eux : email, puis code reçu par email. Aucune relance pour 
 | Changement de mot de passe sans ré-authentification | `GOTRUE_SECURITY_UPDATE_PASSWORD_REQUIRE_REAUTHENTICATION` | `false` |
 | Durée de validité des liens et des codes | `GOTRUE_MAILER_OTP_EXP` | `3600` |
 
-La règle des 8 caractères est appliquée par l'app ; `GOTRUE_PASSWORD_MIN_LENGTH=8` est facultatif.
+Règle de mot de passe côté serveur :
+
+| Réglage | Variable GoTrue | Valeur |
+|---------|-----------------|--------|
+| Longueur minimale | `GOTRUE_PASSWORD_MIN_LENGTH` | `12` |
+| Types exigés | `GOTRUE_PASSWORD_REQUIRED_CHARACTERS` | minuscules, majuscules, chiffres, symboles (mêmes symboles que `PASSWORD_SPECIAL_CHARACTERS`) |
+| Refus des mots de passe ayant fuité | `GOTRUE_PASSWORD_HIBP_ENABLED` | `true` (si le service est injoignable, le mot de passe est accepté) |
+
+Dans `docker-compose.yml`, doubler le `$` de la liste de symboles (`$$`).
 
 **Templates email** (fichiers servis par le conteneur `email-templates`, dossier `/opt/supabase/volumes/auth/templates`)
 
@@ -78,4 +86,4 @@ Les déploiements Preview Vercel ne sont pas dans la liste : leurs liens retombe
 
 ## Local
 
-`supabase/config.toml` : `enable_confirmations = true`, `minimum_password_length = 8`, redirections `http://127.0.0.1:3000/**` et `http://localhost:3000/**`. Les emails arrivent dans Inbucket / Mailpit (templates par défaut, déjà en lien).
+`supabase/config.toml` : `enable_confirmations = true`, `minimum_password_length = 12`, `password_requirements = "lower_upper_letters_digits_symbols"`, redirections `http://127.0.0.1:3000/**` et `http://localhost:3000/**`. Les emails arrivent dans Inbucket / Mailpit (templates par défaut, déjà en lien).

@@ -8,7 +8,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { AUTH_PATHS, establishSessionFromUrl } from '@/lib/auth-email-links'
 import { finalizePendingSignup } from '@/lib/signup-finalize'
-import { HAS_PASSWORD_KEY, PASSWORD_HINT, validateNewPassword } from '@/lib/password-policy'
+import { HAS_PASSWORD_KEY, PASSWORD_HINT, passwordServerErrorMessage, validateNewPassword } from '@/lib/password-policy'
 import PasswordInput from '@/components/auth/PasswordInput'
 import AuthShell, { AuthLoading, AUTH_LINK_CLASS, AUTH_PRIMARY_BUTTON_CLASS } from '@/components/auth/AuthShell'
 
@@ -44,14 +44,7 @@ export default function ResetPasswordPage() {
     const { error: updateError } = await supabase.auth.updateUser({ password, data: { [HAS_PASSWORD_KEY]: true } })
     if (updateError) {
       setSaving(false)
-      const code = (updateError as { code?: string }).code
-      setError(
-        code === 'same_password'
-          ? 'Choisissez un mot de passe différent de l’actuel.'
-          : code === 'weak_password'
-            ? 'Mot de passe trop faible. Choisissez-en un plus long.'
-            : 'Enregistrement impossible. Le lien a peut-être expiré : demandez-en un nouveau.'
-      )
+      setError(passwordServerErrorMessage(updateError, 'Enregistrement impossible. Le lien a peut-être expiré : demandez-en un nouveau.'))
       return
     }
     // Nouveau mot de passe : fermer les autres sessions (appareil perdu, session volée).
