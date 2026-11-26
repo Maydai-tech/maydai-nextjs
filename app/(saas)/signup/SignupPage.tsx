@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { AUTH_PATHS, authRedirectUrl, isAuthRateLimited } from '@/lib/auth-email-links'
-import { HAS_PASSWORD_KEY, PASSWORD_HINT, validateNewPassword } from '@/lib/password-policy'
+import { HAS_PASSWORD_KEY, PASSWORD_HINT, passwordServerErrorMessage, validateNewPassword } from '@/lib/password-policy'
 import {
   acquisitionFields,
   computeEffectiveAttribution,
@@ -303,13 +303,10 @@ export default function SignupPage({ partnerConfig }: SignupPageProps = {}) {
         setError('Un compte existe déjà avec cette adresse email. Veuillez vous connecter.')
       } else if (signUpError) {
         console.error('[signup] signUp', signUpError)
-        const code = (signUpError as { code?: string }).code
         setError(
           isAuthRateLimited(signUpError)
             ? 'Trop de demandes. Réessayez d’ici quelques minutes.'
-            : code === 'weak_password'
-              ? 'Mot de passe trop faible. Choisissez-en un plus long.'
-              : 'Erreur lors de la création du compte. Veuillez réessayer.'
+            : passwordServerErrorMessage(signUpError, 'Erreur lors de la création du compte. Veuillez réessayer.')
         )
       } else if (data.session) {
         // Confirmation email désactivée côté serveur : session immédiate, on finalise ici.

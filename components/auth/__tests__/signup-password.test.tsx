@@ -60,7 +60,7 @@ describe('SignupPage (mot de passe)', () => {
 
   test('bloque l’étape 1 si les mots de passe ne correspondent pas', () => {
     render(<SignupPage />)
-    fillStep1('motdepasse', 'motdepassf')
+    fillStep1('Motdepasse-2026', 'Motdepasse-2027')
     expect(screen.getByText(/ne correspondent pas/)).toBeInTheDocument()
     expect(screen.queryByLabelText(/Entreprise/)).not.toBeInTheDocument()
   })
@@ -68,13 +68,13 @@ describe('SignupPage (mot de passe)', () => {
   test('signUp avec mot de passe, lien de confirmation et profil en métadonnées', async () => {
     mockAuth.signUp.mockResolvedValue({ data: { user: { identities: [{}] }, session: null }, error: null })
     render(<SignupPage />)
-    fillStep1('motdepasse', 'motdepasse')
+    fillStep1('Motdepasse-2026', 'Motdepasse-2026')
     submitStep2()
 
     expect(await screen.findByText('Confirmez votre adresse email')).toBeInTheDocument()
     expect(mockAuth.signUp).toHaveBeenCalledWith({
       email: 'jean@ex.fr',
-      password: 'motdepasse',
+      password: 'Motdepasse-2026',
       options: {
         emailRedirectTo: 'http://localhost/signup/confirmation',
         data: {
@@ -104,7 +104,7 @@ describe('SignupPage (mot de passe)', () => {
   test('email déjà confirmé (identities vide) → message compte existant', async () => {
     mockAuth.signUp.mockResolvedValue({ data: { user: { identities: [] }, session: null }, error: null })
     render(<SignupPage />)
-    fillStep1('motdepasse', 'motdepasse')
+    fillStep1('Motdepasse-2026', 'Motdepasse-2026')
     submitStep2()
     expect(await screen.findByText(/Un compte existe déjà/)).toBeInTheDocument()
   })
