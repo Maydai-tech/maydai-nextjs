@@ -81,7 +81,7 @@ function renderModelChanges(
         : ''
       return `<li><strong>${escapeHtml(model.model_provider)}</strong> - ${escapeHtml(model.model_name)}${changedFields}</li>`
     })
-    .join('')
+    .join('\n')
 
   return `<h3>${escapeHtml(title)} (${models.length})</h3><ul>${rows}</ul>`
 }
