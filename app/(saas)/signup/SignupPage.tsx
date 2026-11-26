@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { AUTH_PATHS, authRedirectUrl, isAuthRateLimited } from '@/lib/auth-email-links'
-import { PASSWORD_HINT, validateNewPassword } from '@/lib/password-policy'
+import { HAS_PASSWORD_KEY, PASSWORD_HINT, validateNewPassword } from '@/lib/password-policy'
 import {
   acquisitionFields,
   computeEffectiveAttribution,
@@ -289,7 +289,7 @@ export default function SignupPage({ partnerConfig }: SignupPageProps = {}) {
         password,
         options: {
           emailRedirectTo: authRedirectUrl(AUTH_PATHS.confirmSignup),
-          data: { [PENDING_SIGNUP_KEY]: pending },
+          data: { [PENDING_SIGNUP_KEY]: pending, [HAS_PASSWORD_KEY]: true },
         },
       })
 

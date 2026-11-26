@@ -8,7 +8,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { AUTH_PATHS, establishSessionFromUrl } from '@/lib/auth-email-links'
 import { finalizePendingSignup } from '@/lib/signup-finalize'
-import { PASSWORD_HINT, validateNewPassword } from '@/lib/password-policy'
+import { HAS_PASSWORD_KEY, PASSWORD_HINT, validateNewPassword } from '@/lib/password-policy'
 import PasswordInput from '@/components/auth/PasswordInput'
 import AuthShell, { AuthLoading, AUTH_LINK_CLASS, AUTH_PRIMARY_BUTTON_CLASS } from '@/components/auth/AuthShell'
 
@@ -41,7 +41,7 @@ export default function ResetPasswordPage() {
     }
     setError('')
     setSaving(true)
-    const { error: updateError } = await supabase.auth.updateUser({ password })
+    const { error: updateError } = await supabase.auth.updateUser({ password, data: { [HAS_PASSWORD_KEY]: true } })
     if (updateError) {
       setSaving(false)
       const code = (updateError as { code?: string }).code

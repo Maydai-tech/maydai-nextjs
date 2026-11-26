@@ -91,6 +91,7 @@ describe('SignupPage (mot de passe)', () => {
             leadId: 'lead-1',
             attribution: null,
           },
+          has_password: true,
         },
       },
     })

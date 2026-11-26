@@ -6,23 +6,27 @@ import Link from 'next/link'
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { sendLoginEvent } from '@/lib/gtm'
-import { ArrowRight, Clock, Info } from 'lucide-react'
+import { ArrowRight, Clock } from 'lucide-react'
 import { SIGNUP_HREF } from '@/lib/signup-utm-hrefs'
 import { AUTH_PATHS, authRedirectUrl, isAuthRateLimited } from '@/lib/auth-email-links'
 import { finalizePendingSignup, getPendingSignup } from '@/lib/signup-finalize'
 import PasswordInput from '@/components/auth/PasswordInput'
+import OTPVerification from '@/components/auth/OTPVerification'
 import AuthShell, { EmailField, AuthLoading, AUTH_LINK_CLASS, AUTH_PRIMARY_BUTTON_CLASS } from '@/components/auth/AuthShell'
 
 type LoginError = null | 'invalid' | 'unconfirmed' | 'generic'
+// email → mot de passe (défaut) ou code (ancien compte sans mot de passe choisi)
+type LoginStep = 'email' | 'password' | 'code'
 
 export default function LoginPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const { signIn, user, loading } = useAuth()
+    const { signIn, signInWithOtp, verifyOtp, user, loading } = useAuth()
 
     // Pre-fill email from URL params (e.g., /login?email=user@example.com)
     const emailFromUrl = searchParams.get('email') || ''
 
+    const [step, setStep] = useState<LoginStep>('email')
     const [email, setEmail] = useState(emailFromUrl)
     const [password, setPassword] = useState('')
     const [loginError, setLoginError] = useState<LoginError>(null)
@@ -62,6 +66,70 @@ export default function LoginPage() {
         }, 60_000)
     }
 
+    // Fin de connexion commune au mot de passe et au code.
+    const completeLogin = async () => {
+        // Inscription confirmée sur un autre appareil : le profil n'a pas encore été créé.
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session && getPendingSignup(session)) {
+            try {
+                await finalizePendingSignup(session)
+            } catch (finalizeErr) {
+                console.error('[login] Finalisation inscription', finalizeErr)
+            }
+        }
+
+        try {
+            await sendLoginEvent('email')
+        } catch (err) {
+            console.error('[gtm] Login event tracking failed:', err)
+        }
+        router.push('/dashboard/registries')
+    }
+
+    const backToEmail = () => {
+        isSubmittingRef.current = false
+        setStep('email')
+        setPassword('')
+        setLoginError(null)
+    }
+
+    // Étape 1 : l'email décide de l'écran suivant.
+    const handleEmailSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setLoginError(null)
+        setFormLoading(true)
+        try {
+            const response = await fetch('/api/auth/login-method', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email.trim() }),
+            })
+            if (!response.ok) throw new Error(`login-method ${response.status}`)
+            const { method } = (await response.json()) as { method: 'password' | 'code' }
+
+            if (method === 'code') {
+                const { error } = await signInWithOtp(email.trim(), false)
+                if (error) {
+                    if (isAuthRateLimited(error)) startRateLimit()
+                    else {
+                        console.error('Login error:', error)
+                        setLoginError('generic')
+                    }
+                    return
+                }
+                isSubmittingRef.current = true // redirection après l'événement GTM, pas dès la session
+                setStep('code')
+            } else {
+                setStep('password')
+            }
+        } catch (err) {
+            console.error('Login error:', err)
+            setLoginError('generic')
+        } finally {
+            setFormLoading(false)
+        }
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoginError(null)
@@ -91,23 +159,7 @@ export default function LoginPage() {
 
             clearRateLimitTimer()
             setIsRateLimited(false)
-
-            // Inscription confirmée sur un autre appareil : le profil n'a pas encore été créé.
-            const { data: { session } } = await supabase.auth.getSession()
-            if (session && getPendingSignup(session)) {
-                try {
-                    await finalizePendingSignup(session)
-                } catch (finalizeErr) {
-                    console.error('[login] Finalisation inscription', finalizeErr)
-                }
-            }
-
-            try {
-                await sendLoginEvent('email')
-            } catch (err) {
-                console.error('[gtm] Login event tracking failed:', err)
-            }
-            router.push('/dashboard/registries')
+            await completeLogin()
         } catch (err) {
             console.error('Login error:', err)
             isSubmittingRef.current = false
@@ -131,20 +183,37 @@ export default function LoginPage() {
         return <AuthLoading />
     }
 
-    return (
-        <AuthShell title="Connexion" subtitle={<p>Connectez-vous à votre espace.</p>}>
-            <form className="space-y-6" onSubmit={handleSubmit}>
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-[#0080A3]/10 border border-[#0080A3]/20 text-sm text-slate-700">
-                    <Info className="w-5 h-5 text-[#0080A3] mt-0.5 flex-shrink-0" aria-hidden="true" />
-                    <p>
-                        La connexion se fait désormais avec un mot de passe. Première connexion ?{' '}
-                        <Link href={AUTH_PATHS.forgotPassword} className={`${AUTH_LINK_CLASS} underline`}>
-                            Créez le vôtre
-                        </Link>
-                        .
-                    </p>
-                </div>
+    // Ancien compte : code à 6 chiffres, comme avant MAY-6.
+    if (step === 'code') {
+        return (
+            <OTPVerification
+                email={email.trim()}
+                onVerify={(code) => verifyOtp(email.trim(), code)}
+                onSuccess={completeLogin}
+                onBack={backToEmail}
+                onResend={() => signInWithOtp(email.trim(), false)}
+                title="Connexion"
+            />
+        )
+    }
 
+    return (
+        <AuthShell
+            title="Connexion"
+            subtitle={
+                step === 'password' ? (
+                    <p>
+                        {email.trim()} ·{' '}
+                        <button type="button" onClick={backToEmail} className={AUTH_LINK_CLASS}>
+                            Modifier
+                        </button>
+                    </p>
+                ) : (
+                    <p>Connectez-vous à votre espace.</p>
+                )
+            }
+        >
+            <form className="space-y-6" onSubmit={step === 'email' ? handleEmailSubmit : handleSubmit}>
                 {isRateLimited && (
                     <div
                         role="alert"
@@ -165,11 +234,10 @@ export default function LoginPage() {
                 {loginError === 'invalid' && (
                     <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4">
                         <p className="text-red-600 text-sm">
-                            Email ou mot de passe incorrect. Pas encore de mot de passe ?{' '}
+                            Email ou mot de passe incorrect.{' '}
                             <Link href={AUTH_PATHS.forgotPassword} className="font-medium underline">
-                                Créez-le
+                                Mot de passe oublié ?
                             </Link>
-                            .
                         </p>
                     </div>
                 )}
@@ -204,11 +272,14 @@ export default function LoginPage() {
                     </div>
                 )}
 
-                <EmailField value={email} onChange={(value) => {
+                {step === 'email' && (
+                    <EmailField value={email} onChange={(value) => {
                         setEmail(value)
                         setLoginError(null)
                     }} />
+                )}
 
+                {step === 'password' && (
                 <PasswordInput
                     id="password"
                     label="Mot de passe"
@@ -224,21 +295,22 @@ export default function LoginPage() {
                         </Link>
                     }
                 />
+                )}
 
                 <button
                     type="submit"
-                    disabled={isRateLimited || formLoading || !email || !password}
+                    disabled={isRateLimited || formLoading || !email || (step === 'password' && !password)}
                     aria-busy={formLoading}
                     className={AUTH_PRIMARY_BUTTON_CLASS}
                 >
                     {formLoading ? (
                         <>
                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" aria-hidden="true" />
-                            Connexion en cours...
+                            {step === 'email' ? 'Vérification...' : 'Connexion en cours...'}
                         </>
                     ) : (
                         <>
-                            Se connecter
+                            {step === 'email' ? 'Continuer' : 'Se connecter'}
                             <ArrowRight className="h-5 w-5" aria-hidden="true" />
                         </>
                     )}

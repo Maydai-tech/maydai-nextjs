@@ -3,10 +3,14 @@
 import { useState } from 'react'
 import { Lock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { PASSWORD_HINT, validateNewPassword } from '@/lib/password-policy'
+import { useAuth } from '@/lib/auth'
+import { HAS_PASSWORD_KEY, PASSWORD_HINT, validateNewPassword } from '@/lib/password-policy'
 import PasswordInput from '@/components/auth/PasswordInput'
 
 export default function PasswordChangeCard() {
+  const { user, refreshSession } = useAuth()
+  // Ancien compte connecté par code : le mot de passe est facultatif, il peut en définir un ici.
+  const [hasPassword, setHasPassword] = useState(user?.user_metadata?.[HAS_PASSWORD_KEY] === true)
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [saving, setSaving] = useState(false)
@@ -21,7 +25,7 @@ export default function PasswordChangeCard() {
     }
     setSaving(true)
     setMessage(null)
-    const { error } = await supabase.auth.updateUser({ password })
+    const { error } = await supabase.auth.updateUser({ password, data: { [HAS_PASSWORD_KEY]: true } })
     setSaving(false)
     if (error) {
       const code = (error as { code?: string }).code
@@ -32,13 +36,20 @@ export default function PasswordChangeCard() {
             ? 'Choisissez un mot de passe différent de l’actuel.'
             : code === 'weak_password'
               ? 'Mot de passe trop faible. Choisissez-en un plus long.'
-              : 'Impossible de changer le mot de passe. Veuillez réessayer.',
+              : 'Impossible d’enregistrer le mot de passe. Veuillez réessayer.',
       })
       return
     }
     setPassword('')
     setConfirmation('')
-    setMessage({ type: 'success', text: 'Votre mot de passe a été modifié.' })
+    setMessage({
+      type: 'success',
+      text: hasPassword
+        ? 'Votre mot de passe a été modifié.'
+        : 'Votre mot de passe est enregistré. Vous l’utiliserez à votre prochaine connexion.',
+    })
+    setHasPassword(true)
+    void refreshSession()
   }
 
   return (
@@ -47,7 +58,11 @@ export default function PasswordChangeCard() {
         <Lock size={18} className="text-[#0080A3]" aria-hidden="true" />
         Mot de passe
       </h3>
-      <p className="text-sm text-gray-500 mt-1">Le mot de passe que vous utilisez pour vous connecter.</p>
+      <p className="text-sm text-gray-500 mt-1">
+        {hasPassword
+          ? 'Le mot de passe que vous utilisez pour vous connecter.'
+          : 'Facultatif : vous vous connectez aujourd’hui avec un code reçu par email. Définissez un mot de passe pour vous connecter sans code.'}
+      </p>
 
       <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -83,7 +98,7 @@ export default function PasswordChangeCard() {
           aria-busy={saving}
           className="w-full sm:w-auto px-5 py-2.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Changer le mot de passe
+          {hasPassword ? 'Changer le mot de passe' : 'Définir un mot de passe'}
         </button>
       </form>
     </div>

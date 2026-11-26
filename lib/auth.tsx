@@ -10,6 +10,9 @@ interface AuthContextType {
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>
+  /** Connexion par code : réservée aux anciens comptes sans mot de passe (MAY-6). */
+  signInWithOtp: (email: string, shouldCreateUser?: boolean) => Promise<{ error: Error | null }>
+  verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   deleteAccount: () => Promise<void>
   refreshSession: () => Promise<void>
@@ -162,17 +165,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const signInWithOtp = useCallback(async (email: string, shouldCreateUser = false) => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser } })
+      return { error }
+    } catch (error) {
+      console.error('Error in signInWithOtp:', error)
+      return { error: error as Error }
+    }
+  }, [])
+
+  const verifyOtp = useCallback(async (email: string, token: string) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+      return { error }
+    } catch (error) {
+      console.error('Error in verifyOtp:', error)
+      return { error: error as Error }
+    }
+  }, [])
+
   const value = useMemo(() => ({
     user,
     session,
     loading,
     signIn,
     signUp,
+    signInWithOtp,
+    verifyOtp,
     signOut,
     deleteAccount,
     refreshSession,
     getAccessToken
-  }), [user, session, loading, signIn, signUp, signOut, deleteAccount, refreshSession, getAccessToken])
+  }), [user, session, loading, signIn, signUp, signInWithOtp, verifyOtp, signOut, deleteAccount, refreshSession, getAccessToken])
 
   return (
     <AuthContext.Provider value={value}>

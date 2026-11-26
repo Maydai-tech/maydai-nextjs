@@ -3,6 +3,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 const mockPush = jest.fn()
 const mockRefresh = jest.fn()
 const mockSignIn = jest.fn()
+const mockSignInWithOtp = jest.fn()
+const mockVerifyOtp = jest.fn()
+const mockRefreshSession = jest.fn()
+let mockUser: { user_metadata: Record<string, unknown> } | null = null
 const mockAuth = {
   getSession: jest.fn(),
   resend: jest.fn(),
@@ -23,7 +27,14 @@ jest.mock('next/image', () => ({
   default: (props: { alt: string }) => <img alt={props.alt} />,
 }))
 jest.mock('@/lib/auth', () => ({
-  useAuth: () => ({ signIn: mockSignIn, user: null, loading: false }),
+  useAuth: () => ({
+    signIn: mockSignIn,
+    signInWithOtp: mockSignInWithOtp,
+    verifyOtp: mockVerifyOtp,
+    refreshSession: mockRefreshSession,
+    user: mockUser,
+    loading: false,
+  }),
 }))
 jest.mock('@/lib/supabase', () => ({
   get supabase() {
@@ -54,27 +65,79 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockAuth.getSession.mockResolvedValue({ data: { session } })
   mockFinalize.mockResolvedValue(true)
+  mockUser = null
+  mockLoginMethod('password')
 })
+
+function mockLoginMethod(method: 'password' | 'code' | 'error') {
+  global.fetch = jest.fn().mockResolvedValue(
+    method === 'error' ? { ok: false, status: 500 } : { ok: true, json: async () => ({ method }) }
+  ) as unknown as typeof fetch
+}
+
+/** Étape 1 : l'email (pré-rempli) puis « Continuer ». */
+async function continueToPassword() {
+  fireEvent.click(screen.getByRole('button', { name: /continuer/i }))
+  await screen.findByLabelText('Mot de passe')
+}
 
 function fillPassword(label: string, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } })
 }
 
-describe('LoginPage (mot de passe)', () => {
-  test('pré-remplit l’email, affiche le bandeau et bascule la visibilité du mot de passe', () => {
+describe('LoginPage (email puis mot de passe ou code)', () => {
+  test('étape 1 : email pré-rempli, pas de champ mot de passe avant « Continuer »', () => {
     render(<LoginPage />)
     expect(screen.getByLabelText('Email')).toHaveValue('jean@ex.fr')
-    expect(screen.getByText('Créez le vôtre')).toHaveAttribute('href', '/login/mot-de-passe-oublie')
+    expect(screen.queryByLabelText('Mot de passe')).not.toBeInTheDocument()
+    expect(screen.getByText('Créer un compte')).toHaveAttribute('href', '/signup?utm_source=login')
+  })
+
+  test('compte avec mot de passe (ou email inconnu) → écran mot de passe', async () => {
+    render(<LoginPage />)
+    await continueToPassword()
+    expect(global.fetch).toHaveBeenCalledWith('/api/auth/login-method', expect.objectContaining({ body: JSON.stringify({ email: 'jean@ex.fr' }) }))
+    expect(mockSignInWithOtp).not.toHaveBeenCalled()
     expect(screen.getByText('Mot de passe oublié ?')).toHaveAttribute('href', '/login/mot-de-passe-oublie')
     const input = screen.getByLabelText('Mot de passe')
     expect(input).toHaveAttribute('type', 'password')
     fireEvent.click(screen.getByRole('button', { name: 'Afficher le mot de passe' }))
     expect(input).toHaveAttribute('type', 'text')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier' }))
+    expect(screen.getByLabelText('Email')).toHaveValue('jean@ex.fr')
+  })
+
+  test('ancien compte → code envoyé puis connexion par code, sans mot de passe', async () => {
+    mockLoginMethod('code')
+    mockSignInWithOtp.mockResolvedValue({ error: null })
+    mockVerifyOtp.mockResolvedValue({ error: null })
+    render(<LoginPage />)
+    fireEvent.click(screen.getByRole('button', { name: /continuer/i }))
+    await waitFor(() => expect(screen.getAllByRole('textbox')).toHaveLength(6))
+    const digits = screen.getAllByRole('textbox')
+    expect(mockSignInWithOtp).toHaveBeenCalledWith('jean@ex.fr', false)
+    expect(screen.queryByLabelText('Mot de passe')).not.toBeInTheDocument()
+    digits.forEach((input, index) => fireEvent.change(input, { target: { value: String(index + 1) } }))
+    await waitFor(() => expect(mockVerifyOtp).toHaveBeenCalledWith('jean@ex.fr', '123456'))
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard/registries'))
+    expect(mockSendLoginEvent).toHaveBeenCalledWith('email')
+    expect(mockSignIn).not.toHaveBeenCalled()
+  })
+
+  test('vérification de l’email impossible → message, on reste sur l’email', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {})
+    mockLoginMethod('error')
+    render(<LoginPage />)
+    fireEvent.click(screen.getByRole('button', { name: /continuer/i }))
+    expect(await screen.findByText('Une erreur est survenue. Veuillez réessayer.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Email')).toBeInTheDocument()
   })
 
   test('connexion réussie → événement login puis tableau de bord', async () => {
     mockSignIn.mockResolvedValue({ error: null })
     render(<LoginPage />)
+    await continueToPassword()
     fillPassword('Mot de passe', 'secret123')
     fireEvent.click(screen.getByRole('button', { name: /se connecter/i }))
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard/registries'))
@@ -88,19 +151,21 @@ describe('LoginPage (mot de passe)', () => {
     const pendingSession = { ...session, user: { ...session.user, user_metadata: { pending_signup: { profile: {} } } } }
     mockAuth.getSession.mockResolvedValue({ data: { session: pendingSession } })
     render(<LoginPage />)
+    await continueToPassword()
     fillPassword('Mot de passe', 'secret123')
     fireEvent.click(screen.getByRole('button', { name: /se connecter/i }))
     await waitFor(() => expect(mockPush).toHaveBeenCalled())
     expect(mockFinalize).toHaveBeenCalledWith(pendingSession)
   })
 
-  test('identifiants incorrects → message avec lien de création', async () => {
+  test('identifiants incorrects → message avec lien mot de passe oublié', async () => {
     mockSignIn.mockResolvedValue({ error: { code: 'invalid_credentials', message: 'Invalid login credentials' } })
     render(<LoginPage />)
+    await continueToPassword()
     fillPassword('Mot de passe', 'mauvais')
     fireEvent.click(screen.getByRole('button', { name: /se connecter/i }))
     expect(await screen.findByText(/Email ou mot de passe incorrect/)).toBeInTheDocument()
-    expect(screen.getByText('Créez-le')).toHaveAttribute('href', '/login/mot-de-passe-oublie')
+    expect(screen.getAllByText('Mot de passe oublié ?')).toHaveLength(2)
     expect(mockPush).not.toHaveBeenCalled()
   })
 
@@ -108,6 +173,7 @@ describe('LoginPage (mot de passe)', () => {
     mockSignIn.mockResolvedValue({ error: { code: 'email_not_confirmed', message: 'Email not confirmed' } })
     mockAuth.resend.mockResolvedValue({ error: null })
     render(<LoginPage />)
+    await continueToPassword()
     fillPassword('Mot de passe', 'secret123')
     fireEvent.click(screen.getByRole('button', { name: /se connecter/i }))
     fireEvent.click(await screen.findByRole('button', { name: /Renvoyer l'email de confirmation/ }))
@@ -124,6 +190,7 @@ describe('LoginPage (mot de passe)', () => {
   test('trop de tentatives → bandeau d’attente', async () => {
     mockSignIn.mockResolvedValue({ error: { status: 429, message: 'rate limit' } })
     render(<LoginPage />)
+    await continueToPassword()
     fillPassword('Mot de passe', 'secret123')
     fireEvent.click(screen.getByRole('button', { name: /se connecter/i }))
     expect(await screen.findByText('Veuillez patienter quelques instants')).toBeInTheDocument()
@@ -169,7 +236,7 @@ describe('ResetPasswordPage', () => {
     fillPassword('Confirmer le mot de passe', 'motdepasse')
     fireEvent.click(screen.getByRole('button', { name: /Enregistrer et me connecter/ }))
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard/registries'))
-    expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'motdepasse' })
+    expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'motdepasse', data: { has_password: true } })
   })
 })
 
@@ -204,6 +271,7 @@ describe('SignupConfirmationPage', () => {
 
 describe('PasswordChangeCard', () => {
   test('refuse moins de 8 caractères', async () => {
+    mockUser = { user_metadata: { has_password: true } }
     render(<PasswordChangeCard />)
     fillPassword('Nouveau mot de passe', 'court')
     fillPassword('Confirmer le mot de passe', 'court')
@@ -213,12 +281,27 @@ describe('PasswordChangeCard', () => {
   })
 
   test('change le mot de passe et confirme', async () => {
+    mockUser = { user_metadata: { has_password: true } }
     mockAuth.updateUser.mockResolvedValue({ error: null })
     render(<PasswordChangeCard />)
     fillPassword('Nouveau mot de passe', 'nouveau-mdp')
     fillPassword('Confirmer le mot de passe', 'nouveau-mdp')
     fireEvent.click(screen.getByRole('button', { name: 'Changer le mot de passe' }))
     expect(await screen.findByText('Votre mot de passe a été modifié.')).toBeInTheDocument()
-    expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'nouveau-mdp' })
+    expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'nouveau-mdp', data: { has_password: true } })
+  })
+
+  test('ancien compte à code : définir un mot de passe est facultatif et pose le marqueur', async () => {
+    mockUser = { user_metadata: {} }
+    mockAuth.updateUser.mockResolvedValue({ error: null })
+    render(<PasswordChangeCard />)
+    expect(screen.getByText(/Facultatif/)).toBeInTheDocument()
+    fillPassword('Nouveau mot de passe', 'nouveau-mdp')
+    fillPassword('Confirmer le mot de passe', 'nouveau-mdp')
+    fireEvent.click(screen.getByRole('button', { name: 'Définir un mot de passe' }))
+    expect(await screen.findByText(/Votre mot de passe est enregistré/)).toBeInTheDocument()
+    expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'nouveau-mdp', data: { has_password: true } })
+    expect(screen.getByRole('button', { name: 'Changer le mot de passe' })).toBeInTheDocument()
+    expect(mockRefreshSession).toHaveBeenCalled()
   })
 })

@@ -13,3 +13,13 @@ export function validateNewPassword(password: string, confirmation: string): str
   }
   return null
 }
+
+/**
+ * Marqueur (user_metadata) posé quand l'utilisateur choisit un mot de passe : inscription,
+ * réinitialisation, paramètres. Sans lui, un compte existant se connecte par code.
+ * GoTrue stocke un mot de passe aléatoire pour les comptes créés par code : la base seule
+ * ne permet pas de savoir qui en connaît un.
+ * ponytail: simple indice d'affichage modifiable par l'utilisateur lui-même ; à passer en
+ * app_metadata si un jour il conditionne un droit.
+ */
+export const HAS_PASSWORD_KEY = 'has_password'
