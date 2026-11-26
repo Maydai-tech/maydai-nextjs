@@ -1,0 +1,15 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - heading "Suis-je prêt·e pour Paris-Brest-Paris Randonneur ?" [level=2] [ref=e4]
+    - generic [ref=e5]:
+      - generic "Toi" [ref=e8]
+      - generic [ref=e16]:
+        - generic [ref=e17]: Toi
+        - generic [ref=e18]: Les intéressé·es
+    - separator
+    - paragraph [ref=e19]: Réponds à quelques questions pour te situer parmi les personnes déjà intéressées.
+    - button "Je situe mon niveau →" [ref=e20] [cursor=pointer]
+    - link "Voir l'évènement sur Upcomi" [ref=e21] [cursor=pointer]:
+      - /url: https://app.upcomi.cc/event/paris-brest-paris-randonneur-2027
+      - img "Upcomi" [ref=e23]
+  - button "Open Next.js Dev Tools" [ref=e29] [cursor=pointer]

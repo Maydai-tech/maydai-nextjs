@@ -25,13 +25,20 @@ Règle unique : 8 caractères minimum, confirmation identique (`lib/password-pol
 | `/login/nouveau-mot-de-passe` | Cible du lien « Reset password » : choix du mot de passe (`updateUser`), puis `/dashboard/registries` | `.../nouveau-mot-de-passe/ResetPasswordPage.tsx` |
 | `/signup` | Formulaire existant + mot de passe. `signUp` avec le profil dans `user_metadata.pending_signup`, puis écran « Confirmez votre adresse email » | `app/(saas)/signup/SignupPage.tsx` |
 | `/signup/confirmation` | Cible du lien « Confirm signup » : session, `POST /api/auth/complete-signup`, liaison lead, GTM, `/dashboard/registries` | `app/(saas)/signup/confirmation/SignupConfirmationPage.tsx` |
-| `/settings` (Général) | Carte « Mot de passe » : changer son mot de passe ; facultatif pour un ancien compte à code (« Définir un mot de passe »), qui passe alors à l'écran mot de passe | `components/Settings/PasswordChangeCard.tsx` |
+| `/settings` (Général) | Carte « Mot de passe » : changer son mot de passe en saisissant l'actuel ; facultatif pour un ancien compte à code (« Définir un mot de passe »), qui passe alors à l'écran mot de passe | `components/Settings/PasswordChangeCard.tsx` |
 
 ## Flux
 
 - **Session depuis un lien** (`lib/auth-email-links.ts › establishSessionFromUrl`) : `?token_hash=&type=` → `verifyOtp` ; `?code=` (PKCE, défaut de `@supabase/ssr`) → échangé automatiquement par supabase-js, sinon `exchangeCodeForSession` ; `#access_token` (implicite) → détecté par supabase-js.
 - **Profil d'inscription** (`lib/signup-finalize.ts`) : les données du formulaire (noms, entreprise, secteur, UTM / partenaire Learning Gate, `?plan=`, `?lead_id=`) sont stockées dans `user_metadata.pending_signup` au `signUp`, rejouées vers `complete-signup` après confirmation, puis effacées.
 - **Lien ouvert sur un autre appareil** : en PKCE, le code ne peut pas être échangé (pas de `code_verifier`), mais l'email est bien confirmé par GoTrue. La page invite à se connecter ; à la première connexion, `/login` finalise l'inscription si `pending_signup` est encore présent. Un lien de réinitialisation ouvert sur un autre navigateur affiche « Lien invalide » → redemander un lien.
+
+## Sécurité
+
+- `POST /api/auth/login-method` est limitée à 10 demandes par minute et par adresse IP (`lib/rate-limit.ts`, compteur en mémoire par instance). La réponse `code` révèle qu'un ancien compte existe : compromis accepté pour afficher le bon écran.
+- Le marqueur `has_password` ne choisit que l'écran. La connexion par code reste acceptée par GoTrue pour tous les comptes : comme pour « Mot de passe oublié », l'accès à la boîte mail donne accès au compte.
+- Après un changement ou une réinitialisation de mot de passe, les autres sessions sont fermées (`signOut({ scope: 'others' })`).
+- Dans Paramètres, changer un mot de passe existant exige l'actuel. Un ancien compte à code en définit un sans cette étape.
 
 ## Utilisateurs existants
 

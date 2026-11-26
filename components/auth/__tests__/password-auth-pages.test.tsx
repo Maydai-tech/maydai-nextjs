@@ -6,12 +6,14 @@ const mockSignIn = jest.fn()
 const mockSignInWithOtp = jest.fn()
 const mockVerifyOtp = jest.fn()
 const mockRefreshSession = jest.fn()
-let mockUser: { user_metadata: Record<string, unknown> } | null = null
+let mockUser: { email?: string; user_metadata: Record<string, unknown> } | null = null
 const mockAuth = {
   getSession: jest.fn(),
   resend: jest.fn(),
   resetPasswordForEmail: jest.fn(),
   updateUser: jest.fn(),
+  signOut: jest.fn(),
+  signInWithPassword: jest.fn(),
 }
 const mockEstablish = jest.fn()
 const mockFinalize = jest.fn()
@@ -65,6 +67,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockAuth.getSession.mockResolvedValue({ data: { session } })
   mockFinalize.mockResolvedValue(true)
+  mockAuth.signOut.mockResolvedValue({ error: null })
   mockUser = null
   mockLoginMethod('password')
 })
@@ -237,6 +240,7 @@ describe('ResetPasswordPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /Enregistrer et me connecter/ }))
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/dashboard/registries'))
     expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'motdepasse', data: { has_password: true } })
+    expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: 'others' })
   })
 })
 
@@ -273,6 +277,7 @@ describe('PasswordChangeCard', () => {
   test('refuse moins de 8 caractères', async () => {
     mockUser = { user_metadata: { has_password: true } }
     render(<PasswordChangeCard />)
+    fillPassword('Mot de passe actuel', 'ancien-mdp')
     fillPassword('Nouveau mot de passe', 'court')
     fillPassword('Confirmer le mot de passe', 'court')
     fireEvent.click(screen.getByRole('button', { name: 'Changer le mot de passe' }))
@@ -280,15 +285,31 @@ describe('PasswordChangeCard', () => {
     expect(mockAuth.updateUser).not.toHaveBeenCalled()
   })
 
-  test('change le mot de passe et confirme', async () => {
-    mockUser = { user_metadata: { has_password: true } }
-    mockAuth.updateUser.mockResolvedValue({ error: null })
+  test('mot de passe actuel incorrect → refus, rien n’est modifié', async () => {
+    mockUser = { email: 'jean@ex.fr', user_metadata: { has_password: true } }
+    mockAuth.signInWithPassword.mockResolvedValue({ error: { code: 'invalid_credentials', message: 'Invalid login credentials' } })
     render(<PasswordChangeCard />)
+    fillPassword('Mot de passe actuel', 'mauvais')
+    fillPassword('Nouveau mot de passe', 'nouveau-mdp')
+    fillPassword('Confirmer le mot de passe', 'nouveau-mdp')
+    fireEvent.click(screen.getByRole('button', { name: 'Changer le mot de passe' }))
+    expect(await screen.findByText('Mot de passe actuel incorrect.')).toBeInTheDocument()
+    expect(mockAuth.signInWithPassword).toHaveBeenCalledWith({ email: 'jean@ex.fr', password: 'mauvais' })
+    expect(mockAuth.updateUser).not.toHaveBeenCalled()
+  })
+
+  test('change le mot de passe et confirme', async () => {
+    mockUser = { email: 'jean@ex.fr', user_metadata: { has_password: true } }
+    mockAuth.updateUser.mockResolvedValue({ error: null })
+    mockAuth.signInWithPassword.mockResolvedValue({ error: null })
+    render(<PasswordChangeCard />)
+    fillPassword('Mot de passe actuel', 'ancien-mdp')
     fillPassword('Nouveau mot de passe', 'nouveau-mdp')
     fillPassword('Confirmer le mot de passe', 'nouveau-mdp')
     fireEvent.click(screen.getByRole('button', { name: 'Changer le mot de passe' }))
     expect(await screen.findByText('Votre mot de passe a été modifié.')).toBeInTheDocument()
     expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'nouveau-mdp', data: { has_password: true } })
+    expect(mockAuth.signOut).toHaveBeenCalledWith({ scope: 'others' })
   })
 
   test('ancien compte à code : définir un mot de passe est facultatif et pose le marqueur', async () => {
@@ -296,6 +317,7 @@ describe('PasswordChangeCard', () => {
     mockAuth.updateUser.mockResolvedValue({ error: null })
     render(<PasswordChangeCard />)
     expect(screen.getByText(/Facultatif/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Mot de passe actuel')).not.toBeInTheDocument()
     fillPassword('Nouveau mot de passe', 'nouveau-mdp')
     fillPassword('Confirmer le mot de passe', 'nouveau-mdp')
     fireEvent.click(screen.getByRole('button', { name: 'Définir un mot de passe' }))
@@ -303,5 +325,6 @@ describe('PasswordChangeCard', () => {
     expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: 'nouveau-mdp', data: { has_password: true } })
     expect(screen.getByRole('button', { name: 'Changer le mot de passe' })).toBeInTheDocument()
     expect(mockRefreshSession).toHaveBeenCalled()
+    expect(mockAuth.signInWithPassword).not.toHaveBeenCalled()
   })
 })

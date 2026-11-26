@@ -104,6 +104,10 @@ export default function LoginPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email.trim() }),
             })
+            if (response.status === 429) {
+                startRateLimit()
+                return
+            }
             if (!response.ok) throw new Error(`login-method ${response.status}`)
             const { method } = (await response.json()) as { method: 'password' | 'code' }
 

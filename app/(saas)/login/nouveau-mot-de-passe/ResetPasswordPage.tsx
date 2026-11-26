@@ -54,6 +54,8 @@ export default function ResetPasswordPage() {
       )
       return
     }
+    // Nouveau mot de passe : fermer les autres sessions (appareil perdu, session volée).
+    await supabase.auth.signOut({ scope: 'others' }).catch((err) => console.error('[reset-password] Fermeture des autres sessions', err))
     // Un lien de réinitialisation confirme aussi l'email : finaliser une inscription restée en attente.
     const { data } = await supabase.auth.getSession()
     if (data.session) {

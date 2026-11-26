@@ -11,6 +11,7 @@ export default function PasswordChangeCard() {
   const { user, refreshSession } = useAuth()
   // Ancien compte connecté par code : le mot de passe est facultatif, il peut en définir un ici.
   const [hasPassword, setHasPassword] = useState(user?.user_metadata?.[HAS_PASSWORD_KEY] === true)
+  const [currentPassword, setCurrentPassword] = useState('')
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [saving, setSaving] = useState(false)
@@ -25,6 +26,15 @@ export default function PasswordChangeCard() {
     }
     setSaving(true)
     setMessage(null)
+    // Compte avec mot de passe : vérifier l'actuel avant d'en changer (session ouverte ≠ titulaire du compte).
+    if (hasPassword) {
+      const { error: currentError } = await supabase.auth.signInWithPassword({ email: user?.email ?? '', password: currentPassword })
+      if (currentError) {
+        setSaving(false)
+        setMessage({ type: 'error', text: 'Mot de passe actuel incorrect.' })
+        return
+      }
+    }
     const { error } = await supabase.auth.updateUser({ password, data: { [HAS_PASSWORD_KEY]: true } })
     setSaving(false)
     if (error) {
@@ -40,6 +50,9 @@ export default function PasswordChangeCard() {
       })
       return
     }
+    // Nouveau mot de passe : fermer les autres sessions (appareil perdu, session volée).
+    await supabase.auth.signOut({ scope: 'others' }).catch((err) => console.error('[settings] Fermeture des autres sessions', err))
+    setCurrentPassword('')
     setPassword('')
     setConfirmation('')
     setMessage({
@@ -65,6 +78,17 @@ export default function PasswordChangeCard() {
       </p>
 
       <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
+        {hasPassword && (
+          <div className="md:w-1/2 md:pr-2">
+            <PasswordInput
+              id="settings-current-password"
+              label="Mot de passe actuel"
+              value={currentPassword}
+              onChange={setCurrentPassword}
+              autoComplete="current-password"
+            />
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <PasswordInput
             id="settings-new-password"
@@ -94,7 +118,7 @@ export default function PasswordChangeCard() {
 
         <button
           type="submit"
-          disabled={saving || !password || !confirmation}
+          disabled={saving || !password || !confirmation || (hasPassword && !currentPassword)}
           aria-busy={saving}
           className="w-full sm:w-auto px-5 py-2.5 text-sm font-medium text-white bg-[#0080A3] rounded-lg hover:bg-[#006280] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
