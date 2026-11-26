@@ -48,8 +48,11 @@ import InviteCollaboratorModal from '@/components/Collaboration/InviteCollaborat
 import { DatePickerModal } from '../shared/DatePickerModal'
 import { getDeploymentStatus, getDeploymentStatusColor } from '@/lib/deployment-status'
 import UseCaseHistoryModal from './UseCaseHistoryModal'
+import { EuLicenseAlert } from '@/components/EuLicenseAlert'
+import { shouldShowEuLicenseAlert } from '@/lib/eu-license-alert'
+import { retiredPublishedWeightsLabel } from '@/lib/bench-llm/model-visibility'
 
-type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
+type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at' | 'lifecycle_status' | 'license_eu_restricted'>>
 
 interface UseCaseHeaderProps {
   useCase: UseCase
@@ -696,6 +699,19 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
                   />
                   <span className="text-sm text-gray-600">{useCase.compl_ai_models.model_name}</span>
                 </div>
+                {retiredPublishedWeightsLabel(useCase.compl_ai_models.lifecycle_status) && (
+                  <p className="mt-2 text-xs font-medium text-amber-800">
+                    {retiredPublishedWeightsLabel(useCase.compl_ai_models.lifecycle_status)}
+                  </p>
+                )}
+                {shouldShowEuLicenseAlert({
+                  licenseEuRestricted: useCase.compl_ai_models.license_eu_restricted === true,
+                  organizationCountry: useCase.companies?.country,
+                }) && (
+                  <div className="mt-3">
+                    <EuLicenseAlert />
+                  </div>
+                )}
                 {useCase.compl_ai_models.model_provider && (
                   <div className="text-xs text-gray-500 mt-1">
                     {useCase.compl_ai_models.model_provider}
@@ -792,6 +808,7 @@ export function UseCaseHeader({ useCase, progress, onUpdateUseCase, updating = f
         currentModel={useCase.compl_ai_models || null}
         onSave={handleModelSave}
         saving={updating}
+        organizationCountry={useCase.companies?.country}
       />
 
       {/* Modal de confirmation de suppression */}

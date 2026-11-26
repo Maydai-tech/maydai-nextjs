@@ -3,8 +3,11 @@ import { ComplAIModel } from '@/lib/supabase'
 import { useApiCall } from '@/lib/api-client-legacy'
 import { Bot, X, Search, Check } from 'lucide-react'
 import ComplAiScoreBadge from './ComplAiScoreBadge'
+import { EuLicenseAlert } from '@/components/EuLicenseAlert'
+import { shouldShowEuLicenseAlert } from '@/lib/eu-license-alert'
+import { retiredPublishedWeightsLabel } from '@/lib/bench-llm/model-visibility'
 
-type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at'>>
+type PartialComplAIModel = Pick<ComplAIModel, 'id' | 'model_name' | 'model_provider'> & Partial<Pick<ComplAIModel, 'model_type' | 'version' | 'created_at' | 'updated_at' | 'lifecycle_status' | 'license_eu_restricted'>>
 
 interface ModelProvider {
   id: number
@@ -17,6 +20,7 @@ interface ModelSelectorModalProps {
   currentModel?: PartialComplAIModel | null
   onSave: (model: PartialComplAIModel | null) => Promise<void>
   saving?: boolean
+  organizationCountry?: string | null
 }
 
 export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
@@ -24,7 +28,8 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   onClose,
   currentModel,
   onSave,
-  saving = false
+  saving = false,
+  organizationCountry = null,
 }) => {
   const [selectedModel, setSelectedModel] = useState<PartialComplAIModel | null>(currentModel || null)
   const [providers, setProviders] = useState<ModelProvider[]>([])
@@ -219,6 +224,11 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                                   <span className="font-semibold text-gray-900">
                                     {model.model_name}
                                   </span>
+                                  {retiredPublishedWeightsLabel(model.lifecycle_status) && (
+                                    <span className="text-xs font-medium text-amber-800">
+                                      {retiredPublishedWeightsLabel(model.lifecycle_status)}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-gray-600">
                                   <span>{provider.name}</span>
@@ -259,24 +269,34 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                 providerModels[provider.id]?.some(model => model.id === selectedModel.id)
               )
               return (
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-4">
-                  <div className="flex items-center gap-2 text-blue-800 mb-2">
-                    <Check className="w-4 h-4" />
-                    <span className="text-sm font-medium">Nouveau modèle sélectionné :</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bot className="w-4 h-4 text-blue-600" />
-                      <span className="font-medium text-blue-900">{selectedModel.model_name}</span>
-                      {selectedProvider && (
-                        <span className="text-blue-700">• {selectedProvider.name}</span>
-                      )}
-                      {selectedModel.version && (
-                        <span className="text-blue-600 text-sm">(v{selectedModel.version})</span>
-                      )}
+                <>
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mt-4">
+                    <div className="flex items-center gap-2 text-blue-800 mb-2">
+                      <Check className="w-4 h-4" />
+                      <span className="text-sm font-medium">Nouveau modèle sélectionné :</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bot className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium text-blue-900">{selectedModel.model_name}</span>
+                        {selectedProvider && (
+                          <span className="text-blue-700">• {selectedProvider.name}</span>
+                        )}
+                        {selectedModel.version && (
+                          <span className="text-blue-600 text-sm">(v{selectedModel.version})</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
+                  {shouldShowEuLicenseAlert({
+                    licenseEuRestricted: selectedModel.license_eu_restricted === true,
+                    organizationCountry,
+                  }) && (
+                    <div className="mt-3">
+                      <EuLicenseAlert />
+                    </div>
+                  )}
+                </>
               )
             })()}
 

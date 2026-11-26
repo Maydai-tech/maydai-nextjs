@@ -218,6 +218,11 @@ export interface ComplAIModel {
   lifecycle_source_url?: string | null
   lifecycle_checked_at?: string | null
   visibility_override?: boolean | null
+  lifecycle_status?: string | null
+  license_class?: string | null
+  license_id?: string | null
+  license_url?: string | null
+  license_eu_restricted?: boolean | null
   search_labels?: string[]
 }
 

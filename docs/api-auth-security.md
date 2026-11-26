@@ -31,12 +31,14 @@ if (auth.error) return auth.error
 | Route | Secret | Header |
 |-------|--------|--------|
 | `GET /api/cron/sync-llm-stats` | `CRON_SECRET` | `Authorization: Bearer …` (égalité stricte) |
+| `GET /api/cron/sync-llm-control` | `CRON_SECRET` | idem. Refuse avant toute écriture si un en-tête attendu manque |
 | `GET /api/cron/sync-ecologits` | idem | idem |
-| `GET /api/admin/comparia/sync` | `CRON_SECRET` | Bearer **ou** `x-cron-secret` (`timingSafeEqual`) |
-| `POST /api/admin/comparia/sync` | cron **ou** admin | si `x-cron-secret` est envoyé et faux → 401 même pour un admin |
+| `POST /api/admin/comparia/preview` | admin | `verifyAdminAuth`, aucune écriture |
+| `POST /api/admin/comparia/import` | admin | `verifyAdminAuth`, indépendant de la case « Écrire » |
+| `GET/POST /api/admin/comparia/reconcile` | admin | `verifyAdminAuth`. Unitaire `match` / `ignore` / `unignore`, ou lot `match-many` / `ignore-many` |
 | `POST /api/webhooks/kb-update` | `INTERNAL_API_KEY` | `x-api-key` |
 | `POST /api/webhooks/sync-siren` | `INTERNAL_API_KEY` | même schéma |
-| `POST /api/admin/llm-control-tower-sync` | admin | `verifyAdminAuth` (pas de cron). Exige `GOOGLE_SHEETS_CONTROL_TOWER_ID` |
+| `POST /api/admin/llm-control-tower-sync` | admin | `verifyAdminAuth`. Body `{ dryRun: true }` simule sans écriture. Le cron est `GET /api/cron/sync-llm-control` |
 | `POST /api/admin/llm-system-cards-import` | admin | idem |
 | `GET /api/storage/signed-url` | user JWT | Bearer + `user_companies` sur le `companyId` du path (`#448`) |
 | `GET /api/storage/file-metadata` | user JWT | idem |

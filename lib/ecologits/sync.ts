@@ -2,8 +2,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import { exactEcoLogitsMatchKey, normalizeEcoLogitsIdentifier, normalizeEcoLogitsProvider } from './normalization'
 import { flattenEcoLogitsEstimate } from './parsing'
-import { createUnclassifiedModel } from '@/lib/bench-llm/create-unclassified-model'
 import { resolveAliasTargetId, type AliasRecord, type LineageModel } from '@/lib/bench-llm/model-lineage'
+import { toExplicitError } from '@/lib/errors/postgrest-error'
 import {
   ECOLOGITS_ELECTRICITY_ZONE,
   ECOLOGITS_OUTPUT_TOKENS,
@@ -213,9 +213,9 @@ async function createExactLinks(
         .eq('source', 'ecologits'),
     ])
 
-  if (maydaiError) throw maydaiError
-  if (linksError) throw linksError
-  if (aliasError) throw aliasError
+  if (maydaiError) throw toExplicitError('EcoLogits Sync - createExactLinks', maydaiError)
+  if (linksError) throw toExplicitError('EcoLogits Sync - createExactLinks', linksError)
+  if (aliasError) throw toExplicitError('EcoLogits Sync - createExactLinks', aliasError)
 
   const aliases = ((aliasRows ?? []) as Array<{
     model_id: string
@@ -237,31 +237,17 @@ async function createExactLinks(
     aliases,
   ).map((link) => ({ ...link, updated_at: now }))
 
-  const linkedEcoIds = new Set([
-    ...((linkRows ?? []) as ExistingLinkRow[]).map((link) => link.ecologits_model_id),
-    ...newLinks.map((link) => link.ecologits_model_id),
-  ])
-  for (const model of ecoModels) {
-    if (linkedEcoIds.has(model.id)) continue
-    const modelId = await createUnclassifiedModel(supabase, {
-      modelName: model.name,
-      provider: model.provider,
-      source: 'ecologits',
-      sourceId: model.id,
-      rawName: model.name,
-    })
-    newLinks.push({
-      ecologits_model_id: model.id,
-      maydai_model_id: modelId,
-      match_method: 'exact',
-      updated_at: now,
-    })
-    linkedEcoIds.add(model.id)
-  }
-
   if (newLinks.length === 0) return 0
   const { error } = await supabase.from('ecologits_model_links').insert(newLinks)
-  if (error) throw error
+  if (error) throw toExplicitError('EcoLogits Sync - createExactLinks', error)
+
+  const linkedIds = newLinks.map((link) => link.ecologits_model_id)
+  const { error: statusError } = await supabase
+    .from('ecologits_models')
+    .update({ link_status: 'matched', updated_at: now })
+    .in('id', linkedIds)
+    .neq('link_status', 'ignored')
+  if (statusError) throw toExplicitError('EcoLogits Sync - createExactLinks', statusError)
   return newLinks.length
 }
 
@@ -324,7 +310,8 @@ export async function syncEcoLogitsCatalog(
       try {
         exactLinksCreated = await createExactLinks(supabase, ecoRows)
       } catch (error) {
-        errors.push(`Rapprochement: ${error instanceof Error ? error.message : String(error)}`)
+        const explicitErr = toExplicitError('EcoLogits Sync - Rapprochement', error)
+        errors.push(`Rapprochement: ${explicitErr.message}`)
       }
 
       const ecoByKey = new Map(

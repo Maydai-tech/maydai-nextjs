@@ -32,6 +32,11 @@ export async function PUT(
         .delete()
         .eq('ecologits_model_id', id)
       if (error) throw error
+      const { error: statusError } = await supabase
+        .from('ecologits_models')
+        .update({ link_status: 'unmatched', updated_at: new Date().toISOString() })
+        .eq('id', id)
+      if (statusError) throw statusError
       return NextResponse.json({ success: true, link: null })
     }
 
@@ -56,6 +61,11 @@ export async function PUT(
       .select('ecologits_model_id, maydai_model_id, match_method')
       .single()
     if (error) throw error
+    const { error: statusError } = await supabase
+      .from('ecologits_models')
+      .update({ link_status: 'matched', updated_at: new Date().toISOString() })
+      .eq('id', id)
+    if (statusError) throw statusError
     return NextResponse.json({ success: true, link: data })
   } catch (error) {
     console.error('[EcoLogits Admin] Liaison impossible:', error)

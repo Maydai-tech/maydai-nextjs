@@ -2,10 +2,27 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 
 import {
+  columnIndexToA1,
+  columnLetterForGroup,
+  CONTROL_TOWER_CANONICAL_HEADERS,
+  CONTROL_TOWER_CSV_HEADERS,
+  CONTROL_TOWER_HEADER_GROUPS,
+  findControlTowerHeader,
+  quoteSheetTitle,
+  requireControlTowerGroup,
+  requireControlTowerHeader,
+  sheetCell,
+  type ControlTowerHeaderGroup,
+} from '@/lib/bench-llm/control-tower-headers'
+import {
   applyLifecycleStatusOverride,
   resolveProviderLifecycle,
   type ProviderLifecycleStatus,
 } from '@/lib/bench-llm/provider-lifecycle'
+import {
+  HUMAN_ACTION_HEADER,
+  humanActionFormula,
+} from '@/lib/bench-llm/control-tower-human-actions'
 import { getSheetsClient, upsertTextFileInFolder } from '@/lib/google-drive'
 import {
   parseSheetSystemCardStatus,
@@ -31,38 +48,35 @@ const LIFECYCLE_STATUSES = new Set<ProviderLifecycleStatus>([
   'retired',
 ])
 
-const CSV_HEADERS = [
-  'ID Supabase',
-  'Nom de la technologie',
-  'Nom du LLM (Standard Supabase)',
-  'Nom du LLM (Standard Hermes/Fichier)',
-  'Statut Supabase',
-  'Statut Fiche Technique',
-  'Statut LLM',
-  'Lien du dossier Drive cible',
-  'Lien du fichier Markdown généré',
-  'Date de dernière mise à jour (Supabase)',
-  "Date de priorisation de l'action",
-  'Action requise par Hermes',
-  'Prêt pour import',
-] as const
+const CSV_HEADERS = CONTROL_TOWER_CSV_HEADERS
+
+export type MaydaiStatusLabel = 'Questionnaire' | 'Catalogue'
+
+export function maydaiStatusLabel(inQuestionnaire: boolean): MaydaiStatusLabel {
+  return inQuestionnaire ? 'Questionnaire' : 'Catalogue'
+}
 
 export type ControlTowerModelRow = {
   id: string
   slug: string
   model_provider: string | null
   model_name: string | null
+  model_provider_id?: number | null
   updated_at: string | null
   hasSystemCard: boolean
   system_card_status?: string | null
   systemCardStatus?: SystemCardStatus
   llmStatus: string
+  maydaiStatus: MaydaiStatusLabel
+  proposedToUser: 'Oui' | 'Non'
+  declaredUseCases: number
 }
 
 type ComplAiModelPageRow = {
   id: string
   slug: string
   model_provider: string | null
+  model_provider_id: number | null
   model_name: string | null
   updated_at: string | null
   lifecycle_status: string | null
@@ -107,30 +121,6 @@ export function resolveControlTowerLlmStatus(input: {
   )
 }
 
-function foldHeader(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase()
-}
-
-function columnIndexToA1(index: number): string {
-  let n = index + 1
-  let label = ''
-  while (n > 0) {
-    const rem = (n - 1) % 26
-    label = String.fromCharCode(65 + rem) + label
-    n = Math.floor((n - 1) / 26)
-  }
-  return label
-}
-
-function quoteSheetTitle(title: string): string {
-  return `'${title.replace(/'/g, "''")}'`
-}
-
 function createControlTowerServiceClient(): SupabaseClient {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
@@ -140,23 +130,40 @@ function createControlTowerServiceClient(): SupabaseClient {
   return createClient(supabaseUrl, serviceRoleKey)
 }
 
-const controlTowerSheetRowSchema = z.tuple([
-  z.string().min(1),
-  z.string(),
-  z.string(),
-  z.string().min(1),
-  z.literal(STATUT_BASE_IMPORTE),
-  z.enum([STATUT_FICHE_GENEREE, STATUT_FICHE_MANQUANTE, STATUT_FICHE_ERREUR]),
-  z.string(),
-  z.string().min(1),
-  z.string(),
-  z.string(),
-  z.string(),
-  z.enum(['NONE', 'CREATE', 'CLASSER']),
-  z.enum(['Déjà importé', 'Non']),
-])
+const APPEND_GROUPS = [
+  'id',
+  'statutMaydai',
+  'provider',
+  'modelName',
+  'hermesName',
+  'proposed',
+  'usecases',
+  'importResult',
+  'fiche',
+  'driveFolder',
+  'updatedAt',
+  'action',
+  'ready',
+] as const satisfies readonly ControlTowerHeaderGroup[]
 
-const controlTowerSheetRowsSchema = z.array(controlTowerSheetRowSchema)
+const PLATFORM_GROUPS = [
+  'statutMaydai',
+  'provider',
+  'modelName',
+  'hermesName',
+  'proposed',
+  'usecases',
+] as const satisfies readonly ControlTowerHeaderGroup[]
+
+const SUIVI_GROUPS = [
+  'llmStatus',
+  'launchDate',
+  'deprecationDate',
+  'retirementDate',
+  'replacement',
+  'lifecycleSource',
+  'lifecycleCheckedAt',
+] as const satisfies readonly ControlTowerHeaderGroup[]
 
 async function resolveFirstControlTowerSheet(
   sheets: ReturnType<typeof getSheetsClient>,
@@ -177,23 +184,111 @@ async function resolveFirstControlTowerSheet(
   return { title, sheetId }
 }
 
+/** Valeur écrite à la création d'une ligne, ou dans une cellule encore vide. */
+export function sheetFicheValueForBlankCell(hasSystemCard: boolean): string {
+  return hasSystemCard ? STATUT_FICHE_GENEREE : STATUT_FICHE_MANQUANTE
+}
+
+/**
+ * null : ne pas écrire. Une cellule déjà remplie (« En cours », « Générée »,
+ * « Erreur : … » ou toute autre valeur) est laissée telle quelle.
+ */
+export function sheetFicheWrite(current: string, hasSystemCard: boolean): string | null {
+  if (current.trim()) return null
+  return sheetFicheValueForBlankCell(hasSystemCard)
+}
+
+export function controlTowerFieldValues(
+  row: ControlTowerModelRow,
+  action?: 'NONE' | 'CREATE' | 'CLASSER',
+): Partial<Record<ControlTowerHeaderGroup, string>> {
+  const statutFiche = row.hasSystemCard
+    ? STATUT_FICHE_GENEREE
+    : row.systemCardStatus === 'error_no_system_card'
+      ? STATUT_FICHE_ERREUR
+      : STATUT_FICHE_MANQUANTE
+  return {
+    id: row.id,
+    statutMaydai: row.maydaiStatus,
+    provider: row.model_provider ?? '',
+    modelName: row.model_name ?? '',
+    hermesName: toHermesFileName(row.slug),
+    proposed: row.proposedToUser,
+    usecases: String(row.declaredUseCases),
+    importResult: STATUT_BASE_IMPORTE,
+    fiche: statutFiche,
+    llmStatus: row.llmStatus,
+    driveFolder: CONTROL_TOWER_DRIVE_FOLDER_URL,
+    markdownFile: '',
+    updatedAt: formatControlTowerDate(row.updated_at),
+    priorityDate: '',
+    action: action ?? (row.hasSystemCard ? 'NONE' : 'CREATE'),
+    ready: row.hasSystemCard ? 'Déjà importé' : 'Non',
+  }
+}
+
+/** Ligne ajoutée au Sheet. Le suivi du LLM reste vide : l'agent de veille le renseigne. */
+export function controlTowerSheetRowValues(
+  row: ControlTowerModelRow,
+  action?: 'NONE' | 'CREATE' | 'CLASSER',
+): Partial<Record<ControlTowerHeaderGroup, string>> {
+  const values = controlTowerFieldValues(row, action)
+  const suivi = Object.fromEntries(SUIVI_GROUPS.map((group) => [group, ''])) as Partial<
+    Record<ControlTowerHeaderGroup, string>
+  >
+  return {
+    ...values,
+    ...suivi,
+    fiche: sheetFicheValueForBlankCell(row.hasSystemCard),
+  }
+}
+
+function valueForSheetHeader(
+  header: string,
+  values: Partial<Record<ControlTowerHeaderGroup, string>>,
+): string {
+  for (const group of Object.keys(CONTROL_TOWER_HEADER_GROUPS) as ControlTowerHeaderGroup[]) {
+    if (findControlTowerHeader([header], ...CONTROL_TOWER_HEADER_GROUPS[group]) === 0) {
+      return values[group] ?? ''
+    }
+  }
+  return ''
+}
+
 export function buildControlTowerSheetRow(row: ControlTowerModelRow): string[] {
-  const statutFiche = row.hasSystemCard ? STATUT_FICHE_GENEREE : row.systemCardStatus === 'error_no_system_card' ? STATUT_FICHE_ERREUR : STATUT_FICHE_MANQUANTE
-  return [
-    row.id,
-    row.model_provider ?? '',
-    row.model_name ?? '',
-    toHermesFileName(row.slug),
-    STATUT_BASE_IMPORTE,
-    statutFiche,
-    row.llmStatus,
-    CONTROL_TOWER_DRIVE_FOLDER_URL,
-    '',
-    formatControlTowerDate(row.updated_at),
-    '',
-    row.hasSystemCard ? 'NONE' : 'CREATE',
-    row.hasSystemCard ? 'Déjà importé' : 'Non',
-  ]
+  const values = controlTowerFieldValues(row)
+  return CSV_HEADERS.map((header) => valueForSheetHeader(header, values))
+}
+
+function rowAlignedToHeaders(
+  headers: readonly string[],
+  values: Partial<Record<ControlTowerHeaderGroup, string>>,
+): string[] {
+  return headers.map((header) => valueForSheetHeader(header, values))
+}
+
+function requireGroups(headers: readonly string[], groups: readonly ControlTowerHeaderGroup[]): void {
+  for (const group of groups) requireControlTowerGroup(headers, group)
+}
+
+async function readFirstSheetMatrix(
+  sheets: ReturnType<typeof getSheetsClient>,
+  spreadsheetId: string,
+  title: string,
+): Promise<string[][]> {
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: quoteSheetTitle(title),
+  })
+  return (response.data.values ?? []).map((row) => row.map((cell) => String(cell ?? '')))
+}
+
+function sheetHeaders(matrix: string[][]): string[] {
+  return (matrix[0] ?? []).map((header) => String(header ?? ''))
+}
+
+function sheetIsEmpty(headers: string[]): boolean {
+  return headers.every((header) => header.trim().length === 0)
 }
 
 export async function appendMissingModelsToSheet(spreadsheetId: string): Promise<number> {
@@ -202,17 +297,16 @@ export async function appendMissingModelsToSheet(spreadsheetId: string): Promise
   const sheets = getSheetsClient()
   const { title } = await resolveFirstControlTowerSheet(sheets, parsedSpreadsheetId)
   const quotedTitle = quoteSheetTitle(title)
+  const matrix = await readFirstSheetMatrix(sheets, parsedSpreadsheetId, title)
+  const existingHeaders = sheetHeaders(matrix)
+  const empty = sheetIsEmpty(existingHeaders)
+  const headers = empty ? [...CONTROL_TOWER_CANONICAL_HEADERS] : existingHeaders
+  requireGroups(headers, APPEND_GROUPS)
 
-  const existingData = await sheets.spreadsheets.values.get({
-    spreadsheetId: parsedSpreadsheetId,
-    range: `${quotedTitle}!A:A`,
-  })
-  const columnA = Array.isArray(existingData.data.values) ? existingData.data.values : []
-  const populatedIds = columnA
-    .map((row) => String(row?.[0] ?? '').trim())
-    .filter((value) => value.length > 0)
-  const headerPresent = foldHeader(populatedIds[0] ?? '') === foldHeader('ID Supabase')
-  const existingIds = new Set(headerPresent ? populatedIds.slice(1) : populatedIds)
+  const idIndex = requireControlTowerGroup(headers, 'id')
+  const existingIds = new Set(
+    matrix.slice(1).map((row) => sheetCell(row, idIndex)).filter((value) => value.length > 0),
+  )
 
   let models: ControlTowerModelRow[]
   try {
@@ -226,27 +320,22 @@ export async function appendMissingModelsToSheet(spreadsheetId: string): Promise
 
   const rowsToAdd = models
     .filter((model) => !existingIds.has(model.id))
-    .map((model) => {
-      const row = buildControlTowerSheetRow(model)
-      row[11] = 'CLASSER'
-      return row
-    })
+    .map((model) => rowAlignedToHeaders(headers, controlTowerSheetRowValues(model, 'CLASSER')))
 
   if (rowsToAdd.length === 0) return 0
 
-  const parsedRows = controlTowerSheetRowsSchema.parse(rowsToAdd)
-  const values = populatedIds.length === 0 ? [[...CSV_HEADERS], ...parsedRows] : parsedRows
-  const lastColumn = columnIndexToA1(CSV_HEADERS.length - 1)
+  const values = empty ? [[...headers], ...rowsToAdd] : rowsToAdd
+  const lastColumn = columnIndexToA1(headers.length - 1)
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: parsedSpreadsheetId,
-    range: `${quotedTitle}!A:${lastColumn}`,
+    range: `${quotedTitle}!${columnIndexToA1(0)}:${lastColumn}`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     requestBody: { values },
   })
 
-  return parsedRows.length
+  return rowsToAdd.length
 }
 
 export async function writeControlTowerLlmStatusColumn(
@@ -266,26 +355,17 @@ export async function writeControlTowerLlmStatusColumn(
   const sheets = getSheetsClient()
   const { title } = await resolveFirstControlTowerSheet(sheets, spreadsheetId)
   const quotedTitle = quoteSheetTitle(title)
-  const headerRes = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `${quotedTitle}!1:1`,
-  })
-  const headers = (headerRes.data.values?.[0] ?? []).map((header) => String(header ?? ''))
-  const statusCol = headers.findIndex((header) => foldHeader(header) === foldHeader(STATUT_LLM_HEADER))
-  if (statusCol < 0) return { updatedCells: 0, inserted: false }
-
-  const column = columnIndexToA1(statusCol)
-  const [idRes, statusRes] = await Promise.all([
-    sheets.spreadsheets.values.get({ spreadsheetId, range: `${quotedTitle}!A:A` }),
-    sheets.spreadsheets.values.get({ spreadsheetId, range: `${quotedTitle}!${column}:${column}` }),
-  ])
-  const idRows = idRes.data.values ?? []
-  const statusRows = statusRes.data.values ?? []
+  const matrix = await readFirstSheetMatrix(sheets, spreadsheetId, title)
+  const headers = sheetHeaders(matrix)
+  requireGroups(headers, ['id', 'llmStatus'])
+  const idIndex = requireControlTowerGroup(headers, 'id')
+  const statusIndex = requireControlTowerGroup(headers, 'llmStatus')
+  const column = columnIndexToA1(statusIndex)
   const statusById = new Map(rows.map((row) => [row.id, row.llmStatus]))
   const data: { range: string; values: string[][] }[] = []
-  for (let index = 1; index < idRows.length; index += 1) {
-    const id = String(idRows[index]?.[0] ?? '').trim()
-    const current = String(statusRows[index]?.[0] ?? '').trim()
+  for (let index = 1; index < matrix.length; index += 1) {
+    const id = sheetCell(matrix[index], idIndex)
+    const current = sheetCell(matrix[index], statusIndex)
     const next = statusById.get(id)
     if (!id || current || !next) continue
     data.push({
@@ -306,11 +386,7 @@ export async function readControlTowerSheetMatrix(spreadsheetId: string): Promis
   const parsedSpreadsheetId = z.string().trim().min(1).parse(spreadsheetId)
   const sheets = getSheetsClient()
   const { title } = await resolveFirstControlTowerSheet(sheets, parsedSpreadsheetId)
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: parsedSpreadsheetId,
-    range: `${quoteSheetTitle(title)}!A:AA`,
-  })
-  return response.data.values ?? []
+  return readFirstSheetMatrix(sheets, parsedSpreadsheetId, title)
 }
 
 export async function writeControlTowerTaxonomyStatuses(
@@ -322,12 +398,14 @@ export async function writeControlTowerTaxonomyStatuses(
   const sheets = getSheetsClient()
   const { title } = await resolveFirstControlTowerSheet(sheets, parsedSpreadsheetId)
   const quotedTitle = quoteSheetTitle(title)
+  const headers = sheetHeaders(await readFirstSheetMatrix(sheets, parsedSpreadsheetId, title))
+  const column = columnLetterForGroup(headers, 'taxonomyValidated')
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: parsedSpreadsheetId,
     requestBody: {
       valueInputOption: 'RAW',
       data: updates.map((update) => ({
-        range: `${quotedTitle}!S${update.sheetRow}`,
+        range: `${quotedTitle}!${column}${update.sheetRow}`,
         values: [[update.value]],
       })),
     },
@@ -335,23 +413,37 @@ export async function writeControlTowerTaxonomyStatuses(
   return updates.length
 }
 
+function groupForHeaderLabel(label: string): ControlTowerHeaderGroup | null {
+  for (const group of Object.keys(CONTROL_TOWER_HEADER_GROUPS) as ControlTowerHeaderGroup[]) {
+    if (findControlTowerHeader([label], ...CONTROL_TOWER_HEADER_GROUPS[group]) === 0) return group
+  }
+  return null
+}
+
 export async function writeControlTowerCells(
   spreadsheetId: string,
-  updates: Array<{ sheetRow: number; column: string; value: string }>,
+  updates: Array<{ sheetRow: number; header: string; value: string }>,
 ): Promise<number> {
   if (updates.length === 0) return 0
   const parsedSpreadsheetId = z.string().trim().min(1).parse(spreadsheetId)
   const sheets = getSheetsClient()
   const { title } = await resolveFirstControlTowerSheet(sheets, parsedSpreadsheetId)
   const quotedTitle = quoteSheetTitle(title)
+  const headers = sheetHeaders(await readFirstSheetMatrix(sheets, parsedSpreadsheetId, title))
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: parsedSpreadsheetId,
     requestBody: {
       valueInputOption: 'RAW',
-      data: updates.map((update) => ({
-        range: `${quotedTitle}!${update.column}${update.sheetRow}`,
-        values: [[update.value]],
-      })),
+      data: updates.map((update) => {
+        const group = groupForHeaderLabel(update.header)
+        if (!group) {
+          throw new Error(`En-tête manquant : « ${update.header} ». Aucune colonne n'a été insérée.`)
+        }
+        return {
+          range: `${quotedTitle}!${columnLetterForGroup(headers, group)}${update.sheetRow}`,
+          values: [[update.value]],
+        }
+      }),
     },
   })
   return updates.length
@@ -363,99 +455,268 @@ export function controlTowerFicheLabel(status: string | null | undefined): strin
   return STATUT_FICHE_MANQUANTE
 }
 
+export type PlatformSheetModel = {
+  provider: string
+  modelName: string
+  hermesName: string
+  maydaiStatus: string
+  proposedToUser: string
+  declaredUseCases: string
+  ficheStatus: string
+}
+
+export function projectPlatformColumns(input: {
+  headers: string[]
+  rows: string[][]
+  models: Map<string, PlatformSheetModel>
+}): Array<{ header: string; column: string; values: string[][] }> {
+  requireGroups(input.headers, ['id', ...PLATFORM_GROUPS])
+  const idIndex = requireControlTowerGroup(input.headers, 'id')
+  const dataRows = input.rows.slice(1)
+  return PLATFORM_GROUPS.map((group) => {
+    const index = requireControlTowerGroup(input.headers, group)
+    const values = dataRows.map((row) => {
+      const id = sheetCell(row, idIndex)
+      const model = input.models.get(id)
+      if (!model) return [sheetCell(row, index)]
+      const fields: Partial<Record<ControlTowerHeaderGroup, string>> = {
+        statutMaydai: model.maydaiStatus,
+        provider: model.provider,
+        modelName: model.modelName,
+        hermesName: model.hermesName,
+        proposed: model.proposedToUser,
+        usecases: model.declaredUseCases,
+      }
+      return [fields[group] ?? '']
+    })
+    return {
+      header: CONTROL_TOWER_HEADER_GROUPS[group][0],
+      column: columnIndexToA1(index),
+      values,
+    }
+  })
+}
+
+export type ControlTowerSyncChangedCell = {
+  column: string
+  row: number
+  before: string
+  after: string
+}
+
+export type ControlTowerSyncAddedRow = {
+  row: number
+  id: string
+  modelName: string
+  fiche: string
+  llmStatus: string
+}
+
+export type ControlTowerSyncPlan = {
+  changedCells: ControlTowerSyncChangedCell[]
+  formulasRewritten: number
+  rowsAdded: ControlTowerSyncAddedRow[]
+}
+
+export function assertControlTowerSyncHeaders(headers: readonly string[]): void {
+  requireGroups(headers, ['id', ...PLATFORM_GROUPS, 'fiche'])
+}
+
+export function buildControlTowerSyncPlan(input: {
+  headers: string[]
+  rows: string[][]
+  models: ControlTowerModelRow[]
+}): ControlTowerSyncPlan {
+  assertControlTowerSyncHeaders(input.headers)
+  const headers = input.headers
+  const idIndex = requireControlTowerGroup(headers, 'id')
+  const existingIds = new Set(
+    input.rows.slice(1).map((row) => sheetCell(row, idIndex)).filter((id) => id.length > 0),
+  )
+  const byId = new Map(input.models.map((model) => [model.id, model]))
+  const platform = new Map(input.models.map((model) => [
+    model.id,
+    {
+      provider: model.model_provider ?? '',
+      modelName: model.model_name ?? '',
+      hermesName: toHermesFileName(model.slug),
+      maydaiStatus: model.maydaiStatus,
+      proposedToUser: model.proposedToUser,
+      declaredUseCases: String(model.declaredUseCases),
+      ficheStatus: sheetFicheValueForBlankCell(model.hasSystemCard),
+    },
+  ]))
+  const changedCells: ControlTowerSyncChangedCell[] = []
+  for (const column of projectPlatformColumns({ headers, rows: input.rows, models: platform })) {
+    const index = requireControlTowerHeader(headers, column.header, ...aliasesForProjectedHeader(column.header))
+    column.values.forEach((value, offset) => {
+      const before = sheetCell(input.rows[offset + 1], index)
+      const after = value[0] ?? ''
+      if (before !== after) {
+        changedCells.push({
+          column: headers[index] || column.header,
+          row: offset + 2,
+          before,
+          after,
+        })
+      }
+    })
+  }
+  const ficheIndex = requireControlTowerGroup(headers, 'fiche')
+  input.rows.slice(1).forEach((row, offset) => {
+    const model = byId.get(sheetCell(row, idIndex))
+    if (!model) return
+    const before = sheetCell(row, ficheIndex)
+    const after = sheetFicheWrite(before, model.hasSystemCard)
+    if (!after || after === before) return
+    changedCells.push({
+      column: headers[ficheIndex] || 'Statut Fiche Technique',
+      row: offset + 2,
+      before,
+      after,
+    })
+  })
+  const rowsAdded = input.models
+    .filter((model) => !existingIds.has(model.id))
+    .map((model, index) => {
+      const values = controlTowerSheetRowValues(model, 'CLASSER')
+      return {
+        row: input.rows.length + 1 + index,
+        id: model.id,
+        modelName: model.model_name ?? '',
+        fiche: values.fiche ?? '',
+        llmStatus: values.llmStatus ?? '',
+      }
+    })
+  const humanActionIndex = findControlTowerHeader(headers, HUMAN_ACTION_HEADER)
+  return {
+    changedCells,
+    formulasRewritten: humanActionIndex < 0
+      ? 0
+      : Math.max(input.rows.length - 1, 0) + rowsAdded.length,
+    rowsAdded,
+  }
+}
+
+function aliasesForProjectedHeader(header: string): string[] {
+  for (const names of Object.values(CONTROL_TOWER_HEADER_GROUPS)) {
+    if (names[0] === header) return names.slice(1)
+  }
+  return []
+}
+
+export async function ensureControlTowerSyncHeaders(spreadsheetId: string): Promise<void> {
+  const parsedSpreadsheetId = z.string().trim().min(1).parse(spreadsheetId)
+  const sheets = getSheetsClient()
+  const { title } = await resolveFirstControlTowerSheet(sheets, parsedSpreadsheetId)
+  const matrix = await readFirstSheetMatrix(sheets, parsedSpreadsheetId, title)
+  assertControlTowerSyncHeaders(sheetHeaders(matrix))
+}
+
+export async function previewControlTowerSync(spreadsheetId: string): Promise<ControlTowerSyncPlan> {
+  const parsedSpreadsheetId = z.string().trim().min(1).parse(spreadsheetId)
+  const supabase = createControlTowerServiceClient()
+  const sheets = getSheetsClient()
+  const { title } = await resolveFirstControlTowerSheet(sheets, parsedSpreadsheetId)
+  const matrix = await readFirstSheetMatrix(sheets, parsedSpreadsheetId, title)
+  const headers = sheetHeaders(matrix)
+  assertControlTowerSyncHeaders(headers)
+  const models = await fetchControlTowerRows(supabase)
+  return buildControlTowerSyncPlan({ headers, rows: matrix, models })
+}
+
 export async function syncControlTowerDerivedColumns(spreadsheetId: string): Promise<{
   ficheCells: number
   visibilityCells: number
   popularityCells: number
+  humanActionCells: number
 }> {
   const parsedSpreadsheetId = z.string().trim().min(1).parse(spreadsheetId)
   const supabase = createControlTowerServiceClient()
   const sheets = getSheetsClient()
   const { title } = await resolveFirstControlTowerSheet(sheets, parsedSpreadsheetId)
   const quotedTitle = quoteSheetTitle(title)
-  const [idRes, models, visibleRows, usecaseRows] = await Promise.all([
-    sheets.spreadsheets.values.get({
-      spreadsheetId: parsedSpreadsheetId,
-      range: `${quotedTitle}!A:A`,
-    }),
-    fetchAllPages<{ id: string; system_card_status: string | null }>(
-      (from, to) => Promise.resolve(
-        supabase
-          .from('compl_ai_models')
-          .select('id, system_card_status')
-          .order('id', { ascending: true })
-          .range(from, to),
-      ),
-      'Lecture compl_ai_models',
-    ),
-    fetchAllPages<{ id: string }>(
-      (from, to) => Promise.resolve(
-        supabase
-          .from('compl_ai_models_visible')
-          .select('id')
-          .order('id', { ascending: true })
-          .range(from, to),
-      ),
-      'Lecture compl_ai_models_visible',
-    ),
-    fetchAllPages<{ primary_model_id: string }>(
-      (from, to) => Promise.resolve(
-        supabase
-          .from('usecases')
-          .select('primary_model_id')
-          .not('primary_model_id', 'is', null)
-          .is('soft_deleted_at', null)
-          .order('id', { ascending: true })
-          .range(from, to),
-      ),
-      'Lecture usecases',
-    ),
-  ])
-
-  const statusById = new Map(models.map((model) => [model.id, model.system_card_status]))
-  const visibleIds = new Set(visibleRows.map((row) => row.id))
-  const popularity = new Map<string, number>()
-  for (const row of usecaseRows) {
-    popularity.set(row.primary_model_id, (popularity.get(row.primary_model_id) ?? 0) + 1)
+  const matrix = await readFirstSheetMatrix(sheets, parsedSpreadsheetId, title)
+  const headers = sheetHeaders(matrix)
+  const models = await fetchControlTowerRows(supabase)
+  const plan = buildControlTowerSyncPlan({ headers, rows: matrix, models })
+  const dataRows = matrix.length - 1
+  if (dataRows <= 0) {
+    return { ficheCells: 0, visibilityCells: 0, popularityCells: 0, humanActionCells: 0 }
   }
-
-  const idRows = (idRes.data.values ?? []).slice(1)
-  if (idRows.length === 0) {
-    return { ficheCells: 0, visibilityCells: 0, popularityCells: 0 }
-  }
-  const lastRow = idRows.length + 1
-  const fiche: string[][] = []
-  const visibility: string[][] = []
-  const counts: number[][] = []
-  for (const row of idRows) {
-    const id = String(row?.[0] ?? '').trim()
-    if (!id) {
-      fiche.push([''])
-      visibility.push([''])
-      counts.push([0])
-      continue
-    }
-    fiche.push([controlTowerFicheLabel(statusById.get(id))])
-    visibility.push([visibleIds.has(id) ? 'Oui' : 'Non'])
-    counts.push([popularity.get(id) ?? 0])
-  }
-
+  const identification = projectPlatformColumns({
+    headers,
+    rows: matrix,
+    models: new Map(models.map((model) => [
+      model.id,
+      {
+        provider: model.model_provider ?? '',
+        modelName: model.model_name ?? '',
+        hermesName: toHermesFileName(model.slug),
+        maydaiStatus: model.maydaiStatus,
+        proposedToUser: model.proposedToUser,
+        declaredUseCases: String(model.declaredUseCases),
+        ficheStatus: sheetFicheValueForBlankCell(model.hasSystemCard),
+      },
+    ])),
+  })
+  const lastRow = dataRows + 1
   await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: parsedSpreadsheetId,
     requestBody: {
       valueInputOption: 'RAW',
-      data: [
-        { range: `${quotedTitle}!F2:F${lastRow}`, values: fiche },
-        { range: `${quotedTitle}!Z2:Z${lastRow}`, values: visibility },
-        { range: `${quotedTitle}!AA2:AA${lastRow}`, values: counts },
-      ],
+      data: identification.map((column) => ({
+        range: `${quotedTitle}!${column.column}2:${column.column}${lastRow}`,
+        values: column.values,
+      })),
     },
   })
-
+  const ficheCells = plan.changedCells.filter((cell) => findControlTowerHeader([cell.column], 'Statut Fiche Technique') === 0)
+  if (ficheCells.length > 0) {
+    const ficheColumn = columnIndexToA1(requireControlTowerGroup(headers, 'fiche'))
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: parsedSpreadsheetId,
+      requestBody: {
+        valueInputOption: 'RAW',
+        data: ficheCells.map((cell) => ({
+          range: `${quotedTitle}!${ficheColumn}${cell.row}`,
+          values: [[cell.after]],
+        })),
+      },
+    })
+  }
+  const humanActionIndex = findControlTowerHeader(headers, HUMAN_ACTION_HEADER)
+  let humanActionCells = 0
+  if (humanActionIndex >= 0) {
+    const formula = humanActionFormula()
+    const column = columnIndexToA1(humanActionIndex)
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: parsedSpreadsheetId,
+      requestBody: {
+        valueInputOption: 'USER_ENTERED',
+        data: [{
+          range: `${quotedTitle}!${column}2:${column}${lastRow}`,
+          values: Array.from({ length: dataRows }, () => [formula]),
+        }],
+      },
+    })
+    humanActionCells = dataRows
+  }
+  const visibility = plan.changedCells.filter((cell) => findControlTowerHeader(
+    [cell.column],
+    "Proposé à l'utilisateur",
+    'Visible dans MaydAI',
+  ) === 0).length
+  const popularity = plan.changedCells.filter((cell) => findControlTowerHeader(
+    [cell.column],
+    "Cas d'usage déclarés",
+    'Popularité',
+  ) === 0).length
   return {
-    ficheCells: fiche.length,
-    visibilityCells: visibility.length,
-    popularityCells: counts.length,
+    ficheCells: ficheCells.length,
+    visibilityCells: visibility,
+    popularityCells: popularity,
+    humanActionCells,
   }
 }
 
@@ -554,19 +815,61 @@ async function fetchSourceIdsByModel(
 async function fetchControlTowerRows(
   supabase: SupabaseClient,
 ): Promise<ControlTowerModelRow[]> {
-  const systemCardIds = await fetchSystemCardIdentifiers(supabase)
-  const sourceIdsByModel = await fetchSourceIdsByModel(supabase)
-  const models = await fetchAllPages<ComplAiModelPageRow>(
-    (from, to) =>
-      Promise.resolve(
+  const [systemCardIds, sourceIdsByModel, providers, visibleRows, usecaseRows, models] = await Promise.all([
+    fetchSystemCardIdentifiers(supabase),
+    fetchSourceIdsByModel(supabase),
+    fetchAllPages<{ id: number; tooltip_title: string | null }>(
+      (from, to) => Promise.resolve(
         supabase
-          .from('compl_ai_models')
-          .select('id, slug, model_provider, model_name, updated_at, lifecycle_status, system_card_status')
-          .order('slug', { ascending: true })
+          .from('model_providers')
+          .select('id, tooltip_title')
+          .order('id', { ascending: true })
           .range(from, to),
       ),
-    'Lecture compl_ai_models',
+      'Lecture model_providers',
+    ),
+    fetchAllPages<{ id: string }>(
+      (from, to) => Promise.resolve(
+        supabase
+          .from('compl_ai_models_visible')
+          .select('id')
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
+      'Lecture compl_ai_models_visible',
+    ),
+    fetchAllPages<{ primary_model_id: string }>(
+      (from, to) => Promise.resolve(
+        supabase
+          .from('usecases')
+          .select('primary_model_id')
+          .not('primary_model_id', 'is', null)
+          .is('soft_deleted_at', null)
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
+      'Lecture usecases',
+    ),
+    fetchAllPages<ComplAiModelPageRow>(
+      (from, to) =>
+        Promise.resolve(
+          supabase
+            .from('compl_ai_models')
+            .select('id, slug, model_provider, model_provider_id, model_name, updated_at, lifecycle_status, system_card_status')
+            .order('slug', { ascending: true })
+            .range(from, to),
+        ),
+      'Lecture compl_ai_models',
+    ),
+  ])
+  const questionnaireProviderIds = new Set(
+    providers.filter((provider) => provider.tooltip_title != null).map((provider) => provider.id),
   )
+  const visibleIds = new Set(visibleRows.map((row) => row.id))
+  const usecases = new Map<string, number>()
+  for (const row of usecaseRows) {
+    usecases.set(row.primary_model_id, (usecases.get(row.primary_model_id) ?? 0) + 1)
+  }
 
   return models.map((model) => ({
     ...model,
@@ -580,6 +883,11 @@ async function fetchControlTowerRows(
       lifecycleStatus: model.lifecycle_status,
       sourceIds: sourceIdsByModel.get(model.id),
     }),
+    maydaiStatus: maydaiStatusLabel(
+      model.model_provider_id != null && questionnaireProviderIds.has(model.model_provider_id),
+    ),
+    proposedToUser: visibleIds.has(model.id) ? 'Oui' : 'Non',
+    declaredUseCases: usecases.get(model.id) ?? 0,
   }))
 }
 

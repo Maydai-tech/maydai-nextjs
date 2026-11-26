@@ -1,13 +1,48 @@
-import { planControlTowerApply, type ControlTowerModelRef } from '../control-tower-apply'
+import {
+  controlTowerDatabasePatch,
+  planControlTowerApply,
+  projectSelectorAfterApply,
+  type ControlTowerModelRef,
+} from '../control-tower-apply'
 
 const sonnet = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const base = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 const other = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
 
+const LEGACY_HEADERS = [
+  'ID Supabase',
+  'Nom de la technologie',
+  'Nom du LLM (Standard Supabase)',
+  'Nom du LLM (Standard Hermes/Fichier)',
+  'Statut Supabase',
+  'Statut Fiche Technique',
+  'Statut LLM',
+  'Lien du dossier Drive cible',
+  'Lien du fichier Markdown généré',
+  'Date de dernière mise à jour (Supabase)',
+  "Date de priorisation de l'action",
+  'Action requise par Hermes',
+  'Prêt pour import',
+  'Validation juridique',
+  'Modèle de base',
+  'Rôle',
+  'Ligne de référence (ID)',
+  'Fusionner avec (ID)',
+  'Taxonomie validée',
+  'Date de lancement',
+  'Date de dépréciation',
+  'Date de retrait',
+  'Remplacé par (ID)',
+  'Source du statut',
+  'Dernière vérification',
+  'Visible dans MaydAI',
+  'Popularité',
+]
+
 const models: ControlTowerModelRef[] = [
-  { id: sonnet, slug: 'claude-sonnet', mergedIntoId: null },
-  { id: base, slug: 'gpt-base', mergedIntoId: null },
-  { id: other, slug: 'mistral-small', mergedIntoId: null },
+  { id: sonnet, slug: 'claude-sonnet', modelName: 'Claude Sonnet', mergedIntoId: null, role: null, referenceModelId: null },
+  { id: base, slug: 'gpt-base', modelName: 'GPT Base', mergedIntoId: null, role: 'base', referenceModelId: null },
+  { id: other, slug: 'mistral-small', modelName: 'Mistral Small', mergedIntoId: null, role: 'base', referenceModelId: null },
 ]
 
 function row(cells: Record<number, string>): string[] {
@@ -20,6 +55,7 @@ describe('planControlTowerApply', () => {
   test('ignore une ligne sans source ni taxonomie, même si la ligne est courte', () => {
     const plan = planControlTowerApply({
       rows: [{ sheetRow: 2, cells: [sonnet, 'Anthropic'] }],
+      headers: LEGACY_HEADERS,
       models,
       today: '2026-11-16',
     })
@@ -42,6 +78,7 @@ describe('planControlTowerApply', () => {
           24: '2026-11-16',
         }),
       }],
+      headers: LEGACY_HEADERS,
       models,
       today: '2026-11-16',
     })
@@ -60,6 +97,7 @@ describe('planControlTowerApply', () => {
         lifecycle_checked_at: '2026-11-16T00:00:00.000Z',
       },
       taxonomie: null,
+      licence: null,
       sheetStatus: null,
     }])
   })
@@ -75,6 +113,7 @@ describe('planControlTowerApply', () => {
           23: 'https://example.com/status',
         }),
       }],
+      headers: LEGACY_HEADERS,
       models,
       today: '2026-11-16',
     })
@@ -82,7 +121,7 @@ describe('planControlTowerApply', () => {
     expect(plan.rejectedValues).toEqual([{
       sheetRow: 3,
       modelId: sonnet,
-      column: 'T',
+      column: 'Date de lancement',
       value: '32/13/2026',
       reason: 'date invalide',
     }])
@@ -105,6 +144,7 @@ describe('planControlTowerApply', () => {
           18: 'Oui',
         }),
       }],
+      headers: LEGACY_HEADERS,
       models,
       today: '2026-11-16',
     })
@@ -127,6 +167,7 @@ describe('planControlTowerApply', () => {
         sheetRow: 5,
         cells: row({ 0: sonnet, 15: 'champion', 18: 'oui' }),
       }],
+      headers: LEGACY_HEADERS,
       models,
       today: '2026-11-16',
     })
@@ -135,9 +176,9 @@ describe('planControlTowerApply', () => {
     expect(plan.rejectedValues).toEqual([{
       sheetRow: 5,
       modelId: sonnet,
-      column: 'P',
+      column: 'Rôle',
       value: 'champion',
-      reason: 'rôle hors liste',
+      reason: 'type de ligne hors liste',
     }])
   })
 
@@ -147,6 +188,7 @@ describe('planControlTowerApply', () => {
         { sheetRow: 2, cells: row({ 0: sonnet, 17: base, 18: 'Oui' }) },
         { sheetRow: 3, cells: row({ 0: base, 17: 'claude-sonnet', 18: 'Oui' }) },
       ],
+      headers: LEGACY_HEADERS,
       models,
       today: '2026-11-16',
     })
@@ -164,11 +206,286 @@ describe('planControlTowerApply', () => {
         sheetRow: 9,
         cells: row({ 0: other.replace('c', 'd'), 23: 'https://example.com' }),
       }],
+      headers: LEGACY_HEADERS,
       models,
       today: '2026-11-16',
     })
 
     expect(plan.modifiedRows).toEqual([])
     expect(plan.rejectedValues[0]?.reason).toBe('ID inconnu')
+  })
+
+  test('convertit Type de ligne et Précision vers role, même si les colonnes ont changé de place', () => {
+    const headers = [
+      'Taxonomie validée',
+      'Précision',
+      'ID Supabase',
+      'Type de ligne',
+      'Ligne de référence (ID)',
+      'Fusionner avec (ID)',
+      'Modèle de base (ID)',
+      'Statut LLM',
+      'Date de lancement',
+      'Date de dépréciation',
+      'Date de retrait',
+      'Remplacé par (ID)',
+      'Source du statut',
+      'Dernière vérification',
+    ]
+    const cells = headers.map((header) => ({
+      'Taxonomie validée': 'Oui',
+      'Précision': 'Stade',
+      'ID Supabase': sonnet,
+      'Type de ligne': 'Variante',
+      'Ligne de référence (ID)': base,
+    }[header] ?? ''))
+
+    const plan = planControlTowerApply({
+      headers,
+      rows: [{ sheetRow: 4, cells }],
+      models,
+      today: '2026-11-16',
+    })
+
+    expect(plan.rejectedValues).toEqual([])
+    expect(plan.modifiedRows[0]?.taxonomie).toMatchObject({
+      role: 'stade',
+      reference_model_id: base,
+    })
+  })
+
+  test('refuse chaque référence interdite', () => {
+    const variant = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+    const small = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+    const large = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
+    const chain = '99999999-9999-4999-8999-999999999999'
+    const loop = 'abababab-abab-4aba-8aba-abababababab'
+    const self = '12121212-1212-4121-8121-121212121212'
+    const named: ControlTowerModelRef[] = [
+      { id: variant, slug: 'gpt-oss-120b-high', modelName: 'GPT OSS 120B High', mergedIntoId: null, role: 'reglage', referenceModelId: null },
+      { id: small, slug: 'gpt-oss-20b', modelName: 'GPT OSS 20B', mergedIntoId: null, role: 'base', referenceModelId: null },
+      { id: large, slug: 'gpt-oss-120b', modelName: 'GPT OSS 120B', mergedIntoId: null, role: 'base', referenceModelId: chain },
+      { id: chain, slug: 'gpt-oss-chain', modelName: 'GPT OSS 120B Chain', mergedIntoId: null, role: 'base', referenceModelId: null },
+      { id: loop, slug: 'loop-target', modelName: 'Loop Target', mergedIntoId: null, role: 'base', referenceModelId: sonnet },
+      { id: sonnet, slug: 'claude-sonnet', modelName: 'Claude Sonnet', mergedIntoId: null, role: null, referenceModelId: null },
+      { id: self, slug: 'solo', modelName: 'Solo', mergedIntoId: null, role: 'base', referenceModelId: null },
+    ]
+    const cases = [
+      { id: variant, reference: small, reason: 'la taille diffère de la ligne de référence' },
+      { id: self, reference: self, reason: 'la ligne de référence est la ligne elle-même' },
+      { id: sonnet, reference: variant, reason: "la ligne de référence n'est pas de type Modèle" },
+      { id: variant, reference: large, reason: 'chaîne de lignes de référence' },
+      { id: sonnet, reference: loop, reason: 'boucle de lignes de référence' },
+    ]
+
+    const plan = planControlTowerApply({
+      headers: LEGACY_HEADERS,
+      rows: cases.map((entry, index) => ({
+        sheetRow: index + 2,
+        cells: row({
+          0: entry.id,
+          15: 'stade',
+          16: entry.reference,
+          18: 'Oui',
+        }),
+      })),
+      models: named,
+      today: '2026-11-16',
+    })
+
+    expect(plan.modifiedRows.filter((entry) => entry.taxonomie)).toEqual([])
+    expect(plan.rejectedValues.map((rejection) => rejection.reason)).toEqual(cases.map((entry) => entry.reason))
+  })
+
+  test('applique la licence des poids sur une ligne Questionnaire, et refuse un libellé inconnu', () => {
+    const headers = [
+      ...LEGACY_HEADERS,
+      'Statut MaydAI',
+      'Type de modèle',
+      'Identifiant de la licence',
+      'Source de la licence',
+      'Exclusion UE',
+    ]
+    const cellsFor = (values: Record<string, string>) => headers.map((header) => values[header] ?? '')
+    const plan = planControlTowerApply({
+      headers,
+      rows: [
+        {
+          sheetRow: 2,
+          cells: cellsFor({
+            'ID Supabase': sonnet,
+            'Statut MaydAI': 'Questionnaire',
+            'Type de modèle': 'Poids ouverts, licence libre',
+            'Identifiant de la licence': 'apache-2.0',
+            'Source de la licence': 'https://www.apache.org/licenses/LICENSE-2.0',
+            'Exclusion UE': 'Oui',
+          }),
+        },
+        {
+          sheetRow: 3,
+          cells: cellsFor({
+            'ID Supabase': base,
+            'Statut MaydAI': 'Questionnaire',
+            'Type de modèle': 'Propriétaire',
+            'Identifiant de la licence': '-',
+            'Source de la licence': '-',
+          }),
+        },
+        {
+          sheetRow: 4,
+          cells: cellsFor({
+            'ID Supabase': other,
+            'Statut MaydAI': 'Catalogue',
+            'Type de modèle': 'Poids ouverts, licence libre',
+          }),
+        },
+        {
+          sheetRow: 5,
+          cells: cellsFor({
+            'ID Supabase': sonnet,
+            'Statut MaydAI': 'Questionnaire',
+            'Source du statut': 'https://example.com/status',
+            'Type de modèle': 'Semi-ouvert',
+          }),
+        },
+      ],
+      models,
+      today: '2026-11-16',
+    })
+
+    expect(plan.modifiedRows.filter((row) => row.licence)).toEqual([
+      expect.objectContaining({
+        sheetRow: 2,
+        modelId: sonnet,
+        licence: {
+          license_class: 'open_free',
+          license_id: 'apache-2.0',
+          license_url: 'https://www.apache.org/licenses/LICENSE-2.0',
+          license_eu_restricted: true,
+        },
+      }),
+      expect.objectContaining({
+        sheetRow: 3,
+        modelId: base,
+        licence: {
+          license_class: 'proprietary',
+          license_id: null,
+          license_url: null,
+          license_eu_restricted: false,
+        },
+      }),
+    ])
+    expect(plan.rejectedValues).toEqual([
+      expect.objectContaining({
+        sheetRow: 5,
+        column: 'Type de modèle',
+        value: 'Semi-ouvert',
+        reason: 'type de modèle inconnu',
+      }),
+    ])
+    expect(plan.modifiedRows.find((row) => row.sheetRow === 5)?.licence).toBeNull()
+  })
+
+  test('Retiré donne retired, avec ou sans date de retrait, sans regarder les cas d’usage', () => {
+    const plan = planControlTowerApply({
+      rows: [
+        {
+          sheetRow: 4,
+          cells: row({ 0: sonnet, 6: 'Retiré', 23: 'https://example.com/status' }),
+        },
+        {
+          sheetRow: 5,
+          cells: row({
+            0: base,
+            6: 'Retiré',
+            21: '2026-10-23',
+            23: 'https://example.com/status',
+          }),
+        },
+      ],
+      headers: LEGACY_HEADERS,
+      models,
+      today: '2026-11-22',
+    })
+
+    expect(plan.rejectedValues).toEqual([])
+    expect(plan.modifiedRows.map((item) => item.veille?.lifecycle_status)).toEqual(['retired', 'retired'])
+    expect(plan.modifiedRows[0]?.veille?.retirement_date).toBeNull()
+    expect(plan.modifiedRows[1]?.veille?.retirement_date).toBe('2026-10-23')
+    expect(controlTowerDatabasePatch(plan.modifiedRows[0]).lifecycle_status).toBe('retired')
+    expect(controlTowerDatabasePatch(plan.modifiedRows[1]).lifecycle_status).toBe('retired')
+  })
+
+  test('un libellé de statut inconnu est refusé et n’écrit pas lifecycle_status', () => {
+    const plan = planControlTowerApply({
+      rows: [{
+        sheetRow: 4,
+        cells: row({ 0: sonnet, 6: 'Brouillon', 23: 'https://example.com/status' }),
+      }],
+      headers: LEGACY_HEADERS,
+      models,
+      today: '2026-11-22',
+    })
+
+    expect(plan.rejectedValues).toEqual([{
+      sheetRow: 4,
+      modelId: sonnet,
+      column: 'Statut LLM',
+      value: 'Brouillon',
+      reason: 'statut LLM inconnu',
+    }])
+    expect(plan.modifiedRows[0]?.veille).not.toHaveProperty('lifecycle_status')
+  })
+
+  test('la simulation et le patch d’application masquent le même nombre de modèles', () => {
+    const plan = planControlTowerApply({
+      rows: [{
+        sheetRow: 4,
+        cells: row({ 0: sonnet, 6: 'Retiré', 23: 'https://example.com/status' }),
+      }],
+      headers: LEGACY_HEADERS,
+      models,
+      today: '2026-11-22',
+    })
+    const current = [
+      {
+        id: sonnet,
+        providerInQuestionnaire: true,
+        role: null,
+        lifecycleStatus: 'deprecated',
+        mergedIntoId: null,
+        visibilityOverride: null,
+        licenseClass: 'proprietary',
+      },
+      {
+        id: base,
+        providerInQuestionnaire: true,
+        role: null,
+        lifecycleStatus: 'active',
+        mergedIntoId: null,
+        visibilityOverride: null,
+        licenseClass: 'proprietary',
+      },
+    ]
+    const fromPlan = projectSelectorAfterApply(current, plan.modifiedRows)
+    const fromPatch = projectSelectorAfterApply(current, plan.modifiedRows.map((item) => ({
+      ...item,
+      veille: {
+        lifecycle_source_url: 'https://example.com/status',
+        lifecycle_status: controlTowerDatabasePatch(item).lifecycle_status as 'retired',
+      },
+    })))
+
+    expect(fromPlan).toEqual({ before: 2, after: 1, hidden: 1 })
+    expect(fromPatch).toEqual(fromPlan)
+  })
+
+  test('s’arrête si un en-tête attendu manque', () => {
+    expect(() => planControlTowerApply({
+      headers: ['ID Supabase'],
+      rows: [],
+      models,
+      today: '2026-11-16',
+    })).toThrow('En-tête manquant : « Statut LLM ». Aucune colonne n\'a été insérée.')
   })
 })

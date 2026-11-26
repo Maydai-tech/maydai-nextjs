@@ -1,33 +1,26 @@
-export const CONTROL_TOWER_SHEET_WIDTH = 27
+import {
+  findControlTowerGroup,
+  foldControlTowerHeader,
+  requireControlTowerGroup,
+  sheetCell,
+  type ControlTowerHeaderGroup,
+} from '@/lib/bench-llm/control-tower-headers'
+import {
+  explainReferenceRefusal,
+  lineKindFromRole,
+  roleFromLegacyLabel,
+  roleFromLineLabels,
+  type LineKind,
+} from '@/lib/bench-llm/control-tower-taxonomy'
+import { type ControlTowerRole } from '@/lib/bench-llm/control-tower-roles'
+import {
+  blankLicenseText,
+  licenseClassFromLabel,
+  type LicenseClass,
+} from '@/lib/bench-llm/license-class'
+import { isModelProposedToUser } from '@/lib/bench-llm/model-visibility'
 
-export const CONTROL_TOWER_COLUMNS = {
-  id: 0,
-  statutLlm: 6,
-  baseModel: 14,
-  role: 15,
-  referenceModel: 16,
-  mergedInto: 17,
-  taxonomyValidated: 18,
-  launchDate: 19,
-  deprecationDate: 20,
-  retirementDate: 21,
-  replacementModel: 22,
-  lifecycleSource: 23,
-  lifecycleCheckedAt: 24,
-} as const
-
-export const CONTROL_TOWER_ROLES = [
-  'base',
-  'version',
-  'non_documente',
-  'stade',
-  'format',
-  'reglage',
-  'auxiliaire',
-  'alias',
-  'introuvable',
-  'a_classer',
-] as const
+export type { ControlTowerRole }
 
 const LIFECYCLE_BY_LABEL: Record<string, 'active' | 'legacy' | 'deprecated' | 'retired'> = {
   actif: 'active',
@@ -39,12 +32,24 @@ const LIFECYCLE_BY_LABEL: Record<string, 'active' | 'legacy' | 'deprecated' | 'r
   retired: 'retired',
 }
 
+export type SheetLifecycleStatus = 'active' | 'legacy' | 'deprecated' | 'retired'
+
+/** Actif, Legacy, Déprécié, Retiré. Vide → null. Libellé inconnu → invalid. */
+export function lifecycleStatusFromSheetLabel(label: string): SheetLifecycleStatus | null | 'invalid' {
+  const folded = fold(label)
+  if (!folded) return null
+  return LIFECYCLE_BY_LABEL[folded] ?? 'invalid'
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export type ControlTowerModelRef = {
   id: string
   slug: string
+  modelName: string
   mergedIntoId: string | null
+  role: string | null
+  referenceModelId: string | null
 }
 
 export type VeillePatch = {
@@ -58,10 +63,17 @@ export type VeillePatch = {
 }
 
 export type TaxonomyPatch = {
-  role: (typeof CONTROL_TOWER_ROLES)[number] | null
+  role: ControlTowerRole | null
   reference_model_id: string | null
   merged_into_id: string | null
   base_model_id: string | null
+}
+
+export type LicensePatch = {
+  license_class: LicenseClass
+  license_id: string | null
+  license_url: string | null
+  license_eu_restricted: boolean
 }
 
 export type ModifiedControlTowerRow = {
@@ -69,6 +81,7 @@ export type ModifiedControlTowerRow = {
   modelId: string
   veille: VeillePatch | null
   taxonomie: TaxonomyPatch | null
+  licence: LicensePatch | null
   sheetStatus: string | null
 }
 
@@ -85,21 +98,8 @@ export type ControlTowerApplyPlan = {
   rejectedValues: RejectedControlTowerValue[]
 }
 
-export function padControlTowerSheetRow(row: readonly unknown[] | undefined): string[] {
-  return Array.from({ length: CONTROL_TOWER_SHEET_WIDTH }, (_, index) => String(row?.[index] ?? ''))
-}
-
 function fold(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase()
-}
-
-function cell(row: string[], index: number): string {
-  return (row[index] ?? '').trim()
+  return foldControlTowerHeader(value)
 }
 
 export function parseControlTowerDate(value: string): string | null | 'invalid' {
@@ -166,18 +166,167 @@ function mergeCycleMembers(next: Map<string, string | null>, starts: string[]): 
   return members
 }
 
+function groupLabel(group: ControlTowerHeaderGroup): string {
+  return requireGroupName(group)
+}
+
+function requireGroupName(group: ControlTowerHeaderGroup): string {
+  const names = {
+    id: 'ID Supabase',
+    statutMaydai: 'Statut MaydAI',
+    provider: 'Nom de la technologie',
+    modelName: 'Nom du LLM (Standard Supabase)',
+    hermesName: 'Nom du LLM (Standard Hermes/Fichier)',
+    proposed: "Proposé à l'utilisateur",
+    usecases: "Cas d'usage déclarés",
+    lineType: 'Type de ligne',
+    precision: 'Précision',
+    legacyRole: 'Rôle',
+    reference: 'Ligne de référence (ID)',
+    merge: 'Fusionner avec (ID)',
+    baseModel: 'Modèle de base (ID)',
+    taxonomyValidated: 'Taxonomie validée',
+    llmStatus: 'Statut LLM',
+    launchDate: 'Date de lancement',
+    deprecationDate: 'Date de dépréciation',
+    retirementDate: 'Date de retrait',
+    replacement: 'Remplacé par (ID)',
+    lifecycleSource: 'Source du statut',
+    lifecycleCheckedAt: 'Dernière vérification',
+    fiche: 'Statut Fiche Technique',
+    action: 'Action requise par Hermes',
+    priorityDate: "Date de priorisation de l'action",
+    driveFolder: 'Lien du dossier Drive cible',
+    markdownFile: 'Lien du fichier Markdown généré',
+    humanAction: 'Action humaine requise',
+    legal: 'Validation juridique',
+    ready: 'Prêt pour import',
+    importResult: "Résultat de l'import",
+    updatedAt: 'Date de dernière mise à jour (Supabase)',
+    licenseClass: 'Type de modèle',
+    licenseId: 'Identifiant de la licence',
+    licenseUrl: 'Source de la licence',
+    licenseEu: 'Exclusion UE',
+  } as const
+  return names[group]
+}
+
+function readGroup(
+  headers: readonly string[],
+  row: readonly unknown[],
+  group: ControlTowerHeaderGroup,
+): string {
+  return sheetCell(row, requireControlTowerGroup(headers, group))
+}
+
 type TaxonomyDraft = {
   sheetRow: number
   modelId: string
+  modelName: string
   patch: TaxonomyPatch
-  rejections: RejectedControlTowerValue[]
+}
+
+function readLicensePatch(
+  headers: readonly string[],
+  row: readonly unknown[],
+  sheetRow: number,
+  modelId: string,
+): { patch: LicensePatch | null; rejections: RejectedControlTowerValue[] } {
+  const label = readGroup(headers, row, 'licenseClass')
+  const parsed = licenseClassFromLabel(label)
+  if (parsed === 'empty') return { patch: null, rejections: [] }
+  if (parsed === 'invalid') {
+    return {
+      patch: null,
+      rejections: [{
+        sheetRow,
+        modelId,
+        column: groupLabel('licenseClass'),
+        value: label,
+        reason: 'type de modèle inconnu',
+      }],
+    }
+  }
+  const exclusion = readGroup(headers, row, 'licenseEu')
+  const foldedExclusion = fold(exclusion)
+  if (exclusion && foldedExclusion !== 'oui') {
+    return {
+      patch: null,
+      rejections: [{
+        sheetRow,
+        modelId,
+        column: groupLabel('licenseEu'),
+        value: exclusion,
+        reason: 'exclusion UE inconnue',
+      }],
+    }
+  }
+  return {
+    patch: {
+      license_class: parsed,
+      license_id: blankLicenseText(readGroup(headers, row, 'licenseId')),
+      license_url: blankLicenseText(readGroup(headers, row, 'licenseUrl')),
+      license_eu_restricted: foldedExclusion === 'oui',
+    },
+    rejections: [],
+  }
+}
+
+function readTaxonomyRole(
+  headers: readonly string[],
+  row: readonly unknown[],
+): { role: ControlTowerRole | null | 'invalid'; column: string; value: string; reason: string } {
+  const typeIndex = findControlTowerGroup(headers, 'lineType')
+  if (typeIndex >= 0) {
+    const precisionIndex = requireControlTowerGroup(headers, 'precision')
+    const typeValue = sheetCell(row, typeIndex)
+    const precisionValue = sheetCell(row, precisionIndex)
+    const role = roleFromLineLabels(typeValue, precisionValue)
+    const typeKnown = ['modele', 'variante', 'doublon', 'hors champ'].includes(fold(typeValue))
+    return {
+      role,
+      column: role === 'invalid' && typeKnown ? groupLabel('precision') : groupLabel('lineType'),
+      value: [typeValue, precisionValue].filter(Boolean).join(' / '),
+      reason: role === 'invalid' && typeKnown
+        ? 'précision incompatible avec le type de ligne'
+        : 'type de ligne hors liste',
+    }
+  }
+  const legacyIndex = requireControlTowerGroup(headers, 'legacyRole')
+  const value = sheetCell(row, legacyIndex)
+  return {
+    role: roleFromLegacyLabel(value),
+    column: groupLabel('legacyRole'),
+    value,
+    reason: 'type de ligne hors liste',
+  }
 }
 
 export function planControlTowerApply(input: {
+  headers: readonly string[]
   rows: Array<{ sheetRow: number; cells: readonly unknown[] }>
   models: ControlTowerModelRef[]
   today: string
 }): ControlTowerApplyPlan {
+  const headers = input.headers
+  requireControlTowerGroup(headers, 'id')
+  requireControlTowerGroup(headers, 'llmStatus')
+  requireControlTowerGroup(headers, 'baseModel')
+  requireControlTowerGroup(headers, 'reference')
+  requireControlTowerGroup(headers, 'merge')
+  requireControlTowerGroup(headers, 'taxonomyValidated')
+  requireControlTowerGroup(headers, 'launchDate')
+  requireControlTowerGroup(headers, 'deprecationDate')
+  requireControlTowerGroup(headers, 'retirementDate')
+  requireControlTowerGroup(headers, 'replacement')
+  requireControlTowerGroup(headers, 'lifecycleSource')
+  requireControlTowerGroup(headers, 'lifecycleCheckedAt')
+  if (findControlTowerGroup(headers, 'lineType') >= 0) {
+    requireControlTowerGroup(headers, 'precision')
+  } else {
+    requireControlTowerGroup(headers, 'legacyRole')
+  }
+
   const byId = new Map(input.models.map((model) => [model.id.toLowerCase(), model]))
   const bySlug = new Map(input.models.map((model) => [fold(model.slug), model]))
   const modifiedRows: ModifiedControlTowerRow[] = []
@@ -186,20 +335,22 @@ export function planControlTowerApply(input: {
 
   for (const source of input.rows) {
     if (source.sheetRow <= 1) continue
-    const row = padControlTowerSheetRow(source.cells)
-    const rawId = cell(row, CONTROL_TOWER_COLUMNS.id)
-    const sourceUrl = cell(row, CONTROL_TOWER_COLUMNS.lifecycleSource)
-    const taxonomyMark = fold(cell(row, CONTROL_TOWER_COLUMNS.taxonomyValidated))
+    const row = source.cells
+    const rawId = readGroup(headers, row, 'id')
+    const sourceUrl = readGroup(headers, row, 'lifecycleSource')
+    const taxonomyMark = fold(readGroup(headers, row, 'taxonomyValidated'))
     const wantsVeille = sourceUrl.length > 0
     const wantsTaxonomy = taxonomyMark === 'oui'
-    if (!wantsVeille && !wantsTaxonomy) continue
+    const wantsLicense = findControlTowerGroup(headers, 'licenseClass') >= 0
+      && fold(readGroup(headers, row, 'statutMaydai')) === 'questionnaire'
+    if (!wantsVeille && !wantsTaxonomy && !wantsLicense) continue
 
     const model = UUID_PATTERN.test(rawId) ? byId.get(rawId.toLowerCase()) : undefined
     if (!model) {
       rejectedValues.push({
         sheetRow: source.sheetRow,
         modelId: rawId,
-        column: 'A',
+        column: groupLabel('id'),
         value: rawId,
         reason: 'ID inconnu',
       })
@@ -209,51 +360,50 @@ export function planControlTowerApply(input: {
     let veille: VeillePatch | null = null
     if (wantsVeille) {
       const rejections: RejectedControlTowerValue[] = []
-      const statusText = cell(row, CONTROL_TOWER_COLUMNS.statutLlm)
-      const status = statusText ? LIFECYCLE_BY_LABEL[fold(statusText)] : null
-      if (statusText && !status) {
+      const statusText = readGroup(headers, row, 'llmStatus')
+      const status = lifecycleStatusFromSheetLabel(statusText)
+      if (status === 'invalid') {
         rejections.push({
           sheetRow: source.sheetRow,
           modelId: model.id,
-          column: 'G',
+          column: groupLabel('llmStatus'),
           value: statusText,
           reason: 'statut LLM inconnu',
         })
       }
-      const launchDate = parseControlTowerDate(cell(row, CONTROL_TOWER_COLUMNS.launchDate))
-      const deprecationDate = parseControlTowerDate(cell(row, CONTROL_TOWER_COLUMNS.deprecationDate))
-      const retirementDate = parseControlTowerDate(cell(row, CONTROL_TOWER_COLUMNS.retirementDate))
-      const checkedAt = parseControlTowerTimestamp(cell(row, CONTROL_TOWER_COLUMNS.lifecycleCheckedAt))
-      for (const [column, parsed, value] of [
-        ['T', launchDate, cell(row, CONTROL_TOWER_COLUMNS.launchDate)],
-        ['U', deprecationDate, cell(row, CONTROL_TOWER_COLUMNS.deprecationDate)],
-        ['V', retirementDate, cell(row, CONTROL_TOWER_COLUMNS.retirementDate)],
-        ['Y', checkedAt, cell(row, CONTROL_TOWER_COLUMNS.lifecycleCheckedAt)],
+      const launchDate = parseControlTowerDate(readGroup(headers, row, 'launchDate'))
+      const deprecationDate = parseControlTowerDate(readGroup(headers, row, 'deprecationDate'))
+      const retirementDate = parseControlTowerDate(readGroup(headers, row, 'retirementDate'))
+      const checkedAt = parseControlTowerTimestamp(readGroup(headers, row, 'lifecycleCheckedAt'))
+      for (const [group, parsed, value] of [
+        ['launchDate', launchDate, readGroup(headers, row, 'launchDate')],
+        ['deprecationDate', deprecationDate, readGroup(headers, row, 'deprecationDate')],
+        ['retirementDate', retirementDate, readGroup(headers, row, 'retirementDate')],
+        ['lifecycleCheckedAt', checkedAt, readGroup(headers, row, 'lifecycleCheckedAt')],
       ] as const) {
         if (parsed === 'invalid') {
           rejections.push({
             sheetRow: source.sheetRow,
             modelId: model.id,
-            column,
+            column: groupLabel(group),
             value,
             reason: 'date invalide',
           })
         }
       }
-      const replacement = resolveModelId(cell(row, CONTROL_TOWER_COLUMNS.replacementModel), byId, bySlug)
+      const replacement = resolveModelId(readGroup(headers, row, 'replacement'), byId, bySlug)
       if (replacement === 'invalid') {
         rejections.push({
           sheetRow: source.sheetRow,
           modelId: model.id,
-          column: 'W',
-          value: cell(row, CONTROL_TOWER_COLUMNS.replacementModel),
+          column: groupLabel('replacement'),
+          value: readGroup(headers, row, 'replacement'),
           reason: 'ID inconnu',
         })
       }
       rejectedValues.push(...rejections)
-      const rejectedColumns = new Set(rejections.map((rejection) => rejection.column))
       veille = { lifecycle_source_url: sourceUrl }
-      if (!rejectedColumns.has('G')) veille.lifecycle_status = status
+      if (status && status !== 'invalid') veille.lifecycle_status = status
       if (launchDate !== 'invalid') veille.launch_date = launchDate
       if (deprecationDate !== 'invalid') veille.deprecation_date = deprecationDate
       if (retirementDate !== 'invalid') veille.retirement_date = retirementDate
@@ -263,32 +413,29 @@ export function planControlTowerApply(input: {
 
     if (wantsTaxonomy) {
       const rejections: RejectedControlTowerValue[] = []
-      const roleText = cell(row, CONTROL_TOWER_COLUMNS.role)
-      const role = roleText
-        ? CONTROL_TOWER_ROLES.find((candidate) => candidate === fold(roleText).replace(/ /g, '_')) ?? null
-        : null
-      if (roleText && !role) {
+      const parsedRole = readTaxonomyRole(headers, row)
+      if (parsedRole.value && parsedRole.role === 'invalid') {
         rejections.push({
           sheetRow: source.sheetRow,
           modelId: model.id,
-          column: 'P',
-          value: roleText,
-          reason: 'rôle hors liste',
+          column: parsedRole.column,
+          value: parsedRole.value,
+          reason: parsedRole.reason,
         })
       }
-      const reference = resolveModelId(cell(row, CONTROL_TOWER_COLUMNS.referenceModel), byId, bySlug)
-      const mergedInto = resolveModelId(cell(row, CONTROL_TOWER_COLUMNS.mergedInto), byId, bySlug)
-      const baseModel = resolveModelId(cell(row, CONTROL_TOWER_COLUMNS.baseModel), byId, bySlug)
-      for (const [column, resolved, value] of [
-        ['Q', reference, cell(row, CONTROL_TOWER_COLUMNS.referenceModel)],
-        ['R', mergedInto, cell(row, CONTROL_TOWER_COLUMNS.mergedInto)],
-        ['O', baseModel, cell(row, CONTROL_TOWER_COLUMNS.baseModel)],
+      const reference = resolveModelId(readGroup(headers, row, 'reference'), byId, bySlug)
+      const mergedInto = resolveModelId(readGroup(headers, row, 'merge'), byId, bySlug)
+      const baseModel = resolveModelId(readGroup(headers, row, 'baseModel'), byId, bySlug)
+      for (const [group, resolved, value] of [
+        ['reference', reference, readGroup(headers, row, 'reference')],
+        ['merge', mergedInto, readGroup(headers, row, 'merge')],
+        ['baseModel', baseModel, readGroup(headers, row, 'baseModel')],
       ] as const) {
         if (resolved === 'invalid') {
           rejections.push({
             sheetRow: source.sheetRow,
             modelId: model.id,
-            column,
+            column: groupLabel(group),
             value,
             reason: 'ID inconnu',
           })
@@ -299,9 +446,9 @@ export function planControlTowerApply(input: {
         taxonomyDrafts.push({
           sheetRow: source.sheetRow,
           modelId: model.id,
-          rejections,
+          modelName: model.modelName,
           patch: {
-            role,
+            role: parsedRole.role === 'invalid' ? null : parsedRole.role,
             reference_model_id: reference === 'invalid' ? null : reference,
             merged_into_id: mergedInto === 'invalid' ? null : mergedInto,
             base_model_id: baseModel === 'invalid' ? null : baseModel,
@@ -310,12 +457,20 @@ export function planControlTowerApply(input: {
       }
     }
 
-    if (veille) {
+    let licence: LicensePatch | null = null
+    if (wantsLicense) {
+      const parsedLicense = readLicensePatch(headers, row, source.sheetRow, model.id)
+      rejectedValues.push(...parsedLicense.rejections)
+      licence = parsedLicense.patch
+    }
+
+    if (veille || licence) {
       modifiedRows.push({
         sheetRow: source.sheetRow,
         modelId: model.id,
         veille,
         taxonomie: null,
+        licence,
         sheetStatus: null,
       })
     }
@@ -324,15 +479,43 @@ export function planControlTowerApply(input: {
   const nextMerge = new Map(input.models.map((model) => [model.id, model.mergedIntoId]))
   for (const draft of taxonomyDrafts) nextMerge.set(draft.modelId, draft.patch.merged_into_id)
   const cyclicIds = mergeCycleMembers(nextMerge, taxonomyDrafts.map((draft) => draft.modelId))
+
+  const roleById = new Map(input.models.map((model) => [model.id, model.role]))
+  for (const draft of taxonomyDrafts) roleById.set(draft.modelId, draft.patch.role)
+  const names = new Map(input.models.map((model) => [model.id, model.modelName]))
+  const references = new Map(input.models.map((model) => [model.id, model.referenceModelId]))
+  for (const draft of taxonomyDrafts) references.set(draft.modelId, draft.patch.reference_model_id)
+  const kinds = new Map<string, LineKind>(
+    input.models.map((model) => [model.id, lineKindFromRole(roleById.get(model.id))]),
+  )
+
   const acceptedTaxonomy = new Map<string, TaxonomyDraft>()
   for (const draft of taxonomyDrafts) {
     if (draft.patch.merged_into_id && cyclicIds.has(draft.modelId)) {
       rejectedValues.push({
         sheetRow: draft.sheetRow,
         modelId: draft.modelId,
-        column: 'R',
+        column: groupLabel('merge'),
         value: draft.patch.merged_into_id,
         reason: 'fusion circulaire',
+      })
+      continue
+    }
+    const referenceReason = explainReferenceRefusal({
+      modelId: draft.modelId,
+      modelName: draft.modelName,
+      referenceId: draft.patch.reference_model_id,
+      names,
+      kinds,
+      references,
+    })
+    if (referenceReason) {
+      rejectedValues.push({
+        sheetRow: draft.sheetRow,
+        modelId: draft.modelId,
+        column: groupLabel('reference'),
+        value: draft.patch.reference_model_id ?? '',
+        reason: referenceReason,
       })
       continue
     }
@@ -351,6 +534,7 @@ export function planControlTowerApply(input: {
         modelId: draft.modelId,
         veille: null,
         taxonomie: draft.patch,
+        licence: null,
         sheetStatus,
       })
     }
@@ -358,4 +542,73 @@ export function planControlTowerApply(input: {
 
   modifiedRows.sort((a, b) => a.sheetRow - b.sheetRow)
   return { modifiedRows, rejectedValues }
+}
+
+/** Objet envoyé à compl_ai_models. Le statut reconnu est toujours inclus. */
+export function controlTowerDatabasePatch(row: ModifiedControlTowerRow): Record<string, unknown> {
+  return {
+    ...(row.veille ?? {}),
+    ...(row.taxonomie ?? {}),
+    ...(row.licence ?? {}),
+  }
+}
+
+export type SelectorModelState = {
+  id: string
+  providerInQuestionnaire: boolean
+  role: string | null
+  lifecycleStatus: string | null
+  mergedIntoId: string | null
+  visibilityOverride: boolean | null
+  licenseClass: string | null
+}
+
+export type SelectorProjection = {
+  before: number
+  after: number
+  hidden: number
+}
+
+function visibilityOf(model: SelectorModelState) {
+  return isModelProposedToUser({
+    providerInQuestionnaire: model.providerInQuestionnaire,
+    role: model.role,
+    lifecycleStatus: model.lifecycleStatus,
+    mergedIntoId: model.mergedIntoId,
+    visibilityOverride: model.visibilityOverride,
+    licenseClass: model.licenseClass,
+  })
+}
+
+/** Applique le même patch que l’écriture, puis recalcule le sélecteur. */
+export function projectSelectorAfterApply(
+  models: SelectorModelState[],
+  rows: ModifiedControlTowerRow[],
+): SelectorProjection {
+  const nextById = new Map(models.map((model) => [model.id, { ...model }]))
+  for (const row of rows) {
+    const model = nextById.get(row.modelId)
+    if (!model) continue
+    const patch = controlTowerDatabasePatch(row)
+    if (Object.prototype.hasOwnProperty.call(patch, 'lifecycle_status')) {
+      model.lifecycleStatus = (patch.lifecycle_status as string | null) ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'role')) {
+      model.role = (patch.role as string | null) ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'merged_into_id')) {
+      model.mergedIntoId = (patch.merged_into_id as string | null) ?? null
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'license_class')) {
+      model.licenseClass = String(patch.license_class)
+    }
+  }
+  const next = [...nextById.values()]
+  const before = models.filter((model) => visibilityOf(model)).length
+  const after = next.filter((model) => visibilityOf(model)).length
+  const hidden = models.filter((model) => {
+    const projected = nextById.get(model.id) ?? model
+    return visibilityOf(model) && !visibilityOf(projected)
+  }).length
+  return { before, after, hidden }
 }

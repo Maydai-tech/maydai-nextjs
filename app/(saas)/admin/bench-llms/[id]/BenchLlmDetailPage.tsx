@@ -84,6 +84,8 @@ type CompariaModel = {
   release_date: string | null
   organisation: string
   license: string | null
+  ranking_class?: number | null
+  link_status?: 'matched' | 'unmatched' | 'ignored' | null
   last_imported_at: string
 }
 type DetailResponse = {
@@ -300,6 +302,8 @@ export function BenchLlmDetailContent({
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[
                 ['Identifiant Compar:IA', comparia.source_id],
+                ['Lien', comparia.link_status === 'matched' ? 'Associé' : comparia.link_status === 'ignored' ? 'Ignoré' : comparia.link_status === 'unmatched' ? 'À rapprocher' : '—'],
+                ['Classe', comparia.ranking_class],
                 ['Rang', comparia.rank],
                 ['Score Bradley–Terry', comparia.bradley_terry_score],
                 ['Intervalle du score', comparia.bt_p2_5 != null && comparia.bt_p97_5 != null ? `${comparia.bt_p2_5} – ${comparia.bt_p97_5}` : '—'],

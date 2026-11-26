@@ -2,6 +2,7 @@ import { parse } from 'csv-parse/sync'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { CONTROL_TOWER_FOLDER_ID } from '@/lib/bench-llm/control-tower-csv'
+import { findControlTowerHeader } from '@/lib/bench-llm/control-tower-headers'
 import { normalizeLlmModelSlug } from '@/lib/bench-llm/model-slug'
 import {
   formatImportedPillarStatus,
@@ -12,6 +13,7 @@ import {
 import {
   parseSheetSystemCardStatus,
   STATUT_FICHE_ERREUR,
+  STATUT_FICHE_GENEREE,
   type SystemCardStatus,
 } from '@/lib/validations/system-card'
 import {
@@ -56,6 +58,7 @@ export type ControlTowerStatusUpdate = {
   success: boolean
   errorMessage?: string
   statutSupabase?: string
+  ficheTechnique?: string
   importedOn: string
 }
 
@@ -475,9 +478,8 @@ export function controlTowerSpreadsheetId(): string {
   return id
 }
 
-export function findColumnIndexByHeader(headers: string[], label: string): number {
-  const wanted = foldHeader(label)
-  return headers.findIndex((header) => foldHeader(header) === wanted)
+export function findColumnIndexByHeader(headers: string[], ...labels: string[]): number {
+  return findControlTowerHeader(headers, ...labels)
 }
 
 export function columnIndexToA1(index: number): string {
@@ -599,15 +601,29 @@ export async function writeControlTowerStatusesToSheet(
   })
   const rows = valuesRes.data.values ?? []
   const headers = (rows[0] ?? []).map((header) => String(header ?? ''))
-  const statusCol = findColumnIndexByHeader(headers, STATUT_SUPABASE_HEADER)
+  const statusCol = findColumnIndexByHeader(headers, "Résultat de l'import", 'Statut Supabase')
   if (statusCol < 0) {
-    throw new Error(`Colonne "${STATUT_SUPABASE_HEADER}" introuvable dans l'en-tête`)
+    throw new Error(
+      "En-tête manquant : « Résultat de l'import » (ou « Statut Supabase »). Aucune colonne n'a été insérée.",
+    )
   }
-  const readyCol = findColumnIndexByHeader(headers, PRET_POUR_IMPORT_HEADER)
-  const actionCol = findColumnIndexByHeader(headers, ACTION_HERMES_HEADER)
+  const readyCol = findColumnIndexByHeader(headers, 'Prêt pour import')
+  const actionCol = findColumnIndexByHeader(headers, 'Action requise par Hermes')
+  const ficheCol = findColumnIndexByHeader(headers, 'Statut Fiche Technique')
+  const idCol = findColumnIndexByHeader(headers, 'ID Supabase')
+  if (idCol < 0) {
+    throw new Error("En-tête manquant : « ID Supabase ». Aucune colonne n'a été insérée.")
+  }
+  if (updates.some((update) => update.success) && (readyCol < 0 || actionCol < 0)) {
+    const missing = readyCol < 0 ? 'Prêt pour import' : 'Action requise par Hermes'
+    throw new Error(`En-tête manquant : « ${missing} ». Aucune colonne n'a été insérée.`)
+  }
+  if (updates.some((update) => update.ficheTechnique === STATUT_FICHE_GENEREE) && ficheCol < 0) {
+    throw new Error("En-tête manquant : « Statut Fiche Technique ». Aucune colonne n'a été insérée.")
+  }
 
   const matchCols = {
-    idCol: findColumnIndexByHeader(headers, 'ID Supabase'),
+    idCol,
     hermesCol: findColumnIndexByHeader(headers, 'Nom du LLM (Standard Hermes/Fichier)'),
     nameCol: findColumnIndexByHeader(headers, 'Nom du LLM (Standard Supabase)'),
   }
@@ -639,6 +655,9 @@ export async function writeControlTowerStatusesToSheet(
     if (update.success) {
       pushCell(readyCol, sheetRow, 'Déjà importé', PRET_POUR_IMPORT_HEADER)
       pushCell(actionCol, sheetRow, 'NONE', ACTION_HERMES_HEADER)
+    }
+    if (update.ficheTechnique === STATUT_FICHE_GENEREE) {
+      pushCell(ficheCol, sheetRow, STATUT_FICHE_GENEREE, 'Statut Fiche Technique')
     }
   }
 
@@ -953,6 +972,7 @@ export async function importSystemCardsFromControlTower(
         modelName: row.modelName,
         success: true,
         importedOn,
+        ficheTechnique: STATUT_FICHE_GENEREE,
         statutSupabase: pillarOutcome.unmappedCount > 0
           ? formatImportedPillarStatus(importedOn, pillarOutcome.unmappedCount)
           : undefined,
