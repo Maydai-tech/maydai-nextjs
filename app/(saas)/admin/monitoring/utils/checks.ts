@@ -27,12 +27,14 @@ export type MonitoringChecksInput = {
   emailError: string | null
   purges: PurgeLike[]
   purgesError: string | null
+  /** Conteneurs actifs et combien ont des logs plafonnés ; absent si l'hôte ne le publie pas */
+  logRotation?: { containers: number; rotated: number } | null
   formatDate: (iso: string) => string
 }
 
 /** Cartes d'état de la page monitoring, dérivées des données réelles de l'hôte. */
 export function buildMonitoringChecks(input: MonitoringChecksInput): MonitoringCheck[] {
-  const { usePercent, diskError, email, emailError, purges, purgesError, formatDate } = input
+  const { usePercent, diskError, email, emailError, purges, purgesError, logRotation, formatDate } = input
 
   const diskAlert: MonitoringCheck =
     usePercent === null
@@ -47,14 +49,12 @@ export function buildMonitoringChecks(input: MonitoringChecksInput): MonitoringC
       ? { key: 'email', title: 'Canal email', value: 'Alerte envoyée', details: `Dernière alerte le ${formatDate(email.lastSentAt)} vers ${email.recipient || 'un destinataire inconnu'}.`, tone: 'info' }
       : { key: 'email', title: 'Canal email', value: 'Aucune alerte', details: 'Aucune alerte disque envoyée pour l’instant.', tone: 'ok' }
 
-  // ponytail: l'hôte ne publie pas encore l'état de la rotation des logs ; brancher ici quand un JSON l'exposera.
-  const logs: MonitoringCheck = {
-    key: 'logs',
-    title: 'Rotation des logs',
-    value: 'Non suivie',
-    details: 'Le serveur ne remonte pas encore l’état de la rotation des logs.',
-    tone: 'muted',
-  }
+  const unbounded = logRotation ? logRotation.containers - logRotation.rotated : 0
+  const logs: MonitoringCheck = !logRotation
+    ? { key: 'logs', title: 'Rotation des logs', value: 'Non suivie', details: 'Le serveur ne remonte pas l’état de la rotation des logs.', tone: 'muted' }
+    : unbounded > 0
+      ? { key: 'logs', title: 'Rotation des logs', value: 'Incomplète', details: `${unbounded} conteneur${unbounded > 1 ? 's' : ''} sur ${logRotation.containers} sans limite de taille de logs.`, tone: 'warn' }
+      : { key: 'logs', title: 'Rotation des logs', value: 'Active', details: `Logs plafonnés sur les ${logRotation.containers} conteneurs.`, tone: 'ok' }
 
   const last = [...purges].sort((a, b) => b.ranAt.localeCompare(a.ranAt))[0]
   const docker: MonitoringCheck = purgesError

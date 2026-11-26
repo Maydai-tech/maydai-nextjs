@@ -229,10 +229,22 @@ async function getProductionDiskUsage() {
   const normalized = normalizeMonitoringDiskPayload(json)
   const reconciled = reconcileProductionDiskMetrics(normalized)
 
+  const logRotation = parseLogRotation((json as Record<string, unknown>).logRotation)
+
   return {
     ...reconciled,
     source: 'production',
+    ...(logRotation ? { logRotation } : {}),
   }
+}
+
+/** État de la rotation des logs Docker publié par l'hôte dans disk.json (absent sur un hôte ancien). */
+function parseLogRotation(value: unknown): { containers: number; rotated: number } | null {
+  if (!value || typeof value !== 'object') return null
+  const { containers, rotated } = value as Record<string, unknown>
+  if (typeof containers !== 'number' || typeof rotated !== 'number') return null
+  if (!Number.isInteger(containers) || !Number.isInteger(rotated) || containers < 0 || rotated < 0) return null
+  return { containers, rotated }
 }
 
 type DiskUsageResult = {

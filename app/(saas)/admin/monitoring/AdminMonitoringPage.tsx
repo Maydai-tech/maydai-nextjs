@@ -31,6 +31,7 @@ interface DiskUsage {
   source?: string
   /** Présent lorsque l’API a recalculé total / % pour cohérence */
   coherenceNote?: string
+  logRotation?: { containers: number; rotated: number }
 }
 
 interface EmailStatus {
@@ -174,6 +175,7 @@ export default function AdminMonitoringPage() {
     emailError,
     purges,
     purgesError,
+    logRotation: diskUsage?.logRotation ?? null,
     formatDate: formatUpdatedAtFr,
   })
 

@@ -52,7 +52,7 @@ Identifiants absents → `Source monitoring non configurée`. En **dev** uniquem
 
 `email-status.json` en **404** = aucune alerte envoyée (l’hôte ne l’écrit qu’au premier envoi, disque > 85 %) : `email: null`, `emailError: null`.
 
-Les cartes d’état de la page (`utils/checks.ts`) sont dérivées de ces données : alerte disque (occupation vs 85 %), dernière alerte email, dernière purge Docker. « Rotation des logs » reste « Non suivie » tant que l’hôte ne publie pas cet état.
+Les cartes d’état de la page (`utils/checks.ts`) sont dérivées de ces données : alerte disque (occupation vs 85 %), dernière alerte email, dernière purge Docker. « Rotation des logs » vient du champ optionnel `logRotation: { containers, rotated }` de `disk.json` (écrit par `/usr/local/bin/update-disk-json.sh` sur l’hôte) : « Active » si tous les conteneurs ont des logs plafonnés, « Incomplète » sinon, « Non suivie » si le champ est absent.
 
 JSON disque attendu : `total`, `used`, `free` (ou `available`), `usePercent`, `updatedAt`. Si `|total − (used+free)| > 12 %`, l’API recalcule total et % (`coherenceNote`).
 

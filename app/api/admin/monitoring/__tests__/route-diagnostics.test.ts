@@ -110,3 +110,45 @@ describe('GET /api/admin/monitoring — diagnostics', () => {
     expect(payload.emailError).toBe('Source statut email indisponible (500)')
   })
 })
+
+describe('GET /api/admin/monitoring — rotation des logs', () => {
+  const disk = { total: 48, used: 11, free: 37, usePercent: '22%', updatedAt: '2026-11-26T00:00:00Z' }
+  const saved: Record<string, string | undefined> = {}
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    for (const key of ENV_KEYS) {
+      saved[key] = process.env[key]
+      delete process.env[key]
+    }
+    process.env.MONITORING_HTTP_USER = 'monitoring'
+    process.env.MONITORING_HTTP_PASSWORD = 'secret'
+    verifyAdminAuth.mockResolvedValue({ user: { id: 'admin', role: 'admin' } })
+  })
+
+  afterEach(() => {
+    for (const key of ENV_KEYS) {
+      if (saved[key] === undefined) delete process.env[key]
+      else process.env[key] = saved[key]
+    }
+  })
+
+  const mockDisk = (payload: Record<string, unknown>) =>
+    fetchMock.mockImplementation(async (url: string) =>
+      url.endsWith('disk.json')
+        ? { ok: true, status: 200, json: async () => payload }
+        : { ok: false, status: 404, json: async () => [] }
+    )
+
+  test('passes through the log rotation state published by the host', async () => {
+    mockDisk({ ...disk, logRotation: { containers: 19, rotated: 19 } })
+    const { payload } = await callDisk()
+    expect(payload.disk.logRotation).toEqual({ containers: 19, rotated: 19 })
+  })
+
+  test('omits a missing or malformed log rotation state', async () => {
+    mockDisk({ ...disk, logRotation: { containers: '19', rotated: -1 } })
+    const { payload } = await callDisk()
+    expect(payload.disk).not.toHaveProperty('logRotation')
+  })
+})
