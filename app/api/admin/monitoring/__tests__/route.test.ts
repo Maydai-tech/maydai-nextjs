@@ -79,15 +79,22 @@ describe('GET /api/admin/monitoring', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  test('does not fetch a public HTTP origin even when env points to it', async () => {
+  test('ignores URL env vars: never fetches a public HTTP origin', async () => {
     verifyAdminAuth.mockResolvedValue({ user: { id: 'admin', role: 'admin' } })
     process.env.MONITORING_PROD_DISK_JSON_URL = 'http://203.0.113.10/monitoring/disk.json'
-    process.env.MONITORING_PROD_EMAIL_STATUS_JSON_URL =
-      'http://203.0.113.10/monitoring/email-status.json'
-    process.env.MONITORING_PROD_DOCKER_PURGES_JSON_URL =
-      'http://203.0.113.10/monitoring/docker-purges.json'
     process.env.MONITORING_HTTP_USER = 'monitoring'
     process.env.MONITORING_HTTP_PASSWORD = 'secret'
+    fetchMock.mockResolvedValue({ ok: false, status: 503, json: async () => ({}) })
+
+    await GET(new NextRequest('http://localhost/api/admin/monitoring?action=disk'))
+
+    const urls = fetchMock.mock.calls.map(([url]) => String(url))
+    expect(urls.length).toBeGreaterThan(0)
+    expect(urls.every((url) => url.startsWith('https://api.maydai.io/monitoring/'))).toBe(true)
+  })
+
+  test('does not fetch anything without monitoring credentials', async () => {
+    verifyAdminAuth.mockResolvedValue({ user: { id: 'admin', role: 'admin' } })
 
     const response = await GET(
       new NextRequest('http://localhost/api/admin/monitoring?action=disk')
@@ -145,7 +152,7 @@ describe('GET /api/admin/monitoring', () => {
     expect(payload.diskError).toBeNull()
     expect(fetchMock).toHaveBeenCalledTimes(3)
     for (const call of fetchMock.mock.calls) {
-      expect(String(call[0])).toMatch(/^https:\/\/monitoring\.example\.com\//)
+      expect(String(call[0])).toMatch(/^https:\/\/api\.maydai\.io\/monitoring\//)
       expect(call[1]).toEqual(
         expect.objectContaining({
           headers: { Authorization: expectedAuth },

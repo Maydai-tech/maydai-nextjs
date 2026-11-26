@@ -84,3 +84,32 @@ describe('buildMonitoringChecks', () => {
     })
   })
 })
+
+describe('buildMonitoringChecks — rotation des logs', () => {
+  const base = {
+    usePercent: 23,
+    diskError: null,
+    email: null,
+    emailError: null,
+    purges: [],
+    purgesError: null,
+    formatDate: (iso: string) => iso,
+  }
+  const logsOf = (logRotation?: { containers: number; rotated: number } | null) =>
+    buildMonitoringChecks({ ...base, logRotation }).find((c) => c.key === 'logs')!
+
+  test('active quand tous les conteneurs ont des logs plafonnés', () => {
+    expect(logsOf({ containers: 19, rotated: 19 })).toMatchObject({ value: 'Active', tone: 'ok' })
+  })
+
+  test('incomplète quand des conteneurs n’ont pas de limite', () => {
+    const check = logsOf({ containers: 19, rotated: 17 })
+    expect(check).toMatchObject({ value: 'Incomplète', tone: 'warn' })
+    expect(check.details).toContain('2 conteneurs sur 19')
+  })
+
+  test('non suivie quand le serveur ne publie pas l’état', () => {
+    expect(logsOf(null)).toMatchObject({ value: 'Non suivie', tone: 'muted' })
+    expect(logsOf()).toMatchObject({ value: 'Non suivie', tone: 'muted' })
+  })
+})
