@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
+import { AUTH_PATHS, authRedirectUrl } from './auth-email-links'
 
 interface AuthContextType {
   user: User | null
@@ -167,7 +168,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithOtp = useCallback(async (email: string, shouldCreateUser = false) => {
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser } })
+      // emailRedirectTo : un compte jamais confirmé reçoit l'email « Confirm signup » (code + lien).
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser, emailRedirectTo: authRedirectUrl(AUTH_PATHS.confirmSignup) },
+      })
       return { error }
     } catch (error) {
       console.error('Error in signInWithOtp:', error)

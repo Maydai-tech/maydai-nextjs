@@ -31,7 +31,7 @@ Règle unique : 8 caractères minimum, confirmation identique (`lib/password-pol
 
 - **Session depuis un lien** (`lib/auth-email-links.ts › establishSessionFromUrl`) : `?token_hash=&type=` → `verifyOtp` ; `?code=` (PKCE, défaut de `@supabase/ssr`) → échangé automatiquement par supabase-js, sinon `exchangeCodeForSession` ; `#access_token` (implicite) → détecté par supabase-js.
 - **Profil d'inscription** (`lib/signup-finalize.ts`) : les données du formulaire (noms, entreprise, secteur, UTM / partenaire Learning Gate, `?plan=`, `?lead_id=`) sont stockées dans `user_metadata.pending_signup` au `signUp`, rejouées vers `complete-signup` après confirmation, puis effacées.
-- **Lien ouvert sur un autre appareil** : en PKCE, le code ne peut pas être échangé (pas de `code_verifier`), mais l'email est bien confirmé par GoTrue. La page invite à se connecter ; à la première connexion, `/login` finalise l'inscription si `pending_signup` est encore présent. Un lien de réinitialisation ouvert sur un autre navigateur affiche « Lien invalide » → redemander un lien.
+- **Lien ouvert sur un autre appareil** : avec les templates en `token_hash` (voir plus bas), le lien fonctionne partout. Si un template utilisait `{{ .ConfirmationURL }}` (PKCE), le code ne pourrait pas être échangé ailleurs que dans le navigateur d'origine : la page invite alors à se connecter, et `/login` finalise l'inscription si `pending_signup` est encore présent.
 
 ## Sécurité
 
@@ -57,17 +57,22 @@ Rien ne change pour eux : email, puis code reçu par email. Aucune relance pour 
 
 La règle des 8 caractères est appliquée par l'app ; `GOTRUE_PASSWORD_MIN_LENGTH=8` est facultatif.
 
-**Templates email**
+**Templates email** (fichiers servis par le conteneur `email-templates`, dossier `/opt/supabase/volumes/auth/templates`)
 
 | Template | Envoyé pour | Contenu |
 |----------|-------------|---------|
-| « Magic Link » | Connexion par code d'un ancien compte | **Inchangé** : code `{{ .Token }}` |
-| « Confirm signup » | Inscription ; et connexion par code d'un ancien compte jamais confirmé | **Code et lien** : garder `{{ .Token }}`, ajouter un bouton « Confirmer mon adresse email » → `{{ .ConfirmationURL }}` |
-| « Reset password » | Mot de passe oublié (inutilisé avant MAY-6) | Lien « Choisir mon mot de passe » → `{{ .ConfirmationURL }}` |
+| `magic_link.html` | Connexion par code d'un ancien compte | **Inchangé** : code `{{ .Token }}` |
+| `confirmation.html` | Inscription ; et connexion par code d'un ancien compte jamais confirmé | **Lien et code** : bouton « Confirmer mon adresse email » + `{{ .Token }}` |
+| `recovery.html` (nouveau, `GOTRUE_MAILER_TEMPLATES_RECOVERY`) | Mot de passe oublié | Bouton « Choisir mon mot de passe » |
 
-Le code doit rester dans « Confirm signup » : GoTrue envoie ce template, et non « Magic Link », quand un compte non confirmé demande un code.
+Les boutons pointent vers l'app, pas vers GoTrue :
 
-`{{ .ConfirmationURL }}` respecte le `redirectTo` envoyé par l'app (preprod ou prod). Ne pas construire le lien avec `{{ .SiteURL }}` : les utilisateurs preprod seraient envoyés en prod. Alternative compatible multi-appareils, si besoin : `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup` (resp. `type=recovery`), géré par les deux pages.
+- confirmation : `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email`
+- réinitialisation : `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=recovery`
+
+La page appelle ensuite `verifyOtp({ token_hash, type })` : le lien marche sur n'importe quel appareil, et un antivirus de messagerie qui pré-ouvre les liens ne consomme pas le jeton. `{{ .RedirectTo }}` reprend l'adresse envoyée par l'app (prod ou preprod) si elle figure dans `GOTRUE_URI_ALLOW_LIST`, sinon `GOTRUE_SITE_URL`.
+
+Le code doit rester dans `confirmation.html` : GoTrue envoie ce template, et non `magic_link.html`, quand un compte non confirmé demande un code.
 
 Les déploiements Preview Vercel ne sont pas dans la liste : leurs liens retombent sur `SITE_URL`.
 
