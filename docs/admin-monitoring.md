@@ -26,15 +26,17 @@ Auth : `verifyAdminAuth` (rôle `admin` ou `super_admin`). 401 / 403 / 404 comme
 
 Timeout fetch source : 15 s, `redirect: 'error'`, `cache: 'no-store'`.
 
-`stats` et `disk` renvoient aussi `emailError` et `sourceIssues` : pour chaque source refusée, la variable en cause et la raison (variable absente, HTTP public, identifiants dans l’URL, authentification manquante). Jamais l’URL elle-même. La page les affiche sous « Configuration des sources à corriger ».
+`stats` et `disk` renvoient aussi `emailError` et `sourceIssues` : pour chaque source refusée, le fichier en cause et la raison (en pratique : authentification manquante). Jamais l’URL elle-même. La page les affiche sous « Configuration des sources à corriger ».
 
 ## 3. Sources JSON (hôte OVH)
 
-| Variable | Fichier typique | Consommateur |
-|----------|-----------------|--------------|
-| `MONITORING_PROD_DISK_JSON_URL` | `disk.json` | `getProductionDiskUsage` |
-| `MONITORING_PROD_EMAIL_STATUS_JSON_URL` | `email-status.json` | `getProductionEmailStatus` |
-| `MONITORING_PROD_DOCKER_PURGES_JSON_URL` | `docker-purges.json` | `getProductionDockerPurges` |
+Les trois adresses sont **en dur** dans `MONITORING_SOURCE_URLS` (`lib/monitoring-source.ts`) : ce ne sont pas des secrets, l’accès est protégé par les identifiants. Les anciennes variables `MONITORING_PROD_*_JSON_URL` sont ignorées.
+
+| Source | Fichier | Consommateur |
+|--------|---------|--------------|
+| `disk` | `disk.json` | `getProductionDiskUsage` |
+| `email` | `email-status.json` | `getProductionEmailStatus` |
+| `purges` | `docker-purges.json` | `getProductionDockerPurges` |
 
 `isAllowedMonitoringSourceUrl` / `resolveMonitoringFetchTarget` (`lib/monitoring-source.ts`) :
 
@@ -46,7 +48,7 @@ Timeout fetch source : 15 s, `redirect: 'error'`, `cache: 'no-store'`.
 | `https://user:pass@host/…` | — | **refusé** (credentials dans l’URL) |
 | HTTPS sans token / basic | — | **refusé** |
 
-URL refusée ou absente → `Source monitoring non configurée`. En **dev** uniquement, le disque retombe sur `df -h /` de la machine locale. En prod : `disk: null` + `diskError`. Pas de fallback local pour les purges Docker.
+Identifiants absents → `Source monitoring non configurée`. En **dev** uniquement, le disque retombe sur `df -h /` de la machine locale. En prod : `disk: null` + `diskError`. Pas de fallback local pour les purges Docker.
 
 `email-status.json` en **404** = aucune alerte envoyée (l’hôte ne l’écrit qu’au premier envoi, disque > 85 %) : `email: null`, `emailError: null`.
 
@@ -72,7 +74,6 @@ Vérifs attendues (depuis l’hôte vs Internet) : documentées dans `protect-ov
 
 | Variable | Usage |
 |----------|--------|
-| `MONITORING_PROD_*_JSON_URL` | Trois URLs ci-dessus |
 | `MONITORING_BEARER_TOKEN` | `Authorization: Bearer …` (prioritaire) |
 | `MONITORING_HTTP_USER` / `MONITORING_HTTP_PASSWORD` | Basic auth si pas de bearer |
 | `SUPABASE_OVH_SSH_HOST` | Tunnel / script de protection (jamais d’IP commitée) |

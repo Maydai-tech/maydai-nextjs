@@ -7,6 +7,16 @@
  * - https + en-tête d’authentification (basic auth ou bearer)
  */
 
+/**
+ * Adresses des JSON publiés par le serveur de production. Pas des secrets :
+ * l'accès est protégé par MONITORING_HTTP_USER / MONITORING_HTTP_PASSWORD.
+ */
+export const MONITORING_SOURCE_URLS = {
+  disk: 'https://api.maydai.io/monitoring/disk.json',
+  email: 'https://api.maydai.io/monitoring/email-status.json',
+  purges: 'https://api.maydai.io/monitoring/docker-purges.json',
+} as const
+
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1'])
 
 export type MonitoringFetchTarget = {

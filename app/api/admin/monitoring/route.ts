@@ -3,6 +3,7 @@ import { errorMonitor } from '@/lib/error-monitor'
 import { verifyAdminAuth } from '@/lib/admin-auth'
 import {
   describeMonitoringSourceIssue,
+  MONITORING_SOURCE_URLS,
   resolveMonitoringFetchTarget,
 } from '@/lib/monitoring-source'
 import { exec } from 'node:child_process'
@@ -209,7 +210,7 @@ async function getLocalDiskUsage() {
 }
 
 async function getProductionDiskUsage() {
-  const target = resolveMonitoringFetchTarget(process.env.MONITORING_PROD_DISK_JSON_URL)
+  const target = resolveMonitoringFetchTarget(MONITORING_SOURCE_URLS.disk)
   if (!target) {
     throw new Error(MONITORING_SOURCE_UNCONFIGURED)
   }
@@ -262,7 +263,7 @@ async function getDiskUsageResult(): Promise<DiskUsageResult> {
 }
 
 async function getProductionEmailStatus() {
-  const target = resolveMonitoringFetchTarget(process.env.MONITORING_PROD_EMAIL_STATUS_JSON_URL)
+  const target = resolveMonitoringFetchTarget(MONITORING_SOURCE_URLS.email)
   if (!target) {
     throw new Error(MONITORING_SOURCE_UNCONFIGURED)
   }
@@ -299,18 +300,12 @@ async function getEmailStatusResult() {
   }
 }
 
-const MONITORING_SOURCE_ENV = {
-  disk: 'MONITORING_PROD_DISK_JSON_URL',
-  email: 'MONITORING_PROD_EMAIL_STATUS_JSON_URL',
-  purges: 'MONITORING_PROD_DOCKER_PURGES_JSON_URL',
-} as const
-
-/** Diagnostic de configuration par source, pour comprendre « Source monitoring non configurée ». */
+/** Diagnostic par source, pour comprendre « Source monitoring non configurée ». */
 function getSourceIssues(): Record<string, string> {
   const issues: Record<string, string> = {}
-  for (const [source, envKey] of Object.entries(MONITORING_SOURCE_ENV)) {
-    const issue = describeMonitoringSourceIssue(process.env[envKey])
-    if (issue) issues[source] = `${envKey} : ${issue}`
+  for (const [source, url] of Object.entries(MONITORING_SOURCE_URLS)) {
+    const issue = describeMonitoringSourceIssue(url)
+    if (issue) issues[source] = `${url.split('/').pop()} : ${issue}`
   }
   return issues
 }
@@ -343,7 +338,7 @@ function isDockerPurge(value: unknown): value is DockerPurge {
 }
 
 async function getProductionDockerPurges(): Promise<DockerPurge[]> {
-  const target = resolveMonitoringFetchTarget(process.env.MONITORING_PROD_DOCKER_PURGES_JSON_URL)
+  const target = resolveMonitoringFetchTarget(MONITORING_SOURCE_URLS.purges)
   if (!target) {
     throw new Error(MONITORING_SOURCE_UNCONFIGURED)
   }

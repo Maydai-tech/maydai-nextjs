@@ -62,16 +62,13 @@ describe('GET /api/admin/monitoring — diagnostics', () => {
     }
   })
 
-  test('explains why each source is refused, without echoing URLs', async () => {
-    process.env.MONITORING_PROD_DISK_JSON_URL = 'http://203.0.113.10/monitoring/disk.json'
-    process.env.MONITORING_PROD_DOCKER_PURGES_JSON_URL = 'https://monitoring.example.com/docker-purges.json'
-
+  test('explains that credentials are missing, without echoing URLs', async () => {
     const { payload } = await callDisk()
 
-    expect(payload.sourceIssues.disk).toMatch(/^MONITORING_PROD_DISK_JSON_URL : URL en HTTP public refusée/)
-    expect(payload.sourceIssues.email).toBe('MONITORING_PROD_EMAIL_STATUS_JSON_URL : variable absente')
-    expect(payload.sourceIssues.purges).toMatch(/authentification manquante/)
-    expect(JSON.stringify(payload.sourceIssues)).not.toContain('203.0.113.10')
+    expect(payload.sourceIssues.disk).toMatch(/^disk\.json : authentification manquante/)
+    expect(payload.sourceIssues.email).toMatch(/^email-status\.json : authentification manquante/)
+    expect(payload.sourceIssues.purges).toMatch(/^docker-purges\.json : authentification manquante/)
+    expect(JSON.stringify(payload.sourceIssues)).not.toContain('https://')
     expect(payload.emailError).toBe('Source monitoring non configurée')
   })
 
