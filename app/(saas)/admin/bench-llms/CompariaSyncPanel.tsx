@@ -70,6 +70,20 @@ function authHeaders(token: string, json = false): HeadersInit {
   }
 }
 
+const SESSION_MESSAGE = 'Session d\'authentification indisponible. Veuillez rafraîchir la page.'
+
+function readableClientError(error: unknown, fallback: string): string {
+  const raw = error instanceof Error ? error.message : ''
+  if (
+    raw === 'Failed to fetch'
+    || raw.includes('ERR_NETWORK_CHANGED')
+    || raw.includes('NetworkError')
+  ) {
+    return 'Connexion interrompue pendant le chargement (réseau changé ou coupé). Réessayez.'
+  }
+  return raw || fallback
+}
+
 export function CompariaSyncDialog({
   open,
   busy,
@@ -104,7 +118,10 @@ export function CompariaSyncDialog({
 
   async function analyze(nextFile: File) {
     const token = getAccessToken()
-    if (!token) return
+    if (!token) {
+      setError(SESSION_MESSAGE)
+      return
+    }
     setFile(nextFile)
     setPreview(null)
     setMessage(null)
@@ -115,6 +132,7 @@ export function CompariaSyncDialog({
       body.append('file', nextFile)
       const response = await fetch('/api/admin/comparia/preview', {
         method: 'POST',
+        cache: 'no-store',
         headers: authHeaders(token),
         body,
       })
@@ -131,7 +149,7 @@ export function CompariaSyncDialog({
         unmatchedCount: payload.unmatchedCount,
       })
     } catch (analyzeError) {
-      setError(analyzeError instanceof Error ? analyzeError.message : 'Analyse impossible')
+      setError(readableClientError(analyzeError, 'Analyse impossible'))
     } finally {
       onBusy(null)
     }
@@ -149,7 +167,11 @@ export function CompariaSyncDialog({
 
   async function importFile() {
     const token = getAccessToken()
-    if (!token || !file) return
+    if (!token) {
+      setError(SESSION_MESSAGE)
+      return
+    }
+    if (!file) return
     setError(null)
     setMessage(null)
     onBusy('Import Compar:IA')
@@ -158,6 +180,7 @@ export function CompariaSyncDialog({
       body.append('file', file)
       const response = await fetch('/api/admin/comparia/import', {
         method: 'POST',
+        cache: 'no-store',
         headers: authHeaders(token),
         body,
       })
@@ -168,7 +191,7 @@ export function CompariaSyncDialog({
       setMessage(payload.message || 'Import Compar:IA terminé.')
       onImported()
     } catch (importError) {
-      setError(importError instanceof Error ? importError.message : 'Import impossible')
+      setError(readableClientError(importError, 'Import impossible'))
     } finally {
       onBusy(null)
     }
@@ -292,13 +315,19 @@ export function CompariaReconcileSection({
   const [savingId, setSavingId] = useState<string | null>(null)
   const [savingBulk, setSavingBulk] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [queueReload, setQueueReload] = useState(0)
 
   useEffect(() => {
     const token = getAccessToken()
-    if (!token) return
+    if (!token) {
+      setLoading(false)
+      setLoadError(SESSION_MESSAGE)
+      return
+    }
     let cancelled = false
     setLoading(true)
-    setError(null)
+    setLoadError(null)
     void fetch(`/api/admin/comparia/reconcile?status=${status}&activity=${activity}`, {
       headers: authHeaders(token),
       cache: 'no-store',
@@ -307,7 +336,7 @@ export function CompariaReconcileSection({
         const payload = await parseApiJson<QueueResponse>(response)
         if (cancelled) return
         if (!response.ok) {
-          setError(payload.error || 'Chargement Compar:IA impossible')
+          setLoadError(payload.error || 'Chargement Compar:IA impossible')
           return
         }
         const nextCounts = payload.counts ?? { unmatched: 0, ignored: 0, matched: 0 }
@@ -321,8 +350,8 @@ export function CompariaReconcileSection({
         ])))
         onUnmatchedCount(nextCounts.unmatched)
       })
-      .catch((loadError: unknown) => {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Chargement impossible')
+      .catch((loadFailure: unknown) => {
+        if (!cancelled) setLoadError(readableClientError(loadFailure, 'Chargement Compar:IA impossible'))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -330,16 +359,24 @@ export function CompariaReconcileSection({
     return () => {
       cancelled = true
     }
-  }, [activity, getAccessToken, onUnmatchedCount, refreshToken, status])
+  }, [activity, getAccessToken, onUnmatchedCount, queueReload, refreshToken, status])
+
+  function refreshQueue() {
+    setQueueReload((current) => current + 1)
+  }
 
   async function act(sourceId: string, action: 'match' | 'ignore' | 'unignore') {
     const token = getAccessToken()
-    if (!token) return
+    if (!token) {
+      setError(SESSION_MESSAGE)
+      return
+    }
     setSavingId(sourceId)
     setError(null)
     try {
       const response = await fetch('/api/admin/comparia/reconcile', {
         method: 'POST',
+        cache: 'no-store',
         headers: authHeaders(token, true),
         body: JSON.stringify({
           sourceId,
@@ -352,9 +389,10 @@ export function CompariaReconcileSection({
         setError(payload.error || 'Enregistrement impossible')
         return
       }
+      refreshQueue()
       onChanged()
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Enregistrement impossible')
+      setError(readableClientError(actionError, 'Enregistrement impossible'))
     } finally {
       setSavingId(null)
     }
@@ -362,7 +400,10 @@ export function CompariaReconcileSection({
 
   async function actMany(action: 'match-many' | 'ignore-many') {
     const token = getAccessToken()
-    if (!token) return
+    if (!token) {
+      setError(SESSION_MESSAGE)
+      return
+    }
     const links = rows.flatMap((row) => {
       const maydaiModelId = selection[row.source_id]
       return maydaiModelId ? [{ sourceId: row.source_id, maydaiModelId }] : []
@@ -375,6 +416,7 @@ export function CompariaReconcileSection({
     try {
       const response = await fetch('/api/admin/comparia/reconcile', {
         method: 'POST',
+        cache: 'no-store',
         headers: authHeaders(token, true),
         body: JSON.stringify(action === 'match-many' ? { action, links } : { action, sourceIds }),
       })
@@ -386,9 +428,10 @@ export function CompariaReconcileSection({
       if ((payload.failed ?? 0) > 0) {
         setError(`${payload.updated ?? 0} ligne(s) enregistrée(s), ${payload.failed} en échec. ${payload.errors?.[0] ?? ''}`)
       }
+      refreshQueue()
       onChanged()
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'Enregistrement groupé impossible')
+      setError(readableClientError(actionError, 'Enregistrement groupé impossible'))
     } finally {
       setSavingBulk(false)
     }
@@ -458,10 +501,18 @@ export function CompariaReconcileSection({
           </div>
         </div>
       ) : null}
+      {loadError ? (
+        <div className="mt-3 flex flex-col gap-3 rounded-md bg-red-50 p-3 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">
+          <span>{loadError}</span>
+          <button type="button" onClick={refreshQueue} className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-800">
+            Réessayer
+          </button>
+        </div>
+      ) : null}
       {error ? <p className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</p> : null}
       {loading ? (
         <div className="mt-4 flex items-center gap-2 text-sm text-gray-600"><Loader2 className="h-4 w-4 animate-spin" /> Chargement…</div>
-      ) : rows.length === 0 ? (
+      ) : loadError && rows.length === 0 ? null : rows.length === 0 ? (
         <p className="mt-4 rounded-lg border border-dashed border-gray-300 bg-white p-4 text-sm text-gray-600">
           {activity !== 'all'
             ? 'Aucune ligne pour ce filtre CSV.'

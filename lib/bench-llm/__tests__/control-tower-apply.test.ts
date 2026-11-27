@@ -1,8 +1,10 @@
 import {
+  buildChangedControlTowerUpdate,
   controlTowerDatabasePatch,
   planControlTowerApply,
   projectSelectorAfterApply,
   type ControlTowerModelRef,
+  type ControlTowerStoredRow,
 } from '../control-tower-apply'
 
 const sonnet = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -487,5 +489,48 @@ describe('planControlTowerApply', () => {
       models,
       today: '2026-11-16',
     })).toThrow('En-tête manquant : « Statut LLM ». Aucune colonne n\'a été insérée.')
+  })
+})
+
+describe('buildChangedControlTowerUpdate', () => {
+  const nowIso = '2026-11-27T16:00:00.000Z'
+  const replacementId = '80a712c2-dead-4647-ac8c-59604cecef9c'
+  const current: ControlTowerStoredRow = {
+    replacement_model_id: null,
+    lifecycle_source_url: 'https://docs.mistral.ai/models',
+    deprecation_date: null,
+    retirement_date: null,
+  }
+
+  test('un patch identique à la ligne actuelle ne produit aucun UPDATE', () => {
+    expect(buildChangedControlTowerUpdate(current, {
+      replacement_model_id: null,
+      lifecycle_source_url: 'https://docs.mistral.ai/models',
+      deprecation_date: undefined,
+      retirement_date: null,
+    }, nowIso)).toBeNull()
+  })
+
+  test('un remplacement null vers un UUID ajoute updated_at', () => {
+    expect(buildChangedControlTowerUpdate(current, {
+      replacement_model_id: replacementId,
+      lifecycle_source_url: 'https://docs.mistral.ai/models',
+    }, nowIso)).toEqual({
+      replacement_model_id: replacementId,
+      updated_at: nowIso,
+    })
+  })
+
+  test('un remplacement déjà posé ramené à null quand la source est renseignée ajoute updated_at', () => {
+    expect(buildChangedControlTowerUpdate({
+      ...current,
+      replacement_model_id: replacementId,
+    }, {
+      replacement_model_id: null,
+      lifecycle_source_url: 'https://docs.mistral.ai/models',
+    }, nowIso)).toEqual({
+      replacement_model_id: null,
+      updated_at: nowIso,
+    })
   })
 })

@@ -12,6 +12,7 @@ const customJestConfig = {
     '!app/**/layout.tsx',
     '!app/**/page.tsx'
   ],
+  modulePathIgnorePatterns: ['<rootDir>/.next/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1', // <-- CORRECTION CRITIQUE ICI
     '^@mistralai/mistralai$': '<rootDir>/lib/mistral/__mocks__/mistralai.ts',
@@ -28,6 +29,7 @@ module.exports = async () => {
       ...baseConfig.moduleNameMapper,
       ...customJestConfig.moduleNameMapper,
     },
+    modulePathIgnorePatterns: [...(baseConfig.modulePathIgnorePatterns || []), '<rootDir>/.next/'],
   }
 
   return {

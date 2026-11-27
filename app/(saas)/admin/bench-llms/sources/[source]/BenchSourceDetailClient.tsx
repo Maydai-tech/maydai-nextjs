@@ -40,6 +40,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+interface ComplAiRunLog {
+  sync_date?: string | null
+  status?: string | null
+  models_synced?: number | null
+  evaluations_synced?: number | null
+  error_message?: string | null
+}
+
+function readComplAiRunLog(value: Record<string, unknown>): ComplAiRunLog {
+  return {
+    sync_date: typeof value.sync_date === 'string' ? value.sync_date : null,
+    status: typeof value.status === 'string' ? value.status : null,
+    models_synced: typeof value.models_synced === 'number' ? value.models_synced : null,
+    evaluations_synced: typeof value.evaluations_synced === 'number' ? value.evaluations_synced : null,
+    error_message: typeof value.error_message === 'string' ? value.error_message : null,
+  }
+}
+
+function isComplAiSuccessStatus(status: string | null | undefined): boolean {
+  return (status || '').toLowerCase() === 'success'
+}
+
 function getLabel(key: string | null | undefined): string {
   return key || 'Inconnu'
 }
@@ -258,12 +280,17 @@ export default function BenchSourceDetailClient({ source }: { source: BenchSourc
               <ul className="space-y-2">{Array.isArray(payload.last_run_issues.errors) ? payload.last_run_issues.errors.filter(isRecord).map((issue) => <li key={String(issue.message)} className="rounded-md bg-red-50 p-3 text-sm text-red-900">{typeof issue.message === 'string' ? issue.message : 'Erreur illisible'}{typeof issue.conflict === 'string' ? ` · conflit ${issue.conflict}` : ''}</li>) : null}</ul>
             </section>
           ) : (
-            <ul className="space-y-2">{Array.isArray(payload?.last_run_issues) ? payload.last_run_issues.filter(isRecord).map((log) => (
-              <li key={`${String(log.sync_date)}-${String(log.status)}`} className="rounded-md border bg-white p-3 text-sm">
-                {getLabel(typeof log.sync_date === 'string' ? log.sync_date : null)} · {getLabel(typeof log.status === 'string' ? log.status : null)} · {typeof log.models_synced === 'number' ? log.models_synced : '—'} modèles · {typeof log.evaluations_synced === 'number' ? log.evaluations_synced : '—'} évaluations
-                {typeof log.error_message === 'string' && log.error_message ? <p className="mt-2 text-red-800">{log.error_message}</p> : null}
+            <ul className="space-y-2">{Array.isArray(payload?.last_run_issues) ? payload.last_run_issues.filter(isRecord).map((raw) => {
+              const log = readComplAiRunLog(raw)
+              const success = isComplAiSuccessStatus(log.status)
+              return (
+              <li key={`${log.sync_date ?? ''}-${log.status ?? ''}-${log.models_synced ?? ''}`} className="rounded-md border bg-white p-3 text-sm">
+                <span className={success ? 'rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800' : 'rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-800'}>{log.status || 'statut inconnu'}</span>
+                <span className="text-gray-700"> · {log.sync_date || 'date inconnue'} · {log.models_synced ?? '—'} modèles · {log.evaluations_synced ?? '—'} évaluations</span>
+                {log.error_message ? <p className={success ? 'mt-2 text-gray-700' : 'mt-2 text-red-800'}>{log.error_message}</p> : null}
               </li>
-            )) : null}</ul>
+              )
+            }) : null}</ul>
           )}
         </>
       ) : null}
