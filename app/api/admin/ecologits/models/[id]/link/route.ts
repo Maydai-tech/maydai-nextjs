@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 
 import { verifyAdminAuth } from '@/lib/admin-auth'
+import {
+  EcologitsLinkUpdateError,
+  matchEcologitsModel,
+  unlinkEcologitsModel,
+} from '@/lib/ecologits/link-actions'
 import { createEcoLogitsServiceClient } from '@/lib/ecologits/sync'
+import { EcologitsPutLinkBodySchema } from '@/types/ecologits.zod'
+
+export const dynamic = 'force-dynamic'
+
+const EcoModelIdSchema = z.string().uuid()
 
 export async function PUT(
   request: NextRequest,
@@ -11,67 +22,40 @@ export async function PUT(
   if (auth.error) return auth.error
 
   const { id } = await context.params
-  const body = (await request.json().catch(() => ({}))) as { maydaiModelId?: unknown }
-  const maydaiModelId =
-    typeof body.maydaiModelId === 'string' && body.maydaiModelId.trim()
-      ? body.maydaiModelId.trim()
-      : null
+  const ecoId = EcoModelIdSchema.safeParse(id)
+  if (!ecoId.success) {
+    return NextResponse.json({ error: 'Identifiant EcoLogits invalide.' }, { status: 400 })
+  }
+
+  let json: unknown
+  try {
+    json = await request.json()
+  } catch (error) {
+    console.error('[EcoLogits Link]', error)
+    return NextResponse.json({ error: 'JSON invalide.' }, { status: 400 })
+  }
+  const parsed = EcologitsPutLinkBodySchema.safeParse(json)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues.map((issue) => issue.message).join(' ; ') || 'Corps invalide.' },
+      { status: 400 },
+    )
+  }
 
   try {
     const supabase = createEcoLogitsServiceClient()
-    const { data: ecoModel } = await supabase
-      .from('ecologits_models')
-      .select('id')
-      .eq('id', id)
-      .maybeSingle()
-    if (!ecoModel) return NextResponse.json({ error: 'Modèle EcoLogits introuvable' }, { status: 404 })
-
-    if (!maydaiModelId) {
-      const { error } = await supabase
-        .from('ecologits_model_links')
-        .delete()
-        .eq('ecologits_model_id', id)
-      if (error) throw error
-      const { error: statusError } = await supabase
-        .from('ecologits_models')
-        .update({ link_status: 'unmatched', updated_at: new Date().toISOString() })
-        .eq('id', id)
-      if (statusError) throw statusError
-      return NextResponse.json({ success: true, link: null })
-    }
-
-    const { data: maydaiModel } = await supabase
-      .from('compl_ai_models')
-      .select('id')
-      .eq('id', maydaiModelId)
-      .maybeSingle()
-    if (!maydaiModel) return NextResponse.json({ error: 'Modèle MaydAI introuvable' }, { status: 404 })
-
-    const { data, error } = await supabase
-      .from('ecologits_model_links')
-      .upsert(
-        {
-          ecologits_model_id: id,
-          maydai_model_id: maydaiModelId,
-          match_method: 'manual',
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'ecologits_model_id' },
-      )
-      .select('ecologits_model_id, maydai_model_id, match_method')
-      .single()
-    if (error) throw error
-    const { error: statusError } = await supabase
-      .from('ecologits_models')
-      .update({ link_status: 'matched', updated_at: new Date().toISOString() })
-      .eq('id', id)
-    if (statusError) throw statusError
-    return NextResponse.json({ success: true, link: data })
+    const result = parsed.data.maydai_model_id
+      ? await matchEcologitsModel(supabase, {
+        ecologitsModelId: ecoId.data,
+        maydaiModelId: parsed.data.maydai_model_id,
+        conflictMode: 'add',
+      })
+      : await unlinkEcologitsModel(supabase, ecoId.data)
+    return NextResponse.json(result)
   } catch (error) {
-    console.error('[EcoLogits Admin] Liaison impossible:', error)
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erreur interne du serveur' },
-      { status: 500 },
-    )
+    console.error('[EcoLogits Link]', error)
+    const status = error instanceof EcologitsLinkUpdateError ? error.status : 500
+    const message = error instanceof Error ? error.message : 'Erreur interne du serveur'
+    return NextResponse.json({ error: message }, { status })
   }
 }

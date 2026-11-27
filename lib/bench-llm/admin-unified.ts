@@ -9,6 +9,7 @@ import {
   type ProviderLifecycle,
   type ProviderLifecycleStatus,
 } from '@/lib/bench-llm/provider-lifecycle'
+import { ecologitsEstimateIsComplete } from '@/types/ecologits.zod'
 
 export type BenchSourceKey = 'maydai' | 'compl_ai' | 'comparia' | 'llm_stats' | 'ecologits'
 
@@ -38,6 +39,11 @@ export type SourceCrossCoverageKey =
   | 'maydai'
   | 'system_card'
 
+export type OrphanSummary = {
+  actionableCount: number
+  label: string
+}
+
 export type SourceCoverageStat = {
   source: SourceCrossCoverageKey
   totalInCatalog: number
@@ -48,6 +54,7 @@ export type SourceCoverageStat = {
   inServiceCompletionPercent: number
   crossCoverage: Record<SourceCrossCoverageKey, number>
   inServiceCrossCoverage: Record<SourceCrossCoverageKey, number>
+  orphanSummary?: OrphanSummary
 }
 
 export type BenchSourceCoverageMap = Record<SourceCrossCoverageKey, SourceCoverageStat>
@@ -138,6 +145,7 @@ export type UnifiedBenchModel = {
   entityId: string
   canonicalModelId: string | null
   ecoModelId: string | null
+  ecoLinksCount: number
   compariaModelId: string | null
   slug: string
   name: string
@@ -292,6 +300,16 @@ export function splitBenchProviderGroupsByQuestionnaire(groups: BenchProviderGro
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? value[0] ?? null : value ?? null
+}
+
+function preferLinkedEcoModel(current: EcoCatalogPresence, candidate: EcoCatalogPresence): EcoCatalogPresence {
+  const currentComplete = ecologitsEstimateIsComplete(current.estimate)
+  const candidateComplete = ecologitsEstimateIsComplete(candidate.estimate)
+  if (candidateComplete !== currentComplete) return candidateComplete ? candidate : current
+  if (candidate.is_active !== current.is_active) return candidate.is_active ? candidate : current
+  const byName = candidate.name.localeCompare(current.name, 'fr')
+  if (byName !== 0) return byName < 0 ? candidate : current
+  return candidate.id.localeCompare(current.id) < 0 ? candidate : current
 }
 
 export function parseBenchEntityId(entityId: string):
@@ -548,14 +566,17 @@ export function buildUnifiedBenchModels(
 
   const ecoByMaydai = new Map<string, EcoCatalogPresence>()
   const ecoNamesByMaydai = new Map<string, string[]>()
+  const ecoLinksCountByMaydai = new Map<string, number>()
   const unmatchedEco: EcoCatalogPresence[] = []
   for (const eco of ecoModels) {
     const link = firstRelation(eco.link)
     if (link?.maydai_model_id) {
-      ecoByMaydai.set(link.maydai_model_id, eco)
+      const current = ecoByMaydai.get(link.maydai_model_id)
+      ecoByMaydai.set(link.maydai_model_id, current ? preferLinkedEcoModel(current, eco) : eco)
       const names = ecoNamesByMaydai.get(link.maydai_model_id) ?? []
       names.push(eco.name)
       ecoNamesByMaydai.set(link.maydai_model_id, names)
+      ecoLinksCountByMaydai.set(link.maydai_model_id, (ecoLinksCountByMaydai.get(link.maydai_model_id) ?? 0) + 1)
     } else unmatchedEco.push(eco)
   }
 
@@ -600,6 +621,7 @@ export function buildUnifiedBenchModels(
       entityId: `maydai_${model.id}`,
       canonicalModelId: model.id,
       ecoModelId: eco?.id ?? null,
+      ecoLinksCount: ecoLinksCountByMaydai.get(model.id) ?? 0,
       compariaModelId: comparia?.id ?? null,
       slug,
       name: slug,
@@ -645,6 +667,7 @@ export function buildUnifiedBenchModels(
       entityId: `ecologits_${eco.id}`,
       canonicalModelId: null,
       ecoModelId: eco.id,
+      ecoLinksCount: 0,
       compariaModelId: null,
       slug: eco.name,
       name: eco.name,
@@ -676,6 +699,7 @@ export function buildUnifiedBenchModels(
       entityId: `comparia_${comparia.id}`,
       canonicalModelId: null,
       ecoModelId: null,
+      ecoLinksCount: 0,
       compariaModelId: comparia.id,
       slug: comparia.source_id,
       name: comparia.source_id,

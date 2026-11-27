@@ -2,38 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { verifyAdminAuth } from '@/lib/admin-auth'
 import { CompariaLinkUpdateError, updateCompariaLink, type CompariaLinkAction } from '@/lib/comparia/link-actions'
-import type { CompariaLinkStatus } from '@/lib/comparia/matching'
+import { compariaQueueCounts, compariaRowVisible, sortCompariaQueue } from '@/lib/comparia/reconcile-visibility'
 import { suggestMaydaiModelForComparia, type MaydaiSuggestionModel } from '@/lib/comparia/suggestions'
+import { toExplicitError } from '@/lib/errors/postgrest-error'
 import { createEcoLogitsServiceClient } from '@/lib/ecologits/sync'
+import {
+  CompariaActivityFilterSchema,
+  CompariaMaydaiOptionSchema,
+  CompariaQueueRowSchema,
+  CompariaQueueStatusSchema,
+  type CompariaMaydaiOption,
+  type CompariaQueueRow,
+} from '@/types/comparia.zod'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const STATUSES = ['unmatched', 'ignored', 'matched', 'all'] as const
-type StatusFilter = (typeof STATUSES)[number]
+const PAGE_SIZE = 1000
+const COMPARIA_COLUMNS = 'id, source_id, organisation, rank, parameters_billions, consumption_mwh_per_1k_tokens, bradley_terry_score, license, size, release_date, is_active, missing_since, link_status, maydai_model_id, match_method, linked_model:compl_ai_models(id, slug, model_name, model_provider)'
 
-type CompariaQueueRow = {
-  source_id: string
-  rank: number
-  organisation: string | null
-  bradley_terry_score: number | null
-  license: string | null
-  size: string | null
-  release_date: string | null
-  link_status: CompariaLinkStatus | null
-  maydai_model_id: string | null
-  is_active: boolean
-}
-
-type MaydaiOption = {
-  id: string
-  slug: string | null
-  model_name: string
-  model_provider: string | null
-  short_name?: string | null
-  long_name?: string | null
-  variants?: unknown
-  merged_into_id?: string | null
+type PageResult = {
+  data: unknown
+  error: { message?: string | null; details?: string | null } | null
 }
 
 function readVariants(value: unknown): string[] {
@@ -41,7 +31,7 @@ function readVariants(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === 'string' && item.trim() !== '')
 }
 
-function toSuggestionModel(model: MaydaiOption): MaydaiSuggestionModel {
+function toSuggestionModel(model: CompariaMaydaiOption): MaydaiSuggestionModel {
   return {
     id: model.id,
     slug: model.slug,
@@ -54,71 +44,109 @@ function toSuggestionModel(model: MaydaiOption): MaydaiSuggestionModel {
   }
 }
 
-function isStatusFilter(value: string | null): value is StatusFilter {
-  return STATUSES.some((status) => status === value)
-}
-
 function isAction(value: unknown): value is CompariaLinkAction {
   return value === 'match' || value === 'ignore' || value === 'unignore'
 }
 
-function visibleRow(row: CompariaQueueRow, status: StatusFilter): boolean {
-  if (status === 'all') return true
-  if (row.link_status !== status) return false
-  if (status === 'ignored') return true
-  return row.is_active
+async function fetchPages(
+  loadPage: (from: number, to: number) => PromiseLike<PageResult>,
+): Promise<unknown[]> {
+  const rows: unknown[] = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const page = await loadPage(from, from + PAGE_SIZE - 1)
+    if (page.error) throw toExplicitError('Admin Compar:IA Reconcile', page.error)
+    if (!Array.isArray(page.data)) {
+      throw new Error('Réponse Compar:IA illisible : la page n’est pas un tableau.')
+    }
+    rows.push(...page.data)
+    if (page.data.length < PAGE_SIZE) break
+  }
+  return rows
+}
+
+function parseCatalog(rows: unknown[]): CompariaQueueRow[] {
+  return rows.map((row, index) => {
+    const parsed = CompariaQueueRowSchema.safeParse(row)
+    if (!parsed.success) {
+      console.error('[Admin Compar:IA Reconcile]', parsed.error)
+      throw new Error(`Ligne Compar:IA ${index + 1} illisible.`)
+    }
+    return parsed.data
+  })
+}
+
+function parseOptions(rows: unknown[]): CompariaMaydaiOption[] {
+  return rows.flatMap((row, index) => {
+    const parsed = CompariaMaydaiOptionSchema.safeParse(row)
+    if (!parsed.success) {
+      console.error('[Admin Compar:IA Reconcile]', `Option MaydAI ${index + 1} rejetée.`, parsed.error)
+      return []
+    }
+    return [parsed.data]
+  })
 }
 
 export async function GET(request: NextRequest) {
   const auth = await verifyAdminAuth(request)
   if (auth.error) return auth.error
 
-  const requested = request.nextUrl.searchParams.get('status')
-  const status: StatusFilter = isStatusFilter(requested) ? requested : 'unmatched'
+  const statusParsed = CompariaQueueStatusSchema.safeParse(request.nextUrl.searchParams.get('status') ?? 'unmatched')
+  if (!statusParsed.success) {
+    return NextResponse.json({ error: 'Statut Compar:IA invalide.' }, { status: 400 })
+  }
+  const activityRaw = request.nextUrl.searchParams.get('activity')
+  const activityParsed = CompariaActivityFilterSchema.safeParse(activityRaw ?? undefined)
+  if (!activityParsed.success) {
+    return NextResponse.json({ error: 'Filtre d’activité Compar:IA invalide.' }, { status: 400 })
+  }
+  const status = statusParsed.data
+  const activity = activityParsed.data
   const supabase = createEcoLogitsServiceClient()
 
-  const [{ data: rows, error: rowsError }, { data: models, error: modelsError }] = await Promise.all([
-    supabase
-      .from('comparia_models')
-      .select('source_id, rank, organisation, bradley_terry_score, license, size, release_date, link_status, maydai_model_id, is_active')
-      .order('rank', { ascending: true }),
-    supabase
-      .from('compl_ai_models')
-      .select('id, slug, model_name, model_provider, short_name, long_name, variants, merged_into_id')
-      .order('model_provider', { ascending: true })
-      .order('model_name', { ascending: true }),
-  ])
-  if (rowsError) {
-    return NextResponse.json({ error: rowsError.message }, { status: 500 })
+  try {
+    const [rawRows, rawModels] = await Promise.all([
+      fetchPages((from, to) =>
+        supabase
+          .from('comparia_models')
+          .select(COMPARIA_COLUMNS)
+          .order('is_active', { ascending: false })
+          .order('rank', { ascending: true })
+          .order('source_id', { ascending: true })
+          .range(from, to),
+      ),
+      fetchPages((from, to) =>
+        supabase
+          .from('compl_ai_models')
+          .select('id, slug, model_name, model_provider, short_name, long_name, variants, merged_into_id')
+          .order('model_name', { ascending: true })
+          .range(from, to),
+      ),
+    ])
+    const catalog = sortCompariaQueue(parseCatalog(rawRows))
+    const suggestionModels = parseOptions(rawModels).map(toSuggestionModel)
+    const visible = catalog.filter((row) => compariaRowVisible(row, status, activity))
+    return NextResponse.json({
+      status,
+      activity,
+      counts: compariaQueueCounts(catalog),
+      rows: visible.map((row) => ({
+        ...row,
+        suggestionId: row.link_status === 'unmatched'
+          ? suggestMaydaiModelForComparia(row, suggestionModels)?.id ?? null
+          : null,
+      })),
+      models: suggestionModels.map((model) => ({
+        id: model.id,
+        slug: model.slug ?? null,
+        model_name: model.model_name,
+        model_provider: model.model_provider ?? null,
+      })),
+    })
+  } catch (error) {
+    console.error('[Admin Compar:IA Reconcile]', error)
+    const message = error instanceof Error ? error.message : 'Lecture Compar:IA impossible'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
-  if (modelsError) {
-    return NextResponse.json({ error: modelsError.message }, { status: 500 })
-  }
-
-  const catalog = (rows ?? []) as CompariaQueueRow[]
-  const suggestionModels = ((models ?? []) as MaydaiOption[]).map(toSuggestionModel)
-  const counts = {
-    unmatched: catalog.filter((row) => row.link_status === 'unmatched' && row.is_active).length,
-    ignored: catalog.filter((row) => row.link_status === 'ignored').length,
-    matched: catalog.filter((row) => row.link_status === 'matched' && row.is_active).length,
-  }
-
-  return NextResponse.json({
-    status,
-    counts,
-    rows: catalog.filter((row) => visibleRow(row, status)).map((row) => ({
-      ...row,
-      suggestionId: row.link_status === 'unmatched' && row.is_active
-        ? suggestMaydaiModelForComparia(row, suggestionModels)?.id ?? null
-        : null,
-    })),
-    models: suggestionModels.map((model) => ({
-      id: model.id,
-      slug: model.slug ?? null,
-      model_name: model.model_name,
-      model_provider: model.model_provider ?? null,
-    })),
-  })
 }
 
 export async function POST(request: NextRequest) {
@@ -128,7 +156,8 @@ export async function POST(request: NextRequest) {
   let body: unknown
   try {
     body = await request.json()
-  } catch {
+  } catch (error) {
+    console.error('[Admin Compar:IA Reconcile]', error)
     return NextResponse.json({ error: 'JSON invalide.' }, { status: 400 })
   }
   if (!body || typeof body !== 'object') {
@@ -159,12 +188,12 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json({ success: true, ...result })
   } catch (error) {
+    console.error('[Admin Compar:IA Reconcile]', error)
     if (error instanceof CompariaLinkUpdateError) {
       return NextResponse.json({ error: error.message }, { status: error.status })
     }
     const message = error instanceof Error ? error.message : 'Erreur inconnue'
-    console.error('[Compar:IA] Rapprochement impossible:', error)
-    return NextResponse.json({ error: message }, { status: 400 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
@@ -211,6 +240,7 @@ async function bulkReconcile(
       })
       updated += 1
     } catch (error) {
+      console.error('[Admin Compar:IA Reconcile]', error)
       const message = error instanceof Error ? error.message : 'Erreur inconnue'
       errors.push(`${job.sourceId} : ${message}`)
     }

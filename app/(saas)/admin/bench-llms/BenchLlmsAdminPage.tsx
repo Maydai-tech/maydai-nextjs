@@ -5,7 +5,9 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  ArrowUpRight,
   Check,
+  Copy,
   ChevronRight,
   Database,
   Download,
@@ -18,11 +20,12 @@ import {
   X,
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { Fragment, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 
 import Toast from '@/components/Toast'
 import { useAuth } from '@/lib/auth'
-import { CompariaReconcileSection, CompariaSyncDialog } from './CompariaSyncPanel'
+import { CompariaSyncDialog } from './CompariaSyncPanel'
 import type {
   BenchFilterableSourceKey,
   BenchLifecycleFilter,
@@ -62,13 +65,26 @@ const FILTER_SOURCES: Array<{ key: BenchFilterableSourceKey; label: string }> = 
   { key: 'system_card', label: 'System Card' },
 ]
 
-const CONSOLIDATION_SOURCES: Array<{ key: keyof BenchSourceCoverageMap; label: string; historyKey: string }> = [
-  { key: 'llm_stats', label: 'LLM Stats', historyKey: 'llmStats' },
-  { key: 'ecologits', label: 'EcoLogits', historyKey: 'ecologits' },
-  { key: 'comparia', label: 'Compar:IA', historyKey: 'comparia' },
-  { key: 'compl_ai', label: 'COMPL-AI', historyKey: 'complAi' },
-  { key: 'system_card', label: 'System Card', historyKey: 'systemCard' },
+const CONSOLIDATION_SOURCES: Array<{ key: keyof BenchSourceCoverageMap; label: string; historyKey: string; slug: string }> = [
+  { key: 'llm_stats', label: 'LLM Stats', historyKey: 'llmStats', slug: 'llm-stats' },
+  { key: 'ecologits', label: 'EcoLogits', historyKey: 'ecologits', slug: 'ecologits' },
+  { key: 'comparia', label: 'Compar:IA', historyKey: 'comparia', slug: 'comparia' },
+  { key: 'compl_ai', label: 'COMPL-AI', historyKey: 'complAi', slug: 'compl-ai' },
+  { key: 'system_card', label: 'System Card', historyKey: 'systemCard', slug: 'system-card' },
 ]
+
+type UnclassifiedModel = {
+  id: string
+  slug: string | null
+  model_name: string
+  model_provider: string | null
+  lifecycle_status: string | null
+  created_at: string | null
+}
+
+function getLabel(key: string | null | undefined): string {
+  return key || 'Inconnu'
+}
 
 const COVERAGE_KEYS: Array<keyof BenchSourceCoverageMap> = [
   'llm_stats',
@@ -175,6 +191,23 @@ function isCoverageStat(value: unknown): value is CoverageStat {
   if (fields.crossCoverage == null || typeof fields.crossCoverage !== 'object' || Array.isArray(fields.crossCoverage)) return false
   const cross = readRecord(fields.crossCoverage)
   return COVERAGE_KEYS.every((key) => typeof cross[key] === 'number' && Number.isFinite(cross[key]))
+}
+
+function readUnclassifiedModels(value: unknown): UnclassifiedModel[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((item) => {
+    if (item == null || typeof item !== 'object' || Array.isArray(item)) return []
+    const record = readRecord(item)
+    if (typeof record.id !== 'string' || typeof record.model_name !== 'string') return []
+    return [{
+      id: record.id,
+      slug: typeof record.slug === 'string' ? record.slug : null,
+      model_name: record.model_name,
+      model_provider: typeof record.model_provider === 'string' ? record.model_provider : null,
+      lifecycle_status: typeof record.lifecycle_status === 'string' ? record.lifecycle_status : null,
+      created_at: typeof record.created_at === 'string' ? record.created_at : null,
+    }]
+  })
 }
 
 function readSourceCoverage(value: unknown): BenchSourceCoverageMap | null {
@@ -634,6 +667,9 @@ export default function BenchLlmsAdminPage() {
   const [total, setTotal] = useState(0)
   const [histories, setHistories] = useState<Record<string, HistoryRow[]>>({})
   const [sourceCoverage, setSourceCoverage] = useState<BenchSourceCoverageMap | null>(null)
+  const [unclassifiedModels, setUnclassifiedModels] = useState<UnclassifiedModel[]>([])
+  const [onlyUnclassified, setOnlyUnclassified] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const deferredSearch = useDeferredValue(search)
@@ -667,12 +703,10 @@ export default function BenchLlmsAdminPage() {
   const [writePillars, setWritePillars] = useState(false)
   const [replaceSeededPillars, setReplaceSeededPillars] = useState(false)
   const [compariaOpen, setCompariaOpen] = useState(false)
-  const [compariaRefresh, setCompariaRefresh] = useState(0)
-  const [unmatchedComparia, setUnmatchedComparia] = useState(0)
-  const reportUnmatchedComparia = useCallback((count: number) => setUnmatchedComparia(count), [])
   const [createForm, setCreateForm] = useState({ model_name: '', model_provider: '', model_type: 'large-language-model', version: '' })
   const pageSize = 5000
 
+  const unclassifiedIds = useMemo(() => new Set(unclassifiedModels.map((model) => model.id)), [unclassifiedModels])
   const providerGroups = useMemo(
     () =>
       groupUnifiedBenchModelsByProvider(models).map((group) => ({
@@ -681,9 +715,18 @@ export default function BenchLlmsAdminPage() {
       })),
     [models, sortColumn, sortDirection],
   )
+  const visibleGroups = useMemo(() => {
+    if (!onlyUnclassified) return providerGroups
+    return providerGroups
+      .map((group) => ({
+        ...group,
+        models: group.models.filter((model) => model.canonicalModelId != null && unclassifiedIds.has(model.canonicalModelId)),
+      }))
+      .filter((group) => group.models.length > 0)
+  }, [onlyUnclassified, providerGroups, unclassifiedIds])
   const { inQuestionnaire: questionnaireGroups, catalogOnly: catalogGroups } = useMemo(
-    () => splitBenchProviderGroupsByQuestionnaire(providerGroups),
-    [providerGroups],
+    () => splitBenchProviderGroupsByQuestionnaire(visibleGroups),
+    [visibleGroups],
   )
 
   const handleSort = useCallback((column: BenchSortColumn) => {
@@ -726,6 +769,7 @@ export default function BenchLlmsAdminPage() {
         availability,
       })
       const response = await fetch(`/api/admin/bench-llms?${params}`, {
+        cache: 'no-store',
         headers: { Authorization: `Bearer ${token}` },
       })
       const payload = await parseApiJson<ApiResponse>(response)
@@ -735,17 +779,13 @@ export default function BenchLlmsAdminPage() {
       setTotal(typeof payload.total === 'number' && Number.isFinite(payload.total) ? payload.total : 0)
       setHistories(readHistories(payload.histories))
       setSourceCoverage(readSourceCoverage(payload.sourceCoverage))
+      setUnclassifiedModels(readUnclassifiedModels(readRecord(payload).unclassifiedModels))
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Erreur inconnue')
     } finally {
       setLoading(false)
     }
   }, [availability, deferredSearch, getAccessToken, lifecycleStatus, page, provider, source])
-
-  const refreshComparia = useCallback(() => {
-    setCompariaRefresh((value) => value + 1)
-    void fetchModels()
-  }, [fetchModels])
 
   useEffect(() => void fetchModels(), [fetchModels])
   useEffect(() => setPage(1), [availability, deferredSearch, lifecycleStatus, provider, source])
@@ -1018,8 +1058,46 @@ export default function BenchLlmsAdminPage() {
     }
   }, [getAccessToken])
 
+  async function copyModelId(id: string) {
+    try {
+      await navigator.clipboard.writeText(id)
+      setCopiedId(id)
+    } catch (copyError) {
+      console.error('[Bench LLMs] Copie UUID impossible', copyError)
+      setError('Copie de l’UUID impossible.')
+    }
+  }
+
   return (
     <div className="pb-12">
+      {unclassifiedModels.length > 0 ? (
+        <section className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-semibold text-amber-950">{unclassifiedModels.length} fiche{unclassifiedModels.length > 1 ? 's' : ''} à classer</h2>
+              <p className="mt-1 text-sm text-amber-900">Rôle <span className="font-medium">a_classer</span>, tous périmètres confondus. Lecture seule : la qualification se fait dans la Tour de Contrôle.</p>
+            </div>
+            <button type="button" onClick={() => setOnlyUnclassified((value) => !value)} className="rounded-md border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-950">
+              {onlyUnclassified ? 'Voir tout le registre' : 'Isoler a_classer dans le registre'}
+            </button>
+          </div>
+          <ul className="mt-4 space-y-3">
+            {unclassifiedModels.map((model) => (
+              <li key={model.id} className="rounded-md border border-amber-100 bg-white p-3 text-sm">
+                <div className="font-medium text-gray-900">{model.model_name}</div>
+                <div className="mt-1 text-gray-600">{getLabel(model.model_provider)} · {getLabel(model.slug)} · {model.created_at ? new Date(model.created_at).toLocaleString('fr-FR') : 'Date inconnue'}</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => void copyModelId(model.id)} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs"><Copy className="h-3.5 w-3.5" />{copiedId === model.id ? 'UUID copié' : 'Copier l’UUID'}</button>
+                  <Link href={`/admin/bench-llms/${model.id}`} className="rounded-md border px-2 py-1 text-xs text-[#0080A3]">Ouvrir la fiche</Link>
+                  <Link href="/admin/bench-llms/sources/llm-stats" className="rounded-md border px-2 py-1 text-xs text-[#0080A3]">File LLM Stats</Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        <p className="mb-4 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-800">0 fiche à classer</p>
+      )}
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <div className="flex items-center gap-3">
@@ -1046,7 +1124,7 @@ export default function BenchLlmsAdminPage() {
           <button onClick={() => callAction('Synchronisation EcoLogits', '/api/admin/ecologits/sync')} disabled={action != null} className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white"><Leaf className="h-4 w-4" /> Sync EcoLogits</button>
           <button type="button" onClick={() => setCompariaOpen(true)} disabled={action != null} className="rounded-md bg-violet-700 px-3 py-2 text-sm font-medium text-white">
             Sync Compar:IA
-            {unmatchedComparia > 0 ? <span className="ml-2 rounded-full bg-white/20 px-1.5 py-0.5 text-xs">{unmatchedComparia}</span> : null}
+            {sourceCoverage?.comparia.orphanSummary ? <span className="ml-2 rounded-full bg-white/20 px-1.5 py-0.5 text-xs">{sourceCoverage.comparia.orphanSummary.label}</span> : null}
           </button>
           <button onClick={() => callAction('Synchronisation COMPL-AI', '/api/admin/compl-ai/sync')} disabled={action != null} className="rounded-md bg-indigo-700 px-3 py-2 text-sm font-medium text-white">Sync COMPL-AI</button>
           <button onClick={() => callAction('Recalcul MaydAI', '/api/admin/compl-ai/recalculate-maydai-scores')} disabled={action != null} className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium">Recalcul MaydAI</button>
@@ -1070,7 +1148,11 @@ export default function BenchLlmsAdminPage() {
               <div key={card.key} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-medium text-gray-900">{card.label}</div>
+                    <Link href={`/admin/bench-llms/sources/${card.slug}`} className="group inline-flex items-center gap-1 font-medium text-gray-900 underline-offset-4 hover:text-[#0080A3] hover:underline">
+                      {card.label}
+                      <ArrowUpRight className="h-4 w-4 opacity-60 group-hover:opacity-100" />
+                    </Link>
+                    {stat?.orphanSummary ? <div className="mt-2 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-900">{stat.orphanSummary.label}</div> : null}
                     {latest ? (
                       <div className="mt-2 text-sm text-gray-600">
                         <div>Statut : {latest.status ?? 'terminé'}</div>
@@ -1124,13 +1206,13 @@ export default function BenchLlmsAdminPage() {
         </div>
       </section>
 
-      <CompariaReconcileSection
-        getAccessToken={getAccessToken}
-        refreshToken={compariaRefresh}
-        disabled={action != null}
-        onUnmatchedCount={reportUnmatchedComparia}
-        onChanged={refreshComparia}
-      />
+      <nav className="mb-6 flex flex-wrap gap-2" aria-label="Files de réconciliation">
+        {CONSOLIDATION_SOURCES.map((card) => (
+          <Link key={card.slug} href={`/admin/bench-llms/sources/${card.slug}`} className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-[#0080A3] hover:bg-sky-50">
+            {card.label}
+          </Link>
+        ))}
+      </nav>
 
       {action ? <div className="mb-4 flex items-center gap-2 rounded-md bg-sky-50 p-3 text-sm text-sky-800"><Loader2 className="h-4 w-4 animate-spin" /> {action}…</div> : null}
       {error ? <div className="mb-4 flex items-start gap-2 rounded-md bg-red-50 p-3 text-sm text-red-800"><AlertTriangle className="mt-0.5 h-4 w-4" /> {error}</div> : null}
@@ -1336,7 +1418,7 @@ export default function BenchLlmsAdminPage() {
         getAccessToken={getAccessToken}
         onClose={() => { if (action == null) setCompariaOpen(false) }}
         onBusy={setAction}
-        onImported={refreshComparia}
+        onImported={() => void fetchModels()}
       />
 
       <Toast

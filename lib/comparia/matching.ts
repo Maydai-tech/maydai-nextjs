@@ -1,10 +1,66 @@
+import { z } from 'zod'
+
 import { normalizeLlmModelSlug } from '@/lib/bench-llm/model-slug'
 import { followMergedModelId, resolveAliasTargetId, type AliasRecord, type LineageModel } from '@/lib/bench-llm/model-lineage'
 
 import type { ParsedCompariaModel } from '@/lib/comparia/import'
 
-export type CompariaLinkStatus = 'matched' | 'unmatched' | 'ignored'
-export type CompariaMatchMethod = 'exact' | 'slug' | 'manual'
+export const CompariaLinkStatusSchema = z.enum(['matched', 'unmatched', 'ignored'])
+export type CompariaLinkStatus = z.infer<typeof CompariaLinkStatusSchema>
+
+export const CompariaMatchMethodSchema = z.enum(['exact', 'slug', 'manual'])
+export type CompariaMatchMethod = z.infer<typeof CompariaMatchMethodSchema>
+
+/**
+ * Ligne de rapprochement Compar:IA.
+ * `superRefine` reprend `comparia_models_link_consistency` :
+ * `matched` exige les deux clés, `unmatched` et `ignored` les exigent nulles.
+ */
+export const CompariaModelLinkStateSchema = z
+  .object({
+    id: z.string().uuid(),
+    source_id: z.string(),
+    link_status: CompariaLinkStatusSchema,
+    maydai_model_id: z.string().uuid().nullable(),
+    match_method: CompariaMatchMethodSchema.nullable(),
+  })
+  .strict()
+  .superRefine((row, ctx) => {
+    if (row.link_status === 'matched') {
+      if (row.maydai_model_id == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['maydai_model_id'],
+          message: 'Un lien matched exige maydai_model_id.',
+        })
+      }
+      if (row.match_method == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['match_method'],
+          message: 'Un lien matched exige match_method.',
+        })
+      }
+      return
+    }
+
+    if (row.maydai_model_id != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['maydai_model_id'],
+        message: 'Un lien unmatched ou ignored exige maydai_model_id null.',
+      })
+    }
+    if (row.match_method != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['match_method'],
+        message: 'Un lien unmatched ou ignored exige match_method null.',
+      })
+    }
+  })
+
+export type CompariaModelLinkState = z.infer<typeof CompariaModelLinkStateSchema>
 
 export type CompariaHubModel = {
   id: string

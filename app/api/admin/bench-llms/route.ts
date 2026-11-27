@@ -16,6 +16,7 @@ import {
   type BenchLifecycleFilter,
 } from '@/lib/bench-llm/admin-unified'
 import { createEcoLogitsServiceClient } from '@/lib/ecologits/sync'
+import { loadOrphanSummaries, loadUnclassifiedModels } from '@/lib/bench-llm/source-reconcile-service'
 
 export const dynamic = 'force-dynamic'
 
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
         .limit(CATALOG_ROW_LIMIT),
       supabase
         .from('ecologits_models')
-        .select('id, provider, name, is_active, last_seen_at, link:ecologits_model_links(maydai_model_id), estimate:ecologits_estimates(id)'),
+        .select('id, provider, name, is_active, last_seen_at, link:ecologits_model_links(maydai_model_id), estimate:ecologits_estimates(output_token_count, electricity_mix_zone, energy_min, energy_max, energy_unit, gwp_min, gwp_max, gwp_unit, adpe_min, adpe_max, pe_min, pe_max, wcf_min, wcf_max)'),
       supabase
         .from('comparia_models')
         .select('id, source_id, organisation, rank, is_active, last_imported_at, maydai_model_id'),
@@ -157,6 +158,13 @@ export async function GET(request: NextRequest) {
       },
     )
     const sourceCoverage = computeSourceCoverageStats(unified)
+    const [unclassifiedModels, orphanSummaries] = await Promise.all([
+      loadUnclassifiedModels(supabase),
+      loadOrphanSummaries(supabase),
+    ])
+    for (const key of ['llm_stats', 'ecologits', 'comparia', 'compl_ai', 'system_card'] as const) {
+      sourceCoverage[key] = { ...sourceCoverage[key], orphanSummary: orphanSummaries[key] }
+    }
     const systemCardModelsCount = unified.filter((model) => model.metrics.hasSystemCard === true).length
     const latestSystemCardDate = latestSystemCardTimestamp(validSystemCards)
     const sourceParam = request.nextUrl.searchParams.get('source')
@@ -190,6 +198,7 @@ export async function GET(request: NextRequest) {
       pageSize,
       providers: [...new Set(unified.map((model) => model.provider))].sort(),
       sourceCoverage,
+      unclassifiedModels,
       histories: {
         llmStats: withNormalizedModelsFetched(llmRuns),
         ecologits: withNormalizedModelsFetched(ecoRuns),

@@ -36,6 +36,7 @@ type MaydaiModelOption = {
 }
 
 type StatusFilter = 'unmatched' | 'ignored' | 'matched'
+type ActivityFilter = 'all' | 'active' | 'archived'
 
 type QueueResponse = {
   counts?: { unmatched: number; ignored: number; matched: number }
@@ -48,6 +49,12 @@ const FILTERS: Array<{ key: StatusFilter; label: string }> = [
   { key: 'unmatched', label: 'À rapprocher' },
   { key: 'ignored', label: 'Ignorés' },
   { key: 'matched', label: 'Associés' },
+]
+
+const ACTIVITY_FILTERS: Array<{ key: ActivityFilter; label: string }> = [
+  { key: 'all', label: 'Tous' },
+  { key: 'active', label: 'Actif CSV' },
+  { key: 'archived', label: 'Archive CSV' },
 ]
 
 function formatRankingDate(iso: string): string {
@@ -276,6 +283,7 @@ export function CompariaReconcileSection({
   onChanged: () => void
 }) {
   const [status, setStatus] = useState<StatusFilter>('unmatched')
+  const [activity, setActivity] = useState<ActivityFilter>('all')
   const [rows, setRows] = useState<CompariaRow[]>([])
   const [models, setModels] = useState<MaydaiModelOption[]>([])
   const [counts, setCounts] = useState({ unmatched: 0, ignored: 0, matched: 0 })
@@ -291,13 +299,17 @@ export function CompariaReconcileSection({
     let cancelled = false
     setLoading(true)
     setError(null)
-    void fetch(`/api/admin/comparia/reconcile?status=${status}`, {
+    void fetch(`/api/admin/comparia/reconcile?status=${status}&activity=${activity}`, {
       headers: authHeaders(token),
+      cache: 'no-store',
     })
       .then(async (response) => {
         const payload = await parseApiJson<QueueResponse>(response)
-        if (!response.ok) throw new Error(payload.error || 'Chargement Compar:IA impossible')
         if (cancelled) return
+        if (!response.ok) {
+          setError(payload.error || 'Chargement Compar:IA impossible')
+          return
+        }
         const nextCounts = payload.counts ?? { unmatched: 0, ignored: 0, matched: 0 }
         const nextRows = Array.isArray(payload.rows) ? payload.rows : []
         setCounts(nextCounts)
@@ -318,7 +330,7 @@ export function CompariaReconcileSection({
     return () => {
       cancelled = true
     }
-  }, [getAccessToken, onUnmatchedCount, refreshToken, status])
+  }, [activity, getAccessToken, onUnmatchedCount, refreshToken, status])
 
   async function act(sourceId: string, action: 'match' | 'ignore' | 'unignore') {
     const token = getAccessToken()
@@ -336,7 +348,10 @@ export function CompariaReconcileSection({
         }),
       })
       const payload = await parseApiJson<{ error?: string; success?: boolean }>(response)
-      if (!response.ok || payload.success === false) throw new Error(payload.error || 'Enregistrement impossible')
+      if (!response.ok || payload.success === false) {
+        setError(payload.error || 'Enregistrement impossible')
+        return
+      }
       onChanged()
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : 'Enregistrement impossible')
@@ -364,7 +379,10 @@ export function CompariaReconcileSection({
         body: JSON.stringify(action === 'match-many' ? { action, links } : { action, sourceIds }),
       })
       const payload = await parseApiJson<{ error?: string; success?: boolean; updated?: number; failed?: number; errors?: string[] }>(response)
-      if (!response.ok || payload.success === false) throw new Error(payload.error || 'Enregistrement groupé impossible')
+      if (!response.ok || payload.success === false) {
+        setError(payload.error || 'Enregistrement groupé impossible')
+        return
+      }
       if ((payload.failed ?? 0) > 0) {
         setError(`${payload.updated ?? 0} ligne(s) enregistrée(s), ${payload.failed} en échec. ${payload.errors?.[0] ?? ''}`)
       }
@@ -388,7 +406,7 @@ export function CompariaReconcileSection({
             <span className="rounded-full bg-violet-700 px-2 py-0.5 text-xs font-medium text-white">{counts.unmatched}</span>
           ) : null}
         </h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {FILTERS.map((filter) => (
             <button
               key={filter.key}
@@ -397,6 +415,17 @@ export function CompariaReconcileSection({
               className={`rounded-full px-3 py-1 text-sm font-medium ${status === filter.key ? 'bg-violet-700 text-white' : 'border border-gray-300 bg-white text-gray-700'}`}
             >
               {filter.label} ({counts[filter.key]})
+            </button>
+          ))}
+          <span className="mx-1 hidden h-5 w-px bg-gray-200 sm:inline-block" aria-hidden="true" />
+          {ACTIVITY_FILTERS.map((filter) => (
+            <button
+              key={filter.key}
+              type="button"
+              onClick={() => setActivity(filter.key)}
+              className={`rounded-full px-2.5 py-1 text-xs font-medium ${activity === filter.key ? 'bg-gray-900 text-white' : 'border border-gray-200 bg-white text-gray-600'}`}
+            >
+              {filter.label}
             </button>
           ))}
         </div>
@@ -434,7 +463,11 @@ export function CompariaReconcileSection({
         <div className="mt-4 flex items-center gap-2 text-sm text-gray-600"><Loader2 className="h-4 w-4 animate-spin" /> Chargement…</div>
       ) : rows.length === 0 ? (
         <p className="mt-4 rounded-lg border border-dashed border-gray-300 bg-white p-4 text-sm text-gray-600">
-          {status === 'unmatched' ? 'Aucun modèle Compar:IA en attente. Déposez un CSV avec Sync Compar:IA.' : 'Aucune ligne dans ce filtre.'}
+          {activity !== 'all'
+            ? 'Aucune ligne pour ce filtre CSV.'
+            : status === 'unmatched'
+              ? 'Aucun modèle Compar:IA en attente. Déposez un CSV avec Sync Compar:IA.'
+              : 'Aucune ligne dans ce filtre.'}
         </p>
       ) : (
         <div className="mt-4 overflow-x-auto rounded-lg border border-gray-200 bg-white">
@@ -455,7 +488,12 @@ export function CompariaReconcileSection({
               {rows.map((row) => (
                 <tr key={row.source_id} className="border-t border-gray-100 align-top">
                   <td className="px-3 py-3 font-medium">{row.rank}</td>
-                  <td className="px-3 py-3 font-mono text-xs">{row.source_id}</td>
+                  <td className="px-3 py-3 font-mono text-xs">
+                    <div>{row.source_id}</div>
+                    <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 font-sans text-[11px] font-medium ${row.is_active ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-100 text-amber-950'}`}>
+                      {row.is_active ? 'Actif CSV' : 'Archive CSV'}
+                    </span>
+                  </td>
                   <td className="px-3 py-3">{row.organisation ?? '—'}</td>
                   <td className="px-3 py-3">{row.bradley_terry_score ?? '—'}</td>
                   <td className="px-3 py-3">{row.license ?? '—'}</td>
