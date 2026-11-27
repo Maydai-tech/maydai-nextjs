@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation'
 
 import { useAuth } from '@/lib/auth'
 import { parseApiJson } from '@/lib/utils'
+import { formatEcologitsArchitecture } from '@/types/ecologits.zod'
 
 type TabKey = 'maydai' | 'compl-ai' | 'comparia' | 'llm-stats' | 'ecologits'
 type Benchmark = { id: string; code: string; name: string; principle_id: string }
@@ -49,22 +50,27 @@ type CanonicalModel = {
   release_date: string | null
   knowledge_cutoff: string | null
 }
-type EcoEstimate = Record<string, number | string | null> & {
-  output_token_count: number
-  electricity_mix_zone: string
-  estimated_at: string
+type EcoEstimate = Record<string, unknown>
+type EstimateStatus = 'complete' | 'empty_metrics' | 'no_estimate'
+type EstimateSummary = {
+  status: EstimateStatus
+  filled_impacts_count: number
+  output_token_count: number | null
+  electricity_mix_zone: string | null
 }
+type EcoWarning = { code: string | null; message: string | null }
 type EcoModel = {
   id: string
   provider: string
   name: string
   architecture: unknown
-  sources: unknown[]
-  warnings: Array<{ code?: string; message?: string }>
+  architecture_label: string
+  warnings: EcoWarning[]
   is_active: boolean
-  last_seen_at: string
-  estimate: EcoEstimate | EcoEstimate[] | null
-  link: Array<{ maydai_model_id: string; match_method: string }> | null
+  match_method: string | null
+  estimate_summary: EstimateSummary
+  estimate: EcoEstimate | null
+  link: Array<{ maydai_model_id: string; match_method: string | null }>
 }
 type MaydaiOption = { id: string; model_name: string; model_provider: string | null }
 type CompariaModel = {
@@ -93,6 +99,7 @@ type DetailResponse = {
   model: CanonicalModel | null
   evaluations: Evaluation[]
   ecologits: EcoModel | null
+  ecologitsModels?: EcoModel[]
   comparia: CompariaModel | null
   principles: Principle[]
   maydaiModels: MaydaiOption[]
@@ -119,13 +126,124 @@ function first<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? value[0] ?? null : value ?? null
 }
 
+function metricNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 function formatRange(estimate: EcoEstimate | null, key: string) {
-  const min = estimate?.[`${key}_min`]
-  const max = estimate?.[`${key}_max`]
-  const unit = estimate?.[`${key}_unit`]
-  if (typeof min !== 'number' || typeof max !== 'number') return 'Non disponible'
+  const min = metricNumber(estimate?.[`${key}_min`])
+  const max = metricNumber(estimate?.[`${key}_max`])
+  const unit = typeof estimate?.[`${key}_unit`] === 'string' ? estimate[`${key}_unit`] : ''
+  if (min == null || max == null) return 'Non disponible'
   const formatter = new Intl.NumberFormat('fr-FR', { maximumSignificantDigits: 4 })
-  return `${formatter.format(min)} – ${formatter.format(max)} ${unit ?? ''}`
+  return `${formatter.format(min)} – ${formatter.format(max)} ${unit}`.trim()
+}
+
+function readWarnings(value: unknown): EcoWarning[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((warning) => {
+    if (typeof warning === 'string' && warning.trim()) return [{ code: null, message: warning }]
+    if (!isRecord(warning)) return []
+    const code = typeof warning.code === 'string' ? warning.code : null
+    const message = typeof warning.message === 'string' ? warning.message : null
+    return code || message ? [{ code, message }] : []
+  })
+}
+
+function readSummary(value: unknown): EstimateSummary {
+  if (!isRecord(value) || (value.status !== 'complete' && value.status !== 'empty_metrics' && value.status !== 'no_estimate')) {
+    return { status: 'no_estimate', filled_impacts_count: 0, output_token_count: null, electricity_mix_zone: null }
+  }
+  const filled = metricNumber(value.filled_impacts_count)
+  return {
+    status: value.status,
+    filled_impacts_count: filled != null ? Math.min(5, Math.max(0, Math.trunc(filled))) : 0,
+    output_token_count: metricNumber(value.output_token_count),
+    electricity_mix_zone: typeof value.electricity_mix_zone === 'string' ? value.electricity_mix_zone : null,
+  }
+}
+
+function readEcoModel(value: unknown): EcoModel | null {
+  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.name !== 'string') return null
+  const summary = readSummary(value.estimate_summary)
+  const link = Array.isArray(value.link)
+    ? value.link.flatMap((item) => {
+      if (!isRecord(item) || typeof item.maydai_model_id !== 'string') return []
+      return [{
+        maydai_model_id: item.maydai_model_id,
+        match_method: typeof item.match_method === 'string' ? item.match_method : null,
+      }]
+    })
+    : []
+  return {
+    id: value.id,
+    provider: typeof value.provider === 'string' ? value.provider : '—',
+    name: value.name,
+    architecture: value.architecture,
+    architecture_label: typeof value.architecture_label === 'string' ? value.architecture_label : formatEcologitsArchitecture(value.architecture),
+    warnings: readWarnings(value.warnings),
+    is_active: value.is_active === true,
+    match_method: typeof value.match_method === 'string' ? value.match_method : link[0]?.match_method ?? null,
+    estimate_summary: summary,
+    estimate: isRecord(value.estimate) ? value.estimate : null,
+    link,
+  }
+}
+
+function readEcoModels(payload: DetailResponse): EcoModel[] {
+  if (Array.isArray(payload.ecologitsModels)) {
+    return payload.ecologitsModels.flatMap((row) => {
+      const parsed = readEcoModel(row)
+      return parsed ? [parsed] : []
+    })
+  }
+  const single = readEcoModel(payload.ecologits)
+  return single ? [single] : []
+}
+
+function ecoHeadline(models: EcoModel[], attached: boolean): string {
+  const total = models.length
+  const complete = models.filter((model) => model.estimate_summary.status === 'complete').length
+  const empty = models.filter((model) => model.estimate_summary.status === 'empty_metrics').length
+  const missing = models.filter((model) => model.estimate_summary.status === 'no_estimate').length
+  const noun = `${total} entrée${total > 1 ? 's' : ''} EcoLogits ${attached ? 'rattachée' : 'affichée'}${total > 1 ? 's' : ''}`
+  if (complete === total) return `${noun} — ${complete}/${total} avec estimations 5/5`
+  const parts: string[] = []
+  if (complete > 0) parts.push(`${complete} complète${complete > 1 ? 's' : ''}`)
+  if (empty > 0) parts.push(`${empty} métriques vides`)
+  if (missing > 0) parts.push(`${missing} sans estimation`)
+  return `${noun} — ${parts.join(', ')}`
+}
+
+function scenarioLabel(model: EcoModel): string {
+  const tokens = model.estimate_summary.output_token_count ?? metricNumber(model.estimate?.output_token_count)
+  const zone = model.estimate_summary.electricity_mix_zone
+    ?? (typeof model.estimate?.electricity_mix_zone === 'string' ? model.estimate.electricity_mix_zone : null)
+  if (tokens == null && !zone) return 'Scénario non renseigné'
+  const tokenText = tokens === 1000 ? '1 000 tokens' : tokens != null ? `${new Intl.NumberFormat('fr-FR').format(tokens)} tokens` : 'tokens non renseignés'
+  return `${tokenText} · ${zone ?? 'zone non renseignée'}`
+}
+
+function completenessBadge(summary: EstimateSummary): { label: string; className: string } {
+  if (summary.status === 'complete') {
+    return { label: '5/5 impacts complets', className: 'bg-emerald-100 text-emerald-900' }
+  }
+  if (summary.status === 'empty_metrics') {
+    const label = summary.filled_impacts_count === 0
+      ? '0/5 métriques vides'
+      : `${summary.filled_impacts_count}/5 impacts partiels`
+    return { label, className: 'bg-amber-100 text-amber-950' }
+  }
+  return { label: 'Aucune ligne d\'estimation', className: 'bg-gray-100 text-gray-700' }
 }
 
 function EmptySource({ children }: { children: React.ReactNode }) {
@@ -226,9 +344,9 @@ export function BenchLlmDetailContent({
 
   const model = data?.model ?? null
   const evaluations = useMemo(() => data?.evaluations ?? [], [data?.evaluations])
-  const eco = data?.ecologits ?? null
+  const eco = data?.ecologits ? readEcoModel(data.ecologits) : null
+  const linkedEcos = data ? readEcoModels(data) : []
   const comparia = data?.comparia ?? null
-  const estimate = first(eco?.estimate)
   const allBenchmarks = useMemo(
     () => (data?.principles ?? []).flatMap((principle) => principle.benchmarks),
     [data?.principles],
@@ -346,21 +464,62 @@ export function BenchLlmDetailContent({
         ) : null}
 
         {activeTab === 'ecologits' ? (
-          eco ? <div className="space-y-6">
+          linkedEcos.length > 0 ? <div className="space-y-6">
             <section className="rounded-lg border border-emerald-100 bg-emerald-50/40 p-5">
-              <div className="flex items-center gap-2"><Leaf className="h-5 w-5 text-emerald-700" /><h2 className="font-semibold">Impacts pour 1 000 tokens · FRA</h2></div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{IMPACTS.map(([key, label]) => <div key={key} className="rounded-md bg-white p-3"><div className="text-xs uppercase text-gray-500">{label}</div><div className="mt-1 font-semibold">{formatRange(estimate, key)}</div></div>)}</div>
+              <div className="flex items-center gap-2"><Leaf className="h-5 w-5 text-emerald-700" /><h2 className="font-semibold">{ecoHeadline(linkedEcos, Boolean(model))}</h2></div>
+              <p className="mt-2 text-sm text-gray-600">Les entrées complètes (5/5) sont affichées en premier, puis celles du catalogue EcoLogits actuel, puis le nom.</p>
             </section>
-            <section className="rounded-lg border bg-white p-5">
-              <h2 className="font-semibold">Liaison MaydAI</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {linkedEcos.map((entry) => {
+                const badge = completenessBadge(entry.estimate_summary)
+                const architecture = formatEcologitsArchitecture(entry.architecture)
+                return (
+                  <article key={entry.id} className="flex flex-col rounded-lg border bg-white p-4 shadow-sm">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h3 className="font-semibold text-gray-900">{entry.provider} / {entry.name}</h3>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${entry.is_active ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-950'}`}>{entry.is_active ? 'Catalogue EcoLogits actuel' : 'Archive EcoLogits'}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-800">{entry.match_method ?? 'sans méthode'}</span>
+                      <span className={`rounded-full px-2 py-0.5 font-medium ${badge.className}`}>{badge.label}</span>
+                    </div>
+                    <p className="mt-3 text-sm text-gray-700">Architecture : {architecture}</p>
+                    <p className="mt-1 text-sm text-gray-500">{scenarioLabel(entry)}</p>
+                    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {IMPACTS.map(([key, label]) => (
+                        <div key={key} className="rounded-md bg-gray-50 p-2">
+                          <dt className="text-xs uppercase text-gray-500">{label}</dt>
+                          <dd className="mt-1 text-sm font-semibold text-gray-900">{formatRange(entry.estimate, key)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    {entry.warnings.length > 0 ? (
+                      <ul className="mt-3 space-y-1">
+                        {entry.warnings.map((warning, index) => (
+                          <li key={`${entry.id}-${warning.code ?? 'warning'}-${index}`} className="rounded bg-amber-50 p-2 text-xs text-amber-950">{warning.code ?? 'Avertissement'}{warning.message ? ` — ${warning.message}` : ''}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={saving != null}
+                      onClick={() => mutate('Déliaison EcoLogits', '/api/admin/ecologits/reconcile', { method: 'POST', body: JSON.stringify({ action: 'unlink', ecologits_model_id: entry.id }) })}
+                      className="mt-4 inline-flex items-center justify-center gap-2 self-start rounded-md border px-3 py-2 text-sm disabled:opacity-50"
+                    >
+                      <Unlink className="h-4 w-4" /> Délier cette entrée
+                    </button>
+                  </article>
+                )
+              })}
+            </div>
+            {eco ? <section className="rounded-lg border bg-white p-5">
+              <h2 className="font-semibold">Rattacher l’entrée principale</h2>
+              <p className="mt-1 text-sm text-gray-600">{eco.provider} / {eco.name}</p>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <select value={selectedMaydaiId} onChange={(event) => setSelectedMaydaiId(event.target.value)} className="min-w-0 flex-1 rounded-md border px-3 py-2"><option value="">Choisir un modèle…</option>{data.maydaiModels.map((option) => <option key={option.id} value={option.id}>{option.model_provider ?? '—'} / {option.model_name}</option>)}</select>
-                <button disabled={!selectedMaydaiId || saving != null} onClick={() => mutate('Liaison EcoLogits', `/api/admin/ecologits/models/${eco.id}/link`, { method: 'PUT', body: JSON.stringify({ maydaiModelId: selectedMaydaiId }) })} className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Lier</button>
-                {first(eco.link) ? <button disabled={saving != null} onClick={() => mutate('Déliaison EcoLogits', `/api/admin/ecologits/models/${eco.id}/link`, { method: 'PUT', body: JSON.stringify({ maydaiModelId: null }) })} className="inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm"><Unlink className="h-4 w-4" /> Délier</button> : null}
+                <button disabled={!selectedMaydaiId || saving != null} onClick={() => mutate('Liaison EcoLogits', `/api/admin/ecologits/models/${eco.id}/link`, { method: 'PUT', body: JSON.stringify({ maydai_model_id: selectedMaydaiId }) })} className="rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Lier</button>
               </div>
-            </section>
-            {eco.warnings.length > 0 ? <section className="rounded-lg border bg-white p-5"><h2 className="font-semibold">Avertissements</h2><ul className="mt-3 space-y-2">{eco.warnings.map((warning, index) => <li key={`${warning.code}-${index}`} className="rounded bg-amber-50 p-3 text-sm text-amber-900">{warning.code ?? 'Avertissement'} — {warning.message}</li>)}</ul></section> : null}
-            <section className="rounded-lg border bg-white p-5"><h2 className="font-semibold">Architecture</h2><pre className="mt-3 overflow-x-auto rounded bg-gray-950 p-4 text-xs text-gray-100">{JSON.stringify(eco.architecture ?? {}, null, 2)}</pre></section>
+            </section> : null}
           </div> : <EmptySource>Aucune donnée EcoLogits pour ce modèle.</EmptySource>
         ) : null}
       </div>

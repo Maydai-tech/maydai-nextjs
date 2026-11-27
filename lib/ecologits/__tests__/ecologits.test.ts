@@ -43,6 +43,53 @@ describe('EcoLogits parsing and synchronization rules', () => {
     expect(shouldDeactivateMissingModels(['Estimation échouée'])).toBe(false)
   })
 
+  test('ne planifie aucun lien pour un modèle EcoLogits ignoré', () => {
+    const planned = planExactEcoLogitsLinks(
+      [
+        {
+          id: 'eco-ignored-alias',
+          provider: 'google_genai',
+          name: 'gemini-flash-latest',
+          link_status: 'ignored',
+        },
+        {
+          id: 'eco-ignored-name',
+          provider: 'mistralai',
+          name: 'mistral-medium-3',
+          link_status: 'ignored',
+        },
+        {
+          id: 'eco-open',
+          provider: 'openai',
+          name: 'gpt-4o',
+          link_status: 'unmatched',
+        },
+      ],
+      [
+        { id: 'maydai-gemini', model_provider: 'Google', model_name: 'Gemini Flash Latest' },
+        { id: 'maydai-mistral', model_provider: 'Mistral', model_name: 'Mistral Medium 3' },
+        { id: 'maydai-gpt', model_provider: 'OpenAI', model_name: 'GPT 4o' },
+      ],
+      [],
+      [
+        {
+          modelId: 'maydai-gemini',
+          source: 'ecologits',
+          sourceId: 'eco-ignored-alias',
+          normalizedName: 'geminiflashlatest',
+        },
+      ],
+    )
+
+    expect(planned).toEqual([
+      {
+        ecologits_model_id: 'eco-open',
+        maydai_model_id: 'maydai-gpt',
+        match_method: 'exact',
+      },
+    ])
+  })
+
   test('creates unambiguous exact links without overwriting a manual link', () => {
     const planned = planExactEcoLogitsLinks(
       [

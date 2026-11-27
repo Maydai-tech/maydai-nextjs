@@ -1,5 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { z } from 'zod'
 
+import { type EcoLogitsLinkStatus } from '@/lib/bench-llm/veille-columns'
+import { EcologitsModelLinkStateSchema } from '@/types/ecologits.zod'
 import { exactEcoLogitsMatchKey, normalizeEcoLogitsIdentifier, normalizeEcoLogitsProvider } from './normalization'
 import { flattenEcoLogitsEstimate } from './parsing'
 import { resolveAliasTargetId, type AliasRecord, type LineageModel } from '@/lib/bench-llm/model-lineage'
@@ -18,7 +21,18 @@ const RETRY_DELAYS_MS = [500, 1_500, 3_000]
 const ESTIMATION_CONCURRENCY = 5
 
 type TriggerSource = 'admin' | 'cron'
-type EcoModelRow = { id: string; provider: string; name: string }
+
+/** Candidat au rapprochement. `link_status` absent n'est pas traité comme ignoré. */
+export type EcoLogitsLinkCandidate = {
+  id: string
+  provider: string
+  name: string
+  link_status?: EcoLogitsLinkStatus
+}
+
+const StoredEcoCatalogRowSchema = EcologitsModelLinkStateSchema.extend({
+  provider: z.string(),
+}).strict()
 type MaydaiModelRow = { id: string; model_name: string; model_provider: string | null; merged_into_id?: string | null }
 type ExistingLinkRow = { ecologits_model_id: string; maydai_model_id: string; match_method: 'exact' | 'manual' }
 
@@ -40,7 +54,7 @@ export function buildCatalogModelRow(model: EcoLogitsCatalogModel, now: string) 
 }
 
 export function planExactEcoLogitsLinks(
-  ecoModels: EcoModelRow[],
+  ecoModels: readonly EcoLogitsLinkCandidate[],
   maydaiModels: MaydaiModelRow[],
   existingLinks: ExistingLinkRow[],
   aliases: readonly AliasRecord[] = [],
@@ -67,6 +81,7 @@ export function planExactEcoLogitsLinks(
     match_method: 'exact'
   }> = []
   for (const model of ecoModels) {
+    if (model.link_status === 'ignored') continue
     if (linkedEcoIds.has(model.id)) continue
     const aliasTarget = resolveAliasTargetId(aliases, [...lineage.values()], {
       source: 'ecologits',
@@ -197,9 +212,29 @@ async function mapWithConcurrency<T>(
   await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, runWorker))
 }
 
+function parseStoredEcoCatalog(data: unknown): EcoLogitsLinkCandidate[] {
+  const parsed = z.array(StoredEcoCatalogRowSchema).safeParse(data)
+  if (!parsed.success) {
+    throw new Error(`Catalogue EcoLogits illisible: ${parsed.error.message}`)
+  }
+  return parsed.data.map((row) => {
+    const state = EcologitsModelLinkStateSchema.parse({
+      id: row.id,
+      name: row.name,
+      link_status: row.link_status,
+    })
+    return {
+      id: state.id,
+      provider: row.provider,
+      name: state.name,
+      link_status: state.link_status,
+    }
+  })
+}
+
 async function createExactLinks(
   supabase: SupabaseClient,
-  ecoModels: EcoModelRow[],
+  ecoModels: readonly EcoLogitsLinkCandidate[],
 ): Promise<number> {
   const [{ data: maydaiRows, error: maydaiError }, { data: linkRows, error: linksError }, { data: aliasRows, error: aliasError }] =
     await Promise.all([
@@ -302,11 +337,10 @@ export async function syncEcoLogitsCatalog(
       const { data, error } = await supabase
         .from('ecologits_models')
         .upsert(rows, { onConflict: 'provider,name' })
-        .select('id, provider, name')
+        .select('id, provider, name, link_status')
       if (error) throw error
-      modelsUpserted = data?.length ?? 0
-
-      const ecoRows = (data ?? []) as EcoModelRow[]
+      const ecoRows = parseStoredEcoCatalog(data ?? [])
+      modelsUpserted = ecoRows.length
       try {
         exactLinksCreated = await createExactLinks(supabase, ecoRows)
       } catch (error) {

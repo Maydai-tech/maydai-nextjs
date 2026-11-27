@@ -32,6 +32,78 @@ const TARGET_SLUGS = [
   'llama-3-1-405b-instruct',
 ] as const
 
+const QWEN4_MAX_ID = 'e948dec0-e65f-44ca-ba71-2960fc3640b5'
+const GEMINI_4_CARBON_ID = '55e15c11-d802-4c4c-afd4-7db907c6837d'
+const MISTRAL_MEDIUM_35_ID = '354120aa-a79e-4b6c-a501-c2e20226f327'
+const MISTRAL_MEDIUM_3_ECO_ID = '1c5a0c39-0a4a-41c1-9f54-8ac0c8f61cdf'
+
+const BLOCKED_ECO_NAMES = [
+  'gemini-3.1-flash-image-preview',
+  'gemini-flash-latest',
+  'gemini-flash-lite-latest',
+] as const
+
+const REPLACEMENT_EXPECTATIONS = [
+  { slug: 'claude-sonnet-4-5', replacementId: '6eeb1f37-15f6-45d4-93c5-9ecee05a81ba' },
+  { slug: 'gemini-2-5-flash', replacementId: '58702394-db65-4954-8dcd-aa37ce2e60e3' },
+  { slug: 'gpt-5', replacementId: '72cf24a4-9228-4a1e-adca-87c1bff575e4' },
+  { slug: 'mistral-tiny', replacementId: '80a712c2-dead-4647-ac8c-59604cecef9c' },
+  { slug: 'grok-4-1-fast-non-reasoning', replacementId: '56adadb8-a67a-4341-b153-84cf3b8dede3' },
+  { slug: 'grok-4-1-fast-reasoning', replacementId: '56adadb8-a67a-4341-b153-84cf3b8dede3' },
+  { slug: 'gpt-5-3', replacementId: '47f7cb3d-898f-4809-bbab-8057da7fb1b6' },
+] as const
+
+const COMPARIA_SOURCE_IDS = ['hermes-4-70b', 'lfm2-24b-a2b', 'lfm2-8b-a1b', 'qwen-3-8b'] as const
+const DETACHED_MAYDAI_SLUGS = ['hermes-3-70b', 'lfm2-5-vl-3b', 'lfm2-5-2-6b', 'qwen3-14b'] as const
+
+const RECONCILIATION_SLUGS = [
+  'qwen4-max-preview',
+  'aion-1-0-instruct',
+  'gemini-4-neon',
+  ...REPLACEMENT_EXPECTATIONS.map((item) => item.slug),
+  ...DETACHED_MAYDAI_SLUGS,
+] as const
+
+type CheckResult = { ok: boolean; line: string }
+
+function strictDbRequested(): boolean {
+  return process.argv.includes('--strict-db')
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function rowsOf(data: unknown, label: string): Record<string, unknown>[] {
+  if (data == null) return []
+  if (!Array.isArray(data)) throw new Error(`${label} illisible`)
+  return data.map((row, index) => {
+    if (!isRecord(row)) throw new Error(`${label} ligne ${index + 1} illisible`)
+    return row
+  })
+}
+
+function optionalString(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key]
+  if (value == null) return null
+  if (typeof value !== 'string') throw new Error(`${key} illisible`)
+  return value
+}
+
+function mark(ok: boolean, detail: string): CheckResult {
+  return { ok, line: `${ok ? '[OK]' : '[PENDING_MIGRATION]'} ${detail}` }
+}
+
+function showValue(value: string | null): string {
+  return value ?? 'NULL'
+}
+
+function isBlockedEcoName(value: string | null): boolean {
+  return value === 'gemini-3.1-flash-image-preview'
+    || value === 'gemini-flash-latest'
+    || value === 'gemini-flash-lite-latest'
+}
+
 function supabaseUrl(): string {
   return (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim()
 }
@@ -131,7 +203,271 @@ function checkExplicitError(): void {
   console.log('b) toExplicitError:', error.message)
 }
 
-async function checkDatabase(supabase: SupabaseClient): Promise<void> {
+async function selectAllRows(
+  supabase: SupabaseClient,
+  table: 'ecologits_models' | 'ecologits_model_links',
+  columns: string,
+): Promise<Record<string, unknown>[]> {
+  const rows: Record<string, unknown>[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from(table).select(columns).range(from, from + 999)
+    if (error) throw toExplicitError('debug:llm-sync-check', error)
+    const page = rowsOf(data, table)
+    rows.push(...page)
+    if (page.length < 1000) break
+  }
+  return rows
+}
+
+function ficheBySlug(rows: Record<string, unknown>[]): Map<string, Record<string, unknown>> {
+  const bySlug = new Map<string, Record<string, unknown>>()
+  for (const row of rows) {
+    const slug = optionalString(row, 'slug')
+    if (slug && !bySlug.has(slug)) bySlug.set(slug, row)
+  }
+  return bySlug
+}
+
+function checkBloc1(bySlug: Map<string, Record<string, unknown>>): CheckResult[] {
+  const checks: CheckResult[] = []
+  const preview = bySlug.get('qwen4-max-preview')
+  checks.push(preview
+    ? mark(
+      optionalString(preview, 'lifecycle_status') === 'retired'
+        && optionalString(preview, 'role') === 'stade'
+        && optionalString(preview, 'replacement_model_id') === QWEN4_MAX_ID,
+      `qwen4-max-preview lifecycle_status=${showValue(optionalString(preview, 'lifecycle_status'))}, role=${showValue(optionalString(preview, 'role'))}, replacement_model_id=${showValue(optionalString(preview, 'replacement_model_id'))}`,
+    )
+    : mark(false, 'qwen4-max-preview absente'))
+
+  const aion = bySlug.get('aion-1-0-instruct')
+  checks.push(aion
+    ? mark(
+      optionalString(aion, 'lifecycle_status') === 'active'
+        && optionalString(aion, 'role') === 'base'
+        && optionalString(aion, 'license_id') === 'mit',
+      `aion-1-0-instruct lifecycle_status=${showValue(optionalString(aion, 'lifecycle_status'))}, role=${showValue(optionalString(aion, 'role'))}, license_id=${showValue(optionalString(aion, 'license_id'))}`,
+    )
+    : mark(false, 'aion-1-0-instruct absente'))
+
+  const neon = bySlug.get('gemini-4-neon')
+  checks.push(neon
+    ? mark(
+      optionalString(neon, 'lifecycle_status') === 'active'
+        && optionalString(neon, 'role') === 'version'
+        && optionalString(neon, 'base_model_id') === GEMINI_4_CARBON_ID,
+      `gemini-4-neon lifecycle_status=${showValue(optionalString(neon, 'lifecycle_status'))}, role=${showValue(optionalString(neon, 'role'))}, base_model_id=${showValue(optionalString(neon, 'base_model_id'))}`,
+    )
+    : mark(false, 'gemini-4-neon absente'))
+
+  for (const expected of REPLACEMENT_EXPECTATIONS) {
+    const row = bySlug.get(expected.slug)
+    const replacementId = row ? optionalString(row, 'replacement_model_id') : null
+    checks.push(row
+      ? mark(
+        replacementId === expected.replacementId,
+        `${expected.slug} replacement_model_id=${showValue(replacementId)}`,
+      )
+      : mark(false, `${expected.slug} absente`))
+  }
+  return checks
+}
+
+async function checkBloc2(supabase: SupabaseClient, geminiFlashId: string | null): Promise<CheckResult[]> {
+  const checks: CheckResult[] = []
+  const { data: ecoRows, error: ecoError } = await supabase
+    .from('ecologits_models')
+    .select('id, name, link_status')
+    .in('name', [...BLOCKED_ECO_NAMES])
+  if (ecoError) throw toExplicitError('debug:llm-sync-check', ecoError)
+  const ecoModels = rowsOf(ecoRows, 'ecologits_models')
+  const ecoByName = new Map(ecoModels.map((row) => [optionalString(row, 'name'), row]))
+  const ecoIds = ecoModels.map((row) => optionalString(row, 'id')).filter((id): id is string => id != null)
+
+  let links: Record<string, unknown>[] = []
+  if (ecoIds.length > 0) {
+    const { data: linkRows, error: linkError } = await supabase
+      .from('ecologits_model_links')
+      .select('ecologits_model_id, maydai_model_id')
+      .in('ecologits_model_id', ecoIds)
+    if (linkError) throw toExplicitError('debug:llm-sync-check', linkError)
+    links = rowsOf(linkRows, 'ecologits_model_links')
+  }
+
+  for (const name of BLOCKED_ECO_NAMES) {
+    const row = ecoByName.get(name)
+    if (!row) {
+      checks.push(mark(false, `${name} absente de ecologits_models`))
+      continue
+    }
+    const id = optionalString(row, 'id')
+    const status = optionalString(row, 'link_status')
+    const towardGemini = geminiFlashId != null && links.some((link) =>
+      optionalString(link, 'ecologits_model_id') === id
+      && optionalString(link, 'maydai_model_id') === geminiFlashId,
+    )
+    checks.push(mark(
+      geminiFlashId != null && status === 'ignored' && !towardGemini,
+      geminiFlashId == null
+        ? `${name} link_status=${showValue(status)}, cible gemini-1-5-flash absente`
+        : `${name} link_status=${showValue(status)}, lien vers gemini-1-5-flash=${towardGemini ? 'présent' : 'absent'}`,
+    ))
+  }
+
+  const aliasIds = [...ecoIds, MISTRAL_MEDIUM_3_ECO_ID]
+  const { data: aliasBySource, error: aliasSourceError } = await supabase
+    .from('llm_model_aliases')
+    .select('id, source_id, raw_name, model_id')
+    .eq('source', 'ecologits')
+    .in('source_id', aliasIds)
+  if (aliasSourceError) throw toExplicitError('debug:llm-sync-check', aliasSourceError)
+  const { data: aliasByName, error: aliasNameError } = await supabase
+    .from('llm_model_aliases')
+    .select('id, source_id, raw_name, model_id')
+    .eq('source', 'ecologits')
+    .in('raw_name', [...BLOCKED_ECO_NAMES, 'mistral-medium-3'])
+  if (aliasNameError) throw toExplicitError('debug:llm-sync-check', aliasNameError)
+  const aliases = new Map<string, Record<string, unknown>>()
+  for (const row of [...rowsOf(aliasBySource, 'llm_model_aliases'), ...rowsOf(aliasByName, 'llm_model_aliases')]) {
+    const id = optionalString(row, 'id')
+    if (id) aliases.set(id, row)
+  }
+  const residual = [...aliases.values()].filter((row) => {
+    const sourceId = optionalString(row, 'source_id')
+    const rawName = optionalString(row, 'raw_name')
+    return ecoIds.includes(sourceId ?? '') || isBlockedEcoName(rawName)
+  })
+  checks.push(mark(
+    residual.length === 0,
+    `alias ecologits résiduels sur les 3 entrées Gemini : ${residual.length}`,
+  ))
+  const mediumAlias = [...aliases.values()].filter((row) =>
+    optionalString(row, 'model_id') === MISTRAL_MEDIUM_35_ID
+    && (optionalString(row, 'raw_name') === 'mistral-medium-3' || optionalString(row, 'source_id') === MISTRAL_MEDIUM_3_ECO_ID),
+  )
+  checks.push(mark(
+    mediumAlias.length === 0,
+    `alias ecologits mistral-medium-3 vers mistral-medium-3-5 : ${mediumAlias.length}`,
+  ))
+
+  const catalog = await selectAllRows(supabase, 'ecologits_models', 'id, name, link_status')
+  const allLinks = await selectAllRows(supabase, 'ecologits_model_links', 'ecologits_model_id')
+  const linkedIds = new Set(allLinks.map((row) => optionalString(row, 'ecologits_model_id')).filter((id): id is string => id != null))
+  const divergent = catalog.filter((row) => {
+    const status = optionalString(row, 'link_status')
+    const linked = linkedIds.has(optionalString(row, 'id') ?? '')
+    if (status === 'ignored') return false
+    if (status === 'matched') return !linked
+    if (status === 'unmatched') return linked
+    return true
+  })
+  const ignoredWithLink = catalog.filter((row) =>
+    optionalString(row, 'link_status') === 'ignored' && linkedIds.has(optionalString(row, 'id') ?? ''),
+  )
+  const sample = [...divergent, ...ignoredWithLink]
+    .slice(0, 5)
+    .map((row) => optionalString(row, 'name') ?? optionalString(row, 'id') ?? '(sans nom)')
+    .join(', ')
+  checks.push(mark(
+    divergent.length === 0 && ignoredWithLink.length === 0,
+    `cohérence link_status : ${divergent.length} divergence(s), ${ignoredWithLink.length} ignored avec lien${sample ? ` (${sample})` : ''}`,
+  ))
+  return checks
+}
+
+async function checkBloc3(supabase: SupabaseClient, bySlug: Map<string, Record<string, unknown>>): Promise<CheckResult[]> {
+  const checks: CheckResult[] = []
+  const { data: compariaRows, error: compariaError } = await supabase
+    .from('comparia_models')
+    .select('source_id, maydai_model_id, link_status')
+    .in('source_id', [...COMPARIA_SOURCE_IDS])
+  if (compariaError) throw toExplicitError('debug:llm-sync-check', compariaError)
+  const comparia = rowsOf(compariaRows, 'comparia_models')
+  const { data: pivotRows, error: pivotError } = await supabase
+    .from('llm_model_source_ids')
+    .select('source_id')
+    .eq('source', 'comparia')
+    .in('source_id', [...COMPARIA_SOURCE_IDS])
+  if (pivotError) throw toExplicitError('debug:llm-sync-check', pivotError)
+  const pivots = new Set(rowsOf(pivotRows, 'llm_model_source_ids').map((row) => optionalString(row, 'source_id')))
+
+  for (const sourceId of COMPARIA_SOURCE_IDS) {
+    const matches = comparia.filter((row) => optionalString(row, 'source_id') === sourceId)
+    const detached = matches.length > 0 && matches.every((row) =>
+      optionalString(row, 'maydai_model_id') == null && optionalString(row, 'link_status') === 'ignored',
+    )
+    const pivotAbsent = !pivots.has(sourceId)
+    const status = matches.map((row) => optionalString(row, 'link_status') ?? 'NULL').join(', ') || 'absente'
+    checks.push(mark(
+      detached && pivotAbsent,
+      `${sourceId} link_status=${status}, maydai_model_id ${matches.some((row) => optionalString(row, 'maydai_model_id')) ? 'présent' : 'NULL'}, pivot comparia ${pivotAbsent ? 'absent' : 'présent'}`,
+    ))
+  }
+
+  const ficheIds = DETACHED_MAYDAI_SLUGS
+    .map((slug) => bySlug.get(slug))
+    .map((row) => row ? optionalString(row, 'id') : null)
+    .filter((id): id is string => id != null)
+  const linkedFicheIds = new Set<string>()
+  if (ficheIds.length > 0) {
+    const { data: remainingLinks, error: remainingError } = await supabase
+      .from('comparia_models')
+      .select('maydai_model_id')
+      .in('maydai_model_id', ficheIds)
+    if (remainingError) throw toExplicitError('debug:llm-sync-check', remainingError)
+    for (const row of rowsOf(remainingLinks, 'comparia_models')) {
+      const id = optionalString(row, 'maydai_model_id')
+      if (id) linkedFicheIds.add(id)
+    }
+  }
+
+  for (const slug of DETACHED_MAYDAI_SLUGS) {
+    const row = bySlug.get(slug)
+    if (!row) {
+      checks.push(mark(false, `${slug} absente`))
+      continue
+    }
+    const id = optionalString(row, 'id')
+    if (id && linkedFicheIds.has(id)) {
+      checks.push(mark(true, `${slug} a encore un lien Compar:IA : le vidage des colonnes n'est pas exigé`))
+      continue
+    }
+    const rank = row.comparia_rank
+    const consumption = row.consumption_wh_per_1k_tokens
+    checks.push(mark(
+      rank == null && consumption == null,
+      `${slug} sans lien Compar:IA, comparia_rank=${rank == null ? 'NULL' : String(rank)}, consumption_wh_per_1k_tokens=${consumption == null ? 'NULL' : String(consumption)}`,
+    ))
+  }
+  return checks
+}
+
+async function checkReconciliation(supabase: SupabaseClient): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('compl_ai_models')
+    .select('id, slug, lifecycle_status, role, replacement_model_id, license_id, base_model_id, comparia_rank, consumption_wh_per_1k_tokens')
+    .in('slug', [...RECONCILIATION_SLUGS, 'gemini-1-5-flash'])
+  if (error) throw toExplicitError('debug:llm-sync-check', error)
+  const bySlug = ficheBySlug(rowsOf(data, 'compl_ai_models'))
+  const geminiFlashId = optionalString(bySlug.get('gemini-1-5-flash') ?? {}, 'id')
+  const bloc1 = checkBloc1(bySlug)
+  const bloc2 = await checkBloc2(supabase, geminiFlashId)
+  const bloc3 = await checkBloc3(supabase, bySlug)
+  const checks = [...bloc1, ...bloc2, ...bloc3]
+  const conformant = checks.every((check) => check.ok)
+
+  console.log('d) Rapport réconciliation 20261126110000')
+  console.log('   Bloc 1 — cycle de vie')
+  for (const check of bloc1) console.log(`   ${check.line}`)
+  console.log('   Bloc 2 — EcoLogits')
+  for (const check of bloc2) console.log(`   ${check.line}`)
+  console.log('   Bloc 3 — Compar:IA')
+  for (const check of bloc3) console.log(`   ${check.line}`)
+  console.log(`   Verdict : ${conformant ? 'CONFORME POST-MIGRATION 20261126110000' : 'AVANT MIGRATION 20261126110000'}`)
+  return conformant
+}
+
+async function checkDatabase(supabase: SupabaseClient): Promise<boolean> {
   const { data: providers, error: providerError } = await supabase
     .from('model_providers')
     .select('id')
@@ -179,7 +515,7 @@ async function checkDatabase(supabase: SupabaseClient): Promise<void> {
     if (ecoError) throw toExplicitError('debug:llm-sync-check', ecoError)
     for (const model of ecoModels ?? []) ecoNames.set(model.id, model.name)
   }
-  console.log('c) Liens EcoLogits des 6 cas (état actuel, migration non appliquée) :')
+  console.log('c) Liens EcoLogits des fiches cibles :')
   for (const slug of TARGET_SLUGS) {
     const model = [...byId.values()].find((item) => item.slug === slug)
     const names = (links ?? [])
@@ -188,6 +524,7 @@ async function checkDatabase(supabase: SupabaseClient): Promise<void> {
       .sort()
     console.log(`   ${slug}: ${names.length ? names.join(' | ') : '(aucun lien)'}`)
   }
+  return checkReconciliation(supabase)
 }
 
 async function main(): Promise<void> {
@@ -197,16 +534,30 @@ async function main(): Promise<void> {
   console.log(`Kill-switch écriture: ${production ? 'ACTIF (URL distante)' : 'ACTIF (lecture seule locale)'}`)
   checkPayloads()
   checkExplicitError()
+  const strictDb = strictDbRequested()
   if (!url || !key) {
     console.log('c) Supabase non configuré : lecture des rôles et des liens ignorée.')
+    console.log('d) Rapport réconciliation 20261126110000')
+    console.log('   Verdict : AVANT MIGRATION 20261126110000')
+    if (strictDb) {
+      console.error('debug:llm-sync-check ÉCHEC (--strict-db)')
+      process.exitCode = 1
+    }
     return
   }
   const host = (() => {
     try { return new URL(url).host } catch { return '(url illisible)' }
   })()
   console.log(`c) Lecture seule sur ${host}`)
-  await checkDatabase(readOnlyClient(url, key, production))
-  console.log('debug:llm-sync-check OK')
+  const conformant = await checkDatabase(readOnlyClient(url, key, production))
+  if (strictDb && !conformant) {
+    console.error('debug:llm-sync-check ÉCHEC (--strict-db)')
+    process.exitCode = 1
+    return
+  }
+  console.log(conformant
+    ? 'debug:llm-sync-check OK'
+    : 'debug:llm-sync-check OK (écarts en attente de migration, sans --strict-db)')
 }
 
 main().catch((error: unknown) => {
