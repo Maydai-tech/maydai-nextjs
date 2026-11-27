@@ -553,6 +553,121 @@ export function controlTowerDatabasePatch(row: ModifiedControlTowerRow): Record<
   }
 }
 
+/** Ligne lue dans compl_ai_models avant comparaison. Chaque champ est optionnel. */
+export interface ControlTowerStoredRow {
+  lifecycle_status?: string | null
+  launch_date?: string | null
+  deprecation_date?: string | null
+  retirement_date?: string | null
+  replacement_model_id?: string | null
+  lifecycle_source_url?: string | null
+  lifecycle_checked_at?: string | null
+  role?: string | null
+  reference_model_id?: string | null
+  merged_into_id?: string | null
+  base_model_id?: string | null
+  license_class?: string | null
+  license_id?: string | null
+  license_url?: string | null
+  license_eu_restricted?: boolean | null
+}
+
+export interface ControlTowerChangedUpdate {
+  updated_at: string
+  lifecycle_status?: string | null
+  launch_date?: string | null
+  deprecation_date?: string | null
+  retirement_date?: string | null
+  replacement_model_id?: string | null
+  lifecycle_source_url?: string | null
+  lifecycle_checked_at?: string | null
+  role?: string | null
+  reference_model_id?: string | null
+  merged_into_id?: string | null
+  base_model_id?: string | null
+  license_class?: string | null
+  license_id?: string | null
+  license_url?: string | null
+  license_eu_restricted?: boolean | null
+}
+
+function isStoredRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function comparableScalar(value: unknown): string | boolean | null {
+  if (value === undefined || value === null) return null
+  if (typeof value === 'boolean') return value
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (trimmed === '') return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
+  if (/^\d{4}-\d{2}-\d{2}[T ]/.test(trimmed)) {
+    const isoLike = trimmed.includes(' ') && !trimmed.includes('T') ? trimmed.replace(' ', 'T') : trimmed
+    const parsed = Date.parse(isoLike)
+    if (Number.isFinite(parsed)) return new Date(parsed).toISOString()
+  }
+  if (UUID_PATTERN.test(trimmed)) return trimmed.toLowerCase()
+  return trimmed
+}
+
+function storedField(currentRow: ControlTowerStoredRow, key: string): unknown {
+  if (!isStoredRecord(currentRow)) return null
+  if (!Object.prototype.hasOwnProperty.call(currentRow, key)) return null
+  return currentRow[key]
+}
+
+function patchScalar(value: unknown): string | boolean | null {
+  if (value === undefined || value === null) return null
+  if (typeof value === 'boolean' || typeof value === 'string') return value
+  throw new Error('Valeur de patch Tour de Contrôle illisible')
+}
+
+/**
+ * Ne renvoie un UPDATE que si au moins une colonne du patch diffère de la ligne stockée.
+ * `undefined` et `null` sont le même vide. `updated_at` n'est ajouté que dans ce cas.
+ */
+export function buildChangedControlTowerUpdate(
+  currentRow: ControlTowerStoredRow,
+  patch: Record<string, unknown>,
+  nowIso: string,
+): ControlTowerChangedUpdate | null {
+  if (!isStoredRecord(currentRow)) {
+    throw new Error('Ligne compl_ai_models illisible')
+  }
+  if (!isStoredRecord(patch)) {
+    throw new Error('Patch Tour de Contrôle illisible')
+  }
+  const changed: ControlTowerChangedUpdate = { updated_at: nowIso }
+  let hasChange = false
+  for (const [key, rawNext] of Object.entries(patch)) {
+    if (key === 'updated_at') continue
+    const next = patchScalar(rawNext)
+    const current = comparableScalar(storedField(currentRow, key))
+    if (current === comparableScalar(next)) continue
+    hasChange = true
+    if (key === 'lifecycle_status') changed.lifecycle_status = typeof next === 'string' ? next : null
+    else if (key === 'launch_date') changed.launch_date = typeof next === 'string' ? next : null
+    else if (key === 'deprecation_date') changed.deprecation_date = typeof next === 'string' ? next : null
+    else if (key === 'retirement_date') changed.retirement_date = typeof next === 'string' ? next : null
+    else if (key === 'replacement_model_id') changed.replacement_model_id = typeof next === 'string' ? next : null
+    else if (key === 'lifecycle_source_url') changed.lifecycle_source_url = typeof next === 'string' ? next : null
+    else if (key === 'lifecycle_checked_at') changed.lifecycle_checked_at = typeof next === 'string' ? next : null
+    else if (key === 'role') changed.role = typeof next === 'string' ? next : null
+    else if (key === 'reference_model_id') changed.reference_model_id = typeof next === 'string' ? next : null
+    else if (key === 'merged_into_id') changed.merged_into_id = typeof next === 'string' ? next : null
+    else if (key === 'base_model_id') changed.base_model_id = typeof next === 'string' ? next : null
+    else if (key === 'license_class') changed.license_class = typeof next === 'string' ? next : null
+    else if (key === 'license_id') changed.license_id = typeof next === 'string' ? next : null
+    else if (key === 'license_url') changed.license_url = typeof next === 'string' ? next : null
+    else if (key === 'license_eu_restricted') {
+      changed.license_eu_restricted = typeof next === 'boolean' ? next : null
+    }
+    else throw new Error(`Colonne de patch inconnue : ${key}`)
+  }
+  return hasChange ? changed : null
+}
+
 export type SelectorModelState = {
   id: string
   providerInQuestionnaire: boolean

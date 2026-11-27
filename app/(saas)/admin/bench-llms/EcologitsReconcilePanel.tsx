@@ -188,6 +188,20 @@ function warningSummary(warnings: unknown[]): string {
   }).join(' · ')
 }
 
+const SESSION_MESSAGE = 'Session d\'authentification indisponible. Veuillez rafraîchir la page.'
+
+function readableClientError(error: unknown, fallback: string): string {
+  const raw = error instanceof Error ? error.message : ''
+  if (
+    raw === 'Failed to fetch'
+    || raw.includes('ERR_NETWORK_CHANGED')
+    || raw.includes('NetworkError')
+  ) {
+    return 'Connexion interrompue pendant le chargement (réseau changé ou coupé). Réessayez.'
+  }
+  return raw || fallback
+}
+
 export function EcologitsReconcilePanel({
   getAccessToken,
   lastRunErrors,
@@ -209,15 +223,22 @@ export function EcologitsReconcilePanel({
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [errorByRowId, setErrorByRowId] = useState<Record<string, string>>({})
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
+    if (status === 'errors') return
     const token = getAccessToken()
-    if (!token || status === 'errors') return
+    if (!token) {
+      setLoading(false)
+      setLoadError(SESSION_MESSAGE)
+      return
+    }
     const controller = new AbortController()
     setLoading(true)
-    setError(null)
+    setLoadError(null)
     const params = new URLSearchParams({ status, search, page: '1', pageSize: '200' })
     void fetch(`/api/admin/ecologits/reconcile?${params}`, {
       cache: 'no-store',
@@ -250,13 +271,13 @@ export function EcologitsReconcilePanel({
           matched: payload.counts?.matched ?? 0,
         })
       })
-      .catch((loadError: unknown) => {
-        if (loadError instanceof DOMException && loadError.name === 'AbortError') return
-        setError(loadError instanceof Error ? loadError.message : 'Chargement impossible')
+      .catch((loadFailure: unknown) => {
+        if (loadFailure instanceof DOMException && loadFailure.name === 'AbortError') return
+        setLoadError(readableClientError(loadFailure, 'Chargement de la file EcoLogits impossible'))
       })
       .finally(() => setLoading(false))
     return () => controller.abort()
-  }, [getAccessToken, search, status])
+  }, [getAccessToken, reloadKey, search, status])
 
   const selectedIds = useMemo(() => Object.entries(checked).filter(([, on]) => on).map(([id]) => id), [checked])
 
@@ -269,9 +290,17 @@ export function EcologitsReconcilePanel({
     })
   }
 
+  function reportActionError(rowId: string | null, message: string) {
+    if (rowId) setErrorByRowId((current) => ({ ...current, [rowId]: message }))
+    else setBulkError(message)
+  }
+
   async function run(label: string, body: unknown, rowId: string | null) {
     const token = getAccessToken()
-    if (!token) return
+    if (!token) {
+      reportActionError(rowId, SESSION_MESSAGE)
+      return
+    }
     setBusy(label)
     if (rowId) dismissRowError(rowId)
     else setBulkError(null)
@@ -284,19 +313,25 @@ export function EcologitsReconcilePanel({
       })
       const payload = await parseApiJson<{ error?: string }>(response)
       if (!response.ok) {
-        const message = payload.error || 'Action impossible'
-        if (rowId) setErrorByRowId((current) => ({ ...current, [rowId]: message }))
-        else setBulkError(message)
+        reportActionError(rowId, payload.error || 'Action impossible')
         return
       }
       if (rowId) dismissRowError(rowId)
       setBulkError(null)
       setChecked({})
+      const action = isRecord(body) && typeof body.action === 'string' ? body.action : null
+      if (rowId && (action === 'match' || action === 'ignore')) {
+        setTargets((current) => {
+          if (!current[rowId]) return current
+          const next = { ...current }
+          delete next[rowId]
+          return next
+        })
+      }
+      setReloadKey((current) => current + 1)
       onChanged()
     } catch (actionError) {
-      const message = actionError instanceof Error ? actionError.message : 'Action impossible'
-      if (rowId) setErrorByRowId((current) => ({ ...current, [rowId]: message }))
-      else setBulkError(message)
+      reportActionError(rowId, readableClientError(actionError, 'Action impossible'))
     } finally {
       setBusy(null)
     }
@@ -304,7 +339,10 @@ export function EcologitsReconcilePanel({
 
   async function syncCatalog() {
     const token = getAccessToken()
-    if (!token) return
+    if (!token) {
+      setError(SESSION_MESSAGE)
+      return
+    }
     setBusy('Sync EcoLogits')
     setError(null)
     try {
@@ -319,9 +357,10 @@ export function EcologitsReconcilePanel({
         return
       }
       setError(null)
+      setReloadKey((current) => current + 1)
       onChanged()
     } catch (syncError) {
-      setError(syncError instanceof Error ? syncError.message : 'Synchronisation impossible')
+      setError(readableClientError(syncError, 'Synchronisation impossible'))
     } finally {
       setBusy(null)
     }
@@ -358,6 +397,14 @@ export function EcologitsReconcilePanel({
           ] as const).map(([key, label]) => (
             <button key={key} type="button" onClick={() => setQualityFilter(key)} className={`rounded-full border px-3 py-1 text-sm ${qualityFilter === key ? 'border-[#0080A3] bg-sky-50 text-[#006280]' : 'border-gray-200 text-gray-700'}`}>{label}</button>
           ))}
+        </div>
+      ) : null}
+      {loadError ? (
+        <div className="mt-3 flex flex-col gap-3 rounded-md bg-red-50 p-3 text-sm text-red-800 sm:flex-row sm:items-center sm:justify-between">
+          <span>{loadError}</span>
+          <button type="button" onClick={() => setReloadKey((current) => current + 1)} className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-800">
+            Réessayer
+          </button>
         </div>
       ) : null}
       {error ? (
@@ -448,7 +495,7 @@ export function EcologitsReconcilePanel({
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                       {existingLinks.length === 0 ? <button type="button" disabled={!targets[row.id] || busy != null} onClick={() => void run('Associer', { action: 'match', ecologits_model_id: row.id, maydai_model_id: targets[row.id], conflict_mode: 'add' }, row.id)} className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">Associer</button> : null}
                       {existingLinks.length > 0 ? <button type="button" disabled={!targets[row.id] || busy != null} onClick={() => void run('Ajouter', { action: 'match', ecologits_model_id: row.id, maydai_model_id: targets[row.id], conflict_mode: 'add' }, row.id)} className="rounded-md bg-emerald-700 px-3 py-2 text-sm font-medium text-white disabled:opacity-50">Ajouter ce lien (N:1)</button> : null}
-                      {existingLinks.length > 0 ? <button type="button" disabled={!targets[row.id] || busy != null} onClick={() => void run('Remplacer', { action: 'match', ecologits_model_id: row.id, maydai_model_id: targets[row.id], conflict_mode: 'replace_all' }, row.id)} className="rounded-md border border-amber-300 bg-white px-3 py-2 text-sm">Remplacer le(s) {existingLinks.length} lien(s) existant(s)</button> : null}
+                      {existingLinks.length > 0 ? <button type="button" disabled={!targets[row.id] || busy != null} onClick={() => void run('Remplacer', { action: 'match', ecologits_model_id: row.id, maydai_model_id: targets[row.id], conflict_mode: 'replace_all' }, row.id)} className="rounded-md border border-amber-300 bg-white px-3 py-2 text-sm disabled:opacity-50">Remplacer le(s) {existingLinks.length} lien(s) existant(s)</button> : null}
                       {row.link_status !== 'ignored' ? <button type="button" disabled={busy != null} onClick={() => void run('Ignorer', { action: 'ignore', ecologits_model_id: row.id }, row.id)} className="rounded-md border px-3 py-2 text-sm">{existingLinks.length > 0 ? 'Ignorer cette entrée' : 'Ignorer'}</button> : null}
                       {row.link_status === 'ignored' ? <button type="button" disabled={busy != null} onClick={() => void run('Réactiver', { action: 'unignore', ecologits_model_id: row.id }, row.id)} className="rounded-md border px-3 py-2 text-sm">Ne plus ignorer</button> : null}
                       {row.link_status === 'matched' ? <button type="button" disabled={busy != null} onClick={() => void run('Délier', { action: 'unlink', ecologits_model_id: row.id }, row.id)} className="rounded-md border px-3 py-2 text-sm">Délier</button> : null}
