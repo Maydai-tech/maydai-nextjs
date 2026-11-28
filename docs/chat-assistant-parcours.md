@@ -129,12 +129,13 @@ Types : `NEW_QUESTION_NODE` | `PATH_COMPLETE` | `NOT_STARTED` (GET uniquement).
 
 | Variable | Rôle |
 |----------|------|
-| `MISTRAL_API_KEY` | SDK agents + embeddings RAG |
-| `MISTRAL_CONVERSATION_AGENT_ID` | Accueil / tool setup (optionnel, défaut en code) |
+| `MISTRAL_API_KEY` | SDK agents + embeddings RAG. Lue **à chaque appel** (`getMistralClient`) : un override env après boot est pris en compte. |
+| `MISTRAL_CONVERSATION_AGENT_ID` | Accueil / tool setup (optionnel, défaut `DEFAULT_CONVERSATION_AGENT_ID`) |
 | `MISTRAL_EVALUATION_AGENT_ID` | Évaluateur |
 | `MISTRAL_REPORT_AGENT_ID` | Rapport structuré |
+| `MISTRAL_DESCRIPTION_AGENT_ID` | Résumé cas d’usage (`getDescriptionAgentId`, `POST /api/mistral/generate-description`) |
 
-Sans clé : `getMistralClient()` échoue au runtime.
+Sans clé : `getMistralClient()` échoue au runtime. Les IDs d’agents sont relus à l’appel (`#457`) — ne plus les capturer dans une constante de module.
 
 ## 7. Pièges
 
