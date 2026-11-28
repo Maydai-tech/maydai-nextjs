@@ -33,6 +33,7 @@ Hub canonique LLM : `.cursor/rules/llm-models-hub.mdc`. Sync Drive Hermes : `.cu
 | [e2e-playwright.md](./e2e-playwright.md) | Playwright local + CI, mots de passe uniques, plus de rapport OVH |
 | [guide-installation-mcp-supabase.md](./guide-installation-mcp-supabase.md) | MCP Supabase OVH |
 | [supabase-ovh-cli.md](./supabase-ovh-cli.md) | CLI Supabase self-hosted |
+| [preprod-database.md](./preprod-database.md) | Base preprod séparée : copie anonymisée de la prod, mise en place serveur + Vercel |
 
 Auth API : `.cursor/rules/api-architecture.mdc`, `.cursor/rules/authentication-patterns.mdc`. Webhooks Hermes : header `x-api-key` = `INTERNAL_API_KEY`. Crons Vercel : Bearer `CRON_SECRET`. Monitoring hôte : jamais d’HTTP public.
 
