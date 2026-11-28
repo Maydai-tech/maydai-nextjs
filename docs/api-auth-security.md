@@ -32,20 +32,27 @@ if (auth.error) return auth.error
 |-------|--------|--------|
 | `GET /api/cron/sync-llm-stats` | `CRON_SECRET` | `Authorization: Bearer …` (égalité stricte) |
 | `GET /api/cron/sync-llm-control` | `CRON_SECRET` | idem. Refuse avant toute écriture si un en-tête attendu manque |
+| `GET /api/cron/process-purges` | `CRON_SECRET` | `*/15`. Soft-delete Freemium 24 h + hard-delete 35 j. Runbook : [freemium-governance.md](./freemium-governance.md) |
 | `GET /api/cron/sync-ecologits` | idem | idem |
 | `POST /api/admin/comparia/preview` | admin | `verifyAdminAuth`, aucune écriture |
 | `POST /api/admin/comparia/import` | admin | `verifyAdminAuth`, indépendant de la case « Écrire » |
 | `GET/POST /api/admin/comparia/reconcile` | admin | `verifyAdminAuth`. Unitaire `match` / `ignore` / `unignore`, ou lot `match-many` / `ignore-many` |
 | `POST /api/webhooks/kb-update` | `INTERNAL_API_KEY` | `x-api-key` |
 | `POST /api/webhooks/sync-siren` | `INTERNAL_API_KEY` | même schéma |
-| `POST /api/admin/llm-control-tower-sync` | admin | `verifyAdminAuth`. Body `{ dryRun: true }` simule sans écriture. Le cron est `GET /api/cron/sync-llm-control` |
-| `POST /api/admin/llm-system-cards-import` | admin | idem |
+| `POST /api/admin/llm-control-tower-sync` | admin | `verifyAdminAuth`. Body `{ dryRun: true }` simule. **Défaut = écriture** si body absent. Cron : `GET /api/cron/sync-llm-control` |
+| `POST /api/admin/llm-control-tower-apply` | admin | **Défaut `dryRun: true`**. `{ dryRun: false }` écrit taxonomie + veille + licence, seulement si une colonne change. |
+| `POST /api/admin/llm-system-cards-import` | admin | écriture immédiate (cartes + piliers) |
+| `POST /api/admin/llm-system-cards-pillars` | admin | simulation sauf `{ write: true }` |
 | `GET /api/storage/signed-url` | user JWT | Bearer + `user_companies` sur le `companyId` du path (`#448`) |
 | `GET /api/storage/file-metadata` | user JWT | idem |
 
 Routes user System Cards (`GET /api/system-cards/…`, `POST /api/dossiers/pillar-completion`) : Bearer via `getAuthenticatedSupabaseClient`. Le POST vérifie `user_companies` sur le `company_id` du cas d’usage. Détail : [llm-system-cards.md](./llm-system-cards.md).
 
 `GET` / `POST /api/admin/monitoring` : `verifyAdminAuth` **et** sources JSON hôte restreintes (`lib/monitoring-source.ts`). Runbook : [admin-monitoring.md](./admin-monitoring.md).
+
+`GET` / `PATCH /api/admin/governance` : `verifyAdminAuth`. `GET` / `POST /api/governance/confirm-deletion` : **aucune auth** (jeton SHA-256 à usage unique). Détail : [freemium-governance.md](./freemium-governance.md).
+
+Formulaire contact : Server Action, pas Bearer. Turnstile pour les visiteurs anonymes. Runbook : [contact-form-security.md](./contact-form-security.md).
 
 Sans `CRON_SECRET` / `INTERNAL_API_KEY`, les routes concernées répondent 401 ou 500 (config incomplète). Vercel Cron envoie `Authorization: Bearer $CRON_SECRET`.
 
@@ -79,11 +86,13 @@ UI : `UploadedFileDisplay` ouvre via signed-url (`window.open`), jamais `<a href
 
 Le 1er segment du path = `company_id`. Un collaborateur seulement dans `user_usecases` (sans `user_companies`) reçoit **403** à l’ouverture — aligné sur GET / upload dossier, pas sur `hasAccess` de `lib/collaborators.ts`.
 
+`user_companies` n’a **pas** de colonne `is_active`. La révocation admin (`PATCH /api/admin/users/[id]` body `{ remove_company_id }`) fait un **DELETE** de la ligne. `userCanAccessDossierPath` = existence de la row. Un soft-delete inventé sur `is_active` ne ferait rien.
+
 Les anciennes URL publiques en base restent normalisées en lecture. Si le bucket est encore public, une URL déjà divulguée peut rester joignable hors app.
 
 ### Admin / debug
 
-- `GET` / `POST /api/admin/monitoring` : `verifyAdminAuth` (admin). Les JSON disque / email / purges ne sont fetchés que si l’URL est loopback HTTP **ou** HTTPS + `MONITORING_BEARER_TOKEN` / basic auth. HTTP public (IP ou hostname) → source ignorée (`Source monitoring non configurée`).
+- `GET` / `POST /api/admin/monitoring` : `verifyAdminAuth` (admin). Les adresses JSON sont **en dur** (`MONITORING_SOURCE_URLS`, `https://api.maydai.io/monitoring/…`). Fetch uniquement si loopback HTTP **ou** HTTPS + `MONITORING_BEARER_TOKEN` / basic auth. HTTP public (IP ou hostname) → source ignorée. Runbook : [admin-monitoring.md](./admin-monitoring.md).
 - `GET /api/debug` : `verifyAdminAuth(request, 'super_admin')` uniquement.
 
 ### Rôles `profiles` (septembre 2026)
@@ -111,6 +120,7 @@ Les invitations (`POST /api/collaboration/profile`) figent déjà `role: 'user'`
 - `POST /api/mistral/generate-description` : Bearer obligatoire.
 - `POST /api/stripe/create-checkout-session` : Bearer obligatoire. Le `userId` du body est **ignoré**. `client_reference_id`, `metadata.user_id` / `metadata.userId` et le customer Stripe sont calés sur `user.id` du JWT. Sans Bearer → 401, Stripe n’est pas appelé. (`#439`)
 - `GET /api/stripe/retrieve-session` : Bearer + le `session_id` doit appartenir à l’utilisateur (`client_reference_id` ou `metadata.user_id`). Sinon 403.
+- Période d’abonnement : API Stripe **Basil** (`2025-08-27.basil`). `current_period_start` / `end` sont sur `items.data[0]`, plus en top-level Subscription. Lire le haut de l’objet (ou tomber sur now/+30 j) corrompt `subscriptions` en base. Helpers : `getStripeSubscriptionPeriodIso` / `Unix` (`lib/stripe/utils/subscription-period.ts`). Consommateurs : `syncSubscriptionFromStripe`, webhook `customer.subscription.updated`. (`#456`)
 
 Les messages d’erreur Stripe côté client sont génériques (`lib/stripe/utils/error-handling.ts`) : ne pas renvoyer la stack Stripe au navigateur.
 
@@ -118,12 +128,13 @@ Les messages d’erreur Stripe côté client sont génériques (`lib/stripe/util
 
 | Route | Auth | Notes |
 |-------|------|--------|
+| `POST /api/auth/login-method` | aucune | `{ method: "password" \| "code" }` selon `user_metadata.has_password`. 10 req/min/IP (`lib/rate-limit.ts`, mémoire d’instance). Email inconnu → `password` (pas d’énumération). `code` révèle un ancien compte. Runbook : [auth-mot-de-passe.md](./auth-mot-de-passe.md). |
 | `POST /api/auth/check-email` | aucune | Existence dans `auth.users` (service role). Énumération d’e-mails possible. |
-| `POST /api/auth/complete-signup` | Bearer | Upsert `profiles` sur `user.id`. Acquisition `gclid` / `utm_*` : champ absent → `null`. |
+| `POST /api/auth/complete-signup` | Bearer | Merge `profiles` sur `user.id` (`mergeCompleteSignupProfile`). Champ **omis** → valeur existante conservée. Champ présent à `null` → écrase. |
 | `POST /api/leads/website-direct` | Bearer | Lead `website_direct` si attribution utile et pas de `lead_id`. |
 | `POST /api/leads/link-to-user` | Bearer | 403 si l’e-mail du lead ≠ e-mail JWT. |
 
-Landings co-brandées (`/p/learning-gate`) : même wizard, UTM défaut partenaire. Runbook : [signup-partner-landings.md](./signup-partner-landings.md).
+Landings co-brandées (`/p/learning-gate`) : même wizard, UTM défaut partenaire. Runbook : [signup-partner-landings.md](./signup-partner-landings.md). Connexion : [auth-mot-de-passe.md](./auth-mot-de-passe.md).
 
 ## 4. Checklist nouvelle route
 

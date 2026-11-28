@@ -10,14 +10,16 @@ Couvrir les parcours UI (auth, registre, questionnaire, scoring, tracking) contr
 
 ## 2. Lancer en local
 
+Runtime : **Node 24.x** (`.nvmrc`, `engines`, CI `node-version: '24'`). Le projet est **pnpm-only**.
+
 ```bash
-npm run e2e          # Chromium, serveur local si PLAYWRIGHT_BASE_URL est localhost
-npm run e2e:ui       # UI Playwright
-npm run e2e:headed
-npm run e2e:debug
+pnpm e2e          # Chromium, serveur local si PLAYWRIGHT_BASE_URL est localhost
+pnpm e2e:ui       # UI Playwright
+pnpm e2e:headed
+pnpm e2e:debug
 ```
 
-Config : `playwright.config.ts` charge `.env.local`. `PLAYWRIGHT_BASE_URL` défaut `http://localhost:3000`. Si l’URL est locale, Playwright démarre `npm run dev` (sauf si un serveur tourne déjà, hors CI).
+Config : `playwright.config.ts` charge `.env.local`. `PLAYWRIGHT_BASE_URL` défaut `http://localhost:3000`. Si l’URL est locale, Playwright démarre `pnpm run dev` (sauf si un serveur tourne déjà, hors CI).
 
 Minimum : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`. En préprod protégée : `VERCEL_AUTOMATION_BYPASS_SECRET` (header `x-vercel-protection-bypass`).
 
@@ -52,4 +54,5 @@ Le workflow le rappelle : la base Supabase préprod **est** la prod. Les specs i
 - **`e2e/old/`** n’est pas exécuté. Le modifier ne change pas CI.
 - **Rapport HTML public = régression.** Le lire via l’artifact GitHub (ou `playwright-report/` en local).
 - Notion : toute **création / modification / suppression** de spec Playwright doit mettre à jour la doc tests Notion (règle projet) — ce runbook repo ne remplace pas cette page.
-- **Landings partenaires.** `e2e/auth/signup.spec.ts` (`@prod`) teste `POST /api/auth/complete-signup` (payload minimal / complet). Aucune spec ne charge `/p/learning-gate` ni le merge UTM partenaire. Runbook : [signup-partner-landings.md](./signup-partner-landings.md).
+- **Landings partenaires.** `e2e/auth/signup.spec.ts` (`@prod`) teste `POST /api/auth/complete-signup` (payload minimal / complet). Aucune spec ne charge `/p/learning-gate`, le merge UTM, `/contact` Turnstile, ni le bandeau Freemium 24 h.
+- **Login en deux temps.** `e2e/tracking.spec.ts` mocke `POST /api/auth/login-method` (`{ method: "code" }`) avant l’OTP, parce que l’e-mail de test n’existe pas en base. Sans ce mock, `/login` affiche le mot de passe. Helper `authenticateUser` pose le cookie session : il ne passe pas par l’écran email.

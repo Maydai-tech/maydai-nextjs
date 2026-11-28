@@ -27,12 +27,16 @@ Slug JS = `normalizeLlmModelSlug` (`lib/bench-llm/model-slug.ts`), équivalent S
 | Table / colonne | Rôle |
 |-----------------|------|
 | `compl_ai_models` | Fiche canonique (admin Bench LLM) |
-| `compl_ai_models.lifecycle_status` | Override admin CSV : `active` \| `deprecated` \| `retired` \| `legacy`. `NULL` = snapshot fournisseur officiel. **Pas** un identifiant de source. |
+| `compl_ai_models.lifecycle_status` | Override Apply veille (ou CSV historique) : `active` \| `deprecated` \| `retired` \| `legacy`. `NULL` = snapshot fournisseur officiel. **Pas** un identifiant de source. Écrit **uniquement** par Apply (`VEILLE_COLUMNS`). |
+| `compl_ai_models.role` / `reference_model_id` / `merged_into_id` / `base_model_id` | Taxonomie Tour de contrôle. Apply, pas une source externe. |
+| `compl_ai_models.system_card_status` | Miroir Sheet (`generated` \| `missing` \| `error_no_system_card`). Pas une source du pivot. |
+| `compl_ai_models.license_class` / `license_id` / `license_url` / `license_eu_restricted` | Licence des poids (Apply, lignes Questionnaire). |
+| `compl_ai_models.launch_date` / `deprecation_date` / `retirement_date` / `replacement_model_id` / `lifecycle_source_url` / `lifecycle_checked_at` | Veille Sheet. Apply si « Source du statut » est remplie. |
 | `compl_ai_evaluations` | Un score COMPL-AI par `(model_id, benchmark_id)` |
 | `llm_model_source_ids` | Pivot `(source, source_id)` unique → `model_id` (`llm_stats` \| `ecologits` \| `comparia`) |
-| `ecologits_models` | Catalogue EcoLogits (`is_active` = présence catalogue, **pas** le cycle de vie) |
-| `ecologits_model_links` | Lien EcoLogits → fiche MaydAI (unique sur `ecologits_model_id`) |
-| `comparia_models` | Catalogue Compar:IA (scores, `is_active`) |
+| `ecologits_models` | Catalogue EcoLogits (`is_active` = présence catalogue, **pas** le cycle de vie). `link_status` ∈ `unmatched` \| `matched` \| `ignored`. |
+| `ecologits_model_links` | Lien EcoLogits → fiche MaydAI (unique sur `ecologits_model_id` ; **plusieurs** EcoLogits par fiche MaydAI). |
+| `comparia_models` | Catalogue Compar:IA (scores, `link_status`, `is_active` = archive si `false`) |
 | `comparia_import_runs` | Historique d’import |
 | `llm_stats_sync_runs` | Historique cron LLM Stats |
 
@@ -51,7 +55,7 @@ Déclarées dans `vercel.json` :
 | EcoLogits | `GET /api/cron/sync-ecologits` | `0 3 * * *` | idem |
 | Compar:IA | Upload admin du CSV Etalab | pas de cron | `verifyAdminAuth` |
 
-System Cards : bouton admin. La tour de contrôle a aussi le cron du mercredi `0 6 * * 3`, deux heures après LLM Stats. Sync = append Sheet + colonnes d’identification + formules d’action + CSV Drive. Elle ne réécrit pas le bloc Suivi du LLM. Runbook : [llm-system-cards.md](./llm-system-cards.md).
+System Cards / Tour de contrôle : boutons admin **et** cron mercredi `0 6 * * 3` (deux heures après LLM Stats). Sync = append Sheet + identification + formules A1–A9 + miroir `error_no_system_card` + CSV Drive. Elle ne réécrit pas le bloc Suivi du LLM, ni une cellule « Statut Fiche Technique » déjà remplie. Apply (veille + taxonomie + licence) et import piliers sont **admin-only**, pas le cron. Runbook : [llm-system-cards.md](./llm-system-cards.md).
 
 Compar:IA ne lit plus le Shared Drive. Le bouton violet **Sync Compar:IA** de `/admin/bench-llms` ouvre un dépôt du CSV officiel `comparia_model-ranking-JJ_MM_AAAA-license_Etalab_2_0.csv` :
 
@@ -61,7 +65,7 @@ Compar:IA ne lit plus le Shared Drive. Le bouton violet **Sync Compar:IA** de `/
 
 La consommation du CSV est en **mWh / 1 000 tokens** (`comparia_models.consumption_mwh_per_1k_tokens`). La colonne consolidée `compl_ai_models.consumption_wh_per_1k_tokens` reçoit la valeur / 1000, et seulement si la cellule n’est pas vide. `comparia_rank` est mis à jour pour les modèles `matched`.
 
-Durées Vercel : LLM Stats / Control Tower 60 s ; EcoLogits / import Compar:IA / import System Cards 300 s.
+Durées Vercel : LLM Stats / Control Tower (sync, cron, apply, piliers, purge) 60 s ; EcoLogits / import Compar:IA / import System Cards 300 s. Preview Compar:IA et reconcile : 60 s.
 
 ### Webhook Drive (Hermes)
 
@@ -78,16 +82,16 @@ Hors dossier AI Act, le webhook télécharge le CSV nommé `file_name` et appell
 
 | Source | Table d’écriture | Entrée |
 |--------|------------------|--------|
-| LLM Stats | pivot `llm_model_source_ids` | cron + admin `/api/admin/llm-stats-sync-runs` |
+| LLM Stats | pivot `llm_model_source_ids` | cron + admin `/api/admin/llm-stats-sync-runs`. Un **update** omet identité + veille (`llmStatsDatabaseUpdate` → `omitImmutableExternalUpdateColumns`). Un **insert** omet seulement la veille. |
 | EcoLogits | `ecologits_model_links` (**pas** le pivot) | cron + `/api/admin/ecologits/sync` + `PUT /api/admin/ecologits/models/[id]/link` |
-| Compar:IA | `comparia_models` (`link_status`) + pivot | upload admin, rapprochement manuel. Drive historique sans cron |
-| COMPL-AI scores | `compl_ai_evaluations` (+ `lifecycle_status` sur la fiche) | CSV admin §7 |
+| Compar:IA | `comparia_models` (`link_status`) + pivot | upload admin, rapprochement manuel. Drive historique (webhook) sans cron |
+| COMPL-AI scores | `compl_ai_evaluations` | CSV admin §7. L’import **n’écrit plus** `lifecycle_status` (`omitVeilleColumns`). |
 
-Le cron EcoLogits (`lib/ecologits/sync.ts` → `planExactEcoLogitsLinks`) ne crée un lien `exact` que s’il reste **un** MaydAI libre pour la clé provider+nom, et **refuse** un 2ᵉ EcoLogits sur une fiche déjà liée. Le rattachement de plusieurs alias (dated / latest) se fait à la main (`match_method = 'manual'`). Unique côté EcoLogits : `onConflict: 'ecologits_model_id'`. Unique côté MaydAI : **levée** (`20260919100000_…`).
+Le cron EcoLogits (`planExactEcoLogitsLinks`) ne crée un lien `exact` que s’il reste **un** MaydAI libre pour la clé provider+nom, et **refuse** un 2ᵉ EcoLogits automatique sur une fiche déjà liée. Le rattachement manuel de plusieurs alias (dated / latest) est **autorisé** : `PUT` utilise `conflictMode: 'add'` ; `require_explicit` (409) si d’autres liens existent et que le mode n’est pas `add` / `replace_all`. Unique côté EcoLogits : `ecologits_model_id`. Unique côté MaydAI : **levée**. La fiche détail charge **tous** les liens (`loadEcoLinks`) — plus de `.maybeSingle()` qui cassait à 2+ liens.
 
-Admin Bench : `lib/bench-llm/admin-unified.ts` — une ligne par fiche. Badge EcoLogits = lien `ecologits_model_links` **ou** pivot `source = 'ecologits'`. Pas de colonnes `llm_stats_id` / `eco_*` sur le hub.
+Admin Bench : `lib/bench-llm/admin-unified.ts` — une ligne par fiche. `ecoLinksCount` = nombre de liens. Badge EcoLogits = lien `ecologits_model_links` **ou** pivot `source = 'ecologits'`. File d’attente Compar:IA : `compariaRowVisible` filtre `is_active` (`active` / `archived` / `all`). Pas de colonnes `llm_stats_id` / `eco_*` sur le hub.
 
-System Cards : table séparée `llm_system_cards.model_identifier` = slug. Pas une source du pivot, pas une colonne sur `compl_ai_models`. Voir [llm-system-cards.md](./llm-system-cards.md).
+System Cards : table séparée `llm_system_cards.model_identifier` = slug. Pas une source du pivot. `system_card_status` / taxonomie / dates de veille / `license_class` sont des **métadonnées de fiche**. Couverture admin : 6ᵉ source (`computeSourceCoverageStats`). Filtre « En activité » = `active` **ou** `deprecated` (`isInServiceLifecycleStatus`) — distinct de `ecologits_models.is_active`. Voir [llm-system-cards.md](./llm-system-cards.md).
 
 ## 4. Variables
 
@@ -98,7 +102,7 @@ System Cards : table séparée `llm_system_cards.model_identifier` = slug. Pas u
 | `LLM_STATS_BASE_URL` | Défaut `https://api.llm-stats.com/stats` |
 | `ECOLOGITS_BASE_URL` / `ECOLOGITS_API_KEY` | Catalogue + estimations |
 | `GOOGLE_DRIVE_*` | Service Account Shared Drive (System Cards, Control Tower, webhook KB) |
-| `GOOGLE_SHEETS_CONTROL_TOWER_ID` | Sheet Tour de contrôle : **requis** pour `POST /api/admin/llm-control-tower-sync` (append des ids hub absents + write-back `Statut LLM`) et pour l’import System Cards |
+| `GOOGLE_SHEETS_CONTROL_TOWER_ID` | Sheet Tour de contrôle : **requis** pour sync, cron, apply (veille + taxonomie + licence) et import System Cards |
 | `GOOGLE_DRIVE_FOLDER_CONTROL_TOWER` | Dossier CSV snapshot (export Control Tower) |
 | `GOOGLE_DRIVE_FOLDER_ID` | Dossier du script de suivi Sheets (§8) — **pas** le dossier Control Tower |
 | `INTERNAL_API_KEY` | Webhook KB + sync SIREN |
@@ -107,8 +111,8 @@ System Cards : table séparée `llm_system_cards.model_identifier` = slug. Pas u
 
 1. Ouvrir `/admin/bench-llms` (fiche unique, pas de doublon source).
 2. LLM Stats / Compar:IA : insérer une ligne pivot `source` + `source_id` + `match_method = 'manual'`.
-3. EcoLogits : `PUT /api/admin/ecologits/models/{ecoId}/link` body `{ "maydaiModelId": "<uuid>" }`. Body sans id → unlink (delete des lignes de cet `ecologits_model_id`). 404 si l’un des deux ids est inconnu.
-4. Ne pas recréer une fiche `compl_ai_models` pour « rattacher » une source orpheline.
+3. EcoLogits : `PUT /api/admin/ecologits/models/{ecoId}/link` body `{ "maydai_model_id": "<uuid>" }` (ajoute, N:1). Body sans id → unlink de **cet** EcoLogits. 404 si l’un des deux ids est inconnu. 409 si d’autres liens existent et que `conflictMode` n’autorise pas l’ajout.
+4. Ne pas recréer une fiche `compl_ai_models` pour « rattacher » une source orpheline. Compar:IA ne crée jamais de fiche (`createUnclassifiedModel` est réservé à EcoLogits).
 
 Matching Compar:IA à l’import (`planCompariaLinks`) : lien persistant `matched` ou `ignored`, alias explicite, puis égalité stricte du slug / id technique (et de l’id sans préfixe `fournisseur/`). Une normalisation `.` ↔ `-` n’est retenue que si elle vise un seul modèle. Le bouton admin et `POST /api/admin/comparia/reconcile` enregistrent un lien `manual`.
 
@@ -127,7 +131,7 @@ Ce n’est **pas** `ecologits_models.is_active` (présence catalogue). Snapshot 
 
 `applyLifecycleStatusOverride(officiel, compl_ai_models.lifecycle_status)` : si la colonne CSV est renseignée, elle **remplace** le statut (le label aussi). Source affichée : `csv` si aucun match officiel.
 
-Consommateurs : dashboard `/admin/bench-llms`, export COMPL-AI, colonne `Statut LLM` de la Tour de contrôle (`resolveControlTowerLlmStatus`).
+Consommateurs : dashboard `/admin/bench-llms`, export COMPL-AI, colonne `Statut LLM` de la Tour de contrôle (`resolveControlTowerLlmStatus`). L’Apply veille peut **écraser** `lifecycle_status` depuis le Sheet si « Source du statut » est renseignée. Un modèle `retired` aux poids ouverts reste visible dans le sélecteur cas d’usage (`isModelProposedToUser`).
 
 ## 7. CSV COMPL-AI (une ligne par modèle)
 
@@ -187,10 +191,12 @@ Catalogue lu : `compl_ai_models` + évaluations + liens EcoLogits / Compar:IA / 
 
 ## 9. Pièges
 
-- Une source orpheline n’est **pas** une raison d’ajouter une colonne sur `compl_ai_models`.
-- EcoLogits : le cron n’écrit **pas** `llm_model_source_ids`. Plusieurs alias → lien **manuel**. La fiche détail (`GET /api/admin/bench-llms/models/[id]`) fait un `.maybeSingle()` sur `maydai_model_id` : 2+ liens → erreur PostgREST. Le dashboard unifié garde le **dernier** EcoLogits vu pour `ecoModelId`.
+- Une source orpheline n’est **pas** une raison d’ajouter une colonne sur `compl_ai_models`. `role` / `system_card_status` / dates de veille / `license_class` sont du cycle de vie interne, pas un `llm_stats_id`.
+- Identité verrouillée (`#481`) : un cron LLM Stats **ne renomme plus** une fiche existante. Seul Apply (et l’admin) touche nom / slug / licence / taxonomie / veille.
+- Apply taxonomie : `{ dryRun: false }` fusionne via `reassignMergedModel` (déplace pivot / évaluations / EcoLogits vers l’absorbeur). Simulation par défaut. Une ligne inchangée n’est pas écrite (`#485`). Détail : [llm-system-cards.md](./llm-system-cards.md) §3.
+- EcoLogits : le cron n’écrit **pas** `llm_model_source_ids`. Plusieurs alias → lien **manuel** (N:1, `#484`). La fiche détail liste tous les liens. Le dashboard unifié expose `ecoLinksCount` et garde un `ecoModelId` d’affichage.
+- Compar:IA : plus de cron Vercel ni de `GET /api/admin/comparia/sync`. L’admin uploade le CSV Etalab. Le webhook KB peut encore appeler `persistCompariaCatalog` (sans créer de fiche). Archives = `is_active = false`.
 - CSV mal recollé : UUID dans « Nom du modèle » et nom dans « Fournisseur » → le parser promote l’UUID et récupère le nom.
 - Score CSV hors `[0, 1]` → ligne rejetée. Import « succès » avec 0 score = 422 (ne plus afficher un faux 200).
 - `matchComplAiModelId` (chat setup) fait un `ILIKE` sur `model_name` uniquement — pas le slug. Ambigu ou absent → `primary_model_id` null.
 - Docs historiques [PERPLEXITY_MODELS_IMPLEMENTATION.md](./PERPLEXITY_MODELS_IMPLEMENTATION.md) et [ENRICHISSEMENT_MODELS_IMPLEMENTATION.md](./ENRICHISSEMENT_MODELS_IMPLEMENTATION.md) : chemins admin anciens. Nouvelles APIs : `/api/admin/bench-llms` et `/api/admin/bench-llms/models/[id]`.
-- Cron Compar:IA : un `x-cron-secret` **faux** est rejeté même si un Bearer admin est présent (`hasRejectedCronSecret`).

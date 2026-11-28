@@ -73,7 +73,7 @@ Les CTA vitrine (`lib/signup-utm-hrefs.ts`) pointent vers `/signup?utm_source=ma
 
 `CompleteSignupSchema` : **tous** les champs optionnels. Le commentaire JSDoc de la route (phone required, etc.) est **périmé**. L’UI exige prénom / nom / e-mail / entreprise / secteur / CGU ; l’API accepte un payload minimal (E2E `e2e/auth/signup.spec.ts`).
 
-`complete-signup` écrit aussi `gclid` / `utm_*` sur `profiles` (tronqués à 512 caractères). Un champ acquisition **absent** du JSON devient `null` dans l’upsert — un second appel partiel peut effacer une attribution déjà stockée.
+`complete-signup` fusionne via `mergeCompleteSignupProfile` (`#452`) : une clé **absente** du patch conserve la valeur déjà en base (SIREN, téléphone, UTM). Une clé **présente** (y compris `null`) écrase. L’UI `/signup` et `/p/learning-gate` n’envoient jamais `phone` ni `siren`. Purge Freemium : [freemium-governance.md](./freemium-governance.md). Connexion : [auth-mot-de-passe.md](./auth-mot-de-passe.md).
 
 `?plan=` valide → `auth.updateUser({ data: { signup_plan_intent } })` (non bloquant). **Aucun lecteur** in-repo de `signup_plan_intent` au moment de cette page.
 
@@ -94,4 +94,5 @@ Pas de layout dédié sous `(saas)/p/` : le layout SaaS monte déjà `Attributio
 - **Pas un autre tunnel de facturation.** Copy « Freemium » ≠ écriture d’un plan. Stripe checkout reste le seul chemin payant (`docs/api-auth-security.md`).
 - **UTM URL > UTM partenaire.** Un visiteur déjà tagué ads / vitrine garde sa source ; Learning Gate ne fait que combler les trous.
 - **`check-email` énumère les comptes.** Endpoint public ; `getUserByEmail` parcourt `listUsers` page par page (coût qui croît avec `auth.users`).
-- **Pas de spec UI partenaire.** Playwright couvre `POST /api/auth/complete-signup`, pas `/p/learning-gate`.
+- **Pas de spec UI partenaire.** Playwright couvre `POST /api/auth/complete-signup`, pas `/p/learning-gate` ni le merge UTM.
+- **JSDoc route périmé.** Le contrat vivant est le schéma Zod + `mergeCompleteSignupProfile`, pas le bloc « phone required » au-dessus de `POST`.
